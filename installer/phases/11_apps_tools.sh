@@ -39,7 +39,8 @@ phase_run() {
 
     log_step "Yazi bestandsbeheerder installeren..."
     pacman_install yazi
-    pacman_install unar                 # uitpakken vanuit yazi
+    pacman_install p7zip                # uitpakken vanuit yazi (7z, xz, bzip2...)
+    pacman_install unzip zip            # zip-bestanden vanuit yazi
 
     log_step "Yazi-config deployen..."
     deploy_config "yazi"
