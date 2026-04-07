@@ -24,15 +24,22 @@ Eigen Hyprland rice voor Arch Linux. Modulair, reproduceerbaar, volledig automat
 ## Installatie
 
 ```bash
-git clone https://github.com/JorisKooistra/kingstra-dots ~/.config/kingstra-dots
-cd ~/.config/kingstra-dots
+bash <(curl -fsSL https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh)
+```
 
-# Alles installeren (hardware auto-detectie)
-bash install.sh
+De bootstrap kloont de repo naar `~/kingstra-dots` en start de installer automatisch.
 
-# Dry-run — bekijk wat er zou gebeuren
-bash install.sh --dry-run
+**Met opties:**
+```bash
+# Dry-run — bekijk wat er zou gebeuren zonder iets te installeren
+bash <(curl -fsSL https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh) --dry-run
 
+# Andere installatiemap
+KINGSTRA_DIR=~/.config/kingstra-dots bash <(curl -fsSL https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh)
+```
+
+**Handmatig (na klonen):**
+```bash
 # Één fase uitvoeren
 bash install.sh --phase 09_wallpaper
 
