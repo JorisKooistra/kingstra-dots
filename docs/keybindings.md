@@ -83,7 +83,7 @@
 | `Super + C` | Calendar popup |
 | `Super + O` | Monitor overview |
 | `Super + X` | FocusTime / power menu |
-| `Super + Shift + I` | Guide & weather settings |
+| `Super + Shift + I` | Settings panel |
 | Click CPU/RAM pill | Stats popup |
 
 ---
