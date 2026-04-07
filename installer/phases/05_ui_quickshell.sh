@@ -26,8 +26,12 @@ phase_run() {
     _phase05_validate
 
     log_ok "Fase 05 voltooid — Quickshell UI-laag staat."
-    log_info "Start Quickshell handmatig met: quickshell -p ~/.config/quickshell/shell.qml"
-    log_info "Of herstart je Hyprland-sessie."
+    log_info "Herstart je Hyprland-sessie om de UI-laag te activeren."
+    log_info "Of start handmatig:"
+    log_info "  awww-daemon &"
+    log_info "  quickshell -p ~/.config/quickshell/TopBar.qml &"
+    log_info "  quickshell -p ~/.config/quickshell/Main.qml &"
+    log_info "  walker --daemon &"
 }
 
 # ---------------------------------------------------------------------------
@@ -51,8 +55,27 @@ _phase05_write_autostart_ui() {
 # 71-autostart-ui.conf — UI-laag autostart (aangemaakt door fase 5)
 # =============================================================================
 
-# Quickshell top bar
-exec-once = quickshell -p ~/.config/quickshell/shell.qml
+# ---------------------------------------------------------------------------
+# Wallpaper daemon (awww) + skwd-wall picker daemon
+# ---------------------------------------------------------------------------
+exec-once = awww-daemon
+exec-once = quickshell -p ~/.config/skwd-wall/daemon.qml
+
+# ---------------------------------------------------------------------------
+# Quickshell — topbar (één per scherm) en popup master window
+# ---------------------------------------------------------------------------
+exec-once = quickshell -p ~/.config/quickshell/TopBar.qml
+exec-once = quickshell -p ~/.config/quickshell/Main.qml
+
+# ---------------------------------------------------------------------------
+# Launcher daemon (walker — verplicht voor app-lijst en D-Bus activatie)
+# ---------------------------------------------------------------------------
+exec-once = walker --daemon
+
+# ---------------------------------------------------------------------------
+# OSD daemon (volume/brightness overlay via SwayOSD)
+# ---------------------------------------------------------------------------
+exec-once = swayosd-server
 EOF
     log_ok "71-autostart-ui.conf aangemaakt"
 

@@ -23,6 +23,9 @@ phase_run() {
     log_step "skwd-wall installeren..."
     _phase09_install_skwd_wall
 
+    log_step "skwd-wall config aanmaken..."
+    _phase09_write_skwd_wall_config
+
     log_step "Videowallpaper-pakket installeren (mpvpaper)..."
     _phase09_install_mpvpaper
 
@@ -36,6 +39,7 @@ phase_run() {
     validate_cmd awww
     validate_dir  "$HOME/.config/skwd-wall"                "skwd-wall"
     validate_file "$HOME/.config/skwd-wall/daemon.qml"     "skwd-wall/daemon.qml"
+    validate_file "$HOME/.config/skwd-wall/config.json"    "skwd-wall/config.json"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"    "kingstra-wallpaper"
     validate_dir  "$HOME/Pictures/Wallpapers"              "Pictures/Wallpapers"
     validate_report
@@ -68,6 +72,79 @@ _phase09_install_skwd_wall() {
     git clone --depth=1 https://github.com/liixini/skwd-wall "$dest" && \
         log_ok "skwd-wall gecloned naar: $dest" || \
         log_warn "skwd-wall klonen mislukt — controleer internetverbinding"
+}
+
+_phase09_write_skwd_wall_config() {
+    local config_dest="$HOME/.config/skwd-wall/config.json"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "skwd-wall config.json zou worden aangemaakt: $config_dest"
+        return 0
+    fi
+
+    if [[ -f "$config_dest" ]]; then
+        log_info "skwd-wall config.json bestaat al — niet overschreven"
+        return 0
+    fi
+
+    if [[ ! -d "$(dirname "$config_dest")" ]]; then
+        log_warn "skwd-wall map bestaat niet — config.json overgeslagen"
+        return 0
+    fi
+
+    cat > "$config_dest" <<'EOF'
+{
+    "compositor": "hyprland",
+    "monitor": "",
+    "paths": {
+        "wallpaper": "~/Pictures/Wallpapers",
+        "videoWallpaper": "~/Pictures/Wallpapers/video",
+        "cache": "",
+        "templates": "",
+        "scripts": "",
+        "steam": "",
+        "steamWorkshop": "",
+        "steamWeAssets": ""
+    },
+    "features": {
+        "matugen": true,
+        "ollama": false,
+        "steam": false,
+        "wallhaven": false
+    },
+    "colorSource": "magick",
+    "ollama": { "url": "http://localhost:11434", "model": "gemma3:4b" },
+    "steam": { "apiKey": "", "username": "" },
+    "wallhaven": { "apiKey": "" },
+    "matugen": { "schemeType": "scheme-fidelity" },
+    "integrations": [
+        { "name": "skwd-wall", "template": "quickshell-colors.json", "output": "~/.config/quickshell/colors.json" },
+        { "name": "kitty", "template": "kitty.conf", "output": "~/.config/kitty/skwd-theme.conf", "reload": "pkill -USR1 kitty" },
+        { "name": "vscode", "template": "vscode-theme.json", "output": "~/.vscode/extensions/matugen.matugen-theme-1.0.0/themes/matugen-color-theme.json" },
+        { "name": "vesktop", "template": "vesktop.css", "output": "~/.config/vesktop/themes/kitty-match.css" },
+        { "name": "spicetify", "template": "spicetify.ini", "output": "~/.config/spicetify/Themes/Matugen/color.ini", "reload": "~/.config/skwd-wall/scripts/reload-spicetify.sh" },
+        { "name": "spicetify-css", "template": "spicetify.css", "output": "~/.config/spicetify/Themes/Matugen/user.css" },
+        { "name": "qt6ct", "template": "qt6ct-colors.conf", "output": "~/.config/qt6ct/colors/matugen.conf" },
+        { "name": "yazi", "template": "yazi-theme.toml", "output": "~/.config/yazi/theme.toml" },
+        { "name": "omp", "reload": "~/.config/skwd-wall/scripts/reload-omp.sh" }
+    ],
+    "components": {
+        "wallpaperSelector": {
+            "displayMode": "slices",
+            "showColorDots": true,
+            "sliceSpacing": -30,
+            "hexScrollStep": 1,
+            "customPresets": {}
+        }
+    },
+    "wallpaperMute": true,
+    "performance": {
+        "imageOptimizePreset": "balanced",
+        "imageOptimizeResolution": "2k"
+    }
+}
+EOF
+    log_ok "skwd-wall config.json aangemaakt: $config_dest"
 }
 
 _phase09_install_mpvpaper() {

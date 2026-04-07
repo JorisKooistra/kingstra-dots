@@ -14,7 +14,7 @@ animations  = true
 
 # Zoekbalk
 placeholder = "Zoeken..."
-show_initial_entries = false
+show_initial_entries = true
 
 # Iconen
 icon_size = 32

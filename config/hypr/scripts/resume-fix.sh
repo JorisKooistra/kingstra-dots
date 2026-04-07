@@ -41,9 +41,14 @@ fi
 # ---------------------------------------------------------------------------
 # 4 — Quickshell herstart als hij is afgesloten
 # ---------------------------------------------------------------------------
-if ! pgrep -f "quickshell.*shell.qml" &>/dev/null; then
-    _log "Quickshell niet actief — herstart..."
-    quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/shell.qml" &
+if ! pgrep -f "quickshell.*TopBar.qml" &>/dev/null; then
+    _log "Quickshell TopBar niet actief — herstart..."
+    quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/TopBar.qml" &
+    disown
+fi
+if ! pgrep -f "quickshell.*Main.qml" &>/dev/null; then
+    _log "Quickshell Main niet actief — herstart..."
+    quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/Main.qml" &
     disown
 fi
 
