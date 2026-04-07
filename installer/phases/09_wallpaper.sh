@@ -13,7 +13,7 @@
 
 phase_run() {
     log_step "Wallpaper-pakketten installeren..."
-    aur_install awww-bin                # wallpaper daemon (vervangt hyprpaper)
+    aur_install awww                    # wallpaper daemon (vervangt hyprpaper)
     pacman_install imagemagick          # voor gradient-fallback + manipulatie
     pacman_install ffmpeg               # voor videothumbnails / -verwerking
     pacman_install sqlite               # walker/history dep, ook nuttig voor indexer
