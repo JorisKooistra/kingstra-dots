@@ -2,7 +2,7 @@
 // PowerButton.qml — Power-menu knop
 // =============================================================================
 import QtQuick
-import "../../" as Ks
+import "../../"
 
 Item {
     id: root
@@ -15,8 +15,8 @@ Item {
         anchors.fill: parent
         radius: height / 2
         color:  area.containsMouse
-            ? Qt.rgba(Ks.Colors.red.r, Ks.Colors.red.g, Ks.Colors.red.b, 0.25)
-            : Ks.Colors.pillBackground
+            ? Qt.rgba(Colors.red.r, Colors.red.g, Colors.red.b, 0.25)
+            : Colors.pillBackground
 
         Behavior on color { ColorAnimation { duration: 150 } }
     }
@@ -24,7 +24,7 @@ Item {
     Text {
         anchors.centerIn: parent
         text:  "⏻"
-        color: area.containsMouse ? Ks.Colors.red : Ks.Colors.subtext0
+        color: area.containsMouse ? Colors.red : Colors.subtext0
         font { family: "JetBrainsMono Nerd Font"; pixelSize: 14 }
         Behavior on color { ColorAnimation { duration: 150 } }
     }

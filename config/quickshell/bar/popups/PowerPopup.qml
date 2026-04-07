@@ -2,11 +2,12 @@
 // PowerPopup.qml — Power-menu popup (Imperative-stijl)
 // =============================================================================
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
-import "../../" as Ks
+import "../../"
 
 PanelWindow {
     id: popup
@@ -39,7 +40,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         radius: 12
-        color:  Ks.Colors.popupBackground
+        color:  Colors.popupBackground
 
         layer.enabled: true
         layer.effect: MultiEffect {
@@ -89,8 +90,8 @@ PanelWindow {
                 height: 52
                 radius: 8
                 color:  btnArea.containsMouse
-                    ? Qt.rgba(Ks.Colors.surfaceVariant.r, Ks.Colors.surfaceVariant.g, Ks.Colors.surfaceVariant.b, 0.9)
-                    : Qt.rgba(Ks.Colors.surface.r, Ks.Colors.surface.g, Ks.Colors.surface.b, 0.7)
+                    ? Qt.rgba(Colors.surfaceVariant.r, Colors.surfaceVariant.g, Colors.surfaceVariant.b, 0.9)
+                    : Qt.rgba(Colors.surface.r, Colors.surface.g, Colors.surface.b, 0.7)
 
                 Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -101,14 +102,14 @@ PanelWindow {
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         text:  modelData.icon
-                        color: btnArea.containsMouse ? Ks.Colors.primary : Ks.Colors.text
+                        color: btnArea.containsMouse ? Colors.primary : Colors.text
                         font { family: "JetBrainsMono Nerd Font"; pixelSize: 20 }
                         Behavior on color { ColorAnimation { duration: 150 } }
                     }
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         text:  modelData.label
-                        color: Ks.Colors.subtext0
+                        color: Colors.subtext0
                         font { family: "Fira Sans"; pixelSize: 11 }
                     }
                 }

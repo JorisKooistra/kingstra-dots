@@ -4,7 +4,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Hyprland
-import "../../" as Ks
+import "../../"
 
 Item {
     id: root
@@ -44,17 +44,17 @@ Item {
                     anchors.centerIn: parent
 
                     color: isActive
-                        ? Ks.Colors.primary
+                        ? Colors.primary
                         : hasWindows
-                            ? Qt.rgba(Ks.Colors.primary.r, Ks.Colors.primary.g, Ks.Colors.primary.b, 0.5)
-                            : Qt.rgba(Ks.Colors.outline.r, Ks.Colors.outline.g, Ks.Colors.outline.b, 0.4)
+                            ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.5)
+                            : Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.4)
 
                     // Werkruimtenummer tonen in actieve dot
                     Text {
                         anchors.centerIn: parent
                         visible:  parent.width >= 16
                         text:     wsItem.wsId.toString()
-                        color:    Ks.Colors.onPrimary
+                        color:    Colors.onPrimary
                         font {
                             family:    "Fira Sans"
                             pixelSize: 11

@@ -5,7 +5,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
-import "../../" as Ks
+import "../../"
 
 Item {
     id: root
@@ -24,8 +24,8 @@ Item {
         anchors.fill: parent
         radius: height / 2
         color:  hoverArea.containsMouse
-                ? Qt.rgba(Ks.Colors.primary.r, Ks.Colors.primary.g, Ks.Colors.primary.b, 0.15)
-                : Ks.Colors.pillBackground
+                ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.15)
+                : Colors.pillBackground
         Behavior on color { ColorAnimation { duration: 150 } }
     }
 
@@ -47,14 +47,14 @@ Item {
             spacing: 4
             Text {
                 text:  ""
-                color: Ks.Colors.blue
+                color: Colors.blue
                 font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
             }
             Text {
                 text:  root.cpuPercent.toFixed(0) + "%"
-                color: root.cpuPercent > 80 ? Ks.Colors.red
-                     : root.cpuPercent > 50 ? Ks.Colors.yellow
-                     : Ks.Colors.subtext0
+                color: root.cpuPercent > 80 ? Colors.red
+                     : root.cpuPercent > 50 ? Colors.yellow
+                     : Colors.subtext0
                 font { family: "JetBrainsMono Nerd Font"; pixelSize: 12 }
                 Behavior on color { ColorAnimation { duration: 300 } }
             }
@@ -63,7 +63,7 @@ Item {
         // Scheidingsteken
         Rectangle {
             width: 1; height: 14
-            color: Qt.rgba(Ks.Colors.outline.r, Ks.Colors.outline.g, Ks.Colors.outline.b, 0.4)
+            color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.4)
         }
 
         // RAM
@@ -71,14 +71,14 @@ Item {
             spacing: 4
             Text {
                 text:  "󰍛"
-                color: Ks.Colors.mauve
+                color: Colors.mauve
                 font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
             }
             Text {
                 text:  root.ramUsedMb + "MB"
-                color: root.ramPercent > 80 ? Ks.Colors.red
-                     : root.ramPercent > 60 ? Ks.Colors.yellow
-                     : Ks.Colors.subtext0
+                color: root.ramPercent > 80 ? Colors.red
+                     : root.ramPercent > 60 ? Colors.yellow
+                     : Colors.subtext0
                 font { family: "JetBrainsMono Nerd Font"; pixelSize: 12 }
                 Behavior on color { ColorAnimation { duration: 300 } }
             }

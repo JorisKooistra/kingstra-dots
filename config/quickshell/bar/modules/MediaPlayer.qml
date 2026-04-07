@@ -5,7 +5,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
-import "../../" as Ks
+import "../../"
 
 Item {
     id: root
@@ -26,7 +26,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color:  Ks.Colors.pillBackground
+        color:  Colors.pillBackground
         visible: root.visible
     }
 
@@ -39,7 +39,7 @@ Item {
         // Speel/pauzeer-icoon
         Text {
             text:  root.status === "Playing" ? "󰏤" : "󰐊"
-            color: Ks.Colors.green
+            color: Colors.green
             font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
 
             MouseArea {
@@ -52,14 +52,14 @@ Item {
         // Titeltekst
         Text {
             text:  root.displayText
-            color: Ks.Colors.subtext0
+            color: Colors.subtext0
             font { family: "Fira Sans"; pixelSize: 12 }
         }
 
         // Volgend nummer
         Text {
             text:  "󰒭"
-            color: Ks.Colors.subtext0
+            color: Colors.subtext0
             font { family: "JetBrainsMono Nerd Font"; pixelSize: 12 }
 
             MouseArea {

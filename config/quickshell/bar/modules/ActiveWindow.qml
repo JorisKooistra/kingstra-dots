@@ -4,7 +4,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Hyprland
-import "../../" as Ks
+import "../../"
 
 Item {
     id: root
@@ -22,7 +22,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color:  Ks.Colors.pillBackground
+        color:  Colors.pillBackground
     }
 
     Text {
@@ -36,7 +36,7 @@ Item {
         }
 
         text:  root.displayText
-        color: Ks.Colors.subtext0
+        color: Colors.subtext0
         elide: Text.ElideRight
         font {
             family:    "Fira Sans"

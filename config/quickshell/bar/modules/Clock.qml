@@ -4,7 +4,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import "../../" as Ks
+import "../../"
 
 Item {
     id: root
@@ -14,7 +14,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color:  Ks.Colors.pillBackground
+        color:  Colors.pillBackground
     }
 
     RowLayout {
@@ -25,7 +25,7 @@ Item {
         // Datum
         Text {
             text: Qt.formatDate(SystemClock.date, "ddd d MMM")
-            color: Ks.Colors.subtext0
+            color: Colors.subtext0
             font {
                 family:    "Fira Sans"
                 pixelSize: 12
@@ -35,13 +35,13 @@ Item {
         // Scheidingsteken
         Rectangle {
             width: 1; height: 14
-            color: Qt.rgba(Ks.Colors.outline.r, Ks.Colors.outline.g, Ks.Colors.outline.b, 0.5)
+            color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.5)
         }
 
         // Tijd
         Text {
             text: Qt.formatTime(SystemClock.time, "HH:mm")
-            color: Ks.Colors.text
+            color: Colors.text
             font {
                 family:    "JetBrainsMono Nerd Font"
                 pixelSize: 13

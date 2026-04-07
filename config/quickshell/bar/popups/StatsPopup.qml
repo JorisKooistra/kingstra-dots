@@ -9,7 +9,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
-import "../../" as Ks
+import "../../"
 
 PanelWindow {
     id: statsPopup
@@ -39,13 +39,13 @@ PanelWindow {
     // ---------------------------------------------------------------------------
     Rectangle {
         anchors.fill: parent
-        color:        Ks.Colors.popupBackground
+        color:        Colors.popupBackground
         radius:       14
         border {
             color: Qt.rgba(
-                Ks.Colors.outline.r,
-                Ks.Colors.outline.g,
-                Ks.Colors.outline.b,
+                Colors.outline.r,
+                Colors.outline.g,
+                Colors.outline.b,
                 0.35
             )
             width: 1
@@ -62,7 +62,7 @@ PanelWindow {
             // Header
             Text {
                 text:  " Systeeminfo"
-                color: Ks.Colors.text
+                color: Colors.text
                 font { family: "JetBrainsMono Nerd Font"; pixelSize: 13; bold: true }
                 Layout.bottomMargin: 2
             }
@@ -71,7 +71,7 @@ PanelWindow {
             Rectangle {
                 Layout.fillWidth: true
                 height: 1
-                color: Qt.rgba(Ks.Colors.outline.r, Ks.Colors.outline.g, Ks.Colors.outline.b, 0.3)
+                color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.3)
                 Layout.bottomMargin: 2
             }
 
@@ -81,7 +81,7 @@ PanelWindow {
                 label:   "CPU"
                 value:   cpuPct.toFixed(0) + "%"
                 pct:     cpuPct
-                iconClr: Ks.Colors.blue
+                iconClr: Colors.blue
             }
 
             // RAM
@@ -90,7 +90,7 @@ PanelWindow {
                 label:   "RAM"
                 value:   ramUsed + " / " + ramTotal
                 pct:     ramPct
-                iconClr: Ks.Colors.mauve
+                iconClr: Colors.mauve
             }
 
             // Disk
@@ -99,7 +99,7 @@ PanelWindow {
                 label:   "Disk /"
                 value:   diskUsed + " / " + diskTotal
                 pct:     diskPct
-                iconClr: Ks.Colors.peach
+                iconClr: Colors.peach
             }
 
             // Temperatuur
@@ -108,18 +108,18 @@ PanelWindow {
                 Layout.fillWidth: true
                 Text {
                     text:  ""
-                    color: tempC > 80 ? Ks.Colors.red : tempC > 65 ? Ks.Colors.yellow : Ks.Colors.green
+                    color: tempC > 80 ? Colors.red : tempC > 65 ? Colors.yellow : Colors.green
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
                 }
                 Text {
                     text:  "Temp"
-                    color: Ks.Colors.subtext0
+                    color: Colors.subtext0
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 11 }
                     Layout.fillWidth: true
                 }
                 Text {
                     text:  tempC > 0 ? tempC.toFixed(0) + " °C" : "—"
-                    color: tempC > 80 ? Ks.Colors.red : tempC > 65 ? Ks.Colors.yellow : Ks.Colors.text
+                    color: tempC > 80 ? Colors.red : tempC > 65 ? Colors.yellow : Colors.text
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 12; bold: true }
                 }
             }
@@ -130,18 +130,18 @@ PanelWindow {
                 Layout.fillWidth: true
                 Text {
                     text:  "󰇚"
-                    color: Ks.Colors.green
+                    color: Colors.green
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
                 }
                 Text {
                     text:  "Net ↓↑"
-                    color: Ks.Colors.subtext0
+                    color: Colors.subtext0
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 11 }
                     Layout.fillWidth: true
                 }
                 Text {
                     text:  rxRate + " / " + txRate
-                    color: Ks.Colors.text
+                    color: Colors.text
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 12; bold: true }
                 }
             }
@@ -152,18 +152,18 @@ PanelWindow {
                 Layout.fillWidth: true
                 Text {
                     text:  "󱑀"
-                    color: Ks.Colors.subtext0
+                    color: Colors.subtext0
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
                 }
                 Text {
                     text:  "Uptime"
-                    color: Ks.Colors.subtext0
+                    color: Colors.subtext0
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 11 }
                     Layout.fillWidth: true
                 }
                 Text {
                     text:  uptimeStr
-                    color: Ks.Colors.text
+                    color: Colors.text
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 12; bold: true }
                 }
             }
@@ -172,7 +172,7 @@ PanelWindow {
             Rectangle {
                 Layout.fillWidth: true
                 height: 1
-                color: Qt.rgba(Ks.Colors.outline.r, Ks.Colors.outline.g, Ks.Colors.outline.b, 0.3)
+                color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.3)
                 Layout.topMargin:    2
                 Layout.bottomMargin: 2
             }
@@ -183,16 +183,16 @@ PanelWindow {
                 height: 30
                 radius: 8
                 color: btopHover.containsMouse
-                       ? Qt.rgba(Ks.Colors.primary.r, Ks.Colors.primary.g, Ks.Colors.primary.b, 0.2)
+                       ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.2)
                        : "transparent"
-                border { color: Qt.rgba(Ks.Colors.primary.r, Ks.Colors.primary.g, Ks.Colors.primary.b, 0.4); width: 1 }
+                border { color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.4); width: 1 }
 
                 Behavior on color { ColorAnimation { duration: 150 } }
 
                 Text {
                     anchors.centerIn: parent
                     text:  " btop"
-                    color: Ks.Colors.primary
+                    color: Colors.primary
                     font { family: "JetBrainsMono Nerd Font"; pixelSize: 12 }
                 }
 
@@ -363,7 +363,7 @@ PanelWindow {
         property string label:   ""
         property string value:   ""
         property real   pct:     0
-        property color  iconClr: Ks.Colors.blue
+        property color  iconClr: Colors.blue
 
         Layout.fillWidth: true
         spacing: 3
@@ -379,13 +379,13 @@ PanelWindow {
             }
             Text {
                 text:  label
-                color: Ks.Colors.subtext0
+                color: Colors.subtext0
                 font { family: "JetBrainsMono Nerd Font"; pixelSize: 11 }
                 Layout.fillWidth: true
             }
             Text {
                 text:  value
-                color: pct > 85 ? Ks.Colors.red : pct > 65 ? Ks.Colors.yellow : Ks.Colors.text
+                color: pct > 85 ? Colors.red : pct > 65 ? Colors.yellow : Colors.text
                 font { family: "JetBrainsMono Nerd Font"; pixelSize: 12; bold: true }
                 Behavior on color { ColorAnimation { duration: 300 } }
             }
@@ -396,13 +396,13 @@ PanelWindow {
             Layout.fillWidth: true
             height: 3
             radius: 2
-            color: Qt.rgba(Ks.Colors.outline.r, Ks.Colors.outline.g, Ks.Colors.outline.b, 0.25)
+            color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.25)
 
             Rectangle {
                 width:  parent.width * Math.min(1, pct / 100)
                 height: parent.height
                 radius: parent.radius
-                color:  pct > 85 ? Ks.Colors.red : pct > 65 ? Ks.Colors.yellow : iconClr
+                color:  pct > 85 ? Colors.red : pct > 65 ? Colors.yellow : iconClr
                 Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
                 Behavior on color { ColorAnimation { duration: 300 } }
             }

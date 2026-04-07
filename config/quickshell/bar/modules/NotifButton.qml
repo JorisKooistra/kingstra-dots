@@ -5,7 +5,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
-import "../../" as Ks
+import "../../"
 
 Item {
     id: root
@@ -20,8 +20,8 @@ Item {
         anchors.fill: parent
         radius: height / 2
         color:  count > 0
-            ? Qt.rgba(Ks.Colors.primary.r, Ks.Colors.primary.g, Ks.Colors.primary.b, 0.2)
-            : Ks.Colors.pillBackground
+            ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.2)
+            : Colors.pillBackground
 
         Behavior on color { ColorAnimation { duration: 200 } }
     }
@@ -32,9 +32,9 @@ Item {
 
         Text {
             text:  dndActive ? "󰂛" : (count > 0 ? "󰂚" : "󰂜")
-            color: dndActive ? Ks.Colors.yellow
-                 : count > 0 ? Ks.Colors.primary
-                 : Ks.Colors.subtext0
+            color: dndActive ? Colors.yellow
+                 : count > 0 ? Colors.primary
+                 : Colors.subtext0
             font { family: "JetBrainsMono Nerd Font"; pixelSize: 14 }
             Behavior on color { ColorAnimation { duration: 200 } }
         }
@@ -42,7 +42,7 @@ Item {
         Text {
             visible: count > 0
             text:    count > 99 ? "99+" : count.toString()
-            color:   Ks.Colors.primary
+            color:   Colors.primary
             font { family: "Fira Sans"; pixelSize: 11; bold: true }
         }
     }

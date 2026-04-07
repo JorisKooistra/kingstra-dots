@@ -7,9 +7,9 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
-import "./modules" as Modules
-import "./popups"  as Popups
-import "../"       as Ks
+import "./modules"
+import "./popups"
+import "../"      
 
 PanelWindow {
     id: bar
@@ -41,7 +41,7 @@ PanelWindow {
     Rectangle {
         id: barBackground
         anchors.fill: parent
-        color:        Ks.Colors.barBackground
+        color:        Colors.barBackground
         radius:       0
 
         // Subtiele onderlijn
@@ -53,9 +53,9 @@ PanelWindow {
             }
             height: 1
             color:  Qt.rgba(
-                Ks.Colors.outline.r,
-                Ks.Colors.outline.g,
-                Ks.Colors.outline.b,
+                Colors.outline.r,
+                Colors.outline.g,
+                Colors.outline.b,
                 0.4
             )
         }
@@ -75,7 +75,7 @@ PanelWindow {
         spacing: 0
 
         // Links — werkruimtes
-        Modules.Workspaces {
+        Workspaces {
             Layout.alignment: Qt.AlignVCenter
         }
 
@@ -87,12 +87,12 @@ PanelWindow {
                 anchors.centerIn: parent
                 spacing: 12
 
-                Modules.ActiveWindow {
+                ActiveWindow {
                     Layout.alignment: Qt.AlignVCenter
                     maxWidth: 300
                 }
 
-                Modules.Clock {
+                Clock {
                     Layout.alignment: Qt.AlignVCenter
                 }
             }
@@ -103,20 +103,20 @@ PanelWindow {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
             spacing: 4
 
-            Modules.MediaPlayer {
+            MediaPlayer {
                 Layout.alignment: Qt.AlignVCenter
             }
 
-            Modules.SystemStats {
+            SystemStats {
                 Layout.alignment: Qt.AlignVCenter
                 onToggleStatsMenu: statsPopup.visible = !statsPopup.visible
             }
 
-            Modules.NotifButton {
+            NotifButton {
                 Layout.alignment: Qt.AlignVCenter
             }
 
-            Modules.PowerButton {
+            PowerButton {
                 Layout.alignment: Qt.AlignVCenter
                 onTogglePowerMenu: powerPopup.visible = !powerPopup.visible
             }
@@ -126,7 +126,7 @@ PanelWindow {
     // ---------------------------------------------------------------------------
     // Power-popup (aangestuurd door PowerButton)
     // ---------------------------------------------------------------------------
-    Popups.PowerPopup {
+    PowerPopup {
         id: powerPopup
         visible: false
         parentBar: bar
@@ -135,7 +135,7 @@ PanelWindow {
     // ---------------------------------------------------------------------------
     // Stats-popup (aangestuurd door SystemStats klik)
     // ---------------------------------------------------------------------------
-    Popups.StatsPopup {
+    StatsPopup {
         id: statsPopup
         visible: false
         parentBar: bar

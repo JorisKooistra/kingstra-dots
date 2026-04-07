@@ -3,7 +3,7 @@
 // =============================================================================
 import QtQuick
 import QtQuick.Layouts
-import "../" as Ks
+import "../"
 
 Rectangle {
     id: root
@@ -11,7 +11,7 @@ Rectangle {
     property alias content: contentLoader.sourceComponent
     property real  hPadding: 10
     property real  vPadding:  5
-    property color bgColor:   Ks.Colors.pillBackground
+    property color bgColor:   Colors.pillBackground
     property real  radius:    height / 2   // Volledig afgerond
 
     implicitHeight: 26

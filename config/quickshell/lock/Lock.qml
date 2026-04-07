@@ -8,6 +8,7 @@
 // Hypridle:   lock_cmd = quickshell -p ~/.config/quickshell/lock/Lock.qml
 // =============================================================================
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Effects
 import Quickshell
