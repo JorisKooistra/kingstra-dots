@@ -1,7 +1,10 @@
 plan.txt
-voorbeelden en bronnen/dotfiles-main.zip
-voorbeelden en bronnen/imperative-dots-master.zip
-voorbeelden en bronnen/skwd-wall-main.zip
-voorbeelden en bronnen/*
+voorbeelden en bronnen/
 .env
+*.bak
+*.orig
+*.swp
+*~
+.DS_Store
+__pycache__/
 

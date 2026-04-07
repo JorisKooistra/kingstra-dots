@@ -1,100 +1,100 @@
 # kingstra-dots
 
-Eigen Hyprland rice voor Arch Linux. Modulair, reproduceerbaar, volledig automatisch te installeren.
+Personal Hyprland rice for Arch Linux. Modular, reproducible, fully automated installation.
 
 ---
 
-## Kenmerken
+## Features
 
-- **Compositor** — Hyprland met modulaire `conf.d`-structuur
-- **Bar** — Quickshell (QML): werkruimtes, klok, actief venster, CPU/RAM, media, meldingen
-- **Thema** — Matugen genereert Material You-kleuren vanuit de wallpaper
-- **Shell** — zsh + oh-my-posh, thema volgt de wallpaper-kleuren
-- **Terminal** — kitty met Matugen-kleuren en JetBrains Mono
+- **Compositor** — Hyprland with modular `conf.d` structure
+- **Bar** — Quickshell (QML): workspaces, clock, active window, CPU/RAM, media, notifications
+- **Theme** — Matugen generates Material You colors from the wallpaper
+- **Shell** — zsh + oh-my-posh, theme follows wallpaper colors
+- **Terminal** — kitty with Matugen colors and JetBrains Mono
 - **Launcher** — Walker (`Super+Ctrl+Return`)
-- **Meldingen** — SwayNC (control center rechtsonder)
-- **Wallpaper** — hyprpaper (statisch) + mpvpaper (video, optioneel)
-- **Lockscreen** — hyprlock, stijl volgt Matugen-kleuren
-- **OSD** — SwayOSD (volume, helderheid)
-- **Bestandsbeheer** — Nautilus + Yazi (terminal)
-- **Hardware** — automatische detectie: Nvidia/AMD/Intel, laptop, touchpad, vingerafdruk
+- **Notifications** — SwayNC (control center, top-left)
+- **Wallpaper** — hyprpaper (static) + mpvpaper (video, optional)
+- **Lockscreen** — hyprlock, styled with Matugen colors
+- **OSD** — SwayOSD (volume, brightness)
+- **File manager** — Nautilus + Yazi (terminal)
+- **Hardware** — automatic detection: Nvidia/AMD/Intel, laptop, touchpad, fingerprint
 
 ---
 
-## Installatie
+## Installation
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh)
 ```
 
-De bootstrap kloont de repo naar `~/kingstra-dots` en start de installer automatisch.
+The bootstrap clones the repo to `~/kingstra-dots` and starts the installer automatically.
 
-**Met opties:**
+**With options:**
 ```bash
-# Dry-run — bekijk wat er zou gebeuren zonder iets te installeren
+# Dry-run — see what would happen without installing anything
 bash <(curl -fsSL https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh) --dry-run
 
-# Andere installatiemap
+# Custom install directory
 KINGSTRA_DIR=~/.config/kingstra-dots bash <(curl -fsSL https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh)
 ```
 
-**Handmatig (na klonen):**
+**Manual (after cloning):**
 ```bash
-# Één fase uitvoeren
+# Run a single phase
 bash install.sh --phase 09_wallpaper
 
-# Vanaf een fase verdergaan
+# Continue from a specific phase
 bash install.sh --from-phase 10_session
 
-# Feature-flags overschrijven
+# Override feature flags
 echo "ENABLE_FINGERPRINT=false" > my-overrides.conf
 bash install.sh --override my-overrides.conf
 ```
 
-### Vereisten
+### Requirements
 
 - Arch Linux (pacman)
-- AUR-helper (`yay` of `paru`) — vereist voor AUR-pakketten
+- AUR helper (`yay` or `paru`) — required for AUR packages
 - bash 4.4+
 - git
 
 ---
 
-## Installatiefasen
+## Installation phases
 
-| # | Fase | Inhoud |
+| # | Phase | Description |
 |---|---|---|
-| 01 | Projectskelet | Mappenstructuur, installervalidatie |
+| 01 | Project base | Directory structure, installer validation |
 | 02 | Shell/terminal | zsh, oh-my-posh, kitty, fastfetch, cava |
-| 03 | Hyprland core | Modulaire config, screenshots, GTK, portalen |
-| 04 | Bindingen | 5 bind-bestanden, duplicaatcontrole |
-| 05 | Quickshell UI | Topbar, workspaces, klok, stats, media, power |
-| 06 | Meldingen | SwayNC: control center, mpris, DND |
-| 07 | Launcher | Walker: app launcher, ssh, calculatie |
-| 08 | Thema | Matugen: kleuren uit wallpaper voor alle apps |
-| 09 | Wallpaper | hyprpaper + mpvpaper, orchestrator, fzf-picker |
-| 10 | Sessie | hyprlock, hypridle, SDDM |
+| 03 | Hyprland core | Modular config, screenshots, GTK, portals |
+| 04 | Bindings | 5 bind files, duplicate checking |
+| 05 | Quickshell UI | Top bar, workspaces, clock, stats, media, power |
+| 06 | Notifications | SwayNC: control center, mpris, DND |
+| 07 | Launcher | Walker: app launcher, ssh, calculator |
+| 08 | Theming | Matugen: colors from wallpaper for all apps |
+| 09 | Wallpaper | hyprpaper + mpvpaper, orchestrator, fzf picker |
+| 10 | Session | hyprlock, hypridle, SDDM |
 | 11 | Apps | Nautilus, yazi, cliphist, playerctl, screenshots |
-| 12 | Netwerk/resume | NetworkManager, Bluetooth, post-suspend fixes |
+| 12 | Network/resume | NetworkManager, Bluetooth, post-suspend fixes |
 | 13 | Monitoring | StatsPopup, lm_sensors, btop |
-| 14 | Hardware | Automatische GPU/laptop/touchpad/fingerprint-aanpassing |
-| 15 | Validatie | Eindcontrole van alle componenten |
+| 14 | Hardware | Automatic GPU/laptop/touchpad/fingerprint detection |
+| 15 | Validation | Final check of all components |
 
 ---
 
-## Wallpaper en thema
+## Wallpaper and theming
 
 ```bash
-# Statisch wallpaper instellen (triggert automatisch Matugen)
-kingstra-wallpaper set ~/Pictures/Wallpapers/foto.png
+# Set static wallpaper (automatically triggers Matugen)
+kingstra-wallpaper set ~/Pictures/Wallpapers/photo.png
 
-# Videowallpaper
-kingstra-wallpaper video ~/Videos/achtergrond.mp4
+# Video wallpaper
+kingstra-wallpaper video ~/Videos/background.mp4
 
-# Willekeurig
+# Random
 kingstra-wallpaper random
 
-# Interactieve picker (fzf + preview)
+# Interactive picker (fzf + preview)
 kingstra-wallpaper pick
 
 # Status
@@ -103,20 +103,20 @@ kingstra-wallpaper status
 
 ---
 
-## Hardware-detectie
+## Hardware detection
 
-De installer detecteert automatisch:
+The installer automatically detects:
 
-| Hardware | Variabele | Actie |
+| Hardware | Variable | Action |
 |---|---|---|
 | Nvidia GPU | `DETECT_GPU=nvidia` | env vars, cursor fix, nvidia-utils |
 | AMD GPU | `DETECT_GPU=amd` | VA-API driver (radeonsi) |
-| Laptop/batterij | `DETECT_IS_LAPTOP=true` | power-profiles, korte timeouts |
+| Laptop/battery | `DETECT_IS_LAPTOP=true` | power-profiles, short timeouts |
 | Backlight | `DETECT_HAS_BACKLIGHT=true` | brightnessctl, hypridle dim |
 | Touchpad | `DETECT_HAS_TOUCHPAD=true` | natural scroll, tap-to-click |
-| Vingerafdruk | `DETECT_HAS_FINGERPRINT=true` | fprintd, PAM-configuratie |
+| Fingerprint | `DETECT_HAS_FINGERPRINT=true` | fprintd, PAM configuration |
 
-Om gedetecteerde waarden te overschrijven:
+To override detected values:
 ```bash
 # my-overrides.conf
 ENABLE_FINGERPRINT=false
@@ -126,41 +126,45 @@ ENABLE_SPICETIFY=true
 
 ---
 
-## Belangrijke paden
+## Important paths
 
-| Pad | Inhoud |
+| Path | Contents |
 |---|---|
-| `~/.config/hypr/` | Hyprland configuratie (symlink naar repo) |
-| `~/.config/hypr/conf.d/72-hardware.conf` | Gegenereerde hardware-config |
-| `~/.config/quickshell/` | Quickshell/QML topbar |
+| `~/.config/hypr/` | Hyprland configuration (symlinked from repo) |
+| `~/.config/hypr/conf.d/72-hardware.conf` | Generated hardware config |
+| `~/.config/quickshell/` | Quickshell/QML top bar |
 | `~/.config/matugen/` | Matugen templates |
-| `~/.config/kingstra-dots/` | Deze repo |
+| `~/.config/kingstra-dots/` | This repo |
 | `~/.local/bin/kingstra-*` | Installer scripts |
 | `~/.local/share/kingstra/` | Logs, backups, markers |
 | `~/Pictures/Wallpapers/` | Wallpapers |
 
 ---
 
-## Toetscombinaties
+## Keybindings
 
-Zie [docs/keybindings.md](docs/keybindings.md) voor de volledige lijst.
+See [docs/keybindings.md](docs/keybindings.md) for the full list.
 
-Snel overzicht:
+Quick overview:
 
-| Combinatie | Actie |
+| Keybinding | Action |
 |---|---|
 | `Super + Return` | Kitty |
 | `Super + Ctrl + Return` | Walker launcher |
 | `Super + E` | Nautilus |
-| `Super + Shift + E` | Yazi (terminal bestandsbeheer) |
+| `Super + Shift + E` | Yazi (terminal file manager) |
 | `Super + N` | SwayNC control center |
-| `Super + V` | Klembordgeschiedenis |
-| `Super + X` | Power-menu |
-| `Super + Alt + N` | nmtui (netwerk) |
+| `Super + V` | Clipboard history |
+| `Super + X` | Power menu |
+| `Super + Alt + N` | nmtui (network) |
 | `Print` | Screenshot |
 
 ---
 
-## Licentie
+## Credits
 
-MIT
+Inspired by [imperative-dots](https://github.com/ilyamiro/imperative-dots) by ilyamiro.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
