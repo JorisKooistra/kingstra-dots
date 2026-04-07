@@ -1,21 +1,16 @@
-/* =============================================================================
-   colors.css — Walker kleurvariabelen
-   AUTOMATISCH GEGENEREERD door matugen (fase 8). Pas dit bestand NIET aan.
-   Standaard: Catppuccin Mocha
-   ============================================================================= */
-
+/* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
 :root {
-  --primary:         #89b4fa;
-  --secondary:       #cba6f7;
-  --error:           #f38ba8;
-  --background:      #1e1e2e;
-  --surface:         #313244;
-  --surface-variant: #45475a;
-  --on-surface:      #cdd6f4;
-  --outline:         #6c7086;
-  --text:            #cdd6f4;
-  --subtext:         #a6adc8;
-  --base:            #1e1e2e;
-  --mantle:          #181825;
-  --crust:           #11111b;
+  --primary:         #a9cdd6;
+  --secondary:       #bbc9cd;
+  --error:           #ffb4ab;
+  --background:      #121414;
+  --surface:         #121414;
+  --surface-variant: #41484a;
+  --on-surface:      #e3e2e2;
+  --outline:         #8b9294;
+  --text:            #e3e2e2;
+  --subtext:         #c1c8ca;
+  --base:            #121414;
+  --mantle:          #000000;
+  --crust:           #000000;
 }

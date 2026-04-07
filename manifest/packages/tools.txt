@@ -15,6 +15,9 @@ aur:oh-my-posh-bin
 
 # Launcher
 aur:walker-bin
+aur:elephant
+aur:elephant-desktopapplications-bin
+aur:elephant-providerlist-bin
 
 # Systeeminfo
 fastfetch

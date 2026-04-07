@@ -68,9 +68,11 @@ exec-once = quickshell -p ~/.config/quickshell/TopBar.qml
 exec-once = quickshell -p ~/.config/quickshell/Main.qml
 
 # ---------------------------------------------------------------------------
-# Launcher daemon (walker — verplicht voor app-lijst en D-Bus activatie)
+# Launcher daemon (elephant + walker)
+# elephant moet vóór walker starten (datasource backend)
 # ---------------------------------------------------------------------------
-exec-once = walker --daemon
+exec-once = elephant
+exec-once = walker --gapplication-service
 
 # ---------------------------------------------------------------------------
 # OSD daemon (volume/brightness overlay via SwayOSD)

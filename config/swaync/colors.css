@@ -1,40 +1,30 @@
-/* =============================================================================
-   colors.css — SwayNC kleurvariabelen
-   AUTOMATISCH GEGENEREERD door matugen (fase 8). Pas dit bestand NIET aan.
-   Standaard: Catppuccin Mocha
-   ============================================================================= */
-
+/* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
 :root {
-  --primary:            #89b4fa;
-  --on-primary:         #1e1e2e;
-  --primary-container:  #313244;
-  --secondary:          #cba6f7;
-  --on-secondary:       #1e1e2e;
-  --error:              #f38ba8;
-  --background:         #1e1e2e;
-  --on-background:      #cdd6f4;
-  --surface:            #313244;
-  --on-surface:         #cdd6f4;
-  --surface-variant:    #45475a;
-  --on-surface-variant: #cdd6f4;
-  --outline:            #6c7086;
-  --outline-variant:    #45475a;
-
-  --text:     #cdd6f4;
-  --subtext0: #a6adc8;
-  --subtext1: #bac2de;
-  --overlay0: #6c7086;
-  --surface0: #313244;
-  --surface1: #45475a;
-  --base:     #1e1e2e;
-  --mantle:   #181825;
-  --crust:    #11111b;
-
-  --green:   #a6e3a1;
-  --yellow:  #f9e2af;
-  --peach:   #fab387;
-  --red:     #f38ba8;
-  --mauve:   #cba6f7;
-  --blue:    #89b4fa;
-  --sky:     #89dceb;
+  --primary:            #a9cdd6;
+  --on-primary:         #10353c;
+  --primary-container:  #3c5e66;
+  --secondary:          #bbc9cd;
+  --on-secondary:       #263236;
+  --error:              #ffb4ab;
+  --background:         #121414;
+  --on-background:      #e3e2e2;
+  --surface:            #121414;
+  --on-surface:         #e3e2e2;
+  --surface-variant:    #41484a;
+  --on-surface-variant: #c1c8ca;
+  --outline:            #8b9294;
+  --outline-variant:    #41484a;
+  --text:               #e3e2e2;
+  --subtext0:           #c1c8ca;
+  --surface0:           #121414;
+  --surface1:           #41484a;
+  --base:               #121414;
+  --mantle:             #000000;
+  --crust:              #000000;
+  --green:              #eabe9c;
+  --yellow:             #ffffff;
+  --red:                #ffb4ab;
+  --mauve:              #bbc9cd;
+  --blue:               #a9cdd6;
+  --sky:                #735237;
 }
