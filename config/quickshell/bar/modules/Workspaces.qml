@@ -27,7 +27,8 @@ Item {
                 readonly property int wsId:      index + 1
                 readonly property bool isActive: Hyprland.activeWorkspace?.id === wsId
                 readonly property bool hasWindows: {
-                    for (const ws of Hyprland.workspaces) {
+                    const list = Hyprland.workspaces.values ?? []
+                    for (const ws of list) {
                         if (ws.id === wsId && ws.windowCount > 0) return true
                     }
                     return false

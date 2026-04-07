@@ -89,14 +89,14 @@ Item {
     FileView {
         id: cpuFile
         path: "/proc/stat"
-        onTextChanged: _parseCpu(text)
+        onTextChanged: root._parseCpu(cpuFile.text)
     }
 
     // /proc/meminfo — RAM
     FileView {
         id: memFile
         path: "/proc/meminfo"
-        onTextChanged: _parseMem(text)
+        onTextChanged: root._parseMem(memFile.text)
     }
 
     // Prikkel beide bestanden elke 3 seconden

@@ -17,12 +17,16 @@ PanelWindow {
     // Koppeling met de ouderbar voor monitor + hoogte
     property PanelWindow parentBar
 
+    // Zelfde scherm als de bar
+    screen: parentBar?.screen ?? null
+
     // ---------------------------------------------------------------------------
     // Layershell configuratie
     // ---------------------------------------------------------------------------
-    WlrLayershell.monitor: parentBar ? parentBar.WlrLayershell.monitor : null
-    WlrLayershell.layer:   WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    WlrLayershell {
+        layer:         WlrLayershell.Overlay
+        keyboardFocus: WlrKeyboardFocus.None
+    }
 
     anchors { top: true; right: true }
     margins {
@@ -30,8 +34,8 @@ PanelWindow {
         right: 8
     }
 
-    width:  248
-    height: content.implicitHeight + 24
+    implicitWidth:  248
+    implicitHeight: content.implicitHeight + 24
     color:  "transparent"
 
     // ---------------------------------------------------------------------------
@@ -233,21 +237,23 @@ PanelWindow {
     property var _prevNet: null
 
     // CPU
-    FileView { id: cpuF; path: "/proc/stat";   onTextChanged: _parseCpu(text) }
+    FileView { id: cpuF; path: "/proc/stat";   onTextChanged: statsPopup._parseCpu(cpuF.text) }
     // RAM
-    FileView { id: memF; path: "/proc/meminfo"; onTextChanged: _parseMem(text) }
+    FileView { id: memF; path: "/proc/meminfo"; onTextChanged: statsPopup._parseMem(memF.text) }
     // Temperatuur (kernel thermal zone 0)
-    FileView { id: tmpF; path: "/sys/class/thermal/thermal_zone0/temp"; onTextChanged: _parseTemp(text) }
+    FileView { id: tmpF; path: "/sys/class/thermal/thermal_zone0/temp"; onTextChanged: statsPopup._parseTemp(tmpF.text) }
     // Netwerk
-    FileView { id: netF; path: "/proc/net/dev"; onTextChanged: _parseNet(text) }
+    FileView { id: netF; path: "/proc/net/dev"; onTextChanged: statsPopup._parseNet(netF.text) }
     // Uptime
-    FileView { id: upF;  path: "/proc/uptime";  onTextChanged: _parseUptime(text) }
+    FileView { id: upF;  path: "/proc/uptime";  onTextChanged: statsPopup._parseUptime(upF.text) }
 
     // Disk — via Process (df)
     Process {
         id: dfProc
         command: ["df", "-BM", "--output=size,used,avail", "/"]
-        onExited: _parseDisk(stdout)
+        stdout: StdioCollector {
+            onStreamFinished: statsPopup._parseDisk(this.text)
+        }
     }
 
     // btop — opent in kitty

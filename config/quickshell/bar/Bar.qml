@@ -15,12 +15,6 @@ PanelWindow {
     id: bar
 
     // ---------------------------------------------------------------------------
-    // Scherm-koppeling (ingesteld door shell.qml via Variants)
-    // ---------------------------------------------------------------------------
-    property var screen: null
-    WlrLayershell.monitor: bar.screen
-
-    // ---------------------------------------------------------------------------
     // Positie en grootte
     // ---------------------------------------------------------------------------
     anchors {
@@ -28,10 +22,10 @@ PanelWindow {
         left:  true
         right: true
     }
-    height: 36
+    implicitHeight: 36
 
     // Reserveer ruimte voor de bar — vensters beginnen eronder
-    exclusiveZone: height
+    exclusiveZone: implicitHeight
 
     // ---------------------------------------------------------------------------
     // Uiterlijk — transparant + blur (blur via Hyprland layerrule)

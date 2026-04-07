@@ -3,13 +3,23 @@
 // =============================================================================
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import "../../"
 
 Item {
     id: root
     implicitWidth:  layout.implicitWidth + 16
     implicitHeight: 26
+
+    property var _now: new Date()
+
+    // Update elke minuut
+    Timer {
+        interval: 60000
+        running:  true
+        repeat:   true
+        triggeredOnStart: true
+        onTriggered: root._now = new Date()
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -24,7 +34,7 @@ Item {
 
         // Datum
         Text {
-            text: Qt.formatDate(SystemClock.date, "ddd d MMM")
+            text: Qt.formatDate(root._now, "ddd d MMM")
             color: Colors.subtext0
             font {
                 family:    "Fira Sans"
@@ -40,7 +50,7 @@ Item {
 
         // Tijd
         Text {
-            text: Qt.formatTime(SystemClock.time, "HH:mm")
+            text: Qt.formatTime(root._now, "HH:mm")
             color: Colors.text
             font {
                 family:    "JetBrainsMono Nerd Font"
@@ -48,11 +58,6 @@ Item {
                 bold:      true
             }
         }
-    }
-
-    // Klok tikt elke minuut
-    SystemClock {
-        precision: SystemClock.Minutes
     }
 
     MouseArea {
