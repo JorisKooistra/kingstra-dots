@@ -56,7 +56,7 @@ phase_run() {
     validate_cmd grim
     validate_cmd slurp
     validate_cmd yazi
-    validate_cmd polkit-gnome-authentication-agent-1 || true  # pad-variant
+    validate_file "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1" "polkit-gnome"
     validate_dir  "$HOME/.config/yazi" "yazi config"
     validate_file "$HOME/.config/yazi/yazi.toml"    "yazi.toml"
     validate_file "$HOME/.config/yazi/keymap.toml"  "yazi keymap.toml"
