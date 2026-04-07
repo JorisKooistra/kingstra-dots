@@ -179,6 +179,9 @@ main() {
         apply_overrides "$OVERRIDE_FILE"
     fi
 
+    # Back-upmap aanmaken met vaste timestamp voor de hele sessie
+    backup_init
+
     print_banner
     print_system_info
 
@@ -189,6 +192,9 @@ main() {
     if $DRY_RUN; then
         log_warn "DRY-RUN modus actief — geen wijzigingen worden doorgevoerd."
     fi
+
+    # Pre-flight: back-up alle bestaande dotfiles vóór de eerste fase
+    backup_preflight
 
     run_phases
 

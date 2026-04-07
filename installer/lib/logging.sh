@@ -89,11 +89,14 @@ EOF
 
 print_system_info() {
     echo ""
-    printf "  ${_BOLD}Profiel:${_RESET}    %s\n" "${PROFILE:-default}"
     printf "  ${_BOLD}Distro:${_RESET}     %s\n" "${DETECTED_DISTRO:-onbekend}"
-    printf "  ${_BOLD}Nvidia:${_RESET}     %s\n" "${HAS_NVIDIA:-nee}"
-    printf "  ${_BOLD}Laptop:${_RESET}     %s\n" "${IS_LAPTOP:-nee}"
+    printf "  ${_BOLD}GPU:${_RESET}        %s\n" "${DETECT_GPU:-onbekend}"
+    printf "  ${_BOLD}Laptop:${_RESET}     %s\n" "${DETECT_IS_LAPTOP:-false}"
+    printf "  ${_BOLD}Touchpad:${_RESET}   %s\n" "${DETECT_HAS_TOUCHPAD:-false}"
+    printf "  ${_BOLD}Fingerprint:${_RESET}%s\n" "${DETECT_HAS_FINGERPRINT:-false}"
+    printf "  ${_BOLD}AUR-helper:${_RESET} %s\n" "${AUR_HELPER:-geen}"
     printf "  ${_BOLD}Dry-run:${_RESET}    %s\n" "${DRY_RUN:-false}"
+    printf "  ${_BOLD}Back-up:${_RESET}    %s\n" "${BACKUP_DIR:-wordt aangemaakt}"
     printf "  ${_BOLD}Logbestand:${_RESET} %s\n" "$LOG_FILE"
     echo ""
 }
