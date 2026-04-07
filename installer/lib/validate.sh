@@ -53,24 +53,31 @@ validate_dir() {
 }
 
 # Controleer of een symlink correct wijst (overgeslagen in dry-run)
+# validate_link <link> <verwacht_doel> [label]
+# Als expected_target leeg is, wordt alleen gecontroleerd of het een symlink is.
 validate_link() {
     local link="$1"
-    local expected_target="$2"
+    local expected_target="${2:-}"
+    local label="${3:-$link}"
     if "${DRY_RUN:-false}"; then
-        log_dry "Symlink-check overgeslagen (dry-run): $link"
+        log_dry "Symlink-check overgeslagen (dry-run): $label"
         return 0
     fi
     if [[ -L "$link" ]]; then
+        if [[ -z "$expected_target" ]]; then
+            log_ok "Symlink aanwezig: $label"
+            return 0
+        fi
         local actual_target
         actual_target="$(readlink "$link")"
         if [[ "$actual_target" == "$expected_target" ]]; then
-            log_ok "Symlink correct: $link"
+            log_ok "Symlink correct: $label"
         else
-            log_error "Symlink wijst verkeerd: $link → $actual_target (verwacht: $expected_target)"
+            log_error "Symlink wijst verkeerd: $label → $actual_target (verwacht: $expected_target)"
             (( VALIDATE_ERRORS++ )) || true
         fi
     else
-        log_error "Geen symlink: $link"
+        log_error "Geen symlink: $label"
         (( VALIDATE_ERRORS++ )) || true
     fi
 }

@@ -95,17 +95,20 @@ _phase15_validate_configs() {
 }
 
 _phase15_validate_links() {
-    validate_link "$HOME/.config/hypr"        "~/.config/hypr → repo"
-    validate_link "$HOME/.config/quickshell"  "~/.config/quickshell → repo"
-    validate_link "$HOME/.config/matugen"     "~/.config/matugen → repo"
-    validate_link "$HOME/.config/swaync"      "~/.config/swaync → repo"
-    validate_link "$HOME/.config/walker"      "~/.config/walker → repo"
-    validate_link "$HOME/.config/kitty"       "~/.config/kitty → repo"
-    validate_link "$HOME/.config/yazi"        "~/.config/yazi → repo"
-    validate_link "$HOME/.config/hyprpaper"   "~/.config/hyprpaper → repo"
-    validate_link "$HOME/.config/hypridle"    "~/.config/hypridle → repo"
-    validate_link "$HOME/.local/bin/kingstra-theme-apply" "kingstra-theme-apply script"
-    validate_link "$HOME/.local/bin/kingstra-wallpaper"   "kingstra-wallpaper script"
+    local cfg="$REPO_ROOT/config"
+    validate_link "$HOME/.config/hypr"       "$cfg/hypr"       "~/.config/hypr"
+    validate_link "$HOME/.config/quickshell" "$cfg/quickshell" "~/.config/quickshell"
+    validate_link "$HOME/.config/matugen"    "$cfg/matugen"    "~/.config/matugen"
+    validate_link "$HOME/.config/swaync"     "$cfg/swaync"     "~/.config/swaync"
+    validate_link "$HOME/.config/walker"     "$cfg/walker"     "~/.config/walker"
+    validate_link "$HOME/.config/kitty"      "$cfg/kitty"      "~/.config/kitty"
+    validate_link "$HOME/.config/yazi"       "$cfg/yazi"       "~/.config/yazi"
+    validate_link "$HOME/.config/hyprpaper"  "$cfg/hyprpaper"  "~/.config/hyprpaper"
+    validate_link "$HOME/.config/hypridle"   "$cfg/hypridle"   "~/.config/hypridle"
+    validate_link "$HOME/.local/bin/kingstra-theme-apply" \
+                  "$cfg/shared/scripts/matugen-apply.sh"  "kingstra-theme-apply"
+    validate_link "$HOME/.local/bin/kingstra-wallpaper" \
+                  "$cfg/shared/scripts/kingstra-wallpaper.sh" "kingstra-wallpaper"
 }
 
 _phase15_write_marker() {
