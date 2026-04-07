@@ -40,7 +40,7 @@ Variants {
             property int barHeight: s(48)
 
             // THICKER BAR, MINIMAL MARGINS (Scaled)
-            height: barHeight
+            implicitHeight: barHeight
             margins { top: s(8); bottom: 0; left: s(4); right: s(4) }
             
             // exclusiveZone = height + top margin
