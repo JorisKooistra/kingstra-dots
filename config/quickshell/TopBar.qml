@@ -434,7 +434,7 @@ Variants {
                             id: searchMouse
                             anchors.fill: parent
                             hoverEnabled: true
-                            onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/rofi_show.sh drun"])
+                            onClicked: Quickshell.execDetached(["bash", "-c", "walker"])
                         }
                     }
 

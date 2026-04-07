@@ -79,9 +79,10 @@ _phase05_activate_widget_binds() {
 
 _phase05_validate() {
     validate_cmd quickshell
-    validate_file "$HOME/.config/quickshell/shell.qml"       "shell.qml"
-    validate_file "$HOME/.config/quickshell/TopBar.qml"      "TopBar.qml"
-    validate_file "$HOME/.config/quickshell/Main.qml"        "Main.qml"
+    validate_file "$HOME/.config/quickshell/TopBar.qml"        "TopBar.qml"
+    validate_file "$HOME/.config/quickshell/Main.qml"          "Main.qml"
     validate_file "$HOME/.config/quickshell/MatugenColors.qml" "MatugenColors.qml"
+    validate_file "$HOME/.config/quickshell/sys_info.sh"       "sys_info.sh"
+    validate_file "$HOME/.config/hypr/scripts/qs_manager.sh"   "qs_manager.sh"
     validate_report
 }

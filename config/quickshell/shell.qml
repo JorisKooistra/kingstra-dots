@@ -1,16 +1,8 @@
 // =============================================================================
-// shell.qml — Quickshell entry point — kingstra-dots
+// shell.qml — NIET GEBRUIKT als entry point
 // =============================================================================
-// Laadt TopBar (per scherm) en Main (popup master window) tegelijk.
-// Start met: quickshell -p ~/.config/quickshell/shell.qml
+// TopBar en Main worden als aparte processen gestart vanuit autostart:
+//   exec-once = quickshell -p ~/.config/quickshell/TopBar.qml
+//   exec-once = quickshell -p ~/.config/quickshell/Main.qml
+//   exec-once = quickshell -p ~/.config/skwd-wall/daemon.qml
 // =============================================================================
-import QtQuick
-import Quickshell
-
-ShellRoot {
-    // Topbar — één per scherm (zit al in TopBar.qml als Variants)
-    Loader { source: "TopBar.qml" }
-
-    // Popup master window (wallpaper picker, music, network, etc.)
-    Loader { source: "Main.qml" }
-}

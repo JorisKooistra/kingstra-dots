@@ -35,7 +35,7 @@ _phase15_validate_commands() {
     # Kern
     validate_cmd hyprland
     validate_cmd hyprctl
-    validate_cmd hyprpaper
+    validate_cmd awww
     validate_cmd hypridle
     validate_cmd hyprlock
     # Shell
