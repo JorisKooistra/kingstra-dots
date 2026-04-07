@@ -114,6 +114,14 @@ fi
 # GTK — gsettings prikkel voor thema-refresh
 gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" 2>/dev/null || true
 
+# SDDM — wallpaper bijwerken in theme.conf (zodat loginscherm klopt)
+SDDM_THEME_CONF="/usr/share/sddm/themes/kingstra/theme.conf"
+if [[ -f "$SDDM_THEME_CONF" ]]; then
+    if sudo -n sed -i "s|^background=.*|background=$WALLPAPER|" "$SDDM_THEME_CONF" 2>/dev/null; then
+        _log "SDDM-wallpaper bijgewerkt"
+    fi
+fi
+
 # ---------------------------------------------------------------------------
 # Stap 4 — Afgerond
 # ---------------------------------------------------------------------------

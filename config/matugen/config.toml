@@ -47,3 +47,7 @@ output_path = "~/.config/qt6ct/colors/kingstra.conf"
 [templates.hyprlock]
 input_path  = "~/.config/matugen/templates/hyprlock.conf"
 output_path = "~/.config/hyprlock/hyprlock.conf"
+
+[templates.sddm-colors]
+input_path  = "~/.config/matugen/templates/sddm-colors.qml"
+output_path = "/usr/share/sddm/themes/kingstra/Colors.qml"

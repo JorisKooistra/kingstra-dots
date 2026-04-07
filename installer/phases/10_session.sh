@@ -38,8 +38,8 @@ phase_run() {
     validate_report
 
     log_ok "Fase 10 voltooid — Sessielaag actief."
-    log_info "Handmatig vergrendelen: hyprlock"
-    log_info "Hyprlock stijl aanpassen: kingstra-theme-apply <wallpaper>"
+    log_info "Vergrendelen:      Super+Ctrl+L (Quickshell Lock.qml)"
+    log_info "Kleuren bijwerken: kingstra-theme-apply <wallpaper>  (werkt ook voor SDDM)"
 }
 
 # ---------------------------------------------------------------------------
@@ -47,12 +47,40 @@ phase_run() {
 _phase10_install_sddm() {
     pacman_install sddm
 
-    # SDDM Catppuccin Mocha theme (AUR)
-    if [[ "${ENABLE_SDDM:-true}" == "true" ]]; then
-        aur_install sddm-catppuccin-mocha-git 2>/dev/null || {
-            log_warn "sddm-catppuccin-mocha-git niet beschikbaar — standaard SDDM-theme wordt gebruikt"
-            log_info "  Alternatief: sddm-theme-catppuccin-git (beschikbaar via AUR)"
-        }
+    if [[ "${ENABLE_SDDM:-true}" != "true" ]]; then
+        return 0
+    fi
+
+    log_step "Kingstra SDDM-theme installeren..."
+    _phase10_install_sddm_theme
+}
+
+_phase10_install_sddm_theme() {
+    local theme_src="$REPO_ROOT/config/sddm/themes/kingstra"
+    local theme_dest="/usr/share/sddm/themes/kingstra"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "SDDM-theme zou worden geïnstalleerd: $theme_dest"
+        return 0
+    fi
+
+    sudo mkdir -p "$theme_dest"
+    sudo cp -r "$theme_src/." "$theme_dest/"
+    log_ok "SDDM-theme geïnstalleerd: $theme_dest"
+
+    # Schrijfrechten geven voor matugen (Colors.qml wordt gegenereerd)
+    sudo chmod 777 "$theme_dest"
+    log_ok "Matugen kan Colors.qml schrijven naar $theme_dest"
+
+    # Wallpaper uit kingstra state instellen als theme-achtergrond
+    local state_file="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
+    if [[ -f "$state_file" ]]; then
+        local wallpaper
+        wallpaper="$(cat "$state_file")"
+        if [[ -f "$wallpaper" ]]; then
+            sudo sed -i "s|^background=.*|background=$wallpaper|" "$theme_dest/theme.conf"
+            log_ok "SDDM-wallpaper ingesteld: $wallpaper"
+        fi
     fi
 }
 
