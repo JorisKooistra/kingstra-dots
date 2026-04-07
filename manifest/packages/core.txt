@@ -30,7 +30,6 @@ xdg-user-dirs
 # Wayland hulpprogramma's
 wl-clipboard
 wlr-randr
-grimblast
 
 # Fonts (kern)
 noto-fonts
