@@ -108,7 +108,7 @@ _phase15_validate_links() {
     validate_link "$HOME/.local/bin/kingstra-theme-apply" \
                   "$cfg/shared/scripts/matugen-apply.sh"  "kingstra-theme-apply"
     validate_link "$HOME/.local/bin/kingstra-wallpaper" \
-                  "$cfg/shared/scripts/kingstra-wallpaper.sh" "kingstra-wallpaper"
+                  "$REPO_ROOT/config/wallpaper/kingstra-wallpaper" "kingstra-wallpaper"
 }
 
 _phase15_write_marker() {
