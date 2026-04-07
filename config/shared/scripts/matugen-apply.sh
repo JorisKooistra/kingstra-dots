@@ -64,16 +64,11 @@ if ! $RELOAD_ONLY; then
     mkdir -p "$(dirname "$STATE_FILE")"
     echo "$WALLPAPER" > "$STATE_FILE"
 
-    # hyprpaper
-    if command -v hyprctl &>/dev/null && command -v hyprpaper &>/dev/null; then
-        hyprctl hyprpaper preload "$WALLPAPER" 2>/dev/null || true
-        # Alle monitors instellen
-        while IFS= read -r monitor; do
-            hyprctl hyprpaper wallpaper "$monitor,$WALLPAPER" 2>/dev/null || true
-        done < <(hyprctl monitors -j 2>/dev/null | \
-            python3 -c "import sys,json; [print(m['name']) for m in json.load(sys.stdin)]" \
-            2>/dev/null || echo "")
-        _log "Wallpaper ingesteld via hyprpaper"
+    # awww
+    if command -v awww &>/dev/null; then
+        awww img "$WALLPAPER" --transition-type random 2>/dev/null || \
+        awww img "$WALLPAPER" 2>/dev/null || true
+        _log "Wallpaper ingesteld via awww"
     fi
 fi
 

@@ -12,33 +12,30 @@
 # =============================================================================
 
 phase_run() {
-    log_step "Statische wallpaper-pakketten installeren..."
-    pacman_install hyprpaper
+    log_step "Wallpaper-pakketten installeren..."
+    aur_install awww-bin                # wallpaper daemon (vervangt hyprpaper)
     pacman_install imagemagick          # voor gradient-fallback + manipulatie
     pacman_install ffmpeg               # voor videothumbnails / -verwerking
     pacman_install sqlite               # walker/history dep, ook nuttig voor indexer
     pacman_install inotify-tools        # voor live-reloadwatcher (optioneel)
     pacman_install chafa                # ASCII/pixel-preview in fzf picker
-    aur_install waypaper                # GUI wallpaper picker (Super+Ctrl+W)
+
+    log_step "skwd-wall installeren..."
+    _phase09_install_skwd_wall
 
     log_step "Videowallpaper-pakket installeren (mpvpaper)..."
     _phase09_install_mpvpaper
 
-    log_step "Hyprpaper-config deployen..."
-    deploy_config "hyprpaper"
-
     log_step "Wallpaper-orchestrator deployen..."
     _phase09_deploy_orchestrator
-
-    log_step "Waypaper-config deployen..."
-    deploy_config "waypaper"
 
     log_step "Wallpaper-map aanmaken..."
     _phase09_ensure_wallpaper_dir
 
     log_step "Fase 09 valideren..."
-    validate_cmd hyprpaper
-    validate_file "$HOME/.config/hyprpaper/hyprpaper.conf" "hyprpaper.conf"
+    validate_cmd awww
+    validate_dir  "$HOME/.config/skwd-wall"                "skwd-wall"
+    validate_file "$HOME/.config/skwd-wall/daemon.qml"     "skwd-wall/daemon.qml"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"    "kingstra-wallpaper"
     validate_dir  "$HOME/Pictures/Wallpapers"              "Pictures/Wallpapers"
     validate_report
@@ -51,6 +48,27 @@ phase_run() {
 }
 
 # ---------------------------------------------------------------------------
+
+_phase09_install_skwd_wall() {
+    local dest="$HOME/.config/skwd-wall"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "skwd-wall zou worden gecloned naar: $dest"
+        return 0
+    fi
+
+    if [[ -d "$dest/.git" ]]; then
+        log_info "skwd-wall al aanwezig — updaten..."
+        git -C "$dest" pull --ff-only 2>/dev/null && \
+            log_ok "skwd-wall bijgewerkt" || \
+            log_warn "skwd-wall update mislukt — bestaande versie behouden"
+        return 0
+    fi
+
+    git clone --depth=1 https://github.com/liixini/skwd-wall "$dest" && \
+        log_ok "skwd-wall gecloned naar: $dest" || \
+        log_warn "skwd-wall klonen mislukt — controleer internetverbinding"
+}
 
 _phase09_install_mpvpaper() {
     # Altijd installeren als profiel video-wallpaper toestaat

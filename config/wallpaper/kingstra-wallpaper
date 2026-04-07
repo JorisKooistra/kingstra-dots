@@ -68,7 +68,7 @@ _monitors() {
 }
 
 # ---------------------------------------------------------------------------
-# Backend: statisch (hyprpaper)
+# Backend: statisch (awww)
 # ---------------------------------------------------------------------------
 _stop_video() {
     if pgrep -x mpvpaper &>/dev/null; then
@@ -84,17 +84,13 @@ _set_static() {
 
     _stop_video
 
-    if ! command -v hyprctl &>/dev/null; then
-        _warn "hyprctl niet gevonden — kan wallpaper niet instellen"
+    if ! command -v awww &>/dev/null; then
+        _warn "awww niet gevonden — kan wallpaper niet instellen"
         return 0
     fi
 
-    # Preload + instellen op alle monitors
-    hyprctl hyprpaper preload "$file" 2>/dev/null || true
-    while IFS= read -r monitor; do
-        [[ -z "$monitor" ]] && continue
-        hyprctl hyprpaper wallpaper "$monitor,$file" 2>/dev/null || true
-    done < <(_monitors)
+    awww img "$file" --transition-type random 2>/dev/null || \
+    awww img "$file" 2>/dev/null || true
 
     _log "Statisch wallpaper ingesteld: $(basename "$file")"
 }
@@ -293,10 +289,10 @@ cmd_status() {
         echo "mpvpaper:  gestopt"
     fi
 
-    if pgrep -x hyprpaper &>/dev/null; then
-        echo "hyprpaper: actief"
+    if pgrep -x awww &>/dev/null; then
+        echo "awww:      actief"
     else
-        echo "hyprpaper: gestopt"
+        echo "awww:      gestopt"
     fi
 }
 
