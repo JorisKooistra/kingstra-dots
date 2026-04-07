@@ -1,0 +1,155 @@
+# =============================================================================
+# theme.toml — Yazi thema (Catppuccin Mocha)
+# Matugen kan dit bestand overschrijven als kingstra-yazi-colors.toml template
+# wordt toegevoegd (zie config/matugen/templates/).
+# =============================================================================
+
+[manager]
+cwd              = { fg = "#89b4fa" }
+
+hovered          = { fg = "#1e1e2e", bg = "#89b4fa" }
+previewed        = { bg = "#313244" }
+count_copied     = { fg = "#1e1e2e", bg = "#a6e3a1" }
+count_cut        = { fg = "#1e1e2e", bg = "#f38ba8" }
+count_selected   = { fg = "#1e1e2e", bg = "#cba6f7" }
+find_keyword     = { fg = "#f9e2af", bold = true }
+find_position    = { fg = "#fab387", bg = "reset", bold = true }
+marker_copied    = { fg = "#a6e3a1", bg = "#a6e3a1" }
+marker_cut       = { fg = "#f38ba8", bg = "#f38ba8" }
+marker_selected  = { fg = "#cba6f7", bg = "#cba6f7" }
+marker_marked    = { fg = "#89dceb", bg = "#89dceb" }
+tab_active       = { fg = "#1e1e2e", bg = "#cba6f7" }
+tab_inactive     = { fg = "#cdd6f4", bg = "#45475a" }
+tab_width        = 1
+count_extracted  = { fg = "#1e1e2e", bg = "#f9e2af" }
+
+border_symbol    = "│"
+border_style     = { fg = "#585b70" }
+
+[status]
+separator_open   = ""
+separator_close  = ""
+separator_style  = { fg = "#45475a", bg = "#313244" }
+mode_normal      = { fg = "#1e1e2e", bg = "#89b4fa", bold = true }
+mode_select      = { fg = "#1e1e2e", bg = "#a6e3a1", bold = true }
+mode_unset       = { fg = "#1e1e2e", bg = "#f38ba8", bold = true }
+progress_label   = { fg = "#ffffff", bold = true }
+progress_normal  = { fg = "#89b4fa", bg = "#313244" }
+progress_error   = { fg = "#f38ba8", bg = "#313244" }
+permissions_t    = { fg = "#89b4fa" }
+permissions_r    = { fg = "#f9e2af" }
+permissions_w    = { fg = "#f38ba8" }
+permissions_x    = { fg = "#a6e3a1" }
+permissions_s    = { fg = "#585b70" }
+
+[input]
+border           = { fg = "#89b4fa" }
+title            = {}
+value            = {}
+selected         = { reversed = true }
+
+[select]
+border           = { fg = "#89b4fa" }
+active           = { fg = "#cba6f7" }
+inactive         = {}
+
+[tasks]
+border           = { fg = "#89b4fa" }
+title            = {}
+hovered          = { fg = "#89b4fa", underline = true }
+
+[which]
+mask             = { bg = "#1e1e2e" }
+cand             = { fg = "#89dceb" }
+rest             = { fg = "#9399b2" }
+desc             = { fg = "#cba6f7" }
+separator        = "  "
+separator_style  = { fg = "#585b70" }
+
+[help]
+on               = { fg = "#cba6f7" }
+run              = { fg = "#89dceb" }
+hovered          = { bg = "#45475a", bold = true }
+footer           = { fg = "#313244", bg = "#cdd6f4" }
+
+[filetype]
+rules = [
+  # Afbeeldingen
+  { mime = "image/*",   fg = "#89dceb" },
+  # Video
+  { mime = "video/*",   fg = "#cba6f7" },
+  # Audio
+  { mime = "audio/*",   fg = "#fab387" },
+  # Archieven
+  { mime = "application/zip",              fg = "#f38ba8" },
+  { mime = "application/x-tar",            fg = "#f38ba8" },
+  { mime = "application/gzip",             fg = "#f38ba8" },
+  { mime = "application/x-7z-compressed",  fg = "#f38ba8" },
+  { mime = "application/x-rar",            fg = "#f38ba8" },
+  # Broncode
+  { mime = "text/*",    fg = "#a6e3a1" },
+  # Uitvoerbare bestanden
+  { name = "*.sh",      fg = "#a6e3a1" },
+  # Verborgen bestanden
+  { name = ".*",        fg = "#9399b2" },
+  # Map
+  { name = "*/",        fg = "#89b4fa" },
+]
+
+[icon]
+rules = [
+  # Mappen
+  { name = "*/",        text = " " },
+  # Verborgen
+  { name = ".*",        text = " " },
+  # Git
+  { name = ".git/",     text = " " },
+  { name = ".github/",  text = " " },
+  # Scripts
+  { name = "*.sh",      text = " " },
+  { name = "*.bash",    text = " " },
+  { name = "*.zsh",     text = " " },
+  # Configuratie
+  { name = "*.toml",    text = " " },
+  { name = "*.json",    text = " " },
+  { name = "*.yaml",    text = " " },
+  { name = "*.yml",     text = " " },
+  { name = "*.conf",    text = " " },
+  # Markup
+  { name = "*.md",      text = " " },
+  { name = "*.html",    text = " " },
+  { name = "*.css",     text = " " },
+  # Programmeertalen
+  { name = "*.py",      text = " " },
+  { name = "*.rs",      text = " " },
+  { name = "*.go",      text = " " },
+  { name = "*.js",      text = " " },
+  { name = "*.ts",      text = " " },
+  { name = "*.c",       text = " " },
+  { name = "*.cpp",     text = " " },
+  # Afbeeldingen
+  { name = "*.jpg",     text = " " },
+  { name = "*.jpeg",    text = " " },
+  { name = "*.png",     text = " " },
+  { name = "*.webp",    text = " " },
+  { name = "*.svg",     text = " " },
+  # Video
+  { name = "*.mp4",     text = " " },
+  { name = "*.mkv",     text = " " },
+  { name = "*.webm",    text = " " },
+  # Audio
+  { name = "*.mp3",     text = " " },
+  { name = "*.flac",    text = " " },
+  { name = "*.ogg",     text = " " },
+  # Archieven
+  { name = "*.zip",     text = " " },
+  { name = "*.tar",     text = " " },
+  { name = "*.gz",      text = " " },
+  { name = "*.7z",      text = " " },
+  # Overig
+  { name = "*.pdf",     text = " " },
+  { name = "*.txt",     text = " " },
+  { name = "Makefile",  text = " " },
+  { name = "LICENSE",   text = " " },
+  { name = "README*",   text = " " },
+]

@@ -1,0 +1,142 @@
+# =============================================================================
+# keymap.toml — Yazi toetsenindeling
+# =============================================================================
+# Vim-stijl met extra kingstra-bindingen bovenop de standaard Yazi-defaults.
+
+[manager]
+keymap = [
+  # ---------------------------------------------------------------------------
+  # Navigatie
+  # ---------------------------------------------------------------------------
+  { on = "h",         run = "leave",                           desc = "Ga naar bovenliggende map" },
+  { on = "l",         run = "enter",                           desc = "Ga map in / open bestand" },
+  { on = "j",         run = "arrow 1",                         desc = "Omlaag" },
+  { on = "k",         run = "arrow -1",                        desc = "Omhoog" },
+  { on = "J",         run = "arrow 5",                         desc = "5 omlaag" },
+  { on = "K",         run = "arrow -5",                        desc = "5 omhoog" },
+  { on = "<Up>",      run = "arrow -1",                        desc = "Omhoog" },
+  { on = "<Down>",    run = "arrow 1",                         desc = "Omlaag" },
+  { on = "<Left>",    run = "leave",                           desc = "Bovenliggende map" },
+  { on = "<Right>",   run = "enter",                           desc = "Map in / open" },
+  { on = "g",         run = "arrow -99999999",                 desc = "Naar boven" },
+  { on = "G",         run = "arrow 99999999",                  desc = "Naar beneden" },
+  { on = "<Ctrl-u>",  run = "arrow -50%",                      desc = "Halve pagina omhoog" },
+  { on = "<Ctrl-d>",  run = "arrow 50%",                       desc = "Halve pagina omlaag" },
+  { on = "<Ctrl-b>",  run = "arrow -100%",                     desc = "Pagina omhoog" },
+  { on = "<Ctrl-f>",  run = "arrow 100%",                      desc = "Pagina omlaag" },
+
+  # ---------------------------------------------------------------------------
+  # Tabbladen
+  # ---------------------------------------------------------------------------
+  { on = "t",         run = "tab_create --current",            desc = "Nieuw tabblad" },
+  { on = "1",         run = "tab_switch 0",                    desc = "Tabblad 1" },
+  { on = "2",         run = "tab_switch 1",                    desc = "Tabblad 2" },
+  { on = "3",         run = "tab_switch 2",                    desc = "Tabblad 3" },
+  { on = "[",         run = "tab_switch -1 --relative",        desc = "Vorig tabblad" },
+  { on = "]",         run = "tab_switch 1 --relative",         desc = "Volgend tabblad" },
+
+  # ---------------------------------------------------------------------------
+  # Selectie
+  # ---------------------------------------------------------------------------
+  { on = "<Space>",   run = ["select --state=none", "arrow 1"], desc = "Selecteer/deselecteer" },
+  { on = "v",         run = "visual_mode",                     desc = "Visuele modus" },
+  { on = "V",         run = "select_all --state=true",         desc = "Alles selecteren" },
+  { on = "<Esc>",     run = ["escape", "select_all --state=false"], desc = "Selectie wissen / escape" },
+
+  # ---------------------------------------------------------------------------
+  # Bestandsbewerkingen
+  # ---------------------------------------------------------------------------
+  { on = "o",         run = "open",                            desc = "Openen met standaardapp" },
+  { on = "O",         run = "open --interactive",              desc = "Openen met... (kiezen)" },
+  { on = "r",         run = "rename",                          desc = "Hernoemen" },
+  { on = "d",         run = "remove --permanently",            desc = "Verwijderen (permanent)" },
+  { on = "D",         run = "trash",                           desc = "Naar prullenbak" },
+  { on = "a",         run = "create",                          desc = "Bestand/map aanmaken" },
+  { on = "y",         run = ["yank", "escape"],                desc = "Kopiëren" },
+  { on = "Y",         run = ["unyank", "escape"],              desc = "Kopiëren ongedaan" },
+  { on = "x",         run = ["yank --cut", "escape"],          desc = "Knippen" },
+  { on = "p",         run = "paste",                           desc = "Plakken" },
+  { on = "P",         run = "paste --force",                   desc = "Plakken (overschrijven)" },
+
+  # ---------------------------------------------------------------------------
+  # Zoeken en filteren
+  # ---------------------------------------------------------------------------
+  { on = "/",         run = "find",                            desc = "Zoeken (vooruit)" },
+  { on = "?",         run = "find --previous",                 desc = "Zoeken (achteruit)" },
+  { on = "n",         run = "find_arrow",                      desc = "Volgend zoekresultaat" },
+  { on = "N",         run = "find_arrow --previous",           desc = "Vorig zoekresultaat" },
+  { on = "f",         run = "filter",                          desc = "Filteren" },
+  { on = "s",         run = "search fd",                       desc = "Zoeken met fd" },
+  { on = "S",         run = "search rg",                       desc = "Zoeken in inhoud (rg)" },
+  { on = "<Ctrl-c>",  run = "search --close",                  desc = "Zoekopdracht sluiten" },
+
+  # ---------------------------------------------------------------------------
+  # Weergave
+  # ---------------------------------------------------------------------------
+  { on = ".",         run = "hidden toggle",                   desc = "Verborgen bestanden tonen/verbergen" },
+  { on = "z",         run = "plugin zoxide",                   desc = "Zoxide navigeren" },
+  { on = "Z",         run = "plugin fzf",                      desc = "FZF navigeren" },
+
+  # ---------------------------------------------------------------------------
+  # Kopieer naar klembord
+  # ---------------------------------------------------------------------------
+  { on = ["c", "c"],  run = "copy path",                       desc = "Pad kopiëren" },
+  { on = ["c", "d"],  run = "copy dirname",                    desc = "Map kopiëren" },
+  { on = ["c", "f"],  run = "copy filename",                   desc = "Bestandsnaam kopiëren" },
+  { on = ["c", "n"],  run = "copy name_without_ext",           desc = "Naam (zonder ext.) kopiëren" },
+
+  # ---------------------------------------------------------------------------
+  # Sortering
+  # ---------------------------------------------------------------------------
+  { on = ["S", "a"],  run = "sort alphabetical --dir-first",   desc = "Sorteer: alfabet" },
+  { on = ["S", "s"],  run = "sort size --dir-first",           desc = "Sorteer: grootte" },
+  { on = ["S", "m"],  run = "sort mtime --dir-first",          desc = "Sorteer: wijzigingstijd" },
+
+  # ---------------------------------------------------------------------------
+  # Overig
+  # ---------------------------------------------------------------------------
+  { on = "q",         run = "quit",                            desc = "Afsluiten" },
+  { on = "Q",         run = "quit --no-cwd-file",              desc = "Afsluiten zonder map te onthouden" },
+  { on = "~",         run = "help",                            desc = "Help" },
+  { on = "<F1>",      run = "help",                            desc = "Help" },
+]
+
+[tasks]
+keymap = [
+  { on = "<Esc>", run = "close", desc = "Takenvenster sluiten" },
+  { on = "~",     run = "help",  desc = "Help" },
+]
+
+[select]
+keymap = [
+  { on = "<Esc>",    run = "close",          desc = "Sluiten" },
+  { on = "j",        run = "arrow 1",        desc = "Omlaag" },
+  { on = "k",        run = "arrow -1",       desc = "Omhoog" },
+  { on = "<Up>",     run = "arrow -1",       desc = "Omhoog" },
+  { on = "<Down>",   run = "arrow 1",        desc = "Omlaag" },
+  { on = "<Enter>",  run = "choose",         desc = "Kiezen" },
+]
+
+[input]
+keymap = [
+  { on = "<Esc>",     run = ["close", "escape"], desc = "Sluiten / annuleren" },
+  { on = "<Enter>",   run = "submit",             desc = "Bevestigen" },
+  { on = "<Ctrl-c>",  run = "close",              desc = "Sluiten" },
+  { on = "<Left>",    run = "move -1",            desc = "Cursor links" },
+  { on = "<Right>",   run = "move 1",             desc = "Cursor rechts" },
+  { on = "<Ctrl-a>",  run = "move -999",          desc = "Begin van regel" },
+  { on = "<Ctrl-e>",  run = "move 999",           desc = "Einde van regel" },
+  { on = "<Backspace>", run = "backspace",         desc = "Teken wissen" },
+  { on = "<Delete>",  run = "delete",             desc = "Teken verwijderen" },
+]
+
+[help]
+keymap = [
+  { on = "<Esc>", run = "escape", desc = "Sluiten" },
+  { on = "q",     run = "close",  desc = "Sluiten" },
+  { on = "j",     run = "arrow 1",  desc = "Omlaag" },
+  { on = "k",     run = "arrow -1", desc = "Omhoog" },
+  { on = "<Up>",  run = "arrow -1", desc = "Omhoog" },
+  { on = "<Down>",run = "arrow 1",  desc = "Omlaag" },
+  { on = "/",     run = "filter",   desc = "Filteren" },
+]

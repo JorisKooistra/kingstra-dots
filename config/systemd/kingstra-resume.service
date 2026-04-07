@@ -1,0 +1,16 @@
+[Unit]
+Description=Kingstra post-resume fixes (WiFi/BT rescan, widget herstel)
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+# Wacht na resume zodat het systeem stabiel is
+ExecStartPre=/bin/sleep 1
+ExecStart=%h/.config/hypr/scripts/resume-fix.sh
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-1
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+
+[Install]
+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target

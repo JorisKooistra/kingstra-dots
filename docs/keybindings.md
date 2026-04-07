@@ -47,9 +47,13 @@
 | `Super + Ctrl + Return` | Walker (launcher) |
 | `Super + B` | Browser (standaard) |
 | `Super + E` | Nautilus (bestanden) |
+| `Super + Shift + E` | Yazi (terminal bestandsbeheer) |
 | `Super + V` | Klembordgeschiedenis (cliphist) |
 | `Super + Shift + Return` | btop in kitty |
 | `Super + Shift + C` | cava in kitty |
+| `Super + Alt + N` | nmtui (WiFi-beheer in kitty) |
+| `Super + Alt + B` | Blueman (Bluetooth-beheer) |
+| `Super + Ctrl + B` | Hyprland config herladen |
 
 ---
 
@@ -60,11 +64,9 @@
 | `Super + N` | SwayNC control center aan/uit |
 | `Super + Shift + N` | Alle meldingen sluiten |
 | `Super + Alt + N` | Niet-storen wisselen |
-| `Super + W` | Wallpaper-selector *(fase 9)* |
-| `Super + M` | Muziek-popup *(fase 5)* |
-| `Super + C` | Kalender-popup *(fase 5)* |
-| `Super + O` | Vensteroverzicht *(fase 5)* |
-| `Super + X` | Power-menu *(fase 5)* |
+| `Super + W` | Wallpaper-picker (kingstra-wallpaper pick) |
+| `Super + X` | Power-menu (Quickshell popup) |
+| Klik op CPU/RAM-pill | Stats-popup (CPU, RAM, disk, temp, netwerk) |
 
 ---
 
@@ -121,4 +123,4 @@ Bestanden worden opgeslagen in `~/Pictures/Screenshots/`.
 
 ---
 
-*Gegenereerd door fase 4. Bijgewerkt door fase 5 zodra Quickshell IPC-commando's beschikbaar zijn.*
+*Volledig bijgewerkt na alle 15 installatiefasen.*

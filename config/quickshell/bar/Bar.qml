@@ -108,6 +108,7 @@ PanelWindow {
 
             Modules.SystemStats {
                 Layout.alignment: Qt.AlignVCenter
+                onToggleStatsMenu: statsPopup.visible = !statsPopup.visible
             }
 
             Modules.NotifButton {
@@ -130,10 +131,23 @@ PanelWindow {
         parentBar: bar
     }
 
+    // ---------------------------------------------------------------------------
+    // Stats-popup (aangestuurd door SystemStats klik)
+    // ---------------------------------------------------------------------------
+    Popups.StatsPopup {
+        id: statsPopup
+        visible: false
+        parentBar: bar
+    }
+
     // IPC-signalen — andere processen kunnen popups togglen via:
-    // qs ipc call power toggle
+    // qs ipc call power toggle  |  qs ipc call stats toggle
     IpcHandler {
         target: "power"
         function toggle() { powerPopup.visible = !powerPopup.visible }
+    }
+    IpcHandler {
+        target: "stats"
+        function toggle() { statsPopup.visible = !statsPopup.visible }
     }
 }

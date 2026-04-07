@@ -1,0 +1,83 @@
+# =============================================================================
+# yazi.toml — Bestandsbeheer configuratie
+# =============================================================================
+
+[manager]
+ratio         = [1, 3, 4]
+sort_by       = "alphabetical"
+sort_sensitive = false
+sort_reverse  = false
+sort_dir_first = true
+linemode      = "size"
+show_hidden   = false
+show_symlink  = true
+
+[preview]
+tab_size      = 2
+max_width     = 800
+max_height    = 900
+image_filter  = "triangle"
+image_quality = 82
+sixel_fraction = 15
+
+[opener]
+edit = [
+  { run = 'kitty -e ${EDITOR:-nvim} "$@"', desc = "$EDITOR", block = true },
+]
+open = [
+  { run = 'xdg-open "$@"', desc = "Openen" },
+]
+reveal = [
+  { run = 'xdg-open "$(dirname "$1")"', desc = "Map openen" },
+]
+extract = [
+  { run = 'unar "$1"', desc = "Uitpakken" },
+]
+play = [
+  { run = 'mpv "$@"', orphan = true, desc = "Afspelen" },
+]
+wallpaper = [
+  { run = 'kingstra-wallpaper set "$1"', desc = "Als wallpaper instellen" },
+]
+
+[open]
+rules = [
+  { name = "*/",                         use = ["edit", "open", "reveal"] },
+  { mime = "text/*",                     use = ["edit", "reveal"] },
+  { mime = "image/*",                    use = ["wallpaper", "open", "reveal"] },
+  { mime = "video/*",                    use = ["play", "reveal"] },
+  { mime = "audio/*",                    use = ["play", "reveal"] },
+  { mime = "application/zip",            use = ["extract", "reveal"] },
+  { mime = "application/x-tar",          use = ["extract", "reveal"] },
+  { mime = "application/gzip",           use = ["extract", "reveal"] },
+  { mime = "application/x-7z-compressed", use = ["extract", "reveal"] },
+  { name = "*",                          use = ["open", "edit", "reveal"] },
+]
+
+[tasks]
+micro_workers    = 5
+macro_workers    = 10
+bizarre_retry    = 5
+image_alloc      = 536870912
+suppress_preload = false
+
+[plugin]
+preloaders = [
+  { mime = "image/*", run = "image" },
+]
+previewers = [
+  { name = "*/",               run = "folder" },
+  { mime = "text/*",           run = "code" },
+  { mime = "image/*",          run = "image" },
+  { mime = "video/*",          run = "video" },
+  { mime = "application/json", run = "json" },
+  { name = "*.toml",           run = "code" },
+  { name = "*.sh",             run = "code" },
+  { name = "*.md",             run = "code" },
+]
+
+[input]
+cursor_blink = false
+
+[log]
+enabled = false

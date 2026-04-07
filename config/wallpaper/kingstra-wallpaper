@@ -1,0 +1,319 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-wallpaper — Wallpaper-orchestrator
+# =============================================================================
+# Gebruik:
+#   kingstra-wallpaper set <bestand>       Statisch wallpaper + matugen thema
+#   kingstra-wallpaper video <bestand>     Videowallpaper via mpvpaper
+#   kingstra-wallpaper random [--video]    Willekeurig uit $KINGSTRA_WALLPAPER_DIR
+#   kingstra-wallpaper reload              Herlaad laatste wallpaper (behoudt modus)
+#   kingstra-wallpaper pick                Interactieve fzf-kiezer
+#   kingstra-wallpaper stop-video          Stop video, herstel statisch
+#   kingstra-wallpaper status              Toon huidige wallpaperinformatie
+# =============================================================================
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
+WALLPAPER_DIR="${KINGSTRA_WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+STATE_FILE="$CACHE_DIR/last-wallpaper"
+MODE_FILE="$CACHE_DIR/wallpaper-mode"          # "static" of "video"
+LOG_PREFIX="[kingstra-wallpaper]"
+
+STATIC_EXTS=("jpg" "jpeg" "png" "webp" "gif")
+VIDEO_EXTS=("mp4" "mkv" "webm" "avi" "mov")
+
+MPVPAPER_OPTS="${MPVPAPER_OPTS:---no-audio --loop}"
+
+mkdir -p "$CACHE_DIR"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+_log()  { echo "$LOG_PREFIX $*"; }
+_warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
+_die()  { echo "$LOG_PREFIX FOUT: $*" >&2; exit 1; }
+
+_notify() {
+    notify-send --icon=preferences-desktop-wallpaper \
+                --app-name="kingstra" \
+                "$1" "${2:-}" \
+                --urgency=low \
+                --expire-time=2000 \
+                2>/dev/null || true
+}
+
+_is_image() {
+    local f="${1,,}"
+    for ext in "${STATIC_EXTS[@]}"; do
+        [[ "$f" == *."$ext" ]] && return 0
+    done
+    return 1
+}
+
+_is_video() {
+    local f="${1,,}"
+    for ext in "${VIDEO_EXTS[@]}"; do
+        [[ "$f" == *."$ext" ]] && return 0
+    done
+    return 1
+}
+
+_monitors() {
+    hyprctl monitors -j 2>/dev/null \
+        | python3 -c "import sys,json; [print(m['name']) for m in json.load(sys.stdin)]" \
+        2>/dev/null || echo ""
+}
+
+# ---------------------------------------------------------------------------
+# Backend: statisch (hyprpaper)
+# ---------------------------------------------------------------------------
+_stop_video() {
+    if pgrep -x mpvpaper &>/dev/null; then
+        pkill -x mpvpaper 2>/dev/null || true
+        sleep 0.2
+        _log "mpvpaper gestopt"
+    fi
+}
+
+_set_static() {
+    local file="$1"
+    [[ -f "$file" ]] || _die "Bestand niet gevonden: $file"
+
+    _stop_video
+
+    if ! command -v hyprctl &>/dev/null; then
+        _warn "hyprctl niet gevonden — kan wallpaper niet instellen"
+        return 0
+    fi
+
+    # Preload + instellen op alle monitors
+    hyprctl hyprpaper preload "$file" 2>/dev/null || true
+    while IFS= read -r monitor; do
+        [[ -z "$monitor" ]] && continue
+        hyprctl hyprpaper wallpaper "$monitor,$file" 2>/dev/null || true
+    done < <(_monitors)
+
+    _log "Statisch wallpaper ingesteld: $(basename "$file")"
+}
+
+# ---------------------------------------------------------------------------
+# Backend: video (mpvpaper)
+# ---------------------------------------------------------------------------
+_set_video() {
+    local file="$1"
+    [[ -f "$file" ]] || _die "Bestand niet gevonden: $file"
+
+    if ! command -v mpvpaper &>/dev/null; then
+        _warn "mpvpaper niet geïnstalleerd — val terug op statisch"
+        _set_static_fallback_for_video "$file"
+        return 0
+    fi
+
+    _stop_video
+
+    # Start mpvpaper op alle monitors
+    while IFS= read -r monitor; do
+        [[ -z "$monitor" ]] && continue
+        mpvpaper $MPVPAPER_OPTS "$monitor" "$file" &
+        disown
+    done < <(_monitors)
+
+    _log "Videowallpaper gestart: $(basename "$file")"
+}
+
+_set_static_fallback_for_video() {
+    # Gebruik een eventuele thumbnailafbeelding of de huidige static state
+    local current
+    current="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+    if [[ -f "$current" ]] && _is_image "$current"; then
+        _set_static "$current"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# State opslaan
+# ---------------------------------------------------------------------------
+_save_state() {
+    local file="$1" mode="$2"
+    echo "$file"  > "$STATE_FILE"
+    echo "$mode"  > "$MODE_FILE"
+}
+
+# ---------------------------------------------------------------------------
+# Commando's
+# ---------------------------------------------------------------------------
+cmd_set() {
+    local file="${1:-}"
+    [[ -z "$file" ]] && _die "Gebruik: kingstra-wallpaper set <bestand>"
+    file="$(realpath "$file")"
+
+    _set_static "$file"
+    _save_state "$file" "static"
+
+    # Matugen pipeline (genereert kleuren + herstart apps)
+    if command -v kingstra-theme-apply &>/dev/null; then
+        kingstra-theme-apply "$file"
+    else
+        _warn "kingstra-theme-apply niet gevonden — alleen wallpaper ingesteld"
+        _notify "Wallpaper ingesteld" "$(basename "$file")"
+    fi
+}
+
+cmd_video() {
+    local file="${1:-}"
+    [[ -z "$file" ]] && _die "Gebruik: kingstra-wallpaper video <bestand>"
+    file="$(realpath "$file")"
+
+    _set_video "$file"
+    _save_state "$file" "video"
+    _notify "Videowallpaper" "$(basename "$file")"
+}
+
+cmd_random() {
+    local video_mode=false
+    [[ "${1:-}" == "--video" ]] && video_mode=true
+
+    # Bouw zoekpatroon
+    local find_args=(-maxdepth 3 -type f)
+    if $video_mode; then
+        find_args+=( \( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.webm" -o -iname "*.avi" -o -iname "*.mov" \) )
+    else
+        find_args+=( \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) )
+    fi
+
+    [[ -d "$WALLPAPER_DIR" ]] || _die "Wallpaper-map niet gevonden: $WALLPAPER_DIR"
+
+    local file
+    file="$(find "$WALLPAPER_DIR" "${find_args[@]}" 2>/dev/null | shuf -n 1)"
+    [[ -z "$file" ]] && _die "Geen wallpapers gevonden in $WALLPAPER_DIR"
+
+    if $video_mode; then
+        cmd_video "$file"
+    else
+        cmd_set "$file"
+    fi
+}
+
+cmd_reload() {
+    local file mode
+    file="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+    mode="$(cat "$MODE_FILE" 2>/dev/null || echo "static")"
+
+    if [[ -z "$file" ]]; then
+        _warn "Geen opgeslagen wallpaper — kies willekeurig"
+        cmd_random
+        return 0
+    fi
+
+    if [[ ! -f "$file" ]]; then
+        _warn "Opgeslagen wallpaper niet gevonden: $file"
+        cmd_random
+        return 0
+    fi
+
+    if [[ "$mode" == "video" ]]; then
+        _set_video "$file"
+    else
+        _set_static "$file"
+        # Herlaad ook kleuren (matugen --reload past alleen templates opnieuw toe)
+        if command -v kingstra-theme-apply &>/dev/null; then
+            kingstra-theme-apply --reload 2>/dev/null || true
+        fi
+    fi
+
+    _log "Wallpaper herladen: $(basename "$file") [$mode]"
+}
+
+cmd_pick() {
+    if ! command -v fzf &>/dev/null; then
+        _die "fzf niet geïnstalleerd — installeer fzf voor de picker"
+    fi
+
+    [[ -d "$WALLPAPER_DIR" ]] || _die "Wallpaper-map niet gevonden: $WALLPAPER_DIR"
+
+    local preview_cmd=""
+    if command -v chafa &>/dev/null; then
+        preview_cmd="chafa --size=\$((FZF_PREVIEW_COLUMNS))x\$((FZF_PREVIEW_LINES)) {}"
+    elif command -v kitty &>/dev/null; then
+        preview_cmd="kitty +kitten icat --clear --transfer-mode=memory --stdin=no --place \${FZF_PREVIEW_COLUMNS}x\${FZF_PREVIEW_LINES}@0x0 {} 2>/dev/null || file {}"
+    else
+        preview_cmd="file {}"
+    fi
+
+    local file
+    file="$(find "$WALLPAPER_DIR" -maxdepth 3 -type f \
+        \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \
+           -o -iname "*.webp" -o -iname "*.mp4" -o -iname "*.mkv" \
+           -o -iname "*.webm" \) \
+        2>/dev/null | sort | \
+        fzf --prompt="Wallpaper > " \
+            --preview="$preview_cmd" \
+            --preview-window=right:60%:wrap \
+            --bind="ctrl-v:execute(kingstra-wallpaper video {})+abort" \
+            --header="Enter=statisch  Ctrl-V=video  Esc=annuleer")"
+
+    [[ -z "$file" ]] && { _log "Geannuleerd"; exit 0; }
+
+    if _is_video "$file"; then
+        cmd_video "$file"
+    else
+        cmd_set "$file"
+    fi
+}
+
+cmd_stop_video() {
+    _stop_video
+
+    # Herstel laatste statisch wallpaper
+    local file
+    file="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+    if [[ -f "$file" ]] && _is_image "$file"; then
+        _set_static "$file"
+        echo "static" > "$MODE_FILE"
+        _log "Statisch wallpaper hersteld: $(basename "$file")"
+    else
+        _warn "Geen statisch wallpaper in state — gebruik: kingstra-wallpaper set <bestand>"
+    fi
+}
+
+cmd_status() {
+    local file mode
+    file="$(cat "$STATE_FILE" 2>/dev/null || echo "(geen)")"
+    mode="$(cat "$MODE_FILE" 2>/dev/null || echo "static")"
+
+    echo "Modus:     $mode"
+    echo "Bestand:   $file"
+
+    if pgrep -x mpvpaper &>/dev/null; then
+        echo "mpvpaper:  actief"
+    else
+        echo "mpvpaper:  gestopt"
+    fi
+
+    if pgrep -x hyprpaper &>/dev/null; then
+        echo "hyprpaper: actief"
+    else
+        echo "hyprpaper: gestopt"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Dispatch
+# ---------------------------------------------------------------------------
+CMD="${1:-}"
+shift || true
+
+case "$CMD" in
+    set)         cmd_set "$@" ;;
+    video)       cmd_video "$@" ;;
+    random)      cmd_random "$@" ;;
+    reload)      cmd_reload ;;
+    pick)        cmd_pick ;;
+    stop-video)  cmd_stop_video ;;
+    status)      cmd_status ;;
+    "")          _die "Geen commando opgegeven. Gebruik: kingstra-wallpaper <commando>" ;;
+    *)           _die "Onbekend commando: $CMD" ;;
+esac

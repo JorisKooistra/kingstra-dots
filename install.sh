@@ -19,8 +19,7 @@ done
 # Standaardwaarden
 # ---------------------------------------------------------------------------
 DRY_RUN=false
-PROFILE=""          # Leeg = auto-detectie na detect_system()
-PROFILE_EXPLICIT=false
+OVERRIDE_FILE=""    # Optioneel override-bestand na auto-detectie
 SELECTED_PHASE=""
 FROM_PHASE=""
 SKIP_CONFIRM=false
@@ -63,9 +62,8 @@ parse_args() {
                 FROM_PHASE="$2"
                 shift 2
                 ;;
-            --profile)
-                PROFILE="$2"
-                PROFILE_EXPLICIT=true
+            --override)
+                OVERRIDE_FILE="$2"
                 shift 2
                 ;;
             --yes|-y)
@@ -84,7 +82,7 @@ parse_args() {
         esac
     done
 
-    export DRY_RUN PROFILE PROFILE_EXPLICIT SELECTED_PHASE FROM_PHASE SKIP_CONFIRM
+    export DRY_RUN OVERRIDE_FILE SELECTED_PHASE FROM_PHASE SKIP_CONFIRM
 }
 
 usage() {
@@ -92,11 +90,11 @@ usage() {
 Gebruik: ./install.sh [opties]
 
 Opties:
-  (geen)               Alle fases uitvoeren met het standaardprofiel
+  (geen)               Alle fases uitvoeren — hardware wordt automatisch gedetecteerd
   --dry-run            Laat zien wat er zou gebeuren zonder wijzigingen
   --phase FASE         Voer alleen één fase uit (bijv. 01_project_base)
   --from-phase FASE    Start vanaf een specifieke fase
-  --profile PROFIEL    Gebruik profiel: default | nvidia | laptop
+  --override BESTAND   Overschrijf gedetecteerde feature-flags met een bestand
   --yes, -y            Bevestigingsvragen overslaan
   --help, -h           Dit helpbericht tonen
 
@@ -105,8 +103,12 @@ Voorbeelden:
   ./install.sh --dry-run
   ./install.sh --phase 01_project_base
   ./install.sh --from-phase 03_hypr_core
-  ./install.sh --profile nvidia
-  ./install.sh --profile laptop --yes
+  ./install.sh --override my-overrides.conf --yes
+
+Override-bestand formaat (optioneel, overschrijft auto-detectie):
+  ENABLE_FINGERPRINT=false
+  ENABLE_VIDEO_WALLPAPER=false
+  ENABLE_SPICETIFY=true
 EOF
 }
 
@@ -172,13 +174,10 @@ main() {
     log_init
     detect_system
 
-    # Profiel: expliciet opgegeven wint altijd; anders auto-detectie
-    if ! $PROFILE_EXPLICIT; then
-        PROFILE="${PROFILE_AUTO:-default}"
+    # Optioneel: overschrijf gedetecteerde waarden met een gebruikersbestand
+    if [[ -n "$OVERRIDE_FILE" ]]; then
+        apply_overrides "$OVERRIDE_FILE"
     fi
-    export PROFILE
-
-    load_profile "$PROFILE"
 
     print_banner
     print_system_info

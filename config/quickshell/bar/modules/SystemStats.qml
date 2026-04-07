@@ -12,6 +12,8 @@ Item {
     implicitHeight: 26
     implicitWidth:  row.implicitWidth + 16
 
+    signal toggleStatsMenu
+
     // CPU-staat bijhouden voor percentage-berekening
     property var  _prevCpu:  null
     property real cpuPercent: 0
@@ -21,7 +23,18 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color:  Ks.Colors.pillBackground
+        color:  hoverArea.containsMouse
+                ? Qt.rgba(Ks.Colors.primary.r, Ks.Colors.primary.g, Ks.Colors.primary.b, 0.15)
+                : Ks.Colors.pillBackground
+        Behavior on color { ColorAnimation { duration: 150 } }
+    }
+
+    MouseArea {
+        id:           hoverArea
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape:  Qt.PointingHandCursor
+        onClicked:    root.toggleStatsMenu()
     }
 
     RowLayout {

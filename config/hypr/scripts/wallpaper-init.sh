@@ -1,26 +1,39 @@
 #!/usr/bin/env bash
 # =============================================================================
-# wallpaper-init.sh — Minimale wallpaper-init (fase 3)
+# wallpaper-init.sh — Wallpaper-initialisatie bij Hyprland-start
 # =============================================================================
-# Fase 9 vervangt dit script door de volledige wallpaper-orchestratorlaag.
-# Dit script zorgt alleen dat er een werkende wallpaper is op eerste start.
+# Dit script wordt aangeroepen vanuit 70-autostart.conf.
+# Delegeert aan de kingstra-wallpaper orchestrator (fase 9).
+# Vóór fase 9 (of als orchestrator ontbreekt) valt het terug op minimale logica.
 # =============================================================================
+set -euo pipefail
 
-WALLPAPER_DIR="${KINGSTRA_WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
 STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
+WALLPAPER_DIR="${KINGSTRA_WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
 
-# Wacht even zodat hyprpaper tijd heeft om te starten
-sleep 0.5
+# Wacht even zodat hyprpaper volledig opgestart is
+sleep 0.8
 
+# ---------------------------------------------------------------------------
+# Pad 1 — Gebruik de kingstra-wallpaper orchestrator als die beschikbaar is
+# ---------------------------------------------------------------------------
+if command -v kingstra-wallpaper &>/dev/null; then
+    kingstra-wallpaper reload
+    exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Pad 2 — Fallback: minimale hyprpaper aanroep zonder orchestrator
+# ---------------------------------------------------------------------------
 _set_wallpaper() {
     local file="$1"
-    if command -v hyprpaper &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl hyprpaper preload "$file" 2>/dev/null || true
         hyprctl hyprpaper wallpaper ",$file"   2>/dev/null || true
     fi
 }
 
-# Herstel laatste wallpaper als die er was
+# Herstel laatste wallpaper als die er is
 if [[ -f "$STATE_FILE" ]]; then
     last="$(cat "$STATE_FILE")"
     if [[ -f "$last" ]]; then
@@ -29,9 +42,9 @@ if [[ -f "$STATE_FILE" ]]; then
     fi
 fi
 
-# Kies een willekeurige wallpaper uit de map
+# Kies een willekeurig afbeelding uit de map
 if [[ -d "$WALLPAPER_DIR" ]]; then
-    file="$(find "$WALLPAPER_DIR" -maxdepth 2 -type f \
+    file="$(find "$WALLPAPER_DIR" -maxdepth 3 -type f \
         \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) \
         2>/dev/null | shuf -n 1)"
 
@@ -43,6 +56,6 @@ if [[ -d "$WALLPAPER_DIR" ]]; then
     fi
 fi
 
-# Geen wallpaper gevonden — log een waarschuwing
 echo "[kingstra] Geen wallpapers gevonden in $WALLPAPER_DIR" >&2
 echo "[kingstra] Maak de map aan en voeg .jpg/.png/.webp bestanden toe." >&2
+exit 0
