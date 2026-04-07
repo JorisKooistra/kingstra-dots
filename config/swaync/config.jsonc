@@ -5,7 +5,7 @@
 
   // Positie en laag
   "$schema": "/etc/xdg/swaync/configSchema.json",
-  "positionX": "right",
+  "positionX": "left",
   "positionY": "top",
   "layer": "overlay",
   "layer-shell": true,
@@ -16,8 +16,8 @@
   "control-center-height": 0,           // 0 = automatisch
   "control-center-margin-top": 44,      // Onder de topbar
   "control-center-margin-bottom": 8,
-  "control-center-margin-right": 8,
-  "control-center-margin-left": 0,
+  "control-center-margin-right": 0,
+  "control-center-margin-left": 8,
 
   // Notificaties
   "notification-icon-size": 40,
