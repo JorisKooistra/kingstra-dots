@@ -25,7 +25,7 @@ phase_run() {
 
     log_step "Fase 13 valideren..."
     validate_cmd btop
-    validate_cmd lm_sensors || validate_cmd sensors
+    validate_cmd sensors
     validate_file "$HOME/.config/quickshell/bar/popups/StatsPopup.qml" "StatsPopup.qml"
     validate_file "$HOME/.config/quickshell/bar/modules/SystemStats.qml" "SystemStats.qml"
     validate_report
