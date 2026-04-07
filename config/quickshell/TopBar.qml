@@ -52,6 +52,13 @@ Variants {
                 id: mocha
             }
 
+            // User settings (date/time format)
+            property var _settingsData: ({})
+            property FileView _settingsFv: FileView {
+                path: Qt.resolvedUrl("settings/settings.json").toString().replace(/^file:\/\//, "")
+                onTextChanged: { try { barWindow._settingsData = JSON.parse(text); } catch(e) {} }
+            }
+
             // --- State Variables ---
             
             // Triggers layout animations immediately to feel fast
@@ -287,8 +294,10 @@ Variants {
                 interval: 1000; running: true; repeat: true; triggeredOnStart: true
                 onTriggered: {
                     let d = new Date();
-                    barWindow.timeStr = Qt.formatDateTime(d, "hh:mm:ss AP");
-                    barWindow.fullDateStr = Qt.formatDateTime(d, "dddd, MMMM dd");
+                    let tf = barWindow._settingsData.timeFormat || "hh:mm:ss AP";
+                    let df = barWindow._settingsData.dateFormat || "dddd, MMMM dd";
+                    barWindow.timeStr = Qt.formatDateTime(d, tf);
+                    barWindow.fullDateStr = Qt.formatDateTime(d, df);
                     if (barWindow.typeInIndex >= barWindow.fullDateStr.length) {
                         barWindow.typeInIndex = barWindow.fullDateStr.length;
                     }
