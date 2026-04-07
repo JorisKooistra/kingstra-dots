@@ -19,6 +19,7 @@ phase_run() {
     pacman_install sqlite               # walker/history dep, ook nuttig voor indexer
     pacman_install inotify-tools        # voor live-reloadwatcher (optioneel)
     pacman_install chafa                # ASCII/pixel-preview in fzf picker
+    aur_install waypaper                # GUI wallpaper picker (Super+Ctrl+W)
 
     log_step "Videowallpaper-pakket installeren (mpvpaper)..."
     _phase09_install_mpvpaper
@@ -28,6 +29,9 @@ phase_run() {
 
     log_step "Wallpaper-orchestrator deployen..."
     _phase09_deploy_orchestrator
+
+    log_step "Waypaper-config deployen..."
+    deploy_config "waypaper"
 
     log_step "Wallpaper-map aanmaken..."
     _phase09_ensure_wallpaper_dir
