@@ -1,3 +1,2 @@
-module Ks
 singleton Colors 1.0 Colors.qml
 PillContainer 1.0 components/PillContainer.qml

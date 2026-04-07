@@ -1,3 +1,2 @@
-module Ks.Bar.Popups
 PowerPopup 1.0 PowerPopup.qml
-StatsPopup  1.0 StatsPopup.qml
+StatsPopup 1.0 StatsPopup.qml
