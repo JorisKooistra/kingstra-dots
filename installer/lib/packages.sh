@@ -48,7 +48,23 @@ aur_install() {
     [[ ${#to_install[@]} -eq 0 ]] && return 0
 
     log_step "$AUR_HELPER installeren: ${to_install[*]}"
-    run_cmd "$AUR_HELPER" -S --needed --noconfirm "${to_install[@]}"
+
+    # Voorkom dat de AUR-helper een pager opent (less/bat/diff-so-fancy) of de
+    # terminal manipuleert (alternate screen buffer, mouse tracking).
+    # --skipreview (paru) / --nodiffmenu --nocleanmenu (yay) slaan PKGBUILD-
+    # reviews over. PAGER=cat garandeert geen interactieve pager ongeacht config.
+    local -a aur_flags=(--needed --noconfirm)
+    case "${AUR_HELPER##*/}" in
+        paru) aur_flags+=(--skipreview) ;;
+        yay)  aur_flags+=(--nodiffmenu --nocleanmenu --noeditmenu) ;;
+    esac
+
+    PAGER=cat run_cmd "$AUR_HELPER" -S "${aur_flags[@]}" "${to_install[@]}"
+
+    # Herstel terminal-staat voor het geval de AUR-helper toch iets heeft
+    # aangepast (alternate screen, mouse reporting, line discipline).
+    stty sane 2>/dev/null || true
+    printf '\033[?1049l\033[?1000l\033[?1002l\033[?1003l\033[?1006l' 2>/dev/null || true
 }
 
 # Installeer pakketten vanuit een manifestbestand

@@ -26,6 +26,7 @@ phase_run() {
 
     log_ok "Fase 15 voltooid — Kingstra-dots is volledig geïnstalleerd."
     _phase15_print_next_steps
+    _phase15_prompt_reboot
 }
 
 # ---------------------------------------------------------------------------
@@ -158,4 +159,28 @@ _phase15_print_next_steps() {
     printf '\033[1mLog:\033[0m    ~/.local/share/kingstra/install.log\n'
     printf '\033[1mBackups:\033[0m ~/.local/share/kingstra/backups/\n'
     printf '\n'
+}
+
+_phase15_prompt_reboot() {
+    if "${DRY_RUN:-false}"; then
+        log_dry "Herstart-prompt zou verschijnen"
+        return 0
+    fi
+
+    printf '\033[1;33m  Herstart aanbevolen\033[0m om SDDM en alle services correct op te starten.\n\n'
+
+    local answer
+    read -r -p "  Nu herstarten? [j/N] " answer
+    case "${answer,,}" in
+        j|ja|y|yes)
+            log_ok "Systeem wordt herstart..."
+            sleep 1
+            sudo reboot
+            ;;
+        *)
+            printf '\n'
+            log_info "Herstart later met: sudo reboot"
+            printf '\n'
+            ;;
+    esac
 }

@@ -235,9 +235,10 @@ _phase10_enable_sddm() {
     fi
 
     # Controleer welke display manager actief is
+    # '|| true' voorkomt dat grep exit 1 (geen match) de installer stopt via set -eo pipefail
     local current_dm
     current_dm="$(systemctl list-units --type=service --state=enabled 2>/dev/null \
-        | grep -E 'gdm|lightdm|ly|greetd|sddm' | awk '{print $1}' | head -1)"
+        | grep -E 'gdm|lightdm|ly|greetd|sddm' | awk '{print $1}' | head -1 || true)"
 
     if [[ -n "$current_dm" ]] && [[ "$current_dm" != "sddm.service" ]]; then
         log_warn "Andere display manager actief: $current_dm"
