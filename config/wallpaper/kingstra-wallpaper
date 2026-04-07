@@ -289,7 +289,7 @@ cmd_status() {
         echo "mpvpaper:  gestopt"
     fi
 
-    if pgrep -x awww &>/dev/null; then
+    if pgrep -x awww-daemon &>/dev/null; then
         echo "awww:      actief"
     else
         echo "awww:      gestopt"

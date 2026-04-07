@@ -76,7 +76,7 @@ PanelWindow {
             }
 
             // CPU
-            _StatRow {
+            StatRow {
                 icon:    ""
                 label:   "CPU"
                 value:   cpuPct.toFixed(0) + "%"
@@ -85,7 +85,7 @@ PanelWindow {
             }
 
             // RAM
-            _StatRow {
+            StatRow {
                 icon:    "󰍛"
                 label:   "RAM"
                 value:   ramUsed + " / " + ramTotal
@@ -94,7 +94,7 @@ PanelWindow {
             }
 
             // Disk
-            _StatRow {
+            StatRow {
                 icon:    "󰋊"
                 label:   "Disk /"
                 value:   diskUsed + " / " + diskTotal
@@ -358,7 +358,7 @@ PanelWindow {
     // ---------------------------------------------------------------------------
     // Intern component — rij met label, waarde en voortgangsbalk
     // ---------------------------------------------------------------------------
-    component _StatRow: ColumnLayout {
+    component StatRow: ColumnLayout {
         property string icon:    ""
         property string label:   ""
         property string value:   ""

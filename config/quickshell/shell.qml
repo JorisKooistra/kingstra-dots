@@ -11,11 +11,9 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
 
-        delegate: Component {
-            Bar {
-                required property var modelData
-                screen: modelData
-            }
+        delegate: Bar {
+            required property var modelData
+            screen: modelData
         }
     }
 }
