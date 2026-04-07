@@ -15,7 +15,7 @@ aur:oh-my-posh-bin
 
 # Launcher
 aur:walker-bin
-aur:elephant
+aur:elephant-bin
 aur:elephant-desktopapplications-bin
 aur:elephant-providerlist-bin
 

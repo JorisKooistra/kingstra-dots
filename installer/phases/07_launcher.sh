@@ -6,7 +6,7 @@
 phase_run() {
     log_step "Walker + Elephant installeren..."
     aur_install walker-bin
-    aur_install elephant
+    aur_install elephant-bin
     aur_install elephant-desktopapplications-bin
     aur_install elephant-providerlist-bin
 
