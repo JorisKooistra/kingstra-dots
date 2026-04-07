@@ -1,5 +1,5 @@
 /* =============================================================================
-   style.css — SwayNC stijl (Imperative-geïnspireerd)
+   style.css — SwayNC stijl (QuickShell-consistent)
    ============================================================================= */
 
 @import "colors.css";
@@ -9,7 +9,7 @@
    --------------------------------------------------------------------------- */
 * {
   all: unset;
-  font-family: "Fira Sans", sans-serif;
+  font-family: "JetBrains Mono", "Fira Sans", sans-serif;
   font-size: 13px;
   transition: all 150ms ease;
 }
@@ -18,12 +18,12 @@
    Control center venster
    --------------------------------------------------------------------------- */
 .control-center {
-  background: color-mix(in srgb, var(--mantle) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--outline) 30%, transparent);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px color-mix(in srgb, var(--crust) 60%, transparent);
-  padding: 10px;
-  color: var(--text);
+  background: alpha(@mantle, 0.92);
+  border: 1px solid alpha(@outline, 0.20);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px alpha(@crust, 0.70);
+  padding: 12px;
+  color: @text;
 }
 
 /* ---------------------------------------------------------------------------
@@ -31,49 +31,49 @@
    --------------------------------------------------------------------------- */
 .widget-title {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  padding: 6px 4px 10px 4px;
+  font-weight: 800;
+  color: @text;
+  padding: 8px 8px 12px 8px;
 }
 
 .widget-title > button {
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
-  border-radius: 8px;
-  color: var(--primary);
-  padding: 4px 10px;
+  background: alpha(@primary, 0.12);
+  border: 1px solid alpha(@primary, 0.25);
+  border-radius: 10px;
+  color: @primary;
+  padding: 6px 14px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .widget-title > button:hover {
-  background: color-mix(in srgb, var(--primary) 25%, transparent);
+  background: alpha(@primary, 0.22);
 }
 
 .widget-title > button:active {
-  background: color-mix(in srgb, var(--primary) 35%, transparent);
+  background: alpha(@primary, 0.32);
 }
 
 /* ---------------------------------------------------------------------------
    Niet-storen toggle
    --------------------------------------------------------------------------- */
 .widget-dnd {
-  padding: 4px 4px 10px 4px;
+  padding: 4px 8px 10px 8px;
 }
 
 .widget-dnd > switch {
-  background: var(--surface1);
+  background: @surface1;
   border-radius: 20px;
   border: none;
   padding: 2px;
 }
 
 .widget-dnd > switch:checked {
-  background: var(--primary);
+  background: @primary;
 }
 
 .widget-dnd > switch slider {
-  background: var(--base);
+  background: @base;
   border-radius: 50%;
   min-width: 20px;
   min-height: 20px;
@@ -88,31 +88,31 @@
 }
 
 .notification {
-  background: color-mix(in srgb, var(--surface0) 90%, transparent);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent);
-  border-radius: 10px;
-  padding: 10px;
-  color: var(--text);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--crust) 30%, transparent);
+  background: alpha(@surface0, 0.85);
+  border: 1px solid alpha(@outline-variant, 0.30);
+  border-radius: 14px;
+  padding: 12px;
+  color: @text;
+  box-shadow: 0 4px 16px alpha(@crust, 0.40);
 }
 
 .notification:hover {
-  background: color-mix(in srgb, var(--surface1) 90%, transparent);
-  border-color: color-mix(in srgb, var(--outline) 60%, transparent);
+  background: alpha(@surface1, 0.90);
+  border-color: alpha(@outline, 0.45);
 }
 
 /* Urgentieniveaus */
 .notification.low {
-  border-left: 3px solid var(--surface1);
+  border-left: 3px solid @surface1;
 }
 
 .notification.normal {
-  border-left: 3px solid var(--primary);
+  border-left: 3px solid @primary;
 }
 
 .notification.critical {
-  border-left: 3px solid var(--red);
-  background: color-mix(in srgb, var(--red) 8%, var(--surface0));
+  border-left: 3px solid @red;
+  background: alpha(mix(@red, @surface0, 0.08), 0.90);
 }
 
 /* Header (app-naam + tijd) */
@@ -126,139 +126,141 @@
 
 .app-name {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--primary);
+  font-weight: 800;
+  color: @primary;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
 }
 
 .time {
   font-size: 11px;
-  color: var(--subtext0);
+  color: @subtext0;
 }
 
 /* Titel */
 .summary {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 700;
+  color: @text;
   padding-top: 2px;
 }
 
 /* Lichaam */
 .body {
   font-size: 12px;
-  color: var(--subtext0);
+  color: @subtext0;
   padding-top: 2px;
 }
 
 /* App-icoon */
 .app-icon {
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 /* Afbeelding in notificatie */
 .notification-image {
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 /* ---------------------------------------------------------------------------
    Acties-knoppen
    --------------------------------------------------------------------------- */
 .notification-action {
-  background: color-mix(in srgb, var(--surface1) 80%, transparent);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 40%, transparent);
-  border-radius: 8px;
-  color: var(--on-surface);
-  padding: 4px 12px;
+  background: alpha(@surface1, 0.70);
+  border: 1px solid alpha(@outline-variant, 0.25);
+  border-radius: 10px;
+  color: @on-surface;
+  padding: 6px 14px;
   font-size: 12px;
+  font-weight: 600;
   margin-top: 6px;
   margin-right: 4px;
 }
 
 .notification-action:hover {
-  background: color-mix(in srgb, var(--primary) 20%, var(--surface1));
-  color: var(--primary);
-  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  background: alpha(mix(@primary, @surface1, 0.20), 0.85);
+  color: @primary;
+  border-color: alpha(@primary, 0.35);
 }
 
 .notification-action:active {
-  background: color-mix(in srgb, var(--primary) 30%, var(--surface1));
+  background: alpha(mix(@primary, @surface1, 0.30), 0.90);
 }
 
 /* Sluiten-knop */
 .close-button {
   background: transparent;
   border-radius: 50%;
-  color: var(--subtext0);
-  min-width: 20px;
-  min-height: 20px;
+  color: @subtext0;
+  min-width: 22px;
+  min-height: 22px;
   padding: 2px;
 }
 
 .close-button:hover {
-  background: color-mix(in srgb, var(--red) 20%, transparent);
-  color: var(--red);
+  background: alpha(@red, 0.18);
+  color: @red;
 }
 
 /* ---------------------------------------------------------------------------
    MPRIS-widget (mediaspeler)
    --------------------------------------------------------------------------- */
 .widget-mpris {
-  padding: 4px;
+  padding: 4px 8px;
 }
 
 .widget-mpris-player {
-  background: color-mix(in srgb, var(--surface0) 90%, transparent);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 40%, transparent);
-  border-radius: 10px;
-  padding: 12px;
+  background: alpha(@surface0, 0.85);
+  border: 1px solid alpha(@outline-variant, 0.25);
+  border-radius: 14px;
+  padding: 14px;
   margin-bottom: 6px;
 }
 
 .widget-mpris-title {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 700;
+  color: @text;
 }
 
 .widget-mpris-subtitle {
   font-size: 12px;
-  color: var(--subtext0);
+  color: @subtext0;
 }
 
 .widget-mpris > box > button {
-  background: color-mix(in srgb, var(--surface1) 80%, transparent);
+  background: alpha(@surface1, 0.70);
   border-radius: 50%;
-  color: var(--text);
-  min-width: 32px;
-  min-height: 32px;
+  color: @text;
+  min-width: 34px;
+  min-height: 34px;
   margin: 2px;
 }
 
 .widget-mpris > box > button:hover {
-  background: color-mix(in srgb, var(--primary) 20%, var(--surface1));
-  color: var(--primary);
+  background: alpha(mix(@primary, @surface1, 0.20), 0.85);
+  color: @primary;
 }
 
 /* ---------------------------------------------------------------------------
    Inhibitors
    --------------------------------------------------------------------------- */
 .widget-inhibitors {
-  padding: 4px 4px 10px 4px;
+  padding: 4px 8px 10px 8px;
 }
 
 .widget-inhibitors > button {
-  background: color-mix(in srgb, var(--yellow) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--yellow) 30%, transparent);
-  border-radius: 8px;
-  color: var(--yellow);
-  padding: 4px 10px;
+  background: alpha(@yellow, 0.12);
+  border: 1px solid alpha(@yellow, 0.25);
+  border-radius: 10px;
+  color: @yellow;
+  padding: 6px 14px;
   font-size: 12px;
+  font-weight: 600;
 }
 
 .widget-inhibitors > button:hover {
-  background: color-mix(in srgb, var(--yellow) 25%, transparent);
+  background: alpha(@yellow, 0.22);
 }
 
 /* ---------------------------------------------------------------------------
