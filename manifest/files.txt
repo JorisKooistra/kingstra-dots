@@ -1,0 +1,42 @@
+# =============================================================================
+# manifest/files.txt — Bestanden deployen
+# =============================================================================
+# Formaat: src_relatief_aan_repo|dest (~ wordt uitgebreid naar $HOME)
+#
+# Dit bestand wordt uitgebreid naarmate er meer fases worden gebouwd.
+# Fases deployen hun eigen bestanden vanuit hun phase_run() functie.
+# Dit manifest dient als centraal overzicht / handmatige override.
+# =============================================================================
+
+# config/hypr → ~/.config/hypr
+config/hypr|~/.config/hypr
+
+# config/kitty → ~/.config/kitty
+config/kitty|~/.config/kitty
+
+# config/zsh → ~/.config/zsh
+config/zsh|~/.config/zsh
+
+# config/fastfetch → ~/.config/fastfetch
+config/fastfetch|~/.config/fastfetch
+
+# config/cava → ~/.config/cava
+config/cava|~/.config/cava
+
+# config/matugen → ~/.config/matugen
+config/matugen|~/.config/matugen
+
+# config/swaync → ~/.config/swaync
+config/swaync|~/.config/swaync
+
+# config/walker → ~/.config/walker
+config/walker|~/.config/walker
+
+# config/quickshell → ~/.config/quickshell
+config/quickshell|~/.config/quickshell
+
+# config/qt6ct → ~/.config/qt6ct
+config/qt6ct|~/.config/qt6ct
+
+# config/yazi → ~/.config/yazi
+config/yazi|~/.config/yazi

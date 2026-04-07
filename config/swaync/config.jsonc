@@ -1,0 +1,94 @@
+{
+  // ============================================================================
+  // SwayNC — config.jsonc
+  // ============================================================================
+
+  // Positie en laag
+  "$schema": "/etc/xdg/swaync/configSchema.json",
+  "positionX": "right",
+  "positionY": "top",
+  "layer": "overlay",
+  "layer-shell": true,
+  "cssPriority": "application",
+
+  // Afmetingen
+  "control-center-width": 420,
+  "control-center-height": 0,           // 0 = automatisch
+  "control-center-margin-top": 44,      // Onder de topbar
+  "control-center-margin-bottom": 8,
+  "control-center-margin-right": 8,
+  "control-center-margin-left": 0,
+
+  // Notificaties
+  "notification-icon-size": 40,
+  "notification-body-image-height": 160,
+  "notification-body-image-width": 200,
+  "notification-inline-replies": false,
+  "notification-visibility": {
+    "example-name": {
+      "state": "muted",
+      "urgency": "Low",
+      "app-name": "Spotify"
+    }
+  },
+
+  // Timeout (ms) — 0 = nooit vanzelf verdwijnen
+  "timeout": 5,
+  "timeout-low": 2,
+  "timeout-critical": 0,
+
+  // Gedrag
+  "fit-to-screen": false,
+  "relative-timestamps": true,
+  "hide-on-clear": false,
+  "hide-on-action": true,
+  "image-visibility": "when-available",
+  "transition-time": 200,
+
+  // Geluiden uitschakelen (SwayOSD of aparte audio-tool doet dit)
+  "notification-2fa-action": true,
+
+  // Scrollen
+  "keyboard-shortcuts": true,
+  "magic-title-toggle": true,
+
+  // Widgets in het control center (van boven naar beneden)
+  "control-center-exclusive-zone": false,
+  "control-center-widgets": [
+    "inhibitors",
+    "title",
+    "dnd",
+    "notifications",
+    "mpris"
+  ],
+
+  "control-center-widget-radii": 10,
+
+  "widgets": [
+    "inhibitors",
+    "title",
+    "dnd",
+    "notifications",
+    "mpris"
+  ],
+
+  "widget-config": {
+    "title": {
+      "text": "Notificaties",
+      "clear-all-button": true,
+      "button-text": "Alles sluiten 󰆴"
+    },
+    "dnd": {
+      "text": "Niet storen"
+    },
+    "inhibitors": {
+      "text": "Inhibitors",
+      "button-text": "󰾆 Vrijgeven",
+      "clear-all-button": true
+    },
+    "mpris": {
+      "image-size": 96,
+      "image-radius": 8
+    }
+  }
+}

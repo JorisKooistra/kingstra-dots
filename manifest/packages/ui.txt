@@ -1,0 +1,20 @@
+# =============================================================================
+# manifest/packages/ui.txt — UI-laag (Quickshell, SwayNC, SwayOSD)
+# =============================================================================
+
+# Quickshell en Qt6
+aur:quickshell-git
+qt6-base
+qt6-declarative
+qt6-multimedia
+qt6-wayland
+qt6-svg
+
+# SwayNC (notificaties + control center)
+swaync
+
+# SwayOSD (on-screen display voor volume/helderheid)
+aur:swayosd-git
+
+# Qt6ct (Qt-theming buiten KDE)
+qt6ct

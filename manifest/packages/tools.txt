@@ -1,0 +1,49 @@
+# =============================================================================
+# manifest/packages/tools.txt — Dagelijkse tools
+# =============================================================================
+
+# Terminal
+kitty
+
+# Shell
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+
+# Prompt
+aur:oh-my-posh-bin
+
+# Launcher
+aur:walker-bin
+
+# Systeeminfo
+fastfetch
+
+# Audio visualizer
+cava
+
+# Systeemmonitor
+btop
+
+# Bestandsbeheerder
+nautilus
+
+# Klembord
+cliphist
+
+# Media
+playerctl
+
+# Screenshots
+grim
+slurp
+aur:satty
+
+# Bestandsbeheer + terminalhulp
+yazi
+eza
+bat
+fd
+ripgrep
+fzf
+jq

@@ -1,0 +1,113 @@
+// =============================================================================
+// fastfetch/config.jsonc — kingstra-dots
+// =============================================================================
+// Stijl: Arch ASCII logo links, systeeminfo rechts
+// Kleuren volgen matugen in fase 8 via $FASTFETCH_COLOR_* variabelen
+// =============================================================================
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+
+    "logo": {
+        "type": "builtin",
+        "source": "arch",
+        "color": {
+            "1": "blue",
+            "2": "cyan"
+        },
+        "padding": {
+            "top": 1,
+            "left": 2,
+            "right": 2
+        }
+    },
+
+    "display": {
+        "separator": "  ",
+        "color": {
+            "keys": "blue",
+            "title": "cyan"
+        }
+    },
+
+    "modules": [
+        {
+            "type": "title",
+            "format": "{user-name}@{host-name}",
+            "key": "",
+            "keyColor": "cyan"
+        },
+        "break",
+        {
+            "type": "os",
+            "key": "󰣇 OS",
+            "format": "{pretty-name} {version}"
+        },
+        {
+            "type": "kernel",
+            "key": " Kernel"
+        },
+        {
+            "type": "uptime",
+            "key": "󰔚 Uptime"
+        },
+        {
+            "type": "packages",
+            "key": "󰏗 Pakketten"
+        },
+        "break",
+        {
+            "type": "wm",
+            "key": "󱂬 WM"
+        },
+        {
+            "type": "shell",
+            "key": " Shell"
+        },
+        {
+            "type": "terminal",
+            "key": " Terminal"
+        },
+        {
+            "type": "font",
+            "key": " Font",
+            "format": "{name} {size}pt"
+        },
+        "break",
+        {
+            "type": "cpu",
+            "key": " CPU",
+            "format": "{name} ({cores-physical}C/{cores-logical}T) @ {freq-max}GHz"
+        },
+        {
+            "type": "gpu",
+            "key": "󰍛 GPU",
+            "format": "{name} [{driver}]",
+            "detectionMethod": "pci"
+        },
+        {
+            "type": "memory",
+            "key": " RAM",
+            "format": "{used} / {total} ({percentage}%)"
+        },
+        {
+            "type": "disk",
+            "key": "󰋊 Schijf",
+            "format": "{used} / {total} ({percentage}%) [{filesystem}]",
+            "folders": "/"
+        },
+        "break",
+        {
+            "type": "localip",
+            "key": " LAN",
+            "format": "{ipv4} [{ifname}]",
+            "showIpv4": true,
+            "showIpv6": false
+        },
+        "break",
+        {
+            "type": "colors",
+            "paddingLeft": 0,
+            "symbol": "circle"
+        }
+    ]
+}

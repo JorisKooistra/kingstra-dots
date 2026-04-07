@@ -1,0 +1,59 @@
+# =============================================================================
+# cava/config — kingstra-dots
+# =============================================================================
+# Kleuren volgen matugen (fase 8) — dit is het standaard (Catppuccin Mocha)
+# =============================================================================
+
+[general]
+mode = normal
+framerate = 60
+autosens = 1
+sensitivity = 100
+bars = 0              # 0 = automatisch
+bar_width = 2
+bar_spacing = 1
+bar_height = 32
+channels = stereo
+sleep_timer = 0
+
+[input]
+method = pipewire
+source = auto
+
+[output]
+method = ncurses
+raw_target = /dev/stdout
+data_format = binary
+bit_format = 16bit
+ascii_max_range = 1000
+alsa_hint = default
+
+[color]
+# Catppuccin Mocha — wordt overschreven door matugen
+gradient = 1
+gradient_count = 8
+gradient_color_1 = '#89b4fa'    # blue
+gradient_color_2 = '#b4befe'    # lavender
+gradient_color_3 = '#cba6f7'    # mauve
+gradient_color_4 = '#f5c2e7'    # pink
+gradient_color_5 = '#f38ba8'    # red
+gradient_color_6 = '#fab387'    # peach
+gradient_color_7 = '#f9e2af'    # yellow
+gradient_color_8 = '#a6e3a1'    # green
+
+background = '#1e1e2e'
+
+[smoothing]
+monstercat = 0
+waves = 0
+gravity = 100
+ignore_le = 0
+
+[eq]
+# Per-frequentieband aanpassing (optioneel)
+# 1 = 100%
+1 = 1
+2 = 1
+3 = 1
+4 = 1
+5 = 1

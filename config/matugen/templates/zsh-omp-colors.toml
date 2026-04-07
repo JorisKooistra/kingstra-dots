@@ -1,0 +1,17 @@
+# Automatisch gegenereerd door matugen. Pas dit bestand NIET aan.
+# Wordt ingeladen door kingstra.omp.toml via @include (fase 8 update omp-thema)
+[palette]
+primary   = "{{colors.primary.default.hex}}"
+secondary = "{{colors.secondary.default.hex}}"
+tertiary  = "{{colors.tertiary.default.hex}}"
+error     = "{{colors.error.default.hex}}"
+text      = "{{colors.on_background.default.hex}}"
+subtext0  = "{{colors.on_surface_variant.default.hex}}"
+surface   = "{{colors.surface.default.hex}}"
+base      = "{{colors.background.default.hex}}"
+green     = "{{colors.tertiary.default.hex}}"
+red       = "{{colors.error.default.hex}}"
+yellow    = "{{colors.on_tertiary_container.default.hex}}"
+blue      = "{{colors.primary.default.hex}}"
+mauve     = "{{colors.secondary.default.hex}}"
+peach     = "{{colors.on_secondary_container.default.hex}}"

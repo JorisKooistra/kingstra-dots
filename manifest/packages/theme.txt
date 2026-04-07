@@ -1,0 +1,21 @@
+# =============================================================================
+# manifest/packages/theme.txt — Theminglaag (Matugen + fonts)
+# =============================================================================
+
+# Matugen — material color extraction
+aur:matugen-bin
+
+# Nerd Fonts (iconen in topbar, terminal)
+aur:ttf-jetbrains-mono-nerd
+ttf-fira-code
+aur:ttf-fira-sans
+
+# Material Design Icons (supplementair voor Quickshell)
+aur:ttf-material-design-icons-variable
+
+# GTK theming
+nwg-look
+gnome-themes-extra
+
+# Cursor
+aur:bibata-cursor-theme

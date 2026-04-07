@@ -1,0 +1,45 @@
+# =============================================================================
+# matugen — config.toml
+# =============================================================================
+
+[config]
+# Kleurindex: 0 = meest dominante kleur van de wallpaper
+# Pas aan naar 1-4 voor alternatieve kleuren
+color_index = 0
+
+# Kleurschema: "scheme-content" | "scheme-tonal-spot" | "scheme-fidelity"
+# scheme-tonal-spot = standaard Material You
+scheme_type = "scheme-tonal-spot"
+
+# Matugen schrijft de gegenereerde kleuren naar alle templates
+# Alle templates staan in config/matugen/templates/
+
+[templates]
+
+[templates.hypr-colors]
+input_path  = "~/.config/matugen/templates/hypr-colors.conf"
+output_path = "~/.config/hypr/colors.conf"
+
+[templates.kitty-colors]
+input_path  = "~/.config/matugen/templates/kitty-colors.conf"
+output_path = "~/.config/kitty/colors.conf"
+
+[templates.quickshell-colors]
+input_path  = "~/.config/matugen/templates/quickshell-colors.json"
+output_path = "~/.config/quickshell/colors.json"
+
+[templates.swaync-colors]
+input_path  = "~/.config/matugen/templates/swaync-colors.css"
+output_path = "~/.config/swaync/colors.css"
+
+[templates.walker-colors]
+input_path  = "~/.config/matugen/templates/walker-colors.css"
+output_path = "~/.config/walker/colors.css"
+
+[templates.zsh-omp-colors]
+input_path  = "~/.config/matugen/templates/zsh-omp-colors.toml"
+output_path = "~/.config/zsh/omp-colors.toml"
+
+[templates.qt6ct-colors]
+input_path  = "~/.config/matugen/templates/qt6ct-colors.conf"
+output_path = "~/.config/qt6ct/colors/kingstra.conf"

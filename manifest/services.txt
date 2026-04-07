@@ -1,0 +1,16 @@
+# =============================================================================
+# manifest/services.txt — Systemd services
+# =============================================================================
+# Formaat: "system:<service>" of "user:<service>"
+
+# Audio (user services)
+user:pipewire
+user:pipewire-pulse
+user:wireplumber
+
+# Login manager (system service)
+system:sddm
+
+# --- Optioneel ---
+# Power profiles (laptop) — ENABLE_POWER_PROFILES=true
+# system:power-profiles-daemon

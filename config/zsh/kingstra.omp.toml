@@ -1,0 +1,118 @@
+# =============================================================================
+# kingstra.omp.toml — oh-my-posh thema
+# =============================================================================
+# Stijl: clean, minimaal, Imperative-geïnspireerd
+# Kleuren worden via omgevingsvariabelen overschreven door matugen (fase 8)
+# =============================================================================
+
+version = 2
+final_space = true
+
+[[blocks]]
+type = "prompt"
+alignment = "left"
+newline = true
+
+  [[blocks.segments]]
+  # OS-icoon
+  type = "os"
+  style = "plain"
+  foreground = "p:blue"
+  template = "  "
+
+  [[blocks.segments]]
+  # Pad (relatief aan home)
+  type = "path"
+  style = "plain"
+  foreground = "p:text"
+  template = "{{ .Path }} "
+
+  [blocks.segments.properties]
+  style = "agnoster_short"
+  max_depth = 3
+  home_icon = "~"
+  folder_separator_icon = " / "
+
+  [[blocks.segments]]
+  # Git-status
+  type = "git"
+  style = "plain"
+  foreground = "p:green"
+  foreground_templates = [
+    "{{ if .Detached }}p:yellow{{ end }}",
+    "{{ if gt .Ahead 0 }}p:blue{{ end }}",
+    "{{ if gt .Behind 0 }}p:red{{ end }}",
+    "{{ if .Working.Changed }}p:yellow{{ end }}",
+    "{{ if .Staging.Changed }}p:mauve{{ end }}",
+  ]
+  template = "on  {{ .HEAD }}{{ if .Working.Changed }} {{ .Working.String }}{{ end }}{{ if .Staging.Changed }}  {{ .Staging.String }}{{ end }} "
+
+  [blocks.segments.properties]
+  fetch_status = true
+  fetch_upstream_icon = true
+
+[[blocks]]
+type = "prompt"
+alignment = "left"
+newline = true
+
+  [[blocks.segments]]
+  # Prompt-teken (rood bij fout, groen bij succes)
+  type = "status"
+  style = "plain"
+  foreground = "p:green"
+  foreground_templates = ["{{ if gt .Code 0 }}p:red{{ end }}"]
+  template = "{{ if gt .Code 0 }}󰅙{{ else }}❯{{ end }} "
+
+  [blocks.segments.properties]
+  always_enabled = true
+
+[[blocks]]
+type = "rprompt"
+overflow = "hidden"
+
+  [[blocks.segments]]
+  # Uitvoeringstijd (alleen bij lang durende commando's)
+  type = "executiontime"
+  style = "plain"
+  foreground = "p:peach"
+  template = "{{ .FormattedMs }} "
+
+  [blocks.segments.properties]
+  threshold = 2000
+  style = "austin"
+
+  [[blocks.segments]]
+  # Tijd
+  type = "time"
+  style = "plain"
+  foreground = "p:subtext0"
+  template = "{{ .CurrentDate | date \"15:04\" }} "
+
+# ---------------------------------------------------------------------------
+# Kleurenpalet — Catppuccin Mocha als standaard
+# Wordt overschreven door matugen in fase 8
+# ---------------------------------------------------------------------------
+[palette]
+text      = "#cdd6f4"
+subtext0  = "#a6adc8"
+subtext1  = "#bac2de"
+overlay   = "#6c7086"
+surface   = "#313244"
+base      = "#1e1e2e"
+mantle    = "#181825"
+crust     = "#11111b"
+blue      = "#89b4fa"
+lavender  = "#b4befe"
+sapphire  = "#74c7ec"
+sky       = "#89dceb"
+teal      = "#94e2d5"
+green     = "#a6e3a1"
+yellow    = "#f9e2af"
+peach     = "#fab387"
+maroon    = "#eba0ac"
+red       = "#f38ba8"
+mauve     = "#cba6f7"
+flamingo  = "#f2cdcd"
+rosewater = "#f5e0dc"
+pink      = "#f5c2e7"

@@ -1,0 +1,273 @@
+/* =============================================================================
+   style.css — SwayNC stijl (Imperative-geïnspireerd)
+   ============================================================================= */
+
+@import "colors.css";
+
+/* ---------------------------------------------------------------------------
+   Globale reset
+   --------------------------------------------------------------------------- */
+* {
+  all: unset;
+  font-family: "Fira Sans", sans-serif;
+  font-size: 13px;
+  transition: all 150ms ease;
+}
+
+/* ---------------------------------------------------------------------------
+   Control center venster
+   --------------------------------------------------------------------------- */
+.control-center {
+  background: color-mix(in srgb, var(--mantle) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline) 30%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--crust) 60%, transparent);
+  padding: 10px;
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------------
+   Titelbalk
+   --------------------------------------------------------------------------- */
+.widget-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 6px 4px 10px 4px;
+}
+
+.widget-title > button {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: 8px;
+  color: var(--primary);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.widget-title > button:hover {
+  background: color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.widget-title > button:active {
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   Niet-storen toggle
+   --------------------------------------------------------------------------- */
+.widget-dnd {
+  padding: 4px 4px 10px 4px;
+}
+
+.widget-dnd > switch {
+  background: var(--surface1);
+  border-radius: 20px;
+  border: none;
+  padding: 2px;
+}
+
+.widget-dnd > switch:checked {
+  background: var(--primary);
+}
+
+.widget-dnd > switch slider {
+  background: var(--base);
+  border-radius: 50%;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+/* ---------------------------------------------------------------------------
+   Notificatiekaarten
+   --------------------------------------------------------------------------- */
+.notification-row {
+  outline: none;
+  padding: 0 0 6px 0;
+}
+
+.notification {
+  background: color-mix(in srgb, var(--surface0) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent);
+  border-radius: 10px;
+  padding: 10px;
+  color: var(--text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--crust) 30%, transparent);
+}
+
+.notification:hover {
+  background: color-mix(in srgb, var(--surface1) 90%, transparent);
+  border-color: color-mix(in srgb, var(--outline) 60%, transparent);
+}
+
+/* Urgentieniveaus */
+.notification.low {
+  border-left: 3px solid var(--surface1);
+}
+
+.notification.normal {
+  border-left: 3px solid var(--primary);
+}
+
+.notification.critical {
+  border-left: 3px solid var(--red);
+  background: color-mix(in srgb, var(--red) 8%, var(--surface0));
+}
+
+/* Header (app-naam + tijd) */
+.notification-default-action {
+  padding: 0;
+}
+
+.notification-content {
+  padding: 0;
+}
+
+.app-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time {
+  font-size: 11px;
+  color: var(--subtext0);
+}
+
+/* Titel */
+.summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  padding-top: 2px;
+}
+
+/* Lichaam */
+.body {
+  font-size: 12px;
+  color: var(--subtext0);
+  padding-top: 2px;
+}
+
+/* App-icoon */
+.app-icon {
+  border-radius: 8px;
+}
+
+/* Afbeelding in notificatie */
+.notification-image {
+  border-radius: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Acties-knoppen
+   --------------------------------------------------------------------------- */
+.notification-action {
+  background: color-mix(in srgb, var(--surface1) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 40%, transparent);
+  border-radius: 8px;
+  color: var(--on-surface);
+  padding: 4px 12px;
+  font-size: 12px;
+  margin-top: 6px;
+  margin-right: 4px;
+}
+
+.notification-action:hover {
+  background: color-mix(in srgb, var(--primary) 20%, var(--surface1));
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+.notification-action:active {
+  background: color-mix(in srgb, var(--primary) 30%, var(--surface1));
+}
+
+/* Sluiten-knop */
+.close-button {
+  background: transparent;
+  border-radius: 50%;
+  color: var(--subtext0);
+  min-width: 20px;
+  min-height: 20px;
+  padding: 2px;
+}
+
+.close-button:hover {
+  background: color-mix(in srgb, var(--red) 20%, transparent);
+  color: var(--red);
+}
+
+/* ---------------------------------------------------------------------------
+   MPRIS-widget (mediaspeler)
+   --------------------------------------------------------------------------- */
+.widget-mpris {
+  padding: 4px;
+}
+
+.widget-mpris-player {
+  background: color-mix(in srgb, var(--surface0) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 40%, transparent);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 6px;
+}
+
+.widget-mpris-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.widget-mpris-subtitle {
+  font-size: 12px;
+  color: var(--subtext0);
+}
+
+.widget-mpris > box > button {
+  background: color-mix(in srgb, var(--surface1) 80%, transparent);
+  border-radius: 50%;
+  color: var(--text);
+  min-width: 32px;
+  min-height: 32px;
+  margin: 2px;
+}
+
+.widget-mpris > box > button:hover {
+  background: color-mix(in srgb, var(--primary) 20%, var(--surface1));
+  color: var(--primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Inhibitors
+   --------------------------------------------------------------------------- */
+.widget-inhibitors {
+  padding: 4px 4px 10px 4px;
+}
+
+.widget-inhibitors > button {
+  background: color-mix(in srgb, var(--yellow) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--yellow) 30%, transparent);
+  border-radius: 8px;
+  color: var(--yellow);
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.widget-inhibitors > button:hover {
+  background: color-mix(in srgb, var(--yellow) 25%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   Notificatie toast (buiten control center)
+   --------------------------------------------------------------------------- */
+.notification-window {
+  background: transparent;
+}
+
+.floating-notifications {
+  background: transparent;
+}

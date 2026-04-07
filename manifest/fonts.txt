@@ -1,0 +1,20 @@
+# =============================================================================
+# manifest/fonts.txt — Fonts (installatie via pakketmanager)
+# =============================================================================
+# Fonts worden geïnstalleerd als pakket (zie theme.txt).
+# Dit bestand documenteert welke font-familie waarvoor gebruikt wordt.
+
+# JetBrains Mono Nerd — terminal, code, Quickshell monospace
+# Pakket: ttf-jetbrains-mono-nerd
+
+# Fira Code — fallback code font
+# Pakket: ttf-fira-code
+
+# Fira Sans — UI-tekst in Quickshell
+# Pakket: ttf-fira-sans
+
+# Material Design Icons — Quickshell iconen (supplementair)
+# Pakket: ttf-material-design-icons-variable
+
+# Noto Fonts — brede Unicode dekking + emoji
+# Pakket: noto-fonts, noto-fonts-emoji

@@ -1,0 +1,25 @@
+# =============================================================================
+# manifest/packages/optional.txt — Optionele pakketten
+# =============================================================================
+# Deze worden alleen geïnstalleerd als het bijbehorende profiel-vlag aan staat.
+
+# Spicetify (Spotify-theming) — ENABLE_SPICETIFY=true
+# aur:spicetify-cli
+
+# Vesktop (Discord-client) — ENABLE_VESKTOP=true
+# aur:vesktop-bin
+
+# VSCode — altijd bruikbaar maar niet verplicht
+# aur:visual-studio-code-bin
+
+# Mpvpaper (video wallpapers) — ENABLE_VIDEO_WALLPAPER=true
+# aur:mpvpaper
+
+# Vingerafdruk — ENABLE_FINGERPRINT=true
+# fprintd
+
+# Power profiles (laptop) — ENABLE_POWER_PROFILES=true
+# power-profiles-daemon
+
+# Helderheidsregeling (laptop) — ENABLE_BRIGHTNESS_CONTROL=true
+# brightnessctl

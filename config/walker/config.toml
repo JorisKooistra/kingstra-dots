@@ -1,0 +1,63 @@
+# =============================================================================
+# Walker — config.toml
+# =============================================================================
+
+[ui]
+# Positie: gecentreerd, bovenste derde van het scherm
+anchor      = "center"
+width       = 680
+height      = 0        # Automatisch op basis van resultaten
+max_entries = 8
+
+# Animaties
+animations  = true
+
+# Zoekbalk
+placeholder = "Zoeken..."
+show_initial_entries = false
+
+# Iconen
+icon_size = 32
+icons     = true
+
+[runner]
+# Shell-commando's uitvoeren via r: prefix
+prefix     = "r:"
+name_label = true
+
+[applications]
+# Desktop-entries
+name_label   = true
+show_generic = false
+cache        = true
+
+[websearch]
+prefix  = "?"
+entries = [
+  { name = "DuckDuckGo", url = "https://duckduckgo.com/?q=%s" },
+  { name = "GitHub",     url = "https://github.com/search?q=%s" },
+]
+
+[ssh]
+# SSH-hosts uit ~/.ssh/config
+prefix = "ssh:"
+
+[clipboard]
+# Klembordgeschiedenis via cliphist
+prefix  = "cb:"
+enabled = false   # Gebruik Super+V voor directe cliphist-toegang
+
+[symbols]
+# Emoji en symbolen
+prefix = ":"
+
+[calc]
+prefix  = "="
+enabled = true
+
+[typeahead]
+enabled = true
+delay   = 150
+
+[history]
+enabled = true

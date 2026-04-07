@@ -1,0 +1,38 @@
+# =============================================================================
+# manifest/packages/core.txt — Hyprland core
+# =============================================================================
+# Formaat: pakketnnaam (pacman) of aur:<pakketnaam> (AUR)
+
+# Wayland / Hyprland
+hyprland
+hyprutils
+hyprcursor
+hyprpaper
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+xdg-utils
+
+# Polkit
+polkit-gnome
+
+# Audio
+pipewire
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+wireplumber
+
+# Dbus / sessiebeheer
+dbus
+dbus-python
+xdg-user-dirs
+
+# Wayland hulpprogramma's
+wl-clipboard
+wlr-randr
+grimblast
+
+# Fonts (kern)
+noto-fonts
+noto-fonts-emoji
+ttf-liberation

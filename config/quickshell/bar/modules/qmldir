@@ -1,0 +1,8 @@
+module Ks.Bar.Modules
+Workspaces   1.0 Workspaces.qml
+Clock        1.0 Clock.qml
+ActiveWindow 1.0 ActiveWindow.qml
+SystemStats  1.0 SystemStats.qml
+MediaPlayer  1.0 MediaPlayer.qml
+NotifButton  1.0 NotifButton.qml
+PowerButton  1.0 PowerButton.qml

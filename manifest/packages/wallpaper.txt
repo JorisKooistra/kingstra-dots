@@ -1,0 +1,19 @@
+# =============================================================================
+# manifest/packages/wallpaper.txt — Wallpaperlaag
+# =============================================================================
+
+# Hyprpaper (statische wallpapers)
+hyprpaper
+
+# Beeldverwerking voor matugen + thumbnails
+imagemagick
+ffmpeg
+curl
+sqlite
+
+# Bestandssysteembewaking (wallpaper dir)
+inotify-tools
+
+# --- Optioneel (video wallpapers) ---
+# Schakel in via profiel: ENABLE_VIDEO_WALLPAPER=true
+# aur:mpvpaper

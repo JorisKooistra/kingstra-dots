@@ -1,0 +1,19 @@
+# =============================================================================
+# manifest/packages/session.txt — Sessionlaag (lock, idle, SDDM)
+# =============================================================================
+
+# Hyprlock (lockscreen)
+hyprlock
+
+# Hypridle (idle daemon)
+hypridle
+
+# SDDM (login manager)
+sddm
+
+# SDDM theme — sugar-candy stijl
+aur:sddm-sugar-candy-git
+
+# --- Optioneel (vingerafdruk) ---
+# Schakel in via profiel: ENABLE_FINGERPRINT=true
+# fprintd

@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-dots — Installer
+# =============================================================================
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export REPO_ROOT
+
+# ---------------------------------------------------------------------------
+# Bibliotheekbestanden inladen
+# ---------------------------------------------------------------------------
+for lib in "$REPO_ROOT"/installer/lib/*.sh; do
+    # shellcheck source=/dev/null
+    source "$lib"
+done
+
+# ---------------------------------------------------------------------------
+# Standaardwaarden
+# ---------------------------------------------------------------------------
+DRY_RUN=false
+PROFILE=""          # Leeg = auto-detectie na detect_system()
+PROFILE_EXPLICIT=false
+SELECTED_PHASE=""
+FROM_PHASE=""
+SKIP_CONFIRM=false
+
+PHASES_DIR="$REPO_ROOT/installer/phases"
+
+ALL_PHASES=(
+    01_project_base
+    02_shell_terminal
+    03_hypr_core
+    04_bindings
+    05_ui_quickshell
+    06_notifications
+    07_launcher
+    08_theming
+    09_wallpaper
+    10_session
+    11_apps_tools
+    12_network_resume_fixes
+    13_monitoring
+    14_profiles
+    15_finalize
+)
+
+# ---------------------------------------------------------------------------
+# Argumenten verwerken
+# ---------------------------------------------------------------------------
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            --phase)
+                SELECTED_PHASE="$2"
+                shift 2
+                ;;
+            --from-phase)
+                FROM_PHASE="$2"
+                shift 2
+                ;;
+            --profile)
+                PROFILE="$2"
+                PROFILE_EXPLICIT=true
+                shift 2
+                ;;
+            --yes|-y)
+                SKIP_CONFIRM=true
+                shift
+                ;;
+            --help|-h)
+                usage
+                exit 0
+                ;;
+            *)
+                log_error "Onbekend argument: $1"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+
+    export DRY_RUN PROFILE PROFILE_EXPLICIT SELECTED_PHASE FROM_PHASE SKIP_CONFIRM
+}
+
+usage() {
+    cat <<EOF
+Gebruik: ./install.sh [opties]
+
+Opties:
+  (geen)               Alle fases uitvoeren met het standaardprofiel
+  --dry-run            Laat zien wat er zou gebeuren zonder wijzigingen
+  --phase FASE         Voer alleen één fase uit (bijv. 01_project_base)
+  --from-phase FASE    Start vanaf een specifieke fase
+  --profile PROFIEL    Gebruik profiel: default | nvidia | laptop
+  --yes, -y            Bevestigingsvragen overslaan
+  --help, -h           Dit helpbericht tonen
+
+Voorbeelden:
+  ./install.sh
+  ./install.sh --dry-run
+  ./install.sh --phase 01_project_base
+  ./install.sh --from-phase 03_hypr_core
+  ./install.sh --profile nvidia
+  ./install.sh --profile laptop --yes
+EOF
+}
+
+# ---------------------------------------------------------------------------
+# Fases uitvoeren
+# ---------------------------------------------------------------------------
+resolve_phases() {
+    local phases_to_run=()
+
+    if [[ -n "$SELECTED_PHASE" ]]; then
+        phases_to_run=("$SELECTED_PHASE")
+    elif [[ -n "$FROM_PHASE" ]]; then
+        local found=false
+        for phase in "${ALL_PHASES[@]}"; do
+            if [[ "$phase" == "$FROM_PHASE" ]]; then
+                found=true
+            fi
+            if $found; then
+                phases_to_run+=("$phase")
+            fi
+        done
+        if ! $found; then
+            log_error "Fase '$FROM_PHASE' niet gevonden."
+            exit 1
+        fi
+    else
+        phases_to_run=("${ALL_PHASES[@]}")
+    fi
+
+    echo "${phases_to_run[@]}"
+}
+
+run_phases() {
+    local -a phases
+    read -r -a phases <<< "$(resolve_phases)"
+
+    for phase in "${phases[@]}"; do
+        local phase_file="$PHASES_DIR/${phase}.sh"
+        if [[ ! -f "$phase_file" ]]; then
+            log_warn "Fasescript niet gevonden: $phase_file — overgeslagen"
+            continue
+        fi
+
+        log_phase "$phase"
+        # shellcheck source=/dev/null
+        source "$phase_file"
+
+        if declare -f "phase_run" > /dev/null; then
+            phase_run
+            unset -f phase_run
+        else
+            log_warn "Fase '$phase' heeft geen phase_run() functie."
+        fi
+    done
+}
+
+# ---------------------------------------------------------------------------
+# Hoofdstroom
+# ---------------------------------------------------------------------------
+main() {
+    parse_args "$@"
+
+    log_init
+    detect_system
+
+    # Profiel: expliciet opgegeven wint altijd; anders auto-detectie
+    if ! $PROFILE_EXPLICIT; then
+        PROFILE="${PROFILE_AUTO:-default}"
+    fi
+    export PROFILE
+
+    load_profile "$PROFILE"
+
+    print_banner
+    print_system_info
+
+    if ! $SKIP_CONFIRM && ! $DRY_RUN; then
+        prompt_confirm "Doorgaan met installatie?" || { log_info "Installatie geannuleerd."; exit 0; }
+    fi
+
+    if $DRY_RUN; then
+        log_warn "DRY-RUN modus actief — geen wijzigingen worden doorgevoerd."
+    fi
+
+    run_phases
+
+    print_summary
+}
+
+main "$@"

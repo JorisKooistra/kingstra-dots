@@ -1,0 +1,138 @@
+/* =============================================================================
+   style.css — Walker stijl (Imperative-geïnspireerd)
+   ============================================================================= */
+
+@import "colors.css";
+
+/* ---------------------------------------------------------------------------
+   Venster
+   --------------------------------------------------------------------------- */
+#window {
+  background:   color-mix(in srgb, var(--mantle) 94%, transparent);
+  border:       1px solid color-mix(in srgb, var(--outline) 30%, transparent);
+  border-radius: 14px;
+  box-shadow:   0 12px 40px color-mix(in srgb, var(--crust) 70%, transparent);
+  color:        var(--text);
+  font-family:  "Fira Sans", sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+   Zoekbalk
+   --------------------------------------------------------------------------- */
+#search {
+  background:  transparent;
+  border:      none;
+  border-bottom: 1px solid color-mix(in srgb, var(--outline) 30%, transparent);
+  border-radius: 0;
+  color:       var(--text);
+  font-size:   16px;
+  padding:     16px 18px;
+  caret-color: var(--primary);
+}
+
+#search::placeholder {
+  color: var(--subtext);
+}
+
+/* Zoekicoon */
+#search-icon {
+  color:       var(--subtext);
+  margin-left: 16px;
+  font-size:   18px;
+}
+
+/* ---------------------------------------------------------------------------
+   Resultatenlijst
+   --------------------------------------------------------------------------- */
+#results {
+  background:  transparent;
+  padding:     8px 6px;
+}
+
+/* Resultaatrij */
+row {
+  border-radius: 8px;
+  margin:       2px 2px;
+  padding:      6px 10px;
+  transition:   background 100ms ease;
+}
+
+row:selected,
+row:hover {
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  outline:    none;
+}
+
+row:selected {
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface));
+}
+
+/* ---------------------------------------------------------------------------
+   Inhoud van een resultaat
+   --------------------------------------------------------------------------- */
+#icon {
+  border-radius: 6px;
+  margin-right: 10px;
+}
+
+#name {
+  color:     var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+#description,
+#label {
+  color:     var(--subtext);
+  font-size: 11px;
+  margin-top: 1px;
+}
+
+/* Actie-badge (bijv. "runner", "ssh") */
+#activatable-label {
+  background:  color-mix(in srgb, var(--primary) 15%, transparent);
+  border:      1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  border-radius: 4px;
+  color:       var(--primary);
+  font-size:   10px;
+  font-weight: 600;
+  padding:     1px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ---------------------------------------------------------------------------
+   Scroll
+   --------------------------------------------------------------------------- */
+scrollbar {
+  background: transparent;
+  border:     none;
+}
+
+scrollbar slider {
+  background:    color-mix(in srgb, var(--outline) 40%, transparent);
+  border-radius: 4px;
+  min-width:     4px;
+}
+
+scrollbar slider:hover {
+  background: color-mix(in srgb, var(--primary) 50%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   Typeahead / aanvulling
+   --------------------------------------------------------------------------- */
+#typeahead {
+  color:     var(--subtext);
+  font-size: 16px;
+}
+
+/* ---------------------------------------------------------------------------
+   Calculator-uitkomst
+   --------------------------------------------------------------------------- */
+#calc-result {
+  color:       var(--primary);
+  font-size:   15px;
+  font-weight: 600;
+  font-family: "JetBrainsMono Nerd Font", monospace;
+}

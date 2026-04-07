@@ -1,0 +1,16 @@
+/* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
+:root {
+  --primary:         {{colors.primary.default.hex}};
+  --secondary:       {{colors.secondary.default.hex}};
+  --error:           {{colors.error.default.hex}};
+  --background:      {{colors.background.default.hex}};
+  --surface:         {{colors.surface.default.hex}};
+  --surface-variant: {{colors.surface_variant.default.hex}};
+  --on-surface:      {{colors.on_surface.default.hex}};
+  --outline:         {{colors.outline.default.hex}};
+  --text:            {{colors.on_background.default.hex}};
+  --subtext:         {{colors.on_surface_variant.default.hex}};
+  --base:            {{colors.background.default.hex}};
+  --mantle:          {{colors.shadow.default.hex}};
+  --crust:           {{colors.shadow.default.hex}};
+}
