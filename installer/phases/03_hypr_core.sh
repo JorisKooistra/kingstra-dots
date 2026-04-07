@@ -44,7 +44,7 @@ _phase03_install_packages() {
         cliphist \
         grim \
         slurp \
-        swaynotificationcenter \
+        swaync \
         playerctl
     aur_install satty
 }

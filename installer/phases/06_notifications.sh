@@ -5,7 +5,7 @@
 
 phase_run() {
     log_step "SwayNC installeren..."
-    pacman_install swaynotificationcenter
+    pacman_install swaync
 
     log_step "SwayNC config deployen..."
     deploy_config "swaync"
