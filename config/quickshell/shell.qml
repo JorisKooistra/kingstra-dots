@@ -1,19 +1,16 @@
 // =============================================================================
 // shell.qml — Quickshell entry point — kingstra-dots
 // =============================================================================
+// Laadt TopBar (per scherm) en Main (popup master window) tegelijk.
 // Start met: quickshell -p ~/.config/quickshell/shell.qml
 // =============================================================================
+import QtQuick
 import Quickshell
-import Quickshell.Wayland
-import "./bar"
 
 ShellRoot {
-    Variants {
-        model: Quickshell.screens
+    // Topbar — één per scherm (zit al in TopBar.qml als Variants)
+    Loader { source: "TopBar.qml" }
 
-        delegate: Bar {
-            required property var modelData
-            screen: modelData
-        }
-    }
+    // Popup master window (wallpaper picker, music, network, etc.)
+    Loader { source: "Main.qml" }
 }
