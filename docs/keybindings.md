@@ -1,126 +1,140 @@
 # Keybindings — kingstra-dots
 
-> **Super** = Windows/Meta-toets  
-> Binds zijn verdeeld over `config/hypr/conf.d/80-84-binds-*.conf`
+> **Super** = Windows/Meta key  
+> Binds are split across `config/hypr/conf.d/80-84-binds-*.conf`
 
 ---
 
-## Vensters
+## Windows
 
-| Toetsen | Actie |
+| Keys | Action |
 |---|---|
-| `Super + H/J/K/L` | Focus links / omlaag / omhoog / rechts |
-| `Super + ←↓↑→` | Focus (pijltoetsen) |
-| `Super + Shift + H/J/K/L` | Venster verplaatsen |
-| `Super + Ctrl + ←↓↑→` | Venster aanpassen |
-| `Super + Muis links` | Venster slepen |
-| `Super + Muis rechts` | Venster aanpassen |
-| `Super + Q` | Venster sluiten |
-| `Super + F` | Volledig scherm |
-| `Super + Shift + F` | Maximaliseren |
-| `Super + T` | Zwevend aan/uit |
-| `Super + Shift + T` | Vastpinnen (altijd zichtbaar) |
+| `Super + H/J/K/L` | Focus left / down / up / right |
+| `Super + ←↓↑→` | Focus (arrow keys) |
+| `Super + Shift + H/J/K/L` | Move window |
+| `Super + Shift + ←↓↑→` | Move window (arrow keys) |
+| `Super + Ctrl + ←↓↑→` | Resize window |
+| `Super + LMB drag` | Move window (mouse) |
+| `Super + RMB drag` | Resize window (mouse) |
+| `Super + Q` | Close window |
+| `Super + F` | Fullscreen |
+| `Super + M` | Maximize (keep bar/gaps) |
+| `Super + T` | Toggle floating |
+| `Super + Shift + T` | Pin (always visible) |
+| `Super + Shift + Space` | Center floating window |
 | `Super + P` | Pseudotile (dwindle) |
-| `Super + \` | Split-richting wisselen (dwindle) |
+| `Super + \` | Toggle split direction (dwindle) |
 
 ---
 
-## Werkruimtes
+## Window groups (tabs)
 
-| Toetsen | Actie |
+| Keys | Action |
 |---|---|
-| `Super + 1–0` | Naar werkruimte 1–10 |
-| `Super + Tab` | Vorige werkruimte |
-| `Super + Scroll` | Werkruimte wisselen |
-| `Super + Shift + 1–0` | Venster naar werkruimte 1–10 |
-| `Super + Alt + 1–0` | Venster stil verplaatsen (focus blijft) |
-| `Super + S` | Scratchpad aan/uit |
-| `Super + Shift + S` | Venster naar scratchpad |
+| `Super + G` | Toggle group |
+| `Super + Alt + →` | Next tab in group |
+| `Super + Alt + ←` | Previous tab in group |
+| `Super + Ctrl + G` | Lock/unlock group |
+| `Super + Shift + G` | Move window out of group |
 
 ---
 
-## Applicaties
+## Workspaces
 
-| Toetsen | Actie |
+| Keys | Action |
+|---|---|
+| `Super + 1–0` | Switch to workspace 1–10 |
+| `Super + Tab` | Previous workspace |
+| `Super + Scroll` | Cycle workspaces |
+| `Super + Shift + 1–0` | Move window to workspace 1–10 |
+| `Super + Alt + 1–0` | Move window silently (keep focus) |
+| `Super + S` | Toggle scratchpad |
+| `Super + Shift + S` | Move window to scratchpad |
+
+---
+
+## Apps
+
+| Keys | Action |
 |---|---|
 | `Super + Return` | Kitty (terminal) |
 | `Super + Ctrl + Return` | Walker (launcher) |
-| `Super + B` | Browser (standaard) |
-| `Super + E` | Nautilus (bestanden) |
-| `Super + Shift + E` | Yazi (terminal bestandsbeheer) |
-| `Super + V` | Klembordgeschiedenis (cliphist) |
+| `Super + B` | Browser (default) |
+| `Super + E` | Nautilus (files) |
+| `Super + Shift + E` | Yazi (terminal file manager) |
+| `Super + V` | Clipboard history (cliphist) |
 | `Super + Shift + Return` | btop in kitty |
 | `Super + Shift + C` | cava in kitty |
-| `Super + Alt + N` | nmtui (WiFi-beheer in kitty) |
-| `Super + Alt + B` | Blueman (Bluetooth-beheer) |
-| `Super + Ctrl + B` | Hyprland config herladen |
+| `Super + Alt + N` | nmtui (network manager in kitty) |
+| `Super + Alt + B` | Blueman (Bluetooth) |
+| `Super + Ctrl + B` | Reload Hyprland config |
 
 ---
 
 ## Widgets
 
-| Toetsen | Actie |
+| Keys | Action |
 |---|---|
-| `Super + N` | SwayNC control center aan/uit |
-| `Super + Shift + N` | Alle meldingen sluiten |
-| `Super + Alt + N` | Niet-storen wisselen |
-| `Super + W` | Wallpaper-picker (kingstra-wallpaper pick) |
-| `Super + X` | Power-menu (Quickshell popup) |
-| Klik op CPU/RAM-pill | Stats-popup (CPU, RAM, disk, temp, netwerk) |
+| `Super + N` | Toggle SwayNC control center |
+| `Super + Shift + N` | Dismiss all notifications |
+| `Super + Alt + N` | Toggle do-not-disturb |
+| `Super + W` | Wallpaper picker |
+| `Super + Shift + M` | Music popup |
+| `Super + C` | Calendar popup |
+| `Super + O` | Monitor overview |
+| `Super + X` | FocusTime / power menu |
+| `Super + Shift + I` | Guide & weather settings |
+| Click CPU/RAM pill | Stats popup |
 
 ---
 
 ## Screenshots
 
-| Toetsen | Actie |
+| Keys | Action |
 |---|---|
-| `Print` | Gebied kiezen → opslaan + kopiëren |
-| `Super + Print` | Gebied kiezen → alleen kopiëren |
-| `Shift + Print` | Gebied kiezen → satty (annotatie) |
-| `Super + Shift + P` | Volledig scherm opslaan |
+| `Print` | Select area → save + copy |
+| `Super + Print` | Select area → copy only |
+| `Shift + Print` | Select area → annotate (satty) |
+| `Super + Shift + P` | Full screen capture |
 
-Bestanden worden opgeslagen in `~/Pictures/Screenshots/`.
+Screenshots are saved to `~/Pictures/Screenshots/`.
 
 ---
 
 ## Media
 
-| Toetsen | Actie |
+| Keys | Action |
 |---|---|
-| `XF86AudioRaiseVolume` | Volume omhoog |
-| `XF86AudioLowerVolume` | Volume omlaag |
-| `XF86AudioMute` | Dempen aan/uit |
-| `XF86AudioMicMute` | Microfoon dempen aan/uit |
-| `XF86MonBrightnessUp` | Helderheid omhoog |
-| `XF86MonBrightnessDown` | Helderheid omlaag |
-| `XF86AudioPlay/Pause` | Afspelen/pauzeren |
-| `XF86AudioNext/Prev` | Volgend/vorig nummer |
-| `Super + Alt + P` | Afspelen/pauzeren |
-| `Super + Alt + .` | Volgend nummer |
-| `Super + Alt + ,` | Vorig nummer |
+| `XF86AudioRaiseVolume` | Volume up |
+| `XF86AudioLowerVolume` | Volume down |
+| `XF86AudioMute` | Toggle mute |
+| `XF86AudioMicMute` | Toggle mic mute |
+| `XF86MonBrightnessUp` | Brightness up |
+| `XF86MonBrightnessDown` | Brightness down |
+| `XF86AudioPlay/Pause` | Play/pause |
+| `XF86AudioNext/Prev` | Next/previous track |
+| `Super + Alt + P` | Play/pause |
+| `Super + Alt + .` | Next track |
+| `Super + Alt + ,` | Previous track |
 
 ---
 
-## Sessie
+## Session
 
-| Toetsen | Actie |
+| Keys | Action |
 |---|---|
-| `Super + Ctrl + L` | Vergrendelen (hyprlock) |
-| `Super + Ctrl + R` | Hyprland herladen |
-| `Super + Ctrl + Q` | Sessie beëindigen |
+| `Super + Ctrl + L` | Lock (hyprlock) |
+| `Super + Ctrl + R` | Reload Hyprland |
+| `Super + Ctrl + Q` | End session |
 
 ---
 
-## Ontwerpregels
+## Design rules
 
-1. `Super` = vensterbeheer en navigatie  
-2. `Super + Shift` = actie op het huidige venster  
-3. `Super + Ctrl` = systeem/sessie of venstergrootte  
-4. `Super + Alt` = stil verplaatsen of media  
-5. Mediatoetsen = directe hardwarefuncties  
-6. Widget-binds storen de workflow niet  
-7. Geen dubbele combinaties — gecontroleerd door de installer
-
----
-
-*Volledig bijgewerkt na alle 15 installatiefasen.*
+1. `Super` = window management and navigation  
+2. `Super + Shift` = action on current window  
+3. `Super + Ctrl` = system/session or window size  
+4. `Super + Alt` = silent move, group nav, or media  
+5. Media keys = direct hardware functions  
+6. Widget binds don't interrupt workflow  
+7. No duplicate combos — checked by installer
