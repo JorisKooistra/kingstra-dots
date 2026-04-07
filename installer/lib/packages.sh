@@ -51,12 +51,12 @@ aur_install() {
 
     # Voorkom dat de AUR-helper een pager opent (less/bat/diff-so-fancy) of de
     # terminal manipuleert (alternate screen buffer, mouse tracking).
-    # --skipreview (paru) / --nodiffmenu --nocleanmenu (yay) slaan PKGBUILD-
-    # reviews over. PAGER=cat garandeert geen interactieve pager ongeacht config.
+    # --skipreview (paru) / --answerdiff=None etc. (yay) slaan PKGBUILD-reviews
+    # over. PAGER=cat garandeert geen interactieve pager ongeacht config.
     local -a aur_flags=(--needed --noconfirm)
     case "${AUR_HELPER##*/}" in
         paru) aur_flags+=(--skipreview) ;;
-        yay)  aur_flags+=(--nodiffmenu --nocleanmenu --noeditmenu) ;;
+        yay)  aur_flags+=(--answerdiff=None --answerclean=None --answeredit=None) ;;
     esac
 
     PAGER=cat run_cmd "$AUR_HELPER" -S "${aur_flags[@]}" "${to_install[@]}"
