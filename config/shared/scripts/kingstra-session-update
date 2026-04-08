@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-session-update — Synchroniseer session.json vanuit losse state files
+# =============================================================================
+# Gebruik: kingstra-session-update
+#
+# Leest wallpaper.json, theme.json en mode.json uit de state directory
+# en schrijft een samengevoegde session.json.
+# =============================================================================
+set -euo pipefail
+
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+SESSION_FILE="$STATE_DIR/session.json"
+LOG_PREFIX="[kingstra-session-update]"
+
+_log()  { echo "$LOG_PREFIX $*"; }
+_die()  { echo "$LOG_PREFIX FOUT: $*" >&2; exit 1; }
+
+command -v jq &>/dev/null || _die "jq is niet geïnstalleerd"
+
+# ---------------------------------------------------------------------------
+# Lees losse state files (met fallback defaults)
+# ---------------------------------------------------------------------------
+WALLPAPER_FILE="$STATE_DIR/wallpaper.json"
+THEME_FILE="$STATE_DIR/theme.json"
+MODE_FILE="$STATE_DIR/mode.json"
+
+wallpaper=""
+theme="botanical"
+mode="office"
+
+if [[ -f "$WALLPAPER_FILE" ]]; then
+    wallpaper=$(jq -r '.path // ""' "$WALLPAPER_FILE")
+fi
+
+if [[ -f "$THEME_FILE" ]]; then
+    theme=$(jq -r '.name // "botanical"' "$THEME_FILE")
+fi
+
+if [[ -f "$MODE_FILE" ]]; then
+    mode=$(jq -r '.name // "office"' "$MODE_FILE")
+fi
+
+# ---------------------------------------------------------------------------
+# Schrijf session.json
+# ---------------------------------------------------------------------------
+mkdir -p "$(dirname "$SESSION_FILE")"
+
+jq -n \
+    --arg wallpaper "$wallpaper" \
+    --arg theme "$theme" \
+    --arg mode "$mode" \
+    '{"wallpaper":$wallpaper,"theme":$theme,"mode":$mode}' \
+    > "$SESSION_FILE"
+
+_log "session.json bijgewerkt: wallpaper=$(basename "$wallpaper" 2>/dev/null || echo '(leeg)'), theme=$theme, mode=$mode"

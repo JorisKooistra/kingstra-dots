@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# =============================================================================
+# apply-shell-state — Centrale apply pipeline: matugen + reloads
+# =============================================================================
+# Gebruik: apply-shell-state [--verbose]
+#
+# Leest session.json voor het wallpaper-pad.
+# Leest scheme/mode/color_index uit quickshell/theme.json (gezet door theme-switch).
+# Draait matugen, optioneel color-transform, herlaadt alle apps.
+# =============================================================================
+set -euo pipefail
+
+SESSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
+THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+LOG_PREFIX="[apply-shell-state]"
+VERBOSE=false
+
+_log()  { echo "$LOG_PREFIX $*"; }
+_warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
+
+for arg in "$@"; do
+    case "$arg" in
+        --verbose|-v) VERBOSE=true ;;
+    esac
+done
+
+# ---------------------------------------------------------------------------
+# Stap 1 — Wallpaper pad bepalen (session.json, fallback cache)
+# ---------------------------------------------------------------------------
+if [[ ! -f "$SESSION_FILE" ]]; then
+    _warn "session.json niet gevonden: $SESSION_FILE"
+    exit 1
+fi
+
+WALLPAPER=$(jq -r '.wallpaper // ""' "$SESSION_FILE")
+
+if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
+    WALLPAPER="$(cat "$CACHE_DIR/last-wallpaper" 2>/dev/null || echo "")"
+fi
+
+if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
+    _warn "Geen geldig wallpaper gevonden (session.json en cache leeg)"
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Stap 2 — Matugen parameters lezen uit quickshell/theme.json
+# ---------------------------------------------------------------------------
+SCHEME="scheme-tonal-spot"
+COLOR_IDX=0
+MODE="dark"
+
+if [[ -f "$THEME_JSON" ]]; then
+    SCHEME=$(jq -r '.scheme_type // "scheme-tonal-spot"' "$THEME_JSON")
+    COLOR_IDX=$(jq -r '.color_index // 0' "$THEME_JSON")
+    MODE=$(jq -r '.mode // "dark"' "$THEME_JSON")
+fi
+
+_log "Wallpaper: $(basename "$WALLPAPER")"
+_log "Scheme: $SCHEME | Mode: $MODE | Color index: $COLOR_IDX"
+
+# ---------------------------------------------------------------------------
+# Stap 3 — Matugen draaien (genereert alle templates)
+# ---------------------------------------------------------------------------
+MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+MATUGEN_ARGS=("image" "$WALLPAPER"
+    "--type"               "$SCHEME"
+    "--mode"               "$MODE"
+    "--source-color-index" "$COLOR_IDX")
+[[ -f "$MATUGEN_CONF" ]] && MATUGEN_ARGS+=("--config" "$MATUGEN_CONF")
+
+matugen "${MATUGEN_ARGS[@]}" 2>/dev/null || _warn "matugen mislukt"
+_log "Matugen templates gegenereerd"
+
+if $VERBOSE; then
+    matugen "${MATUGEN_ARGS[@]}" --show-colors 2>/dev/null || true
+fi
+
+# ---------------------------------------------------------------------------
+# Stap 4 — Color transform (FASE 2, optioneel)
+# ---------------------------------------------------------------------------
+COLOR_TRANSFORM="${HOME}/.local/bin/kingstra-color-transform"
+if [[ -x "$COLOR_TRANSFORM" ]]; then
+    COLORS_JSON=$(matugen "${MATUGEN_ARGS[@]}" --json hex 2>/dev/null || echo "{}")
+    echo "$COLORS_JSON" | "$COLOR_TRANSFORM" || _warn "color-transform mislukt"
+    _log "Color transform toegepast"
+fi
+
+# ---------------------------------------------------------------------------
+# Stap 5 — Apps herladen
+# ---------------------------------------------------------------------------
+if command -v hyprctl &>/dev/null; then
+    hyprctl reload 2>/dev/null || true
+    _log "Hyprland herladen"
+fi
+
+if pgrep -f "quickshell.*shell.qml" &>/dev/null; then
+    pkill -f "quickshell.*shell.qml" 2>/dev/null || true
+    sleep 0.4
+    quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/shell.qml" &
+    disown
+    _log "Quickshell herstart"
+fi
+
+if pgrep -x swaync &>/dev/null; then
+    pkill -x swaync 2>/dev/null || true
+    sleep 0.2
+    swaync &
+    disown
+    _log "SwayNC herstart"
+fi
+
+if pgrep -x kitty &>/dev/null; then
+    pkill -USR1 kitty 2>/dev/null || true
+    _log "Kitty herladen"
+fi
+
+_log "Klaar"

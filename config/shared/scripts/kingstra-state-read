@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-state-read — Lees een veld uit een Kingstra state JSON
+# =============================================================================
+# Gebruik: kingstra-state-read <bestand> <key>
+#
+# Voorbeeld:
+#   kingstra-state-read wallpaper.json matugen_scheme
+#   kingstra-state-read theme.json name
+#
+# Het <bestand> mag een absoluut pad zijn of alleen de bestandsnaam;
+# bij alleen een naam wordt gezocht in $STATE_DIR.
+# =============================================================================
+set -euo pipefail
+
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+LOG_PREFIX="[kingstra-state-read]"
+
+_die() { echo "$LOG_PREFIX FOUT: $*" >&2; exit 1; }
+
+# ---------------------------------------------------------------------------
+# Argumenten
+# ---------------------------------------------------------------------------
+FILE="${1:?Gebruik: kingstra-state-read <bestand> <key>}"
+KEY="${2:?Gebruik: kingstra-state-read <bestand> <key>}"
+
+# Als het geen absoluut pad is, zoek in STATE_DIR
+if [[ "$FILE" != /* ]]; then
+    FILE="$STATE_DIR/$FILE"
+fi
+
+[[ -f "$FILE" ]] || _die "Bestand niet gevonden: $FILE"
+command -v jq &>/dev/null || _die "jq is niet geïnstalleerd"
+
+# ---------------------------------------------------------------------------
+# Lees en output
+# ---------------------------------------------------------------------------
+VALUE=$(jq -r --arg k "$KEY" '.[$k] // empty' "$FILE")
+
+if [[ -z "$VALUE" ]]; then
+    # Key niet gevonden — exit 0 maar geen output
+    exit 0
+fi
+
+echo "$VALUE"

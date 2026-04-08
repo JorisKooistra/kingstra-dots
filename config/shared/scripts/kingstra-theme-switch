@@ -272,4 +272,19 @@ mkdir -p "$(dirname "$ACTIVE_FILE")"
 echo "$THEME_NAME" > "$ACTIVE_FILE"
 _log "Actief thema opgeslagen: $THEME_NAME"
 
+# ---------------------------------------------------------------------------
+# Step 8 — Update state/theme.json + session.json
+# ---------------------------------------------------------------------------
+STATE_WRITE="${HOME}/.local/bin/kingstra-state-write"
+if [[ -x "$STATE_WRITE" ]]; then
+    "$STATE_WRITE" theme.json name "$THEME_NAME"
+    _log "state/theme.json bijgewerkt"
+fi
+
+SESSION_UPDATE="${HOME}/.local/bin/kingstra-session-update"
+if [[ -x "$SESSION_UPDATE" ]]; then
+    "$SESSION_UPDATE"
+    _log "session.json bijgewerkt"
+fi
+
 _notify "Thema: ${META_NAME:-$THEME_NAME}" "Stijl succesvol toegepast"

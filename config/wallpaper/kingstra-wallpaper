@@ -138,6 +138,24 @@ _save_state() {
     echo "$mode"  > "$MODE_FILE"
 }
 
+_update_wallpaper_json() {
+    local file="$1"
+    local state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+    local wjson="$state_dir/wallpaper.json"
+
+    mkdir -p "$state_dir"
+
+    local existing='{}'
+    [[ -f "$wjson" ]] && existing="$(cat "$wjson")"
+
+    echo "$existing" \
+        | jq --arg name "$(basename "$file")" --arg path "$file" \
+             '. + {name: $name, path: $path}' \
+        > "$wjson" || true
+
+    _log "wallpaper.json bijgewerkt: $(basename "$file")"
+}
+
 # ---------------------------------------------------------------------------
 # Commando's
 # ---------------------------------------------------------------------------
@@ -148,12 +166,15 @@ cmd_set() {
 
     _set_static "$file"
     _save_state "$file" "static"
+    _update_wallpaper_json "$file"
+    "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
 
-    # Matugen pipeline (genereert kleuren + herstart apps)
-    if command -v kingstra-theme-apply &>/dev/null; then
-        kingstra-theme-apply "$file"
+    # Kleuren genereren + apps herladen
+    APPLY="${HOME}/.local/bin/apply-shell-state"
+    if [[ -x "$APPLY" ]]; then
+        "$APPLY"
     else
-        _warn "kingstra-theme-apply niet gevonden — alleen wallpaper ingesteld"
+        _warn "apply-shell-state niet gevonden — alleen wallpaper ingesteld"
         _notify "Wallpaper ingesteld" "$(basename "$file")"
     fi
 }
@@ -165,6 +186,8 @@ cmd_video() {
 
     _set_video "$file"
     _save_state "$file" "video"
+    _update_wallpaper_json "$file"
+    "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
     _notify "Videowallpaper" "$(basename "$file")"
 }
 
@@ -214,10 +237,9 @@ cmd_reload() {
         _set_video "$file"
     else
         _set_static "$file"
-        # Herlaad ook kleuren (matugen --reload past alleen templates opnieuw toe)
-        if command -v kingstra-theme-apply &>/dev/null; then
-            kingstra-theme-apply --reload 2>/dev/null || true
-        fi
+        # Herlaad kleuren + apps
+        APPLY="${HOME}/.local/bin/apply-shell-state"
+        [[ -x "$APPLY" ]] && "$APPLY" 2>/dev/null || true
     fi
 
     _log "Wallpaper herladen: $(basename "$file") [$mode]"

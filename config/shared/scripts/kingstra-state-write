@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-state-write — Schrijf een veld in een Kingstra state JSON
+# =============================================================================
+# Gebruik: kingstra-state-write <bestand> <key> <value>
+#
+# Voorbeeld:
+#   kingstra-state-write wallpaper.json name "forest.jpg"
+#   kingstra-state-write theme.json name "ocean"
+#
+# Het <bestand> mag een absoluut pad zijn of alleen de bestandsnaam;
+# bij alleen een naam wordt gezocht in $STATE_DIR.
+# =============================================================================
+set -euo pipefail
+
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+LOG_PREFIX="[kingstra-state-write]"
+
+_die() { echo "$LOG_PREFIX FOUT: $*" >&2; exit 1; }
+
+# ---------------------------------------------------------------------------
+# Argumenten
+# ---------------------------------------------------------------------------
+FILE="${1:?Gebruik: kingstra-state-write <bestand> <key> <value>}"
+KEY="${2:?Gebruik: kingstra-state-write <bestand> <key> <value>}"
+VALUE="${3:?Gebruik: kingstra-state-write <bestand> <key> <value>}"
+
+# Als het geen absoluut pad is, zoek in STATE_DIR
+if [[ "$FILE" != /* ]]; then
+    FILE="$STATE_DIR/$FILE"
+fi
+
+command -v jq &>/dev/null || _die "jq is niet geïnstalleerd"
+
+# Maak bestand aan als het niet bestaat
+if [[ ! -f "$FILE" ]]; then
+    mkdir -p "$(dirname "$FILE")"
+    echo '{}' > "$FILE"
+fi
+
+# ---------------------------------------------------------------------------
+# Schrijf veld
+# ---------------------------------------------------------------------------
+TMP="$(mktemp)"
+jq --arg k "$KEY" --arg v "$VALUE" '.[$k] = $v' "$FILE" > "$TMP" && mv "$TMP" "$FILE"
