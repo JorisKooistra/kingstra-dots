@@ -6,6 +6,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export REPO_ROOT
+export PATH="$HOME/.local/bin:$PATH"
 
 # ---------------------------------------------------------------------------
 # Bibliotheekbestanden inladen

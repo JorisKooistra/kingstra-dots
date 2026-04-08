@@ -50,8 +50,6 @@ _phase15_validate_commands() {
     validate_cmd swayosd-server
     # Thema
     validate_cmd matugen
-    validate_cmd kingstra-theme-apply
-    validate_cmd kingstra-wallpaper
     # Apps
     validate_cmd nautilus
     validate_cmd yazi
@@ -80,6 +78,8 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/quickshell/colors.json"               "colors.json"
     # Matugen
     validate_file "$HOME/.config/matugen/config.toml"                  "matugen/config.toml"
+    validate_file "$HOME/.local/bin/kingstra-theme-apply"              "kingstra-theme-apply"
+    validate_file "$HOME/.local/bin/kingstra-wallpaper"                "kingstra-wallpaper"
     # Session
     validate_file "$HOME/.config/hypridle/hypridle.conf"               "hypridle.conf"
     validate_file "$HOME/.config/hyprlock/hyprlock.conf"               "hyprlock.conf"
