@@ -7,25 +7,91 @@
 #
 # Of met opties doorgeven:
 #   bash <(curl -fsSL https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh) --dry-run
+#
+# Optioneel:
+#   KINGSTRA_REF=main bash <(curl -fsSL https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh)
 # =============================================================================
 set -euo pipefail
 
 REPO_URL="https://github.com/JorisKooistra/kingstra-dots.git"
+REPO_REF="${KINGSTRA_REF:-}"
 REPO_DIR="${KINGSTRA_DIR:-$HOME/kingstra-dots}"
 BOLD='\033[1m'
 GREEN='\033[1;32m'
 RED='\033[1;31m'
 YELLOW='\033[1;33m'
 RESET='\033[0m'
+DRY_RUN=false
 
 _log()  { printf "${BOLD}[kingstra]${RESET} %s\n" "$*"; }
 _ok()   { printf "${GREEN}[kingstra]${RESET} %s\n" "$*"; }
 _warn() { printf "${YELLOW}[kingstra] WARN:${RESET} %s\n" "$*" >&2; }
 _die()  { printf "${RED}[kingstra] FOUT:${RESET} %s\n" "$*" >&2; exit 1; }
 
+_parse_bootstrap_flags() {
+    local arg
+    for arg in "$@"; do
+        if [[ "$arg" == "--dry-run" ]]; then
+            DRY_RUN=true
+            return 0
+        fi
+    done
+}
+
+_detect_repo_ref() {
+    if [[ -n "$REPO_REF" ]]; then
+        return 0
+    fi
+
+    REPO_REF="$(git ls-remote --symref "$REPO_URL" HEAD 2>/dev/null | awk '/^ref:/ {sub("refs/heads/", "", $2); print $2; exit}')"
+    [[ -n "$REPO_REF" ]] || REPO_REF="main"
+}
+
+_ensure_aur_helper() {
+    if command -v yay &>/dev/null; then
+        _ok "AUR-helper gevonden: yay"
+        return 0
+    fi
+
+    if command -v paru &>/dev/null; then
+        _ok "AUR-helper gevonden: paru"
+        return 0
+    fi
+
+    if $DRY_RUN; then
+        _warn "Geen AUR-helper gevonden (yay/paru)."
+        _warn "Dry-run: yay-bin zou automatisch worden geïnstalleerd."
+        return 0
+    fi
+
+    _log "Geen AUR-helper gevonden — yay-bin automatisch installeren..."
+    command -v sudo &>/dev/null || _die "sudo niet gevonden. Installeer sudo en probeer opnieuw."
+
+    sudo pacman -S --needed --noconfirm base-devel git || _die "Kon vereisten voor yay niet installeren."
+
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+
+    if ! git clone --depth=1 https://aur.archlinux.org/yay-bin.git "$tmp_dir/yay-bin"; then
+        rm -rf "$tmp_dir"
+        _die "Kon yay-bin niet klonen vanuit AUR."
+    fi
+
+    if ! (cd "$tmp_dir/yay-bin" && makepkg -si --noconfirm); then
+        rm -rf "$tmp_dir"
+        _die "Automatische installatie van yay-bin mislukt."
+    fi
+
+    rm -rf "$tmp_dir"
+    command -v yay &>/dev/null || _die "yay is nog steeds niet beschikbaar na installatie."
+    _ok "AUR-helper geïnstalleerd: yay"
+}
+
 # ---------------------------------------------------------------------------
 # Vereisten controleren
 # ---------------------------------------------------------------------------
+_parse_bootstrap_flags "$@"
+
 _log "Vereisten controleren..."
 
 [[ -f /etc/arch-release ]] || _die "Alleen Arch Linux wordt ondersteund."
@@ -39,39 +105,30 @@ if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) ))
     _die "bash 4.4+ vereist (huidig: $BASH_VERSION)"
 fi
 
-# AUR-helper
-if command -v yay &>/dev/null; then
-    _ok "AUR-helper gevonden: yay"
-elif command -v paru &>/dev/null; then
-    _ok "AUR-helper gevonden: paru"
-else
-    _warn "Geen AUR-helper gevonden (yay/paru)."
-    _warn "AUR-pakketten kunnen niet automatisch worden geïnstalleerd."
-    _warn "Installeer yay: https://github.com/Jguer/yay#installation"
-    read -r -p "Toch doorgaan? [j/N] " antwoord
-    [[ "${antwoord,,}" == "j" ]] || { _log "Geannuleerd."; exit 0; }
-fi
+_ensure_aur_helper
+_detect_repo_ref
 
 # ---------------------------------------------------------------------------
 # Repository klonen of bijwerken
 # ---------------------------------------------------------------------------
 if [[ -d "$REPO_DIR/.git" ]]; then
     _log "Repo bestaat al — bijwerken: $REPO_DIR"
-    git -C "$REPO_DIR" fetch --quiet origin main 2>/dev/null || true
-    if git -C "$REPO_DIR" reset --hard origin/main; then
+    git -C "$REPO_DIR" remote set-url origin "$REPO_URL"
+    git -C "$REPO_DIR" fetch --quiet origin "$REPO_REF" 2>/dev/null || true
+    if git -C "$REPO_DIR" reset --hard "origin/$REPO_REF" && git -C "$REPO_DIR" clean -fd; then
         _ok "Repo bijgewerkt"
     else
         _warn "Bijwerken mislukt:"
-        git -C "$REPO_DIR" reset --hard origin/main
+        git -C "$REPO_DIR" reset --hard "origin/$REPO_REF"
     fi
 elif [[ -d "$REPO_DIR" ]]; then
     _warn "Map $REPO_DIR bestaat maar is geen git-repo — herklonen"
     mv "$REPO_DIR" "${REPO_DIR}.bak.$(date +%s)"
-    git clone --depth=1 "$REPO_URL" "$REPO_DIR"
+    git clone --depth=1 --branch "$REPO_REF" "$REPO_URL" "$REPO_DIR"
     _ok "Repo gekloond (oude map hernoemd naar .bak)"
 else
     _log "Repo klonen naar: $REPO_DIR"
-    git clone --depth=1 "$REPO_URL" "$REPO_DIR"
+    git clone --depth=1 --branch "$REPO_REF" "$REPO_URL" "$REPO_DIR"
     _ok "Repo gekloond"
 fi
 

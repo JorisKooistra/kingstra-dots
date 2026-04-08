@@ -14,16 +14,28 @@ Item {
 
     MatugenColors { id: _theme }
 
-    property alias activeTheme: carousel.activeTheme
-    property alias selectedThemeId: carousel.selectedThemeId
-    property alias selectedThemeData: carousel.selectedThemeData
-    property alias isApplying: carousel.isApplying
-    property alias isReady: carousel.isReady
+    property string activeTheme: carouselLoader.item && carouselLoader.item.activeTheme ? carouselLoader.item.activeTheme : ""
+    property string selectedThemeId: carouselLoader.item && carouselLoader.item.selectedThemeId ? carouselLoader.item.selectedThemeId : ""
+    property var selectedThemeData: carouselLoader.item && carouselLoader.item.selectedThemeData ? carouselLoader.item.selectedThemeData : ({})
+    property bool isApplying: carouselLoader.item ? carouselLoader.item.isApplying : false
+    property bool isReady: carouselLoader.item ? carouselLoader.item.isReady : true
     signal themeApplied(string themeId)
 
-    Keys.onLeftPressed: { carousel.stepToIndex(-1); event.accepted = true; }
-    Keys.onRightPressed: { carousel.stepToIndex(1); event.accepted = true; }
-    Keys.onReturnPressed: { carousel.applySelectedTheme(); event.accepted = true; }
+    function stepToIndex(delta) {
+        if (carouselLoader.item && carouselLoader.item.stepToIndex) {
+            carouselLoader.item.stepToIndex(delta);
+        }
+    }
+
+    function applySelectedTheme() {
+        if (carouselLoader.item && carouselLoader.item.applySelectedTheme) {
+            carouselLoader.item.applySelectedTheme();
+        }
+    }
+
+    Keys.onLeftPressed: { stepToIndex(-1); event.accepted = true; }
+    Keys.onRightPressed: { stepToIndex(1); event.accepted = true; }
+    Keys.onReturnPressed: { applySelectedTheme(); event.accepted = true; }
     Keys.onEscapePressed: {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
         event.accepted = true;
@@ -41,17 +53,43 @@ Item {
         color: Qt.rgba(_theme.crust.r, _theme.crust.g, _theme.crust.b, 0.92)
     }
 
-    ThemeCarousel {
-        id: carousel
+    Loader {
+        id: carouselLoader
         anchors.fill: parent
         anchors.topMargin: window.s(100)
         anchors.bottomMargin: window.s(90)
         anchors.leftMargin: window.s(32)
         anchors.rightMargin: window.s(32)
-        applyOnItemClick: true
-        onThemeApplied: (themeId) => {
+        source: Qt.resolvedUrl("ThemeCarousel.qml")
+
+        onLoaded: {
+            if (item) {
+                item.applyOnItemClick = true;
+            }
+        }
+    }
+
+    Connections {
+        target: carouselLoader.item
+        ignoreUnknownSignals: true
+        function onThemeApplied(themeId) {
             window.themeApplied(themeId);
             applyNotifTimer.start();
+        }
+    }
+
+    Rectangle {
+        visible: carouselLoader.status === Loader.Error
+        anchors.fill: parent
+        color: Qt.rgba(_theme.crust.r, _theme.crust.g, _theme.crust.b, 0.8)
+        z: 40
+
+        Text {
+            anchors.centerIn: parent
+            text: "Thema carousel kon niet laden"
+            font.family: "JetBrains Mono"
+            font.pixelSize: window.s(14)
+            color: _theme.text
         }
     }
 

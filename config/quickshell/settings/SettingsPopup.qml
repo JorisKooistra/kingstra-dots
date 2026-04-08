@@ -6,7 +6,6 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import "../"
-import "../themes" as ThemeUi
 
 Item {
     id: root
@@ -960,6 +959,19 @@ Item {
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
+                QtObject {
+                    id: themeCarousel
+                    property string selectedThemeId: ""
+                    property var selectedThemeData: ({})
+                    property bool isApplying: false
+
+                    function applySelectedTheme() {
+                        if (themeCarouselLoader.item && themeCarouselLoader.item.applySelectedTheme) {
+                            themeCarouselLoader.item.applySelectedTheme();
+                        }
+                    }
+                }
+
                 ScrollView {
                     anchors.fill: parent
                     anchors.margins: root.s(20)
@@ -1069,13 +1081,71 @@ Item {
 
                         Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
 
-                        ThemeUi.ThemeCarousel {
-                            id: themeCarousel
-                            embedded: true
+                        Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: root.s(290)
-                            onThemeApplied: {
-                                root.refreshActiveTheme();
+
+                            Loader {
+                                id: themeCarouselLoader
+                                anchors.fill: parent
+                                source: Qt.resolvedUrl("../themes/ThemeCarousel.qml")
+
+                                onLoaded: {
+                                    if (item) {
+                                        item.embedded = true;
+                                        themeCarousel.selectedThemeId = item.selectedThemeId || "";
+                                        themeCarousel.selectedThemeData = item.selectedThemeData || ({});
+                                        themeCarousel.isApplying = !!item.isApplying;
+                                    }
+                                }
+                            }
+
+                            Connections {
+                                target: themeCarouselLoader.item
+                                ignoreUnknownSignals: true
+
+                                function onThemeSelected(themeId) {
+                                    themeCarousel.selectedThemeId = themeId || "";
+                                    themeCarousel.selectedThemeData = themeCarouselLoader.item && themeCarouselLoader.item.selectedThemeData ? themeCarouselLoader.item.selectedThemeData : ({});
+                                }
+
+                                function onThemeApplied(themeId) {
+                                    themeCarousel.selectedThemeId = themeId || themeCarousel.selectedThemeId;
+                                    themeCarousel.selectedThemeData = themeCarouselLoader.item && themeCarouselLoader.item.selectedThemeData ? themeCarouselLoader.item.selectedThemeData : themeCarousel.selectedThemeData;
+                                    themeCarousel.isApplying = false;
+                                    root.refreshActiveTheme();
+                                }
+                            }
+
+                            Timer {
+                                interval: 120
+                                running: true
+                                repeat: true
+                                onTriggered: {
+                                    if (themeCarouselLoader.item) {
+                                        themeCarousel.isApplying = !!themeCarouselLoader.item.isApplying;
+                                        if (themeCarousel.selectedThemeId === "" && themeCarouselLoader.item.selectedThemeId) {
+                                            themeCarousel.selectedThemeId = themeCarouselLoader.item.selectedThemeId;
+                                            themeCarousel.selectedThemeData = themeCarouselLoader.item.selectedThemeData || ({});
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                visible: themeCarouselLoader.status === Loader.Error
+                                anchors.fill: parent
+                                radius: root.s(12)
+                                color: Qt.alpha(root.surface0, 0.45)
+                                border.color: root.red
+                                border.width: 1
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Theme carousel kon niet geladen worden"
+                                    font.family: "JetBrains Mono"
+                                    font.pixelSize: root.s(12)
+                                    color: root.text
+                                }
                             }
                         }
 

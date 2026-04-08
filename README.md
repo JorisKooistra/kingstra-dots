@@ -27,7 +27,11 @@ Personal Hyprland rice for Arch Linux. Modular, reproducible, fully automated in
 bash <(curl -fsSL https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh)
 ```
 
-The bootstrap clones the repo to `~/kingstra-dots` and starts the installer automatically.
+The bootstrap:
+- syncs the repo to the latest default branch state before every run;
+- clones to `~/kingstra-dots` (or updates that clone if it already exists);
+- auto-installs `yay-bin` when no AUR helper is present;
+- starts the installer automatically.
 
 **With options:**
 ```bash
@@ -54,9 +58,11 @@ bash install.sh --override my-overrides.conf
 ### Requirements
 
 - Arch Linux (pacman)
-- AUR helper (`yay` or `paru`) — required for AUR packages
 - bash 4.4+
 - git
+
+An AUR helper is no longer a manual prerequisite for the bootstrap flow: when missing,
+`bootstrap.sh` installs `yay-bin` automatically.
 
 ---
 
