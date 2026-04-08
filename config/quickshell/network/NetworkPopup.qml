@@ -125,7 +125,13 @@ Item {
     
     Timer { 
         id: busyTimeout; interval: 15000; 
-        onTriggered: { window.busyTasks = ({}); window.disconnectingDevices = ({}); } 
+        onTriggered: {
+            if (Object.keys(window.busyTasks).length > 0 && window.activeMode === "bt") {
+                window.btConnectError = "Verbinding mislukt (timeout)";
+                btConnectErrorTimer.restart();
+            }
+            window.busyTasks = ({}); window.disconnectingDevices = ({});
+        } 
     }
 
     Timer { id: wifiPendingReset; interval: 8000; onTriggered: { window.wifiPowerPending = false; window.expectedWifiPower = ""; } }
@@ -205,8 +211,16 @@ Item {
         }
         window.ignoreNextModeFileUpdate = false;
 
+        // Start/stop BT device discovery when switching modes
+        if (window.activeMode === "bt" && window.btPower === "on") {
+            window.startBtScan();
+        } else {
+            window.stopBtScan();
+        }
+
         // Complete wipe of nodes to prevent any ghost artifacts between modes
         infoListModel.clear();
+        window.btConnectError = "";
         window.busyTasks = ({});
         window.disconnectingDevices = ({});
         window.currentCores = [null, null, null, null, null];
@@ -302,6 +316,42 @@ Item {
     property var btConnected: []
     property var btList: []
     readonly property bool isBtConn: window.btConnected.length > 0
+    property string btConnectError: ""
+
+    // Process that runs bluetooth connect with error feedback
+    Process {
+        id: btConnectProc
+        property string connectMac: ""
+        command: ["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--connect", connectMac]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let result = JSON.parse(this.text.trim());
+                    if (!result.ok) {
+                        window.btConnectError = result.error || "Onbekende fout";
+                        // Clear busy state for this device on failure
+                        let bt = window.busyTasks;
+                        delete bt[btConnectProc.connectMac];
+                        window.busyTasks = Object.assign({}, bt);
+                        if (Object.keys(window.busyTasks).length === 0 && Object.keys(window.disconnectingDevices).length === 0) busyTimeout.stop();
+                        btConnectErrorTimer.restart();
+                    }
+                } catch(e) {}
+                btPoller.running = true;
+            }
+        }
+    }
+
+    // Auto-clear error message after 5 seconds
+    Timer { id: btConnectErrorTimer; interval: 5000; onTriggered: window.btConnectError = "" }
+
+    // Start scan when BT panel is opened, stop on close
+    function startBtScan() {
+        Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--scan-on"]);
+    }
+    function stopBtScan() {
+        Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--scan-off"]);
+    }
     
     onBtConnectedChanged: { 
         syncCores();
@@ -1669,12 +1719,15 @@ Item {
                                             window.busyTasks = Object.assign({}, bt);
                                             busyTimeout.restart();
                                             
-                                            let cmd = window.activeMode === "wifi"
-                                                ? "nmcli device wifi connect '" + ssid + "'"
-                                                : "bash " + window.scriptsDir + "/bluetooth_panel_logic.sh --connect " + mac
-                                            
-                                            Quickshell.execDetached(["sh", "-c", cmd]);
-                                            if (window.activeMode === "wifi") wifiPoller.running = true; else btPoller.running = true;
+                                            if (window.activeMode === "wifi") {
+                                                let cmd = "nmcli device wifi connect '" + ssid + "'";
+                                                Quickshell.execDetached(["sh", "-c", cmd]);
+                                                wifiPoller.running = true;
+                                            } else {
+                                                window.btConnectError = "";
+                                                btConnectProc.connectMac = mac;
+                                                btConnectProc.running = true;
+                                            }
                                         }
                                     }
                                 }
@@ -1690,6 +1743,30 @@ Item {
                             }
                         }
                     }
+                }
+            }
+
+            // =========================================================
+            // BT CONNECTION ERROR BANNER
+            // =========================================================
+            Rectangle {
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottomMargin: window.s(90)
+                width: window.s(340)
+                height: window.s(36)
+                radius: window.s(10)
+                color: Qt.rgba(window.red.r, window.red.g, window.red.b, 0.85)
+                visible: window.btConnectError !== "" && window.activeMode === "bt"
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 300 } }
+                Text {
+                    anchors.centerIn: parent
+                    text: window.btConnectError
+                    color: window.text
+                    font.pixelSize: window.s(12)
+                    font.weight: Font.Medium
+                    horizontalAlignment: Text.AlignHCenter
                 }
             }
 

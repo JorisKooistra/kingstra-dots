@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-theme-switch — Switch between Kingstra themes
+# =============================================================================
+# Usage: kingstra-theme-switch <theme_name>
+#        kingstra-theme-switch --current         (print current theme)
+#        kingstra-theme-switch --list             (list available themes)
+# =============================================================================
+set -euo pipefail
+
+THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes"
+ACTIVE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/active-theme"
+THEME_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/35-theme.conf"
+THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
+MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
+
+READER="kingstra-theme-read"
+
+LOG_PREFIX="[kingstra-theme-switch]"
+_log()  { echo "$LOG_PREFIX $*"; }
+_warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
+
+_notify() {
+    notify-send --icon=preferences-desktop-theme \
+                --app-name="kingstra" \
+                "$1" "${2:-}" \
+                --urgency=low \
+                --expire-time=3000 \
+                2>/dev/null || true
+}
+
+# ---------------------------------------------------------------------------
+# Arguments
+# ---------------------------------------------------------------------------
+if [[ "${1:-}" == "--current" ]]; then
+    cat "$ACTIVE_FILE" 2>/dev/null || echo "dusk"
+    exit 0
+fi
+
+if [[ "${1:-}" == "--list" ]]; then
+    "$READER" --list "$THEMES_DIR"
+    exit 0
+fi
+
+THEME_NAME="${1:?Gebruik: kingstra-theme-switch <theme_naam>}"
+THEME_FILE="$THEMES_DIR/${THEME_NAME}.toml"
+
+if [[ ! -f "$THEME_FILE" ]]; then
+    _warn "Thema niet gevonden: $THEME_FILE"
+    exit 1
+fi
+
+_log "Overschakelen naar thema: $THEME_NAME"
+
+# ---------------------------------------------------------------------------
+# Read theme values via Python helper
+# ---------------------------------------------------------------------------
+eval "$("$READER" "$THEME_FILE")"
+
+# Variables are now available as: META_NAME, MATUGEN_SCHEME_TYPE, APPEARANCE_BORDER_RADIUS, etc.
+
+# ---------------------------------------------------------------------------
+# Step 1 — Update matugen config.toml (scheme_type + color_index)
+# ---------------------------------------------------------------------------
+if [[ -f "$MATUGEN_CONF" ]]; then
+    sed -i "s|^scheme_type\s*=.*|scheme_type = \"${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}\"|" "$MATUGEN_CONF"
+    sed -i "s|^color_index\s*=.*|color_index = ${MATUGEN_COLOR_INDEX:-0}|" "$MATUGEN_CONF"
+    _log "Matugen config bijgewerkt (scheme: ${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot})"
+fi
+
+# ---------------------------------------------------------------------------
+# Step 2 — Generate 35-theme.conf (Hyprland overrides)
+# ---------------------------------------------------------------------------
+mkdir -p "$(dirname "$THEME_CONF")"
+cat > "$THEME_CONF" <<EOF
+# =============================================================================
+# 35-theme.conf — Automatisch gegenereerd door kingstra-theme-switch
+# Thema: ${META_NAME:-$THEME_NAME}
+# =============================================================================
+
+general {
+    gaps_in = ${APPEARANCE_GAPS_IN:-5}
+    gaps_out = ${APPEARANCE_GAPS_OUT:-10}
+    border_size = ${APPEARANCE_BORDER_WIDTH:-2}
+}
+
+decoration {
+    rounding = ${APPEARANCE_BORDER_RADIUS:-12}
+    blur {
+        size = ${APPEARANCE_BLUR_SIZE:-8}
+        passes = ${APPEARANCE_BLUR_PASSES:-3}
+    }
+}
+EOF
+_log "35-theme.conf gegenereerd"
+
+# ---------------------------------------------------------------------------
+# Step 3 — Generate theme.json (QuickShell via FileView)
+# ---------------------------------------------------------------------------
+mkdir -p "$(dirname "$THEME_JSON")"
+cat > "$THEME_JSON" <<EOF
+{
+    "theme": "${THEME_NAME}",
+    "name": "${META_NAME:-$THEME_NAME}",
+    "icon": "${META_ICON:-󰏘}",
+    "border_radius": ${APPEARANCE_BORDER_RADIUS:-12},
+    "border_width": ${APPEARANCE_BORDER_WIDTH:-2},
+    "gaps_in": ${APPEARANCE_GAPS_IN:-5},
+    "gaps_out": ${APPEARANCE_GAPS_OUT:-10},
+    "bar_opacity": ${APPEARANCE_BAR_OPACITY:-0.85},
+    "popup_opacity": ${APPEARANCE_POPUP_OPACITY:-0.92},
+    "blur_size": ${APPEARANCE_BLUR_SIZE:-8},
+    "blur_passes": ${APPEARANCE_BLUR_PASSES:-3},
+    "animation_speed": ${APPEARANCE_ANIMATION_SPEED:-1.0},
+    "ui_font": "${FONTS_UI_FONT:-Inter}",
+    "ui_font_size": ${FONTS_UI_FONT_SIZE:-13},
+    "mono_font": "${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}",
+    "mono_font_size": ${FONTS_MONO_FONT_SIZE:-12},
+    "bar_height": ${QUICKSHELL_BAR_HEIGHT:-36},
+    "bar_position": "${QUICKSHELL_BAR_POSITION:-top}",
+    "scheme_type": "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}"
+}
+EOF
+_log "theme.json gegenereerd"
+
+# ---------------------------------------------------------------------------
+# Step 4 — Apply Hyprland changes live (no reload needed for keywords)
+# ---------------------------------------------------------------------------
+if command -v hyprctl &>/dev/null; then
+    hyprctl keyword general:gaps_in "${APPEARANCE_GAPS_IN:-5}" 2>/dev/null || true
+    hyprctl keyword general:gaps_out "${APPEARANCE_GAPS_OUT:-10}" 2>/dev/null || true
+    hyprctl keyword general:border_size "${APPEARANCE_BORDER_WIDTH:-2}" 2>/dev/null || true
+    hyprctl keyword decoration:rounding "${APPEARANCE_BORDER_RADIUS:-12}" 2>/dev/null || true
+    hyprctl keyword decoration:blur:size "${APPEARANCE_BLUR_SIZE:-8}" 2>/dev/null || true
+    hyprctl keyword decoration:blur:passes "${APPEARANCE_BLUR_PASSES:-3}" 2>/dev/null || true
+    _log "Hyprland live bijgewerkt"
+fi
+
+# ---------------------------------------------------------------------------
+# Step 5 — Update Kitty font
+# ---------------------------------------------------------------------------
+KITTY_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
+if [[ -f "$KITTY_CONF" ]]; then
+    MONO="${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}"
+    MONO_SIZE="${FONTS_MONO_FONT_SIZE:-12}"
+    sed -i "s|^font_family\s.*|font_family      $MONO|" "$KITTY_CONF" 2>/dev/null || true
+    sed -i "s|^font_size\s.*|font_size $MONO_SIZE|" "$KITTY_CONF" 2>/dev/null || true
+    pkill -USR1 kitty 2>/dev/null || true
+    _log "Kitty font bijgewerkt"
+fi
+
+# ---------------------------------------------------------------------------
+# Step 6 — Run matugen to regenerate colors with new scheme
+# ---------------------------------------------------------------------------
+WALLPAPER="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
+    if command -v kingstra-theme-apply &>/dev/null; then
+        kingstra-theme-apply --reload
+        _log "Matugen kleuren hergegenereerd"
+    elif command -v matugen &>/dev/null; then
+        matugen image "$WALLPAPER" --config "$MATUGEN_CONF" 2>/dev/null
+        hyprctl reload 2>/dev/null || true
+        _log "Matugen direct uitgevoerd"
+    fi
+else
+    _log "Geen wallpaper gevonden — kleuren niet bijgewerkt"
+fi
+
+# ---------------------------------------------------------------------------
+# Step 7 — Save active theme
+# ---------------------------------------------------------------------------
+mkdir -p "$(dirname "$ACTIVE_FILE")"
+echo "$THEME_NAME" > "$ACTIVE_FILE"
+_log "Actief thema opgeslagen: $THEME_NAME"
+
+_notify "Thema: ${META_NAME:-$THEME_NAME}" "Stijl succesvol toegepast"

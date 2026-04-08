@@ -287,6 +287,8 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     if [[ "$TARGET" == "wallpaper" ]]; then
         handle_wallpaper_prep
         echo "$TARGET:$WALLPAPER_THUMB:$MON_DATA" > "$IPC_FILE"
+    elif [[ "$TARGET" == "theme" ]]; then
+        echo "$TARGET::$MON_DATA" > "$IPC_FILE"
     else
         echo "$TARGET::$MON_DATA" > "$IPC_FILE"
     fi

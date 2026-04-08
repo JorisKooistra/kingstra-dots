@@ -1,0 +1,31 @@
+[meta]
+name = "Light"
+description = "Helder en schoon dagthema"
+icon = "󰃠"
+preview_image = "light.jpg"
+
+[matugen]
+scheme_type = "scheme-neutral"
+color_index = 0
+contrast = 0.3
+
+[appearance]
+border_radius = 14
+border_width = 1
+gaps_in = 6
+gaps_out = 12
+bar_opacity = 0.92
+popup_opacity = 0.96
+blur_size = 10
+blur_passes = 4
+animation_speed = 1.0
+
+[fonts]
+ui_font = "Inter"
+ui_font_size = 13
+mono_font = "JetBrainsMono Nerd Font"
+mono_font_size = 12
+
+[quickshell]
+bar_height = 38
+bar_position = "top"

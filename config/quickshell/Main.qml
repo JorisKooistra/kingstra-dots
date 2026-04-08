@@ -180,7 +180,7 @@ FloatingWindow {
     }
 
     function switchWidget(newWidget, arg) {
-        let involvesWallpaper = (newWidget === "wallpaper" || currentActive === "wallpaper");
+        let involvesWallpaper = (newWidget === "wallpaper" || currentActive === "wallpaper" || newWidget === "theme" || currentActive === "theme");
         masterWindow.isWallpaperTransition = involvesWallpaper;
 
         if (newWidget === "hidden") {

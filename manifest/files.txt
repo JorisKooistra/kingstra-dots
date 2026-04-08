@@ -40,3 +40,6 @@ config/qt6ct|~/.config/qt6ct
 
 # config/yazi → ~/.config/yazi
 config/yazi|~/.config/yazi
+
+# config/kingstra → ~/.config/kingstra (thema-definities)
+config/kingstra|~/.config/kingstra

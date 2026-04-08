@@ -21,3 +21,9 @@ config/yazi/theme.toml
 # Installer-gegenereerde hardware config (fase 14)
 config/hypr/conf.d/72-hardware.conf
 
+# Thema-gegenereerde bestanden (kingstra-theme-switch)
+config/hypr/conf.d/35-theme.conf
+
+# Runtime preview cache
+config/quickshell/themes/previews/
+

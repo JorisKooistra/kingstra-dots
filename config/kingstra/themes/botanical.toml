@@ -1,0 +1,31 @@
+[meta]
+name = "Botanical"
+description = "Natuurlijke groene tinten, rustig en organisch"
+icon = "󰌪"
+preview_image = "botanical.jpg"
+
+[matugen]
+scheme_type = "scheme-fidelity"
+color_index = 2
+contrast = 0.1
+
+[appearance]
+border_radius = 18
+border_width = 1
+gaps_in = 8
+gaps_out = 14
+bar_opacity = 0.88
+popup_opacity = 0.93
+blur_size = 12
+blur_passes = 3
+animation_speed = 0.9
+
+[fonts]
+ui_font = "Inter"
+ui_font_size = 13
+mono_font = "JetBrainsMono Nerd Font"
+mono_font_size = 12
+
+[quickshell]
+bar_height = 38
+bar_position = "top"

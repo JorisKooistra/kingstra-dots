@@ -97,8 +97,10 @@ _phase05_activate_widget_binds() {
         return 0
     fi
 
-    # Verwijder de # voor de Quickshell IPC-binds
-    sed -i 's/^# bind = \$mainMod, \(W\|M\|C\|O\|X\)/bind = $mainMod, \1/' "$binds_file"
+    # Verwijder de # voor de Quickshell IPC-binds (M=music, C=calendar, O=monitors, X=focustime)
+    sed -i 's/^# bind = \$mainMod, \(M\|C\|O\|X\)/bind = $mainMod, \1/' "$binds_file"
+    # Activeer theme picker bind
+    sed -i 's/^# bind = \$mainMod CTRL, T/bind = $mainMod CTRL, T/' "$binds_file"
     log_ok "Quickshell widget-binds geactiveerd in 82-binds-widgets.conf"
 }
 

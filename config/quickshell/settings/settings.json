@@ -1,4 +1,4 @@
 {
-    "timeFormat": "hh:mm:ss AP",
+    "timeFormat": "HH:mm:ss",
     "dateFormat": "dddd, MMMM dd"
 }

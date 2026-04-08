@@ -3,7 +3,17 @@
 SCAN_LOG="$HOME/.cache/bt_scan.log"
 PID_FILE="$HOME/.cache/bt_scan_pid"
 CACHE_DIR="/tmp/quickshell_network_cache"
+AGENT_STAMP="/tmp/qs_bt_agent_registered"
 mkdir -p "$CACHE_DIR"
+
+# Register a default agent once per session so pairing works for
+# "just works" devices (Logitech mice/keyboards, etc.)
+ensure_agent() {
+    if [ -f "$AGENT_STAMP" ]; then return; fi
+    bluetoothctl agent NoInputNoOutput 2>/dev/null
+    bluetoothctl default-agent 2>/dev/null
+    touch "$AGENT_STAMP"
+}
 
 get_icon() {
     local type=$(echo "$1" | tr '[:upper:]' '[:lower:]')
@@ -35,6 +45,7 @@ get_audio_profile() {
 }
 
 get_status() {
+    ensure_agent
     power="off"
     if bluetoothctl show | grep -q "Powered: yes"; then power="on"; fi
 
@@ -146,10 +157,46 @@ toggle_power() {
 
 connect_dev() {
     local mac="$1"
-    if [ -f "$PID_FILE" ]; then kill -STOP $(cat "$PID_FILE") 2>/dev/null; fi
+    ensure_agent
+
+    # 1. Check if already paired; if not, pair first
+    if ! bluetoothctl info "$mac" 2>/dev/null | grep -q "Paired: yes"; then
+        local pair_out
+        pair_out=$(timeout 12 bluetoothctl pair "$mac" 2>&1)
+        if [ $? -ne 0 ]; then
+            echo "{\"ok\":false,\"error\":\"Pairing mislukt: ${pair_out//\"/\\\"}\"}"
+            return 1
+        fi
+    fi
+
+    # 2. Trust the device (idempotent)
     bluetoothctl trust "$mac" > /dev/null 2>&1
-    bluetoothctl connect "$mac"
-    if [ -f "$PID_FILE" ]; then kill -CONT $(cat "$PID_FILE") 2>/dev/null; fi
+
+    # 3. Connect with wait-loop (poll every 0.5s, max 15s)
+    local connect_out
+    connect_out=$(timeout 10 bluetoothctl connect "$mac" 2>&1)
+    local rc=$?
+
+    if [ $rc -ne 0 ]; then
+        echo "{\"ok\":false,\"error\":\"Verbinding mislukt: ${connect_out//\"/\\\"}\"}"
+        return 1
+    fi
+
+    # 4. Wait for BlueZ to confirm the device is truly in "Connected" state
+    local waited=0
+    while [ $waited -lt 15 ]; do
+        if bluetoothctl info "$mac" 2>/dev/null | grep -q "Connected: yes"; then
+            # Clear stale cache so fresh profile/icon is picked up
+            rm -f "$CACHE_DIR/bt_stat_${mac//:/_}" 2>/dev/null
+            echo "{\"ok\":true}"
+            return 0
+        fi
+        sleep 0.5
+        waited=$((waited + 1))
+    done
+
+    echo "{\"ok\":false,\"error\":\"Timeout: apparaat reageert niet\"}"
+    return 1
 }
 
 disconnect_dev() {
@@ -165,4 +212,13 @@ case $cmd in
     --toggle) toggle_power ;;
     --connect) connect_dev "$2" ;;
     --disconnect) disconnect_dev "$2" ;;
+    --scan-on)
+        ensure_agent
+        bluetoothctl scan on > "$SCAN_LOG" 2>&1 &
+        echo $! > "$PID_FILE"
+        ;;
+    --scan-off)
+        bluetoothctl scan off > /dev/null 2>&1
+        if [ -f "$PID_FILE" ]; then kill "$(cat "$PID_FILE")" 2>/dev/null; rm -f "$PID_FILE"; fi
+        ;;
 esac

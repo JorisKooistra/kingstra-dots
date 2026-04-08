@@ -101,10 +101,73 @@ Item {
     // Weather state
     property string selectedUnit: "metric"
 
+    // Theme state
+    property string activeThemeName: ""
+    property string activeThemeIcon: "󰏘"
+    property var themeAppearance: ({})
+
     Component.onCompleted: {
         // Generate keybinds JSON
         Quickshell.execDetached(["bash", Qt.resolvedUrl("../settings/read_keybinds.sh").toString().replace(/^file:\/\//, "")]);
+        // Load weather .env values
+        loadEnvProc.running = true;
+        // Load active theme info
+        loadThemeProc.running = true;
         startupSequence.start();
+    }
+
+    // Load weather .env on open
+    Process {
+        id: loadEnvProc
+        command: ["bash", "-c", "if [ -f ~/.config/quickshell/calendar/.env ]; then cat ~/.config/quickshell/calendar/.env; fi"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let lines = this.text.trim().split("\n");
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trim();
+                    if (line.startsWith("#") || line === "") continue;
+                    let eq = line.indexOf("=");
+                    if (eq < 0) continue;
+                    let k = line.substring(0, eq).trim();
+                    let v = line.substring(eq + 1).trim().replace(/^["']|["']$/g, "");
+                    if (k === "OPENWEATHER_KEY" && v) apiKeyInput.text = v;
+                    else if (k === "OPENWEATHER_LAT" && v) latInput.text = v;
+                    else if (k === "OPENWEATHER_LON" && v) lonInput.text = v;
+                    else if (k === "OPENWEATHER_UNIT" && v) root.selectedUnit = v;
+                }
+            }
+        }
+    }
+
+    // Load active theme info
+    Process {
+        id: loadThemeProc
+        command: ["bash", "-c", "kingstra-theme-switch --current"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let active = this.text.trim();
+                if (active !== "") {
+                    loadThemeDetailProc.themeId = active;
+                    loadThemeDetailProc.running = true;
+                }
+            }
+        }
+    }
+    Process {
+        id: loadThemeDetailProc
+        property string themeId: ""
+        command: ["bash", "-c", "kingstra-theme-read --json \"${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes/" + themeId + ".toml\""]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let data = JSON.parse(this.text.trim());
+                    let meta = data.meta || {};
+                    root.activeThemeName = meta.name || loadThemeDetailProc.themeId;
+                    root.activeThemeIcon = meta.icon || "󰏘";
+                    root.themeAppearance = data.appearance || {};
+                } catch(e) {}
+            }
+        }
     }
 
     SequentialAnimation {
@@ -148,6 +211,15 @@ Item {
         ];
         Quickshell.execDetached(["bash", "-c", cmds.join(" && ")]);
         notify("Weather", "API configuration saved");
+        // Trigger immediate weather refresh by clearing cache
+        weatherRefreshTimer.start();
+    }
+
+    Timer {
+        id: weatherRefreshTimer; interval: 500
+        onTriggered: {
+            Quickshell.execDetached(["bash", "-c", "rm -f ~/.cache/quickshell/weather/weather.json 2>/dev/null; bash ~/.config/quickshell/calendar/weather.sh &"]);
+        }
     }
 
     function saveKeybind(index, newMods, newKey) {
@@ -771,62 +843,102 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
                 ColumnLayout {
-                    anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(20)
+                    anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
 
                     Text { text: "Theming Engine"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
 
-                    // Matugen pipeline diagram
+                    // ---- ACTIVE THEME CARD ----
                     Rectangle {
-                        Layout.fillWidth: true; Layout.preferredHeight: root.s(160); radius: root.s(12)
+                        Layout.fillWidth: true; Layout.preferredHeight: root.s(80); radius: root.s(12)
                         color: Qt.alpha(root.surface0, 0.4); border.color: root.ambientPurple; border.width: 1
 
                         RowLayout {
-                            anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(20)
-                            Item { Layout.fillWidth: true }
+                            anchors.fill: parent; anchors.margins: root.s(15); spacing: root.s(15)
 
-                            ColumnLayout {
-                                Layout.alignment: Qt.AlignVCenter; spacing: root.s(8)
-                                Rectangle { Layout.alignment: Qt.AlignHCenter; width: root.s(60); height: root.s(60); radius: root.s(10); color: root.surface1; Text { anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(28); color: root.text } }
-                                Text { text: "Wallpaper"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.text; Layout.alignment: Qt.AlignHCenter }
+                            Rectangle {
+                                width: root.s(50); height: root.s(50); radius: root.s(12)
+                                color: root.surface1
+                                Text { anchors.centerIn: parent; text: root.activeThemeIcon; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: root.s(24); color: root.ambientPurple }
                             }
 
-                            Canvas {
-                                Layout.alignment: Qt.AlignVCenter; width: root.s(40); height: root.s(24)
-                                onPaint: { var ctx = getContext("2d"); ctx.strokeStyle = root.overlay0; ctx.lineWidth = root.s(2); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(root.s(4), root.s(12)); ctx.lineTo(root.s(36), root.s(12)); ctx.moveTo(root.s(26), root.s(4)); ctx.lineTo(root.s(36), root.s(12)); ctx.lineTo(root.s(26), root.s(20)); ctx.stroke(); }
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: root.s(2)
+                                Text { text: "Actief thema"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                Text { text: root.activeThemeName || "Geen thema actief"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
                             }
 
                             Rectangle {
-                                width: root.s(180); height: root.s(90); radius: root.s(12); color: root.base; border.color: root.ambientPurple; border.width: root.s(2); Layout.alignment: Qt.AlignVCenter
-                                ColumnLayout {
-                                    anchors.centerIn: parent; spacing: root.s(8)
-                                    Text { text: "Matugen Core"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(15); color: root.ambientPurple; Layout.alignment: Qt.AlignHCenter }
-                                    RowLayout {
-                                        spacing: root.s(4); Layout.alignment: Qt.AlignHCenter
-                                        Repeater { model: [root.red, root.peach, root.yellow, root.green, root.blue, root.mauve]; Rectangle { width: root.s(12); height: root.s(12); radius: root.s(6); color: modelData } }
-                                    }
+                                Layout.preferredWidth: root.s(140); Layout.preferredHeight: root.s(42); radius: root.s(8)
+                                color: themePickerMa.containsMouse ? Qt.alpha(root.mauve, 0.8) : root.mauve
+                                scale: themePickerMa.pressed ? 0.95 : (themePickerMa.containsMouse ? 1.02 : 1.0)
+                                Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
+                                RowLayout {
+                                    anchors.centerIn: parent; spacing: root.s(6)
+                                    Text { text: "󰏘"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(16); color: root.base }
+                                    Text { text: "Thema kiezen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
+                                }
+                                MouseArea {
+                                    id: themePickerMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                    onClicked: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "theme"])
                                 }
                             }
-
-                            Canvas {
-                                Layout.alignment: Qt.AlignVCenter; width: root.s(40); height: root.s(24)
-                                onPaint: { var ctx = getContext("2d"); ctx.strokeStyle = root.overlay0; ctx.lineWidth = root.s(2); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(root.s(4), root.s(12)); ctx.lineTo(root.s(36), root.s(12)); ctx.moveTo(root.s(26), root.s(4)); ctx.lineTo(root.s(36), root.s(12)); ctx.lineTo(root.s(26), root.s(20)); ctx.stroke(); }
-                            }
-
-                            ColumnLayout {
-                                Layout.alignment: Qt.AlignVCenter; spacing: root.s(8)
-                                Rectangle { Layout.alignment: Qt.AlignHCenter; width: root.s(60); height: root.s(60); radius: root.s(10); color: root.surface1; Text { anchors.centerIn: parent; text: "󰏘"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(28); color: root.text } }
-                                Text { text: "Templates"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.text; Layout.alignment: Qt.AlignHCenter }
-                            }
-
-                            Item { Layout.fillWidth: true }
                         }
                     }
 
-                    Text { text: "When you change wallpapers, Matugen extracts dominant colors and injects them into these config templates in real-time:"; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                    // ---- SEPARATOR ----
+                    Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
 
-                    // Template files
+                    // ---- APPEARANCE OVERVIEW ----
+                    Text { text: "Uiterlijk"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
+
                     GridLayout {
-                        Layout.fillWidth: true; Layout.fillHeight: true; columns: 3; rowSpacing: root.s(10); columnSpacing: root.s(10)
+                        Layout.fillWidth: true; columns: 3; rowSpacing: root.s(8); columnSpacing: root.s(10)
+                        Repeater {
+                            model: [
+                                { label: "Hoekrondheid", key: "border_radius", unit: "px", icon: "󰢡", c: "blue" },
+                                { label: "Randdikte", key: "border_width", unit: "px", icon: "󰘷", c: "sapphire" },
+                                { label: "Binnenmarge", key: "gaps_in", unit: "px", icon: "󰹑", c: "green" },
+                                { label: "Buitenmarge", key: "gaps_out", unit: "px", icon: "󰹑", c: "peach" },
+                                { label: "Blur grootte", key: "blur_size", unit: "", icon: "󰂵", c: "mauve" },
+                                { label: "Blur passes", key: "blur_passes", unit: "", icon: "󰂵", c: "pink" }
+                            ]
+                            Rectangle {
+                                Layout.fillWidth: true; Layout.preferredHeight: root.s(60); radius: root.s(8)
+                                color: Qt.alpha(root.surface0, 0.5); border.color: root.surface1; border.width: 1
+                                RowLayout {
+                                    anchors.fill: parent; anchors.margins: root.s(10); spacing: root.s(8)
+                                    Text { text: modelData.icon; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: root[modelData.c] }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: root.s(2)
+                                        Text { text: modelData.label; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                        Text {
+                                            text: {
+                                                let val = root.themeAppearance[modelData.key];
+                                                return (val !== undefined ? val : "—") + (modelData.unit && val !== undefined ? modelData.unit : "");
+                                            }
+                                            font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(14); color: root.text
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ---- SEPARATOR ----
+                    Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
+
+                    // ---- MATUGEN PIPELINE ----
+                    RowLayout {
+                        spacing: root.s(8)
+                        Text { text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: root.ambientPurple }
+                        Text { text: "Matugen Pipeline"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(14); color: root.text }
+                    }
+
+                    Text { text: "Bij elke wallpaperwissel haalt Matugen kleuren op en injecteert ze in deze templates:"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+
+                    // Template files (compact)
+                    GridLayout {
+                        Layout.fillWidth: true; Layout.fillHeight: true; columns: 3; rowSpacing: root.s(6); columnSpacing: root.s(8)
                         Repeater {
                             model: [
                                 { f: "kitty/colors.conf", i: "󰄛", c: "yellow" },
@@ -837,15 +949,15 @@ Item {
                                 { f: "hypr/colors.conf", i: "", c: "peach" }
                             ]
                             Rectangle {
-                                Layout.fillWidth: true; Layout.preferredHeight: root.s(45); radius: root.s(8)
+                                Layout.fillWidth: true; Layout.preferredHeight: root.s(36); radius: root.s(6)
                                 color: tplMa.containsMouse ? Qt.alpha(root[modelData.c], 0.1) : root.surface0
                                 border.color: tplMa.containsMouse ? root[modelData.c] : "transparent"; border.width: 1
                                 Behavior on color { ColorAnimation { duration: 150 } }
                                 Behavior on border.color { ColorAnimation { duration: 150 } }
                                 RowLayout {
-                                    anchors.fill: parent; anchors.margins: root.s(10); spacing: root.s(10)
-                                    Item { Layout.preferredWidth: root.s(24); Layout.alignment: Qt.AlignVCenter; Text { anchors.centerIn: parent; text: modelData.i; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(16); color: root[modelData.c] } }
-                                    Text { text: modelData.f; font.family: "JetBrains Mono"; font.weight: Font.Medium; font.pixelSize: root.s(12); color: root.text; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter }
+                                    anchors.fill: parent; anchors.margins: root.s(8); spacing: root.s(8)
+                                    Text { text: modelData.i; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: root[modelData.c] }
+                                    Text { text: modelData.f; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.text; Layout.fillWidth: true }
                                 }
                                 MouseArea { id: tplMa; anchors.fill: parent; hoverEnabled: true }
                             }

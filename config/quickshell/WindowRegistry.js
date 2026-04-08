@@ -47,6 +47,7 @@ function getLayout(name, mx, my, mw, mh) {
 
         // Full width, centered vertically
         "wallpaper": { w: mw, h: s(650, scale), rx: 0, ry: Math.floor((mh/2)-(s(650, scale)/2)), comp: "wallpaper/WallpaperPicker.qml" },
+        "theme":     { w: mw, h: s(650, scale), rx: 0, ry: Math.floor((mh/2)-(s(650, scale)/2)), comp: "themes/ThemePicker.qml" },
         
         "hidden":    { w: 1, h: 1, rx: -5000 - mx, ry: -5000 - my, comp: "" } 
     };
