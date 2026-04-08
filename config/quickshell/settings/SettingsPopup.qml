@@ -457,7 +457,7 @@ Item {
 
                                 Rectangle {
                                     id: bindRow
-                                    Layout.fillWidth: true; Layout.preferredHeight: isEditing ? root.s(90) : root.s(46); radius: root.s(8)
+                                    Layout.fillWidth: true; radius: root.s(8)
                                     visible: {
                                         if (!root.keybindFilter) return true;
                                         var txt = (model.mods + " " + model.key + " " + model.d + " " + model.args + " " + model.label).toLowerCase();

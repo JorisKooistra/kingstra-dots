@@ -8,3 +8,16 @@ voorbeelden en bronnen/
 .DS_Store
 __pycache__/
 
+# Matugen-gegenereerde kleurbestanden (output van templates)
+config/hypr/colors.conf
+config/kitty/colors.conf
+config/kitty/skwd-theme.conf
+config/quickshell/colors.json
+config/swaync/colors.css
+config/walker/colors.css
+config/zsh/omp-colors.toml
+config/yazi/theme.toml
+
+# Installer-gegenereerde hardware config (fase 14)
+config/hypr/conf.d/72-hardware.conf
+
