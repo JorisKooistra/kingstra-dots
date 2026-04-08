@@ -44,6 +44,10 @@ output_path = "~/.config/zsh/omp-colors.toml"
 input_path  = "~/.config/matugen/templates/qt6ct-colors.conf"
 output_path = "~/.config/qt6ct/colors/kingstra.conf"
 
+[templates.yazi]
+input_path  = "~/.config/matugen/templates/yazi-theme.toml"
+output_path = "~/.config/yazi/theme.toml"
+
 [templates.hyprlock]
 input_path  = "~/.config/matugen/templates/hyprlock.conf"
 output_path = "~/.config/hyprlock/hyprlock.conf"
