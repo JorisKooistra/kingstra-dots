@@ -17,5 +17,9 @@ aur:ttf-material-design-icons-variable
 nwg-look
 gnome-themes-extra
 
+# Icon themes (per thema wisselbaar)
+papirus-icon-theme
+breeze-icons
+
 # Cursor
 aur:bibata-cursor-theme

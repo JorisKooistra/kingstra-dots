@@ -1,6 +1,6 @@
 [meta]
 name = "Rocky"
-description = "Ruig en industrieel, neutrale steentinten"
+description = "Graniet — hoekig, solide, geen nonsens"
 icon = "󰋘"
 preview_image = "rocky.jpg"
 
@@ -10,25 +10,25 @@ color_index = 0
 contrast = 0.0
 
 [appearance]
-border_radius = 4
-border_width = 3
+border_radius = 2
+border_width = 4
 gaps_in = 2
 gaps_out = 4
-bar_opacity = 0.80
-popup_opacity = 0.88
-blur_size = 3
+bar_opacity = 0.98
+popup_opacity = 0.98
+blur_size = 2
 blur_passes = 1
-animation_speed = 1.3
+animation_speed = 1.4
 
 [fonts]
-ui_font = "Inter"
-ui_font_size = 13
+ui_font = "JetBrains Mono"
+ui_font_size = 12
 mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
 
 [icons]
-icon_theme = "Papirus-Dark"
+icon_theme = "Breeze"
 
 [quickshell]
-bar_height = 34
+bar_height = 32
 bar_position = "top"

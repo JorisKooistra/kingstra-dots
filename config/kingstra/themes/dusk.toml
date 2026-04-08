@@ -1,6 +1,6 @@
 [meta]
 name = "Dusk"
-description = "Warme avondkleuren met diepe tinten"
+description = "Gouden uur — amber, warm licht, dag eindigt"
 icon = "󰖚"
 preview_image = "dusk.jpg"
 
@@ -14,14 +14,14 @@ border_radius = 14
 border_width = 2
 gaps_in = 5
 gaps_out = 10
-bar_opacity = 0.85
+bar_opacity = 0.84
 popup_opacity = 0.90
-blur_size = 8
+blur_size = 10
 blur_passes = 3
 animation_speed = 1.0
 
 [fonts]
-ui_font = "Inter"
+ui_font = "Fira Sans"
 ui_font_size = 13
 mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
