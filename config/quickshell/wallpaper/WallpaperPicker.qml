@@ -90,13 +90,24 @@ Item {
         
         window.targetWallName = safeFileName
         let cleanName = window.getCleanName(safeFileName)
-        let reloadScript = Qt.resolvedUrl("matugen_reload.sh").toString()
-        
-        if (reloadScript.startsWith("file://")) {
-            reloadScript = decodeURIComponent(reloadScript.substring(7))
-        }
-
         const escapeBash = (str) => String(str).replace(/(["\\$`])/g, '\\$1');
+        const applyThemeStateScript = (fileVarName) => `
+            mkdir -p "${Quickshell.env("HOME")}/.cache/kingstra" "${Quickshell.env("HOME")}/.config/kingstra/state"
+            printf '%s\n' "$${fileVarName}" > "${Quickshell.env("HOME")}/.cache/kingstra/last-wallpaper"
+            SCHEME=$(jq -r '.scheme_type // "scheme-tonal-spot"' "${Quickshell.env("HOME")}/.config/quickshell/theme.json" 2>/dev/null || echo "scheme-tonal-spot")
+            MODE=$(jq -r '.mode // "dark"' "${Quickshell.env("HOME")}/.config/quickshell/theme.json" 2>/dev/null || echo "dark")
+            jq -n \
+                --arg name "$(basename "$${fileVarName}")" \
+                --arg path "$${fileVarName}" \
+                --arg matugen_scheme "$SCHEME" \
+                --arg matugen_mode "$MODE" \
+                '{"name":$name,"path":$path,"matugen_scheme":$matugen_scheme,"matugen_mode":$matugen_mode}' \
+                > "${Quickshell.env("HOME")}/.config/kingstra/state/wallpaper.json"
+            "${Quickshell.env("HOME")}/.local/bin/kingstra-session-update" >/dev/null 2>&1 || true
+            if [ -x "${Quickshell.env("HOME")}/.local/bin/apply-shell-state" ]; then
+                "${Quickshell.env("HOME")}/.local/bin/apply-shell-state" >/dev/null 2>&1 || true
+            fi
+        `;
         
         if (window.currentFilter === "Search" && window.hasSearched) {
             let alreadyExists = window.isDownloaded(safeFileName);
@@ -114,15 +125,10 @@ Item {
                         
                         export DEST_FILE="${escapeBash(destFile)}"
                         export FINAL_THUMB="${escapeBash(finalThumb)}"
-                        export RELOAD_SCRIPT="${escapeBash(reloadScript)}"
                         
                         cp "$DEST_FILE" /tmp/lock_bg.png || true
                         pkill mpvpaper || true
-                        
-                        # Run matugen completely detached so it doesn't block swww execution
-                        ( matugen image "$FINAL_THUMB" || true; bash "$RELOAD_SCRIPT" || true ) &
-                        MATUGEN_PID=$!
-                        
+
                         # DETERMINISTIC LOOP: Force swww to succeed.
                         # It will poll every 50ms up to 20 times until the compositor accepts the frame.
                         for i in {1..20}; do
@@ -131,8 +137,8 @@ Item {
                             fi
                             sleep 0.05
                         done
-                        
-                        wait $MATUGEN_PID
+
+                        ${applyThemeStateScript("DEST_FILE")}
                     ) </dev/null >/dev/null 2>&1 & disown
                 `;
                 Quickshell.execDetached(["bash", "-c", applyScript]);
@@ -145,7 +151,6 @@ Item {
                     export DEST_FILE="${escapeBash(destFile)}"
                     export FINAL_THUMB="${escapeBash(finalThumb)}"
                     export TEMP_THUMB="${escapeBash(tempThumb)}"
-                    export RELOAD_SCRIPT="${escapeBash(reloadScript)}"
                     export MAP_FILE="${escapeBash(mapFile)}"
                     
                     (
@@ -167,10 +172,7 @@ Item {
                             
                             cp "$DEST_FILE" /tmp/lock_bg.png || true
                             pkill mpvpaper || true
-                            
-                            ( matugen image "$FINAL_THUMB" || true; bash "$RELOAD_SCRIPT" || true ) &
-                            MATUGEN_PID=$!
-                            
+
                             # DETERMINISTIC LOOP
                             for i in {1..20}; do
                                 if swww img "$DEST_FILE" --transition-type ${randomTransition} --transition-pos 0.5,0.5 --transition-fps 144 --transition-duration 1 >/dev/null 2>&1; then
@@ -178,8 +180,8 @@ Item {
                                 fi
                                 sleep 0.05
                             done
-                            
-                            wait $MATUGEN_PID
+
+                            ${applyThemeStateScript("DEST_FILE")}
                         fi
                     ) </dev/null >/dev/null 2>&1 & disown
                 `;
@@ -193,14 +195,18 @@ Item {
         
         let wallpaperCmd = ""
         let lockBgCmd = ""
+        let postApplyCmd = ""
         
         const escOriginal = escapeBash(originalFile);
         const escThumb = escapeBash(thumbFile);
-        const escReload = escapeBash(reloadScript);
 
         if (isVideo) {
             wallpaperCmd = `mpvpaper -o 'loop --no-audio --hwdec=auto --profile=high-quality --video-sync=display-resample --interpolation --tscale=oversample' '*' "$WALL_FILE"`
             lockBgCmd = `cp "$THUMB_FILE" /tmp/lock_bg.png`
+            postApplyCmd = `
+                ( matugen image "$THUMB_FILE" || true; bash "${Qt.resolvedUrl("matugen_reload.sh").toString().startsWith("file://") ? decodeURIComponent(Qt.resolvedUrl("matugen_reload.sh").toString().substring(7)) : Qt.resolvedUrl("matugen_reload.sh").toString()}" || true ) &
+                MATUGEN_PID=$!
+            `
         } else {
             const randomTransition = window.transitions[Math.floor(Math.random() * window.transitions.length)]
             // Inject the deterministic loop directly into the standard command variable
@@ -213,6 +219,7 @@ Item {
                 done
             `
             lockBgCmd = `cp "$WALL_FILE" /tmp/lock_bg.png`
+            postApplyCmd = applyThemeStateScript("WALL_FILE")
         }
 
         const fullScript = `
@@ -221,17 +228,17 @@ Item {
                 
                 export WALL_FILE="${escOriginal}"
                 export THUMB_FILE="${escThumb}"
-                export RELOAD_SCRIPT="${escReload}"
                 
                 ${lockBgCmd} || true
                 pkill mpvpaper || true
                 
-                ( matugen image "$THUMB_FILE" || true; bash "$RELOAD_SCRIPT" || true ) &
-                MATUGEN_PID=$!
-                
                 ${wallpaperCmd}
-                
-                wait $MATUGEN_PID
+
+                ${postApplyCmd}
+
+                if [ -n "${isVideo ? "1" : ""}" ]; then
+                    wait $MATUGEN_PID
+                fi
             ) </dev/null >/dev/null 2>&1 & disown
         `
         Quickshell.execDetached(["bash", "-c", fullScript])

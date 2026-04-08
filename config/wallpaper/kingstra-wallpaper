@@ -142,15 +142,22 @@ _update_wallpaper_json() {
     local file="$1"
     local state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
     local wjson="$state_dir/wallpaper.json"
+    local theme_json="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 
     mkdir -p "$state_dir"
+    local scheme="scheme-tonal-spot"
+    local mode="dark"
+    if [[ -f "$theme_json" ]]; then
+        scheme="$(jq -r '.scheme_type // "scheme-tonal-spot"' "$theme_json" 2>/dev/null || echo "scheme-tonal-spot")"
+        mode="$(jq -r '.mode // "dark"' "$theme_json" 2>/dev/null || echo "dark")"
+    fi
 
-    local existing='{}'
-    [[ -f "$wjson" ]] && existing="$(cat "$wjson")"
-
-    echo "$existing" \
-        | jq --arg name "$(basename "$file")" --arg path "$file" \
-             '. + {name: $name, path: $path}' \
+    jq -n \
+        --arg name "$(basename "$file")" \
+        --arg path "$file" \
+        --arg matugen_scheme "$scheme" \
+        --arg matugen_mode "$mode" \
+        '{"name":$name,"path":$path,"matugen_scheme":$matugen_scheme,"matugen_mode":$matugen_mode}' \
         > "$wjson" || true
 
     _log "wallpaper.json bijgewerkt: $(basename "$file")"
