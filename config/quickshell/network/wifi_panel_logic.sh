@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
+# Force English nmcli output so ACTIVE/STATE values remain stable even on localized systems.
+export LC_ALL=C
+
 # Check if WiFi is enabled
-POWER=$(nmcli radio wifi)
+POWER=$(nmcli radio wifi 2>/dev/null)
 
 if [[ "$POWER" == "disabled" ]]; then
     echo '{ "power": "off", "connected": null, "networks": [] }'
@@ -22,7 +25,7 @@ CACHE_DIR="/tmp/quickshell_network_cache"
 mkdir -p "$CACHE_DIR"
 
 # Get current connection details
-CURRENT_RAW=$(nmcli -t -f active,ssid,signal,security device wifi | grep "^yes")
+CURRENT_RAW=$(nmcli -t -f active,ssid,signal,security device wifi 2>/dev/null | grep "^yes")
 
 if [[ -n "$CURRENT_RAW" ]]; then
     IFS=':' read -r active ssid signal security <<< "$CURRENT_RAW"
@@ -39,7 +42,7 @@ if [[ -n "$CURRENT_RAW" ]]; then
     
     # If cache is missing, fetch the expensive stats once and save them
     if [ -z "$IP" ] || [ "$IP" == "No IP" ] || [ -z "$FREQ" ]; then
-        IFACE=$(nmcli -t -f DEVICE,TYPE d | awk -F: '$2=="wifi"{print $1;exit}')
+        IFACE=$(nmcli -t -f DEVICE,TYPE d 2>/dev/null | awk -F: '$2=="wifi"{print $1;exit}')
         IP=$(ip -4 addr show dev "$IFACE" 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n1)
         [ -z "$IP" ] && IP="No IP"
         
@@ -64,7 +67,7 @@ else
 fi
 
 # Get available networks INSTANTLY using --rescan no
-NETWORKS_JSON=$(nmcli -t -f active,ssid,signal,security device wifi list --rescan no | \
+NETWORKS_JSON=$(nmcli -t -f active,ssid,signal,security device wifi list --rescan no 2>/dev/null | \
     awk -F: '!seen[$2]++ && $2 != "" && $1 != "yes" {print $2":"$3":"$4}' | \
     head -n 24 | \
     while IFS=':' read -r ssid signal security; do
