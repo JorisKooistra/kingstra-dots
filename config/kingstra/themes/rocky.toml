@@ -7,18 +7,18 @@ preview_image = "rocky.jpg"
 [matugen]
 scheme_type = "scheme-monochrome"
 color_index = 0
-contrast = -0.1
+contrast = 0.0
 
 [appearance]
-border_radius = 6
+border_radius = 4
 border_width = 3
-gaps_in = 3
-gaps_out = 6
-bar_opacity = 0.82
-popup_opacity = 0.90
-blur_size = 5
-blur_passes = 2
-animation_speed = 1.1
+gaps_in = 2
+gaps_out = 4
+bar_opacity = 0.80
+popup_opacity = 0.88
+blur_size = 3
+blur_passes = 1
+animation_speed = 1.3
 
 [fonts]
 ui_font = "Inter"

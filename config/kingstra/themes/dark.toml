@@ -5,20 +5,20 @@ icon = "󰖔"
 preview_image = "dark.jpg"
 
 [matugen]
-scheme_type = "scheme-content"
-color_index = 0
-contrast = -0.2
+scheme_type = "scheme-expressive"
+color_index = 4
+contrast = -0.4
 
 [appearance]
-border_radius = 10
+border_radius = 8
 border_width = 2
-gaps_in = 4
-gaps_out = 8
-bar_opacity = 0.80
-popup_opacity = 0.88
-blur_size = 6
+gaps_in = 3
+gaps_out = 6
+bar_opacity = 0.75
+popup_opacity = 0.82
+blur_size = 4
 blur_passes = 2
-animation_speed = 1.0
+animation_speed = 1.2
 
 [fonts]
 ui_font = "Inter"

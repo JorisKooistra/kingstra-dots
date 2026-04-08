@@ -5,19 +5,19 @@ icon = "󰌪"
 preview_image = "botanical.jpg"
 
 [matugen]
-scheme_type = "scheme-fidelity"
+scheme_type = "scheme-vibrant"
 color_index = 2
-contrast = 0.1
+contrast = 0.3
 
 [appearance]
-border_radius = 18
+border_radius = 20
 border_width = 1
 gaps_in = 8
-gaps_out = 14
+gaps_out = 16
 bar_opacity = 0.88
 popup_opacity = 0.93
-blur_size = 12
-blur_passes = 3
+blur_size = 14
+blur_passes = 4
 animation_speed = 0.9
 
 [fonts]

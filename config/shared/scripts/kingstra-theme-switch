@@ -15,7 +15,7 @@ THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
 
-READER="kingstra-theme-read"
+READER="${HOME}/.local/bin/kingstra-theme-read"
 
 LOG_PREFIX="[kingstra-theme-switch]"
 _log()  { echo "$LOG_PREFIX $*"; }
@@ -249,16 +249,18 @@ _log "GTK/Qt interface bijgewerkt"
 # ---------------------------------------------------------------------------
 WALLPAPER="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
-    if command -v kingstra-theme-apply &>/dev/null; then
-        kingstra-theme-apply --reload
+    if command -v matugen &>/dev/null; then
+        matugen image "$WALLPAPER" --config "$MATUGEN_CONF" 2>/dev/null || true
         _log "Matugen kleuren hergegenereerd"
-    elif command -v matugen &>/dev/null; then
-        matugen image "$WALLPAPER" --config "$MATUGEN_CONF" 2>/dev/null
-        hyprctl reload 2>/dev/null || true
-        _log "Matugen direct uitgevoerd"
+        # Reload QuickShell colors by touching the output file
+        touch "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/colors.json" 2>/dev/null || true
+        # Reload swaync
+        pkill -USR1 swaync 2>/dev/null || true
+    else
+        _warn "matugen niet gevonden — kleuren niet bijgewerkt"
     fi
 else
-    _log "Geen wallpaper gevonden — kleuren niet bijgewerkt"
+    _log "Geen wallpaper gevonden — kleuren niet bijgewerkt via matugen, rest wel toegepast"
 fi
 
 # ---------------------------------------------------------------------------

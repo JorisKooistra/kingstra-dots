@@ -7,18 +7,18 @@ preview_image = "dawn.jpg"
 [matugen]
 scheme_type = "scheme-tonal-spot"
 color_index = 1
-contrast = 0.2
+contrast = 0.4
 
 [appearance]
-border_radius = 16
+border_radius = 18
 border_width = 1
-gaps_in = 6
-gaps_out = 12
-bar_opacity = 0.90
-popup_opacity = 0.95
-blur_size = 10
-blur_passes = 3
-animation_speed = 1.0
+gaps_in = 7
+gaps_out = 14
+bar_opacity = 0.92
+popup_opacity = 0.96
+blur_size = 12
+blur_passes = 4
+animation_speed = 0.8
 
 [fonts]
 ui_font = "Inter"

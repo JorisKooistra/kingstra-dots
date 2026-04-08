@@ -6,16 +6,16 @@ preview_image = "dusk.jpg"
 
 [matugen]
 scheme_type = "scheme-fidelity"
-color_index = 0
-contrast = 0.0
+color_index = 3
+contrast = -0.1
 
 [appearance]
-border_radius = 12
+border_radius = 14
 border_width = 2
 gaps_in = 5
 gaps_out = 10
 bar_opacity = 0.85
-popup_opacity = 0.92
+popup_opacity = 0.90
 blur_size = 8
 blur_passes = 3
 animation_speed = 1.0
