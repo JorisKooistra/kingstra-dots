@@ -99,7 +99,7 @@ Item {
     // Keybinds laden via Process → StdioCollector (geen temp-bestand race-conditie)
     Process {
         id: loadKeybindsProc
-        command: ["bash", "~/.config/quickshell/settings/read_keybinds.sh"]
+        command: ["bash", Quickshell.env("HOME") + "/.config/quickshell/settings/read_keybinds.sh"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -184,7 +184,7 @@ Item {
     // Load active theme info
     Process {
         id: loadThemeProc
-        command: ["bash", "-c", "kingstra-theme-switch --current"]
+        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-switch --current"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let active = this.text.trim();
@@ -198,7 +198,7 @@ Item {
     Process {
         id: loadThemeDetailProc
         property string themeId: ""
-        command: ["bash", "-c", "kingstra-theme-read --json \"${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes/" + themeId + ".toml\""]
+        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-read --json \"${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes/" + themeId + ".toml\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {

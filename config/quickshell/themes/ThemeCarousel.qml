@@ -149,7 +149,7 @@ Item {
 
     Process {
         id: loadThemes
-        command: ["bash", "-c", "kingstra-theme-read --list \"${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes\""]
+        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-read --list \"${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 let raw = this.text.trim();
@@ -173,7 +173,7 @@ Item {
 
     Process {
         id: loadActiveTheme
-        command: ["bash", "-c", "kingstra-theme-switch --current"]
+        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-switch --current"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let active = this.text.trim();
@@ -186,7 +186,7 @@ Item {
     Process {
         id: applyProc
         property string themeName: ""
-        command: ["bash", "-c", "kingstra-theme-switch " + themeName]
+        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-switch " + themeName]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.activeTheme = applyProc.themeName;
