@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# read_keybinds.sh — Parse Hyprland bind files → JSON for SettingsPopup
+# read_keybinds.sh — Parse Hyprland bind files → JSON output to stdout
 # =============================================================================
 CONF_DIR="${HOME}/.config/hypr/conf.d"
-OUTPUT="/tmp/qs_keybinds.json"
 
 # Fallback dispatcher → label (when no inline # comment exists)
 declare -A DISPATCHER_LABELS=(
@@ -22,7 +21,6 @@ declare -A DISPATCHER_LABELS=(
 # Dispatcher+arg → label
 fallback_label() {
     local d="$1" args="$2"
-    # Check exact dispatcher match
     [[ -n "${DISPATCHER_LABELS[$d]}" ]] && { echo "${DISPATCHER_LABELS[$d]}"; return; }
     case "$d" in
         movefocus)
@@ -55,12 +53,12 @@ fallback_label() {
             case "$args" in f) echo "Volgende groepstab" ;; b) echo "Vorige groepstab" ;; *) echo "Groepstab" ;; esac ;;
         lockactivegroup) echo "Groep vergrendelen" ;;
         layoutmsg) echo "Layout-opdracht" ;;
-        exec) echo "${args##*/}" ;;   # Use basename of command
+        exec) echo "${args##*/}" ;;
         *) echo "$d" ;;
     esac
 }
 
-echo "[" > "$OUTPUT"
+echo "["
 first=true
 
 for f in "$CONF_DIR"/8*-binds*.conf; do
@@ -73,23 +71,19 @@ for f in "$CONF_DIR"/8*-binds*.conf; do
     while IFS= read -r line; do
         linenum=$((linenum + 1))
 
-        # Skip comments and empty lines
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
         [[ -z "${line// /}" ]] && continue
 
-        # Match: bind[eml]* = ...
         if [[ "$line" =~ ^(bind[emlr]*)[[:space:]]*=[[:space:]]*(.*) ]]; then
             bindtype="${BASH_REMATCH[1]}"
             rest="${BASH_REMATCH[2]}"
 
-            # Extract inline comment
             comment=""
             if [[ "$rest" =~ (.+)[[:space:]]+#[[:space:]]*(.*) ]]; then
                 rest="${BASH_REMATCH[1]}"
                 comment="${BASH_REMATCH[2]}"
             fi
 
-            # Split by comma
             IFS=',' read -ra parts <<< "$rest"
             [[ ${#parts[@]} -lt 3 ]] && continue
 
@@ -104,24 +98,23 @@ for f in "$CONF_DIR"/8*-binds*.conf; do
             done
 
             # JSON-escape strings
-            comment="${comment//\\/\\\\}"
-            comment="${comment//\"/\\\"}"
-            args="${args//\\/\\\\}"
-            args="${args//\"/\\\"}"
+            comment="${comment//\\/\\\\}"; comment="${comment//\"/\\\"}"
+            args="${args//\\/\\\\}";       args="${args//\"/\\\"}"
+            mods="${mods//\\/\\\\}";       mods="${mods//\"/\\\"}"
+            key="${key//\\/\\\\}";         key="${key//\"/\\\"}"
+            dispatcher="${dispatcher//\\/\\\\}"; dispatcher="${dispatcher//\"/\\\"}"
 
-            # Use fallback label if no inline comment
             if [[ -z "$comment" ]]; then
                 comment=$(fallback_label "$dispatcher" "$args")
-                comment="${comment//\\/\\\\}"
-                comment="${comment//\"/\\\"}"
+                comment="${comment//\\/\\\\}"; comment="${comment//\"/\\\"}"
             fi
 
-            $first || echo "," >> "$OUTPUT"
+            $first || echo ","
             first=false
-            printf '  {"file":"%s","cat":"%s","ln":%d,"t":"%s","mods":"%s","key":"%s","d":"%s","args":"%s","label":"%s"}' \
-                "$fname" "$category" "$linenum" "$bindtype" "$mods" "$key" "$dispatcher" "$args" "$comment" >> "$OUTPUT"
+            printf '  {"file":"%s","cat":"%s","ln":%d,"t":"%s","mods":"%s","key":"%s","d":"%s","args":"%s","label":"%s","bound":true}' \
+                "$fname" "$category" "$linenum" "$bindtype" "$mods" "$key" "$dispatcher" "$args" "$comment"
         fi
     done < "$f"
 done
 
-echo -e "\n]" >> "$OUTPUT"
+echo -e "\n]"

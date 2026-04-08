@@ -318,30 +318,6 @@ Item {
     readonly property bool isBtConn: window.btConnected.length > 0
     property string btConnectError: ""
 
-    // Process that runs bluetooth connect with error feedback
-    Process {
-        id: btConnectProc
-        property string connectMac: ""
-        command: ["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--connect", connectMac]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    let result = JSON.parse(this.text.trim());
-                    if (!result.ok) {
-                        window.btConnectError = result.error || "Onbekende fout";
-                        // Clear busy state for this device on failure
-                        let bt = window.busyTasks;
-                        delete bt[btConnectProc.connectMac];
-                        window.busyTasks = Object.assign({}, bt);
-                        if (Object.keys(window.busyTasks).length === 0 && Object.keys(window.disconnectingDevices).length === 0) busyTimeout.stop();
-                        btConnectErrorTimer.restart();
-                    }
-                } catch(e) {}
-                btPoller.running = true;
-            }
-        }
-    }
-
     // Auto-clear error message after 5 seconds
     Timer { id: btConnectErrorTimer; interval: 5000; onTriggered: window.btConnectError = "" }
 
@@ -1725,8 +1701,8 @@ Item {
                                                 wifiPoller.running = true;
                                             } else {
                                                 window.btConnectError = "";
-                                                btConnectProc.connectMac = mac;
-                                                btConnectProc.running = true;
+                                                Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--connect", mac]);
+                                                btPoller.running = true;
                                             }
                                         }
                                     }

@@ -24,6 +24,10 @@ config/hypr/conf.d/72-hardware.conf
 # Thema-gegenereerde bestanden (kingstra-theme-switch)
 config/hypr/conf.d/35-theme.conf
 
+# Matugen-gegenereerde QML kleurenbestanden
+config/quickshell/shared/Theme.qml
+config/quickshell/overview/common/Appearance.colors.qml
+
 # Runtime preview cache
 config/quickshell/themes/previews/
 

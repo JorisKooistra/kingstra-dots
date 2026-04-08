@@ -74,6 +74,14 @@ Item {
     property int editingIndex: -1
     property string keybindFilter: ""
 
+    // Catalog van bekende acties zonder vaste keybinding — worden als "Niet ingesteld" getoond
+    readonly property var keybindCatalog: [
+        { label: "Kleurenkiezer",    cat: "apps",  file: "81-binds-apps.conf",  d: "exec", args: "hyprpicker -r -n -f hex",              t: "bind", ln: 0, mods: "", key: "" },
+        { label: "Schermopname",     cat: "apps",  file: "81-binds-apps.conf",  d: "exec", args: "wf-recorder",                          t: "bind", ln: 0, mods: "", key: "" },
+        { label: "Uitlogmenu",       cat: "core",  file: "80-binds-core.conf",  d: "exec", args: "wlogout",                               t: "bind", ln: 0, mods: "", key: "" },
+        { label: "Emoji-kiezer",     cat: "apps",  file: "81-binds-apps.conf",  d: "exec", args: "walker --modules emojis",               t: "bind", ln: 0, mods: "", key: "" }
+    ]
+
     // Settings file
     property var settingsData: ({})
     property FileView _settingsFv: FileView {
@@ -86,15 +94,19 @@ Item {
         }
     }
 
-    // Keybinds JSON file
-    property FileView _keybindsFv: FileView {
-        path: "/tmp/qs_keybinds.json"
-        onTextChanged: {
-            try {
-                var data = JSON.parse(text);
-                keybindsModel.clear();
-                for (var i = 0; i < data.length; i++) keybindsModel.append(data[i]);
-            } catch(e) {}
+    // Keybinds laden via Process → StdioCollector (geen temp-bestand race-conditie)
+    Process {
+        id: loadKeybindsProc
+        command: ["bash", Qt.resolvedUrl("read_keybinds.sh").toString().replace(/^file:\/\//, "")]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(text);
+                    root.mergeKeybinds(data);
+                } catch(e) {
+                    root.mergeKeybinds([]);
+                }
+            }
         }
     }
 
@@ -107,8 +119,8 @@ Item {
     property var themeAppearance: ({})
 
     Component.onCompleted: {
-        // Generate keybinds JSON
-        Quickshell.execDetached(["bash", Qt.resolvedUrl("../settings/read_keybinds.sh").toString().replace(/^file:\/\//, "")]);
+        // Laad keybinds via Process
+        loadKeybindsProc.running = true;
         // Load weather .env values
         loadEnvProc.running = true;
         // Load active theme info
@@ -222,15 +234,53 @@ Item {
         }
     }
 
+    // Voeg catalogus-acties toe die nog niet gebonden zijn
+    function mergeKeybinds(rawData) {
+        keybindsModel.clear();
+        var boundKeys = {};
+        for (var i = 0; i < rawData.length; i++) {
+            rawData[i].bound = true;
+            keybindsModel.append(rawData[i]);
+            boundKeys[rawData[i].d + "|" + rawData[i].args] = true;
+        }
+        for (var j = 0; j < keybindCatalog.length; j++) {
+            var entry = keybindCatalog[j];
+            if (!boundKeys[entry.d + "|" + entry.args]) {
+                keybindsModel.append({
+                    file: entry.file, cat: entry.cat, ln: 0,
+                    t: entry.t, mods: "", key: "",
+                    d: entry.d, args: entry.args,
+                    label: entry.label, bound: false
+                });
+            }
+        }
+    }
+
     function saveKeybind(index, newMods, newKey) {
         var item = keybindsModel.get(index);
-        var line = item.t + " = " + newMods + ", " + newKey + ", " + item.d;
+        var line = (item.t || "bind") + " = " + newMods + ", " + newKey + ", " + item.d;
         if (item.args) line += ", " + item.args;
         if (item.label) line += "   # " + item.label;
-        var script = Qt.resolvedUrl("../settings/write_keybind.sh").toString().replace(/^file:\/\//, "");
-        Quickshell.execDetached(["bash", script, item.file, item.ln.toString(), line]);
+        var script = Qt.resolvedUrl("write_keybind.sh").toString().replace(/^file:\/\//, "");
+        if (item.bound) {
+            Quickshell.execDetached(["bash", script, "--update", item.file, item.ln.toString(), line]);
+        } else {
+            Quickshell.execDetached(["bash", script, "--add", item.file, line]);
+            keybindsModel.setProperty(index, "bound", true);
+        }
         keybindsModel.setProperty(index, "mods", newMods);
         keybindsModel.setProperty(index, "key", newKey);
+        editingIndex = -1;
+    }
+
+    function removeKeybind(index) {
+        var item = keybindsModel.get(index);
+        if (!item.bound) return;
+        var script = Qt.resolvedUrl("write_keybind.sh").toString().replace(/^file:\/\//, "");
+        Quickshell.execDetached(["bash", script, "--remove", item.file, item.ln.toString()]);
+        keybindsModel.setProperty(index, "bound", false);
+        keybindsModel.setProperty(index, "mods", "");
+        keybindsModel.setProperty(index, "key", "");
         editingIndex = -1;
     }
 
@@ -495,7 +545,19 @@ Item {
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
 
-                    Text { text: "Keybindings"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: "Keybindings"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text; Layout.fillWidth: true }
+                        Rectangle {
+                            Layout.preferredWidth: root.s(36); Layout.preferredHeight: root.s(36); radius: root.s(8)
+                            color: reloadMa.containsMouse ? root.surface1 : Qt.alpha(root.surface0, 0.6)
+                            border.color: reloadMa.containsMouse ? root.blue : root.surface1; border.width: 1
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on border.color { ColorAnimation { duration: 150 } }
+                            Text { anchors.centerIn: parent; text: "󰑓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(16); color: reloadMa.containsMouse ? root.blue : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                            MouseArea { id: reloadMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { keybindsModel.clear(); loadKeybindsProc.running = true; } }
+                        }
+                    }
 
                     // Search bar
                     Rectangle {
@@ -559,8 +621,20 @@ Item {
                                             Item {
                                                 Layout.preferredWidth: root.s(200); Layout.minimumWidth: root.s(200)
                                                 Layout.fillHeight: true
+
+                                                // Unbound
+                                                Rectangle {
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    visible: !model.bound
+                                                    width: unboundTxt.implicitWidth + root.s(16); height: root.s(26); radius: root.s(4)
+                                                    color: Qt.alpha(root.overlay0, 0.12); border.color: Qt.alpha(root.overlay0, 0.3); border.width: 1
+                                                    Text { id: unboundTxt; anchors.centerIn: parent; text: "Niet ingesteld"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.overlay0 }
+                                                }
+
+                                                // Bound
                                                 Row {
                                                     anchors.verticalCenter: parent.verticalCenter; spacing: root.s(6)
+                                                    visible: model.bound
                                                     Rectangle {
                                                         width: k1t.implicitWidth + root.s(14); height: root.s(26); radius: root.s(4)
                                                         color: root.surface0; border.color: root.surface2; border.width: 1
@@ -629,15 +703,26 @@ Item {
                                             Rectangle {
                                                 Layout.preferredWidth: root.s(70); Layout.preferredHeight: root.s(30); radius: root.s(4)
                                                 color: saveBMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
-                                                Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.base }
+                                                Text { anchors.centerIn: parent; text: "Opslaan"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.base }
                                                 MouseArea { id: saveBMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveKeybind(index, bindRow.editMods, bindRow.editKey) }
+                                            }
+                                            // Remove button (alleen bij bestaande bind)
+                                            Rectangle {
+                                                Layout.preferredWidth: root.s(30); Layout.preferredHeight: root.s(30); radius: root.s(4)
+                                                visible: model.bound
+                                                color: removeBMa.containsMouse ? Qt.alpha(root.red, 0.15) : "transparent"
+                                                border.color: removeBMa.containsMouse ? root.red : root.surface1; border.width: 1
+                                                Behavior on color { ColorAnimation { duration: 150 } }
+                                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                                                Text { anchors.centerIn: parent; text: "󰆴"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: removeBMa.containsMouse ? root.red : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                                                MouseArea { id: removeBMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.removeKeybind(index) }
                                             }
                                             // Cancel button
                                             Rectangle {
                                                 Layout.preferredWidth: root.s(70); Layout.preferredHeight: root.s(30); radius: root.s(4)
                                                 color: cancelMa.containsMouse ? Qt.alpha(root.red, 0.15) : "transparent"
                                                 border.color: root.surface1; border.width: 1
-                                                Text { anchors.centerIn: parent; text: "Cancel"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                                Text { anchors.centerIn: parent; text: "Annuleer"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
                                                 MouseArea { id: cancelMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.editingIndex = -1 }
                                             }
                                         }
