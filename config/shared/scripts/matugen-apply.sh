@@ -50,12 +50,20 @@ fi
 # ---------------------------------------------------------------------------
 _log "Matugen uitvoeren op: $WALLPAPER"
 MATUGEN_CONF_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
-MATUGEN_MODE_ARG=$(grep -m1 '^mode\s*=' "$MATUGEN_CONF_FILE" 2>/dev/null | sed 's/.*=\s*"\?\([a-z]*\)"\?.*/\1/' || echo "dark")
+
+# Lees alle matugen-parameters uit config.toml (worden gezet door kingstra-theme-switch)
+_cfg_val() { grep -m1 "^${1}\s*=" "$MATUGEN_CONF_FILE" 2>/dev/null | sed 's/[^=]*=\s*"\?\([^"]*\)"\?.*/\1/' || echo "${2}"; }
+_SCHEME=$(_cfg_val scheme_type "scheme-tonal-spot")
+_COLOR_IDX=$(_cfg_val color_index "0")
+_MODE=$(_cfg_val mode "dark")
+
+_log "Matugen params: scheme=${_SCHEME}, color_index=${_COLOR_IDX}, mode=${_MODE}"
 matugen image "$WALLPAPER" \
     --config "$MATUGEN_CONF_FILE" \
-    --source-color-index "${MATUGEN_COLOR_INDEX:-0}" \
-    --mode "${MATUGEN_MODE_ARG:-dark}" \
-    2>/dev/null
+    --type "${_SCHEME}" \
+    --source-color-index "${_COLOR_IDX}" \
+    --mode "${_MODE}" \
+    2>/dev/null || true
 
 _log "Templates gegenereerd"
 

@@ -251,11 +251,13 @@ _log "GTK/Qt interface bijgewerkt"
 # ---------------------------------------------------------------------------
 WALLPAPER="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
-    "$HOME/.local/bin/kingstra-theme-apply" --reload 2>/dev/null || {
+    "$HOME/.local/bin/kingstra-theme-apply" --reload || {
         _warn "kingstra-theme-apply mislukt, matugen direct proberen"
         if command -v matugen &>/dev/null; then
             matugen image "$WALLPAPER" --config "$MATUGEN_CONF" \
-                --source-color-index "${MATUGEN_COLOR_INDEX:-0}" 2>/dev/null || true
+                --type "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}" \
+                --source-color-index "${MATUGEN_COLOR_INDEX:-0}" \
+                --mode "${MATUGEN_MODE:-dark}" 2>/dev/null || true
         fi
     }
     _log "Matugen kleuren hergegenereerd"
