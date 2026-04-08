@@ -266,19 +266,19 @@ Item {
         delegate: Item {
             id: delegateRoot
 
-            readonly property var appearanceData: model.appearance || ({})
-            readonly property var fontsData: model.fonts || ({})
-            readonly property var iconsData: model.icons || ({})
-            readonly property var matugenData: model.matugen || ({})
-            readonly property string themeId: model.id !== undefined ? String(model.id) : ""
-            readonly property string themeName: model.name !== undefined ? String(model.name) : ""
-            readonly property string themeIcon: model.icon !== undefined ? String(model.icon) : "󰏘"
-            readonly property string themeDesc: model.description !== undefined ? String(model.description) : ""
-            readonly property string previewImg: model.preview_image !== undefined ? String(model.preview_image) : ""
-            readonly property string schemeType: matugenData.scheme_type !== undefined ? String(matugenData.scheme_type) : (model.scheme_type !== undefined ? String(model.scheme_type) : "")
+            readonly property var appearanceData: appearance !== undefined && appearance !== null ? appearance : ({})
+            readonly property var fontsData: fonts !== undefined && fonts !== null ? fonts : ({})
+            readonly property var iconsData: icons !== undefined && icons !== null ? icons : ({})
+            readonly property var matugenData: matugen !== undefined && matugen !== null ? matugen : ({})
+            readonly property string themeId: id !== undefined ? String(id) : ""
+            readonly property string themeName: name !== undefined ? String(name) : ""
+            readonly property string themeIcon: icon !== undefined ? String(icon) : "󰏘"
+            readonly property string themeDesc: description !== undefined ? String(description) : ""
+            readonly property string previewImg: preview_image !== undefined ? String(preview_image) : ""
+            readonly property string schemeType: matugenData.scheme_type !== undefined ? String(matugenData.scheme_type) : (scheme_type !== undefined ? String(scheme_type) : "")
             readonly property string iconTheme: iconsData.icon_theme !== undefined ? String(iconsData.icon_theme) : "Papirus-Dark"
-            readonly property int borderRadius: appearanceData.border_radius !== undefined ? appearanceData.border_radius : (model.border_radius !== undefined ? model.border_radius : 12)
-            readonly property int gapsOut: appearanceData.gaps_out !== undefined ? appearanceData.gaps_out : (model.gaps_out !== undefined ? model.gaps_out : 10)
+            readonly property int borderRadius: appearanceData.border_radius !== undefined ? appearanceData.border_radius : (border_radius !== undefined ? border_radius : 12)
+            readonly property int gapsOut: appearanceData.gaps_out !== undefined ? appearanceData.gaps_out : (gaps_out !== undefined ? gaps_out : 10)
             readonly property color accentColor: root.accentForScheme(schemeType)
 
             readonly property bool isCurrent: ListView.isCurrentItem

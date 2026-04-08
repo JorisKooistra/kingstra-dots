@@ -966,7 +966,7 @@ Item {
                     clip: true
 
                     ColumnLayout {
-                        width: parent.availableWidth
+                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
                         spacing: root.s(15)
 
                         Text { text: "Theming Engine"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
