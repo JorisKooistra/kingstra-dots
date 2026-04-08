@@ -1,4 +1,5 @@
 plan.txt
+todos.txt
 voorbeelden en bronnen/
 .claude/
 .env
@@ -11,6 +12,7 @@ __pycache__/
 
 # Matugen-gegenereerde kleurbestanden (output van templates)
 config/hypr/colors.conf
+config/kitty/kitty.conf
 config/kitty/colors.conf
 config/kitty/skwd-theme.conf
 config/quickshell/colors.json
@@ -19,7 +21,8 @@ config/walker/colors.css
 config/zsh/omp-colors.toml
 config/yazi/theme.toml
 
-# Installer-gegenereerde hardware config (fase 14)
+# Installer-gegenereerde configs
+config/hypr/conf.d/71-autostart-ui.conf
 config/hypr/conf.d/72-hardware.conf
 
 # Thema-gegenereerde bestanden (kingstra-theme-switch)
@@ -36,4 +39,6 @@ config/quickshell/themes/previews/
 config/quickshell/settings/settings.json
 config/hypr/conf.d/99-custom.conf
 config/quickshell/theme.json
+config/kingstra/active-theme
+config/matugen/config.toml
 
