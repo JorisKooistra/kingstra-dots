@@ -8,6 +8,7 @@ preview_image = "botanical.jpg"
 scheme_type = "scheme-vibrant"
 color_index = 2
 contrast = 0.2
+mode = "dark"
 
 [appearance]
 border_radius = 24

@@ -8,6 +8,7 @@ preview_image = "dusk.jpg"
 scheme_type = "scheme-fidelity"
 color_index = 3
 contrast = -0.1
+mode = "dark"
 
 [appearance]
 border_radius = 14

@@ -11,6 +11,9 @@ color_index = 0
 # scheme-tonal-spot = standaard Material You
 scheme_type = "scheme-tonal-spot"
 
+# Kleurmode: "dark" | "light"
+mode = "dark"
+
 # Matugen schrijft de gegenereerde kleuren naar alle templates
 # Alle templates staan in config/matugen/templates/
 

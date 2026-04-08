@@ -8,6 +8,7 @@ preview_image = "rocky.jpg"
 scheme_type = "scheme-monochrome"
 color_index = 0
 contrast = 0.0
+mode = "dark"
 
 [appearance]
 border_radius = 2

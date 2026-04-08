@@ -8,6 +8,7 @@ preview_image = "dark.jpg"
 scheme_type = "scheme-expressive"
 color_index = 4
 contrast = -0.4
+mode = "dark"
 
 [appearance]
 border_radius = 8

@@ -8,6 +8,7 @@ preview_image = "dawn.jpg"
 scheme_type = "scheme-tonal-spot"
 color_index = 1
 contrast = 0.4
+mode = "light"
 
 [appearance]
 border_radius = 18

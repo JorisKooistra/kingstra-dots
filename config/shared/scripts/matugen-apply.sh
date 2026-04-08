@@ -49,9 +49,12 @@ fi
 # Stap 1 — Matugen uitvoeren (genereert alle template-outputs)
 # ---------------------------------------------------------------------------
 _log "Matugen uitvoeren op: $WALLPAPER"
+MATUGEN_CONF_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+MATUGEN_MODE_ARG=$(grep -m1 '^mode\s*=' "$MATUGEN_CONF_FILE" 2>/dev/null | sed 's/.*=\s*"\?\([a-z]*\)"\?.*/\1/' || echo "dark")
 matugen image "$WALLPAPER" \
-    --config "${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml" \
+    --config "$MATUGEN_CONF_FILE" \
     --source-color-index "${MATUGEN_COLOR_INDEX:-0}" \
+    --mode "${MATUGEN_MODE_ARG:-dark}" \
     2>/dev/null
 
 _log "Templates gegenereerd"

@@ -119,7 +119,8 @@ eval "$("$READER" "$THEME_FILE")"
 if [[ -f "$MATUGEN_CONF" ]]; then
     sed -i "s|^scheme_type\s*=.*|scheme_type = \"${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}\"|" "$MATUGEN_CONF"
     sed -i "s|^color_index\s*=.*|color_index = ${MATUGEN_COLOR_INDEX:-0}|" "$MATUGEN_CONF"
-    _log "Matugen config bijgewerkt (scheme: ${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot})"
+    sed -i "s|^mode\s*=.*|mode = \"${MATUGEN_MODE:-dark}\"|" "$MATUGEN_CONF"
+    _log "Matugen config bijgewerkt (scheme: ${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}, mode: ${MATUGEN_MODE:-dark})"
 fi
 
 # ---------------------------------------------------------------------------
@@ -175,7 +176,8 @@ cat > "$THEME_JSON" <<EOF
     "bar_position": "${QUICKSHELL_BAR_POSITION:-top}",
     "scheme_type": "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}",
     "color_index": ${MATUGEN_COLOR_INDEX:-0},
-    "contrast": ${MATUGEN_CONTRAST:-0.0}
+    "contrast": ${MATUGEN_CONTRAST:-0.0},
+    "mode": "${MATUGEN_MODE:-dark}"
 }
 EOF
 _log "theme.json gegenereerd"
