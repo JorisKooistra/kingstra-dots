@@ -465,21 +465,54 @@ Variants {
                     // Notifications
                     Rectangle {
                         property bool isHovered: notifMouse.containsMouse
-                        color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.95) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                        radius: barWindow.s(14); border.width: 1; border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, isHovered ? 0.15 : 0.05)
-                        Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: barWindow.barHeight
+                        color: isHovered
+                               ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
+                               : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.84)
+                        radius: barWindow.s(16); border.width: 1
+                        border.color: isHovered
+                                      ? Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.32)
+                                      : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                        Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: barWindow.s(68)
+                        clip: true
                         
                         scale: isHovered ? 1.05 : 1.0
                         Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                         Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on border.color { ColorAnimation { duration: 200 } }
                         
-                        Text {
-                            anchors.centerIn: parent
-                            text: ""
-                            font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(18)
-                            color: parent.isHovered ? mocha.yellow : mocha.text
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: barWindow.s(8)
+                            width: barWindow.s(3)
+                            height: parent.height - barWindow.s(16)
+                            radius: barWindow.s(2)
+                            color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, parent.isHovered ? 0.95 : 0.60)
                             Behavior on color { ColorAnimation { duration: 200 } }
                         }
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: barWindow.s(8)
+
+                            Text {
+                                text: ""
+                                font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(18)
+                                color: parent.parent.isHovered ? mocha.yellow : mocha.text
+                                Behavior on color { ColorAnimation { duration: 200 } }
+                            }
+
+                            Rectangle {
+                                width: barWindow.s(8)
+                                height: width
+                                radius: width / 2
+                                color: parent.parent.isHovered
+                                       ? Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.95)
+                                       : Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.55)
+                                Behavior on color { ColorAnimation { duration: 200 } }
+                            }
+                        }
+
                         MouseArea {
                             id: notifMouse
                             anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton

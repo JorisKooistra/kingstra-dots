@@ -73,6 +73,11 @@ def list_themes(themes_dir):
             data = read_toml(path)
             theme_id = fname[:-5]  # strip .toml
             meta = data.get("meta", {})
+            appearance = data.get("appearance", {})
+            fonts = data.get("fonts", {})
+            icons = data.get("icons", {})
+            quickshell = data.get("quickshell", {})
+            matugen = data.get("matugen", {})
             entry = {
                 "id": theme_id,
                 "name": meta.get("name", theme_id.title()),
@@ -80,13 +85,17 @@ def list_themes(themes_dir):
                 "icon": meta.get("icon", "󰏘"),
                 "preview_image": meta.get("preview_image", ""),
                 "file": fname,
+                "appearance": appearance,
+                "fonts": fonts,
+                "icons": icons,
+                "matugen": matugen,
+                "quickshell": quickshell,
             }
             # Include key settings for preview
-            matugen = data.get("matugen", {})
             entry["scheme_type"] = matugen.get("scheme_type", "scheme-tonal-spot")
-            appearance = data.get("appearance", {})
             entry["border_radius"] = appearance.get("border_radius", 12)
             entry["gaps_out"] = appearance.get("gaps_out", 10)
+            entry["icon_theme"] = icons.get("icon_theme", "Papirus-Dark")
             themes.append(entry)
         except Exception:
             continue

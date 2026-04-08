@@ -30,6 +30,59 @@ _notify() {
                 2>/dev/null || true
 }
 
+set_ini_value() {
+    local file="$1"
+    local section="$2"
+    local key="$3"
+    local value="$4"
+
+    mkdir -p "$(dirname "$file")"
+    [[ -f "$file" ]] || printf '[%s]\n' "$section" > "$file"
+
+    python3 - "$file" "$section" "$key" "$value" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+section = sys.argv[2]
+key = sys.argv[3]
+value = sys.argv[4]
+
+lines = path.read_text(encoding="utf-8").splitlines()
+output = []
+in_section = False
+section_found = False
+inserted = False
+
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        if in_section and not inserted:
+            output.append(f"{key}={value}")
+            inserted = True
+        in_section = stripped == f"[{section}]"
+        section_found = section_found or in_section
+        output.append(line)
+        continue
+
+    if in_section and stripped.startswith(f"{key}="):
+        output.append(f"{key}={value}")
+        inserted = True
+    else:
+        output.append(line)
+
+if not section_found:
+    if output and output[-1] != "":
+        output.append("")
+    output.append(f"[{section}]")
+    output.append(f"{key}={value}")
+elif in_section and not inserted:
+    output.append(f"{key}={value}")
+
+path.write_text("\n".join(output) + "\n", encoding="utf-8")
+PY
+}
+
 # ---------------------------------------------------------------------------
 # Arguments
 # ---------------------------------------------------------------------------
@@ -117,9 +170,12 @@ cat > "$THEME_JSON" <<EOF
     "ui_font_size": ${FONTS_UI_FONT_SIZE:-13},
     "mono_font": "${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}",
     "mono_font_size": ${FONTS_MONO_FONT_SIZE:-12},
+    "icon_theme": "${ICONS_ICON_THEME:-Papirus-Dark}",
     "bar_height": ${QUICKSHELL_BAR_HEIGHT:-36},
     "bar_position": "${QUICKSHELL_BAR_POSITION:-top}",
-    "scheme_type": "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}"
+    "scheme_type": "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}",
+    "color_index": ${MATUGEN_COLOR_INDEX:-0},
+    "contrast": ${MATUGEN_CONTRAST:-0.0}
 }
 EOF
 _log "theme.json gegenereerd"
@@ -149,6 +205,44 @@ if [[ -f "$KITTY_CONF" ]]; then
     pkill -USR1 kitty 2>/dev/null || true
     _log "Kitty font bijgewerkt"
 fi
+
+# ---------------------------------------------------------------------------
+# Step 5b — Update GTK, Qt and desktop interface font/icon theme
+# ---------------------------------------------------------------------------
+GTK3_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini"
+GTK4_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-4.0/settings.ini"
+GTK2_CONF="$HOME/.gtkrc-2.0"
+QT6CT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/qt6ct/qt6ct.conf"
+UI_FONT_NAME="${FONTS_UI_FONT:-Inter} ${FONTS_UI_FONT_SIZE:-13}"
+ICON_THEME_NAME="${ICONS_ICON_THEME:-Papirus-Dark}"
+
+for gtk_conf in "$GTK3_CONF" "$GTK4_CONF"; do
+    mkdir -p "$(dirname "$gtk_conf")"
+    [[ -f "$gtk_conf" ]] || printf '[Settings]\n' > "$gtk_conf"
+    sed -i "/^\[Settings\]/,/^\[/ s|^gtk-font-name=.*|gtk-font-name=${UI_FONT_NAME}|" "$gtk_conf" 2>/dev/null || true
+    sed -i "/^\[Settings\]/,/^\[/ s|^gtk-icon-theme-name=.*|gtk-icon-theme-name=${ICON_THEME_NAME}|" "$gtk_conf" 2>/dev/null || true
+    grep -q '^gtk-font-name=' "$gtk_conf" || sed -i "/^\[Settings\]/a gtk-font-name=${UI_FONT_NAME}" "$gtk_conf"
+    grep -q '^gtk-icon-theme-name=' "$gtk_conf" || sed -i "/^\[Settings\]/a gtk-icon-theme-name=${ICON_THEME_NAME}" "$gtk_conf"
+done
+
+if [[ -f "$GTK2_CONF" ]]; then
+    sed -i "s|^gtk-font-name=.*|gtk-font-name=\"${UI_FONT_NAME}\"|" "$GTK2_CONF" 2>/dev/null || true
+    sed -i "s|^gtk-icon-theme-name=.*|gtk-icon-theme-name=\"${ICON_THEME_NAME}\"|" "$GTK2_CONF" 2>/dev/null || true
+else
+    cat > "$GTK2_CONF" <<EOF
+gtk-font-name="${UI_FONT_NAME}"
+gtk-icon-theme-name="${ICON_THEME_NAME}"
+EOF
+fi
+
+set_ini_value "$QT6CT_CONF" "Appearance" "icon_theme" "$ICON_THEME_NAME"
+
+if command -v gsettings &>/dev/null; then
+    gsettings set org.gnome.desktop.interface font-name "$UI_FONT_NAME" 2>/dev/null || true
+    gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME" 2>/dev/null || true
+fi
+
+_log "GTK/Qt interface bijgewerkt"
 
 # ---------------------------------------------------------------------------
 # Step 6 — Run matugen to regenerate colors with new scheme

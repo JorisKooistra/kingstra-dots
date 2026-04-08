@@ -26,6 +26,9 @@ ui_font_size = 13
 mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
 
+[icons]
+icon_theme = "Papirus"
+
 [quickshell]
 bar_height = 36
 bar_position = "top"

@@ -14,10 +14,10 @@
   // Afmetingen
   "control-center-width": 420,
   "control-center-height": 0,           // 0 = automatisch
-  "control-center-margin-top": 44,      // Onder de topbar
+  "control-center-margin-top": 64,      // Onder de topbar, uitgelijnd met de QS widgets
   "control-center-margin-bottom": 8,
   "control-center-margin-right": 0,
-  "control-center-margin-left": 8,
+  "control-center-margin-left": 56,
 
   // Notificaties
   "notification-icon-size": 40,

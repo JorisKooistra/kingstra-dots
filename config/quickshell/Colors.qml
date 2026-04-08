@@ -5,7 +5,7 @@ pragma Singleton
 import QtQuick
 import Quickshell.Io
 
-QtObject {
+Item {
     id: root
 
     property var _data: ({})
