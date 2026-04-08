@@ -53,6 +53,9 @@ _phase03_deploy_configs() {
     # Hele hypr-map als symlink deployen
     deploy_config "hypr"
 
+    # User-state bestanden initialiseren vanuit .default templates
+    deploy_defaults "$REPO_ROOT/config/hypr"
+
     # GTK-instellingen schrijven (niet via symlink, direct in home)
     _phase03_apply_gtk_settings
 }

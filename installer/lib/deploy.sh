@@ -5,12 +5,19 @@
 
 # Maak een symlink van src naar dest.
 # Maakt eerst een back-up als dest al bestaat.
+# Idempotent: als dest al correct linkt naar src, wordt niets gedaan.
 deploy_link() {
     local src="$1"
     local dest="$2"
 
     if [[ ! -e "$src" ]]; then
         log_warn "Bronbestand bestaat niet: $src — symlink overgeslagen"
+        return 0
+    fi
+
+    # Idempotent: als symlink al correct is, skip
+    if [[ -L "$dest" ]] && [[ "$(readlink -f "$dest")" == "$(readlink -f "$src")" ]]; then
+        log_ok "Symlink al correct: $dest → $src"
         return 0
     fi
 
@@ -68,6 +75,35 @@ deploy_configs() {
     for name in "$@"; do
         deploy_config "$name"
     done
+}
+
+# Deploy .default-bestanden als de werkelijke bestanden nog niet bestaan.
+# Zoekt recursief naar *.default in de opgegeven directory.
+# Bestaande user-state wordt NOOIT overschreven.
+deploy_defaults() {
+    local dir="$1"
+
+    if [[ ! -d "$dir" ]]; then
+        log_warn "Directory bestaat niet: $dir — defaults overgeslagen"
+        return 0
+    fi
+
+    while IFS= read -r -d '' default_file; do
+        local target="${default_file%.default}"
+
+        if [[ -e "$target" ]]; then
+            log_ok "User-state behouden: $target"
+            continue
+        fi
+
+        if "${DRY_RUN:-false}"; then
+            log_dry "Default kopiëren: $default_file → $target"
+            continue
+        fi
+
+        cp "$default_file" "$target"
+        log_ok "Default gekopieerd: $target"
+    done < <(find "$dir" -name '*.default' -print0)
 }
 
 # Deploy vanuit files.txt manifest

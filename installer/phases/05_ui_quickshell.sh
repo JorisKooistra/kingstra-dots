@@ -16,6 +16,9 @@ phase_run() {
     log_step "Quickshell config deployen..."
     deploy_config "quickshell"
 
+    # User-state bestanden initialiseren vanuit .default templates
+    deploy_defaults "$REPO_ROOT/config/quickshell"
+
     log_step "UI-autostart aanmaken..."
     _phase05_write_autostart_ui
 

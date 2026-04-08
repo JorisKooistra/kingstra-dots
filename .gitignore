@@ -27,3 +27,8 @@ config/hypr/conf.d/35-theme.conf
 # Runtime preview cache
 config/quickshell/themes/previews/
 
+# User-state bestanden (beschermd via .default templates)
+config/quickshell/settings/settings.json
+config/hypr/conf.d/99-custom.conf
+config/quickshell/theme.json
+
