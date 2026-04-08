@@ -56,7 +56,9 @@ Variants {
             property var _settingsData: ({})
             property FileView _settingsFv: FileView {
                 path: Qt.resolvedUrl("settings/settings.json").toString().replace(/^file:\/\//, "")
-                onTextChanged: { try { barWindow._settingsData = JSON.parse(text); } catch(e) {} }
+                watchChanges: true
+                onFileChanged: this.reload()
+                onTextChanged: { try { barWindow._settingsData = JSON.parse(text()); } catch(e) {} }
             }
 
             // --- State Variables ---

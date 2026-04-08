@@ -90,7 +90,7 @@ Item {
             return url.replace(/^file:\/\//, "");
         }
         onTextChanged: {
-            try { root.settingsData = JSON.parse(text); } catch(e) {}
+            try { root.settingsData = JSON.parse(text()); } catch(e) {}
         }
     }
 
