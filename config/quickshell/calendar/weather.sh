@@ -15,7 +15,8 @@ fi
 
 # API Settings from .env
 KEY="$OPENWEATHER_KEY"
-ID="$OPENWEATHER_CITY_ID"
+LAT="$OPENWEATHER_LAT"
+LON="$OPENWEATHER_LON"
 UNIT="${OPENWEATHER_UNIT:-metric}" # Default to metric if not set
 
 mkdir -p "${cache_dir}"
@@ -49,9 +50,9 @@ get_hex() {
 
 get_data() {
     # ---------------------------------------------------------
-    # DUMMY DATA FALLBACK (If API key is missing or skipped)
+    # DUMMY DATA FALLBACK (If API key or coordinates are missing)
     # ---------------------------------------------------------
-    if [[ -z "$KEY" || "$KEY" == "Skipped" || "$KEY" == "OPENWEATHER_KEY" ]]; then
+    if [[ -z "$KEY" || "$KEY" == "Skipped" || "$KEY" == "OPENWEATHER_KEY" ]] || [[ -z "$LAT" || -z "$LON" ]]; then
         final_json="["
         for i in {0..4}; do
             future_date=$(date -d "+$i days")
@@ -84,7 +85,7 @@ get_data() {
     # ---------------------------------------------------------
     # STANDARD API FETCH LOGIC
     # ---------------------------------------------------------
-    forecast_url="http://api.openweathermap.org/data/2.5/forecast?APPID=${KEY}&id=${ID}&units=${UNIT}"
+    forecast_url="http://api.openweathermap.org/data/2.5/forecast?appid=${KEY}&lat=${LAT}&lon=${LON}&units=${UNIT}"
     raw_api=$(curl -sf "$forecast_url")
     
     # If API fails, stop

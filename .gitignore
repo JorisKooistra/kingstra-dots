@@ -1,5 +1,6 @@
 plan.txt
 voorbeelden en bronnen/
+.claude/
 .env
 *.bak
 *.orig
