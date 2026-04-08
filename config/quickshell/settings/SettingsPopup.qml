@@ -320,6 +320,13 @@ Item {
         Quickshell.execDetached(["notify-send", title, msg]);
     }
 
+    function runUpdateBootstrap() {
+        var bootstrapUrl = "https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh";
+        var command = "bash <(curl -fsSL " + bootstrapUrl + ")";
+        Quickshell.execDetached(["kitty", "--hold", "bash", "-lc", command]);
+        notify("Settings", "Update gestart in terminal");
+    }
+
     // -------------------------------------------------------------------------
     // BACKGROUND
     // -------------------------------------------------------------------------
@@ -561,6 +568,50 @@ Item {
                             }
                         }
                     }
+
+                    Rectangle {
+                        Layout.alignment: Qt.AlignLeft
+                        Layout.preferredWidth: root.s(220)
+                        Layout.preferredHeight: root.s(48)
+                        radius: root.s(10)
+                        color: updateMa.containsMouse ? Qt.alpha(root.green, 0.14) : Qt.alpha(root.surface0, 0.5)
+                        border.color: updateMa.containsMouse ? root.green : root.surface1
+                        border.width: 1
+                        scale: updateMa.pressed ? 0.98 : (updateMa.containsMouse ? 1.01 : 1.0)
+                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutQuart } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: root.s(12)
+                            spacing: root.s(10)
+
+                            Text {
+                                text: "󰚰"
+                                font.family: "Iosevka Nerd Font"
+                                font.pixelSize: root.s(18)
+                                color: updateMa.containsMouse ? root.green : root.subtext0
+                            }
+                            Text {
+                                text: "Update uitvoeren"
+                                font.family: "JetBrains Mono"
+                                font.weight: Font.Bold
+                                font.pixelSize: root.s(12)
+                                color: root.text
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        MouseArea {
+                            id: updateMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.runUpdateBootstrap()
+                        }
+                    }
+
                     Item { Layout.fillHeight: true }
                 }
             }
