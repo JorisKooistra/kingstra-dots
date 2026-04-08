@@ -57,20 +57,10 @@ fi
 # ---------------------------------------------------------------------------
 if [[ -d "$REPO_DIR/.git" ]]; then
     _log "Repo bestaat al — bijwerken: $REPO_DIR"
-    git -C "$REPO_DIR" fetch --depth=1 origin main 2>/dev/null || true
-    if git -C "$REPO_DIR" diff --quiet HEAD 2>/dev/null; then
-        git -C "$REPO_DIR" merge --ff-only origin/main 2>/dev/null && \
-            _ok "Repo bijgewerkt" || \
-            _warn "Bijwerken mislukt — doorgaan met huidige versie"
-    else
-        _warn "Lokale wijzigingen gedetecteerd — stash + update"
-        git -C "$REPO_DIR" stash --include-untracked 2>/dev/null || true
-        git -C "$REPO_DIR" merge --ff-only origin/main 2>/dev/null && \
-            _ok "Repo bijgewerkt" || \
-            _warn "Bijwerken mislukt — doorgaan met huidige versie"
-        git -C "$REPO_DIR" stash pop 2>/dev/null || \
-            _warn "Stash pop mislukt — controleer eventuele conflicten"
-    fi
+    git -C "$REPO_DIR" fetch --quiet origin main 2>/dev/null || true
+    git -C "$REPO_DIR" reset --hard origin/main 2>/dev/null && \
+        _ok "Repo bijgewerkt" || \
+        _warn "Bijwerken mislukt — doorgaan met huidige versie"
 elif [[ -d "$REPO_DIR" ]]; then
     _warn "Map $REPO_DIR bestaat maar is geen git-repo — herklonen"
     mv "$REPO_DIR" "${REPO_DIR}.bak.$(date +%s)"
