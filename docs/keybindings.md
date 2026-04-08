@@ -81,6 +81,7 @@
 | `Super + W` | Wallpaper picker |
 | `Super + Ctrl + T` | Theme picker |
 | `Super + Ctrl + M` | Mode picker (office / gaming / media) |
+| `Super + Alt + G` | Game launcher (quickshell-games-launchers) |
 | `Super + Shift + M` | Music popup |
 | `Super + C` | Calendar popup |
 | `Super + O` | Monitor overview |

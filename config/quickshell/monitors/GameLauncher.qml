@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 import "../"
 
-// GameLauncher — Knop die Steam opent
+// GameLauncher — Opent quickshell-games-launchers (Super+Alt+G)
 Rectangle {
     id: root
     property var mocha
@@ -24,7 +24,7 @@ Rectangle {
 
     Text {
         anchors.centerIn: parent
-        text: ""   // Steam icon (Nerd Font)
+        text: "󰊴"   // gamepad icon (Nerd Font)
         font.family: "Iosevka Nerd Font"
         font.pixelSize: 18
         color: root.isHovered ? mocha.blue : mocha.subtext1
@@ -37,7 +37,7 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: Quickshell.execDetached(["bash", "-c",
-            "steam 2>/dev/null || lutris 2>/dev/null || heroic 2>/dev/null || true"
+            "quickshell-game 2>/dev/null || steam 2>/dev/null || true"
         ])
     }
 }

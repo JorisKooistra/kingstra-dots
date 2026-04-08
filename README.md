@@ -14,6 +14,7 @@ Personal Hyprland rice for Arch Linux. Modular, reproducible, fully automated in
 - **Launcher** — Walker (`Super+Ctrl+Return`)
 - **Notifications** — SwayNC (control center, top-left)
 - **Wallpaper** — hyprpaper (static) + mpvpaper (video, optional)
+- **Game launcher** — [quickshell-games-launchers](https://github.com/Eaquo/quickshell-games-launchers): Steam, Epic, GOG, Heroic met cover art
 - **Lockscreen** — hyprlock, styled with Matugen colors
 - **OSD** — SwayOSD (volume, brightness)
 - **File manager** — Nautilus + Yazi (terminal)
@@ -210,6 +211,7 @@ Quick overview:
 | `Super + N` | SwayNC control center |
 | `Super + V` | Clipboard history |
 | `Super + X` | Power menu |
+| `Super + Alt + G` | Game launcher |
 | `Super + Alt + N` | nmtui (network) |
 | `Print` | Screenshot |
 

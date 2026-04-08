@@ -35,6 +35,9 @@ phase_run() {
     log_step "Standaard thema-config genereren..."
     _phase08_default_theme_conf
 
+    log_step "Game launcher installeren..."
+    _phase08_install_game_launcher
+
     log_step "Eerste kleurapplicatie uitvoeren..."
     _phase08_initial_apply
 
@@ -53,12 +56,15 @@ phase_run() {
     validate_file "$HOME/.local/bin/kingstra-color-transform"     "kingstra-color-transform"
     validate_dir  "$HOME/.config/kingstra/themes"                 "kingstra/themes/"
     validate_dir  "$HOME/.config/kingstra/modes"                  "kingstra/modes/"
+    validate_cmd  quickshell-game
+    validate_file "$HOME/.config/quickshell/game-launcher/config.toml" "game-launcher/config.toml"
     validate_report
 
     log_ok "Fase 08 voltooid."
-    log_info "Thema wisselen:  kingstra-theme-switch <thema_naam>"
-    log_info "Mode wisselen:   kingstra-mode-switch <office|gaming|media>"
-    log_info "State toepassen: apply-shell-state"
+    log_info "Thema wisselen:      kingstra-theme-switch <thema_naam>"
+    log_info "Mode wisselen:       kingstra-mode-switch <office|gaming|media>"
+    log_info "State toepassen:     apply-shell-state"
+    log_info "Game launcher:       quickshell-game  (of Super+Alt+G)"
 }
 
 # ---------------------------------------------------------------------------
@@ -166,6 +172,33 @@ CONF
     else
         log_info "35-theme.conf bestaat al — niet overschreven"
     fi
+}
+
+_phase08_install_game_launcher() {
+    if "${DRY_RUN:-false}"; then
+        log_dry "quickshell-games-launchers-git zou worden geïnstalleerd"
+        return 0
+    fi
+
+    # Installeer AUR package (levert /usr/bin/quickshell-game)
+    aur_install quickshell-games-launchers-git
+
+    # Python dependencies
+    if command -v pip &>/dev/null; then
+        pip install --quiet --user vdf toml 2>/dev/null || \
+            log_warn "pip install vdf/toml mislukt — installeer handmatig"
+    fi
+
+    # Zorg dat de config directory bestaat (symlink via deploy_config "quickshell")
+    local cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/game-launcher"
+    ensure_dir "$cfg_dir"
+
+    # Initialiseer user-config als quickshell-game dat nog niet heeft gedaan
+    if [[ ! -f "$cfg_dir/config.toml" ]]; then
+        quickshell-game --init 2>/dev/null || true
+    fi
+
+    log_ok "Game launcher beschikbaar: quickshell-game (Super+Alt+G)"
 }
 
 _phase08_initial_apply() {
