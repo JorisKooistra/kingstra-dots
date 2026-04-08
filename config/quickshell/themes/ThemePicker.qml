@@ -50,7 +50,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(_theme.crust.r, _theme.crust.g, _theme.crust.b, 0.92)
+        color: Qt.rgba(_theme.crust.r, _theme.crust.g, _theme.crust.b, 0.35)
     }
 
     Loader {
