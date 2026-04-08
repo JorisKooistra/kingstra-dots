@@ -48,16 +48,16 @@ Item {
     readonly property color peach: _theme.peach
     readonly property color yellow: _theme.yellow
     readonly property color red: _theme.red
-    readonly property int themedRadius: root.s(Math.max(12, ThemeConfig.borderRadius))
-    readonly property int themedInnerRadius: root.s(Math.max(8, ThemeConfig.borderRadius - 4))
+    readonly property int themedRadius: root.s(Math.max(12, ThemeConfig.styleWidgetRadius))
+    readonly property int themedInnerRadius: root.s(Math.max(8, ThemeConfig.styleWidgetRadius - 4))
     readonly property string uiFontFamily: ThemeConfig.uiFont
     readonly property string monoFontFamily: ThemeConfig.monoFont
     readonly property string displayFontFamily: ThemeConfig.displayFont
     readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
     readonly property int themedFontWeight: ThemeConfig.fontWeight
     readonly property color popupFill: Qt.rgba(root.base.r, root.base.g, root.base.b, ThemeConfig.popupOpacity)
-    readonly property color popupPanelFill: Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, Math.min(0.88, ThemeConfig.popupOpacity * 0.55))
-    readonly property color popupPanelHoverFill: Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, Math.min(0.94, ThemeConfig.popupOpacity * 0.72))
+    readonly property color popupPanelFill: Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, Math.min(0.90, ThemeConfig.popupOpacity * (0.46 + ThemeConfig.styleGlassStrength * 0.5)))
+    readonly property color popupPanelHoverFill: Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, Math.min(0.96, ThemeConfig.popupOpacity * (0.62 + ThemeConfig.styleGlassStrength * 0.6)))
 
     property real colorBlend: 0.0
     SequentialAnimation on colorBlend {

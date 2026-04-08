@@ -114,6 +114,95 @@ eval "$("$READER" "$THEME_FILE")"
 # Variables are now available as: META_NAME, MATUGEN_SCHEME_TYPE, APPEARANCE_BORDER_RADIUS, etc.
 
 # ---------------------------------------------------------------------------
+# Theme style profiles — one coherent visual language per theme
+# ---------------------------------------------------------------------------
+STYLE_FAMILY="botanical"
+STYLE_DENSITY="comfortable"
+STYLE_SURFACE_MODE="soft-glass"
+STYLE_MOTION="gentle"
+STYLE_ORNAMENT="organic"
+STYLE_PANEL_SHADOW=0.22
+STYLE_OUTLINE_STRENGTH=0.18
+STYLE_GLASS_STRENGTH=0.10
+STYLE_WIDGET_RADIUS=${APPEARANCE_BORDER_RADIUS:-12}
+STYLE_PANEL_PADDING=14
+
+case "$THEME_NAME" in
+    animated)
+        STYLE_FAMILY="animated"
+        STYLE_DENSITY="comfortable"
+        STYLE_SURFACE_MODE="vivid-glass"
+        STYLE_MOTION="playful"
+        STYLE_ORNAMENT="kinetic"
+        STYLE_PANEL_SHADOW=0.28
+        STYLE_OUTLINE_STRENGTH=0.22
+        STYLE_GLASS_STRENGTH=0.16
+        STYLE_WIDGET_RADIUS=18
+        STYLE_PANEL_PADDING=15
+        ;;
+    botanical)
+        STYLE_FAMILY="botanical"
+        STYLE_DENSITY="comfortable"
+        STYLE_SURFACE_MODE="soft-glass"
+        STYLE_MOTION="gentle"
+        STYLE_ORNAMENT="organic"
+        STYLE_PANEL_SHADOW=0.22
+        STYLE_OUTLINE_STRENGTH=0.18
+        STYLE_GLASS_STRENGTH=0.10
+        STYLE_WIDGET_RADIUS=20
+        STYLE_PANEL_PADDING=15
+        ;;
+    cyber)
+        STYLE_FAMILY="cyber"
+        STYLE_DENSITY="compact"
+        STYLE_SURFACE_MODE="hard-surface"
+        STYLE_MOTION="snappy"
+        STYLE_ORNAMENT="grid"
+        STYLE_PANEL_SHADOW=0.34
+        STYLE_OUTLINE_STRENGTH=0.40
+        STYLE_GLASS_STRENGTH=0.03
+        STYLE_WIDGET_RADIUS=6
+        STYLE_PANEL_PADDING=10
+        ;;
+    ocean)
+        STYLE_FAMILY="ocean"
+        STYLE_DENSITY="airy"
+        STYLE_SURFACE_MODE="mist"
+        STYLE_MOTION="smooth"
+        STYLE_ORNAMENT="flow"
+        STYLE_PANEL_SHADOW=0.26
+        STYLE_OUTLINE_STRENGTH=0.16
+        STYLE_GLASS_STRENGTH=0.12
+        STYLE_WIDGET_RADIUS=18
+        STYLE_PANEL_PADDING=16
+        ;;
+    rocky)
+        STYLE_FAMILY="rocky"
+        STYLE_DENSITY="compact"
+        STYLE_SURFACE_MODE="solid"
+        STYLE_MOTION="firm"
+        STYLE_ORNAMENT="minimal"
+        STYLE_PANEL_SHADOW=0.12
+        STYLE_OUTLINE_STRENGTH=0.34
+        STYLE_GLASS_STRENGTH=0.02
+        STYLE_WIDGET_RADIUS=4
+        STYLE_PANEL_PADDING=9
+        ;;
+    space)
+        STYLE_FAMILY="space"
+        STYLE_DENSITY="airy"
+        STYLE_SURFACE_MODE="cinematic-glass"
+        STYLE_MOTION="float"
+        STYLE_ORNAMENT="cosmic"
+        STYLE_PANEL_SHADOW=0.32
+        STYLE_OUTLINE_STRENGTH=0.18
+        STYLE_GLASS_STRENGTH=0.14
+        STYLE_WIDGET_RADIUS=16
+        STYLE_PANEL_PADDING=16
+        ;;
+esac
+
+# ---------------------------------------------------------------------------
 # Step 1 — Update matugen config.toml (scheme_type + color_index)
 # ---------------------------------------------------------------------------
 if [[ -f "$MATUGEN_CONF" ]]; then
@@ -192,6 +281,18 @@ cat > "$THEME_JSON" <<EOF
         "overlay_opacity": ${MATERIAL_OVERLAY_OPACITY:-0.0},
         "glow_intensity": ${MATERIAL_GLOW_INTENSITY:-0.0}
     },
+    "style_profile": {
+        "family": "${STYLE_FAMILY}",
+        "density": "${STYLE_DENSITY}",
+        "surface_mode": "${STYLE_SURFACE_MODE}",
+        "motion": "${STYLE_MOTION}",
+        "ornament": "${STYLE_ORNAMENT}",
+        "panel_shadow": ${STYLE_PANEL_SHADOW},
+        "outline_strength": ${STYLE_OUTLINE_STRENGTH},
+        "glass_strength": ${STYLE_GLASS_STRENGTH},
+        "widget_radius": ${STYLE_WIDGET_RADIUS},
+        "panel_padding": ${STYLE_PANEL_PADDING}
+    },
     "terminal": {
         "bg_opacity": ${TERMINAL_BG_OPACITY:-0.90},
         "blur": ${TERMINAL_BLUR:-false},
@@ -201,6 +302,97 @@ cat > "$THEME_JSON" <<EOF
 }
 EOF
 _log "theme.json gegenereerd"
+
+WALKER_THEME_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/walker/theme.css"
+SWAYNC_THEME_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/theme.css"
+mkdir -p "$(dirname "$WALKER_THEME_CSS")" "$(dirname "$SWAYNC_THEME_CSS")"
+
+cat > "$WALKER_THEME_CSS" <<EOF
+#window {
+  background: color-mix(in srgb, var(--mantle) $(python3 -c "print(round(min(98, max(72, (${APPEARANCE_POPUP_OPACITY:-0.92} + ${STYLE_GLASS_STRENGTH} * 0.35) * 100))))")%, transparent);
+  border: ${APPEARANCE_BORDER_WIDTH:-1}px solid color-mix(in srgb, var(--outline) $(python3 -c "print(round(${STYLE_OUTLINE_STRENGTH} * 100))")%, transparent);
+  border-radius: ${STYLE_WIDGET_RADIUS}px;
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) $(python3 -c "print(round(${STYLE_PANEL_SHADOW} * 100))")%, transparent);
+  font-family: "${FONTS_UI_FONT:-Inter}", sans-serif;
+}
+
+#search {
+  font-size: ${FONTS_UI_FONT_SIZE:-13}px;
+  padding: ${STYLE_PANEL_PADDING}px $((STYLE_PANEL_PADDING + 4))px;
+}
+
+row {
+  border-radius: $(( STYLE_WIDGET_RADIUS > 8 ? STYLE_WIDGET_RADIUS - 8 : 4 ))px;
+  margin: $([[ "$STYLE_DENSITY" == "compact" ]] && echo "1" || ([[ "$STYLE_DENSITY" == "airy" ]] && echo "3" || echo "2"))px 2px;
+  padding: $([[ "$STYLE_DENSITY" == "compact" ]] && echo "5" || ([[ "$STYLE_DENSITY" == "airy" ]] && echo "8" || echo "6"))px $((STYLE_PANEL_PADDING - 2))px;
+}
+
+row:selected,
+row:hover {
+  background: color-mix(in srgb, var(--primary) $(python3 -c "print(round((0.10 + ${STYLE_GLASS_STRENGTH} * 0.60) * 100))")%, var(--surface));
+}
+
+#name {
+  font-family: "${FONTS_DISPLAY_FONT:-${FONTS_UI_FONT:-Inter}}", sans-serif;
+  font-weight: 600;
+}
+
+#description,
+#label,
+#typeahead {
+  font-family: "${FONTS_UI_FONT:-Inter}", sans-serif;
+}
+
+#calc-result {
+  font-family: "${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}", monospace;
+}
+EOF
+
+cat > "$SWAYNC_THEME_CSS" <<EOF
+* {
+  font-family: "${FONTS_UI_FONT:-Inter}", "${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}", sans-serif;
+  font-size: ${FONTS_UI_FONT_SIZE:-13}px;
+}
+
+.control-center {
+  background: alpha(@mantle, $(python3 -c "print(min(0.99, max(0.76, ${APPEARANCE_POPUP_OPACITY:-0.92} + ${STYLE_GLASS_STRENGTH} * 0.20)))"));
+  border: ${APPEARANCE_BORDER_WIDTH:-1}px solid alpha(@outline, ${STYLE_OUTLINE_STRENGTH});
+  border-radius: $((STYLE_WIDGET_RADIUS + 4))px;
+  box-shadow: 0 18px 52px alpha(@crust, ${STYLE_PANEL_SHADOW});
+  padding: ${STYLE_PANEL_PADDING}px;
+}
+
+.widget-title > button,
+.widget-dnd,
+.notification,
+.widget-mpris-player,
+.notification-action {
+  border-radius: ${STYLE_WIDGET_RADIUS}px;
+}
+
+.widget-title > button,
+.widget-dnd,
+.widget-mpris-player,
+.notification {
+  background: alpha(@surface0, $(python3 -c "print(min(0.98, max(0.74, ${APPEARANCE_POPUP_OPACITY:-0.92} + ${STYLE_GLASS_STRENGTH} * 0.15)))"));
+}
+
+.notification {
+  border: ${APPEARANCE_BORDER_WIDTH:-1}px solid alpha(@outline-variant, ${STYLE_OUTLINE_STRENGTH});
+}
+
+.app-name,
+.summary {
+  font-family: "${FONTS_DISPLAY_FONT:-${FONTS_UI_FONT:-Inter}}", sans-serif;
+}
+
+.body,
+.time {
+  font-family: "${FONTS_UI_FONT:-Inter}", sans-serif;
+}
+EOF
+
+_log "Walker/SwayNC theme overrides gegenereerd"
 
 # ---------------------------------------------------------------------------
 # Step 4 — Apply Hyprland changes live (no reload needed for keywords)

@@ -39,14 +39,14 @@ Variants {
             }
 
             property int barHeight: s(ThemeConfig.barHeight > 0 ? ThemeConfig.barHeight : 48)
-            property int panelRadius: s(Math.max(10, ThemeConfig.borderRadius))
-            property int innerPillRadius: s(Math.max(8, ThemeConfig.borderRadius - 4))
+            property int panelRadius: s(Math.max(10, ThemeConfig.styleWidgetRadius))
+            property int innerPillRadius: s(Math.max(8, ThemeConfig.styleWidgetRadius - 4))
             property color panelColor: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, ThemeConfig.barOpacity)
-            property color panelHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.98, ThemeConfig.barOpacity + 0.18))
-            property color panelBorderColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05 + ThemeConfig.materialGlowIntensity)
-            property color panelBorderHoverColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.14 + ThemeConfig.materialGlowIntensity)
-            property color innerPillColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, Math.min(0.88, ThemeConfig.popupOpacity * 0.48))
-            property color innerPillHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.94, ThemeConfig.popupOpacity * 0.72))
+            property color panelHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.98, ThemeConfig.barOpacity + 0.12 + ThemeConfig.styleGlassStrength * 0.35))
+            property color panelBorderColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05 + ThemeConfig.styleOutlineStrength + ThemeConfig.materialGlowIntensity * 0.5)
+            property color panelBorderHoverColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10 + ThemeConfig.styleOutlineStrength + ThemeConfig.materialGlowIntensity * 0.7)
+            property color innerPillColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, Math.min(0.90, ThemeConfig.popupOpacity * (0.42 + ThemeConfig.styleGlassStrength * 0.5)))
+            property color innerPillHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.96, ThemeConfig.popupOpacity * (0.58 + ThemeConfig.styleGlassStrength * 0.6)))
             property string uiFontFamily: ThemeConfig.uiFont
             property string monoFontFamily: ThemeConfig.monoFont
             property string displayFontFamily: ThemeConfig.displayFont

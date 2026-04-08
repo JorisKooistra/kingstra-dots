@@ -36,6 +36,17 @@ Item {
     property real materialOverlayOpacity: 0.0
     property real materialGlowIntensity: 0.0
 
+    property string styleFamily: "botanical"
+    property string styleDensity: "comfortable"
+    property string styleSurfaceMode: "soft-glass"
+    property string styleMotion: "gentle"
+    property string styleOrnament: "organic"
+    property real stylePanelShadow: 0.22
+    property real styleOutlineStrength: 0.18
+    property real styleGlassStrength: 0.10
+    property int styleWidgetRadius: 16
+    property int stylePanelPadding: 14
+
     property string terminalCursorStyle: "block"
     property real terminalBgOpacity: 0.90
     property bool terminalBlur: false
@@ -105,6 +116,18 @@ Item {
                     if (material.texture !== undefined) root.materialTexture = String(material.texture);
                     if (material.overlay_opacity !== undefined) root.materialOverlayOpacity = root.clamp(Number(material.overlay_opacity), 0.0, 0.35);
                     if (material.glow_intensity !== undefined) root.materialGlowIntensity = root.clamp(Number(material.glow_intensity), 0.0, 0.35);
+
+                    let style = data.style_profile || {};
+                    if (style.family !== undefined) root.styleFamily = String(style.family);
+                    if (style.density !== undefined) root.styleDensity = String(style.density);
+                    if (style.surface_mode !== undefined) root.styleSurfaceMode = String(style.surface_mode);
+                    if (style.motion !== undefined) root.styleMotion = String(style.motion);
+                    if (style.ornament !== undefined) root.styleOrnament = String(style.ornament);
+                    if (style.panel_shadow !== undefined) root.stylePanelShadow = root.clamp(Number(style.panel_shadow), 0.0, 0.5);
+                    if (style.outline_strength !== undefined) root.styleOutlineStrength = root.clamp(Number(style.outline_strength), 0.0, 0.5);
+                    if (style.glass_strength !== undefined) root.styleGlassStrength = root.clamp(Number(style.glass_strength), 0.0, 0.5);
+                    if (style.widget_radius !== undefined) root.styleWidgetRadius = parseInt(style.widget_radius) || root.styleWidgetRadius;
+                    if (style.panel_padding !== undefined) root.stylePanelPadding = parseInt(style.panel_padding) || root.stylePanelPadding;
 
                     if (terminal.cursor_style !== undefined) root.terminalCursorStyle = String(terminal.cursor_style);
                     if (terminal.bg_opacity !== undefined) root.terminalBgOpacity = root.clamp(Number(terminal.bg_opacity), 0.15, 1.0);

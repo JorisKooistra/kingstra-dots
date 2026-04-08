@@ -75,8 +75,8 @@ Item {
     readonly property color teal: _theme.teal
     readonly property color green: _theme.green
     readonly property color red: _theme.red
-    readonly property int themedRadius: window.s(Math.max(14, ThemeConfig.borderRadius))
-    readonly property int themedInnerRadius: window.s(Math.max(10, ThemeConfig.borderRadius - 4))
+    readonly property int themedRadius: window.s(Math.max(14, ThemeConfig.styleWidgetRadius))
+    readonly property int themedInnerRadius: window.s(Math.max(10, ThemeConfig.styleWidgetRadius - 4))
     readonly property string uiFontFamily: ThemeConfig.uiFont
     readonly property string monoFontFamily: ThemeConfig.monoFont
     readonly property string displayFontFamily: ThemeConfig.displayFont
