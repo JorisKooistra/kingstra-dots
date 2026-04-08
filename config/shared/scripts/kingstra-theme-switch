@@ -249,16 +249,14 @@ _log "GTK/Qt interface bijgewerkt"
 # ---------------------------------------------------------------------------
 WALLPAPER="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
-    if command -v matugen &>/dev/null; then
-        matugen image "$WALLPAPER" --config "$MATUGEN_CONF" 2>/dev/null || true
-        _log "Matugen kleuren hergegenereerd"
-        # Reload QuickShell colors by touching the output file
-        touch "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/colors.json" 2>/dev/null || true
-        # Reload swaync
-        pkill -USR1 swaync 2>/dev/null || true
-    else
-        _warn "matugen niet gevonden — kleuren niet bijgewerkt"
-    fi
+    "$HOME/.local/bin/kingstra-theme-apply" --reload 2>/dev/null || {
+        _warn "kingstra-theme-apply mislukt, matugen direct proberen"
+        if command -v matugen &>/dev/null; then
+            matugen image "$WALLPAPER" --config "$MATUGEN_CONF" \
+                --source-color-index "${MATUGEN_COLOR_INDEX:-0}" 2>/dev/null || true
+        fi
+    }
+    _log "Matugen kleuren hergegenereerd"
 else
     _log "Geen wallpaper gevonden — kleuren niet bijgewerkt via matugen, rest wel toegepast"
 fi
