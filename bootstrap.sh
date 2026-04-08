@@ -58,9 +58,12 @@ fi
 if [[ -d "$REPO_DIR/.git" ]]; then
     _log "Repo bestaat al — bijwerken: $REPO_DIR"
     git -C "$REPO_DIR" fetch --quiet origin main 2>/dev/null || true
-    git -C "$REPO_DIR" reset --hard origin/main 2>/dev/null && \
-        _ok "Repo bijgewerkt" || \
-        _warn "Bijwerken mislukt — doorgaan met huidige versie"
+    if git -C "$REPO_DIR" reset --hard origin/main; then
+        _ok "Repo bijgewerkt"
+    else
+        _warn "Bijwerken mislukt:"
+        git -C "$REPO_DIR" reset --hard origin/main
+    fi
 elif [[ -d "$REPO_DIR" ]]; then
     _warn "Map $REPO_DIR bestaat maar is geen git-repo — herklonen"
     mv "$REPO_DIR" "${REPO_DIR}.bak.$(date +%s)"

@@ -10,17 +10,33 @@ QtObject {
 
     property var _data: ({})
 
-    // Laad colors.json via FileView (geen XHR nodig)
-    property FileView _fv: FileView {
-        path: root._jsonPath
-        onTextChanged: {
-            try { root._data = JSON.parse(_fv.text) } catch (e) {}
+    // Laad colors.json via bash Process in plaats van FileView
+    property var _colorsContent: ""
+
+    Component.onCompleted: {
+        loadColors.running = true
+    }
+
+    Process {
+        id: loadColors
+        command: ["bash", "-c", "cat ~/.config/quickshell/colors.json 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let content = this.text.trim()
+                if (content) {
+                    try { root._data = JSON.parse(content) } catch (e) {}
+                }
+                // Reload elke 5 seconden voor live updates
+                reloadTimer.running = true
+            }
         }
     }
 
-    readonly property string _jsonPath: {
-        const url = Qt.resolvedUrl("colors.json").toString()
-        return url.replace(/^file:\/\//, "")
+    Timer {
+        id: reloadTimer
+        interval: 5000
+        repeat: true
+        onTriggered: loadColors.running = true
     }
 
     // ---------------------------------------------------------------------------

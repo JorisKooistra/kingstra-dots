@@ -84,20 +84,22 @@ Item {
 
     // Settings file
     property var settingsData: ({})
-    property FileView _settingsFv: FileView {
-        path: {
-            const url = Qt.resolvedUrl("settings.json").toString();
-            return url.replace(/^file:\/\//, "");
-        }
-        onTextChanged: {
-            try { root.settingsData = JSON.parse(text()); } catch(e) {}
+
+    // Load settings via Process in plaats van FileView
+    Process {
+        id: loadSettingsProc
+        command: ["bash", "-c", "cat ~/.config/quickshell/settings/settings.json 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.settingsData = JSON.parse(this.text); } catch(e) {}
+            }
         }
     }
 
     // Keybinds laden via Process → StdioCollector (geen temp-bestand race-conditie)
     Process {
         id: loadKeybindsProc
-        command: ["bash", Qt.resolvedUrl("read_keybinds.sh").toString().replace(/^file:\/\//, "")]
+        command: ["bash", "~/.config/quickshell/settings/read_keybinds.sh"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -119,6 +121,8 @@ Item {
     property var themeAppearance: ({})
 
     Component.onCompleted: {
+        // Laad settings via Process
+        loadSettingsProc.running = true;
         // Laad keybinds via Process
         loadKeybindsProc.running = true;
         // Load weather .env values
@@ -204,7 +208,7 @@ Item {
     // HELPER: save settings.json
     // -------------------------------------------------------------------------
     function saveSettings(timeFormat, dateFormat) {
-        var path = Qt.resolvedUrl("settings.json").toString().replace(/^file:\/\//, "");
+        var path = Quickshell.env("HOME") + "/.config/quickshell/settings/settings.json";
         var json = JSON.stringify({ timeFormat: timeFormat, dateFormat: dateFormat }, null, 4);
         var cmd = "printf '%s' '" + json.replace(/'/g, "'\\''") + "' > " + path;
         Quickshell.execDetached(["bash", "-c", cmd]);
@@ -261,7 +265,7 @@ Item {
         var line = (item.t || "bind") + " = " + newMods + ", " + newKey + ", " + item.d;
         if (item.args) line += ", " + item.args;
         if (item.label) line += "   # " + item.label;
-        var script = Qt.resolvedUrl("write_keybind.sh").toString().replace(/^file:\/\//, "");
+        var script = Quickshell.env("HOME") + "/.config/quickshell/settings/write_keybind.sh";
         if (item.bound) {
             Quickshell.execDetached(["bash", script, "--update", item.file, item.ln.toString(), line]);
         } else {
@@ -276,7 +280,7 @@ Item {
     function removeKeybind(index) {
         var item = keybindsModel.get(index);
         if (!item.bound) return;
-        var script = Qt.resolvedUrl("write_keybind.sh").toString().replace(/^file:\/\//, "");
+        var script = Quickshell.env("HOME") + "/.config/quickshell/settings/write_keybind.sh";
         Quickshell.execDetached(["bash", script, "--remove", item.file, item.ln.toString()]);
         keybindsModel.setProperty(index, "bound", false);
         keybindsModel.setProperty(index, "mods", "");
