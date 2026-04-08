@@ -45,6 +45,15 @@ Item {
     readonly property color teal: _theme.teal
     readonly property color sapphire: _theme.sapphire
     readonly property color blue: _theme.blue
+    readonly property int themedRadius: window.s(Math.max(14, ThemeConfig.borderRadius))
+    readonly property int themedInnerRadius: window.s(Math.max(10, ThemeConfig.borderRadius - 4))
+    readonly property string uiFontFamily: ThemeConfig.uiFont
+    readonly property string monoFontFamily: ThemeConfig.monoFont
+    readonly property string displayFontFamily: ThemeConfig.displayFont
+    readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
+    readonly property int themedFontWeight: ThemeConfig.fontWeight
+    readonly property color popupFill: Qt.rgba(window.base.r, window.base.g, window.base.b, ThemeConfig.popupOpacity)
+    readonly property color glassFill: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, Math.min(0.88, ThemeConfig.popupOpacity * 0.4))
 
     // -------------------------------------------------------------------------
     // STATE & POLLING
@@ -234,10 +243,10 @@ Item {
         // Outer Border
         Rectangle {
             anchors.fill: parent
-            radius: window.s(20)
-            color: window.base
+            radius: window.themedRadius
+            color: window.popupFill
             border.color: window.surface0 // Back to neutral so it doesn't clash
-            border.width: 1
+            border.width: Math.max(1, ThemeConfig.borderWidth)
             clip: true
 
             // Rotating Background Blobs
@@ -295,21 +304,21 @@ Item {
                 
                 // Hours Box
                 Rectangle {
-                    width: window.s(44); height: window.s(48); radius: window.s(10)
-                    color: "#0dffffff"; border.color: "#1affffff"; border.width: 1
+                    width: window.s(44); height: window.s(48); radius: window.themedInnerRadius
+                    color: window.glassFill; border.color: Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12 + ThemeConfig.materialGlowIntensity); border.width: 1
                     
                     Rectangle { anchors.fill: parent; radius: window.s(10); color: window.ambientPrimary; opacity: 0.05; Behavior on color { ColorAnimation { duration: 1000 } } }
                     Column {
                         anchors.centerIn: parent
                         Text { 
                             text: window.upHours.toString().padStart(2, '0')
-                            font.pixelSize: window.s(18); font.family: "JetBrains Mono"; font.weight: Font.Black
+                            font.pixelSize: window.s(18); font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
                             color: window.ambientPrimary
                             Behavior on color { ColorAnimation { duration: 1000 } }
                             anchors.horizontalCenter: parent.horizontalCenter 
                         }
                         Text { 
-                            text: "HR"; font.pixelSize: window.s(8); font.family: "JetBrains Mono"; font.weight: Font.Bold
+                            text: "HR"; font.pixelSize: window.s(8); font.family: window.uiFontFamily; font.weight: Font.Bold; font.letterSpacing: window.themedLetterSpacing
                             color: window.subtext0; anchors.horizontalCenter: parent.horizontalCenter 
                         }
                     }
@@ -319,7 +328,7 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: ":"
-                    font.pixelSize: window.s(22); font.family: "JetBrains Mono"; font.weight: Font.Black
+                    font.pixelSize: window.s(22); font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
                     color: window.ambientPrimary
                     Behavior on color { ColorAnimation { duration: 1000 } }
                     
@@ -334,21 +343,21 @@ Item {
 
                 // Mins Box
                 Rectangle {
-                    width: window.s(44); height: window.s(48); radius: window.s(10)
-                    color: "#0dffffff"; border.color: "#1affffff"; border.width: 1
+                    width: window.s(44); height: window.s(48); radius: window.themedInnerRadius
+                    color: window.glassFill; border.color: Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12 + ThemeConfig.materialGlowIntensity); border.width: 1
                     
                     Rectangle { anchors.fill: parent; radius: window.s(10); color: window.ambientSecondary; opacity: 0.05; Behavior on color { ColorAnimation { duration: 1000 } } }
                     Column {
                         anchors.centerIn: parent
                         Text { 
                             text: window.upMins.toString().padStart(2, '0')
-                            font.pixelSize: window.s(18); font.family: "JetBrains Mono"; font.weight: Font.Black
+                            font.pixelSize: window.s(18); font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
                             color: window.ambientSecondary
                             Behavior on color { ColorAnimation { duration: 1000 } }
                             anchors.horizontalCenter: parent.horizontalCenter 
                         }
                         Text { 
-                            text: "MIN"; font.pixelSize: window.s(8); font.family: "JetBrains Mono"; font.weight: Font.Bold
+                            text: "MIN"; font.pixelSize: window.s(8); font.family: window.uiFontFamily; font.weight: Font.Bold; font.letterSpacing: window.themedLetterSpacing
                             color: window.subtext0; anchors.horizontalCenter: parent.horizontalCenter 
                         }
                     }
@@ -382,8 +391,9 @@ Item {
                     Text {
                         id: usernameText
                         text: window.currentUserName
-                        font.family: "JetBrains Mono"
-                        font.weight: Font.Bold
+                        font.family: window.uiFontFamily
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: window.themedLetterSpacing
                         font.pixelSize: window.s(14)
                         color: window.text
                         anchors.verticalCenter: parent.verticalCenter

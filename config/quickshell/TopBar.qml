@@ -19,7 +19,8 @@ Variants {
             screen: modelData
             
             anchors {
-                top: true
+                top: ThemeConfig.barPosition !== "bottom"
+                bottom: ThemeConfig.barPosition === "bottom"
                 left: true
                 right: true
             }
@@ -37,14 +38,32 @@ Variants {
                 return scaler.s(val); 
             }
 
-            property int barHeight: s(48)
+            property int barHeight: s(ThemeConfig.barHeight > 0 ? ThemeConfig.barHeight : 48)
+            property int panelRadius: s(Math.max(10, ThemeConfig.borderRadius))
+            property int innerPillRadius: s(Math.max(8, ThemeConfig.borderRadius - 4))
+            property color panelColor: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, ThemeConfig.barOpacity)
+            property color panelHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.98, ThemeConfig.barOpacity + 0.18))
+            property color panelBorderColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05 + ThemeConfig.materialGlowIntensity)
+            property color panelBorderHoverColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.14 + ThemeConfig.materialGlowIntensity)
+            property color innerPillColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, Math.min(0.88, ThemeConfig.popupOpacity * 0.48))
+            property color innerPillHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.94, ThemeConfig.popupOpacity * 0.72))
+            property string uiFontFamily: ThemeConfig.uiFont
+            property string monoFontFamily: ThemeConfig.monoFont
+            property string displayFontFamily: ThemeConfig.displayFont
+            property real themeLetterSpacing: ThemeConfig.letterSpacing
+            property int themeFontWeight: ThemeConfig.fontWeight
 
             // THICKER BAR, MINIMAL MARGINS (Scaled)
             implicitHeight: barHeight
-            margins { top: s(8); bottom: 0; left: s(4); right: s(4) }
+            margins {
+                top: ThemeConfig.barPosition === "bottom" ? 0 : s(8)
+                bottom: ThemeConfig.barPosition === "bottom" ? s(8) : 0
+                left: s(4)
+                right: s(4)
+            }
             
             // exclusiveZone = 0 bij auto-hide (media mode), anders height + top margin
-            exclusiveZone: barWindow.barAutoHide ? 0 : barHeight + s(4)
+            exclusiveZone: barWindow.barAutoHide ? 0 : barHeight + (ThemeConfig.barPosition === "bottom" ? s(8) : s(4))
             color: "transparent"
 
             // Dynamic Matugen Palette
@@ -423,8 +442,8 @@ Variants {
                     id: centerBox
                     anchors.centerIn: parent
                     property bool isHovered: centerMouse.containsMouse
-                    color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.95) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                    radius: barWindow.s(14); border.width: 1; border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, isHovered ? 0.15 : 0.05)
+                    color: isHovered ? barWindow.panelHoverColor : barWindow.panelColor
+                    radius: barWindow.panelRadius; border.width: 1; border.color: isHovered ? barWindow.panelBorderHoverColor : barWindow.panelBorderColor
                     height: barWindow.barHeight
                     
                     width: centerLayout.implicitWidth + barWindow.s(36)
@@ -467,8 +486,8 @@ Variants {
                         // Clockbox
                         ColumnLayout {
                             spacing: -2
-                            Text { text: barWindow.timeStr; Layout.alignment: Qt.AlignHCenter; font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(16); font.weight: Font.Black; color: mocha.blue }
-                            Text { text: barWindow.dateStr; Layout.alignment: Qt.AlignHCenter; font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(11); font.weight: Font.Bold; color: mocha.subtext0 }
+                            Text { text: barWindow.timeStr; Layout.alignment: Qt.AlignHCenter; font.family: barWindow.displayFontFamily; font.pixelSize: barWindow.s(16); font.weight: barWindow.themeFontWeight; font.letterSpacing: barWindow.themeLetterSpacing; color: mocha.blue }
+                            Text { text: barWindow.dateStr; Layout.alignment: Qt.AlignHCenter; font.family: barWindow.uiFontFamily; font.pixelSize: barWindow.s(11); font.weight: Font.DemiBold; font.letterSpacing: barWindow.themeLetterSpacing; color: mocha.subtext0 }
                         }
 
                         // Weatherbox
@@ -484,9 +503,10 @@ Variants {
                             Text { 
                                 text: barWindow.weatherTemp; 
                                 Layout.alignment: Qt.AlignVCenter;
-                                font.family: "JetBrains Mono"; 
+                                font.family: barWindow.monoFontFamily; 
                                 font.pixelSize: barWindow.s(17); 
-                                font.weight: Font.Black; 
+                                font.weight: barWindow.themeFontWeight; 
+                                font.letterSpacing: barWindow.themeLetterSpacing;
                                 color: mocha.peach 
                             }
                         }
@@ -523,8 +543,8 @@ Variants {
                     // Search 
                     Rectangle {
                         property bool isHovered: searchMouse.containsMouse
-                        color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.95) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                        radius: barWindow.s(14); border.width: 1; border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, isHovered ? 0.15 : 0.05)
+                        color: isHovered ? barWindow.panelHoverColor : barWindow.panelColor
+                        radius: barWindow.panelRadius; border.width: 1; border.color: isHovered ? barWindow.panelBorderHoverColor : barWindow.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: barWindow.barHeight
                         
                         scale: isHovered ? 1.05 : 1.0
@@ -550,8 +570,8 @@ Variants {
                     Rectangle {
                         visible: barWindow.moduleList.includes("notifications")
                         property bool isHovered: notifMouse.containsMouse
-                        color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.95) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                        radius: barWindow.s(14); border.width: 1; border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, isHovered ? 0.15 : 0.05)
+                        color: isHovered ? barWindow.panelHoverColor : barWindow.panelColor
+                        radius: barWindow.panelRadius; border.width: 1; border.color: isHovered ? barWindow.panelBorderHoverColor : barWindow.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: barWindow.barHeight
                         
                         scale: isHovered ? 1.05 : 1.0
@@ -579,8 +599,8 @@ Variants {
 
                     // Workspaces
                     Rectangle {
-                        color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                        radius: barWindow.s(14); border.width: 1; border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05)
+                        color: barWindow.panelColor
+                        radius: barWindow.panelRadius; border.width: 1; border.color: barWindow.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight
                         clip: true
 
@@ -611,7 +631,7 @@ Variants {
                                     width: targetWidth
                                     Behavior on targetWidth { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
                                     
-                                    height: barWindow.s(32); radius: barWindow.s(10)
+                                    height: barWindow.s(32); radius: barWindow.innerPillRadius
                                     
                                     color: stateLabel === "active" 
                                             ? mocha.mauve 
@@ -653,9 +673,10 @@ Variants {
                                     Text {
                                         anchors.centerIn: parent
                                         text: wsName
-                                        font.family: "JetBrains Mono"
+                                        font.family: barWindow.monoFontFamily
                                         font.pixelSize: barWindow.s(14)
                                         font.weight: stateLabel === "active" ? Font.Black : (stateLabel === "occupied" ? Font.Bold : Font.Medium)
+                                        font.letterSpacing: barWindow.themeLetterSpacing
                                         
                                         color: stateLabel === "active" 
                                                 ? mocha.crust 
@@ -679,8 +700,8 @@ Variants {
                     // Media Player
                     Rectangle {
                         id: mediaBox
-                        color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                        radius: barWindow.s(14); border.width: 1; border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05)
+                        color: barWindow.panelColor
+                        radius: barWindow.panelRadius; border.width: 1; border.color: barWindow.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight
                         clip: true
 
@@ -852,10 +873,10 @@ Variants {
                     // Dedicated System Tray Pill
                     Rectangle {
                         Layout.preferredHeight: barWindow.barHeight // THE FIX: Replaced basic "height"
-                        radius: barWindow.s(14)
-                        border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                        radius: barWindow.panelRadius
+                        border.color: barWindow.panelBorderColor
                         border.width: 1
-                        color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
+                        color: barWindow.panelColor
                         
                         property real targetWidth: trayRepeater.count > 0 ? trayLayout.width + barWindow.s(24) : 0
                         Layout.preferredWidth: targetWidth
@@ -940,10 +961,10 @@ Variants {
                     // System Elements Pill
                     Rectangle {
                         Layout.preferredHeight: barWindow.barHeight // THE FIX: Replaced basic "height"
-                        radius: barWindow.s(14)
-                        border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                        radius: barWindow.panelRadius
+                        border.color: barWindow.panelBorderColor
                         border.width: 1
-                        color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
+                        color: barWindow.panelColor
                         clip: true
                         
                         property real targetWidth: sysLayout.width + barWindow.s(20)
@@ -961,8 +982,8 @@ Variants {
                             Rectangle {
                                 id: kbPill
                                 property bool isHovered: kbMouse.containsMouse
-                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
-                                radius: barWindow.s(10); height: sysLayout.pillHeight;
+                                color: isHovered ? barWindow.innerPillHoverColor : barWindow.innerPillColor
+                                radius: barWindow.innerPillRadius; height: sysLayout.pillHeight;
                                 clip: true
 
                                 property real targetWidth: kbLayoutRow.width + barWindow.s(24)
@@ -982,7 +1003,7 @@ Variants {
                                 Row { 
                                     id: kbLayoutRow; anchors.centerIn: parent; spacing: barWindow.s(8)
                                     Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16); color: parent.parent.isHovered ? mocha.text : mocha.overlay2 }
-                                    Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.kbLayout; font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; color: mocha.text }
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.kbLayout; font.family: barWindow.monoFontFamily; font.pixelSize: barWindow.s(13); font.weight: barWindow.themeFontWeight; font.letterSpacing: barWindow.themeLetterSpacing; color: mocha.text }
                                 }
                                 MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true }
                             }
@@ -992,13 +1013,13 @@ Variants {
                                 id: wifiPill
                                 visible: barWindow.moduleList.includes("network")
                                 property bool isHovered: wifiMouse.containsMouse
-                                radius: barWindow.s(10); height: sysLayout.pillHeight; 
-                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
+                                radius: barWindow.innerPillRadius; height: sysLayout.pillHeight; 
+                                color: isHovered ? barWindow.innerPillHoverColor : barWindow.innerPillColor
                                 clip: true
                                 
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: barWindow.s(10)
+                                    radius: barWindow.innerPillRadius
                                     opacity: barWindow.isWifiOn ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
@@ -1030,7 +1051,7 @@ Variants {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: barWindow.sysPollerLoaded ? (barWindow.isWifiOn ? (barWindow.wifiSsid !== "" ? barWindow.wifiSsid : "On") : "Off") : ""
                                         visible: text !== ""
-                                        font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; 
+                                        font.family: barWindow.monoFontFamily; font.pixelSize: barWindow.s(13); font.weight: barWindow.themeFontWeight; font.letterSpacing: barWindow.themeLetterSpacing;
                                         color: barWindow.isWifiOn ? mocha.base : mocha.text; 
                                         width: Math.min(implicitWidth, barWindow.s(100)); elide: Text.ElideRight 
                                     }
@@ -1043,13 +1064,13 @@ Variants {
                                 id: btPill
                                 visible: barWindow.moduleList.includes("bluetooth")
                                 property bool isHovered: btMouse.containsMouse
-                                radius: barWindow.s(10); height: sysLayout.pillHeight
+                                radius: barWindow.innerPillRadius; height: sysLayout.pillHeight
                                 clip: true
-                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
+                                color: isHovered ? barWindow.innerPillHoverColor : barWindow.innerPillColor
                                 
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: barWindow.s(10)
+                                    radius: barWindow.innerPillRadius
                                     opacity: barWindow.isBtOn ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
@@ -1081,7 +1102,7 @@ Variants {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: barWindow.sysPollerLoaded ? barWindow.btDevice : ""
                                         visible: text !== ""; 
-                                        font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; 
+                                        font.family: barWindow.monoFontFamily; font.pixelSize: barWindow.s(13); font.weight: barWindow.themeFontWeight; font.letterSpacing: barWindow.themeLetterSpacing;
                                         color: barWindow.isBtOn ? mocha.base : mocha.text; 
                                         width: Math.min(implicitWidth, barWindow.s(100)); elide: Text.ElideRight 
                                     }
@@ -1094,13 +1115,13 @@ Variants {
                                 id: volPill
                                 visible: barWindow.moduleList.includes("volume")
                                 property bool isHovered: volMouse.containsMouse
-                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
-                                radius: barWindow.s(10); height: sysLayout.pillHeight;
+                                color: isHovered ? barWindow.innerPillHoverColor : barWindow.innerPillColor
+                                radius: barWindow.innerPillRadius; height: sysLayout.pillHeight;
                                 clip: true
 
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: barWindow.s(10)
+                                    radius: barWindow.innerPillRadius
                                     opacity: barWindow.isSoundActive ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
@@ -1134,7 +1155,7 @@ Variants {
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: barWindow.volPercent; 
-                                        font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; 
+                                        font.family: barWindow.monoFontFamily; font.pixelSize: barWindow.s(13); font.weight: barWindow.themeFontWeight; font.letterSpacing: barWindow.themeLetterSpacing;
                                         color: barWindow.isSoundActive ? mocha.base : mocha.text; 
                                     }
                                 }
@@ -1146,13 +1167,13 @@ Variants {
                                 id: batPill
                                 visible: barWindow.moduleList.includes("battery")
                                 property bool isHovered: batMouse.containsMouse
-                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4);
-                                radius: barWindow.s(10); height: sysLayout.pillHeight;
+                                color: isHovered ? barWindow.innerPillHoverColor : barWindow.innerPillColor;
+                                radius: barWindow.innerPillRadius; height: sysLayout.pillHeight;
                                 clip: true
 
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: barWindow.s(10)
+                                    radius: barWindow.innerPillRadius
                                     opacity: (barWindow.isCharging || barWindow.batCap <= 20) ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
@@ -1186,7 +1207,7 @@ Variants {
                                     }
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
-                                        text: barWindow.batPercent; font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; 
+                                        text: barWindow.batPercent; font.family: barWindow.monoFontFamily; font.pixelSize: barWindow.s(13); font.weight: barWindow.themeFontWeight; font.letterSpacing: barWindow.themeLetterSpacing;
                                         color: (barWindow.isCharging || barWindow.batCap <= 20) ? mocha.base : barWindow.batDynamicColor
                                         Behavior on color { ColorAnimation { duration: 300 } }
                                     }

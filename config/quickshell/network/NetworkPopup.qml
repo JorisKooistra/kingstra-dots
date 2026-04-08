@@ -106,6 +106,15 @@ Item {
     readonly property color red: _theme.red
     readonly property color maroon: _theme.maroon
     readonly property color peach: _theme.peach
+    readonly property int themedRadius: window.s(Math.max(14, ThemeConfig.borderRadius))
+    readonly property int themedInnerRadius: window.s(Math.max(10, ThemeConfig.borderRadius - 4))
+    readonly property string uiFontFamily: ThemeConfig.uiFont
+    readonly property string monoFontFamily: ThemeConfig.monoFont
+    readonly property string displayFontFamily: ThemeConfig.displayFont
+    readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
+    readonly property int themedFontWeight: ThemeConfig.fontWeight
+    readonly property color popupFill: Qt.rgba(window.base.r, window.base.g, window.base.b, ThemeConfig.popupOpacity)
+    readonly property color dockFill: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, Math.min(0.84, ThemeConfig.popupOpacity * 0.45))
 
     readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/quickshell/network"
     
@@ -610,10 +619,10 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            radius: window.s(20)
-            color: window.base
+            radius: window.themedRadius
+            color: window.popupFill
             border.color: window.surface0
-            border.width: 1
+            border.width: Math.max(1, ThemeConfig.borderWidth)
             clip: true
             Rectangle {
                 width: parent.width * 0.8; height: width; radius: width / 2
@@ -1040,7 +1049,7 @@ Item {
                                 }
                                 Text {
                                     Layout.alignment: Qt.AlignHCenter
-                                    font.family: "JetBrains Mono"; font.weight: Font.Bold
+                                    font.family: window.uiFontFamily; font.weight: Font.DemiBold; font.letterSpacing: window.themedLetterSpacing
                                     font.pixelSize: window.s(14) - (window.s(3) * coreContainer.multiShift)
                                     color: window.overlay0
                                     text: window.currentPowerPending 
@@ -1075,7 +1084,7 @@ Item {
                                         Layout.alignment: Qt.AlignHCenter
                                         Layout.maximumWidth: window.s(150) - (window.s(50) * coreContainer.multiShift)
                                         horizontalAlignment: Text.AlignHCenter
-                                        font.family: "JetBrains Mono"; font.weight: Font.Black
+                                        font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
                                         font.pixelSize: window.s(16) - (window.s(4) * coreContainer.multiShift)
                                         color: isMyDisconnecting ? window.overlay1 : window.crust
                                         text: coreContainer.myDevice ? (window.activeMode === "wifi" ? coreContainer.myDevice.ssid : coreContainer.myDevice.name) : ""
@@ -1084,7 +1093,7 @@ Item {
                                     }
                                     Text {
                                         Layout.alignment: Qt.AlignHCenter
-                                        font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: window.s(11)
+                                        font.family: window.uiFontFamily; font.weight: Font.DemiBold; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(11)
                                         color: isMyDisconnecting ? window.overlay1 : (coreMa.containsMouse ? window.crust : "#99000000")
                                         text: isMyDisconnecting ? "Disconnecting..." : (centralCore.disconnectFill > 0.01 ? "Hold..." : "Connected")
                                         Behavior on color { ColorAnimation { duration: 200 } }
@@ -1118,7 +1127,7 @@ Item {
                                             Layout.alignment: Qt.AlignHCenter
                                             Layout.maximumWidth: window.s(150) - (window.s(50) * coreContainer.multiShift)
                                             horizontalAlignment: Text.AlignHCenter
-                                            font.family: "JetBrains Mono"; font.weight: Font.Black
+                                            font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
                                             font.pixelSize: window.s(16) - (window.s(4) * coreContainer.multiShift)
                                             color: window.text
                                             text: coreContainer.myDevice ? (window.activeMode === "wifi" ? coreContainer.myDevice.ssid : coreContainer.myDevice.name) : ""
@@ -1126,7 +1135,7 @@ Item {
                                         }
                                         Text {
                                             Layout.alignment: Qt.AlignHCenter
-                                            font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: window.s(11)
+                                            font.family: window.uiFontFamily; font.weight: Font.DemiBold; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(11)
                                             color: window.text
                                             text: isMyDisconnecting ? "Disconnecting..." : (centralCore.disconnectFill > 0.01 ? "Hold..." : "Connected")
                                         }
@@ -1755,9 +1764,9 @@ Item {
                 anchors.bottomMargin: window.s(25)
                 width: window.s(360)
                 height: window.s(54)
-                radius: window.s(14)
-                color: "#1affffff" 
-                border.color: "#1affffff"
+                radius: window.themedRadius
+                color: window.dockFill 
+                border.color: Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12 + ThemeConfig.materialGlowIntensity)
                 border.width: 1
 
                 RowLayout {
@@ -1769,14 +1778,14 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        radius: window.s(10)
+                        radius: window.themedInnerRadius
                         
                         color: window.activeMode === "wifi" ? "transparent" : (wifiTabMa.containsMouse ? window.surface1 : "transparent")
                         Behavior on color { ColorAnimation { duration: 200 } }
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: window.s(10)
+                            radius: window.themedInnerRadius
                             opacity: window.activeMode === "wifi" ? 1.0 : 0.0
                             Behavior on opacity { NumberAnimation { duration: 300 } }
                             gradient: Gradient {
@@ -1790,7 +1799,7 @@ Item {
                             anchors.centerIn: parent
                             spacing: window.s(8)
                             Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.activeMode === "wifi" ? window.crust : window.text; text: "󰤨"; Behavior on color { ColorAnimation{duration:200} } }
-                            Text { font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: window.s(13); color: window.activeMode === "wifi" ? window.crust : window.text; text: "Wi-Fi"; Behavior on color { ColorAnimation{duration:200} } }
+                            Text { font.family: window.uiFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(13); color: window.activeMode === "wifi" ? window.crust : window.text; text: "Wi-Fi"; Behavior on color { ColorAnimation{duration:200} } }
                         }
                         MouseArea {
                             id: wifiTabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -1807,13 +1816,13 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        radius: window.s(10)
+                        radius: window.themedInnerRadius
                         color: window.activeMode === "bt" ? "transparent" : (btTabMa.containsMouse ? window.surface1 : "transparent")
                         Behavior on color { ColorAnimation { duration: 200 } }
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: window.s(10)
+                            radius: window.themedInnerRadius
                             opacity: window.activeMode === "bt" ? 1.0 : 0.0
                             Behavior on opacity { NumberAnimation { duration: 300 } }
                             gradient: Gradient {
@@ -1827,7 +1836,7 @@ Item {
                             anchors.centerIn: parent
                             spacing: window.s(8)
                             Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.activeMode === "bt" ? window.crust : window.text; text: "󰂯"; Behavior on color { ColorAnimation{duration:200} } }
-                            Text { font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: window.s(13); color: window.activeMode === "bt" ? window.crust : window.text; text: "Bluetooth"; Behavior on color { ColorAnimation{duration:200} } }
+                            Text { font.family: window.uiFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(13); color: window.activeMode === "bt" ? window.crust : window.text; text: "Bluetooth"; Behavior on color { ColorAnimation{duration:200} } }
                         }
                         MouseArea {
                             id: btTabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor

@@ -47,6 +47,15 @@ Item {
     readonly property color teal: _theme.teal
     readonly property color sapphire: _theme.sapphire
     readonly property color blue: _theme.blue
+    readonly property int themedRadius: Math.max(14, ThemeConfig.borderRadius)
+    readonly property int themedInnerRadius: Math.max(10, ThemeConfig.borderRadius - 4)
+    readonly property string uiFontFamily: ThemeConfig.uiFont
+    readonly property string monoFontFamily: ThemeConfig.monoFont
+    readonly property string displayFontFamily: ThemeConfig.displayFont
+    readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
+    readonly property int themedFontWeight: ThemeConfig.fontWeight
+    readonly property color popupFill: Qt.rgba(window.base.r, window.base.g, window.base.b, ThemeConfig.popupOpacity)
+    readonly property color glassFill: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, Math.min(0.88, ThemeConfig.popupOpacity * 0.4))
 
     // -------------------------------------------------------------------------
     // STATE & CONFIG
@@ -225,10 +234,10 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            radius: 20
-            color: window.base
+            radius: window.themedRadius
+            color: window.popupFill
             border.color: window.surface0
-            border.width: 1
+            border.width: Math.max(1, ThemeConfig.borderWidth)
             clip: true
 
             // Rotating Background Blobs
@@ -417,8 +426,9 @@ Item {
                                 // 1. Base Text (Visible when empty)
                                 Text {
                                     anchors.centerIn: parent
-                                    font.family: "JetBrains Mono"
-                                    font.weight: Font.Black
+                                    font.family: window.displayFontFamily
+                                    font.weight: window.themedFontWeight
+                                    font.letterSpacing: window.themedLetterSpacing
                                     font.pixelSize: 32
                                     color: window.activeMute ? window.red : window.text
                                     text: window.activeMute ? "MUTE" : window.activeVol + "%"
@@ -445,8 +455,9 @@ Item {
                                     Text {
                                         x: waveClipItem.width / 2 - width / 2
                                         y: (centralCore.height / 2) - (height / 2) - (centralCore.height - waveClipItem.height)
-                                        font.family: "JetBrains Mono"
-                                        font.weight: Font.Black
+                                        font.family: window.displayFontFamily
+                                        font.weight: window.themedFontWeight
+                                        font.letterSpacing: window.themedLetterSpacing
                                         font.pixelSize: 32
                                         color: window.crust
                                         text: window.activeMute ? "MUTE" : window.activeVol + "%"
@@ -477,13 +488,13 @@ Item {
                                 spacing: 2
                                 Text {
                                     Layout.fillWidth: true; elide: Text.ElideRight
-                                    font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: 20
+                                    font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: 20
                                     color: window.text
                                     text: window.activeName
                                 }
                                 Text {
                                     Layout.fillWidth: true; elide: Text.ElideRight
-                                    font.family: "JetBrains Mono"; font.pixelSize: 13
+                                    font.family: window.uiFontFamily; font.pixelSize: 13; font.letterSpacing: window.themedLetterSpacing
                                     color: window.subtext0
                                     text: window.activeTab === "apps" ? "Master Output Volume" : window.activeDesc
                                 }
@@ -517,14 +528,14 @@ Item {
                                     }
 
                                     Rectangle {
-                                        anchors.fill: parent; radius: 12
-                                        color: "#0dffffff"; border.color: "#1affffff"; border.width: 1
+                                        anchors.fill: parent; radius: window.themedInnerRadius
+                                        color: window.glassFill; border.color: Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12 + ThemeConfig.materialGlowIntensity); border.width: 1
                                         clip: true
 
                                         Rectangle {
                                             height: parent.height
                                             width: parent.width * (Math.min(100, window.activeVol) / 100)
-                                            radius: 12
+                                            radius: window.themedInnerRadius
                                             opacity: window.activeMute ? 0.3 : (masterSliderMa.containsMouse ? 1.0 : 0.85)
                                             Behavior on opacity { NumberAnimation { duration: 200 } }
                                             Behavior on width { enabled: !window.draggingMaster; NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }

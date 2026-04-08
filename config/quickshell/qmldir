@@ -1,3 +1,4 @@
 MatugenColors 1.0 MatugenColors.qml
 singleton Colors 1.0 Colors.qml
+singleton ThemeConfig 1.0 ThemeConfig.qml
 Scaler 1.0 Scaler.qml

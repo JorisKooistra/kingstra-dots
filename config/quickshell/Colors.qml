@@ -82,7 +82,7 @@ Item {
     // ---------------------------------------------------------------------------
     // Afgeleid — transparanties
     // ---------------------------------------------------------------------------
-    readonly property color barBackground:   Qt.rgba(base.r,    base.g,    base.b,    0.85)
-    readonly property color popupBackground: Qt.rgba(mantle.r,  mantle.g,  mantle.b,  0.92)
-    readonly property color pillBackground:  Qt.rgba(surface0.r, surface0.g, surface0.b, 0.80)
+    readonly property color barBackground:   Qt.rgba(base.r,    base.g,    base.b,    ThemeConfig.barOpacity)
+    readonly property color popupBackground: Qt.rgba(mantle.r,  mantle.g,  mantle.b,  ThemeConfig.popupOpacity)
+    readonly property color pillBackground:  Qt.rgba(surface0.r, surface0.g, surface0.b, Math.min(0.92, ThemeConfig.popupOpacity * 0.82))
 }

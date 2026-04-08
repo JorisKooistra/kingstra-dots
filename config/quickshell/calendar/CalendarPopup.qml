@@ -75,6 +75,14 @@ Item {
     readonly property color teal: _theme.teal
     readonly property color green: _theme.green
     readonly property color red: _theme.red
+    readonly property int themedRadius: window.s(Math.max(14, ThemeConfig.borderRadius))
+    readonly property int themedInnerRadius: window.s(Math.max(10, ThemeConfig.borderRadius - 4))
+    readonly property string uiFontFamily: ThemeConfig.uiFont
+    readonly property string monoFontFamily: ThemeConfig.monoFont
+    readonly property string displayFontFamily: ThemeConfig.displayFont
+    readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
+    readonly property int themedFontWeight: ThemeConfig.fontWeight
+    readonly property color popupFill: Qt.rgba(window.base.r, window.base.g, window.base.b, ThemeConfig.popupOpacity)
 
     readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/quickshell/calendar"
 
@@ -407,10 +415,10 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            radius: window.s(20)
-            color: window.base
+            radius: window.themedRadius
+            color: window.popupFill
             border.color: window.surface0
-            border.width: 1
+            border.width: Math.max(1, ThemeConfig.borderWidth)
             clip: true
 
             // =======================================================
@@ -568,16 +576,18 @@ Item {
                         spacing: window.s(2)
                         Text {
                             text: Qt.formatTime(window.currentTime, "HH:mm")
-                            font.family: "JetBrains Mono"
-                            font.weight: Font.Black
+                            font.family: window.displayFontFamily
+                            font.weight: window.themedFontWeight
+                            font.letterSpacing: window.themedLetterSpacing
                             font.pixelSize: window.s(84)
                             color: window.text
                             style: Text.Outline; styleColor: Qt.alpha(window.crust, 0.4)
                         }
                         Text {
                             text: Qt.formatTime(window.currentTime, ":ss")
-                            font.family: "JetBrains Mono"
+                            font.family: window.monoFontFamily
                             font.weight: Font.Bold
+                            font.letterSpacing: window.themedLetterSpacing
                             font.pixelSize: window.s(32)
                             color: window.textAccent
                             Layout.alignment: Qt.AlignBottom
@@ -591,8 +601,9 @@ Item {
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         text: Qt.formatDateTime(window.currentTime, "dddd, MMMM dd")
-                        font.family: "JetBrains Mono"
-                        font.weight: Font.Bold
+                        font.family: window.uiFontFamily
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: window.themedLetterSpacing
                         font.pixelSize: window.s(16)
                         color: window.subtext0
                         opacity: 0.9

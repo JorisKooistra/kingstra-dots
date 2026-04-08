@@ -48,6 +48,16 @@ Item {
     readonly property color peach: _theme.peach
     readonly property color yellow: _theme.yellow
     readonly property color red: _theme.red
+    readonly property int themedRadius: root.s(Math.max(12, ThemeConfig.borderRadius))
+    readonly property int themedInnerRadius: root.s(Math.max(8, ThemeConfig.borderRadius - 4))
+    readonly property string uiFontFamily: ThemeConfig.uiFont
+    readonly property string monoFontFamily: ThemeConfig.monoFont
+    readonly property string displayFontFamily: ThemeConfig.displayFont
+    readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
+    readonly property int themedFontWeight: ThemeConfig.fontWeight
+    readonly property color popupFill: Qt.rgba(root.base.r, root.base.g, root.base.b, ThemeConfig.popupOpacity)
+    readonly property color popupPanelFill: Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, Math.min(0.88, ThemeConfig.popupOpacity * 0.55))
+    readonly property color popupPanelHoverFill: Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, Math.min(0.94, ThemeConfig.popupOpacity * 0.72))
 
     property real colorBlend: 0.0
     SequentialAnimation on colorBlend {
@@ -336,8 +346,8 @@ Item {
         scale: 0.95 + (0.05 * introBase)
 
         Rectangle {
-            anchors.fill: parent; radius: root.s(16)
-            color: root.base; border.color: root.surface0; border.width: 1
+            anchors.fill: parent; radius: root.themedRadius
+            color: root.popupFill; border.color: root.surface0; border.width: Math.max(1, ThemeConfig.borderWidth)
             clip: true
 
             property real time: 0
@@ -371,7 +381,7 @@ Item {
         // =====================================================================
         Rectangle {
             Layout.fillHeight: true; Layout.preferredWidth: root.s(220)
-            radius: root.s(12); color: Qt.alpha(root.surface0, 0.4)
+            radius: root.themedInnerRadius; color: root.popupPanelFill
             border.color: root.surface1; border.width: 1
             opacity: introSidebar
             transform: Translate { x: root.s(-30) * (1.0 - introSidebar) }
@@ -392,8 +402,8 @@ Item {
                         }
                         ColumnLayout {
                             Layout.alignment: Qt.AlignVCenter; spacing: root.s(2)
-                            Text { text: "Settings"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(15); color: root.text }
-                            Text { text: "kingstra-dots"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                            Text { text: "Settings"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(15); color: root.text }
+                            Text { text: "kingstra-dots"; font.family: root.uiFontFamily; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(11); color: root.subtext0 }
                         }
                     }
                 }
@@ -406,7 +416,7 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: root.s(44); radius: root.s(8)
                         property bool isActive: root.currentTab === index
-                        color: isActive ? root.surface1 : (tabMa.containsMouse ? Qt.alpha(root.surface1, 0.5) : "transparent")
+                        color: isActive ? root.popupPanelHoverFill : (tabMa.containsMouse ? root.popupPanelFill : "transparent")
                         Behavior on color { ColorAnimation { duration: 150 } }
 
                         RowLayout {
@@ -415,7 +425,7 @@ Item {
                                 Layout.preferredWidth: root.s(24); Layout.alignment: Qt.AlignVCenter
                                 Text { anchors.centerIn: parent; text: root.tabIcons[index]; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: parent.parent.parent.isActive ? root.ambientPurple : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
                             }
-                            Text { text: root.tabNames[index]; font.family: "JetBrains Mono"; font.weight: parent.parent.isActive ? Font.Bold : Font.Medium; font.pixelSize: root.s(13); color: parent.parent.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: 150 } } }
+                            Text { text: root.tabNames[index]; font.family: root.uiFontFamily; font.weight: parent.parent.isActive ? root.themedFontWeight : Font.Medium; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(13); color: parent.parent.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: 150 } } }
                         }
 
                         Rectangle {
@@ -536,7 +546,7 @@ Item {
                         MouseArea { id: authorMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Quickshell.execDetached(["xdg-open", "https://github.com/JorisKooistra/kingstra-dots"]) }
                     }
 
-                    Text { text: "System Components"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text; Layout.topMargin: root.s(5) }
+                    Text { text: "System Components"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text; Layout.topMargin: root.s(5) }
 
                     GridLayout {
                         Layout.fillWidth: true; columns: 2; rowSpacing: root.s(15); columnSpacing: root.s(15)
@@ -544,7 +554,7 @@ Item {
                             model: systemModel
                             Rectangle {
                                 Layout.fillWidth: true; Layout.preferredHeight: root.s(70); radius: root.s(10)
-                                color: sysCardMa.containsMouse ? Qt.alpha(root[model.clr], 0.1) : Qt.alpha(root.surface0, 0.4)
+                                color: sysCardMa.containsMouse ? Qt.alpha(root[model.clr], 0.14) : root.popupPanelFill
                                 border.color: sysCardMa.containsMouse ? root[model.clr] : root.surface1; border.width: 1
                                 scale: sysCardMa.pressed ? 0.98 : 1.0
                                 Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutQuart } }
@@ -560,8 +570,8 @@ Item {
                                     }
                                     Column {
                                         anchors.left: sysIconBox.right; anchors.leftMargin: root.s(15); anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: root.s(2)
-                                        Text { text: model.pkg; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
-                                        Text { text: model.role; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); color: root.subtext0 }
+                                        Text { text: model.pkg; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(15); color: root.text }
+                                        Text { text: model.role; font.family: root.uiFontFamily; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(12); color: root.subtext0 }
                                     }
                                 }
                                 MouseArea { id: sysCardMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Quickshell.execDetached(["xdg-open", model.link]) }
@@ -573,8 +583,8 @@ Item {
                         Layout.alignment: Qt.AlignLeft
                         Layout.preferredWidth: root.s(220)
                         Layout.preferredHeight: root.s(48)
-                        radius: root.s(10)
-                        color: updateMa.containsMouse ? Qt.alpha(root.green, 0.14) : Qt.alpha(root.surface0, 0.5)
+                        radius: root.themedInnerRadius
+                        color: updateMa.containsMouse ? Qt.alpha(root.green, 0.14) : root.popupPanelFill
                         border.color: updateMa.containsMouse ? root.green : root.surface1
                         border.width: 1
                         scale: updateMa.pressed ? 0.98 : (updateMa.containsMouse ? 1.01 : 1.0)
@@ -595,8 +605,9 @@ Item {
                             }
                             Text {
                                 text: "Update uitvoeren"
-                                font.family: "JetBrains Mono"
-                                font.weight: Font.Bold
+                                font.family: root.uiFontFamily
+                                font.weight: root.themedFontWeight
+                                font.letterSpacing: root.themedLetterSpacing
                                 font.pixelSize: root.s(12)
                                 color: root.text
                                 Layout.fillWidth: true
