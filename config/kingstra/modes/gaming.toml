@@ -1,0 +1,11 @@
+[meta]
+name = "Gaming"
+description = "Prestaties & hardware monitoring"
+icon = "󰊗"
+
+[bar]
+visible = "always"
+autohide = false
+
+[modules]
+list = ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "volume", "game_launcher", "clock"]

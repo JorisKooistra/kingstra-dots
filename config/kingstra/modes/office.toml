@@ -1,0 +1,11 @@
+[meta]
+name = "Office"
+description = "Werk & productiviteit"
+icon = "󰒱"
+
+[bar]
+visible = "always"
+autohide = false
+
+[modules]
+list = ["workspaces", "clock", "network", "battery", "volume", "bluetooth", "notifications"]

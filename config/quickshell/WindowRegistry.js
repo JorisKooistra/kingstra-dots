@@ -48,6 +48,9 @@ function getLayout(name, mx, my, mw, mh) {
         // Full width, centered vertically
         "wallpaper": { w: mw, h: s(650, scale), rx: 0, ry: Math.floor((mh/2)-(s(650, scale)/2)), comp: "wallpaper/WallpaperPicker.qml" },
         "theme":     { w: mw, h: s(650, scale), rx: 0, ry: Math.floor((mh/2)-(s(650, scale)/2)), comp: "themes/ThemePicker.qml" },
+
+        // Mode picker — kleiner, gecentreerd
+        "mode":      { w: s(720, scale), h: s(420, scale), rx: Math.floor((mw/2)-(s(720, scale)/2)), ry: Math.floor((mh/2)-(s(420, scale)/2)), comp: "modes/ModePicker.qml" },
         
         "hidden":    { w: 1, h: 1, rx: -5000 - mx, ry: -5000 - my, comp: "" } 
     };

@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-mode-switch — Wissel tussen Kingstra modes
+# =============================================================================
+# Gebruik: kingstra-mode-switch <mode_naam>
+#          kingstra-mode-switch --current    (print huidige mode)
+#          kingstra-mode-switch --list       (lijst beschikbare modes)
+# =============================================================================
+set -euo pipefail
+
+MODES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/modes"
+LOG_PREFIX="[kingstra-mode-switch]"
+
+_log()  { echo "$LOG_PREFIX $*"; }
+_warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
+
+_notify() {
+    notify-send --icon=preferences-system \
+                --app-name="kingstra" \
+                "$1" "${2:-}" \
+                --urgency=low \
+                --expire-time=3000 \
+                2>/dev/null || true
+}
+
+# ---------------------------------------------------------------------------
+# Argumenten
+# ---------------------------------------------------------------------------
+if [[ "${1:-}" == "--current" ]]; then
+    jq -r '.name // "office"' \
+        "${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/mode.json" 2>/dev/null \
+        || echo "office"
+    exit 0
+fi
+
+if [[ "${1:-}" == "--list" ]]; then
+    echo "office"
+    echo "gaming"
+    echo "media"
+    exit 0
+fi
+
+MODE_NAME="${1:?Gebruik: kingstra-mode-switch <mode_naam>}"
+
+# Valideer mode naam
+case "$MODE_NAME" in
+    office|gaming|media) ;;
+    *)
+        _warn "Onbekende mode: $MODE_NAME (geldig: office, gaming, media)"
+        exit 1
+        ;;
+esac
+
+_log "Overschakelen naar mode: $MODE_NAME"
+
+# ---------------------------------------------------------------------------
+# Stap 1 — Schrijf mode.json
+# ---------------------------------------------------------------------------
+STATE_WRITE="${HOME}/.local/bin/kingstra-state-write"
+if [[ -x "$STATE_WRITE" ]]; then
+    "$STATE_WRITE" mode.json name "$MODE_NAME"
+    _log "state/mode.json bijgewerkt: $MODE_NAME"
+else
+    # Directe fallback
+    STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+    mkdir -p "$STATE_DIR"
+    echo "{\"name\":\"$MODE_NAME\"}" > "$STATE_DIR/mode.json"
+    _log "state/mode.json bijgewerkt (direct): $MODE_NAME"
+fi
+
+# ---------------------------------------------------------------------------
+# Stap 2 — session.json synchroniseren
+# ---------------------------------------------------------------------------
+SESSION_UPDATE="${HOME}/.local/bin/kingstra-session-update"
+if [[ -x "$SESSION_UPDATE" ]]; then
+    "$SESSION_UPDATE"
+    _log "session.json bijgewerkt"
+fi
+
+# ---------------------------------------------------------------------------
+# Stap 3 — Apply shell state (matugen + reloads)
+# ---------------------------------------------------------------------------
+APPLY="${HOME}/.local/bin/apply-shell-state"
+if [[ -x "$APPLY" ]]; then
+    "$APPLY" || _warn "apply-shell-state mislukt"
+    _log "Shell state toegepast"
+fi
+
+_notify "Mode: $MODE_NAME" "Modus succesvol ingesteld"

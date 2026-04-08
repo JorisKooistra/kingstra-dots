@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Fase 08 — Theminglaag (Matugen)
+# Fase 08 — Theminglaag (Matugen + Kingstra scripts)
 # =============================================================================
 # Doel:
 #   - Matugen installeren
-#   - config/matugen deployen (config.toml + templates)
-#   - apply-script deployen
+#   - config/matugen deployen (templates)
+#   - config/kingstra deployen (themes, modes, state)
+#   - Alle kingstra-scripts naar ~/.local/bin/ linken
 #   - Eerste kleurapplicatie draaien op de huidige wallpaper
 # =============================================================================
 
@@ -16,7 +17,7 @@ phase_run() {
     log_step "Matugen config deployen..."
     deploy_config "matugen"
 
-    log_step "Thema-bestanden deployen..."
+    log_step "Thema- en mode-bestanden deployen..."
     deploy_config "kingstra"
 
     log_step "Apply-script deployen..."
@@ -24,6 +25,12 @@ phase_run() {
 
     log_step "Thema-scripts deployen..."
     _phase08_deploy_theme_scripts
+
+    log_step "State-scripts deployen..."
+    _phase08_deploy_state_scripts
+
+    log_step "Mode-scripts deployen..."
+    _phase08_deploy_mode_scripts
 
     log_step "Standaard thema-config genereren..."
     _phase08_default_theme_conf
@@ -33,17 +40,25 @@ phase_run() {
 
     log_step "Fase 08 valideren..."
     validate_cmd matugen
-    validate_file "$HOME/.config/matugen/config.toml"        "matugen/config.toml"
-    validate_dir  "$HOME/.config/matugen/templates"          "matugen/templates/"
-    validate_file "$HOME/.local/bin/kingstra-theme-apply"    "kingstra-theme-apply"
-    validate_file "$HOME/.local/bin/kingstra-theme-switch"   "kingstra-theme-switch"
-    validate_file "$HOME/.local/bin/kingstra-theme-read"     "kingstra-theme-read"
-    validate_dir  "$HOME/.config/kingstra/themes"            "kingstra/themes/"
+    validate_dir  "$HOME/.config/matugen/templates"               "matugen/templates/"
+    validate_file "$HOME/.local/bin/kingstra-theme-apply"         "kingstra-theme-apply"
+    validate_file "$HOME/.local/bin/kingstra-theme-switch"        "kingstra-theme-switch"
+    validate_file "$HOME/.local/bin/kingstra-theme-read"          "kingstra-theme-read"
+    validate_file "$HOME/.local/bin/apply-shell-state"            "apply-shell-state"
+    validate_file "$HOME/.local/bin/kingstra-state-read"          "kingstra-state-read"
+    validate_file "$HOME/.local/bin/kingstra-state-write"         "kingstra-state-write"
+    validate_file "$HOME/.local/bin/kingstra-session-update"      "kingstra-session-update"
+    validate_file "$HOME/.local/bin/kingstra-mode-switch"         "kingstra-mode-switch"
+    validate_file "$HOME/.local/bin/kingstra-mode-read"           "kingstra-mode-read"
+    validate_file "$HOME/.local/bin/kingstra-color-transform"     "kingstra-color-transform"
+    validate_dir  "$HOME/.config/kingstra/themes"                 "kingstra/themes/"
+    validate_dir  "$HOME/.config/kingstra/modes"                  "kingstra/modes/"
     validate_report
 
-    log_ok "Fase 08 voltooid — Matugen is de enige theme-engine."
-    log_info "Handmatig toepassen: kingstra-theme-apply <pad/naar/wallpaper>"
-    log_info "Thema wisselen: kingstra-theme-switch <thema_naam>"
+    log_ok "Fase 08 voltooid."
+    log_info "Thema wisselen:  kingstra-theme-switch <thema_naam>"
+    log_info "Mode wisselen:   kingstra-mode-switch <office|gaming|media>"
+    log_info "State toepassen: apply-shell-state"
 }
 
 # ---------------------------------------------------------------------------
@@ -82,6 +97,54 @@ _phase08_deploy_theme_scripts() {
     log_ok "Thema-scripts beschikbaar: kingstra-theme-switch, kingstra-theme-read"
 }
 
+_phase08_deploy_state_scripts() {
+    local scripts_dir="$REPO_ROOT/config/shared/scripts"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "State-scripts zouden worden gedeployed"
+        return 0
+    fi
+
+    ensure_dir "$HOME/.local/bin"
+
+    local -A state_scripts=(
+        ["kingstra-state-read"]="kingstra-state-read"
+        ["kingstra-state-write"]="kingstra-state-write"
+        ["kingstra-session-update"]="kingstra-session-update"
+        ["apply-shell-state"]="apply-shell-state"
+        ["kingstra-color-transform"]="kingstra-color-transform"
+    )
+
+    for src_name in "${!state_scripts[@]}"; do
+        local dest_name="${state_scripts[$src_name]}"
+        local src="$scripts_dir/$src_name"
+        local dest="$HOME/.local/bin/$dest_name"
+        deploy_link "$src" "$dest"
+        chmod +x "$src"
+    done
+
+    log_ok "State-scripts beschikbaar: kingstra-state-read/write, kingstra-session-update, apply-shell-state, kingstra-color-transform"
+}
+
+_phase08_deploy_mode_scripts() {
+    local scripts_dir="$REPO_ROOT/config/shared/scripts"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Mode-scripts zouden worden gedeployed"
+        return 0
+    fi
+
+    ensure_dir "$HOME/.local/bin"
+
+    deploy_link "$scripts_dir/kingstra-mode-switch" "$HOME/.local/bin/kingstra-mode-switch"
+    chmod +x "$scripts_dir/kingstra-mode-switch"
+
+    deploy_link "$scripts_dir/kingstra-mode-read" "$HOME/.local/bin/kingstra-mode-read"
+    chmod +x "$scripts_dir/kingstra-mode-read"
+
+    log_ok "Mode-scripts beschikbaar: kingstra-mode-switch, kingstra-mode-read"
+}
+
 _phase08_default_theme_conf() {
     local theme_conf="$HOME/.config/hypr/conf.d/35-theme.conf"
 
@@ -106,23 +169,28 @@ CONF
 }
 
 _phase08_initial_apply() {
-    local state_file="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
+    local session_file="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
+    local cache_file="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
 
     if "${DRY_RUN:-false}"; then
         log_dry "Eerste kleurapplicatie zou worden uitgevoerd"
         return 0
     fi
 
-    if [[ -f "$state_file" ]]; then
-        local wallpaper
-        wallpaper="$(cat "$state_file")"
-        if [[ -f "$wallpaper" ]]; then
-            log_step "Kleuren toepassen op: $wallpaper"
-            "$HOME/.local/bin/kingstra-theme-apply" "$wallpaper" || \
-                log_warn "Kleurapplicatie mislukt — handmatig uitvoeren na sessiestart"
-            return 0
-        fi
+    # Probeer wallpaper uit session.json te lezen, daarna fallback naar cache
+    local wallpaper=""
+    if [[ -f "$session_file" ]]; then
+        wallpaper=$(jq -r '.wallpaper // ""' "$session_file" 2>/dev/null || echo "")
+    fi
+    if [[ -z "$wallpaper" || ! -f "$wallpaper" ]] && [[ -f "$cache_file" ]]; then
+        wallpaper="$(cat "$cache_file")"
     fi
 
-    log_info "Nog geen wallpaper in staat — kleuren worden toegepast bij eerste wallpaperwissel (fase 9)"
+    if [[ -n "$wallpaper" && -f "$wallpaper" ]]; then
+        log_step "Eerste kleurapplicatie op: $wallpaper"
+        "$HOME/.local/bin/apply-shell-state" || \
+            log_warn "apply-shell-state mislukt — handmatig uitvoeren na sessiestart"
+    else
+        log_info "Nog geen wallpaper in staat — kleuren worden toegepast bij eerste wallpaperwissel (fase 9)"
+    fi
 }

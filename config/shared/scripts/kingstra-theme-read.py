@@ -78,6 +78,9 @@ def list_themes(themes_dir):
             icons = data.get("icons", {})
             quickshell = data.get("quickshell", {})
             matugen = data.get("matugen", {})
+            color_transform = data.get("color_transform", {})
+            material = data.get("material", {})
+            terminal = data.get("terminal", {})
             entry = {
                 "id": theme_id,
                 "name": meta.get("name", theme_id.title()),
@@ -90,12 +93,18 @@ def list_themes(themes_dir):
                 "icons": icons,
                 "matugen": matugen,
                 "quickshell": quickshell,
+                "color_transform": color_transform,
+                "material": material,
+                "terminal": terminal,
             }
             # Include key settings for preview
             entry["scheme_type"] = matugen.get("scheme_type", "scheme-tonal-spot")
             entry["border_radius"] = appearance.get("border_radius", 12)
             entry["gaps_out"] = appearance.get("gaps_out", 10)
             entry["icon_theme"] = icons.get("icon_theme", "Papirus-Dark")
+            entry["display_font"] = fonts.get("display_font", fonts.get("ui_font", ""))
+            entry["font_weight"] = fonts.get("font_weight", "regular")
+            entry["letter_spacing"] = fonts.get("letter_spacing", 0.0)
             themes.append(entry)
         except Exception:
             continue

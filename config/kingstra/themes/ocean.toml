@@ -1,0 +1,55 @@
+[meta]
+name = "Ocean"
+description = "Diepe zee — koel, rustig, vloeiend"
+icon = "󰇙"
+preview_image = "ocean.jpg"
+
+[matugen]
+scheme_type = "scheme-fidelity"
+color_index = 3
+contrast = 0.1
+mode = "dark"
+
+[appearance]
+border_radius = 18
+border_width = 1
+gaps_in = 8
+gaps_out = 16
+bar_opacity = 0.72
+popup_opacity = 0.80
+blur_size = 24
+blur_passes = 4
+animation_speed = 0.9
+
+[fonts]
+ui_font = "Noto Sans"
+ui_font_size = 13
+mono_font = "JetBrainsMono Nerd Font"
+mono_font_size = 12
+display_font = "Noto Sans"
+font_weight = "light"
+letter_spacing = 0.5
+
+[icons]
+icon_theme = "Papirus-Dark"
+
+[quickshell]
+bar_height = 38
+bar_position = "top"
+
+[color_transform]
+hue_shift = -10
+saturation_adjust = 0.10
+lightness_adjust = 0.05
+thematic_mix = 0.20
+
+[material]
+texture = "flow"
+overlay_opacity = 0.03
+glow_intensity = 0.05
+
+[terminal]
+bg_opacity = 0.82
+blur = true
+padding = 14
+cursor_style = "beam"

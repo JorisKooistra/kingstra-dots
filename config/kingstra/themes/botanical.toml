@@ -17,8 +17,8 @@ gaps_in = 10
 gaps_out = 20
 bar_opacity = 0.78
 popup_opacity = 0.84
-blur_size = 20
-blur_passes = 5
+blur_size = 22
+blur_passes = 3
 animation_speed = 0.85
 
 [fonts]
@@ -26,6 +26,9 @@ ui_font = "Fira Sans"
 ui_font_size = 13
 mono_font = "Fira Code"
 mono_font_size = 12
+display_font = "Fira Sans"
+font_weight = "light"
+letter_spacing = 0.3
 
 [icons]
 icon_theme = "Papirus"
@@ -33,3 +36,20 @@ icon_theme = "Papirus"
 [quickshell]
 bar_height = 40
 bar_position = "top"
+
+[color_transform]
+hue_shift = 5
+saturation_adjust = -0.05
+lightness_adjust = 0.02
+thematic_mix = 0.15
+
+[material]
+texture = "grain"
+overlay_opacity = 0.04
+glow_intensity = 0.02
+
+[terminal]
+bg_opacity = 0.85
+blur = true
+padding = 12
+cursor_style = "beam"

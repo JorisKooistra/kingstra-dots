@@ -1,0 +1,11 @@
+[meta]
+name = "Media"
+description = "Muziek & video"
+icon = "󰓃"
+
+[bar]
+visible = "autohide"
+autohide = true
+
+[modules]
+list = ["volume", "brightness", "media_controls", "clock"]

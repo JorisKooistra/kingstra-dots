@@ -90,14 +90,20 @@ An AUR helper is no longer a manual prerequisite for the bootstrap flow: when mi
 
 ## Wallpaper and theming
 
+Every time the wallpaper, theme, or mode changes, `apply-shell-state` runs automatically:
+it calls Matugen to generate a Material You palette from the current wallpaper, applies
+an optional per-theme color transform, then reloads Quickshell, Hyprland, kitty, and SwayNC.
+
+### Wallpaper
+
 ```bash
-# Set static wallpaper (automatically triggers Matugen)
+# Set static wallpaper
 kingstra-wallpaper set ~/Pictures/Wallpapers/photo.png
 
-# Video wallpaper
+# Video wallpaper (mpvpaper)
 kingstra-wallpaper video ~/Videos/background.mp4
 
-# Random
+# Random wallpaper
 kingstra-wallpaper random
 
 # Interactive picker (fzf + preview)
@@ -106,6 +112,48 @@ kingstra-wallpaper pick
 # Status
 kingstra-wallpaper status
 ```
+
+Keybind: `Super + W` opens the visual wallpaper picker.
+
+### Themes
+
+Themes control the visual personality of the desktop: Matugen scheme type, blur, transparency,
+corner radius, fonts, and subtle color transforms on top of the generated palette.
+
+| Theme | Description | Scheme |
+|---|---|---|
+| `botanical` | Temperate rainforest — moss, wood, filtered light | scheme-vibrant |
+| `rocky` | Granite — angular, solid, no-nonsense | scheme-monochrome |
+| `ocean` | Deep sea — cool, calm, fluid | scheme-fidelity |
+| `space` | Cosmic — deep, dark, floating panels | scheme-expressive |
+| `cyber` | Neon — high contrast, sharp, electric | scheme-rainbow |
+| `animated` | Vibrant — colourful, dynamic, expressive | scheme-fruit-salad |
+
+Switch theme from the terminal or keybind:
+
+```bash
+kingstra-theme-switch botanical
+```
+
+Keybind: `Super + Ctrl + T` opens the visual theme picker.
+
+### Modes
+
+Modes reconfigure the TopBar module set and bar behaviour for the current activity.
+
+| Mode | Bar | Modules |
+|---|---|---|
+| `office` (default) | Always visible | Workspaces, window title, clock, network, battery, volume, bluetooth, notifications |
+| `gaming` | Always visible | Workspaces, CPU/GPU/RAM temp, audio device, mic mute, game launcher, clock |
+| `media` | Auto-hide (3 s) | Volume, brightness, media controls, clock |
+
+Switch mode from the terminal or keybind:
+
+```bash
+kingstra-mode-switch gaming
+```
+
+Keybind: `Super + Ctrl + M` opens the visual mode picker.
 
 ---
 

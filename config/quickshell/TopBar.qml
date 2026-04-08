@@ -43,8 +43,8 @@ Variants {
             implicitHeight: barHeight
             margins { top: s(8); bottom: 0; left: s(4); right: s(4) }
             
-            // exclusiveZone = height + top margin
-            exclusiveZone: barHeight + s(4)
+            // exclusiveZone = 0 bij auto-hide (media mode), anders height + top margin
+            exclusiveZone: barWindow.barAutoHide ? 0 : barHeight + s(4)
             color: "transparent"
 
             // Dynamic Matugen Palette
@@ -74,8 +74,41 @@ Variants {
                 onTriggered: loadTopBarSettingsProc.running = true
             }
 
+            // --- Mode State ---
+            property string activeMode: "office"
+            property var moduleList: ["workspaces", "clock", "network", "battery", "volume", "bluetooth", "notifications"]
+            property bool barAutoHide: false
+            property bool barVisible: true
+
+            function _defaultModules(mode) {
+                if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "volume", "game_launcher", "clock"];
+                if (mode === "media")  return ["volume", "brightness", "media_controls", "clock"];
+                return ["workspaces", "clock", "network", "battery", "volume", "bluetooth", "notifications"];
+            }
+
+            Process {
+                id: loadModeProc
+                command: ["bash", "-c", "cat ~/.config/kingstra/state/mode.json 2>/dev/null"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        try {
+                            let m = JSON.parse(this.text);
+                            if (m.name) barWindow.activeMode = m.name;
+                            barWindow.moduleList = (m.modules && m.modules.length > 0)
+                                ? m.modules
+                                : barWindow._defaultModules(m.name || "office");
+                            barWindow.barAutoHide = m.bar_autohide === true;
+                        } catch(e) {}
+                    }
+                }
+            }
+            Timer {
+                interval: 2000; running: true; repeat: true
+                onTriggered: loadModeProc.running = true
+            }
+
             // --- State Variables ---
-            
+
             // Triggers layout animations immediately to feel fast
             property bool isStartupReady: false
             Timer { interval: 10; running: true; onTriggered: barWindow.isStartupReady = true }
@@ -329,10 +362,61 @@ Variants {
             }
 
             // ==========================================
+            // AUTO-HIDE (media mode)
+            // ==========================================
+            property bool autoHideVisible: !barWindow.barAutoHide
+
+            // Toon bar bij hover op de bovenrand van het scherm
+            MouseArea {
+                id: autoHideTrigger
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: barWindow.barAutoHide ? barWindow.s(4) : 0
+                hoverEnabled: true
+                z: 100
+                onEntered: {
+                    barWindow.autoHideVisible = true;
+                    autoHideTimer.restart();
+                }
+            }
+
+            Timer {
+                id: autoHideTimer
+                interval: 3000
+                onTriggered: {
+                    if (barWindow.barAutoHide && !autoHideTrigger.containsMouse)
+                        barWindow.autoHideVisible = false;
+                }
+            }
+
+            // ==========================================
             // UI LAYOUT
             // ==========================================
             Item {
                 anchors.fill: parent
+                opacity: (!barWindow.barAutoHide || barWindow.autoHideVisible) ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutSine } }
+                transform: Translate {
+                    y: (!barWindow.barAutoHide || barWindow.autoHideVisible) ? 0 : barWindow.s(-60)
+                    Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.InOutSine } }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    propagateComposedEvents: true
+                    onEntered: {
+                        if (barWindow.barAutoHide) {
+                            barWindow.autoHideVisible = true;
+                            autoHideTimer.restart();
+                        }
+                    }
+                    onExited: {
+                        if (barWindow.barAutoHide) autoHideTimer.restart();
+                    }
+                    onClicked: (mouse) => mouse.accepted = false
+                }
 
                 // ---------------- CENTER (MUST BE DECLARED FIRST OR Z-INDEXED FOR PROPER ANCHORING BORDERS) ----------------
                 Rectangle {
@@ -464,6 +548,7 @@ Variants {
 
                     // Notifications
                     Rectangle {
+                        visible: barWindow.moduleList.includes("notifications")
                         property bool isHovered: notifMouse.containsMouse
                         color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.95) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
                         radius: barWindow.s(14); border.width: 1; border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, isHovered ? 0.15 : 0.05)
@@ -492,16 +577,16 @@ Variants {
                         }
                     }
 
-                    // Workspaces 
+                    // Workspaces
                     Rectangle {
                         color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
                         radius: barWindow.s(14); border.width: 1; border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05)
                         Layout.preferredHeight: parent.moduleHeight
                         clip: true
-                        
+
                         property real targetWidth: workspacesModel.count > 0 ? wsLayout.width + barWindow.s(20) : 0
                         Layout.preferredWidth: targetWidth
-                        visible: targetWidth > 0
+                        visible: targetWidth > 0 && barWindow.moduleList.includes("workspaces")
                         opacity: workspacesModel.count > 0 ? 1 : 0
                         
                         Behavior on opacity { NumberAnimation { duration: 300 } }
@@ -591,19 +676,20 @@ Variants {
                         }
                     }            
 
-                    // Media Player 
+                    // Media Player
                     Rectangle {
                         id: mediaBox
                         color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
                         radius: barWindow.s(14); border.width: 1; border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05)
                         Layout.preferredHeight: parent.moduleHeight
-                        clip: true 
-                        
+                        clip: true
+
+                        property bool isMediaMode: barWindow.activeMode === "media"
                         property real targetWidth: barWindow.isMediaActive ? mediaLayoutContainer.width + barWindow.s(24) : 0
-                        Layout.maximumWidth: targetWidth
+                        Layout.maximumWidth: isMediaMode ? barWindow.s(220) : targetWidth
                         Layout.preferredWidth: targetWidth
-                        
-                        visible: targetWidth > 0 || opacity > 0
+
+                        visible: (targetWidth > 0 || opacity > 0) && barWindow.moduleList.includes("media_controls")
                         opacity: barWindow.isMediaActive ? 1.0 : 0.0
 
                         Behavior on targetWidth { NumberAnimation { duration: 700; easing.type: Easing.OutQuint } }
@@ -668,14 +754,14 @@ Variants {
                                             property real maxColWidth: barWindow.width < 1920 ? barWindow.s(120) : barWindow.s(180)
                                             width: maxColWidth 
                                             
-                                            Text { 
-                                                text: barWindow.musicData.title; 
-                                                font.family: "JetBrains Mono"; 
-                                                font.weight: Font.Black; 
-                                                font.pixelSize: barWindow.s(13); 
+                                            Text {
+                                                text: barWindow.musicData.title;
+                                                font.family: "JetBrains Mono";
+                                                font.weight: Font.Black;
+                                                font.pixelSize: mediaBox.isMediaMode ? barWindow.s(11) : barWindow.s(13);
                                                 color: mocha.text;
-                                                width: parent.width
-                                                elide: Text.ElideRight; 
+                                                width: Math.min(parent.width, mediaBox.isMediaMode ? barWindow.s(120) : barWindow.s(200))
+                                                elide: Text.ElideRight;
                                             }
                                             Text { 
                                                 text: barWindow.musicData.timeStr; 
@@ -901,9 +987,10 @@ Variants {
                                 MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true }
                             }
 
-                            // WiFi 
+                            // WiFi
                             Rectangle {
                                 id: wifiPill
+                                visible: barWindow.moduleList.includes("network")
                                 property bool isHovered: wifiMouse.containsMouse
                                 radius: barWindow.s(10); height: sysLayout.pillHeight; 
                                 color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
@@ -951,9 +1038,10 @@ Variants {
                                 MouseArea { id: wifiMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network wifi"]) }
                             }
 
-                            // Bluetooth 
+                            // Bluetooth
                             Rectangle {
                                 id: btPill
+                                visible: barWindow.moduleList.includes("bluetooth")
                                 property bool isHovered: btMouse.containsMouse
                                 radius: barWindow.s(10); height: sysLayout.pillHeight
                                 clip: true
@@ -1004,6 +1092,7 @@ Variants {
                             // Volume
                             Rectangle {
                                 id: volPill
+                                visible: barWindow.moduleList.includes("volume")
                                 property bool isHovered: volMouse.containsMouse
                                 color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
                                 radius: barWindow.s(10); height: sysLayout.pillHeight;
@@ -1055,6 +1144,7 @@ Variants {
                             // Battery
                             Rectangle {
                                 id: batPill
+                                visible: barWindow.moduleList.includes("battery")
                                 property bool isHovered: batMouse.containsMouse
                                 color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4);
                                 radius: barWindow.s(10); height: sysLayout.pillHeight;

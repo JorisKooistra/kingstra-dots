@@ -26,6 +26,9 @@ ui_font = "JetBrains Mono"
 ui_font_size = 12
 mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
+display_font = "JetBrains Mono"
+font_weight = "regular"
+letter_spacing = 0.0
 
 [icons]
 icon_theme = "Breeze"
@@ -33,3 +36,20 @@ icon_theme = "Breeze"
 [quickshell]
 bar_height = 32
 bar_position = "top"
+
+[color_transform]
+hue_shift = 0
+saturation_adjust = -0.15
+lightness_adjust = -0.03
+thematic_mix = 0.10
+
+[material]
+texture = "noise"
+overlay_opacity = 0.03
+glow_intensity = 0.0
+
+[terminal]
+bg_opacity = 0.95
+blur = false
+padding = 8
+cursor_style = "block"

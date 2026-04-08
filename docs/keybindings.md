@@ -79,6 +79,8 @@
 | `Super + Shift + N` | Dismiss all notifications |
 | `Super + Alt + N` | Toggle do-not-disturb |
 | `Super + W` | Wallpaper picker |
+| `Super + Ctrl + T` | Theme picker |
+| `Super + Ctrl + M` | Mode picker (office / gaming / media) |
 | `Super + Shift + M` | Music popup |
 | `Super + C` | Calendar popup |
 | `Super + O` | Monitor overview |

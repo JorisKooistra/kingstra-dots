@@ -177,7 +177,27 @@ cat > "$THEME_JSON" <<EOF
     "scheme_type": "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}",
     "color_index": ${MATUGEN_COLOR_INDEX:-0},
     "contrast": ${MATUGEN_CONTRAST:-0.0},
-    "mode": "${MATUGEN_MODE:-dark}"
+    "mode": "${MATUGEN_MODE:-dark}",
+    "display_font": "${FONTS_DISPLAY_FONT:-${FONTS_UI_FONT:-Inter}}",
+    "font_weight": "${FONTS_FONT_WEIGHT:-regular}",
+    "letter_spacing": ${FONTS_LETTER_SPACING:-0.0},
+    "color_transform": {
+        "hue_shift": ${COLOR_TRANSFORM_HUE_SHIFT:-0},
+        "saturation_adjust": ${COLOR_TRANSFORM_SATURATION_ADJUST:-0.0},
+        "lightness_adjust": ${COLOR_TRANSFORM_LIGHTNESS_ADJUST:-0.0},
+        "thematic_mix": ${COLOR_TRANSFORM_THEMATIC_MIX:-0.0}
+    },
+    "material": {
+        "texture": "${MATERIAL_TEXTURE:-none}",
+        "overlay_opacity": ${MATERIAL_OVERLAY_OPACITY:-0.0},
+        "glow_intensity": ${MATERIAL_GLOW_INTENSITY:-0.0}
+    },
+    "terminal": {
+        "bg_opacity": ${TERMINAL_BG_OPACITY:-0.90},
+        "blur": ${TERMINAL_BLUR:-false},
+        "padding": ${TERMINAL_PADDING:-10},
+        "cursor_style": "${TERMINAL_CURSOR_STYLE:-block}"
+    }
 }
 EOF
 _log "theme.json gegenereerd"
@@ -202,10 +222,14 @@ KITTY_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
 if [[ -f "$KITTY_CONF" ]]; then
     MONO="${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}"
     MONO_SIZE="${FONTS_MONO_FONT_SIZE:-12}"
+    OPACITY="${TERMINAL_BG_OPACITY:-0.90}"
+    PADDING="${TERMINAL_PADDING:-10}"
     sed -i "s|^font_family\s.*|font_family      $MONO|" "$KITTY_CONF" 2>/dev/null || true
     sed -i "s|^font_size\s.*|font_size $MONO_SIZE|" "$KITTY_CONF" 2>/dev/null || true
+    sed -i "s|^background_opacity\s.*|background_opacity $OPACITY|" "$KITTY_CONF" 2>/dev/null || true
+    sed -i "s|^window_padding_width\s.*|window_padding_width $PADDING|" "$KITTY_CONF" 2>/dev/null || true
     pkill -USR1 kitty 2>/dev/null || true
-    _log "Kitty font bijgewerkt"
+    _log "Kitty font/opacity/padding bijgewerkt"
 fi
 
 # ---------------------------------------------------------------------------
@@ -247,22 +271,14 @@ fi
 _log "GTK/Qt interface bijgewerkt"
 
 # ---------------------------------------------------------------------------
-# Step 6 — Run matugen to regenerate colors with new scheme
+# Step 6 — Kleuren hergenereren + apps herladen via apply-shell-state
 # ---------------------------------------------------------------------------
-WALLPAPER="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
-if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
-    "$HOME/.local/bin/kingstra-theme-apply" --reload || {
-        _warn "kingstra-theme-apply mislukt, matugen direct proberen"
-        if command -v matugen &>/dev/null; then
-            matugen image "$WALLPAPER" --config "$MATUGEN_CONF" \
-                --type "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}" \
-                --source-color-index "${MATUGEN_COLOR_INDEX:-0}" \
-                --mode "${MATUGEN_MODE:-dark}" 2>/dev/null || true
-        fi
-    }
-    _log "Matugen kleuren hergegenereerd"
+APPLY="${HOME}/.local/bin/apply-shell-state"
+if [[ -x "$APPLY" ]]; then
+    "$APPLY" || _warn "apply-shell-state mislukt"
+    _log "Kleuren hergegenereerd en apps herladen"
 else
-    _log "Geen wallpaper gevonden — kleuren niet bijgewerkt via matugen, rest wel toegepast"
+    _warn "apply-shell-state niet gevonden — kleuren en apps niet herladen"
 fi
 
 # ---------------------------------------------------------------------------

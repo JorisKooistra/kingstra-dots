@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""kingstra-mode-read — Lees mode TOML bestanden voor shell scripts.
+
+Gebruik:
+    kingstra-mode-read <file.toml>               # Alle key=value (shell-sourceable)
+    kingstra-mode-read <file.toml> <section.key> # Enkele waarde
+    kingstra-mode-read --list <modes_dir>         # JSON array van alle modes
+    kingstra-mode-read --json <file.toml>         # Volledige mode als JSON
+"""
+
+import sys
+import os
+import json
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+
+
+def read_toml(path):
+    with open(path, "rb") as f:
+        return tomllib.load(f)
+
+
+def print_shell_vars(data):
+    def flatten(d, prefix=""):
+        items = {}
+        for k, v in d.items():
+            key = f"{prefix}{k}" if prefix else k
+            if isinstance(v, dict):
+                items.update(flatten(v, f"{key}_"))
+            elif isinstance(v, list):
+                items[key] = json.dumps(v)
+            else:
+                items[key] = v
+        return items
+
+    flat = flatten(data)
+    for k, v in flat.items():
+        shell_key = k.replace(".", "_").upper()
+        if isinstance(v, bool):
+            print(f'{shell_key}={"true" if v else "false"}')
+        elif isinstance(v, (int, float)):
+            print(f"{shell_key}={v}")
+        else:
+            print(f"{shell_key}='{v}'")
+
+
+def get_value(data, dotpath):
+    parts = dotpath.split(".")
+    obj = data
+    for p in parts:
+        if isinstance(obj, dict) and p in obj:
+            obj = obj[p]
+        else:
+            return None
+    return obj
+
+
+def list_modes(modes_dir):
+    modes = []
+    for fname in sorted(os.listdir(modes_dir)):
+        if not fname.endswith(".toml"):
+            continue
+        path = os.path.join(modes_dir, fname)
+        try:
+            data = read_toml(path)
+            mode_id = fname[:-5]
+            meta = data.get("meta", {})
+            bar = data.get("bar", {})
+            modules = data.get("modules", {})
+            entry = {
+                "id": mode_id,
+                "name": meta.get("name", mode_id.title()),
+                "description": meta.get("description", ""),
+                "icon": meta.get("icon", "󰒓"),
+                "bar_visible": bar.get("visible", "always"),
+                "bar_autohide": bar.get("autohide", False),
+                "modules": modules.get("list", []),
+            }
+            modes.append(entry)
+        except Exception:
+            continue
+    return modes
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__, file=sys.stderr)
+        sys.exit(1)
+
+    if sys.argv[1] == "--list":
+        modes_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser("~/.config/kingstra/modes")
+        print(json.dumps(list_modes(modes_dir)))
+        sys.exit(0)
+
+    if sys.argv[1] == "--json":
+        if len(sys.argv) < 3:
+            print("Gebruik: kingstra-mode-read --json <file.toml>", file=sys.stderr)
+            sys.exit(1)
+        data = read_toml(sys.argv[2])
+        print(json.dumps(data))
+        sys.exit(0)
+
+    toml_path = sys.argv[1]
+    if not os.path.isfile(toml_path):
+        print(f"Bestand niet gevonden: {toml_path}", file=sys.stderr)
+        sys.exit(1)
+
+    data = read_toml(toml_path)
+
+    if len(sys.argv) >= 3:
+        val = get_value(data, sys.argv[2])
+        if val is None:
+            sys.exit(1)
+        print(val)
+    else:
+        print_shell_vars(data)
+
+
+if __name__ == "__main__":
+    main()

@@ -13,6 +13,9 @@ set -euo pipefail
 SESSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+MODES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/modes"
+THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes"
 LOG_PREFIX="[apply-shell-state]"
 VERBOSE=false
 
@@ -26,69 +29,139 @@ for arg in "$@"; do
 done
 
 # ---------------------------------------------------------------------------
+# Lockfile — voorkom race conditions bij gelijktijdige aanroepen
+# ---------------------------------------------------------------------------
+LOCK_FILE="/tmp/apply-shell-state.lock"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+    _warn "apply-shell-state draait al — overgeslagen"
+    exit 0
+fi
+trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT
+
+# ---------------------------------------------------------------------------
 # Stap 1 — Wallpaper pad bepalen (session.json, fallback cache)
 # ---------------------------------------------------------------------------
-if [[ ! -f "$SESSION_FILE" ]]; then
-    _warn "session.json niet gevonden: $SESSION_FILE"
-    exit 1
-fi
+WALLPAPER=""
 
-WALLPAPER=$(jq -r '.wallpaper // ""' "$SESSION_FILE")
+if [[ -f "$SESSION_FILE" ]]; then
+    WALLPAPER=$(jq -r '.wallpaper // ""' "$SESSION_FILE" 2>/dev/null || echo "")
+fi
 
 if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
     WALLPAPER="$(cat "$CACHE_DIR/last-wallpaper" 2>/dev/null || echo "")"
 fi
 
 if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
-    _warn "Geen geldig wallpaper gevonden (session.json en cache leeg)"
-    exit 1
+    _warn "Geen geldig wallpaper gevonden — matugen overgeslagen, apps wel herladen"
 fi
 
 # ---------------------------------------------------------------------------
-# Stap 2 — Matugen parameters lezen uit quickshell/theme.json
+# Stap 2 — Theme valideren + matugen parameters bepalen
 # ---------------------------------------------------------------------------
 SCHEME="scheme-tonal-spot"
 COLOR_IDX=0
 MODE="dark"
 
 if [[ -f "$THEME_JSON" ]]; then
-    SCHEME=$(jq -r '.scheme_type // "scheme-tonal-spot"' "$THEME_JSON")
-    COLOR_IDX=$(jq -r '.color_index // 0' "$THEME_JSON")
-    MODE=$(jq -r '.mode // "dark"' "$THEME_JSON")
+    THEME_NAME=$(jq -r '.theme // "botanical"' "$THEME_JSON" 2>/dev/null || echo "botanical")
+    SCHEME=$(jq -r '.scheme_type // "scheme-tonal-spot"' "$THEME_JSON" 2>/dev/null || echo "scheme-tonal-spot")
+    COLOR_IDX=$(jq -r '.color_index // 0' "$THEME_JSON" 2>/dev/null || echo "0")
+    MODE=$(jq -r '.mode // "dark"' "$THEME_JSON" 2>/dev/null || echo "dark")
+
+    # Fallback: onbekend theme → botanical
+    if [[ ! -f "$THEMES_DIR/${THEME_NAME}.toml" ]]; then
+        _warn "Onbekend theme '${THEME_NAME}' — fallback naar botanical"
+        THEME_NAME="botanical"
+        SCHEME="scheme-vibrant"
+        COLOR_IDX=2
+        MODE="dark"
+    fi
 fi
 
-_log "Wallpaper: $(basename "$WALLPAPER")"
-_log "Scheme: $SCHEME | Mode: $MODE | Color index: $COLOR_IDX"
+# Fallback: onbekende mode → office
+SESSION_MODE=$(jq -r '.mode // "office"' "$SESSION_FILE" 2>/dev/null || echo "office")
+case "$SESSION_MODE" in
+    office|gaming|media) ;;
+    *)
+        _warn "Onbekende mode '${SESSION_MODE}' — fallback naar office"
+        SESSION_MODE="office"
+        ;;
+esac
+
+_log "Wallpaper: $(basename "${WALLPAPER:-leeg}")"
+_log "Theme: ${THEME_NAME:-?} | Scheme: $SCHEME | Matugen mode: $MODE | Color index: $COLOR_IDX"
+_log "Mode: $SESSION_MODE"
 
 # ---------------------------------------------------------------------------
 # Stap 3 — Matugen draaien (genereert alle templates)
 # ---------------------------------------------------------------------------
-MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
-MATUGEN_ARGS=("image" "$WALLPAPER"
-    "--type"               "$SCHEME"
-    "--mode"               "$MODE"
-    "--source-color-index" "$COLOR_IDX")
-[[ -f "$MATUGEN_CONF" ]] && MATUGEN_ARGS+=("--config" "$MATUGEN_CONF")
+COLORS_JSON="{}"
 
-matugen "${MATUGEN_ARGS[@]}" 2>/dev/null || _warn "matugen mislukt"
-_log "Matugen templates gegenereerd"
+if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
+    MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+    MATUGEN_ARGS=("image" "$WALLPAPER"
+        "--type"               "$SCHEME"
+        "--mode"               "$MODE"
+        "--source-color-index" "$COLOR_IDX")
+    [[ -f "$MATUGEN_CONF" ]] && MATUGEN_ARGS+=("--config" "$MATUGEN_CONF")
 
-if $VERBOSE; then
-    matugen "${MATUGEN_ARGS[@]}" --show-colors 2>/dev/null || true
+    matugen "${MATUGEN_ARGS[@]}" 2>/dev/null || _warn "matugen mislukt"
+    _log "Matugen templates gegenereerd"
+
+    if $VERBOSE; then
+        matugen "${MATUGEN_ARGS[@]}" --show-colors 2>/dev/null || true
+    fi
+
+    # JSON kleuren opvangen voor color-transform
+    COLORS_JSON=$(matugen "${MATUGEN_ARGS[@]}" --json hex 2>/dev/null || echo "{}")
+
+    # Sla laatste geldige palette op als fallback
+    mkdir -p "$CACHE_DIR"
+    echo "$COLORS_JSON" > "$CACHE_DIR/last-colors.json"
+else
+    # Fallback: gebruik het laatst gegenereerde palette
+    FALLBACK_COLORS="$CACHE_DIR/last-colors.json"
+    if [[ -f "$FALLBACK_COLORS" ]]; then
+        COLORS_JSON=$(cat "$FALLBACK_COLORS")
+        _warn "Geen wallpaper — gebruikt laatste geldige palette uit cache"
+    fi
 fi
 
 # ---------------------------------------------------------------------------
-# Stap 4 — Color transform (FASE 2, optioneel)
+# Stap 4 — Color transform (optioneel)
 # ---------------------------------------------------------------------------
 COLOR_TRANSFORM="${HOME}/.local/bin/kingstra-color-transform"
 if [[ -x "$COLOR_TRANSFORM" ]]; then
-    COLORS_JSON=$(matugen "${MATUGEN_ARGS[@]}" --json hex 2>/dev/null || echo "{}")
-    echo "$COLORS_JSON" | "$COLOR_TRANSFORM" || _warn "color-transform mislukt"
+    echo "$COLORS_JSON" | "$COLOR_TRANSFORM" || _warn "color-transform mislukt — originele kleuren behouden"
     _log "Color transform toegepast"
 fi
 
 # ---------------------------------------------------------------------------
-# Stap 5 — Apps herladen
+# Stap 5 — Mode profiel laden en mode.json uitbreiden
+# ---------------------------------------------------------------------------
+MODE_TOML="$MODES_DIR/${SESSION_MODE}.toml"
+MODE_JSON="$STATE_DIR/mode.json"
+
+if [[ -f "$MODE_TOML" ]] && command -v "${HOME}/.local/bin/kingstra-mode-read" &>/dev/null; then
+    MODE_DATA=$("${HOME}/.local/bin/kingstra-mode-read" --json "$MODE_TOML" 2>/dev/null || echo "{}")
+    MODULES=$(echo "$MODE_DATA" | jq -r '.modules.list // []' 2>/dev/null || echo "[]")
+    AUTOHIDE=$(echo "$MODE_DATA" | jq -r '.bar.autohide // false' 2>/dev/null || echo "false")
+
+    jq -n \
+        --arg name "$SESSION_MODE" \
+        --argjson modules "$MODULES" \
+        --argjson bar_autohide "$AUTOHIDE" \
+        '{"name":$name,"modules":$modules,"bar_autohide":$bar_autohide}' \
+        > "$MODE_JSON"
+    _log "mode.json bijgewerkt: $SESSION_MODE (autohide=$AUTOHIDE)"
+else
+    # Fallback: schrijf minimale mode.json
+    echo "{\"name\":\"$SESSION_MODE\",\"modules\":[],\"bar_autohide\":false}" > "$MODE_JSON"
+fi
+
+# ---------------------------------------------------------------------------
+# Stap 6 — Apps herladen
 # ---------------------------------------------------------------------------
 if command -v hyprctl &>/dev/null; then
     hyprctl reload 2>/dev/null || true

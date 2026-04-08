@@ -1,0 +1,55 @@
+[meta]
+name = "Space"
+description = "Kosmisch — diep, donker, zwevend"
+icon = "󰁛"
+preview_image = "space.jpg"
+
+[matugen]
+scheme_type = "scheme-expressive"
+color_index = 0
+contrast = 0.3
+mode = "dark"
+
+[appearance]
+border_radius = 14
+border_width = 1
+gaps_in = 12
+gaps_out = 24
+bar_opacity = 0.65
+popup_opacity = 0.75
+blur_size = 28
+blur_passes = 5
+animation_speed = 1.1
+
+[fonts]
+ui_font = "Space Grotesk"
+ui_font_size = 13
+mono_font = "JetBrainsMono Nerd Font"
+mono_font_size = 12
+display_font = "Space Grotesk"
+font_weight = "medium"
+letter_spacing = 0.8
+
+[icons]
+icon_theme = "Papirus-Dark"
+
+[quickshell]
+bar_height = 38
+bar_position = "top"
+
+[color_transform]
+hue_shift = 15
+saturation_adjust = 0.08
+lightness_adjust = -0.05
+thematic_mix = 0.25
+
+[material]
+texture = "star-specks"
+overlay_opacity = 0.05
+glow_intensity = 0.15
+
+[terminal]
+bg_opacity = 0.78
+blur = true
+padding = 12
+cursor_style = "beam"
