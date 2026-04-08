@@ -1201,10 +1201,26 @@ Item {
                                     id: fontsInfo
                                     anchors.fill: parent; anchors.margins: root.s(12); spacing: root.s(8)
                                     Text { text: "Fonts"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-                                    RowLayout { Layout.fillWidth: true; Text { text: "UI font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }; Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "ui_font", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text } }
-                                    RowLayout { Layout.fillWidth: true; Text { text: "UI size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }; Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "ui_font_size", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text } }
-                                    RowLayout { Layout.fillWidth: true; Text { text: "Mono font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }; Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "mono_font", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text } }
-                                    RowLayout { Layout.fillWidth: true; Text { text: "Mono size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }; Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "mono_font_size", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text } }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "UI font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
+                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "ui_font", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "UI size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
+                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "ui_font_size", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Mono font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
+                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "mono_font", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Mono size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
+                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "mono_font_size", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                    }
                                 }
                             }
 
@@ -1241,9 +1257,21 @@ Item {
                                     id: matugenInfo
                                     anchors.fill: parent; anchors.margins: root.s(12); spacing: root.s(8)
                                     Text { text: "Matugen scene"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-                                    RowLayout { Layout.fillWidth: true; Text { text: "Scene"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }; Text { text: root.formatSchemeLabel(root.themeValue(themeCarousel.selectedThemeData, "matugen", "scheme_type", "scheme-tonal-spot")); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text } }
-                                    RowLayout { Layout.fillWidth: true; Text { text: "Color index"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }; Text { text: root.themeValue(themeCarousel.selectedThemeData, "matugen", "color_index", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text } }
-                                    RowLayout { Layout.fillWidth: true; Text { text: "Contrast"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }; Text { text: root.themeValue(themeCarousel.selectedThemeData, "matugen", "contrast", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text } }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Scene"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
+                                        Text { text: root.formatSchemeLabel(root.themeValue(themeCarousel.selectedThemeData, "matugen", "scheme_type", "scheme-tonal-spot")); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Color index"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
+                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "matugen", "color_index", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Contrast"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
+                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "matugen", "contrast", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                    }
                                 }
                             }
 
@@ -1259,8 +1287,16 @@ Item {
                                     id: shellInfo
                                     anchors.fill: parent; anchors.margins: root.s(12); spacing: root.s(8)
                                     Text { text: "Shell"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-                                    RowLayout { Layout.fillWidth: true; Text { text: "Bar height"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }; Text { text: root.themeValue(themeCarousel.selectedThemeData, "quickshell", "bar_height", "—") + "px"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text } }
-                                    RowLayout { Layout.fillWidth: true; Text { text: "Bar position"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }; Text { text: root.themeValue(themeCarousel.selectedThemeData, "quickshell", "bar_position", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text } }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Bar height"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
+                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "quickshell", "bar_height", "—") + "px"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Bar position"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
+                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "quickshell", "bar_position", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                    }
                                 }
                             }
                         }
