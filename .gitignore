@@ -13,6 +13,9 @@ __pycache__/
 # Matugen-gegenereerde kleurbestanden (output van templates)
 config/hypr/colors.conf
 config/kitty/colors.conf
+config/kitty/kitty-runtime.conf
+config/kitty/skwd-theme.generated.conf
+config/kitty/kitty-matugen-colors.conf
 config/quickshell/colors.json
 config/swaync/colors.css
 config/walker/colors.css

@@ -119,7 +119,7 @@ _phase09_write_skwd_wall_config() {
     "matugen": { "schemeType": "scheme-fidelity" },
     "integrations": [
         { "name": "skwd-wall", "template": "quickshell-colors.json", "output": "~/.config/quickshell/colors.json" },
-        { "name": "kitty", "template": "kitty.conf", "output": "~/.config/kitty/skwd-theme.conf", "reload": "pkill -USR1 kitty" },
+        { "name": "kitty", "template": "kitty.conf", "output": "~/.config/kitty/skwd-theme.generated.conf", "reload": "pkill -USR1 kitty" },
         { "name": "vscode", "template": "vscode-theme.json", "output": "~/.vscode/extensions/matugen.matugen-theme-1.0.0/themes/matugen-color-theme.json" },
         { "name": "vesktop", "template": "vesktop.css", "output": "~/.config/vesktop/themes/kitty-match.css" },
         { "name": "spicetify", "template": "spicetify.ini", "output": "~/.config/spicetify/Themes/Matugen/color.ini", "reload": "~/.config/skwd-wall/scripts/reload-spicetify.sh" },

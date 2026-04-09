@@ -26,6 +26,9 @@ phase_run() {
     log_step "Configs deployen..."
     _phase02_deploy_configs
 
+    log_step "Kitty runtime-bestanden initialiseren..."
+    _phase02_init_kitty_runtime_files
+
     log_step "Fase 02 valideren..."
     _phase02_validate
 
@@ -98,6 +101,34 @@ _phase02_deploy_configs() {
     deploy_config "kitty"
     deploy_config "fastfetch"
     deploy_config "cava"
+}
+
+_phase02_init_kitty_runtime_files() {
+    local kitty_dir="$HOME/.config/kitty"
+    local runtime_conf="$kitty_dir/kitty-runtime.conf"
+    local skwd_theme_conf="$kitty_dir/skwd-theme.generated.conf"
+    local legacy_conf="$kitty_dir/kitty-matugen-colors.conf"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Kitty runtime placeholders initialiseren in $kitty_dir"
+        return 0
+    fi
+
+    ensure_dir "$kitty_dir"
+
+    [[ -f "$runtime_conf" ]] || cat > "$runtime_conf" <<'EOF'
+# Runtime overrides for kitty (auto-generated).
+EOF
+
+    [[ -f "$skwd_theme_conf" ]] || cat > "$skwd_theme_conf" <<'EOF'
+# skwd-wall generated theme include for kitty.
+EOF
+
+    [[ -f "$legacy_conf" ]] || cat > "$legacy_conf" <<'EOF'
+# Legacy matugen colors include for kitty compatibility.
+EOF
+
+    log_ok "Kitty runtime placeholders klaar"
 }
 
 _phase02_validate() {

@@ -44,6 +44,7 @@ phase_run() {
 
     log_step "Yazi-config deployen..."
     deploy_config "yazi"
+    _phase11_init_yazi_theme_file
 
     log_step "Optionele apps installeren..."
     _phase11_optional_apps
@@ -97,6 +98,25 @@ _phase11_optional_apps() {
         log_info "VSCode niet geïnstalleerd. Installeren via: aur_install visual-studio-code-bin"
         log_info "Of via pacman: pacman -S code (open-source build)"
     fi
+}
+
+_phase11_init_yazi_theme_file() {
+    local yazi_theme="$HOME/.config/yazi/theme.toml"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Yazi theme placeholder zou worden aangemaakt: $yazi_theme"
+        return 0
+    fi
+
+    if [[ -f "$yazi_theme" || -L "$yazi_theme" ]]; then
+        return 0
+    fi
+
+    cat > "$yazi_theme" <<'EOF'
+# Runtime placeholder for Yazi theme.
+# This file is generated/updated by Matugen integration.
+EOF
+    log_ok "Yazi theme placeholder aangemaakt: $yazi_theme"
 }
 
 _phase11_setup_spicetify() {
