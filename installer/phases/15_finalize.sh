@@ -69,6 +69,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/hypr/hyprland.conf"                   "hyprland.conf"
     validate_file "$HOME/.config/hypr/colors.conf"                     "hypr/colors.conf"
     validate_file "$HOME/.config/hypr/conf.d/72-hardware.conf"         "72-hardware.conf"
+    validate_file "$HOME/.config/hypr/scripts/lock.sh"                 "hypr/scripts/lock.sh"
     # Shell
     validate_file "$HOME/.config/kitty/kitty.conf"                     "kitty.conf"
     validate_file "$HOME/.config/zsh/kingstra.omp.toml"                "kingstra.omp.toml"
@@ -79,6 +80,7 @@ _phase15_validate_configs() {
     # Matugen
     validate_file "$HOME/.config/matugen/config.toml"                  "matugen/config.toml"
     validate_file "$HOME/.local/bin/kingstra-theme-apply"              "kingstra-theme-apply"
+    validate_file "$HOME/.local/bin/kingstra-matugen-run"              "kingstra-matugen-run"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"                "kingstra-wallpaper"
     # Session
     validate_file "$HOME/.config/hypridle/hypridle.conf"               "hypridle.conf"
@@ -107,6 +109,8 @@ _phase15_validate_links() {
     validate_link "$HOME/.config/hypridle"   "$cfg/hypridle"   "~/.config/hypridle"
     validate_link "$HOME/.local/bin/kingstra-theme-apply" \
                   "$cfg/shared/scripts/matugen-apply.sh"  "kingstra-theme-apply"
+    validate_link "$HOME/.local/bin/kingstra-matugen-run" \
+                  "$cfg/shared/scripts/kingstra-matugen-run"  "kingstra-matugen-run"
     validate_link "$HOME/.local/bin/kingstra-wallpaper" \
                   "$REPO_ROOT/config/wallpaper/kingstra-wallpaper" "kingstra-wallpaper"
 }

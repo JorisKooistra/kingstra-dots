@@ -83,6 +83,8 @@ Item {
     ListModel { id: keybindsModel }
     property int editingIndex: -1
     property string keybindFilter: ""
+    property string keybindWriteError: ""
+    property string keybindWriteSuccessMessage: ""
 
     // Catalog van bekende acties zonder vaste keybinding — worden als "Niet ingesteld" getoond
     readonly property var keybindCatalog: [
@@ -119,6 +121,27 @@ Item {
                     root.mergeKeybinds([]);
                 }
             }
+        }
+    }
+
+    Process {
+        id: keybindWriteProc
+        command: ["bash", "-lc", "true"]
+        stderr: StdioCollector {
+            onStreamFinished: {
+                root.keybindWriteError = this.text.trim();
+            }
+        }
+        onExited: {
+            if (root.keybindWriteError !== "") {
+                root.notify("Keybinds", "Opslaan mislukt: " + root.keybindWriteError);
+            } else if (root.keybindWriteSuccessMessage !== "") {
+                root.notify("Keybinds", root.keybindWriteSuccessMessage);
+            }
+            root.keybindWriteError = "";
+            root.keybindWriteSuccessMessage = "";
+            root.editingIndex = -1;
+            loadKeybindsProc.running = true;
         }
     }
 
@@ -300,30 +323,44 @@ Item {
 
     function saveKeybind(index, newMods, newKey) {
         var item = keybindsModel.get(index);
-        var line = (item.t || "bind") + " = " + newMods + ", " + newKey + ", " + item.d;
+        var cleanedMods = String(newMods || "").trim().replace(/\s+/g, " ");
+        var cleanedKey = String(newKey || "").trim().replace(/\s+/g, " ");
+        if (cleanedKey === "") {
+            notify("Keybinds", "Key mag niet leeg zijn");
+            return;
+        }
+        if (cleanedMods.indexOf(",") >= 0 || cleanedKey.indexOf(",") >= 0) {
+            notify("Keybinds", "Mods/Key mogen geen komma bevatten");
+            return;
+        }
+
+        var line = (item.t || "bind") + " = " + cleanedMods + ", " + cleanedKey + ", " + item.d;
         if (item.args) line += ", " + item.args;
         if (item.label) line += "   # " + item.label;
         var script = Quickshell.env("HOME") + "/.config/quickshell/settings/write_keybind.sh";
-        if (item.bound) {
-            Quickshell.execDetached(["bash", script, "--update", item.file, item.ln.toString(), line]);
+        root.keybindWriteError = "";
+        if (item.bound && Number(item.ln) > 0) {
+            keybindWriteProc.command = ["bash", script, "--update", item.file, item.ln.toString(), line];
+            root.keybindWriteSuccessMessage = "Keybinding bijgewerkt";
         } else {
-            Quickshell.execDetached(["bash", script, "--add", item.file, line]);
-            keybindsModel.setProperty(index, "bound", true);
+            keybindWriteProc.command = ["bash", script, "--add", item.file, line];
+            root.keybindWriteSuccessMessage = "Keybinding toegevoegd";
         }
-        keybindsModel.setProperty(index, "mods", newMods);
-        keybindsModel.setProperty(index, "key", newKey);
-        editingIndex = -1;
+        keybindWriteProc.running = true;
     }
 
     function removeKeybind(index) {
         var item = keybindsModel.get(index);
         if (!item.bound) return;
+        if (Number(item.ln) <= 0) {
+            notify("Keybinds", "Kan deze binding niet verwijderen (ongeldige regel)");
+            return;
+        }
         var script = Quickshell.env("HOME") + "/.config/quickshell/settings/write_keybind.sh";
-        Quickshell.execDetached(["bash", script, "--remove", item.file, item.ln.toString()]);
-        keybindsModel.setProperty(index, "bound", false);
-        keybindsModel.setProperty(index, "mods", "");
-        keybindsModel.setProperty(index, "key", "");
-        editingIndex = -1;
+        root.keybindWriteError = "";
+        root.keybindWriteSuccessMessage = "Keybinding verwijderd";
+        keybindWriteProc.command = ["bash", script, "--remove", item.file, item.ln.toString()];
+        keybindWriteProc.running = true;
     }
 
     function notify(title, msg) {
@@ -660,7 +697,7 @@ Item {
                         Behavior on border.color { ColorAnimation { duration: 150 } }
                         RowLayout {
                             anchors.fill: parent; anchors.margins: root.s(8); spacing: root.s(8)
-                            Text { text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(16); color: root.subtext0 }
+                            Text { text: "󰍉"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(16); color: root.subtext0 }
                             TextInput {
                                 id: filterInput; Layout.fillWidth: true; Layout.fillHeight: true
                                 verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text
@@ -752,13 +789,44 @@ Item {
                                                 elide: Text.ElideRight; clip: true
                                             }
 
-                                            // Edit icon
-                                            Rectangle {
-                                                Layout.preferredWidth: root.s(28); Layout.preferredHeight: root.s(28); radius: root.s(6)
-                                                color: editBtnMa.containsMouse ? root.surface1 : "transparent"
+                                            RowLayout {
                                                 visible: !bindRow.isEditing
-                                                Text { anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: editBtnMa.containsMouse ? root.blue : root.subtext0 }
-                                                MouseArea { id: editBtnMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { bindRow.editMods = model.mods; bindRow.editKey = model.key; root.editingIndex = index; } }
+                                                spacing: root.s(6)
+
+                                                Rectangle {
+                                                    Layout.preferredWidth: root.s(70); Layout.preferredHeight: root.s(28); radius: root.s(6)
+                                                    color: editBtnMa.containsMouse ? Qt.alpha(root.blue, 0.20) : "transparent"
+                                                    border.color: editBtnMa.containsMouse ? root.blue : root.surface1
+                                                    border.width: 1
+                                                    Text { anchors.centerIn: parent; text: "Bewerk"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: editBtnMa.containsMouse ? root.blue : root.subtext0 }
+                                                    MouseArea {
+                                                        id: editBtnMa
+                                                        anchors.fill: parent
+                                                        hoverEnabled: true
+                                                        cursorShape: Qt.PointingHandCursor
+                                                        onClicked: {
+                                                            bindRow.editMods = model.mods;
+                                                            bindRow.editKey = model.key;
+                                                            root.editingIndex = index;
+                                                        }
+                                                    }
+                                                }
+
+                                                Rectangle {
+                                                    Layout.preferredWidth: root.s(82); Layout.preferredHeight: root.s(28); radius: root.s(6)
+                                                    visible: model.bound
+                                                    color: deleteBtnMa.containsMouse ? Qt.alpha(root.red, 0.15) : "transparent"
+                                                    border.color: deleteBtnMa.containsMouse ? root.red : root.surface1
+                                                    border.width: 1
+                                                    Text { anchors.centerIn: parent; text: "Verwijder"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: deleteBtnMa.containsMouse ? root.red : root.subtext0 }
+                                                    MouseArea {
+                                                        id: deleteBtnMa
+                                                        anchors.fill: parent
+                                                        hoverEnabled: true
+                                                        cursorShape: Qt.PointingHandCursor
+                                                        onClicked: root.removeKeybind(index)
+                                                    }
+                                                }
                                             }
                                         }
 

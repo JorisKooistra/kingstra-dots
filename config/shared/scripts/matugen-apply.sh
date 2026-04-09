@@ -9,6 +9,7 @@ set -euo pipefail
 
 WALLPAPER="${1:-}"
 STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
+MATUGEN_RUNNER="${HOME}/.local/bin/kingstra-matugen-run"
 LOG_PREFIX="[kingstra-theme]"
 
 # ---------------------------------------------------------------------------
@@ -49,21 +50,22 @@ fi
 # Stap 1 — Matugen uitvoeren (genereert alle template-outputs)
 # ---------------------------------------------------------------------------
 _log "Matugen uitvoeren op: $WALLPAPER"
-MATUGEN_CONF_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
-
-# Lees alle matugen-parameters uit config.toml (worden gezet door kingstra-theme-switch)
-_cfg_val() { grep -m1 "^${1}\s*=" "$MATUGEN_CONF_FILE" 2>/dev/null | sed 's/[^=]*=\s*"\?\([^"]*\)"\?.*/\1/' || echo "${2}"; }
-_SCHEME=$(_cfg_val scheme_type "scheme-tonal-spot")
-_COLOR_IDX=$(_cfg_val color_index "0")
-_MODE=$(_cfg_val mode "dark")
-
-_log "Matugen params: scheme=${_SCHEME}, color_index=${_COLOR_IDX}, mode=${_MODE}"
-matugen image "$WALLPAPER" \
-    --config "$MATUGEN_CONF_FILE" \
-    --type "${_SCHEME}" \
-    --source-color-index "${_COLOR_IDX}" \
-    --mode "${_MODE}" \
-    2>/dev/null || true
+if [[ -x "$MATUGEN_RUNNER" ]]; then
+    "$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" 2>/dev/null || true
+else
+    _warn "kingstra-matugen-run niet gevonden — fallback naar directe matugen call"
+    MATUGEN_CONF_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+    _cfg_val() { grep -m1 "^${1}\s*=" "$MATUGEN_CONF_FILE" 2>/dev/null | sed 's/[^=]*=\s*"\?\([^"]*\)"\?.*/\1/' || echo "${2}"; }
+    _SCHEME=$(_cfg_val scheme_type "scheme-tonal-spot")
+    _COLOR_IDX=$(_cfg_val color_index "0")
+    _MODE=$(_cfg_val mode "dark")
+    matugen image "$WALLPAPER" \
+        --config "$MATUGEN_CONF_FILE" \
+        --type "${_SCHEME}" \
+        --source-color-index "${_COLOR_IDX}" \
+        --mode "${_MODE}" \
+        2>/dev/null || true
+fi
 
 _log "Templates gegenereerd"
 

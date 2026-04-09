@@ -16,6 +16,7 @@ CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
 MODES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/modes"
 THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes"
+MATUGEN_RUNNER="${HOME}/.local/bin/kingstra-matugen-run"
 LOG_PREFIX="[apply-shell-state]"
 VERBOSE=false
 
@@ -99,22 +100,36 @@ _log "Mode: $SESSION_MODE"
 COLORS_JSON="{}"
 
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
-    MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
-    MATUGEN_ARGS=("image" "$WALLPAPER"
-        "--type"               "$SCHEME"
-        "--mode"               "$MODE"
-        "--source-color-index" "$COLOR_IDX")
-    [[ -f "$MATUGEN_CONF" ]] && MATUGEN_ARGS+=("--config" "$MATUGEN_CONF")
+    if [[ -x "$MATUGEN_RUNNER" ]]; then
+        "$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" 2>/dev/null || _warn "matugen runner mislukt"
+        _log "Matugen templates gegenereerd"
 
-    matugen "${MATUGEN_ARGS[@]}" 2>/dev/null || _warn "matugen mislukt"
-    _log "Matugen templates gegenereerd"
+        if $VERBOSE; then
+            "$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" --show-colors 2>/dev/null || true
+        fi
 
-    if $VERBOSE; then
-        matugen "${MATUGEN_ARGS[@]}" --show-colors 2>/dev/null || true
+        # JSON kleuren opvangen voor color-transform
+        COLORS_JSON=$("$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" --json hex 2>/dev/null || echo "{}")
+    else
+        _warn "kingstra-matugen-run niet gevonden — fallback naar directe matugen call"
+
+        MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+        MATUGEN_ARGS=("image" "$WALLPAPER"
+            "--type"               "$SCHEME"
+            "--mode"               "$MODE"
+            "--source-color-index" "$COLOR_IDX")
+        [[ -f "$MATUGEN_CONF" ]] && MATUGEN_ARGS+=("--config" "$MATUGEN_CONF")
+
+        matugen "${MATUGEN_ARGS[@]}" 2>/dev/null || _warn "matugen mislukt"
+        _log "Matugen templates gegenereerd"
+
+        if $VERBOSE; then
+            matugen "${MATUGEN_ARGS[@]}" --show-colors 2>/dev/null || true
+        fi
+
+        # JSON kleuren opvangen voor color-transform
+        COLORS_JSON=$(matugen "${MATUGEN_ARGS[@]}" --json hex 2>/dev/null || echo "{}")
     fi
-
-    # JSON kleuren opvangen voor color-transform
-    COLORS_JSON=$(matugen "${MATUGEN_ARGS[@]}" --json hex 2>/dev/null || echo "{}")
 
     # Sla laatste geldige palette op als fallback
     mkdir -p "$CACHE_DIR"

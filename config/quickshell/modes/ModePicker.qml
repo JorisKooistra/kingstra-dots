@@ -11,15 +11,16 @@ Item {
     clip: true
     focus: true
 
-    Scaler { id: scaler; currentWidth: window.width > 0 ? window.width : Screen.width }
+    Scaler { id: scaler; currentWidth: Screen.width }
     function s(val) { return scaler.s(val); }
+    function sf(val, minimumPx) { return Math.max(minimumPx, scaler.s(val)); }
 
     MatugenColors { id: _theme }
 
     property var modeModel: [
-        { id: "office", icon: "ó°’±", label: "Office", desc: "Werk & productiviteit" },
-        { id: "gaming", icon: "ó°Š—", label: "Gaming", desc: "Prestaties & hardware" },
-        { id: "media", icon: "ó°“ƒ", label: "Media", desc: "Muziek & video" }
+        { id: "office", icon: "\uf0b1", label: "Office", desc: "Werk & productiviteit" },
+        { id: "gaming", icon: "\uf11b", label: "Gaming", desc: "Prestaties & hardware" },
+        { id: "media", icon: "\uf001", label: "Media", desc: "Muziek & video" }
     ]
     property string activeMode: "office"
     property int selectedIndex: 0
@@ -33,7 +34,7 @@ Item {
         const fittedWidth = (contentMaxWidth - totalSpacing) / modeModel.length;
         return Math.max(s(132), Math.min(s(200), fittedWidth));
     }
-    property real cardHeight: Math.max(s(150), Math.min(s(200), height - s(180)))
+    property real cardHeight: Math.max(s(180), Math.min(s(250), height - s(170)))
 
     function indexForMode(modeId) {
         for (let i = 0; i < modeModel.length; ++i) {
@@ -90,8 +91,8 @@ Item {
         Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
         anchors.horizontalCenter: parent.horizontalCenter
         z: 20
-        height: window.s(48)
-        width: titleRow.width + window.s(32)
+        height: window.sf(58, 58)
+        width: titleRow.width + window.sf(40, 40)
         radius: window.s(14)
         color: Qt.rgba(_theme.mantle.r, _theme.mantle.g, _theme.mantle.b, 0.90)
         border.color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.8)
@@ -103,15 +104,15 @@ Item {
             spacing: window.s(10)
 
             Text {
-                text: "ó°’“"
-                font.pixelSize: window.s(18)
-                font.family: "JetBrainsMono Nerd Font"
+                text: "\uf085"
+                font.pixelSize: window.sf(20, 20)
+                font.family: "Iosevka Nerd Font"
                 color: _theme.blue
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
                 text: "Mode kiezen"
-                font.pixelSize: window.s(14)
+                font.pixelSize: window.sf(18, 18)
                 font.bold: true
                 color: _theme.text
                 anchors.verticalCenter: parent.verticalCenter
@@ -165,8 +166,8 @@ Item {
 
                     Text {
                         text: modelData.icon
-                        font.pixelSize: window.s(42)
-                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: window.sf(46, 42)
+                        font.family: "Iosevka Nerd Font"
                         color: (isActive || isSelected) ? _theme.blue : _theme.subtext1
                         anchors.horizontalCenter: parent.horizontalCenter
                         Behavior on color { ColorAnimation { duration: 200 } }
@@ -174,7 +175,7 @@ Item {
 
                     Text {
                         text: modelData.label
-                        font.pixelSize: window.s(16)
+                        font.pixelSize: window.sf(18, 18)
                         font.bold: true
                         color: (isActive || isSelected) ? _theme.text : _theme.subtext0
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -186,7 +187,7 @@ Item {
                         width: parent.width
                         wrapMode: Text.WordWrap
                         horizontalAlignment: Text.AlignHCenter
-                        font.pixelSize: window.s(10)
+                        font.pixelSize: window.sf(13, 13)
                         color: Qt.rgba(_theme.subtext0.r, _theme.subtext0.g, _theme.subtext0.b, 0.7)
                     }
                 }
@@ -215,9 +216,9 @@ Item {
         Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
         anchors.horizontalCenter: parent.horizontalCenter
         z: 20
-        height: window.s(40)
-        width: hintRow.width + window.s(28)
-        radius: window.s(10)
+        height: window.sf(52, 52)
+        width: hintRow.width + window.sf(36, 36)
+        radius: window.sf(12, 12)
         color: Qt.rgba(_theme.mantle.r, _theme.mantle.g, _theme.mantle.b, 0.85)
         border.color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.6)
         border.width: 1
@@ -228,46 +229,46 @@ Item {
             spacing: window.s(16)
 
             Row {
-                spacing: window.s(4)
+                spacing: window.sf(6, 6)
                 Rectangle {
-                    width: window.s(20); height: window.s(20); radius: window.s(4)
+                    width: window.sf(26, 26); height: window.sf(26, 26); radius: window.sf(6, 6)
                     color: Qt.rgba(_theme.surface1.r, _theme.surface1.g, _theme.surface1.b, 0.8)
                     anchors.verticalCenter: parent.verticalCenter
-                    Text { anchors.centerIn: parent; text: "←"; font.pixelSize: window.s(10); color: _theme.text; font.bold: true }
+                    Text { anchors.centerIn: parent; text: "←"; font.pixelSize: window.sf(13, 13); color: _theme.text; font.bold: true }
                 }
                 Rectangle {
-                    width: window.s(20); height: window.s(20); radius: window.s(4)
+                    width: window.sf(26, 26); height: window.sf(26, 26); radius: window.sf(6, 6)
                     color: Qt.rgba(_theme.surface1.r, _theme.surface1.g, _theme.surface1.b, 0.8)
                     anchors.verticalCenter: parent.verticalCenter
-                    Text { anchors.centerIn: parent; text: "→"; font.pixelSize: window.s(10); color: _theme.text; font.bold: true }
+                    Text { anchors.centerIn: parent; text: "→"; font.pixelSize: window.sf(13, 13); color: _theme.text; font.bold: true }
                 }
-                Text { text: "Bladeren"; font.pixelSize: window.s(11); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "Bladeren"; font.pixelSize: window.sf(13, 13); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
             }
 
-            Rectangle { width: 1; height: window.s(20); color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.5); anchors.verticalCenter: parent.verticalCenter }
+            Rectangle { width: 1; height: window.sf(24, 24); color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.5); anchors.verticalCenter: parent.verticalCenter }
 
             Row {
-                spacing: window.s(4)
+                spacing: window.sf(6, 6)
                 Rectangle {
-                    width: window.s(44); height: window.s(20); radius: window.s(4)
+                    width: window.sf(54, 54); height: window.sf(26, 26); radius: window.sf(6, 6)
                     color: Qt.rgba(_theme.surface1.r, _theme.surface1.g, _theme.surface1.b, 0.8)
                     anchors.verticalCenter: parent.verticalCenter
-                    Text { anchors.centerIn: parent; text: "Enter"; font.pixelSize: window.s(10); color: _theme.text; font.bold: true }
+                    Text { anchors.centerIn: parent; text: "Enter"; font.pixelSize: window.sf(12, 12); color: _theme.text; font.bold: true }
                 }
-                Text { text: "Toepassen"; font.pixelSize: window.s(11); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "Toepassen"; font.pixelSize: window.sf(13, 13); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
             }
 
-            Rectangle { width: 1; height: window.s(20); color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.5); anchors.verticalCenter: parent.verticalCenter }
+            Rectangle { width: 1; height: window.sf(24, 24); color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.5); anchors.verticalCenter: parent.verticalCenter }
 
             Row {
-                spacing: window.s(4)
+                spacing: window.sf(6, 6)
                 Rectangle {
-                    width: window.s(32); height: window.s(20); radius: window.s(4)
+                    width: window.sf(42, 42); height: window.sf(26, 26); radius: window.sf(6, 6)
                     color: Qt.rgba(_theme.surface1.r, _theme.surface1.g, _theme.surface1.b, 0.8)
                     anchors.verticalCenter: parent.verticalCenter
-                    Text { anchors.centerIn: parent; text: "Esc"; font.pixelSize: window.s(10); color: _theme.text; font.bold: true }
+                    Text { anchors.centerIn: parent; text: "Esc"; font.pixelSize: window.sf(12, 12); color: _theme.text; font.bold: true }
                 }
-                Text { text: "Sluiten"; font.pixelSize: window.s(11); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "Sluiten"; font.pixelSize: window.sf(13, 13); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
             }
         }
     }
@@ -283,9 +284,9 @@ Item {
             spacing: window.s(12)
 
             Text {
-                text: "ó°‘“"
-                font.pixelSize: window.s(32)
-                font.family: "JetBrainsMono Nerd Font"
+                text: "\uf110"
+                font.pixelSize: window.sf(34, 30)
+                font.family: "Iosevka Nerd Font"
                 color: _theme.blue
                 anchors.horizontalCenter: parent.horizontalCenter
 
@@ -298,7 +299,7 @@ Item {
 
             Text {
                 text: "Mode wordt toegepast…"
-                font.pixelSize: window.s(14)
+                font.pixelSize: window.sf(16, 16)
                 color: _theme.text
                 anchors.horizontalCenter: parent.horizontalCenter
             }

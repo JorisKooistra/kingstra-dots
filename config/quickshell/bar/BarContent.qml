@@ -628,6 +628,74 @@ Item {
                                 MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true }
                             }
 
+                            // Package updates (Office mode)
+                            Rectangle {
+                                id: updatesPill
+                                visible: shell.moduleList.includes("updates")
+                                property bool isHovered: updatesMouse.containsMouse
+                                property int updates: Math.max(0, parseInt(shell.updateCount) || 0)
+                                radius: surface.innerPillRadius
+                                height: sysLayout.pillHeight
+                                clip: true
+                                color: isHovered ? surface.innerPillHoverColor : surface.innerPillColor
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: surface.innerPillRadius
+                                    opacity: updatesPill.updates > 0 ? 1.0 : 0.0
+                                    Behavior on opacity { NumberAnimation { duration: 300 } }
+                                    gradient: Gradient {
+                                        orientation: Gradient.Horizontal
+                                        GradientStop { position: 0.0; color: mocha.yellow }
+                                        GradientStop { position: 1.0; color: Qt.lighter(mocha.peach, 1.2) }
+                                    }
+                                }
+
+                                property real targetWidth: updatesLayoutRow.width + shell.s(24)
+                                width: targetWidth
+                                Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+
+                                scale: isHovered ? 1.05 : 1.0
+                                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                                Behavior on color { ColorAnimation { duration: 200 } }
+
+                                property bool initAnimTrigger: false
+                                Timer { running: rightLayout.showLayout && !updatesPill.initAnimTrigger; interval: 25; onTriggered: updatesPill.initAnimTrigger = true }
+                                opacity: initAnimTrigger ? 1 : 0
+                                transform: Translate { y: updatesPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
+                                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+                                Row {
+                                    id: updatesLayoutRow
+                                    anchors.centerIn: parent
+                                    spacing: shell.s(8)
+
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "󰚰"
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: shell.s(16)
+                                        color: updatesPill.updates > 0 ? mocha.base : mocha.subtext0
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: updatesPill.updates.toString()
+                                        font.family: shell.monoFontFamily
+                                        font.pixelSize: shell.s(13)
+                                        font.weight: shell.themeFontWeight
+                                        font.letterSpacing: shell.themeLetterSpacing
+                                        color: updatesPill.updates > 0 ? mocha.base : mocha.text
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: updatesMouse
+                                    hoverEnabled: true
+                                    anchors.fill: parent
+                                    onClicked: shell.refreshUpdates()
+                                }
+                            }
+
                             // WiFi
                             Rectangle {
                                 id: wifiPill
@@ -779,7 +847,20 @@ Item {
                                         color: shell.isSoundActive ? mocha.base : mocha.text; 
                                     }
                                 }
-                                MouseArea { id: volMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"]) }
+                                MouseArea {
+                                    id: volMouse
+                                    hoverEnabled: true
+                                    anchors.fill: parent
+                                    onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"])
+                                    onWheel: (wheel) => {
+                                        if (wheel.angleDelta.y > 0) {
+                                            Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-up"]);
+                                        } else if (wheel.angleDelta.y < 0) {
+                                            Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-down"]);
+                                        }
+                                        wheel.accepted = true;
+                                    }
+                                }
                             }
 
                             // Battery

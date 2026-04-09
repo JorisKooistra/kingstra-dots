@@ -8,4 +8,4 @@ visible = "autohide"
 autohide = true
 
 [modules]
-list = ["volume", "brightness", "media_controls", "clock"]
+list = ["volume", "brightness", "media_controls", "battery", "clock"]

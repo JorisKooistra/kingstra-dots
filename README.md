@@ -94,6 +94,8 @@ An AUR helper is no longer a manual prerequisite for the bootstrap flow: when mi
 Every time the wallpaper, theme, or mode changes, `apply-shell-state` runs automatically:
 it calls Matugen to generate a Material You palette from the current wallpaper, applies
 an optional per-theme color transform, then reloads Quickshell, Hyprland, kitty, and SwayNC.
+The actual Matugen call is centralized in `kingstra-matugen-run`, which always reads
+the active `scheme_type`, `mode`, and `color_index` before running.
 
 ### Wallpaper
 

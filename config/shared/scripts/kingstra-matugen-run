@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-matugen-run — Run matugen with active Kingstra theme settings
+# =============================================================================
+# Gebruik:
+#   kingstra-matugen-run --wallpaper <bestand> [extra matugen args]
+#   kingstra-matugen-run [extra matugen args]   # gebruikt wallpaper uit state
+# Voorbeelden:
+#   kingstra-matugen-run --wallpaper ~/Pictures/wall.png
+#   kingstra-matugen-run --wallpaper ~/Pictures/wall.png --json hex
+# =============================================================================
+set -euo pipefail
+
+THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
+MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+SESSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
+CACHE_WALLPAPER="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
+
+DEFAULT_SCHEME="scheme-tonal-spot"
+DEFAULT_MODE="dark"
+DEFAULT_COLOR_INDEX="0"
+
+WALLPAPER=""
+EXTRA_ARGS=()
+
+_warn() { echo "[kingstra-matugen-run] WARN: $*" >&2; }
+_die()  { echo "[kingstra-matugen-run] FOUT: $*" >&2; exit 1; }
+
+_usage() {
+    cat <<'EOF'
+Gebruik:
+  kingstra-matugen-run --wallpaper <bestand> [extra matugen args]
+  kingstra-matugen-run [extra matugen args]
+EOF
+}
+
+_cfg_val() {
+    local key="$1"
+    local fallback="$2"
+    grep -m1 "^${key}\s*=" "$MATUGEN_CONF" 2>/dev/null \
+        | sed 's/[^=]*=\s*"\?\([^"]*\)"\?.*/\1/' \
+        || echo "$fallback"
+}
+
+_json_val() {
+    local key="$1"
+    local value=""
+    if [[ -f "$THEME_JSON" ]] && command -v jq &>/dev/null; then
+        value="$(jq -r --arg k "$key" '.[$k] // empty' "$THEME_JSON" 2>/dev/null || echo "")"
+    fi
+    echo "$value"
+}
+
+_pick_setting() {
+    local json_key="$1"
+    local cfg_key="$2"
+    local fallback="$3"
+    local value=""
+
+    value="$(_json_val "$json_key")"
+    if [[ -n "$value" && "$value" != "null" ]]; then
+        echo "$value"
+        return 0
+    fi
+
+    if [[ -f "$MATUGEN_CONF" ]]; then
+        value="$(_cfg_val "$cfg_key" "$fallback")"
+        if [[ -n "$value" ]]; then
+            echo "$value"
+            return 0
+        fi
+    fi
+
+    echo "$fallback"
+}
+
+_valid_mode() {
+    case "${1:-}" in
+        dark|light) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+_resolve_wallpaper() {
+    local candidate="$WALLPAPER"
+
+    if [[ -z "$candidate" && -f "$SESSION_FILE" ]] && command -v jq &>/dev/null; then
+        candidate="$(jq -r '.wallpaper // ""' "$SESSION_FILE" 2>/dev/null || echo "")"
+    fi
+
+    if [[ -z "$candidate" && -f "$CACHE_WALLPAPER" ]]; then
+        candidate="$(cat "$CACHE_WALLPAPER" 2>/dev/null || echo "")"
+    fi
+
+    echo "$candidate"
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --wallpaper|-w)
+            shift
+            [[ $# -gt 0 ]] || _die "Optie --wallpaper verwacht een pad"
+            WALLPAPER="$1"
+            shift
+            ;;
+        --help|-h)
+            _usage
+            exit 0
+            ;;
+        --)
+            shift
+            EXTRA_ARGS+=("$@")
+            break
+            ;;
+        *)
+            EXTRA_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+command -v matugen &>/dev/null || _die "matugen niet gevonden in PATH"
+
+WALLPAPER="$(_resolve_wallpaper)"
+if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
+    _die "Geen geldig wallpaperbestand gevonden"
+fi
+
+SCHEME_TYPE="$(_pick_setting "scheme_type" "scheme_type" "$DEFAULT_SCHEME")"
+MODE="$(_pick_setting "mode" "mode" "$DEFAULT_MODE")"
+COLOR_INDEX="$(_pick_setting "color_index" "color_index" "$DEFAULT_COLOR_INDEX")"
+
+if [[ -z "$SCHEME_TYPE" ]]; then
+    _warn "Lege scheme_type gevonden, fallback naar $DEFAULT_SCHEME"
+    SCHEME_TYPE="$DEFAULT_SCHEME"
+fi
+
+if ! _valid_mode "$MODE"; then
+    _warn "Ongeldige mode '$MODE', fallback naar $DEFAULT_MODE"
+    MODE="$DEFAULT_MODE"
+fi
+
+if [[ ! "$COLOR_INDEX" =~ ^-?[0-9]+$ ]]; then
+    _warn "Ongeldige color_index '$COLOR_INDEX', fallback naar $DEFAULT_COLOR_INDEX"
+    COLOR_INDEX="$DEFAULT_COLOR_INDEX"
+fi
+
+if (( COLOR_INDEX < 0 )); then
+    COLOR_INDEX=0
+fi
+
+MATUGEN_ARGS=(
+    image "$WALLPAPER"
+    --type "$SCHEME_TYPE"
+    --mode "$MODE"
+    --source-color-index "$COLOR_INDEX"
+)
+
+if [[ -f "$MATUGEN_CONF" ]]; then
+    MATUGEN_ARGS+=(--config "$MATUGEN_CONF")
+fi
+
+MATUGEN_ARGS+=("${EXTRA_ARGS[@]}")
+
+matugen "${MATUGEN_ARGS[@]}"

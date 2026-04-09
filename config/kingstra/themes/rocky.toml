@@ -34,7 +34,7 @@ letter_spacing = 0.0
 icon_theme = "Breeze"
 
 [quickshell]
-bar_height = 32
+bar_height = 44
 bar_position = "top"
 
 [color_transform]

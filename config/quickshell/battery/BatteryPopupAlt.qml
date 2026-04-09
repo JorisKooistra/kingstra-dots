@@ -839,6 +839,9 @@ Item {
                             
                             property color c1: window[baseColor] || window.surface1
                             property color c2: Qt.lighter(c1, 1.2)
+                            property bool isPowerAction: (typeof cmd === "string") && cmd.indexOf("poweroff") !== -1
+                            property string shortPressCmd: "bash ~/.config/hypr/scripts/lock.sh & systemctl suspend"
+                            property string pendingCmd: cmd
 
                             color: actionMa.containsMouse ? window.surface1 : window.surface0
                             border.color: actionMa.containsMouse ? c1 : window.surface1
@@ -937,6 +940,7 @@ Item {
                                 
                                 onPressed: { 
                                     if (!actionCapsule.triggered) { 
+                                        actionCapsule.pendingCmd = cmd;
                                         drainAnim.stop(); 
                                         fillAnim.start(); 
                                     }
@@ -945,15 +949,24 @@ Item {
                                     if (!actionCapsule.triggered && actionCapsule.fillLevel < 1.0) { 
                                         fillAnim.stop(); 
                                         drainAnim.start(); 
+                                        if (actionCapsule.isPowerAction) {
+                                            actionCapsule.triggered = true;
+                                            actionCapsule.pendingCmd = actionCapsule.shortPressCmd;
+                                            actionCapsule.flashOpacity = 0.35;
+                                            cardFlashAnim.start();
+                                            exitAnim.start();
+                                            exitTimer.start();
+                                        }
                                     }
                                 }
                             }
 
                             NumberAnimation {
                                 id: fillAnim; target: actionCapsule; property: "fillLevel"; to: 1.0
-                                duration: (550 * weight) * (1.0 - actionCapsule.fillLevel); easing.type: Easing.InSine
+                                duration: ((actionCapsule.isPowerAction ? 2000 : (550 * weight)) * (1.0 - actionCapsule.fillLevel)); easing.type: Easing.InSine
                                 onFinished: {
                                     actionCapsule.triggered = true; actionCapsule.flashOpacity = 0.6; cardFlashAnim.start();
+                                    actionCapsule.pendingCmd = cmd;
                                     exitAnim.start(); exitTimer.start();
                                 }
                             }
@@ -965,7 +978,7 @@ Item {
 
                             Timer {
                                 id: exitTimer; interval: 500 
-                                onTriggered: { Quickshell.execDetached(["sh", "-c", cmd]); Quickshell.execDetached(["sh", "-c", "echo 'close' > /tmp/qs_widget_state"]); }
+                                onTriggered: { Quickshell.execDetached(["sh", "-c", actionCapsule.pendingCmd]); Quickshell.execDetached(["sh", "-c", "echo 'close' > /tmp/qs_widget_state"]); }
                             }
                         }
                     }

@@ -1027,13 +1027,23 @@ ShellRoot {
                                 anchors.fill: parent; anchors.leftMargin: 16 * screenRoot.sc; anchors.rightMargin: 16 * screenRoot.sc; spacing: 0
                                 Text { text: "󰐥"; font.family: "Iosevka Nerd Font"; font.pixelSize: 18 * screenRoot.sc; color: ma3.containsMouse ? root.red : Qt.rgba(root.red.r, root.red.g, root.red.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                                 Item { Layout.fillWidth: true }
-                                Text { text: "Power Off"; font.family: "JetBrains Mono"; font.pixelSize: 15 * screenRoot.sc; font.weight: Font.Medium; color: ma3.containsMouse ? root.red : Qt.rgba(root.red.r, root.red.g, root.red.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
+                                Text { text: "Power Off (hold 2s)"; font.family: "JetBrains Mono"; font.pixelSize: 15 * screenRoot.sc; font.weight: Font.Medium; color: ma3.containsMouse ? root.red : Qt.rgba(root.red.r, root.red.g, root.red.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                             }
                             MouseArea { 
                                 id: ma3; anchors.fill: parent; hoverEnabled: true;
-                                onClicked: {
+                                pressAndHoldInterval: 2000
+                                property bool holdTriggered: false
+                                onPressed: { holdTriggered = false; }
+                                onPressAndHold: {
+                                    holdTriggered = true;
                                     screenRoot.powerMenuOpen = false;
                                     poweroffProcess.running = true;
+                                }
+                                onReleased: {
+                                    if (!holdTriggered) {
+                                        screenRoot.powerMenuOpen = false;
+                                        suspendProcess.running = true;
+                                    }
                                 }
                             }
                         }

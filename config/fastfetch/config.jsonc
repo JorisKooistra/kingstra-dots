@@ -44,7 +44,7 @@
         },
         {
             "type": "kernel",
-            "key": " Kernel"
+            "key": " Kernel"
         },
         {
             "type": "uptime",
@@ -61,22 +61,21 @@
         },
         {
             "type": "shell",
-            "key": " Shell"
+            "key": " Shell"
         },
         {
             "type": "terminal",
-            "key": " Terminal"
+            "key": " Terminal"
         },
         {
             "type": "font",
-            "key": " Font",
-            "format": "{name} {size}pt"
+            "key": " Font"
         },
         "break",
         {
             "type": "cpu",
-            "key": " CPU",
-            "format": "{name} ({cores-physical}C/{cores-logical}T) @ {freq-max}GHz"
+            "key": " CPU",
+            "format": "{name} ({cores-physical}C/{cores-logical}T) @ {freq-max}"
         },
         {
             "type": "gpu",
@@ -86,20 +85,18 @@
         },
         {
             "type": "memory",
-            "key": " RAM",
-            "format": "{used} / {total} ({percentage}%)"
+            "key": " RAM",
+            "format": "{used} / {total} ({percentage})"
         },
         {
             "type": "disk",
             "key": "󰋊 Schijf",
-            "format": "{used} / {total} ({percentage}%) [{filesystem}]",
             "folders": "/"
         },
         "break",
         {
             "type": "localip",
-            "key": " LAN",
-            "format": "{ipv4} [{ifname}]",
+            "key": "󰩟 LAN",
             "showIpv4": true,
             "showIpv6": false
         },

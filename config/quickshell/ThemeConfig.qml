@@ -29,7 +29,7 @@ Item {
     property real letterSpacing: 0.0
     property string iconTheme: "Papirus-Dark"
 
-    property int barHeight: 36
+    property int barHeight: 40
     property string barPosition: "top"
     property string barShape: "rounded"
     property string barWidthMode: "full"
@@ -128,7 +128,12 @@ Item {
                     if (data.letter_spacing !== undefined) root.letterSpacing = Number(data.letter_spacing) || 0.0;
                     if (data.icon_theme !== undefined) root.iconTheme = String(data.icon_theme);
 
-                    if (data.bar_height !== undefined) root.barHeight = parseInt(data.bar_height) || root.barHeight;
+                    if (data.bar_height !== undefined) {
+                        let parsedBarHeight = Number(data.bar_height);
+                        if (!isNaN(parsedBarHeight)) {
+                            root.barHeight = parseInt(root.clamp(parsedBarHeight, 40, 96));
+                        }
+                    }
                     if (data.bar_position !== undefined) root.barPosition = String(data.bar_position);
                     if (data.bar_shape !== undefined) root.barShape = String(data.bar_shape);
                     if (data.bar_width_mode !== undefined) root.barWidthMode = String(data.bar_width_mode);

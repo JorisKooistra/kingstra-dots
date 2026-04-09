@@ -36,7 +36,12 @@ Variants {
                 return scaler.s(val); 
             }
 
-            property int barHeight: s(ThemeConfig.barHeight > 0 ? ThemeConfig.barHeight : 48)
+            property int minBarHeight: 40
+            property int themedBarHeight: s(ThemeConfig.barHeight > 0 ? ThemeConfig.barHeight : 48)
+            property int barHeight: Math.max(minBarHeight, themedBarHeight)
+            property bool edgeAttachedBar: ThemeConfig.barAttachToScreenEdge
+                                          && ThemeConfig.barWidthMode === "full"
+                                          && !ThemeConfig.barFloating
             property string uiFontFamily: ThemeConfig.uiFont
             property string monoFontFamily: ThemeConfig.monoFont
             property string displayFontFamily: ThemeConfig.displayFont
@@ -46,14 +51,14 @@ Variants {
             // THICKER BAR, MINIMAL MARGINS (Scaled)
             implicitHeight: barHeight
             margins {
-                top: ThemeConfig.barPosition === "bottom" ? 0 : s(8)
-                bottom: ThemeConfig.barPosition === "bottom" ? s(8) : 0
-                left: s(4)
-                right: s(4)
+                top: ThemeConfig.barPosition === "bottom" ? 0 : (barWindow.edgeAttachedBar ? 0 : s(8))
+                bottom: ThemeConfig.barPosition === "bottom" ? (barWindow.edgeAttachedBar ? 0 : s(8)) : 0
+                left: barWindow.edgeAttachedBar ? 0 : s(4)
+                right: barWindow.edgeAttachedBar ? 0 : s(4)
             }
             
             // exclusiveZone = 0 bij auto-hide (media mode), anders height + top margin
-            exclusiveZone: barWindow.barAutoHide ? 0 : barHeight + (ThemeConfig.barPosition === "bottom" ? s(8) : s(4))
+            exclusiveZone: barWindow.barAutoHide ? 0 : barHeight + (ThemeConfig.barPosition === "bottom" ? margins.bottom : margins.top)
             color: "transparent"
 
             // Dynamic Matugen Palette
@@ -85,14 +90,31 @@ Variants {
 
             // --- Mode State ---
             property string activeMode: "office"
-            property var moduleList: ["workspaces", "clock", "network", "battery", "volume", "bluetooth", "notifications"]
+            property var moduleList: ["workspaces", "clock", "updates", "network", "battery", "volume", "bluetooth", "notifications"]
             property bool barAutoHide: false
             property bool barVisible: true
+            property int updateCount: 0
 
             function _defaultModules(mode) {
-                if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "volume", "game_launcher", "clock"];
-                if (mode === "media")  return ["volume", "brightness", "media_controls", "clock"];
-                return ["workspaces", "clock", "network", "battery", "volume", "bluetooth", "notifications"];
+                if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "battery", "volume", "game_launcher", "clock"];
+                if (mode === "media")  return ["volume", "brightness", "media_controls", "battery", "clock"];
+                return ["workspaces", "clock", "updates", "network", "battery", "volume", "bluetooth", "notifications"];
+            }
+
+            function _normalizeModules(mode, modules) {
+                let normalized = Array.isArray(modules) ? modules.slice() : [];
+                if (mode === "office" && normalized.indexOf("updates") === -1) {
+                    normalized.push("updates");
+                }
+                if ((mode === "office" || mode === "gaming" || mode === "media")
+                        && normalized.indexOf("battery") === -1) {
+                    normalized.push("battery");
+                }
+                return normalized;
+            }
+
+            function refreshUpdates() {
+                updatesPoller.running = true;
             }
 
             Process {
@@ -103,9 +125,10 @@ Variants {
                         try {
                             let m = JSON.parse(this.text);
                             if (m.name) barWindow.activeMode = m.name;
-                            barWindow.moduleList = (m.modules && m.modules.length > 0)
+                            let resolvedModules = (m.modules && m.modules.length > 0)
                                 ? m.modules
                                 : barWindow._defaultModules(m.name || "office");
+                            barWindow.moduleList = barWindow._normalizeModules(m.name || "office", resolvedModules);
                             barWindow.barAutoHide = m.bar_autohide === true;
                         } catch(e) {}
                     }
@@ -166,6 +189,36 @@ Variants {
             ListModel { id: workspacesModel }
             
             property var musicData: { "status": "Stopped", "title": "", "artUrl": "", "timeStr": "" }
+
+            Process {
+                id: updatesPoller
+                command: ["bash", "-c", "~/.config/quickshell/package_updates.sh 2>/dev/null || echo 0"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        let n = parseInt(this.text.trim());
+                        if (!isNaN(n) && n >= 0) barWindow.updateCount = n;
+                    }
+                }
+            }
+
+            Timer {
+                id: updatesTimer
+                interval: 900000
+                running: true
+                repeat: true
+                triggeredOnStart: true
+                onTriggered: {
+                    if (barWindow.moduleList.includes("updates")) {
+                        updatesPoller.running = true;
+                    }
+                }
+            }
+
+            onActiveModeChanged: {
+                if (barWindow.activeMode === "office") {
+                    updatesPoller.running = true;
+                }
+            }
 
             // Derived properties for UI logic
             property bool isMediaActive: barWindow.musicData.status !== "Stopped" && barWindow.musicData.title !== ""

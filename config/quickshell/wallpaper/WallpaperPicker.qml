@@ -204,7 +204,14 @@ Item {
             wallpaperCmd = `mpvpaper -o 'loop --no-audio --hwdec=auto --profile=high-quality --video-sync=display-resample --interpolation --tscale=oversample' '*' "$WALL_FILE"`
             lockBgCmd = `cp "$THUMB_FILE" /tmp/lock_bg.png`
             postApplyCmd = `
-                ( matugen image "$THUMB_FILE" || true; bash "${Qt.resolvedUrl("matugen_reload.sh").toString().startsWith("file://") ? decodeURIComponent(Qt.resolvedUrl("matugen_reload.sh").toString().substring(7)) : Qt.resolvedUrl("matugen_reload.sh").toString()}" || true ) &
+                (
+                    if [ -x "${Quickshell.env("HOME")}/.local/bin/kingstra-matugen-run" ]; then
+                        "${Quickshell.env("HOME")}/.local/bin/kingstra-matugen-run" --wallpaper "$THUMB_FILE" || true
+                    else
+                        matugen image "$THUMB_FILE" || true
+                    fi
+                    bash "${Qt.resolvedUrl("matugen_reload.sh").toString().startsWith("file://") ? decodeURIComponent(Qt.resolvedUrl("matugen_reload.sh").toString().substring(7)) : Qt.resolvedUrl("matugen_reload.sh").toString()}" || true
+                ) &
                 MATUGEN_PID=$!
             `
         } else {

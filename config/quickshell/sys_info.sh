@@ -107,6 +107,35 @@ toggle_mute() {
     if [ "$(is_muted)" = "true" ]; then notify-send -u low -i audio-volume-muted "Volume" "Muted"
     else notify-send -u low -i audio-volume-high "Volume" "Unmuted ($(get_volume)%)"; fi
 }
+
+adjust_volume() {
+    local direction="${1:-up}"
+    local step="${2:-5}"
+    [[ "$step" =~ ^[0-9]+$ ]] || step=5
+
+    if command -v wpctl &> /dev/null; then
+        if [ "$direction" = "up" ]; then
+            wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ "${step}%+" 2>/dev/null || true
+        else
+            wpctl set-volume @DEFAULT_AUDIO_SINK@ "${step}%-" 2>/dev/null || true
+        fi
+        wpctl set-mute @DEFAULT_AUDIO_SINK@ 0 2>/dev/null || true
+    elif command -v pamixer &> /dev/null; then
+        if [ "$direction" = "up" ]; then
+            pamixer --increase "$step" 2>/dev/null || true
+        else
+            pamixer --decrease "$step" 2>/dev/null || true
+        fi
+        pamixer --unmute 2>/dev/null || true
+    elif command -v pactl &> /dev/null; then
+        if [ "$direction" = "up" ]; then
+            pactl set-sink-volume @DEFAULT_SINK@ "+${step}%" 2>/dev/null || true
+        else
+            pactl set-sink-volume @DEFAULT_SINK@ "-${step}%" 2>/dev/null || true
+        fi
+        pactl set-sink-mute @DEFAULT_SINK@ false 2>/dev/null || true
+    fi
+}
 get_volume_icon() {
     local vol=$(get_volume | tr -cd '0-9')
     local muted=$(is_muted)
@@ -165,6 +194,8 @@ case $1 in
     --wifi-toggle) toggle_wifi ;;
     --bt-toggle) toggle_bt ;;
     --toggle-mute) toggle_mute ;;
+    --vol-up) adjust_volume up 5 ;;
+    --vol-down) adjust_volume down 5 ;;
     *)
         # If no arguments are passed, output the full state as JSON
         jq -n -c \

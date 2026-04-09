@@ -126,7 +126,7 @@ Screenshots are saved to `~/Pictures/Screenshots/`.
 
 | Keys | Action |
 |---|---|
-| `Super + Ctrl + L` | Lock (hyprlock) |
+| `Super + Ctrl + L` | Lock (Quickshell lock, fallback hyprlock) |
 | `Super + Ctrl + R` | Reload Hyprland |
 | `Super + Ctrl + Q` | End session |
 
