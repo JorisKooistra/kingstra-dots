@@ -6,7 +6,7 @@ import "effects"
 import "skins"
 
 Item {
-    id: surface
+    id: barSurfaceRoot
     required property var shell
     required property var mocha
 
@@ -22,7 +22,7 @@ Item {
 
     Loader {
         id: barSkin
-        source: surface.skinSource
+        source: barSurfaceRoot.skinSource
         visible: false
     }
 
@@ -38,7 +38,7 @@ Item {
         return !!skin[name];
     }
 
-    readonly property bool continuousBarMode: surface.skinBool("continuousBar", false) && shell.edgeAttachedBar
+    readonly property bool continuousBarMode: barSurfaceRoot.skinBool("continuousBar", false) && shell.edgeAttachedBar
     readonly property bool themeHasDefaultTexture: activeTheme === "botanical"
                                                    || activeTheme === "rocky"
                                                    || activeTheme === "ocean"
@@ -119,68 +119,68 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            visible: surface.continuousBarMode
+            visible: barSurfaceRoot.continuousBarMode
             z: 0.25
             radius: 0
-            color: surface.basePanelColor
+            color: barSurfaceRoot.basePanelColor
             border.width: 1
-            border.color: surface.basePanelBorderColor
+            border.color: barSurfaceRoot.basePanelBorderColor
         }
 
         Image {
             id: textureOverlay
             anchors.fill: parent
             z: 0.35
-            source: surface.activeTextureOverlaySource
+            source: barSurfaceRoot.activeTextureOverlaySource
             fillMode: Image.Tile
-            opacity: surface.textureOverlayOpacity
-            visible: surface.textureOverlayOpacity > 0.0 && source !== "" && status !== Image.Error
+            opacity: barSurfaceRoot.textureOverlayOpacity
+            visible: barSurfaceRoot.textureOverlayOpacity > 0.0 && source !== "" && status !== Image.Error
             smooth: true
             asynchronous: true
             sourceSize.width: Math.max(64, shell.s(240))
             sourceSize.height: Math.max(32, shell.s(100))
             onStatusChanged: {
                 if (status !== Image.Error) return;
-                if (surface.activeTextureOverlaySource === surface.fallbackTextureOverlayPrimary
-                        && surface.fallbackTextureOverlaySecondary !== "") {
-                    surface.activeTextureOverlaySource = surface.fallbackTextureOverlaySecondary;
+                if (barSurfaceRoot.activeTextureOverlaySource === barSurfaceRoot.fallbackTextureOverlayPrimary
+                        && barSurfaceRoot.fallbackTextureOverlaySecondary !== "") {
+                    barSurfaceRoot.activeTextureOverlaySource = barSurfaceRoot.fallbackTextureOverlaySecondary;
                     return;
                 }
-                if (surface.configuredTextureOverlaySource !== "") {
-                    console.warn("[BarSurface] texture overlay asset missing: " + surface.configuredTextureOverlaySource);
+                if (barSurfaceRoot.configuredTextureOverlaySource !== "") {
+                    console.warn("[BarSurface] texture overlay asset missing: " + barSurfaceRoot.configuredTextureOverlaySource);
                 }
             }
         }
 
         ParticleLayer {
             anchors.fill: parent
-            shell: surface.shell
-            mocha: surface.mocha
+            shell: barSurfaceRoot.shell
+            mocha: barSurfaceRoot.mocha
             z: 0
         }
 
         Item {
             anchors.fill: parent
-            visible: surface.skinBool("showCyberGrid", false)
+            visible: barSurfaceRoot.skinBool("showCyberGrid", false)
             z: 0.5
 
             Repeater {
-                model: Math.ceil(surface.width / shell.s(48))
+                model: Math.ceil(barSurfaceRoot.width / shell.s(48))
                 Rectangle {
                     width: 1
-                    height: surface.height
+                    height: barSurfaceRoot.height
                     x: index * shell.s(48)
-                    color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, Math.max(0.0, Math.min(0.6, surface.skinNumber("gridAlpha", 0.0))))
+                    color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, Math.max(0.0, Math.min(0.6, barSurfaceRoot.skinNumber("gridAlpha", 0.0))))
                 }
             }
 
             Repeater {
-                model: Math.ceil(surface.height / shell.s(22))
+                model: Math.ceil(barSurfaceRoot.height / shell.s(22))
                 Rectangle {
-                    width: surface.width
+                    width: barSurfaceRoot.width
                     height: 1
                     y: index * shell.s(22)
-                    color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, Math.max(0.0, Math.min(0.4, surface.skinNumber("gridAlpha", 0.0) * 0.7)))
+                    color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, Math.max(0.0, Math.min(0.4, barSurfaceRoot.skinNumber("gridAlpha", 0.0) * 0.7)))
                 }
             }
         }
@@ -195,25 +195,25 @@ Item {
         Component {
             id: horizontalContentComponent
             BarContent {
-                shell: surface.shell
-                surface: surface
-                mocha: surface.mocha
+                shell: barSurfaceRoot.shell
+                surface: barSurfaceRoot
+                mocha: barSurfaceRoot.mocha
             }
         }
 
         Component {
             id: sidebarContentComponent
             BarContentSidebar {
-                shell: surface.shell
-                surface: surface
-                mocha: surface.mocha
+                shell: barSurfaceRoot.shell
+                surface: barSurfaceRoot
+                mocha: barSurfaceRoot.mocha
             }
         }
 
         OrnamentLayer {
             anchors.fill: parent
-            shell: surface.shell
-            mocha: surface.mocha
+            shell: barSurfaceRoot.shell
+            mocha: barSurfaceRoot.mocha
             z: 2
         }
     }
