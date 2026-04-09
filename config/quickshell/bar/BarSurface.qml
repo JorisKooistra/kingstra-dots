@@ -214,7 +214,7 @@ Item {
             anchors.fill: parent
             shell: barSurfaceRoot.shell
             mocha: barSurfaceRoot.mocha
-            z: 2
+            z: 0.8
         }
     }
 }

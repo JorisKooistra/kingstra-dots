@@ -6,19 +6,21 @@ Item {
     required property var shell
     required property var mocha
 
-    readonly property bool ornamentsActive: shell.ornamentEnabled && shell.ornamentOpacity > 0.0
+    readonly property bool hasRequestedAssets: requestedTopLeft !== "" || requestedTopRight !== "" || requestedTopCenter !== ""
+    readonly property bool allowThemeFallbackAssets: activeTheme === "botanical"
+    readonly property bool ornamentAssetsAllowed: hasRequestedAssets || allowThemeFallbackAssets
+    readonly property bool ornamentsActive: shell.ornamentEnabled && shell.ornamentOpacity > 0.0 && ornamentAssetsAllowed
     readonly property string activeTheme: String(shell.activeThemeName || "botanical").toLowerCase()
-    readonly property real themeOpacityBoost: activeTheme === "botanical" ? 1.55
-                                            : (activeTheme === "rocky" ? 1.35 : 1.20)
-    readonly property real minVisibleOpacity: activeTheme === "botanical" ? 0.38
-                                            : (activeTheme === "rocky" ? 0.22 : 0.18)
+    readonly property real themeOpacityBoost: activeTheme === "botanical" ? 0.62
+                                            : (activeTheme === "rocky" ? 0.55 : 0.60)
     readonly property real levelOpacity: ornamentsActive
-                                       ? Math.max(minVisibleOpacity, Math.min(0.96, Number(shell.ornamentOpacity || 0.0) * themeOpacityBoost))
+                                       ? Math.max(0.0, Math.min(0.32, Number(shell.ornamentOpacity || 0.0) * themeOpacityBoost))
                                        : 0.0
+    readonly property bool allowGeneratedFallback: false
 
-    property string requestedTopLeft: root.ornamentsActive ? String(shell.ornamentTopLeft !== undefined ? shell.ornamentTopLeft : "") : ""
-    property string requestedTopRight: root.ornamentsActive ? String(shell.ornamentTopRight !== undefined ? shell.ornamentTopRight : "") : ""
-    property string requestedTopCenter: root.ornamentsActive ? String(shell.ornamentTopCenter !== undefined ? shell.ornamentTopCenter : "") : ""
+    property string requestedTopLeft: String(shell.ornamentTopLeft !== undefined ? shell.ornamentTopLeft : "")
+    property string requestedTopRight: String(shell.ornamentTopRight !== undefined ? shell.ornamentTopRight : "")
+    property string requestedTopCenter: String(shell.ornamentTopCenter !== undefined ? shell.ornamentTopCenter : "")
 
     readonly property string fallbackRootPrimary: Quickshell.env("HOME") + "/kingstra-dots/assets/themes/" + root.activeTheme + "/"
     readonly property string fallbackRootSecondary: Quickshell.env("HOME") + "/.config/kingstra-dots/assets/themes/" + root.activeTheme + "/"
@@ -119,11 +121,11 @@ Item {
         anchors.top: parent.top
         anchors.leftMargin: shell.s(14)
         anchors.topMargin: shell.s(1)
-        width: shell.s(root.activeTheme === "botanical" ? 134 : 126)
-        height: shell.s(root.activeTheme === "botanical" ? 56 : 52)
+        width: shell.s(root.activeTheme === "botanical" ? 86 : 78)
+        height: shell.s(root.activeTheme === "botanical" ? 34 : 30)
         fillMode: Image.PreserveAspectFit
         source: root.effectiveTopLeft
-        opacity: Math.min(0.98, root.levelOpacity * (root.activeTheme === "botanical" ? 1.10 : 1.0))
+        opacity: Math.min(0.40, root.levelOpacity)
         visible: root.ornamentsActive && source !== "" && status !== Image.Error
         smooth: true
         asynchronous: true
@@ -159,13 +161,13 @@ Item {
         id: topRight
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.rightMargin: shell.s(14)
+        anchors.rightMargin: shell.s(12)
         anchors.topMargin: shell.s(1)
-        width: shell.s(root.activeTheme === "botanical" ? 134 : 126)
-        height: shell.s(root.activeTheme === "botanical" ? 56 : 52)
+        width: shell.s(root.activeTheme === "botanical" ? 86 : 78)
+        height: shell.s(root.activeTheme === "botanical" ? 34 : 30)
         fillMode: Image.PreserveAspectFit
         source: root.effectiveTopRight
-        opacity: Math.min(0.98, root.levelOpacity * (root.activeTheme === "botanical" ? 1.10 : 1.0))
+        opacity: Math.min(0.40, root.levelOpacity)
         visible: root.ornamentsActive && source !== "" && status !== Image.Error
         smooth: true
         asynchronous: true
@@ -201,12 +203,12 @@ Item {
         id: topCenter
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.topMargin: shell.s(root.activeTheme === "rocky" ? 3 : 1)
-        width: shell.s(root.activeTheme === "botanical" ? 152 : 124)
-        height: shell.s(root.activeTheme === "botanical" ? 28 : 24)
+        anchors.topMargin: shell.s(2)
+        width: shell.s(root.activeTheme === "botanical" ? 108 : 92)
+        height: shell.s(root.activeTheme === "botanical" ? 20 : 16)
         fillMode: Image.PreserveAspectFit
         source: root.effectiveTopCenter
-        opacity: Math.min(0.98, root.levelOpacity * (root.activeTheme === "botanical" ? 1.12 : 1.02))
+        opacity: Math.min(0.44, root.levelOpacity)
         visible: root.ornamentsActive && source !== "" && status !== Image.Error
         smooth: true
         asynchronous: true
@@ -246,7 +248,7 @@ Item {
         anchors.topMargin: shell.s(6)
         width: shell.s(70)
         height: shell.s(24)
-        visible: root.ornamentsActive && (topLeft.source === "" || topLeft.status === Image.Error)
+        visible: root.allowGeneratedFallback && root.ornamentsActive && (topLeft.source === "" || topLeft.status === Image.Error)
         opacity: Math.min(0.98, root.levelOpacity * 0.95)
 
         readonly property color accent: root.accentForTheme()
@@ -285,7 +287,7 @@ Item {
         anchors.topMargin: shell.s(6)
         width: shell.s(70)
         height: shell.s(24)
-        visible: root.ornamentsActive && (topRight.source === "" || topRight.status === Image.Error)
+        visible: root.allowGeneratedFallback && root.ornamentsActive && (topRight.source === "" || topRight.status === Image.Error)
         opacity: Math.min(0.98, root.levelOpacity * 0.95)
 
         readonly property color accent: root.accentForTheme()
@@ -323,7 +325,7 @@ Item {
         anchors.topMargin: shell.s(root.activeTheme === "rocky" ? 3 : 1)
         width: shell.s(root.activeTheme === "rocky" ? 112 : 148)
         height: shell.s(root.activeTheme === "rocky" ? 18 : 22)
-        visible: root.ornamentsActive && (topCenter.source === "" || topCenter.status === Image.Error)
+        visible: root.allowGeneratedFallback && root.ornamentsActive && (topCenter.source === "" || topCenter.status === Image.Error)
         opacity: Math.min(0.98, root.levelOpacity * (root.activeTheme === "rocky" ? 0.74 : 0.92))
 
         readonly property color accent: root.accentForTheme()

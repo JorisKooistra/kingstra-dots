@@ -83,6 +83,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.local/bin/kingstra-matugen-run"              "kingstra-matugen-run"
     validate_file "$HOME/.local/bin/kingstra-touch-detect"             "kingstra-touch-detect"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"                "kingstra-wallpaper"
+    validate_file "$HOME/.local/bin/kingstra-skwd-wallpaper-sync"      "kingstra-skwd-wallpaper-sync"
     # Session
     validate_file "$HOME/.config/hypridle/hypridle.conf"               "hypridle.conf"
     validate_file "$HOME/.config/hyprlock/hyprlock.conf"               "hyprlock.conf"
@@ -116,6 +117,8 @@ _phase15_validate_links() {
                   "$cfg/shared/scripts/kingstra-touch-detect"  "kingstra-touch-detect"
     validate_link "$HOME/.local/bin/kingstra-wallpaper" \
                   "$REPO_ROOT/config/wallpaper/kingstra-wallpaper" "kingstra-wallpaper"
+    validate_link "$HOME/.local/bin/kingstra-skwd-wallpaper-sync" \
+                  "$REPO_ROOT/config/wallpaper/kingstra-skwd-wallpaper-sync" "kingstra-skwd-wallpaper-sync"
 }
 
 _phase15_write_marker() {

@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-skwd-wallpaper-sync
+# -----------------------------------------------------------------------------
+# Opent de skwd-wall picker en forceert daarna de centrale Kingstra apply-flow:
+# actuele wallpaper + huidig theme-scheme/mode/color_index.
+# =============================================================================
+set -euo pipefail
+
+DAEMON_QML="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/daemon.qml"
+SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
+THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
+APPLY_SCRIPT="${HOME}/.local/bin/apply-shell-state"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+LOCK_FILE="/tmp/kingstra-skwd-wallpaper-sync.lock"
+MAX_POLLS=320
+POLL_SLEEP="0.35"
+
+LOG_PREFIX="[kingstra-skwd-sync]"
+_log()  { echo "$LOG_PREFIX $*"; }
+_warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
+
+_current_wallpaper() {
+    local path=""
+
+    if command -v swww >/dev/null 2>&1; then
+        local line
+        line="$(swww query 2>/dev/null | grep -m1 'image:' || true)"
+        if [[ -n "$line" ]]; then
+            path="${line#*image: }"
+            path="${path%% (}"
+            if [[ -n "$path" && -f "$path" ]]; then
+                printf '%s\n' "$path"
+                return 0
+            fi
+        fi
+    fi
+
+    local candidate
+    for candidate in \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/current_wallpaper" \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/current-wallpaper" \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/last_wallpaper" \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/last-wallpaper" \
+        "${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/state.json"; do
+        [[ -f "$candidate" ]] || continue
+        if [[ "$candidate" == *.json ]] && command -v jq >/dev/null 2>&1; then
+            path="$(jq -r '.wallpaper // .currentWallpaper // .lastWallpaper // ""' "$candidate" 2>/dev/null || echo "")"
+        else
+            path="$(cat "$candidate" 2>/dev/null || true)"
+        fi
+        if [[ -n "$path" && -f "$path" ]]; then
+            printf '%s\n' "$path"
+            return 0
+        fi
+    done
+
+    path="$(cat "$CACHE_DIR/last-wallpaper" 2>/dev/null || true)"
+    if [[ -n "$path" && -f "$path" ]]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+
+    printf '%s\n' ""
+}
+
+_sync_skwd_config() {
+    [[ -f "$SKWD_CONFIG" ]] || return 0
+    if ! command -v jq >/dev/null 2>&1; then
+        _warn "jq ontbreekt — skwd config sync overgeslagen"
+        return 0
+    fi
+
+    local scheme mode
+    scheme="$(jq -r '.scheme_type // "scheme-tonal-spot"' "$THEME_JSON" 2>/dev/null || echo "scheme-tonal-spot")"
+    mode="$(jq -r '.mode // "dark"' "$THEME_JSON" 2>/dev/null || echo "dark")"
+
+    local tmp_file
+    tmp_file="$(mktemp)"
+    if jq --arg scheme "$scheme" --arg mode "$mode" \
+        '.features.matugen = false
+         | .features.wallhaven = true
+         | .matugen.schemeType = $scheme
+         | .matugen.mode = $mode' \
+        "$SKWD_CONFIG" > "$tmp_file" 2>/dev/null; then
+        mv "$tmp_file" "$SKWD_CONFIG"
+    else
+        rm -f "$tmp_file"
+        _warn "Kon skwd-wall config niet patchen"
+    fi
+}
+
+_watch_and_apply() {
+    local before="$1"
+
+    exec 9>"$LOCK_FILE"
+    if ! flock -n 9; then
+        exit 0
+    fi
+    trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT
+
+    local i current
+    for ((i = 0; i < MAX_POLLS; i++)); do
+        current="$(_current_wallpaper)"
+        if [[ -n "$current" && "$current" != "$before" && -f "$current" ]]; then
+            mkdir -p "$CACHE_DIR"
+            printf '%s\n' "$current" > "$CACHE_DIR/last-wallpaper"
+
+            if [[ -x "$APPLY_SCRIPT" ]]; then
+                "$APPLY_SCRIPT" --wallpaper "$current" >/dev/null 2>&1 || true
+                _log "Centrale apply uitgevoerd op: $(basename "$current")"
+            else
+                _warn "apply-shell-state niet gevonden"
+            fi
+            exit 0
+        fi
+        sleep "$POLL_SLEEP"
+    done
+}
+
+if [[ "${1:-}" == "--watch" ]]; then
+    _watch_and_apply "${2:-}"
+    exit 0
+fi
+
+_sync_skwd_config
+before_wallpaper="$(_current_wallpaper)"
+
+if [[ ! -f "$DAEMON_QML" ]]; then
+    _warn "skwd-wall daemon niet gevonden: $DAEMON_QML"
+    exit 1
+fi
+
+quickshell ipc -p "$DAEMON_QML" call wallpaper toggle >/dev/null 2>&1 || true
+"$0" --watch "$before_wallpaper" >/dev/null 2>&1 &
+disown

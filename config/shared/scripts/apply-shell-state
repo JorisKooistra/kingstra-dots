@@ -12,6 +12,7 @@ set -euo pipefail
 
 SESSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
+MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
 MODES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/modes"
@@ -23,6 +24,21 @@ WALLPAPER_ARG=""
 
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
+
+_set_toml_value() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+
+    mkdir -p "$(dirname "$file")"
+    [[ -f "$file" ]] || touch "$file"
+
+    if grep -Eq "^[[:space:]]*${key}[[:space:]]*=" "$file"; then
+        sed -i -E "s|^[[:space:]]*${key}[[:space:]]*=.*|${key} = ${value}|" "$file"
+    else
+        printf '%s = %s\n' "$key" "$value" >> "$file"
+    fi
+}
 
 for arg in "$@"; do
     case "$arg" in
@@ -119,6 +135,28 @@ case "$SESSION_MODE" in
         SESSION_MODE="office"
         ;;
 esac
+
+# Sync matugen-config expliciet naar het actieve theme-contract.
+# Dit voorkomt dat externe tools (zoals skwd-wall) een afwijkend scheme forceren.
+_set_toml_value "$MATUGEN_CONF" "scheme_type" "\"$SCHEME\""
+_set_toml_value "$MATUGEN_CONF" "mode" "\"$MODE\""
+_set_toml_value "$MATUGEN_CONF" "color_index" "$COLOR_IDX"
+
+# Houd wallpaper state/cache gelijk met de centrale apply-run.
+if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
+    mkdir -p "$CACHE_DIR" "$STATE_DIR"
+    printf '%s\n' "$WALLPAPER" > "$CACHE_DIR/last-wallpaper"
+    jq -n \
+        --arg name "$(basename "$WALLPAPER")" \
+        --arg path "$WALLPAPER" \
+        --arg matugen_scheme "$SCHEME" \
+        --arg matugen_mode "$MODE" \
+        '{"name":$name,"path":$path,"matugen_scheme":$matugen_scheme,"matugen_mode":$matugen_mode}' \
+        > "$STATE_DIR/wallpaper.json"
+
+    SESSION_UPDATE="${HOME}/.local/bin/kingstra-session-update"
+    [[ -x "$SESSION_UPDATE" ]] && "$SESSION_UPDATE" >/dev/null 2>&1 || true
+fi
 
 _log "Wallpaper: $(basename "${WALLPAPER:-leeg}")"
 _log "Theme: ${THEME_NAME:-?} | Scheme: $SCHEME | Matugen mode: $MODE | Color index: $COLOR_IDX"

@@ -13,6 +13,7 @@ ACTIVE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/active-theme"
 THEME_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/35-theme.conf"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
 
 READER="${HOME}/.local/bin/kingstra-theme-read"
@@ -99,6 +100,36 @@ bool_json() {
         echo "true"
     else
         echo "false"
+    fi
+}
+
+sync_skwd_config() {
+    local scheme_type="$1"
+    local mode="$2"
+
+    [[ -f "$SKWD_CONFIG" ]] || return 0
+    if ! command -v jq &>/dev/null; then
+        _warn "jq niet gevonden — skwd-wall config niet gesynchroniseerd"
+        return 0
+    fi
+
+    local tmp_file
+    tmp_file="$(mktemp)"
+
+    if jq \
+        --arg scheme "$scheme_type" \
+        --arg mode "$mode" \
+        '
+        .features.matugen = false
+        | .features.wallhaven = true
+        | .matugen.schemeType = $scheme
+        | .matugen.mode = $mode
+        ' "$SKWD_CONFIG" > "$tmp_file" 2>/dev/null; then
+        mv "$tmp_file" "$SKWD_CONFIG"
+        _log "skwd-wall config gesynchroniseerd (scheme: $scheme_type, mode: $mode, matugen=false)"
+    else
+        rm -f "$tmp_file"
+        _warn "Kon skwd-wall config niet synchroniseren: $SKWD_CONFIG"
     fi
 }
 
@@ -389,6 +420,7 @@ if [[ -f "$MATUGEN_CONF" ]]; then
     sed -i "s|^mode\s*=.*|mode = \"${MATUGEN_MODE:-dark}\"|" "$MATUGEN_CONF"
     _log "Matugen config bijgewerkt (scheme: ${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}, mode: ${MATUGEN_MODE:-dark})"
 fi
+sync_skwd_config "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}" "${MATUGEN_MODE:-dark}"
 
 # ---------------------------------------------------------------------------
 # Step 2 — Generate 35-theme.conf (Hyprland overrides)

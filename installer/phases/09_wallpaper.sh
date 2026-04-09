@@ -45,6 +45,7 @@ phase_run() {
     validate_file "$HOME/.config/skwd-wall/config.json"    "skwd-wall/config.json"
     validate_file "$HOME/.config/skwd-wall/qml/wallpaper/WallpaperSelector.qml" "skwd-wall/qml/wallpaper/WallpaperSelector.qml"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"    "kingstra-wallpaper"
+    validate_file "$HOME/.local/bin/kingstra-skwd-wallpaper-sync" "kingstra-skwd-wallpaper-sync"
     validate_dir  "$HOME/Pictures/Wallpapers"              "Pictures/Wallpapers"
     validate_report
 
@@ -224,6 +225,8 @@ _phase09_patch_skwd_hex_layout() {
 _phase09_deploy_orchestrator() {
     local script_src="$REPO_ROOT/config/wallpaper/kingstra-wallpaper"
     local script_dest="$HOME/.local/bin/kingstra-wallpaper"
+    local bridge_src="$REPO_ROOT/config/wallpaper/kingstra-skwd-wallpaper-sync"
+    local bridge_dest="$HOME/.local/bin/kingstra-skwd-wallpaper-sync"
 
     if "${DRY_RUN:-false}"; then
         log_dry "Orchestrator zou worden gedeployed: $script_dest"
@@ -232,8 +235,11 @@ _phase09_deploy_orchestrator() {
 
     ensure_dir "$HOME/.local/bin"
     deploy_link "$script_src" "$script_dest"
+    deploy_link "$bridge_src" "$bridge_dest"
     chmod +x "$script_src"
+    chmod +x "$bridge_src"
     log_ok "Orchestrator beschikbaar als: kingstra-wallpaper"
+    log_ok "skwd bridge beschikbaar als: kingstra-skwd-wallpaper-sync"
 }
 
 _phase09_ensure_wallpaper_dir() {

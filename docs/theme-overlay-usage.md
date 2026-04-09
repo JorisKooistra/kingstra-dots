@@ -57,3 +57,17 @@ Dit document legt vast waar overlays worden gebruikt in de theme-skin rework.
 - Ornament/effect lagen mogen interactie niet blokkeren.
 - Ontbrekende assets geven warning, nooit crash.
 - Animated hoeft geen extra texture-overlay te hebben; blur-only is toegestaan.
+
+## Matugen Bron Van Waarheid
+- Doelgedrag: kleuren = `actieve wallpaper` + `actief theme matugen-profiel`.
+- Theme-selectie bepaalt altijd het profiel:
+  - `scheme_type`
+  - `mode`
+  - `color_index`
+- Wallpaper-selectie (ook via `skwd-wall`) bepaalt alleen de bronafbeelding.
+- Centrale apply-pad:
+  - `apply-shell-state` synchroniseert eerst `~/.config/matugen/config.toml` vanuit `~/.config/quickshell/theme.json`.
+  - Daarna draait `kingstra-matugen-run` op de gekozen wallpaper.
+- `skwd-wall` wordt op Kingstra-paden gehard met:
+  - `features.matugen=false` (geen los tweede matugen-pad)
+  - scheme/mode sync met actief theme.
