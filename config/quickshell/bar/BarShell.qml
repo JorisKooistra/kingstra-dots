@@ -175,6 +175,16 @@ Variants {
                 return "󰕿";
             }
 
+            function applyAudioState(volumePercent, muted) {
+                let vol = Math.max(0, Math.min(150, parseInt(volumePercent) || 0));
+                let mutedBool = (muted === true || muted === "true");
+                let newVol = vol.toString() + "%";
+                let newIcon = volumeIconFor(vol, mutedBool);
+                if (barWindow.volPercent !== newVol) barWindow.volPercent = newVol;
+                if (barWindow.isMuted !== mutedBool) barWindow.isMuted = mutedBool;
+                if (barWindow.volIcon !== newIcon) barWindow.volIcon = newIcon;
+            }
+
             function handleVolumeWheel(deltaY) {
                 if (!deltaY || deltaY === 0) return;
                 barWindow.volumeWheelAccumulator += deltaY;
@@ -195,15 +205,15 @@ Variants {
                 let next = current + steps;
                 next = Math.max(0, Math.min(150, next));
 
-                barWindow.volPercent = next.toString() + "%";
-                barWindow.isMuted = false;
-                barWindow.volIcon = volumeIconFor(next, false);
+                applyAudioState(next, false);
 
                 if (steps > 0) {
                     Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-up " + steps]);
                 } else {
                     Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-down " + Math.abs(steps)]);
                 }
+
+                if (!audioPoller.running) audioPoller.running = true;
             }
 
             Process {
@@ -435,12 +445,7 @@ Variants {
                                 if (barWindow.btIcon !== data.bt.icon) barWindow.btIcon = data.bt.icon;
                                 if (barWindow.btDevice !== data.bt.connected) barWindow.btDevice = data.bt.connected;
 
-                                let newVol = data.audio.volume.toString() + "%";
-                                if (barWindow.volPercent !== newVol) barWindow.volPercent = newVol;
-                                if (barWindow.volIcon !== data.audio.icon) barWindow.volIcon = data.audio.icon;
-                                
-                                let newMuted = (data.audio.is_muted === "true");
-                                if (barWindow.isMuted !== newMuted) barWindow.isMuted = newMuted;
+                                applyAudioState(data.audio.volume, data.audio.is_muted);
 
                                 let newBat = data.battery.percent.toString() + "%";
                                 if (barWindow.batPercent !== newBat) barWindow.batPercent = newBat;
@@ -465,6 +470,49 @@ Variants {
                 command: ["bash", "-c", "~/.config/quickshell/sys_waiter.sh"]
                 // Strictly use onExited. Quickshell will no longer hook into stdout, preventing pipe deadlocks.
                 onExited: sysPoller.running = true 
+            }
+
+            // Fast audio poller so topbar volume stays in sync with external changes.
+            Process {
+                id: audioPoller
+                command: ["bash", "-c", `
+                    if command -v wpctl >/dev/null 2>&1; then
+                        line="$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || true)"
+                        vol="$(printf '%s\\n' "$line" | grep -oE '[0-9]+(\\.[0-9]+)?' | head -n1)"
+                        if [[ -z "$vol" ]]; then vol="0"; fi
+                        pct="$(awk "BEGIN { v=$vol; if (v < 0) v=0; if (v > 1.5) v=1.5; printf \\"%d\\", int(v*100) }")"
+                        if printf '%s' "$line" | grep -q "MUTED"; then muted="true"; else muted="false"; fi
+                        printf '%s|%s\\n' "$pct" "$muted"
+                    elif command -v pamixer >/dev/null 2>&1; then
+                        vol="$(pamixer --get-volume 2>/dev/null || echo 0)"
+                        muted="$(pamixer --get-mute 2>/dev/null || echo false)"
+                        printf '%s|%s\\n' "$vol" "$muted"
+                    elif command -v pactl >/dev/null 2>&1; then
+                        vol="$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | grep -oE '[0-9]+%' | head -n1 | tr -d '%' || echo 0)"
+                        if pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null | grep -q 'yes'; then muted="true"; else muted="false"; fi
+                        printf '%s|%s\\n' "$vol" "$muted"
+                    else
+                        printf '0|false\\n'
+                    fi
+                `]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        let line = this.text.trim();
+                        if (line === "") return;
+                        let parts = line.split("|");
+                        if (parts.length < 2) return;
+                        applyAudioState(parts[0], parts[1]);
+                    }
+                }
+            }
+            Timer {
+                interval: 450
+                running: true
+                repeat: true
+                triggeredOnStart: true
+                onTriggered: {
+                    if (!audioPoller.running) audioPoller.running = true;
+                }
             }
 
             // Weather remains a slow poll since it fetches from web
