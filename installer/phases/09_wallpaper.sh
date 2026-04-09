@@ -26,6 +26,9 @@ phase_run() {
     log_step "skwd-wall config aanmaken..."
     _phase09_write_skwd_wall_config
 
+    log_step "skwd-wall hex-layout patchen..."
+    _phase09_patch_skwd_hex_layout
+
     log_step "Videowallpaper-pakket installeren (mpvpaper)..."
     _phase09_install_mpvpaper
 
@@ -40,6 +43,7 @@ phase_run() {
     validate_dir  "$HOME/.config/skwd-wall"                "skwd-wall"
     validate_file "$HOME/.config/skwd-wall/daemon.qml"     "skwd-wall/daemon.qml"
     validate_file "$HOME/.config/skwd-wall/config.json"    "skwd-wall/config.json"
+    validate_file "$HOME/.config/skwd-wall/qml/wallpaper/WallpaperSelector.qml" "skwd-wall/qml/wallpaper/WallpaperSelector.qml"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"    "kingstra-wallpaper"
     validate_dir  "$HOME/Pictures/Wallpapers"              "Pictures/Wallpapers"
     validate_report
@@ -187,6 +191,33 @@ _phase09_install_mpvpaper() {
     else
         log_info "ENABLE_VIDEO_WALLPAPER=false — mpvpaper overgeslagen"
         log_info "  Zet ENABLE_VIDEO_WALLPAPER=true in je profiel om videowallpapers in te schakelen."
+    fi
+}
+
+_phase09_patch_skwd_hex_layout() {
+    local selector_qml="$HOME/.config/skwd-wall/qml/wallpaper/WallpaperSelector.qml"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "skwd-wall hex layout zou worden gepatcht: $selector_qml"
+        return 0
+    fi
+
+    if [[ ! -f "$selector_qml" ]]; then
+        log_warn "WallpaperSelector.qml niet gevonden — hex-layout patch overgeslagen"
+        return 0
+    fi
+
+    if grep -Fq 'property real _yOffset: Math.max(0, (height - _gridContentH) / 2)' "$selector_qml"; then
+        sed -i 's/property real _yOffset: Math.max(0, (height - _gridContentH) \/ 2)/property real _yOffset: 0/' "$selector_qml" && \
+            log_ok "skwd-wall hex-layout gepatcht: top-gap verwijderd" || \
+            log_warn "Hex-layout patch mislukt: $selector_qml"
+        return 0
+    fi
+
+    if grep -Fq 'property real _yOffset: 0' "$selector_qml"; then
+        log_info "skwd-wall hex-layout patch al aanwezig"
+    else
+        log_warn "Onbekende WallpaperSelector.qml variant — _yOffset patch niet toegepast"
     fi
 }
 
