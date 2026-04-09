@@ -259,12 +259,19 @@ Rectangle {
                 Keys.onEscapePressed: root.inputActive = false
 
                 onAccepted: {
-                    if (text !== "")
-                        sddm.login(root.currentUserName, text, sessionModel.lastIndex)
+                    sddm.login(root.currentUserName, text, sessionModel.lastIndex)
                 }
 
                 onTextChanged: root.loginFailed = false
             }
+        }
+
+        Text {
+            Layout.alignment: Qt.AlignHCenter
+            text: "Tip: druk Enter op leeg veld om fingerprint/PAM-auth te starten"
+            font { family: "JetBrains Mono"; pixelSize: 11 }
+            color: Colors.outline
+            opacity: 0.9
         }
 
         // Foutmelding

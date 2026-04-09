@@ -185,7 +185,7 @@ The installer automatically detects:
 | Laptop/battery | `DETECT_IS_LAPTOP=true` | power-profiles, short timeouts |
 | Backlight | `DETECT_HAS_BACKLIGHT=true` | brightnessctl, hypridle dim |
 | Touchpad | `DETECT_HAS_TOUCHPAD=true` | natural scroll, tap-to-click |
-| Fingerprint | `DETECT_HAS_FINGERPRINT=true` | fprintd, PAM configuration |
+| Fingerprint | `DETECT_HAS_FINGERPRINT=true` | fprintd, PAM configuration for sudo + SDDM |
 
 To override detected values:
 ```bash
@@ -194,6 +194,8 @@ ENABLE_FINGERPRINT=false
 ENABLE_VIDEO_WALLPAPER=false
 ENABLE_SPICETIFY=true
 ```
+
+Note about SDDM fingerprint flow: unlike GDM, SDDM themes do not always start biometric auth automatically when the greeter appears. In this setup, press `Enter` on an empty password field to trigger PAM/fingerprint auth.
 
 ---
 
