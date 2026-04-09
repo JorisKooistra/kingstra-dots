@@ -30,6 +30,12 @@ Item {
     readonly property real borderWidth: embedded ? root.s(2) : root.s(3)
     readonly property real skewFactor: embedded ? -0.05 : -0.08
     readonly property real previewInfoHeight: embedded ? root.s(72) : root.s(84)
+    readonly property real maxPreviewHeight: itemHeight + root.s(30)
+    readonly property real maxSkewCompensation: Math.abs(skewFactor) * maxPreviewHeight
+    readonly property real maxPreviewWidth: (itemWidth * 1.5) + maxSkewCompensation
+    readonly property int previewDecodeWidth: Math.max(1, Math.round(maxPreviewWidth * Screen.devicePixelRatio))
+    readonly property int previewDecodeHeight: Math.max(1, Math.round(maxPreviewHeight * Screen.devicePixelRatio))
+    readonly property int previewCacheBuffer: Math.round(itemWidth * 8)
 
     property string activeTheme: ""
     property string selectedThemeId: ""
@@ -211,7 +217,10 @@ Item {
         orientation: ListView.Horizontal
         clip: false
         interactive: !root.isApplying
-        cacheBuffer: 2000
+        cacheBuffer: root.previewCacheBuffer
+        displayMarginBeginning: root.itemWidth * 2
+        displayMarginEnd: root.itemWidth * 2
+        reuseItems: false
 
         highlightRangeMode: ListView.StrictlyEnforceRange
         preferredHighlightBegin: (width / 2) - ((root.itemWidth * 1.5 + root.spacing) / 2)
@@ -352,14 +361,19 @@ Item {
 
                         Image {
                             id: previewImage
-                            anchors.fill: parent
+                            readonly property real counterSkew: -root.skewFactor
+                            readonly property real skewCompensation: Math.abs(counterSkew) * height
+                            x: counterSkew > 0 ? -skewCompensation : 0
+                            y: 0
+                            width: parent.width + skewCompensation
+                            height: parent.height
                             fillMode: Image.PreserveAspectCrop
                             source: delegateRoot.previewSource
                             asynchronous: true
                             cache: true
                             mipmap: true
-                            sourceSize.width: Math.max(1, Math.round(width * Screen.devicePixelRatio))
-                            sourceSize.height: Math.max(1, Math.round(height * Screen.devicePixelRatio))
+                            sourceSize.width: root.previewDecodeWidth
+                            sourceSize.height: root.previewDecodeHeight
                             visible: status === Image.Ready
 
                             transform: Matrix4x4 {
