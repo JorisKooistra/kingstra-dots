@@ -35,6 +35,9 @@ phase_run() {
     log_step "Standaard thema-config genereren..."
     _phase08_default_theme_conf
 
+    log_step "Theming placeholders initialiseren..."
+    _phase08_init_generated_theme_files
+
     log_step "Game launcher installeren..."
     _phase08_install_game_launcher
 
@@ -171,6 +174,132 @@ CONF
         log_ok "Standaard 35-theme.conf aangemaakt"
     else
         log_info "35-theme.conf bestaat al — niet overschreven"
+    fi
+}
+
+_phase08_init_generated_theme_files() {
+    local matugen_conf="$HOME/.config/matugen/config.toml"
+    local qs_colors="$HOME/.config/quickshell/colors.json"
+    local hypr_colors="$HOME/.config/hypr/colors.conf"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Theming placeholders zouden worden aangemaakt"
+        return 0
+    fi
+
+    # 1) Matugen config baseline (required by theme/apply scripts)
+    if [[ ! -f "$matugen_conf" ]]; then
+        ensure_dir "$(dirname "$matugen_conf")"
+        cat > "$matugen_conf" <<'EOF'
+scheme_type = "scheme-tonal-spot"
+color_index = 0
+mode = "dark"
+
+[config]
+
+[templates.hyprland]
+input_path = "~/.config/matugen/templates/hypr-colors.conf"
+output_path = "~/.config/hypr/colors.conf"
+
+[templates.quickshell]
+input_path = "~/.config/matugen/templates/quickshell-colors.json"
+output_path = "~/.config/quickshell/colors.json"
+
+[templates.kitty]
+input_path = "~/.config/matugen/templates/kitty-colors.conf"
+output_path = "~/.config/kitty/kitty-matugen-colors.conf"
+
+[templates.swaync]
+input_path = "~/.config/matugen/templates/swaync-colors.css"
+output_path = "~/.config/swaync/colors.css"
+
+[templates.walker]
+input_path = "~/.config/matugen/templates/walker-colors.css"
+output_path = "~/.config/walker/colors.css"
+
+[templates.qt6ct]
+input_path = "~/.config/matugen/templates/qt6ct-colors.conf"
+output_path = "~/.config/qt6ct/colors/matugen.conf"
+
+[templates.yazi]
+input_path = "~/.config/matugen/templates/yazi-theme.toml"
+output_path = "~/.config/yazi/theme.toml"
+
+[templates.omp]
+input_path = "~/.config/matugen/templates/zsh-omp-colors.toml"
+output_path = "~/.config/zsh/omp-colors.toml"
+EOF
+        log_ok "Matugen baseline config aangemaakt: $matugen_conf"
+    fi
+
+    # 2) Quickshell colors fallback (valid JSON)
+    if [[ ! -f "$qs_colors" ]]; then
+        ensure_dir "$(dirname "$qs_colors")"
+        cat > "$qs_colors" <<'EOF'
+{
+  "_comment": "Fallback palette until first Matugen run.",
+  "base": "#1e1e2e",
+  "mantle": "#181825",
+  "crust": "#11111b",
+  "text": "#cdd6f4",
+  "subtext0": "#a6adc8",
+  "subtext1": "#bac2de",
+  "surface0": "#313244",
+  "surface1": "#45475a",
+  "surface2": "#585b70",
+  "overlay0": "#6c7086",
+  "overlay1": "#7f849c",
+  "overlay2": "#9399b2",
+  "blue": "#89b4fa",
+  "mauve": "#cba6f7",
+  "green": "#a6e3a1",
+  "red": "#f38ba8",
+  "yellow": "#f9e2af",
+  "peach": "#fab387",
+  "pink": "#f5c2e7",
+  "teal": "#94e2d5",
+  "primary": "#89b4fa",
+  "on_primary": "#11111b",
+  "primary_container": "#313244",
+  "secondary": "#cba6f7",
+  "on_secondary": "#11111b",
+  "tertiary": "#94e2d5",
+  "on_tertiary": "#11111b",
+  "error": "#f38ba8",
+  "on_error": "#11111b",
+  "background": "#1e1e2e",
+  "on_background": "#cdd6f4",
+  "surface": "#313244",
+  "on_surface": "#cdd6f4",
+  "surface_variant": "#45475a",
+  "on_surface_variant": "#bac2de",
+  "outline": "#6c7086",
+  "outline_variant": "#585b70"
+}
+EOF
+        log_ok "Quickshell fallback colors aangemaakt: $qs_colors"
+    fi
+
+    # 3) Hypr colors fallback (valid variables for conf includes)
+    if [[ ! -f "$hypr_colors" ]]; then
+        ensure_dir "$(dirname "$hypr_colors")"
+        cat > "$hypr_colors" <<'EOF'
+# Fallback palette until first Matugen run.
+$primary           = rgba(89b4faee)
+$on_primary        = rgba(11111bee)
+$primary_container = rgba(313244ee)
+$secondary         = rgba(cba6f7ee)
+$on_secondary      = rgba(11111bee)
+$surface           = rgba(313244ee)
+$on_surface        = rgba(cdd6f4ee)
+$background        = rgba(1e1e2eff)
+$error             = rgba(f38ba8ee)
+
+$border_active   = $primary $secondary 45deg
+$border_inactive = rgba(6c708644)
+$shadow_color    = rgba(11111bcc)
+EOF
+        log_ok "Hypr fallback colors aangemaakt: $hypr_colors"
     fi
 }
 
