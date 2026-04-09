@@ -16,7 +16,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-WALLPAPER_DIR="${KINGSTRA_WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
+DEFAULT_WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
+SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 STATE_FILE="$CACHE_DIR/last-wallpaper"
 MODE_FILE="$CACHE_DIR/wallpaper-mode"          # "static" of "video"
@@ -35,6 +36,33 @@ mkdir -p "$CACHE_DIR"
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
 _die()  { echo "$LOG_PREFIX FOUT: $*" >&2; exit 1; }
+
+_expand_user_path() {
+    local path="${1:-}"
+    case "$path" in
+        "~") echo "$HOME" ;;
+        "~/"*) echo "$HOME/${path#~/}" ;;
+        *) echo "$path" ;;
+    esac
+}
+
+_resolve_wallpaper_dir() {
+    local cfg_dir=""
+
+    if [[ -n "${KINGSTRA_WALLPAPER_DIR:-}" ]]; then
+        cfg_dir="$KINGSTRA_WALLPAPER_DIR"
+    elif [[ -f "$SKWD_CONFIG" ]] && command -v jq &>/dev/null; then
+        cfg_dir="$(jq -r '.paths.wallpaper // ""' "$SKWD_CONFIG" 2>/dev/null || echo "")"
+    fi
+
+    if [[ -z "$cfg_dir" ]]; then
+        cfg_dir="$DEFAULT_WALLPAPER_DIR"
+    fi
+
+    cfg_dir="$(_expand_user_path "$cfg_dir")"
+    [[ "$cfg_dir" = /* ]] || cfg_dir="$HOME/$cfg_dir"
+    echo "$(realpath -m "$cfg_dir")"
+}
 
 _notify() {
     notify-send --icon=preferences-desktop-wallpaper \
@@ -66,6 +94,8 @@ _monitors() {
         | python3 -c "import sys,json; [print(m['name']) for m in json.load(sys.stdin)]" \
         2>/dev/null || echo ""
 }
+
+WALLPAPER_DIR="$(_resolve_wallpaper_dir)"
 
 # ---------------------------------------------------------------------------
 # Backend: statisch (awww)
@@ -310,6 +340,7 @@ cmd_status() {
     mode="$(cat "$MODE_FILE" 2>/dev/null || echo "static")"
 
     echo "Modus:     $mode"
+    echo "Map:       $WALLPAPER_DIR"
     echo "Bestand:   $file"
 
     if pgrep -x mpvpaper &>/dev/null; then

@@ -78,6 +78,10 @@ Item {
         { name: "Monochrome", hex: "#A9A9A9", label: "" },
         { name: "Search", hex: "", label: "Search" } 
     ]
+    readonly property var quickSearchTags: [
+        "nature", "forest", "mountain", "ocean", "sky", "city",
+        "night", "anime", "minimal", "dark", "space", "rain"
+    ]
 
     // -------------------------------------------------------------------------
     // GLOBAL ACTION: APPLY WALLPAPER
@@ -801,6 +805,7 @@ Item {
             view.forceActiveFocus();
 
             if (window.currentFilter === "Search") {
+                Qt.callLater(() => searchInput.forceActiveFocus());
                 if (window.hasSearched) {
                     window.searchIndexRestored = false; 
                     window.trySearchFocus();
@@ -1470,14 +1475,11 @@ Item {
                     id: searchMouseArea
                     anchors.fill: parent
                     hoverEnabled: true 
-                    enabled: !window.isApplying // Lock UI interaction
+                    enabled: !window.isApplying && window.currentFilter !== "Search"
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        if (window.currentFilter !== "Search") {
-                            window.currentFilter = "Search"
-                        } else {
-                            window.currentFilter = "All" 
-                        }
+                        window.currentFilter = "Search"
+                        Qt.callLater(() => searchInput.forceActiveFocus())
                     }
                 }
 
@@ -1525,6 +1527,19 @@ Item {
                     font.family: "JetBrains Mono"
                     font.pixelSize: window.s(16) 
                     clip: true
+                    selectByMouse: true
+                    activeFocusOnPress: true
+
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton
+                        cursorShape: Qt.IBeamCursor
+                        enabled: window.currentFilter === "Search" && !window.isApplying
+                        onPressed: (mouse) => {
+                            searchInput.forceActiveFocus();
+                            mouse.accepted = false;
+                        }
+                    }
                     
                     onTextEdited: {
                         window.hasSearched = false;
@@ -1536,6 +1551,19 @@ Item {
                         searchInput.focus = false; 
                         view.forceActiveFocus();
                     }
+                }
+
+                Text {
+                    anchors.left: searchInput.left
+                    anchors.right: searchInput.right
+                    anchors.verticalCenter: searchInput.verticalCenter
+                    text: "Type tags om te zoeken..."
+                    color: Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.45)
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: window.s(14)
+                    visible: window.currentFilter === "Search" && searchInput.text.length === 0 && !searchInput.activeFocus
+                    elide: Text.ElideRight
+                    z: 1
                 }
 
                 Rectangle {
@@ -1592,6 +1620,70 @@ Item {
                             ctx.lineTo(s(14), s(8));
                             ctx.lineTo(s(9), s(13));
                             ctx.stroke();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        id: quickTagBar
+        visible: window.currentFilter === "Search"
+        opacity: visible ? 1.0 : 0.0
+        anchors.top: filterBarBackground.bottom
+        anchors.topMargin: window.s(8)
+        anchors.horizontalCenter: parent.horizontalCenter
+        z: 19
+        width: Math.min(window.s(1150), parent.width - window.s(40))
+        height: tagFlow.implicitHeight + window.s(16)
+        radius: window.s(10)
+        color: Qt.rgba(_theme.mantle.r, _theme.mantle.g, _theme.mantle.b, 0.78)
+        border.color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.8)
+        border.width: 1
+        clip: true
+        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
+
+        Flow {
+            id: tagFlow
+            anchors.fill: parent
+            anchors.margins: window.s(8)
+            spacing: window.s(6)
+
+            Repeater {
+                model: window.quickSearchTags
+                delegate: Rectangle {
+                    required property string modelData
+                    radius: window.s(6)
+                    height: window.s(22)
+                    width: tagTxt.implicitWidth + window.s(14)
+                    color: tagMa.containsMouse
+                        ? Qt.rgba(_theme.blue.r, _theme.blue.g, _theme.blue.b, 0.24)
+                        : Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.50)
+                    border.color: tagMa.containsMouse
+                        ? _theme.blue
+                        : Qt.rgba(_theme.surface1.r, _theme.surface1.g, _theme.surface1.b, 0.7)
+                    border.width: 1
+
+                    Text {
+                        id: tagTxt
+                        anchors.centerIn: parent
+                        text: String(modelData).toUpperCase()
+                        color: _theme.text
+                        font.family: "JetBrains Mono"
+                        font.pixelSize: window.s(10)
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: tagMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        enabled: !window.isApplying
+                        onClicked: {
+                            searchInput.text = String(modelData);
+                            window.triggerOnlineSearch();
                         }
                     }
                 }

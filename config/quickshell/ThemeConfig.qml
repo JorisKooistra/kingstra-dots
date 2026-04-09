@@ -92,6 +92,14 @@ Item {
         return Font.Normal;
     }
 
+    function normalizeBarPosition(value) {
+        let normalized = String(value || "top").toLowerCase();
+        if (normalized === "bottom" || normalized === "left" || normalized === "right") {
+            return normalized;
+        }
+        return "top";
+    }
+
     Process {
         id: themeReader
         command: ["bash", "-c", "cat ~/.config/quickshell/theme.json 2>/dev/null"]
@@ -135,7 +143,7 @@ Item {
                             root.barHeight = parseInt(root.clamp(parsedBarHeight, 40, 96));
                         }
                     }
-                    if (data.bar_position !== undefined) root.barPosition = String(data.bar_position);
+                    if (data.bar_position !== undefined) root.barPosition = root.normalizeBarPosition(data.bar_position);
                     if (data.bar_shape !== undefined) root.barShape = String(data.bar_shape);
                     if (data.bar_width_mode !== undefined) root.barWidthMode = String(data.bar_width_mode);
                     if (data.bar_floating !== undefined) root.barFloating = !!data.bar_floating;

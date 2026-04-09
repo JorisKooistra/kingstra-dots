@@ -119,7 +119,14 @@ FloatingWindow {
     property real animH: 1
 
     function getLayout(name) {
-        return Registry.getLayout(name, masterWindow.activeMx, masterWindow.activeMy, masterWindow.activeMw, masterWindow.activeMh);
+        return Registry.getLayout(
+            name,
+            masterWindow.activeMx,
+            masterWindow.activeMy,
+            masterWindow.activeMw,
+            masterWindow.activeMh,
+            TouchProfile.windowScale
+        );
     }
     
     width: 1

@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Gebruik: kingstra-touch-detect [--json]
+
+Detecteert of er een touchscreen aanwezig is en print een profiel voor UI-optimalisatie.
+EOF
+}
+
+emit_json() {
+    local is_touch="$1"
+    local count="$2"
+    local source="$3"
+    local ui_scale="$4"
+    local window_scale="$5"
+    local hit_target_scale="$6"
+    local scroll_drag_scale="$7"
+
+    cat <<EOF
+{
+  "is_touchscreen": ${is_touch},
+  "touchscreen_count": ${count},
+  "source": "${source}",
+  "ui_scale": ${ui_scale},
+  "window_scale": ${window_scale},
+  "hit_target_scale": ${hit_target_scale},
+  "scroll_drag_scale": ${scroll_drag_scale}
+}
+EOF
+}
+
+detect_from_hyprctl() {
+    if ! command -v hyprctl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+        return 1
+    fi
+
+    local json
+    json="$(hyprctl devices -j 2>/dev/null || true)"
+    [[ -z "$json" ]] && return 1
+
+    local count
+    count="$(printf '%s' "$json" | jq -r '
+        if (.touch? | type) == "array" then
+            (.touch | length)
+        else
+            ([.. | objects | .name? // empty | strings
+              | select(test("touch(screen)?|touch digitizer|digitizer"; "i"))] | length)
+        end
+    ' 2>/dev/null || echo 0)"
+
+    [[ "$count" =~ ^[0-9]+$ ]] || count=0
+    if (( count > 0 )); then
+        printf '%s\n' "$count"
+        return 0
+    fi
+
+    return 1
+}
+
+detect_from_proc() {
+    [[ -r /proc/bus/input/devices ]] || return 1
+
+    local count
+    count="$(grep -Eic 'touchscreen|touch screen|touch digitizer|digitizer' /proc/bus/input/devices 2>/dev/null || echo 0)"
+    [[ "$count" =~ ^[0-9]+$ ]] || count=0
+
+    if (( count > 0 )); then
+        printf '%s\n' "$count"
+        return 0
+    fi
+
+    return 1
+}
+
+main() {
+    if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+        usage
+        exit 0
+    fi
+
+    local touch_count=0
+    local source="none"
+    local detected=""
+
+    if [[ "${KINGSTRA_FORCE_TOUCH:-}" == "1" ]]; then
+        touch_count=1
+        source="env"
+    elif [[ "${KINGSTRA_FORCE_TOUCH:-}" == "0" ]]; then
+        touch_count=0
+        source="env"
+    else
+        detected="$(detect_from_hyprctl || true)"
+        if [[ "$detected" =~ ^[0-9]+$ ]] && (( detected > 0 )); then
+            touch_count="$detected"
+            source="hyprctl"
+        else
+            detected="$(detect_from_proc || true)"
+            if [[ "$detected" =~ ^[0-9]+$ ]] && (( detected > 0 )); then
+                touch_count="$detected"
+                source="proc"
+            fi
+        fi
+    fi
+
+    if [[ ! "$touch_count" =~ ^[0-9]+$ ]]; then
+        touch_count=0
+        if [[ "$source" != "env" ]]; then
+            source="none"
+        fi
+    fi
+
+    local is_touch="false"
+    local ui_scale="1.0"
+    local window_scale="1.0"
+    local hit_target_scale="1.0"
+    local scroll_drag_scale="1.0"
+
+    if (( touch_count > 0 )); then
+        is_touch="true"
+        ui_scale="1.10"
+        window_scale="1.08"
+        hit_target_scale="1.22"
+        scroll_drag_scale="1.20"
+    fi
+
+    emit_json "$is_touch" "$touch_count" "$source" "$ui_scale" "$window_scale" "$hit_target_scale" "$scroll_drag_scale"
+}
+
+main "$@"

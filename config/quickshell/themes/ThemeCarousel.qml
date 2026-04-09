@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Window
 import Quickshell
@@ -275,10 +276,13 @@ Item {
             readonly property string themeIcon: icon !== undefined ? String(icon) : "󰏘"
             readonly property string themeDesc: description !== undefined ? String(description) : ""
             readonly property string previewImg: preview_image !== undefined ? String(preview_image) : ""
+            readonly property string previewSource: previewImg !== "" ?
+                "file://" + Quickshell.env("HOME") + "/.config/kingstra/themes/previews/" + previewImg : ""
             readonly property string schemeType: matugenData.scheme_type !== undefined ? String(matugenData.scheme_type) : (scheme_type !== undefined ? String(scheme_type) : "")
             readonly property string iconTheme: iconsData.icon_theme !== undefined ? String(iconsData.icon_theme) : "Papirus-Dark"
             readonly property int borderRadius: appearanceData.border_radius !== undefined ? appearanceData.border_radius : (border_radius !== undefined ? border_radius : 12)
             readonly property int gapsOut: appearanceData.gaps_out !== undefined ? appearanceData.gaps_out : (gaps_out !== undefined ? gaps_out : 10)
+            readonly property int previewRadius: root.s(Math.max(12, borderRadius))
             readonly property color accentColor: root.accentForScheme(schemeType)
 
             readonly property bool isCurrent: ListView.isCurrentItem
@@ -322,158 +326,178 @@ Item {
                 Item {
                     anchors.fill: parent
                     anchors.margins: root.borderWidth
-                    clip: true
 
                     Rectangle {
+                        id: previewMask
                         anchors.fill: parent
-                        radius: root.s(Math.max(12, delegateRoot.borderRadius))
-                        color: Qt.rgba(_theme.base.r, _theme.base.g, _theme.base.b, 0.96)
+                        radius: delegateRoot.previewRadius
+                        visible: false
+                        layer.enabled: true
                     }
 
-                    Image {
-                        id: previewImage
+                    Item {
+                        id: maskedVisualLayer
                         anchors.fill: parent
-                        fillMode: Image.PreserveAspectCrop
-                        source: delegateRoot.previewImg !== "" ?
-                            "file://" + Quickshell.env("HOME") + "/.config/kingstra/themes/previews/" + delegateRoot.previewImg : ""
-                        asynchronous: true
-                        visible: status === Image.Ready
-
-                        transform: Matrix4x4 {
-                            property real s: -root.skewFactor
-                            matrix: Qt.matrix4x4(1, s, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        visible: previewImage.status !== Image.Ready
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: Qt.rgba(delegateRoot.accentColor.r, delegateRoot.accentColor.g, delegateRoot.accentColor.b, 0.92) }
-                            GradientStop { position: 0.55; color: Qt.rgba(_theme.surface0.r, _theme.surface0.g, _theme.surface0.b, 0.98) }
-                            GradientStop { position: 1.0; color: Qt.rgba(_theme.base.r, _theme.base.g, _theme.base.b, 1.0) }
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        color: Qt.rgba(delegateRoot.accentColor.r, delegateRoot.accentColor.g, delegateRoot.accentColor.b, delegateRoot.isCurrent ? 0.10 : 0.05)
-                    }
-
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: root.previewInfoHeight
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: "transparent" }
-                            GradientStop { position: 0.28; color: Qt.rgba(0, 0, 0, 0.45) }
-                            GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.82) }
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            maskEnabled: true
+                            maskSource: previewMask
                         }
 
-                        transform: Matrix4x4 {
-                            property real s: -root.skewFactor
-                            matrix: Qt.matrix4x4(1, s, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: delegateRoot.previewRadius
+                            color: Qt.rgba(_theme.base.r, _theme.base.g, _theme.base.b, 0.96)
                         }
 
-                        Column {
+                        Image {
+                            id: previewImage
+                            anchors.fill: parent
+                            fillMode: Image.PreserveAspectCrop
+                            source: delegateRoot.previewSource
+                            asynchronous: true
+                            cache: true
+                            mipmap: true
+                            sourceSize.width: Math.max(1, Math.round(width * Screen.devicePixelRatio))
+                            sourceSize.height: Math.max(1, Math.round(height * Screen.devicePixelRatio))
+                            visible: status === Image.Ready
+
+                            transform: Matrix4x4 {
+                                property real s: -root.skewFactor
+                                matrix: Qt.matrix4x4(1, s, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            visible: previewImage.status !== Image.Ready
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: Qt.rgba(delegateRoot.accentColor.r, delegateRoot.accentColor.g, delegateRoot.accentColor.b, 0.92) }
+                                GradientStop { position: 0.55; color: Qt.rgba(_theme.surface0.r, _theme.surface0.g, _theme.surface0.b, 0.98) }
+                                GradientStop { position: 1.0; color: Qt.rgba(_theme.base.r, _theme.base.g, _theme.base.b, 1.0) }
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            color: Qt.rgba(delegateRoot.accentColor.r, delegateRoot.accentColor.g, delegateRoot.accentColor.b, delegateRoot.isCurrent ? 0.10 : 0.05)
+                        }
+
+                        Rectangle {
+                            anchors.bottom: parent.bottom
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            anchors.bottom: parent.bottom
-                            anchors.leftMargin: root.s(16)
-                            anchors.rightMargin: root.s(16)
-                            anchors.bottomMargin: root.s(12)
-                            spacing: root.s(4)
-
-                            Row {
-                                spacing: root.s(8)
-                                Text {
-                                    text: delegateRoot.themeIcon
-                                    font.pixelSize: root.embedded ? root.s(18) : root.s(20)
-                                    font.family: "JetBrainsMono Nerd Font"
-                                    color: _theme.text
-                                }
-                                Text {
-                                    text: delegateRoot.themeName
-                                    font.pixelSize: root.embedded ? root.s(14) : root.s(16)
-                                    font.bold: true
-                                    color: _theme.text
-                                }
+                            height: root.previewInfoHeight
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: "transparent" }
+                                GradientStop { position: 0.28; color: Qt.rgba(0, 0, 0, 0.45) }
+                                GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.82) }
                             }
 
-                            Row {
-                                spacing: root.s(6)
-                                Rectangle {
-                                    radius: root.s(6)
-                                    color: Qt.rgba(delegateRoot.accentColor.r, delegateRoot.accentColor.g, delegateRoot.accentColor.b, 0.24)
-                                    height: root.s(20)
-                                    width: schemeText.implicitWidth + root.s(14)
-                                    visible: delegateRoot.isCurrent
+                            transform: Matrix4x4 {
+                                property real s: -root.skewFactor
+                                matrix: Qt.matrix4x4(1, s, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+                            }
+
+                            Column {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                anchors.leftMargin: root.s(16)
+                                anchors.rightMargin: root.s(16)
+                                anchors.bottomMargin: root.s(12)
+                                spacing: root.s(4)
+
+                                Row {
+                                    spacing: root.s(8)
                                     Text {
-                                        id: schemeText
-                                        anchors.centerIn: parent
-                                        text: root.formatSchemeLabel(delegateRoot.schemeType)
-                                        font.family: "JetBrains Mono"
-                                        font.pixelSize: root.s(10)
+                                        text: delegateRoot.themeIcon
+                                        font.pixelSize: root.embedded ? root.s(18) : root.s(20)
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        color: _theme.text
+                                    }
+                                    Text {
+                                        text: delegateRoot.themeName
+                                        font.pixelSize: root.embedded ? root.s(14) : root.s(16)
                                         font.bold: true
                                         color: _theme.text
                                     }
                                 }
-                                Rectangle {
-                                    radius: root.s(6)
-                                    color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.30)
-                                    height: root.s(20)
-                                    width: iconThemeText.implicitWidth + root.s(14)
-                                    visible: delegateRoot.isCurrent
-                                    Text {
-                                        id: iconThemeText
-                                        anchors.centerIn: parent
-                                        text: delegateRoot.iconTheme
-                                        font.family: "JetBrains Mono"
-                                        font.pixelSize: root.s(10)
-                                        color: _theme.text
+
+                                Row {
+                                    spacing: root.s(6)
+                                    Rectangle {
+                                        radius: root.s(6)
+                                        color: Qt.rgba(delegateRoot.accentColor.r, delegateRoot.accentColor.g, delegateRoot.accentColor.b, 0.24)
+                                        height: root.s(20)
+                                        width: schemeText.implicitWidth + root.s(14)
+                                        visible: delegateRoot.isCurrent
+                                        Text {
+                                            id: schemeText
+                                            anchors.centerIn: parent
+                                            text: root.formatSchemeLabel(delegateRoot.schemeType)
+                                            font.family: "JetBrains Mono"
+                                            font.pixelSize: root.s(10)
+                                            font.bold: true
+                                            color: _theme.text
+                                        }
+                                    }
+                                    Rectangle {
+                                        radius: root.s(6)
+                                        color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.30)
+                                        height: root.s(20)
+                                        width: iconThemeText.implicitWidth + root.s(14)
+                                        visible: delegateRoot.isCurrent
+                                        Text {
+                                            id: iconThemeText
+                                            anchors.centerIn: parent
+                                            text: delegateRoot.iconTheme
+                                            font.family: "JetBrains Mono"
+                                            font.pixelSize: root.s(10)
+                                            color: _theme.text
+                                        }
                                     }
                                 }
+
+                                Text {
+                                    text: delegateRoot.themeDesc
+                                    font.pixelSize: root.s(11)
+                                    color: _theme.subtext0
+                                    visible: text !== "" && delegateRoot.isCurrent
+                                    opacity: delegateRoot.isCurrent ? 1.0 : 0.0
+                                    Behavior on opacity { NumberAnimation { duration: 300 } }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            visible: delegateRoot.isActive
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.margins: root.s(10)
+                            width: root.s(32)
+                            height: root.s(32)
+                            radius: root.s(16)
+                            color: Qt.rgba(_theme.green.r, _theme.green.g, _theme.green.b, 0.92)
+
+                            transform: Matrix4x4 {
+                                property real s: -root.skewFactor
+                                matrix: Qt.matrix4x4(1, s, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
                             }
 
                             Text {
-                                text: delegateRoot.themeDesc
-                                font.pixelSize: root.s(11)
-                                color: _theme.subtext0
-                                visible: text !== "" && delegateRoot.isCurrent
-                                opacity: delegateRoot.isCurrent ? 1.0 : 0.0
-                                Behavior on opacity { NumberAnimation { duration: 300 } }
+                                anchors.centerIn: parent
+                                text: "󰄬"
+                                font.pixelSize: root.s(18)
+                                font.family: "JetBrainsMono Nerd Font"
+                                color: _theme.crust
                             }
-                        }
-                    }
-
-                    Rectangle {
-                        visible: delegateRoot.isActive
-                        anchors.top: parent.top
-                        anchors.right: parent.right
-                        anchors.margins: root.s(10)
-                        width: root.s(32)
-                        height: root.s(32)
-                        radius: root.s(16)
-                        color: Qt.rgba(_theme.green.r, _theme.green.g, _theme.green.b, 0.92)
-
-                        transform: Matrix4x4 {
-                            property real s: -root.skewFactor
-                            matrix: Qt.matrix4x4(1, s, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-                        }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "󰄬"
-                            font.pixelSize: root.s(18)
-                            font.family: "JetBrainsMono Nerd Font"
-                            color: _theme.crust
                         }
                     }
 
                     Rectangle {
                         anchors.fill: parent
-                        radius: root.s(Math.max(12, delegateRoot.borderRadius))
+                        radius: delegateRoot.previewRadius
                         color: "transparent"
                         border.color: delegateRoot.isCurrent ?
                             Qt.rgba(delegateRoot.accentColor.r, delegateRoot.accentColor.g, delegateRoot.accentColor.b, 0.85) :

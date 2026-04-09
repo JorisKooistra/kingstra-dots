@@ -19,8 +19,12 @@ function s(val, scale) {
 }
 
 // Centralized registry for all widget dimensions and positional mathematics.
-function getLayout(name, mx, my, mw, mh) {
+function getLayout(name, mx, my, mw, mh, touchBoost) {
     let scale = getScale(mw);
+    let boost = Number(touchBoost);
+    if (!isFinite(boost) || boost < 1.0) boost = 1.0;
+    boost = Math.min(1.35, boost);
+    scale *= boost;
 
     let base = {
         // Right-aligned: pinned 20px from the right edge dynamically

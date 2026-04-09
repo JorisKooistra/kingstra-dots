@@ -71,7 +71,7 @@ surface = "wood-matte"
 enabled = true
 top_left = "assets/themes/botanical/ornament-top-left.svg"
 top_right = "assets/themes/botanical/ornament-top-right.svg"
-opacity = 0.30
+opacity = 0.42
 
 [effects]
 particles = "fireflies"

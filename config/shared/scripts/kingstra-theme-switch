@@ -253,6 +253,8 @@ eval "$("$READER" "$THEME_FILE")"
 
 BAR_SHAPE_JSON=$(pick_enum "${BAR_SHAPE:-rounded}" "rounded" "bar.shape" \
     rounded organic-grown capsule block segmented-capsule beveled)
+BAR_POSITION_JSON=$(pick_enum "${QUICKSHELL_BAR_POSITION:-top}" "top" "quickshell.bar_position" \
+    top bottom left right)
 BAR_WIDTH_MODE_JSON=$(pick_enum "${BAR_WIDTH_MODE:-full}" "full" "bar.width_mode" \
     full floating)
 BAR_FLOATING_JSON=$(bool_json "${BAR_FLOATING:-false}")
@@ -438,7 +440,7 @@ cat > "$THEME_JSON" <<EOF
     "mono_font_size": ${FONTS_MONO_FONT_SIZE:-12},
     "icon_theme": "${ICONS_ICON_THEME:-Papirus-Dark}",
     "bar_height": ${QUICKSHELL_BAR_HEIGHT:-36},
-    "bar_position": "${QUICKSHELL_BAR_POSITION:-top}",
+    "bar_position": "${BAR_POSITION_JSON}",
     "bar_shape": "${BAR_SHAPE_JSON}",
     "bar_width_mode": "${BAR_WIDTH_MODE_JSON}",
     "bar_floating": ${BAR_FLOATING_JSON},

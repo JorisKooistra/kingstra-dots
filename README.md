@@ -136,7 +136,11 @@ Theme data now also includes visual skin blocks in each `config/kingstra/themes/
 These fields flow through `kingstra-theme-switch` into `~/.config/quickshell/theme.json`,
 then into `ThemeConfig.qml` with safe fallbacks for invalid or missing values.
 `TopBar.qml` stays the entrypoint and delegates to the bar architecture in `config/quickshell/bar/`
-(`BarShell.qml` -> `BarSurface.qml` -> `BarContent.qml`).
+(`BarShell.qml` -> `BarSurface.qml` -> `BarContent.qml` / `BarContentSidebar.qml`).
+
+`quickshell.bar_position` supports `top`, `bottom`, `left`, `right`.
+- `top`/`bottom`: horizontal bar layout.
+- `left`/`right`: sidebar layout with clock+weather at the top, workspaces vertical, and system controls stacked vertically.
 
 | Theme | Description | Scheme |
 |---|---|---|
@@ -174,6 +178,21 @@ kingstra-mode-switch gaming
 ```
 
 Keybind: `Super + Ctrl + M` opens the visual mode picker.
+
+---
+
+## Touchscreen
+
+The shell now auto-detects touchscreen hardware and applies a touch profile:
+- larger UI scale and popup dimensions
+- larger bar hit targets
+- touch-friendly settings scrolling (finger drag stays native; mouse-wheel catchers disable on touch)
+
+Detector command: `kingstra-touch-detect --json`
+
+Optional override:
+- `KINGSTRA_FORCE_TOUCH=1` force touch mode
+- `KINGSTRA_FORCE_TOUCH=0` force non-touch mode
 
 ---
 

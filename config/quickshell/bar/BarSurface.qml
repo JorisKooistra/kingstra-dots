@@ -95,7 +95,9 @@ Item {
         opacity: (!shell.barAutoHide || shell.autoHideVisible) ? 1.0 : 0.0
         Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutSine } }
         transform: Translate {
-            y: (!shell.barAutoHide || shell.autoHideVisible) ? 0 : shell.s(-60)
+            x: shell.autoHideOffsetX
+            y: shell.autoHideOffsetY
+            Behavior on x { NumberAnimation { duration: 300; easing.type: Easing.InOutSine } }
             Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.InOutSine } }
         }
 
@@ -183,12 +185,29 @@ Item {
             }
         }
 
-        BarContent {
+        Loader {
+            id: contentLoader
             anchors.fill: parent
-            shell: surface.shell
-            surface: surface
-            mocha: surface.mocha
             z: 1
+            sourceComponent: shell.isVerticalBar ? sidebarContentComponent : horizontalContentComponent
+        }
+
+        Component {
+            id: horizontalContentComponent
+            BarContent {
+                shell: surface.shell
+                surface: surface
+                mocha: surface.mocha
+            }
+        }
+
+        Component {
+            id: sidebarContentComponent
+            BarContentSidebar {
+                shell: surface.shell
+                surface: surface
+                mocha: surface.mocha
+            }
         }
 
         OrnamentLayer {

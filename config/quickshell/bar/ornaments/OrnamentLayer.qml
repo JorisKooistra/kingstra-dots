@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 
 Item {
     id: root
@@ -6,14 +7,83 @@ Item {
     required property var mocha
 
     readonly property bool ornamentsActive: shell.ornamentEnabled && shell.ornamentOpacity > 0.0
-    readonly property real levelOpacity: Math.max(0.0, Math.min(1.0, shell.ornamentOpacity))
     readonly property string activeTheme: String(shell.activeThemeName || "botanical").toLowerCase()
-    property string requestedTopLeft: root.ornamentsActive ? String(shell.ornamentTopLeft || "") : ""
-    property string requestedTopRight: root.ornamentsActive ? String(shell.ornamentTopRight || "") : ""
-    property string effectiveTopLeft: requestedTopLeft
-    property string effectiveTopRight: requestedTopRight
-    onRequestedTopLeftChanged: effectiveTopLeft = requestedTopLeft
-    onRequestedTopRightChanged: effectiveTopRight = requestedTopRight
+    readonly property real themeOpacityBoost: activeTheme === "botanical" ? 1.55
+                                            : (activeTheme === "rocky" ? 1.35 : 1.20)
+    readonly property real minVisibleOpacity: activeTheme === "botanical" ? 0.38
+                                            : (activeTheme === "rocky" ? 0.22 : 0.18)
+    readonly property real levelOpacity: ornamentsActive
+                                       ? Math.max(minVisibleOpacity, Math.min(0.96, Number(shell.ornamentOpacity || 0.0) * themeOpacityBoost))
+                                       : 0.0
+
+    property string requestedTopLeft: root.ornamentsActive ? String(shell.ornamentTopLeft !== undefined ? shell.ornamentTopLeft : "") : ""
+    property string requestedTopRight: root.ornamentsActive ? String(shell.ornamentTopRight !== undefined ? shell.ornamentTopRight : "") : ""
+    property string requestedTopCenter: root.ornamentsActive ? String(shell.ornamentTopCenter !== undefined ? shell.ornamentTopCenter : "") : ""
+
+    readonly property string fallbackRootPrimary: Quickshell.env("HOME") + "/kingstra-dots/assets/themes/" + root.activeTheme + "/"
+    readonly property string fallbackRootSecondary: Quickshell.env("HOME") + "/.config/kingstra-dots/assets/themes/" + root.activeTheme + "/"
+
+    readonly property string fallbackTopLeftPrimary: fallbackRootPrimary + "ornament-top-left.svg"
+    readonly property string fallbackTopLeftSecondary: fallbackRootPrimary + "ornament-top-left.png"
+    readonly property string fallbackTopLeftTertiary: fallbackRootSecondary + "ornament-top-left.svg"
+    readonly property string fallbackTopLeftQuaternary: fallbackRootSecondary + "ornament-top-left.png"
+
+    readonly property string fallbackTopRightPrimary: fallbackRootPrimary + "ornament-top-right.svg"
+    readonly property string fallbackTopRightSecondary: fallbackRootPrimary + "ornament-top-right.png"
+    readonly property string fallbackTopRightTertiary: fallbackRootSecondary + "ornament-top-right.svg"
+    readonly property string fallbackTopRightQuaternary: fallbackRootSecondary + "ornament-top-right.png"
+
+    readonly property string fallbackTopCenterPrimary: fallbackRootPrimary + "ornament-center.svg"
+    readonly property string fallbackTopCenterSecondary: fallbackRootPrimary + "ornament-center.png"
+    readonly property string fallbackTopCenterTertiary: fallbackRootSecondary + "ornament-center.svg"
+    readonly property string fallbackTopCenterQuaternary: fallbackRootSecondary + "ornament-center.png"
+
+    property string effectiveTopLeft: ""
+    property string effectiveTopRight: ""
+    property string effectiveTopCenter: ""
+
+    onRequestedTopLeftChanged: resetTopLeftSource()
+    onRequestedTopRightChanged: resetTopRightSource()
+    onRequestedTopCenterChanged: resetTopCenterSource()
+    onActiveThemeChanged: {
+        resetTopLeftSource();
+        resetTopRightSource();
+        resetTopCenterSource();
+    }
+    onOrnamentsActiveChanged: {
+        resetTopLeftSource();
+        resetTopRightSource();
+        resetTopCenterSource();
+    }
+    Component.onCompleted: {
+        resetTopLeftSource();
+        resetTopRightSource();
+        resetTopCenterSource();
+    }
+
+    function resetTopLeftSource() {
+        if (!root.ornamentsActive) {
+            root.effectiveTopLeft = "";
+            return;
+        }
+        root.effectiveTopLeft = root.requestedTopLeft !== "" ? root.requestedTopLeft : root.fallbackTopLeftPrimary;
+    }
+
+    function resetTopRightSource() {
+        if (!root.ornamentsActive) {
+            root.effectiveTopRight = "";
+            return;
+        }
+        root.effectiveTopRight = root.requestedTopRight !== "" ? root.requestedTopRight : root.fallbackTopRightPrimary;
+    }
+
+    function resetTopCenterSource() {
+        if (!root.ornamentsActive) {
+            root.effectiveTopCenter = "";
+            return;
+        }
+        root.effectiveTopCenter = root.requestedTopCenter !== "" ? root.requestedTopCenter : root.fallbackTopCenterPrimary;
+    }
 
     function warnMissing(assetPath, slotName) {
         if (assetPath && assetPath !== "") {
@@ -35,6 +105,10 @@ Item {
             if (mocha && mocha.overlay2 !== undefined) return mocha.overlay2;
             return Qt.rgba(0.78, 0.76, 0.72, 1.0);
         }
+        if (root.activeTheme === "ocean" || root.activeTheme === "space") {
+            if (mocha && mocha.blue !== undefined) return mocha.blue;
+            return Qt.rgba(0.55, 0.78, 0.98, 1.0);
+        }
         if (mocha && mocha.green !== undefined) return mocha.green;
         return Qt.rgba(0.60, 0.84, 0.62, 1.0);
     }
@@ -45,12 +119,12 @@ Item {
         anchors.top: parent.top
         anchors.leftMargin: shell.s(14)
         anchors.topMargin: shell.s(1)
-        width: shell.s(126)
-        height: shell.s(52)
+        width: shell.s(root.activeTheme === "botanical" ? 134 : 126)
+        height: shell.s(root.activeTheme === "botanical" ? 56 : 52)
         fillMode: Image.PreserveAspectFit
         source: root.effectiveTopLeft
-        opacity: root.levelOpacity
-        visible: source !== "" && status !== Image.Error
+        opacity: Math.min(0.98, root.levelOpacity * (root.activeTheme === "botanical" ? 1.10 : 1.0))
+        visible: root.ornamentsActive && source !== "" && status !== Image.Error
         smooth: true
         asynchronous: true
         property bool alreadyWarned: false
@@ -60,6 +134,18 @@ Item {
             let png = root.pngVariant(source);
             if (png !== "" && png !== source) {
                 root.effectiveTopLeft = png;
+                return;
+            }
+            if (source === root.fallbackTopLeftPrimary) {
+                root.effectiveTopLeft = root.fallbackTopLeftSecondary;
+                return;
+            }
+            if (source === root.fallbackTopLeftSecondary) {
+                root.effectiveTopLeft = root.fallbackTopLeftTertiary;
+                return;
+            }
+            if (source === root.fallbackTopLeftTertiary) {
+                root.effectiveTopLeft = root.fallbackTopLeftQuaternary;
                 return;
             }
             if (!alreadyWarned) {
@@ -75,12 +161,12 @@ Item {
         anchors.top: parent.top
         anchors.rightMargin: shell.s(14)
         anchors.topMargin: shell.s(1)
-        width: shell.s(126)
-        height: shell.s(52)
+        width: shell.s(root.activeTheme === "botanical" ? 134 : 126)
+        height: shell.s(root.activeTheme === "botanical" ? 56 : 52)
         fillMode: Image.PreserveAspectFit
         source: root.effectiveTopRight
-        opacity: root.levelOpacity
-        visible: source !== "" && status !== Image.Error
+        opacity: Math.min(0.98, root.levelOpacity * (root.activeTheme === "botanical" ? 1.10 : 1.0))
+        visible: root.ornamentsActive && source !== "" && status !== Image.Error
         smooth: true
         asynchronous: true
         property bool alreadyWarned: false
@@ -92,9 +178,62 @@ Item {
                 root.effectiveTopRight = png;
                 return;
             }
+            if (source === root.fallbackTopRightPrimary) {
+                root.effectiveTopRight = root.fallbackTopRightSecondary;
+                return;
+            }
+            if (source === root.fallbackTopRightSecondary) {
+                root.effectiveTopRight = root.fallbackTopRightTertiary;
+                return;
+            }
+            if (source === root.fallbackTopRightTertiary) {
+                root.effectiveTopRight = root.fallbackTopRightQuaternary;
+                return;
+            }
             if (!alreadyWarned) {
                 alreadyWarned = true;
                 root.warnMissing(source, "top-right");
+            }
+        }
+    }
+
+    Image {
+        id: topCenter
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: shell.s(root.activeTheme === "rocky" ? 3 : 1)
+        width: shell.s(root.activeTheme === "botanical" ? 152 : 124)
+        height: shell.s(root.activeTheme === "botanical" ? 28 : 24)
+        fillMode: Image.PreserveAspectFit
+        source: root.effectiveTopCenter
+        opacity: Math.min(0.98, root.levelOpacity * (root.activeTheme === "botanical" ? 1.12 : 1.02))
+        visible: root.ornamentsActive && source !== "" && status !== Image.Error
+        smooth: true
+        asynchronous: true
+        property bool alreadyWarned: false
+        onSourceChanged: alreadyWarned = false
+        onStatusChanged: {
+            if (status !== Image.Error) return;
+            let png = root.pngVariant(source);
+            if (png !== "" && png !== source) {
+                root.effectiveTopCenter = png;
+                return;
+            }
+            if (source === root.fallbackTopCenterPrimary) {
+                root.effectiveTopCenter = root.fallbackTopCenterSecondary;
+                return;
+            }
+            if (source === root.fallbackTopCenterSecondary) {
+                root.effectiveTopCenter = root.fallbackTopCenterTertiary;
+                return;
+            }
+            if (source === root.fallbackTopCenterTertiary) {
+                root.effectiveTopCenter = root.fallbackTopCenterQuaternary;
+                return;
+            }
+            if (!alreadyWarned) {
+                alreadyWarned = true;
+                root.warnMissing(source, "top-center");
             }
         }
     }
@@ -107,8 +246,8 @@ Item {
         anchors.topMargin: shell.s(6)
         width: shell.s(70)
         height: shell.s(24)
-        visible: root.ornamentsActive && (root.requestedTopLeft === "" || topLeft.status === Image.Error)
-        opacity: root.levelOpacity * 0.9
+        visible: root.ornamentsActive && (topLeft.source === "" || topLeft.status === Image.Error)
+        opacity: Math.min(0.98, root.levelOpacity * 0.95)
 
         readonly property color accent: root.accentForTheme()
         Rectangle {
@@ -116,14 +255,14 @@ Item {
             anchors.top: parent.top
             width: parent.width
             height: shell.s(2)
-            color: Qt.rgba(generatedLeft.accent.r, generatedLeft.accent.g, generatedLeft.accent.b, 0.42)
+            color: Qt.rgba(generatedLeft.accent.r, generatedLeft.accent.g, generatedLeft.accent.b, 0.52)
         }
         Rectangle {
             anchors.left: parent.left
             anchors.top: parent.top
             width: shell.s(2)
             height: parent.height
-            color: Qt.rgba(generatedLeft.accent.r, generatedLeft.accent.g, generatedLeft.accent.b, 0.42)
+            color: Qt.rgba(generatedLeft.accent.r, generatedLeft.accent.g, generatedLeft.accent.b, 0.52)
         }
         Rectangle {
             visible: root.activeTheme !== "rocky"
@@ -134,7 +273,7 @@ Item {
             width: shell.s(8)
             height: shell.s(8)
             radius: width / 2
-            color: Qt.rgba(generatedLeft.accent.r, generatedLeft.accent.g, generatedLeft.accent.b, 0.35)
+            color: Qt.rgba(generatedLeft.accent.r, generatedLeft.accent.g, generatedLeft.accent.b, 0.46)
         }
     }
 
@@ -146,8 +285,8 @@ Item {
         anchors.topMargin: shell.s(6)
         width: shell.s(70)
         height: shell.s(24)
-        visible: root.ornamentsActive && (root.requestedTopRight === "" || topRight.status === Image.Error)
-        opacity: root.levelOpacity * 0.9
+        visible: root.ornamentsActive && (topRight.source === "" || topRight.status === Image.Error)
+        opacity: Math.min(0.98, root.levelOpacity * 0.95)
 
         readonly property color accent: root.accentForTheme()
         Rectangle {
@@ -155,14 +294,14 @@ Item {
             anchors.top: parent.top
             width: parent.width
             height: shell.s(2)
-            color: Qt.rgba(generatedRight.accent.r, generatedRight.accent.g, generatedRight.accent.b, 0.42)
+            color: Qt.rgba(generatedRight.accent.r, generatedRight.accent.g, generatedRight.accent.b, 0.52)
         }
         Rectangle {
             anchors.right: parent.right
             anchors.top: parent.top
             width: shell.s(2)
             height: parent.height
-            color: Qt.rgba(generatedRight.accent.r, generatedRight.accent.g, generatedRight.accent.b, 0.42)
+            color: Qt.rgba(generatedRight.accent.r, generatedRight.accent.g, generatedRight.accent.b, 0.52)
         }
         Rectangle {
             visible: root.activeTheme !== "rocky"
@@ -173,7 +312,64 @@ Item {
             width: shell.s(8)
             height: shell.s(8)
             radius: width / 2
-            color: Qt.rgba(generatedRight.accent.r, generatedRight.accent.g, generatedRight.accent.b, 0.35)
+            color: Qt.rgba(generatedRight.accent.r, generatedRight.accent.g, generatedRight.accent.b, 0.46)
+        }
+    }
+
+    Item {
+        id: generatedCenter
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: shell.s(root.activeTheme === "rocky" ? 3 : 1)
+        width: shell.s(root.activeTheme === "rocky" ? 112 : 148)
+        height: shell.s(root.activeTheme === "rocky" ? 18 : 22)
+        visible: root.ornamentsActive && (topCenter.source === "" || topCenter.status === Image.Error)
+        opacity: Math.min(0.98, root.levelOpacity * (root.activeTheme === "rocky" ? 0.74 : 0.92))
+
+        readonly property color accent: root.accentForTheme()
+
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: shell.s(2)
+            width: parent.width
+            height: shell.s(2)
+            color: Qt.rgba(generatedCenter.accent.r, generatedCenter.accent.g, generatedCenter.accent.b, 0.54)
+        }
+
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: shell.s(7)
+            width: shell.s(7)
+            height: shell.s(7)
+            radius: shell.s(2)
+            rotation: 45
+            color: Qt.rgba(generatedCenter.accent.r, generatedCenter.accent.g, generatedCenter.accent.b, 0.52)
+        }
+
+        Rectangle {
+            visible: root.activeTheme !== "rocky"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.horizontalCenterOffset: -shell.s(26)
+            anchors.topMargin: shell.s(4)
+            width: shell.s(20)
+            height: shell.s(2)
+            rotation: -22
+            color: Qt.rgba(generatedCenter.accent.r, generatedCenter.accent.g, generatedCenter.accent.b, 0.44)
+        }
+
+        Rectangle {
+            visible: root.activeTheme !== "rocky"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.horizontalCenterOffset: shell.s(26)
+            anchors.topMargin: shell.s(4)
+            width: shell.s(20)
+            height: shell.s(2)
+            rotation: 22
+            color: Qt.rgba(generatedCenter.accent.r, generatedCenter.accent.g, generatedCenter.accent.b, 0.44)
         }
     }
 }

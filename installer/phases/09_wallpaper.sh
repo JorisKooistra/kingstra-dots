@@ -111,7 +111,7 @@ _phase09_write_skwd_wall_config() {
         "matugen": false,
         "ollama": false,
         "steam": false,
-        "wallhaven": false
+        "wallhaven": true
     },
     "colorSource": "magick",
     "ollama": { "url": "http://localhost:11434", "model": "gemma3:4b" },
@@ -166,6 +166,7 @@ _phase09_disable_skwd_matugen() {
 
     if jq '
         .features.matugen = false
+        | .features.wallhaven = true
         | .matugen.schemeType = "scheme-tonal-spot"
     ' "$config_file" > "$tmp_file" 2>/dev/null; then
         mv "$tmp_file" "$config_file"

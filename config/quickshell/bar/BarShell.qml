@@ -17,16 +17,19 @@ Variants {
             screen: modelData
             
             anchors {
-                top: ThemeConfig.barPosition !== "bottom"
-                bottom: ThemeConfig.barPosition === "bottom"
-                left: true
-                right: true
+                top: barWindow.isTopBar || barWindow.isVerticalBar
+                bottom: barWindow.isBottomBar || barWindow.isVerticalBar
+                left: barWindow.isHorizontalBar || barWindow.isLeftBar
+                right: barWindow.isHorizontalBar || barWindow.isRightBar
             }
             
             // --- Responsive Scaling Logic ---
+            property real scaleReferenceWidth: barWindow.isVerticalBar
+                                               ? (barWindow.screen ? barWindow.screen.width : 1920)
+                                               : Math.max(800, barWindow.width)
             Scaler {
                 id: scaler
-                currentWidth: barWindow.width
+                currentWidth: barWindow.scaleReferenceWidth
             }
 
             property real baseScale: scaler.baseScale
@@ -36,9 +39,23 @@ Variants {
                 return scaler.s(val); 
             }
 
-            property int minBarHeight: 40
+            property string barPositionNormalized: {
+                let pos = String(ThemeConfig.barPosition || "top").toLowerCase();
+                if (pos === "bottom" || pos === "left" || pos === "right") return pos;
+                return "top";
+            }
+            property bool isTopBar: barPositionNormalized === "top"
+            property bool isBottomBar: barPositionNormalized === "bottom"
+            property bool isLeftBar: barPositionNormalized === "left"
+            property bool isRightBar: barPositionNormalized === "right"
+            property bool isVerticalBar: isLeftBar || isRightBar
+            property bool isHorizontalBar: !isVerticalBar
+            property bool touchOptimized: TouchProfile.isTouchscreen
+            property int minBarHeight: s(touchOptimized ? 44 : 40)
             property int themedBarHeight: s(ThemeConfig.barHeight > 0 ? ThemeConfig.barHeight : 48)
             property int barHeight: Math.max(minBarHeight, themedBarHeight)
+            property int minBarThickness: s(touchOptimized ? 102 : 86)
+            property int barThickness: Math.max(minBarThickness, barHeight + s(18))
             property bool edgeAttachedBar: ThemeConfig.barAttachToScreenEdge
                                           && ThemeConfig.barWidthMode === "full"
                                           && !ThemeConfig.barFloating
@@ -58,16 +75,31 @@ Variants {
             property string textureOverlayAsset: ThemeConfig.textureOverlayAsset
 
             // THICKER BAR, MINIMAL MARGINS (Scaled)
-            implicitHeight: barHeight
+            implicitHeight: barWindow.isHorizontalBar ? barHeight : 0
+            implicitWidth: barWindow.isVerticalBar ? barThickness : 0
             margins {
-                top: ThemeConfig.barPosition === "bottom" ? 0 : (barWindow.edgeAttachedBar ? 0 : s(8))
-                bottom: ThemeConfig.barPosition === "bottom" ? (barWindow.edgeAttachedBar ? 0 : s(8)) : 0
-                left: barWindow.edgeAttachedBar ? 0 : s(4)
-                right: barWindow.edgeAttachedBar ? 0 : s(4)
+                top: barWindow.isHorizontalBar
+                     ? (barWindow.isBottomBar ? 0 : (barWindow.edgeAttachedBar ? 0 : s(8)))
+                     : (barWindow.edgeAttachedBar ? 0 : s(8))
+                bottom: barWindow.isHorizontalBar
+                        ? (barWindow.isBottomBar ? (barWindow.edgeAttachedBar ? 0 : s(8)) : 0)
+                        : (barWindow.edgeAttachedBar ? 0 : s(8))
+                left: barWindow.isHorizontalBar
+                      ? (barWindow.edgeAttachedBar ? 0 : s(8))
+                      : (barWindow.isLeftBar ? (barWindow.edgeAttachedBar ? 0 : s(8)) : 0)
+                right: barWindow.isHorizontalBar
+                       ? (barWindow.edgeAttachedBar ? 0 : s(8))
+                       : (barWindow.isRightBar ? (barWindow.edgeAttachedBar ? 0 : s(8)) : 0)
             }
             
-            // exclusiveZone = 0 bij auto-hide (media mode), anders height + top margin
-            exclusiveZone: barWindow.barAutoHide ? 0 : barHeight + (ThemeConfig.barPosition === "bottom" ? margins.bottom : margins.top)
+            // exclusiveZone = 0 bij auto-hide (media mode), anders bar-dikte + randmarge
+            exclusiveZone: {
+                if (barWindow.barAutoHide) return 0;
+                if (barWindow.isVerticalBar) {
+                    return barWindow.barThickness + (barWindow.isRightBar ? margins.right : margins.left);
+                }
+                return barWindow.barHeight + (barWindow.isBottomBar ? margins.bottom : margins.top);
+            }
             color: "transparent"
 
             // Dynamic Matugen Palette
@@ -103,6 +135,7 @@ Variants {
             property bool barAutoHide: false
             property bool barVisible: true
             property int updateCount: 0
+            property int volumeWheelAccumulator: 0
 
             function _defaultModules(mode) {
                 if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "battery", "volume", "game_launcher", "clock"];
@@ -129,6 +162,8 @@ Variants {
             function openUpdatesTerminal() {
                 let cmd = "~/.config/quickshell/package_upgrade.sh";
                 Quickshell.execDetached(["kitty", "--hold", "bash", "-lc", cmd]);
+                Quickshell.execDetached(["bash", "-c", "rm -f ~/.cache/quickshell/package_updates_count"]);
+                updatesPoller.running = true;
                 Quickshell.execDetached(["notify-send", "Updates", "Update gestart in terminal"]);
             }
 
@@ -142,19 +177,32 @@ Variants {
 
             function handleVolumeWheel(deltaY) {
                 if (!deltaY || deltaY === 0) return;
-                let steps = Math.max(1, Math.round(Math.abs(deltaY) / 120));
+                barWindow.volumeWheelAccumulator += deltaY;
+                let steps = 0;
+
+                while (barWindow.volumeWheelAccumulator >= 120) {
+                    steps += 1;
+                    barWindow.volumeWheelAccumulator -= 120;
+                }
+                while (barWindow.volumeWheelAccumulator <= -120) {
+                    steps -= 1;
+                    barWindow.volumeWheelAccumulator += 120;
+                }
+
+                if (steps === 0) return;
+
                 let current = parseInt(String(barWindow.volPercent).replace("%", "")) || 0;
-                let next = current + (deltaY > 0 ? steps : -steps);
+                let next = current + steps;
                 next = Math.max(0, Math.min(150, next));
 
                 barWindow.volPercent = next.toString() + "%";
                 barWindow.isMuted = false;
                 barWindow.volIcon = volumeIconFor(next, false);
 
-                if (deltaY > 0) {
+                if (steps > 0) {
                     Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-up " + steps]);
                 } else {
-                    Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-down " + steps]);
+                    Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-down " + Math.abs(steps)]);
                 }
             }
 
@@ -468,14 +516,40 @@ Variants {
             // AUTO-HIDE (media mode)
             // ==========================================
             property bool autoHideVisible: !barWindow.barAutoHide
+            property int autoHideOffsetDistance: barWindow.s(72)
+            property int autoHideOffsetX: (!barWindow.barAutoHide || barWindow.autoHideVisible)
+                                          ? 0
+                                          : (barWindow.isLeftBar ? -barWindow.autoHideOffsetDistance
+                                                                 : (barWindow.isRightBar ? barWindow.autoHideOffsetDistance : 0))
+            property int autoHideOffsetY: (!barWindow.barAutoHide || barWindow.autoHideVisible)
+                                          ? 0
+                                          : (barWindow.isBottomBar ? barWindow.autoHideOffsetDistance
+                                                                   : (barWindow.isTopBar ? -barWindow.autoHideOffsetDistance : 0))
 
-            // Toon bar bij hover op de bovenrand van het scherm
             MouseArea {
-                id: autoHideTrigger
-                anchors.top: parent.top
+                id: autoHideTriggerHorizontal
+                visible: barWindow.barAutoHide && barWindow.isHorizontalBar
                 anchors.left: parent.left
                 anchors.right: parent.right
-                height: barWindow.barAutoHide ? barWindow.s(4) : 0
+                anchors.top: barWindow.isTopBar ? parent.top : undefined
+                anchors.bottom: barWindow.isBottomBar ? parent.bottom : undefined
+                height: barWindow.s(4)
+                hoverEnabled: true
+                z: 100
+                onEntered: {
+                    barWindow.autoHideVisible = true;
+                    autoHideTimer.restart();
+                }
+            }
+
+            MouseArea {
+                id: autoHideTriggerVertical
+                visible: barWindow.barAutoHide && barWindow.isVerticalBar
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.left: barWindow.isLeftBar ? parent.left : undefined
+                anchors.right: barWindow.isRightBar ? parent.right : undefined
+                width: barWindow.s(4)
                 hoverEnabled: true
                 z: 100
                 onEntered: {
@@ -488,7 +562,9 @@ Variants {
                 id: autoHideTimer
                 interval: 3000
                 onTriggered: {
-                    if (barWindow.barAutoHide && !autoHideTrigger.containsMouse)
+                    if (barWindow.barAutoHide
+                            && !autoHideTriggerHorizontal.containsMouse
+                            && !autoHideTriggerVertical.containsMouse)
                         barWindow.autoHideVisible = false;
                 }
             }

@@ -41,16 +41,32 @@ cache_is_fresh() {
 
 compute_updates_count() {
     local raw=""
+    local raw_repo=""
+    local raw_aur=""
     local count=0
     local status=0
+    local status_repo=0
+    local status_aur=0
     local backend=""
 
     if command -v yay >/dev/null 2>&1; then
         backend="yay"
         set +e
-        raw="$(timeout "$QUERY_TIMEOUT_SECONDS" yay -Qu 2>/dev/null)"
-        status=$?
+        raw_repo="$(timeout "$QUERY_TIMEOUT_SECONDS" yay -Qu 2>/dev/null)"
+        status_repo=$?
+        raw_aur="$(timeout "$QUERY_TIMEOUT_SECONDS" yay -Qua 2>/dev/null)"
+        status_aur=$?
         set -e
+        # Combineer repo + AUR zodat teller gelijkloopt met `yay -Syu`.
+        raw="$(printf "%s\n%s\n" "$raw_repo" "$raw_aur" | sed '/^[[:space:]]*$/d')"
+        # Gebruik een simpele samengestelde status voor fallback-logica.
+        if [[ $status_repo -eq 0 || $status_aur -eq 0 ]]; then
+            status=0
+        elif [[ $status_repo -eq 124 || $status_aur -eq 124 ]]; then
+            status=124
+        else
+            status=1
+        fi
     elif command -v checkupdates >/dev/null 2>&1; then
         backend="checkupdates"
         set +e

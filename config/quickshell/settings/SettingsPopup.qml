@@ -154,6 +154,7 @@ Item {
     property string activeThemeId: ""
     property var themeAppearance: ({})
     property var activeThemeData: ({})
+    property bool showAllThemeVariables: false
 
     function refreshActiveTheme() {
         loadThemeProc.running = true;
@@ -177,6 +178,97 @@ Item {
             if (parts[i].length > 0) parts[i] = parts[i].charAt(0).toUpperCase() + parts[i].slice(1);
         }
         return parts.join(" ");
+    }
+
+    function normalizeThemeId(themeId) {
+        return String(themeId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    }
+
+    function themeFilePath(themeId) {
+        let safeId = normalizeThemeId(themeId);
+        if (safeId === "") return "";
+        return Quickshell.env("HOME") + "/.config/kingstra/themes/" + safeId + ".toml";
+    }
+
+    function openThemeEditor(themeId) {
+        let filePath = themeFilePath(themeId);
+        if (filePath === "") {
+            notify("Theme", "Geen geldig theme geselecteerd");
+            return;
+        }
+        let escapedPath = filePath.replace(/(["\\$`])/g, "\\$1");
+        let cmd = `FILE="${escapedPath}"
+if [ ! -f "$FILE" ]; then
+  notify-send "Theme" "Bestand niet gevonden: $FILE"
+  exit 0
+fi
+if command -v kitty >/dev/null 2>&1; then
+  kitty --hold bash -lc "editor=\${EDITOR:-nano}; \"\$editor\" \"$FILE\""
+elif command -v xdg-open >/dev/null 2>&1; then
+  xdg-open "$FILE"
+else
+  notify-send "Theme" "Geen editor gevonden"
+fi`;
+        Quickshell.execDetached(["bash", "-lc", cmd]);
+    }
+
+    function stringifyThemeValue(value) {
+        if (value === undefined || value === null) return "—";
+        if (typeof value === "string") return value;
+        if (typeof value === "number" || typeof value === "boolean") return String(value);
+        try { return JSON.stringify(value); } catch (e) {}
+        return String(value);
+    }
+
+    function flattenThemeData(themeData) {
+        let out = [];
+
+        function walk(node, prefix) {
+            if (node === undefined || node === null) return;
+
+            if (Array.isArray(node)) {
+                out.push({ key: prefix, value: root.stringifyThemeValue(node) });
+                return;
+            }
+
+            if (typeof node === "object") {
+                let keys = Object.keys(node);
+                keys.sort();
+                for (let i = 0; i < keys.length; i++) {
+                    let key = keys[i];
+                    let child = node[key];
+                    let nextPrefix = prefix ? (prefix + "." + key) : key;
+                    if (child !== null && typeof child === "object" && !Array.isArray(child)) {
+                        walk(child, nextPrefix);
+                    } else {
+                        out.push({ key: nextPrefix, value: root.stringifyThemeValue(child) });
+                    }
+                }
+                return;
+            }
+
+            out.push({ key: prefix, value: root.stringifyThemeValue(node) });
+        }
+
+        walk(themeData || {}, "");
+        out.sort(function(a, b) { return String(a.key).localeCompare(String(b.key)); });
+        return out;
+    }
+
+    function scrollFlickableByWheel(flickable, deltaY) {
+        if (!flickable || flickable.contentHeight === undefined || flickable.height === undefined) return false;
+        if (!deltaY || deltaY === 0) return false;
+
+        let maxY = Math.max(0, Number(flickable.contentHeight) - Number(flickable.height));
+        if (maxY <= 0) return false;
+
+        // 120 wheel units ~= one notch. Keep this moderate so wheel scrolling stays controllable.
+        let travel = -(Number(deltaY) / 120.0) * root.s(52);
+        let nextY = Number(flickable.contentY) + travel;
+        if (isNaN(nextY)) return false;
+
+        flickable.contentY = Math.max(0, Math.min(maxY, nextY));
+        return true;
     }
 
     Component.onCompleted: {
@@ -668,6 +760,7 @@ Item {
             // TAB 1: KEYBINDINGS
             // =================================================================
             Item {
+                id: keybindTab
                 anchors.fill: parent
                 visible: root.currentTab === 1
                 opacity: visible ? 1.0 : 0.0
@@ -710,9 +803,11 @@ Item {
 
                     // Keybind list
                     ScrollView {
+                        id: keybindScroll
                         Layout.fillWidth: true; Layout.fillHeight: true
                         contentWidth: availableWidth; clip: true
                         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                        ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                         ColumnLayout {
                             width: parent.width; spacing: root.s(6)
@@ -893,6 +988,20 @@ Item {
                                     MouseArea { id: bindMa; anchors.fill: parent; hoverEnabled: true; z: -1 }
                                 }
                             }
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: keybindWheelCatcher
+                    anchors.fill: parent
+                    enabled: !TouchProfile.isTouchscreen
+                    acceptedButtons: Qt.NoButton
+                    hoverEnabled: true
+                    propagateComposedEvents: true
+                    onWheel: (wheel) => {
+                        if (root.scrollFlickableByWheel(keybindScroll.contentItem, wheel.angleDelta.y)) {
+                            wheel.accepted = true;
                         }
                     }
                 }
@@ -1084,6 +1193,7 @@ Item {
             // TAB 3: THEME (MATUGEN)
             // =================================================================
             Item {
+                id: themeTab
                 anchors.fill: parent
                 visible: root.currentTab === 3
                 opacity: visible ? 1.0 : 0.0
@@ -1103,9 +1213,11 @@ Item {
                 }
 
                 ScrollView {
+                    id: themeScroll
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
+                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
                         width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
@@ -1283,6 +1395,76 @@ Item {
 
                         Text { text: "Preview details"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
 
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: root.s(8)
+
+                            Rectangle {
+                                Layout.preferredHeight: root.s(34)
+                                Layout.preferredWidth: root.s(220)
+                                radius: root.s(8)
+                                color: allVarsToggleMa.containsMouse ? Qt.alpha(root.blue, 0.20) : Qt.alpha(root.surface0, 0.65)
+                                border.color: allVarsToggleMa.containsMouse ? root.blue : root.surface2
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(8)
+                                    spacing: root.s(8)
+                                    Text {
+                                        text: root.showAllThemeVariables ? "󰅂" : "󰅀"
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: root.s(14)
+                                        color: root.blue
+                                    }
+                                    Text {
+                                        text: root.showAllThemeVariables ? "Verberg alle variabelen" : "Toon alle variabelen"
+                                        font.family: "JetBrains Mono"
+                                        font.pixelSize: root.s(11)
+                                        font.weight: Font.Bold
+                                        color: root.text
+                                        Layout.fillWidth: true
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: allVarsToggleMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.showAllThemeVariables = !root.showAllThemeVariables
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.preferredHeight: root.s(34)
+                                Layout.preferredWidth: root.s(180)
+                                radius: root.s(8)
+                                color: themeEditMa.containsMouse ? Qt.alpha(root.green, 0.90) : root.green
+                                opacity: themeCarousel.selectedThemeId === "" ? 0.55 : 1.0
+                                border.color: "transparent"
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: root.s(6)
+                                    Text { text: "󰏫"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: root.base }
+                                    Text { text: "Bewerk thema"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.base }
+                                }
+
+                                MouseArea {
+                                    id: themeEditMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    enabled: themeCarousel.selectedThemeId !== ""
+                                    onClicked: root.openThemeEditor(themeCarousel.selectedThemeId)
+                                }
+                            }
+
+                            Item { Layout.fillWidth: true }
+                        }
+
                         GridLayout {
                             Layout.fillWidth: true
                             columns: width > root.s(760) ? 2 : 1
@@ -1431,6 +1613,118 @@ Item {
                             }
                         }
 
+                        Rectangle {
+                            id: allVarsPanel
+                            visible: root.showAllThemeVariables
+                            Layout.fillWidth: true
+                            implicitHeight: allVarsCol.implicitHeight + root.s(24)
+                            radius: root.s(10)
+                            color: Qt.alpha(root.surface0, 0.45)
+                            border.color: root.surface1
+                            border.width: 1
+
+                            property var flatEntries: root.flattenThemeData(themeCarousel.selectedThemeData)
+
+                            ColumnLayout {
+                                id: allVarsCol
+                                anchors.fill: parent
+                                anchors.margins: root.s(12)
+                                spacing: root.s(8)
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Text {
+                                        text: "Alle variabelen (" + allVarsPanel.flatEntries.length + ")"
+                                        font.family: "JetBrains Mono"
+                                        font.weight: Font.Bold
+                                        font.pixelSize: root.s(13)
+                                        color: root.text
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                    Text {
+                                        text: themeCarousel.selectedThemeId !== "" ? themeCarousel.selectedThemeId + ".toml" : ""
+                                        font.family: "JetBrains Mono"
+                                        font.pixelSize: root.s(10)
+                                        color: root.overlay0
+                                    }
+                                }
+
+                                Text {
+                                    text: "Volledige key-paths uit het geselecteerde thema. Gebruik 'Bewerk thema' om waarden aan te passen."
+                                    font.family: "JetBrains Mono"
+                                    font.pixelSize: root.s(10)
+                                    color: root.subtext0
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                }
+
+                                ScrollView {
+                                    id: allVarsScroll
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: root.s(280)
+                                    clip: true
+                                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+
+                                    ListView {
+                                        anchors.fill: parent
+                                        model: allVarsPanel.flatEntries
+                                        spacing: root.s(4)
+                                        clip: true
+
+                                        delegate: Rectangle {
+                                            required property var modelData
+                                            width: ListView.view.width
+                                            height: rowData.implicitHeight + root.s(8)
+                                            radius: root.s(6)
+                                            color: Qt.alpha(root.surface0, 0.52)
+                                            border.color: Qt.alpha(root.surface2, 0.75)
+                                            border.width: 1
+
+                                            RowLayout {
+                                                id: rowData
+                                                anchors.fill: parent
+                                                anchors.margins: root.s(6)
+                                                spacing: root.s(10)
+
+                                                Text {
+                                                    text: String(modelData.key || "—")
+                                                    font.family: "JetBrains Mono"
+                                                    font.pixelSize: root.s(10)
+                                                    color: root.subtext0
+                                                    Layout.preferredWidth: root.s(250)
+                                                    wrapMode: Text.WrapAnywhere
+                                                }
+
+                                                Text {
+                                                    text: String(modelData.value || "—")
+                                                    font.family: "JetBrains Mono"
+                                                    font.pixelSize: root.s(10)
+                                                    font.weight: Font.Bold
+                                                    color: root.text
+                                                    Layout.fillWidth: true
+                                                    wrapMode: Text.WrapAnywhere
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: allVarsWheelCatcher
+                                        anchors.fill: parent
+                                        enabled: !TouchProfile.isTouchscreen
+                                        acceptedButtons: Qt.NoButton
+                                        hoverEnabled: true
+                                        propagateComposedEvents: true
+                                        onWheel: (wheel) => {
+                                            if (root.scrollFlickableByWheel(allVarsScroll.contentItem, wheel.angleDelta.y)) {
+                                                wheel.accepted = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
 
                         RowLayout {
@@ -1466,6 +1760,27 @@ Item {
                                     MouseArea { id: tplMa; anchors.fill: parent; hoverEnabled: true }
                                 }
                             }
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: themeWheelCatcher
+                    anchors.fill: parent
+                    enabled: !TouchProfile.isTouchscreen
+                    acceptedButtons: Qt.NoButton
+                    hoverEnabled: true
+                    propagateComposedEvents: true
+                    onWheel: (wheel) => {
+                        if (root.showAllThemeVariables
+                                && allVarsScroll.visible
+                                && allVarsWheelCatcher.containsMouse
+                                && root.scrollFlickableByWheel(allVarsScroll.contentItem, wheel.angleDelta.y)) {
+                            wheel.accepted = true;
+                            return;
+                        }
+                        if (root.scrollFlickableByWheel(themeScroll.contentItem, wheel.angleDelta.y)) {
+                            wheel.accepted = true;
                         }
                     }
                 }

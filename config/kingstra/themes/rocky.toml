@@ -71,7 +71,7 @@ surface = "stone-matte"
 enabled = true
 top_left = ""
 top_right = ""
-opacity = 0.16
+opacity = 0.24
 
 [effects]
 particles = "none"

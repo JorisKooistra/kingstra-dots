@@ -13,7 +13,11 @@ Dit document legt vast waar overlays worden gebruikt in de theme-skin rework.
   - Texture overlay per theme (`texture-overlay.png`).
   - Runtime via `theme.json` veld `texture_overlay_asset` (en `material.texture_asset`).
   - Fallback bij leeg pad: `~/kingstra-dots/assets/themes/<theme>/texture-overlay.png`.
-  - Ornament overlays via `OrnamentLayer.qml` (top-left, top-right, center optioneel).
+  - Ornament overlays via `OrnamentLayer.qml`:
+    - top-left (`ornament-top-left.svg/png`)
+    - top-right (`ornament-top-right.svg/png`)
+    - top-center (`ornament-center.svg/png`, automatisch geladen als aanwezig)
+  - Als center-asset ontbreekt: generated center ornament als visuele fallback.
   - Cyber divider/grid als code-generated 1-2px lijnen in `CyberBar.qml` (geen verplicht asset).
   - Particle layer via `ParticleLayer.qml` (fireflies / space-specks).
   - Animated: blur-first stijl; overlay is optioneel en niet verplicht.
@@ -33,6 +37,10 @@ Dit document legt vast waar overlays worden gebruikt in de theme-skin rework.
   - `assets/themes/cyber/`
   - `assets/themes/animated/`
 - Input-bestanden in `aanleveringen/` zijn bronmateriaal en niet het eindpad.
+- Ornament bestandsnamen voor runtime:
+  - `ornament-top-left.svg` (of `.png`)
+  - `ornament-top-right.svg` (of `.png`)
+  - `ornament-center.svg` (of `.png`, optioneel maar aanbevolen)
 
 ## Sfeerimpressie In Plaats Van Moodboard
 - Er is geen apart moodboard nodig.
