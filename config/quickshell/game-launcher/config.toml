@@ -4,6 +4,7 @@
 # =============================================================================
 
 [display]
+position       = "center"   # Positie op het scherm: "center" | "top" | "bottom"
 columns        = 4          # Aantal kolommen in de grid
 rows           = 3          # Aantal rijen zichtbaar
 card_width     = 200        # Breedte van een game card (px)
