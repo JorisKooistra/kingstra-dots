@@ -144,7 +144,7 @@ then into `ThemeConfig.qml` with safe fallbacks for invalid or missing values.
 
 | Theme | Description | Scheme |
 |---|---|---|
-| `botanical` | Temperate rainforest — moss, wood, filtered light | scheme-vibrant |
+| `botanical` | Temperate rainforest — moss, wood, filtered light | scheme-content |
 | `rocky` | Granite — angular, solid, no-nonsense | scheme-monochrome |
 | `ocean` | Deep sea — cool, calm, fluid | scheme-fidelity |
 | `space` | Cosmic — deep, dark, floating panels | scheme-expressive |

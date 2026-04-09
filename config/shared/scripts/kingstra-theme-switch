@@ -280,6 +280,10 @@ _log "Overschakelen naar thema: $THEME_NAME"
 eval "$("$READER" "$THEME_FILE")"
 
 # Variables are now available as: META_NAME, MATUGEN_SCHEME_TYPE, APPEARANCE_BORDER_RADIUS, etc.
+MATUGEN_SCHEME_JSON=$(pick_enum "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}" "scheme-tonal-spot" "matugen.scheme_type" \
+    scheme-content scheme-expressive scheme-fidelity scheme-fruit-salad scheme-monochrome scheme-neutral scheme-rainbow scheme-tonal-spot)
+MATUGEN_MODE_JSON=$(pick_enum "${MATUGEN_MODE:-dark}" "dark" "matugen.mode" \
+    dark light)
 
 BAR_SHAPE_JSON=$(pick_enum "${BAR_SHAPE:-rounded}" "rounded" "bar.shape" \
     rounded organic-grown capsule block segmented-capsule beveled)
@@ -414,12 +418,12 @@ esac
 # Step 1 — Update matugen config.toml (scheme_type + color_index)
 # ---------------------------------------------------------------------------
 if [[ -f "$MATUGEN_CONF" ]]; then
-    sed -i "s|^scheme_type\s*=.*|scheme_type = \"${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}\"|" "$MATUGEN_CONF"
+    sed -i "s|^scheme_type\s*=.*|scheme_type = \"${MATUGEN_SCHEME_JSON}\"|" "$MATUGEN_CONF"
     sed -i "s|^color_index\s*=.*|color_index = ${MATUGEN_COLOR_INDEX:-0}|" "$MATUGEN_CONF"
-    sed -i "s|^mode\s*=.*|mode = \"${MATUGEN_MODE:-dark}\"|" "$MATUGEN_CONF"
-    _log "Matugen config bijgewerkt (scheme: ${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}, mode: ${MATUGEN_MODE:-dark})"
+    sed -i "s|^mode\s*=.*|mode = \"${MATUGEN_MODE_JSON}\"|" "$MATUGEN_CONF"
+    _log "Matugen config bijgewerkt (scheme: ${MATUGEN_SCHEME_JSON}, mode: ${MATUGEN_MODE_JSON})"
 fi
-sync_skwd_config "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}" "${MATUGEN_MODE:-dark}"
+sync_skwd_config "${MATUGEN_SCHEME_JSON}" "${MATUGEN_MODE_JSON}"
 
 # ---------------------------------------------------------------------------
 # Step 2 — Generate 35-theme.conf (Hyprland overrides)
@@ -491,10 +495,10 @@ cat > "$THEME_JSON" <<EOF
     "texture_overlay_asset": "${TEXTURE_OVERLAY_ASSET_JSON}",
     "terminal_overlay_asset": "${TERMINAL_OVERLAY_ASSET_JSON}",
     "terminal_overlay_opacity": ${TERMINAL_OVERLAY_OPACITY_JSON},
-    "scheme_type": "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}",
+    "scheme_type": "${MATUGEN_SCHEME_JSON}",
     "color_index": ${MATUGEN_COLOR_INDEX:-0},
     "contrast": ${MATUGEN_CONTRAST:-0.0},
-    "mode": "${MATUGEN_MODE:-dark}",
+    "mode": "${MATUGEN_MODE_JSON}",
     "display_font": "${FONTS_DISPLAY_FONT:-${FONTS_UI_FONT:-Inter}}",
     "font_weight": "${FONTS_FONT_WEIGHT:-regular}",
     "letter_spacing": ${FONTS_LETTER_SPACING:-0.0},

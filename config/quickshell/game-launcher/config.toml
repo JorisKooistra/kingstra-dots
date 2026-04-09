@@ -40,3 +40,8 @@ enabled        = false
 [filter]
 hide_non_steam = false
 min_playtime   = 0          # Verberg games met minder dan N minuten speeltijd
+
+[animations]
+enabled     = true
+duration_ms = 300
+ease_type   = "OutCubic"

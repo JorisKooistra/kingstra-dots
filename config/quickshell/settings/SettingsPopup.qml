@@ -389,6 +389,172 @@ Item {
         return true;
     }
 
+    component ThemedComboBox : ComboBox {
+        id: combo
+        implicitHeight: root.s(34)
+        font.family: root.uiFontFamily
+        font.pixelSize: root.s(11)
+        leftPadding: root.s(10)
+        rightPadding: root.s(28)
+
+        contentItem: Text {
+            text: combo.displayText
+            font: combo.font
+            color: root.text
+            elide: Text.ElideRight
+            verticalAlignment: Text.AlignVCenter
+            leftPadding: combo.leftPadding
+            rightPadding: combo.rightPadding
+        }
+
+        indicator: Text {
+            x: combo.width - width - root.s(10)
+            y: (combo.height - height) / 2
+            text: "󰅀"
+            font.family: "Iosevka Nerd Font"
+            font.pixelSize: root.s(13)
+            color: combo.hovered || combo.visualFocus ? root.blue : root.subtext0
+        }
+
+        background: Rectangle {
+            radius: root.s(8)
+            color: Qt.alpha(root.surface0, 0.78)
+            border.width: 1
+            border.color: combo.visualFocus ? root.blue : (combo.hovered ? Qt.alpha(root.surface2, 0.95) : Qt.alpha(root.surface2, 0.78))
+            Behavior on border.color { ColorAnimation { duration: 120 } }
+        }
+
+        delegate: ItemDelegate {
+            width: combo.width
+            implicitHeight: root.s(32)
+            font: combo.font
+            highlighted: combo.highlightedIndex === index
+            text: modelData !== undefined ? String(modelData) : ""
+            padding: root.s(8)
+
+            contentItem: Text {
+                text: parent.text
+                font: combo.font
+                color: parent.highlighted ? root.base : root.text
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+
+            background: Rectangle {
+                radius: root.s(6)
+                color: parent.highlighted ? root.blue : Qt.alpha(root.surface0, 0.52)
+            }
+        }
+
+        popup: Popup {
+            y: combo.height + root.s(4)
+            width: combo.width
+            padding: root.s(4)
+            implicitHeight: Math.min(root.s(220), contentItem.implicitHeight + root.s(8))
+
+            background: Rectangle {
+                radius: root.s(8)
+                color: Qt.alpha(root.mantle, 0.96)
+                border.color: root.surface2
+                border.width: 1
+            }
+
+            contentItem: ListView {
+                clip: true
+                implicitHeight: contentHeight
+                model: combo.popup.visible ? combo.delegateModel : null
+                currentIndex: combo.highlightedIndex
+                ScrollIndicator.vertical: ScrollIndicator { }
+            }
+        }
+    }
+
+    component ThemedSpinBox : SpinBox {
+        id: spin
+        implicitHeight: root.s(34)
+        font.family: root.uiFontFamily
+        font.pixelSize: root.s(11)
+        leftPadding: root.s(8)
+        rightPadding: root.s(28)
+        editable: true
+
+        contentItem: TextInput {
+            z: 2
+            text: spin.textFromValue(spin.value, spin.locale)
+            font: spin.font
+            color: root.text
+            horizontalAlignment: Qt.AlignHCenter
+            verticalAlignment: TextInput.AlignVCenter
+            readOnly: !spin.editable
+            validator: spin.validator
+            selectByMouse: true
+            selectionColor: Qt.alpha(root.blue, 0.35)
+            selectedTextColor: root.text
+            inputMethodHints: Qt.ImhFormattedNumbersOnly
+            onTextEdited: spin.value = spin.valueFromText(text, spin.locale)
+        }
+
+        up.indicator: Rectangle {
+            x: spin.width - width - root.s(5)
+            y: root.s(4)
+            implicitWidth: root.s(18)
+            implicitHeight: (spin.height / 2) - root.s(5)
+            radius: root.s(4)
+            color: upMa.containsMouse ? Qt.alpha(root.blue, 0.24) : Qt.alpha(root.surface1, 0.74)
+            border.width: 1
+            border.color: upMa.containsMouse ? root.blue : Qt.alpha(root.surface2, 0.82)
+            Text {
+                anchors.centerIn: parent
+                text: "+"
+                font.family: "JetBrains Mono"
+                font.weight: Font.Bold
+                font.pixelSize: root.s(11)
+                color: upMa.containsMouse ? root.blue : root.subtext0
+            }
+            MouseArea {
+                id: upMa
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: spin.increase()
+            }
+        }
+
+        down.indicator: Rectangle {
+            x: spin.width - width - root.s(5)
+            y: spin.height - height - root.s(4)
+            implicitWidth: root.s(18)
+            implicitHeight: (spin.height / 2) - root.s(5)
+            radius: root.s(4)
+            color: downMa.containsMouse ? Qt.alpha(root.blue, 0.24) : Qt.alpha(root.surface1, 0.74)
+            border.width: 1
+            border.color: downMa.containsMouse ? root.blue : Qt.alpha(root.surface2, 0.82)
+            Text {
+                anchors.centerIn: parent
+                text: "−"
+                font.family: "JetBrains Mono"
+                font.weight: Font.Bold
+                font.pixelSize: root.s(11)
+                color: downMa.containsMouse ? root.blue : root.subtext0
+            }
+            MouseArea {
+                id: downMa
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: spin.decrease()
+            }
+        }
+
+        background: Rectangle {
+            radius: root.s(8)
+            color: Qt.alpha(root.surface0, 0.78)
+            border.width: 1
+            border.color: spin.visualFocus ? root.blue : (spin.hovered ? Qt.alpha(root.surface2, 0.95) : Qt.alpha(root.surface2, 0.78))
+            Behavior on border.color { ColorAnimation { duration: 120 } }
+        }
+    }
+
     Component.onCompleted: {
         // Laad settings via Process
         loadSettingsProc.running = true;
@@ -1568,7 +1734,15 @@ Item {
 
                         Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
 
-                        Text { text: "Preview details"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
+                        Text { text: "Thema-instellingen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
+                        Text {
+                            text: "Alle velden zijn direct bewerkbaar. Klik daarna op 'Opslaan in thema'."
+                            font.family: "JetBrains Mono"
+                            font.pixelSize: root.s(10)
+                            color: root.subtext0
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                        }
 
                         RowLayout {
                             Layout.fillWidth: true
@@ -1640,183 +1814,156 @@ Item {
                             Item { Layout.fillWidth: true }
                         }
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            implicitHeight: themeEditorCol.implicitHeight + root.s(24)
-                            radius: root.s(10)
-                            color: Qt.alpha(root.surface0, 0.45)
-                            border.color: root.green
-                            border.width: 1
-
-                            ColumnLayout {
-                                id: themeEditorCol
-                                anchors.fill: parent
-                                anchors.margins: root.s(12)
-                                spacing: root.s(10)
-
-                                Text { text: "In-app thema bewerken"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-                                Text {
-                                    text: "Pas waarden direct hier aan. Opslaan schrijft naar <theme>.toml zonder terminal of externe editor."
-                                    font.family: "JetBrains Mono"
-                                    font.pixelSize: root.s(10)
-                                    color: root.subtext0
-                                    Layout.fillWidth: true
-                                    wrapMode: Text.WordWrap
-                                }
-
-                                GridLayout {
-                                    Layout.fillWidth: true
-                                    columns: width > root.s(980) ? 4 : 2
-                                    rowSpacing: root.s(8)
-                                    columnSpacing: root.s(10)
-
-                                    Text { text: "Hoekrondheid"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 0; to: 64; value: root.editBorderRadius; editable: true; onValueChanged: root.editBorderRadius = value; Layout.fillWidth: true }
-                                    Text { text: "Randdikte"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 0; to: 12; value: root.editBorderWidth; editable: true; onValueChanged: root.editBorderWidth = value; Layout.fillWidth: true }
-
-                                    Text { text: "Binnenmarge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 0; to: 60; value: root.editGapsIn; editable: true; onValueChanged: root.editGapsIn = value; Layout.fillWidth: true }
-                                    Text { text: "Buitenmarge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 0; to: 80; value: root.editGapsOut; editable: true; onValueChanged: root.editGapsOut = value; Layout.fillWidth: true }
-
-                                    Text { text: "Blur size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 0; to: 64; value: root.editBlurSize; editable: true; onValueChanged: root.editBlurSize = value; Layout.fillWidth: true }
-                                    Text { text: "Blur passes"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 0; to: 12; value: root.editBlurPasses; editable: true; onValueChanged: root.editBlurPasses = value; Layout.fillWidth: true }
-
-                                    Text { text: "UI font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    ComboBox {
-                                        model: root.fontOptions
-                                        currentIndex: Math.max(0, model.indexOf(root.editUiFont))
-                                        onActivated: root.editUiFont = currentText
-                                        Layout.fillWidth: true
-                                    }
-                                    Text { text: "UI size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 8; to: 28; value: root.editUiFontSize; editable: true; onValueChanged: root.editUiFontSize = value; Layout.fillWidth: true }
-
-                                    Text { text: "Mono font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    ComboBox {
-                                        model: root.fontOptions
-                                        currentIndex: Math.max(0, model.indexOf(root.editMonoFont))
-                                        onActivated: root.editMonoFont = currentText
-                                        Layout.fillWidth: true
-                                    }
-                                    Text { text: "Mono size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 8; to: 28; value: root.editMonoFontSize; editable: true; onValueChanged: root.editMonoFontSize = value; Layout.fillWidth: true }
-
-                                    Text { text: "Display font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    ComboBox {
-                                        model: root.fontOptions
-                                        currentIndex: Math.max(0, model.indexOf(root.editDisplayFont))
-                                        onActivated: root.editDisplayFont = currentText
-                                        Layout.fillWidth: true
-                                    }
-                                    Text { text: "Font weight"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    ComboBox {
-                                        model: root.fontWeightOptions
-                                        currentIndex: Math.max(0, model.indexOf(root.editFontWeight))
-                                        onActivated: root.editFontWeight = currentText
-                                        Layout.fillWidth: true
-                                    }
-
-                                    Text { text: "Scene"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    ComboBox {
-                                        model: root.schemeOptions
-                                        currentIndex: Math.max(0, model.indexOf(root.editSchemeType))
-                                        onActivated: root.editSchemeType = currentText
-                                        Layout.fillWidth: true
-                                    }
-                                    Text { text: "Color index"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 0; to: 12; value: root.editColorIndex; editable: true; onValueChanged: root.editColorIndex = value; Layout.fillWidth: true }
-
-                                    Text { text: "Contrast"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox {
-                                        from: -100
-                                        to: 100
-                                        stepSize: 1
-                                        value: Math.round(parseFloat(root.editContrast) * 100)
-                                        editable: true
-                                        textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                        valueFromText: function(text, locale) {
-                                            var n = parseFloat(text);
-                                            if (isNaN(n)) return 0;
-                                            return Math.round(n * 100);
-                                        }
-                                        onValueChanged: root.editContrast = (value / 100.0).toFixed(2)
-                                        Layout.fillWidth: true
-                                    }
-                                    Text { text: "Letter spacing"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox {
-                                        from: -300
-                                        to: 300
-                                        stepSize: 1
-                                        value: Math.round(parseFloat(root.editLetterSpacing) * 100)
-                                        editable: true
-                                        textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                        valueFromText: function(text, locale) {
-                                            var n = parseFloat(text);
-                                            if (isNaN(n)) return 0;
-                                            return Math.round(n * 100);
-                                        }
-                                        onValueChanged: root.editLetterSpacing = (value / 100.0).toFixed(2)
-                                        Layout.fillWidth: true
-                                    }
-
-                                    Text { text: "Icon theme"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    ComboBox {
-                                        model: root.iconThemeOptions
-                                        currentIndex: Math.max(0, model.indexOf(root.editIconTheme))
-                                        onActivated: root.editIconTheme = currentText
-                                        Layout.fillWidth: true
-                                    }
-                                    Text { text: "Bar height"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    SpinBox { from: 30; to: 72; value: root.editBarHeight; editable: true; onValueChanged: root.editBarHeight = value; Layout.fillWidth: true }
-
-                                    Text { text: "Bar position"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                    ComboBox {
-                                        model: root.barPositionOptions
-                                        currentIndex: Math.max(0, model.indexOf(root.editBarPosition))
-                                        onActivated: root.editBarPosition = currentText
-                                        Layout.fillWidth: true
-                                    }
-                                    Item { Layout.fillWidth: true }
-                                    Item { Layout.fillWidth: true }
-                                }
-                            }
-                        }
-
                         GridLayout {
                             Layout.fillWidth: true
-                            columns: width > root.s(760) ? 2 : 1
+                            columns: 1
                             rowSpacing: root.s(10)
                             columnSpacing: root.s(10)
 
                             Rectangle {
                                 Layout.fillWidth: true
-                                implicitHeight: appearanceInfo.implicitHeight + root.s(24)
+                                implicitHeight: appearanceEditor.implicitHeight + root.s(24)
                                 radius: root.s(10)
-                                color: Qt.alpha(root.surface0, 0.45)
-                                border.color: root.surface1
+                                color: Qt.alpha(root.surface0, 0.48)
+                                border.color: Qt.alpha(root.surface2, 0.88)
                                 border.width: 1
 
                                 ColumnLayout {
-                                    id: appearanceInfo
-                                    anchors.fill: parent; anchors.margins: root.s(12); spacing: root.s(8)
+                                    id: appearanceEditor
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(12)
+                                    spacing: root.s(8)
+
                                     Text { text: "Uiterlijk"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-                                    Repeater {
-                                        model: [
-                                            { label: "Hoekrondheid", value: root.themeValue(themeCarousel.selectedThemeData, "appearance", "border_radius", "—") + "px" },
-                                            { label: "Randdikte", value: root.themeValue(themeCarousel.selectedThemeData, "appearance", "border_width", "—") + "px" },
-                                            { label: "Binnenmarge", value: root.themeValue(themeCarousel.selectedThemeData, "appearance", "gaps_in", "—") + "px" },
-                                            { label: "Buitenmarge", value: root.themeValue(themeCarousel.selectedThemeData, "appearance", "gaps_out", "—") + "px" },
-                                            { label: "Blur size", value: root.themeValue(themeCarousel.selectedThemeData, "appearance", "blur_size", "—") },
-                                            { label: "Blur passes", value: root.themeValue(themeCarousel.selectedThemeData, "appearance", "blur_passes", "—") }
-                                        ]
-                                        RowLayout {
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Hoekrondheid"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 0; to: 64; value: root.editBorderRadius; onValueChanged: root.editBorderRadius = value; Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Randdikte"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 0; to: 12; value: root.editBorderWidth; onValueChanged: root.editBorderWidth = value; Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Binnenmarge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 0; to: 60; value: root.editGapsIn; onValueChanged: root.editGapsIn = value; Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Buitenmarge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 0; to: 80; value: root.editGapsOut; onValueChanged: root.editGapsOut = value; Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Blur size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 0; to: 64; value: root.editBlurSize; onValueChanged: root.editBlurSize = value; Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Blur passes"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 0; to: 12; value: root.editBlurPasses; onValueChanged: root.editBlurPasses = value; Layout.fillWidth: true }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: fontsEditor.implicitHeight + root.s(24)
+                                radius: root.s(10)
+                                color: Qt.alpha(root.surface0, 0.48)
+                                border.color: Qt.alpha(root.surface2, 0.88)
+                                border.width: 1
+
+                                ColumnLayout {
+                                    id: fontsEditor
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(12)
+                                    spacing: root.s(8)
+
+                                    Text { text: "Fonts"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "UI font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedComboBox {
+                                            model: root.fontOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editUiFont))
+                                            onActivated: root.editUiFont = currentText
                                             Layout.fillWidth: true
-                                            Text { text: modelData.label; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                            Text { text: modelData.value; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                        }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "UI size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 8; to: 28; value: root.editUiFontSize; onValueChanged: root.editUiFontSize = value; Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Mono font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedComboBox {
+                                            model: root.fontOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editMonoFont))
+                                            onActivated: root.editMonoFont = currentText
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Mono size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 8; to: 28; value: root.editMonoFontSize; onValueChanged: root.editMonoFontSize = value; Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Display font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedComboBox {
+                                            model: root.fontOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editDisplayFont))
+                                            onActivated: root.editDisplayFont = currentText
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Font weight"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedComboBox {
+                                            model: root.fontWeightOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editFontWeight))
+                                            onActivated: root.editFontWeight = currentText
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Letter spacing"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox {
+                                            from: -300
+                                            to: 300
+                                            stepSize: 1
+                                            value: Math.round(parseFloat(root.editLetterSpacing) * 100)
+                                            textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                            valueFromText: function(text, locale) {
+                                                var n = parseFloat(text);
+                                                if (isNaN(n)) return 0;
+                                                return Math.round(n * 100);
+                                            }
+                                            onValueChanged: root.editLetterSpacing = (value / 100.0).toFixed(2)
+                                            Layout.fillWidth: true
                                         }
                                     }
                                 }
@@ -1824,111 +1971,120 @@ Item {
 
                             Rectangle {
                                 Layout.fillWidth: true
-                                implicitHeight: fontsInfo.implicitHeight + root.s(24)
+                                implicitHeight: colorEditor.implicitHeight + root.s(24)
                                 radius: root.s(10)
-                                color: Qt.alpha(root.surface0, 0.45)
-                                border.color: root.surface1
+                                color: Qt.alpha(root.surface0, 0.48)
+                                border.color: Qt.alpha(root.surface2, 0.88)
                                 border.width: 1
 
                                 ColumnLayout {
-                                    id: fontsInfo
-                                    anchors.fill: parent; anchors.margins: root.s(12); spacing: root.s(8)
-                                    Text { text: "Fonts"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                                    id: colorEditor
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(12)
+                                    spacing: root.s(8)
+
+                                    Text { text: "Icons & Matugen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "UI font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "ui_font", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                        spacing: root.s(10)
+                                        Text { text: "Icon theme"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedComboBox {
+                                            model: root.iconThemeOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editIconTheme))
+                                            onActivated: root.editIconTheme = currentText
+                                            Layout.fillWidth: true
+                                        }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "UI size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "ui_font_size", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                        spacing: root.s(10)
+                                        Text { text: "Scene"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedComboBox {
+                                            model: root.schemeOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editSchemeType))
+                                            onActivated: root.editSchemeType = currentText
+                                            Layout.fillWidth: true
+                                        }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Mono font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "mono_font", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                        spacing: root.s(10)
+                                        Text { text: "Color index"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 0; to: 12; value: root.editColorIndex; onValueChanged: root.editColorIndex = value; Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Mono size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "fonts", "mono_font_size", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                        spacing: root.s(10)
+                                        Text { text: "Contrast"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox {
+                                            from: -100
+                                            to: 100
+                                            stepSize: 1
+                                            value: Math.round(parseFloat(root.editContrast) * 100)
+                                            textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                            valueFromText: function(text, locale) {
+                                                var n = parseFloat(text);
+                                                if (isNaN(n)) return 0;
+                                                return Math.round(n * 100);
+                                            }
+                                            onValueChanged: root.editContrast = (value / 100.0).toFixed(2)
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    Text {
+                                        text: "Scene bepaalt de Matugen-kleurberekening; icon theme wordt toegepast op GTK en Qt6."
+                                        font.family: "JetBrains Mono"
+                                        font.pixelSize: root.s(10)
+                                        color: root.subtext0
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
                                     }
                                 }
                             }
 
                             Rectangle {
                                 Layout.fillWidth: true
-                                implicitHeight: iconsInfo.implicitHeight + root.s(24)
+                                implicitHeight: shellEditor.implicitHeight + root.s(24)
                                 radius: root.s(10)
-                                color: Qt.alpha(root.surface0, 0.45)
-                                border.color: root.surface1
+                                color: Qt.alpha(root.surface0, 0.48)
+                                border.color: Qt.alpha(root.surface2, 0.88)
                                 border.width: 1
 
                                 ColumnLayout {
-                                    id: iconsInfo
-                                    anchors.fill: parent; anchors.margins: root.s(12); spacing: root.s(8)
-                                    Text { text: "Icons"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Icon theme"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "icons", "icon_theme", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
-                                    }
-                                    Text { text: "Wordt doorgezet naar GTK, Qt6CT en desktop-interface bij toepassen van het thema."; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
-                                }
-                            }
+                                    id: shellEditor
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(12)
+                                    spacing: root.s(8)
 
-                            Rectangle {
-                                Layout.fillWidth: true
-                                implicitHeight: matugenInfo.implicitHeight + root.s(24)
-                                radius: root.s(10)
-                                color: Qt.alpha(root.surface0, 0.45)
-                                border.color: root.surface1
-                                border.width: 1
-
-                                ColumnLayout {
-                                    id: matugenInfo
-                                    anchors.fill: parent; anchors.margins: root.s(12); spacing: root.s(8)
-                                    Text { text: "Matugen scene"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Scene"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.formatSchemeLabel(root.themeValue(themeCarousel.selectedThemeData, "matugen", "scheme_type", "scheme-tonal-spot")); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
-                                    }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Color index"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "matugen", "color_index", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
-                                    }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Contrast"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "matugen", "contrast", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                Layout.fillWidth: true
-                                implicitHeight: shellInfo.implicitHeight + root.s(24)
-                                radius: root.s(10)
-                                color: Qt.alpha(root.surface0, 0.45)
-                                border.color: root.surface1
-                                border.width: 1
-
-                                ColumnLayout {
-                                    id: shellInfo
-                                    anchors.fill: parent; anchors.margins: root.s(12); spacing: root.s(8)
                                     Text { text: "Shell"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Bar height"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "quickshell", "bar_height", "—") + "px"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                        spacing: root.s(10)
+                                        Text { text: "Bar height"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedSpinBox { from: 30; to: 72; value: root.editBarHeight; onValueChanged: root.editBarHeight = value; Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Bar position"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.fillWidth: true }
-                                        Text { text: root.themeValue(themeCarousel.selectedThemeData, "quickshell", "bar_position", "—"); font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.weight: Font.Bold; color: root.text }
+                                        spacing: root.s(10)
+                                        Text { text: "Bar position"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: root.s(120) }
+                                        ThemedComboBox {
+                                            model: root.barPositionOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editBarPosition))
+                                            onActivated: root.editBarPosition = currentText
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    Text {
+                                        text: "Positie en hoogte gelden voor de quickshell bar na toepassen."
+                                        font.family: "JetBrains Mono"
+                                        font.pixelSize: root.s(10)
+                                        color: root.subtext0
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
                                     }
                                 }
                             }

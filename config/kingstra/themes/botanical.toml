@@ -5,10 +5,10 @@ icon = "󰌪"
 preview_image = "botanical.jpg"
 
 [matugen]
-scheme_type = "scheme-vibrant"
-color_index = 2
-contrast = 0.2
-mode = "dark"
+scheme_type = "scheme-content"
+color_index = 1
+contrast = 0.1
+mode = "light"
 
 [appearance]
 border_radius = 24

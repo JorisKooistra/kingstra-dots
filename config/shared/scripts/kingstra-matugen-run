@@ -63,6 +63,17 @@ _valid_mode() {
     esac
 }
 
+_valid_scheme() {
+    case "${1:-}" in
+        scheme-content|scheme-expressive|scheme-fidelity|scheme-fruit-salad|scheme-monochrome|scheme-neutral|scheme-rainbow|scheme-tonal-spot)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 _resolve_theme_id() {
     local theme_id=""
 
@@ -321,8 +332,8 @@ COLOR_INDEX="${MODE_AND_INDEX#*|}"
 
 WALLPAPER="$(_resolve_wallpaper)"
 
-if [[ -z "$SCHEME_TYPE" ]]; then
-    _warn "Lege scheme_type gevonden, fallback naar $DEFAULT_SCHEME"
+if [[ -z "$SCHEME_TYPE" ]] || ! _valid_scheme "$SCHEME_TYPE"; then
+    _warn "Ongeldige scheme_type '$SCHEME_TYPE', fallback naar $DEFAULT_SCHEME"
     SCHEME_TYPE="$DEFAULT_SCHEME"
 fi
 

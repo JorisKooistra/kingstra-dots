@@ -6,9 +6,9 @@ preview_image = "ocean.jpg"
 
 [matugen]
 scheme_type = "scheme-fidelity"
-color_index = 3
-contrast = 0.1
-mode = "dark"
+color_index = 2
+contrast = 0.0
+mode = "light"
 
 [appearance]
 border_radius = 18
