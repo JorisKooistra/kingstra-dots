@@ -12,9 +12,7 @@ __pycache__/
 
 # Matugen-gegenereerde kleurbestanden (output van templates)
 config/hypr/colors.conf
-config/kitty/kitty.conf
 config/kitty/colors.conf
-config/kitty/skwd-theme.conf
 config/quickshell/colors.json
 config/swaync/colors.css
 config/walker/colors.css
@@ -43,4 +41,3 @@ config/kingstra/active-theme
 config/matugen/config.toml
 
 aanleveringen/
-
