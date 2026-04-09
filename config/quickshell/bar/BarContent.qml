@@ -10,6 +10,13 @@ Item {
     required property var shell
     required property var surface
     required property var mocha
+    readonly property int edgeInset: shell.edgeAttachedBar ? shell.s(10) : 0
+    readonly property color rightGroupColor: surface.continuousBarMode
+                                            ? Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.42)
+                                            : surface.panelColor
+    readonly property color rightGroupBorderColor: surface.continuousBarMode
+                                                  ? Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.48)
+                                                  : surface.panelBorderColor
 
                 Rectangle {
                     id: centerBox
@@ -137,6 +144,7 @@ Item {
                 RowLayout {
                     id: leftLayout
                     anchors.left: parent.left
+                    anchors.leftMargin: root.edgeInset
                     anchors.right: centerBox.left  // Hard boundary to prevent overlaps
                     anchors.rightMargin: shell.s(12)
                     anchors.verticalCenter: parent.verticalCenter
@@ -466,6 +474,7 @@ Item {
                 RowLayout {
                     id: rightLayout
                     anchors.right: parent.right
+                    anchors.rightMargin: root.edgeInset
                     anchors.left: centerBox.right // Hard boundary to prevent overlaps
                     anchors.leftMargin: shell.s(12)
                     anchors.verticalCenter: parent.verticalCenter
@@ -493,10 +502,12 @@ Item {
                     // Dedicated System Tray Pill
                     Rectangle {
                         Layout.preferredHeight: shell.barHeight // THE FIX: Replaced basic "height"
+                        Layout.alignment: Qt.AlignVCenter
                         radius: surface.panelRadius
-                        border.color: surface.panelBorderColor
+                        border.color: root.rightGroupBorderColor
                         border.width: 1
-                        color: surface.panelColor
+                        color: root.rightGroupColor
+                        clip: true
                         
                         property real targetWidth: trayRepeater.count > 0 ? trayLayout.width + shell.s(24) : 0
                         Layout.preferredWidth: targetWidth
@@ -581,10 +592,11 @@ Item {
                     // System Elements Pill
                     Rectangle {
                         Layout.preferredHeight: shell.barHeight // THE FIX: Replaced basic "height"
+                        Layout.alignment: Qt.AlignVCenter
                         radius: surface.panelRadius
-                        border.color: surface.panelBorderColor
+                        border.color: root.rightGroupBorderColor
                         border.width: 1
-                        color: surface.panelColor
+                        color: root.rightGroupColor
                         clip: true
                         
                         property real targetWidth: sysLayout.width + shell.s(20)

@@ -2,9 +2,9 @@
 # =============================================================================
 # apply-shell-state — Centrale apply pipeline: matugen + reloads
 # =============================================================================
-# Gebruik: apply-shell-state [--verbose]
+# Gebruik: apply-shell-state [--verbose] [--wallpaper <pad>]
 #
-# Leest session.json voor het wallpaper-pad.
+# Leest wallpaper-pad uit `--wallpaper` of session.json (met cache fallback).
 # Leest scheme/mode/color_index uit quickshell/theme.json (gezet door theme-switch).
 # Draait matugen, optioneel color-transform, herlaadt alle apps.
 # =============================================================================
@@ -19,6 +19,7 @@ THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes"
 MATUGEN_RUNNER="${HOME}/.local/bin/kingstra-matugen-run"
 LOG_PREFIX="[apply-shell-state]"
 VERBOSE=false
+WALLPAPER_ARG=""
 
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
@@ -26,6 +27,27 @@ _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
 for arg in "$@"; do
     case "$arg" in
         --verbose|-v) VERBOSE=true ;;
+    esac
+done
+
+# Parsen van extra opties (huidige wallpaper kan expliciet meegegeven worden)
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --verbose|-v)
+            shift
+            ;;
+        --wallpaper|-w)
+            shift
+            if [[ $# -gt 0 ]]; then
+                WALLPAPER_ARG="$1"
+                shift
+            else
+                _warn "Optie --wallpaper verwacht een pad"
+            fi
+            ;;
+        *)
+            shift
+            ;;
     esac
 done
 
@@ -41,11 +63,19 @@ fi
 trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT
 
 # ---------------------------------------------------------------------------
-# Stap 1 — Wallpaper pad bepalen (session.json, fallback cache)
+# Stap 1 — Wallpaper pad bepalen (arg > session.json > fallback cache)
 # ---------------------------------------------------------------------------
 WALLPAPER=""
 
-if [[ -f "$SESSION_FILE" ]]; then
+if [[ -n "$WALLPAPER_ARG" ]]; then
+    if [[ -f "$WALLPAPER_ARG" ]]; then
+        WALLPAPER="$WALLPAPER_ARG"
+    else
+        _warn "Meegegeven --wallpaper bestaat niet: $WALLPAPER_ARG"
+    fi
+fi
+
+if [[ -z "$WALLPAPER" && -f "$SESSION_FILE" ]]; then
     WALLPAPER=$(jq -r '.wallpaper // ""' "$SESSION_FILE" 2>/dev/null || echo "")
 fi
 

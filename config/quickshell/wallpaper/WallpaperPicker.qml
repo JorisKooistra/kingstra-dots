@@ -105,7 +105,7 @@ Item {
                 > "${Quickshell.env("HOME")}/.config/kingstra/state/wallpaper.json"
             "${Quickshell.env("HOME")}/.local/bin/kingstra-session-update" >/dev/null 2>&1 || true
             if [ -x "${Quickshell.env("HOME")}/.local/bin/apply-shell-state" ]; then
-                "${Quickshell.env("HOME")}/.local/bin/apply-shell-state" >/dev/null 2>&1 || true
+                "${Quickshell.env("HOME")}/.local/bin/apply-shell-state" --wallpaper "$${fileVarName}" >/dev/null 2>&1 || true
             fi
         `;
         

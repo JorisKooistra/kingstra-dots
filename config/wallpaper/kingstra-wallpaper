@@ -179,7 +179,7 @@ cmd_set() {
     # Kleuren genereren + apps herladen
     APPLY="${HOME}/.local/bin/apply-shell-state"
     if [[ -x "$APPLY" ]]; then
-        "$APPLY"
+        "$APPLY" --wallpaper "$file"
     else
         _warn "apply-shell-state niet gevonden — alleen wallpaper ingesteld"
         _notify "Wallpaper ingesteld" "$(basename "$file")"
@@ -246,7 +246,7 @@ cmd_reload() {
         _set_static "$file"
         # Herlaad kleuren + apps
         APPLY="${HOME}/.local/bin/apply-shell-state"
-        [[ -x "$APPLY" ]] && "$APPLY" 2>/dev/null || true
+        [[ -x "$APPLY" ]] && "$APPLY" --wallpaper "$file" 2>/dev/null || true
     fi
 
     _log "Wallpaper herladen: $(basename "$file") [$mode]"
