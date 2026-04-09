@@ -121,6 +121,18 @@ Keybind: `Super + W` opens the visual wallpaper picker.
 Themes control the visual personality of the desktop: Matugen scheme type, blur, transparency,
 corner radius, fonts, and subtle color transforms on top of the generated palette.
 
+Theme data now also includes visual skin blocks in each `config/kingstra/themes/*.toml`:
+- `[bar]`
+- `[widgets]`
+- `[ornaments]`
+- `[effects]`
+- `[terminal_visual]`
+
+These fields flow through `kingstra-theme-switch` into `~/.config/quickshell/theme.json`,
+then into `ThemeConfig.qml` with safe fallbacks for invalid or missing values.
+`TopBar.qml` stays the entrypoint and delegates to the bar architecture in `config/quickshell/bar/`
+(`BarShell.qml` -> `BarSurface.qml` -> `BarContent.qml`).
+
 | Theme | Description | Scheme |
 |---|---|---|
 | `botanical` | Temperate rainforest — moss, wood, filtered light | scheme-vibrant |
@@ -141,6 +153,8 @@ Keybind: `Super + Ctrl + T` opens the visual theme picker.
 ### Modes
 
 Modes reconfigure the TopBar module set and bar behaviour for the current activity.
+Mode changes should only affect content/behaviour (`modules`, `bar_autohide`), while theme identity
+(shape, ornaments, clock style, particle style, widget/bar skin) remains controlled by the active theme.
 
 | Mode | Bar | Modules |
 |---|---|---|

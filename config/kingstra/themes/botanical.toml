@@ -53,3 +53,31 @@ bg_opacity = 0.85
 blur = true
 padding = 12
 cursor_style = "beam"
+
+[bar]
+shape = "organic-grown"
+width_mode = "full"
+floating = false
+attach_to_screen_edge = true
+top_edge_style = "flush"
+bottom_edge_style = "ornate-rounded"
+clock_style = "analog"
+
+[widgets]
+shape = "soft-organic"
+surface = "wood-matte"
+
+[ornaments]
+enabled = true
+top_left = "assets/themes/botanical/ornament-top-left.svg"
+top_right = "assets/themes/botanical/ornament-top-right.svg"
+opacity = 0.18
+
+[effects]
+particles = "fireflies"
+particle_count = 4
+particle_speed = 0.18
+
+[terminal_visual]
+overlay_asset = ""
+overlay_opacity = 0.0

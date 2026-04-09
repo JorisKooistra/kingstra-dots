@@ -53,3 +53,31 @@ bg_opacity = 0.95
 blur = false
 padding = 8
 cursor_style = "block"
+
+[bar]
+shape = "block"
+width_mode = "full"
+floating = false
+attach_to_screen_edge = true
+top_edge_style = "flush"
+bottom_edge_style = "hard"
+clock_style = "digital"
+
+[widgets]
+shape = "hard-rect"
+surface = "stone-matte"
+
+[ornaments]
+enabled = false
+top_left = ""
+top_right = ""
+opacity = 0.0
+
+[effects]
+particles = "none"
+particle_count = 0
+particle_speed = 0.0
+
+[terminal_visual]
+overlay_asset = ""
+overlay_opacity = 0.0

@@ -6,6 +6,7 @@ import QtCore
 import Quickshell
 import Quickshell.Io
 import "../"
+import "../widgets/skins"
 
 Item {
     id: window
@@ -47,15 +48,39 @@ Item {
     readonly property color teal: _theme.teal
     readonly property color sapphire: _theme.sapphire
     readonly property color blue: _theme.blue
-    readonly property int themedRadius: Math.max(14, ThemeConfig.styleWidgetRadius)
-    readonly property int themedInnerRadius: Math.max(10, ThemeConfig.styleWidgetRadius - 4)
+    readonly property string widgetSkinSource: {
+        let t = String(ThemeConfig.theme || "botanical").toLowerCase();
+        if (t === "rocky") return "../widgets/skins/RockyWidgetSkin.qml";
+        if (t === "ocean") return "../widgets/skins/OceanWidgetSkin.qml";
+        if (t === "space") return "../widgets/skins/SpaceWidgetSkin.qml";
+        if (t === "cyber") return "../widgets/skins/CyberWidgetSkin.qml";
+        if (t === "animated") return "../widgets/skins/AnimatedWidgetSkin.qml";
+        return "../widgets/skins/BotanicalWidgetSkin.qml";
+    }
+
+    Loader {
+        id: widgetSkinLoader
+        source: window.widgetSkinSource
+        visible: false
+    }
+
+    readonly property var widgetSkin: widgetSkinLoader.item
+
+    function skinNumber(name, fallbackValue) {
+        if (!widgetSkin || widgetSkin[name] === undefined) return fallbackValue;
+        return Number(widgetSkin[name]);
+    }
+
+    readonly property int themedRadius: Math.max(10, ThemeConfig.styleWidgetRadius + skinNumber("radiusDelta", 0))
+    readonly property int themedInnerRadius: Math.max(8, ThemeConfig.styleWidgetRadius - 4 + Math.floor(skinNumber("radiusDelta", 0) / 2))
     readonly property string uiFontFamily: ThemeConfig.uiFont
     readonly property string monoFontFamily: ThemeConfig.monoFont
     readonly property string displayFontFamily: ThemeConfig.displayFont
     readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
     readonly property int themedFontWeight: ThemeConfig.fontWeight
-    readonly property color popupFill: Qt.rgba(window.base.r, window.base.g, window.base.b, ThemeConfig.popupOpacity)
-    readonly property color glassFill: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, Math.min(0.88, ThemeConfig.popupOpacity * 0.4))
+    readonly property color popupFill: Qt.rgba(window.base.r, window.base.g, window.base.b, Math.min(0.98, ThemeConfig.popupOpacity + skinNumber("popupOpacityBoost", 0.0)))
+    readonly property color glassFill: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, Math.min(0.94, ThemeConfig.popupOpacity * 0.4 * Math.max(0.6, skinNumber("glassOpacityScale", 1.0))))
+    readonly property color popupBorderColor: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, Math.min(1.0, 0.70 + skinNumber("borderAlphaBoost", 0.0)))
 
     // -------------------------------------------------------------------------
     // STATE & CONFIG
@@ -236,7 +261,7 @@ Item {
             anchors.fill: parent
             radius: window.themedRadius
             color: window.popupFill
-            border.color: window.surface0
+            border.color: window.popupBorderColor
             border.width: Math.max(1, ThemeConfig.borderWidth)
             clip: true
 

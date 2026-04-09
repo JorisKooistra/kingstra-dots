@@ -53,3 +53,31 @@ bg_opacity = 0.78
 blur = true
 padding = 12
 cursor_style = "beam"
+
+[bar]
+shape = "segmented-capsule"
+width_mode = "floating"
+floating = true
+attach_to_screen_edge = false
+top_edge_style = "soft"
+bottom_edge_style = "soft"
+clock_style = "hybrid"
+
+[widgets]
+shape = "dark-capsule"
+surface = "deep-glass"
+
+[ornaments]
+enabled = false
+top_left = ""
+top_right = ""
+opacity = 0.0
+
+[effects]
+particles = "space-specks"
+particle_count = 12
+particle_speed = 0.05
+
+[terminal_visual]
+overlay_asset = ""
+overlay_opacity = 0.0

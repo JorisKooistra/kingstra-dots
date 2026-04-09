@@ -31,6 +31,24 @@ Item {
 
     property int barHeight: 36
     property string barPosition: "top"
+    property string barShape: "rounded"
+    property string barWidthMode: "full"
+    property bool barFloating: false
+    property bool barAttachToScreenEdge: true
+    property string barTopEdgeStyle: "soft"
+    property string barBottomEdgeStyle: "soft"
+    property string clockStyle: "digital"
+    property string widgetShape: "rounded"
+    property string widgetSurfaceStyle: "standard"
+    property bool ornamentEnabled: false
+    property string ornamentTopLeft: ""
+    property string ornamentTopRight: ""
+    property real ornamentOpacity: 0.0
+    property string particleType: "none"
+    property int particleCount: 0
+    property real particleSpeed: 0.0
+    property string terminalOverlayAsset: ""
+    property real terminalOverlayOpacity: 0.0
 
     property string materialTexture: "none"
     property real materialOverlayOpacity: 0.0
@@ -112,6 +130,24 @@ Item {
 
                     if (data.bar_height !== undefined) root.barHeight = parseInt(data.bar_height) || root.barHeight;
                     if (data.bar_position !== undefined) root.barPosition = String(data.bar_position);
+                    if (data.bar_shape !== undefined) root.barShape = String(data.bar_shape);
+                    if (data.bar_width_mode !== undefined) root.barWidthMode = String(data.bar_width_mode);
+                    if (data.bar_floating !== undefined) root.barFloating = !!data.bar_floating;
+                    if (data.bar_attach_to_screen_edge !== undefined) root.barAttachToScreenEdge = !!data.bar_attach_to_screen_edge;
+                    if (data.bar_top_edge_style !== undefined) root.barTopEdgeStyle = String(data.bar_top_edge_style);
+                    if (data.bar_bottom_edge_style !== undefined) root.barBottomEdgeStyle = String(data.bar_bottom_edge_style);
+                    if (data.clock_style !== undefined) root.clockStyle = String(data.clock_style);
+                    if (data.widget_shape !== undefined) root.widgetShape = String(data.widget_shape);
+                    if (data.widget_surface !== undefined) root.widgetSurfaceStyle = String(data.widget_surface);
+                    if (data.ornament_enabled !== undefined) root.ornamentEnabled = !!data.ornament_enabled;
+                    if (data.ornament_top_left !== undefined) root.ornamentTopLeft = String(data.ornament_top_left);
+                    if (data.ornament_top_right !== undefined) root.ornamentTopRight = String(data.ornament_top_right);
+                    if (data.ornament_opacity !== undefined) root.ornamentOpacity = root.clamp(Number(data.ornament_opacity), 0.0, 1.0);
+                    if (data.particle_type !== undefined) root.particleType = String(data.particle_type);
+                    if (data.particle_count !== undefined) root.particleCount = parseInt(root.clamp(Number(data.particle_count), 0, 50));
+                    if (data.particle_speed !== undefined) root.particleSpeed = root.clamp(Number(data.particle_speed), 0.0, 2.0);
+                    if (data.terminal_overlay_asset !== undefined) root.terminalOverlayAsset = String(data.terminal_overlay_asset);
+                    if (data.terminal_overlay_opacity !== undefined) root.terminalOverlayOpacity = root.clamp(Number(data.terminal_overlay_opacity), 0.0, 1.0);
 
                     if (material.texture !== undefined) root.materialTexture = String(material.texture);
                     if (material.overlay_opacity !== undefined) root.materialOverlayOpacity = root.clamp(Number(material.overlay_opacity), 0.0, 0.35);

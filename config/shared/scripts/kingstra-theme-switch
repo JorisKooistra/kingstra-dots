@@ -21,6 +21,9 @@ LOG_PREFIX="[kingstra-theme-switch]"
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
 
+SCRIPT_REALPATH="$(readlink -f "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(cd "$(dirname "$SCRIPT_REALPATH")/../../.." && pwd)"
+
 _notify() {
     notify-send --icon=preferences-desktop-theme \
                 --app-name="kingstra" \
@@ -83,6 +86,116 @@ path.write_text("\n".join(output) + "\n", encoding="utf-8")
 PY
 }
 
+is_true() {
+    local value="${1:-false}"
+    case "${value,,}" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+bool_json() {
+    if is_true "${1:-false}"; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
+
+pick_enum() {
+    local value="$1"
+    local default_value="$2"
+    local field="$3"
+    shift 3
+    local allowed
+    for allowed in "$@"; do
+        if [[ "$value" == "$allowed" ]]; then
+            echo "$value"
+            return 0
+        fi
+    done
+    _warn "Ongeldige waarde voor $field ('$value'), fallback naar '$default_value'"
+    echo "$default_value"
+}
+
+sanitize_int() {
+    local value="$1"
+    local default_value="$2"
+    local min_value="$3"
+    local max_value="$4"
+    local field="$5"
+
+    if [[ ! "$value" =~ ^-?[0-9]+$ ]]; then
+        _warn "Ongeldige integer voor $field ('$value'), fallback naar '$default_value'"
+        echo "$default_value"
+        return 0
+    fi
+
+    if (( value < min_value )); then
+        echo "$min_value"
+    elif (( value > max_value )); then
+        echo "$max_value"
+    else
+        echo "$value"
+    fi
+}
+
+sanitize_float() {
+    local value="$1"
+    local default_value="$2"
+    local min_value="$3"
+    local max_value="$4"
+    local field="$5"
+
+    if [[ ! "$value" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+        _warn "Ongeldige float voor $field ('$value'), fallback naar '$default_value'"
+        echo "$default_value"
+        return 0
+    fi
+
+    awk -v v="$value" -v min="$min_value" -v max="$max_value" 'BEGIN {
+        if (v < min) v = min;
+        if (v > max) v = max;
+        print v;
+    }'
+}
+
+resolve_asset_path() {
+    local raw="${1:-}"
+    local field="$2"
+
+    if [[ -z "$raw" ]]; then
+        echo ""
+        return 0
+    fi
+
+    local expanded="$raw"
+    if [[ "$expanded" == "~/"* ]]; then
+        expanded="$HOME/${expanded#~/}"
+    fi
+
+    if [[ "$expanded" == /* ]]; then
+        if [[ -f "$expanded" ]]; then
+            echo "$expanded"
+        else
+            _warn "Asset niet gevonden voor $field: $expanded"
+            echo ""
+        fi
+        return 0
+    fi
+
+    local candidate
+    for candidate in "$REPO_ROOT/$expanded" "${XDG_CONFIG_HOME:-$HOME/.config}/$expanded" "$HOME/$expanded"; do
+        if [[ -f "$candidate" ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    _warn "Asset niet gevonden voor $field: $raw"
+    echo ""
+}
+
 # ---------------------------------------------------------------------------
 # Arguments
 # ---------------------------------------------------------------------------
@@ -112,6 +225,35 @@ _log "Overschakelen naar thema: $THEME_NAME"
 eval "$("$READER" "$THEME_FILE")"
 
 # Variables are now available as: META_NAME, MATUGEN_SCHEME_TYPE, APPEARANCE_BORDER_RADIUS, etc.
+
+BAR_SHAPE_JSON=$(pick_enum "${BAR_SHAPE:-rounded}" "rounded" "bar.shape" \
+    rounded organic-grown capsule block segmented-capsule beveled)
+BAR_WIDTH_MODE_JSON=$(pick_enum "${BAR_WIDTH_MODE:-full}" "full" "bar.width_mode" \
+    full floating)
+BAR_FLOATING_JSON=$(bool_json "${BAR_FLOATING:-false}")
+BAR_ATTACH_TO_SCREEN_EDGE_JSON=$(bool_json "${BAR_ATTACH_TO_SCREEN_EDGE:-true}")
+BAR_TOP_EDGE_STYLE_JSON=$(pick_enum "${BAR_TOP_EDGE_STYLE:-soft}" "soft" "bar.top_edge_style" \
+    flush soft hard beveled)
+BAR_BOTTOM_EDGE_STYLE_JSON=$(pick_enum "${BAR_BOTTOM_EDGE_STYLE:-soft}" "soft" "bar.bottom_edge_style" \
+    flush soft hard beveled ornate-rounded)
+CLOCK_STYLE_JSON=$(pick_enum "${BAR_CLOCK_STYLE:-digital}" "digital" "bar.clock_style" \
+    digital analog hybrid)
+
+WIDGET_SHAPE_JSON="${WIDGETS_SHAPE:-rounded}"
+WIDGET_SURFACE_JSON="${WIDGETS_SURFACE:-standard}"
+
+ORNAMENT_ENABLED_JSON=$(bool_json "${ORNAMENTS_ENABLED:-false}")
+ORNAMENT_TOP_LEFT_JSON=$(resolve_asset_path "${ORNAMENTS_TOP_LEFT:-}" "ornaments.top_left")
+ORNAMENT_TOP_RIGHT_JSON=$(resolve_asset_path "${ORNAMENTS_TOP_RIGHT:-}" "ornaments.top_right")
+ORNAMENT_OPACITY_JSON=$(sanitize_float "${ORNAMENTS_OPACITY:-0.0}" "0.0" "0.0" "1.0" "ornaments.opacity")
+
+PARTICLE_TYPE_JSON=$(pick_enum "${EFFECTS_PARTICLES:-none}" "none" "effects.particles" \
+    none fireflies space-specks)
+PARTICLE_COUNT_JSON=$(sanitize_int "${EFFECTS_PARTICLE_COUNT:-0}" "0" "0" "50" "effects.particle_count")
+PARTICLE_SPEED_JSON=$(sanitize_float "${EFFECTS_PARTICLE_SPEED:-0.0}" "0.0" "0.0" "2.0" "effects.particle_speed")
+
+TERMINAL_OVERLAY_ASSET_JSON=$(resolve_asset_path "${TERMINAL_VISUAL_OVERLAY_ASSET:-}" "terminal_visual.overlay_asset")
+TERMINAL_OVERLAY_OPACITY_JSON=$(sanitize_float "${TERMINAL_VISUAL_OVERLAY_OPACITY:-0.0}" "0.0" "0.0" "1.0" "terminal_visual.overlay_opacity")
 
 # ---------------------------------------------------------------------------
 # Theme style profiles — one coherent visual language per theme
@@ -263,6 +405,24 @@ cat > "$THEME_JSON" <<EOF
     "icon_theme": "${ICONS_ICON_THEME:-Papirus-Dark}",
     "bar_height": ${QUICKSHELL_BAR_HEIGHT:-36},
     "bar_position": "${QUICKSHELL_BAR_POSITION:-top}",
+    "bar_shape": "${BAR_SHAPE_JSON}",
+    "bar_width_mode": "${BAR_WIDTH_MODE_JSON}",
+    "bar_floating": ${BAR_FLOATING_JSON},
+    "bar_attach_to_screen_edge": ${BAR_ATTACH_TO_SCREEN_EDGE_JSON},
+    "bar_top_edge_style": "${BAR_TOP_EDGE_STYLE_JSON}",
+    "bar_bottom_edge_style": "${BAR_BOTTOM_EDGE_STYLE_JSON}",
+    "clock_style": "${CLOCK_STYLE_JSON}",
+    "widget_shape": "${WIDGET_SHAPE_JSON}",
+    "widget_surface": "${WIDGET_SURFACE_JSON}",
+    "ornament_enabled": ${ORNAMENT_ENABLED_JSON},
+    "ornament_top_left": "${ORNAMENT_TOP_LEFT_JSON}",
+    "ornament_top_right": "${ORNAMENT_TOP_RIGHT_JSON}",
+    "ornament_opacity": ${ORNAMENT_OPACITY_JSON},
+    "particle_type": "${PARTICLE_TYPE_JSON}",
+    "particle_count": ${PARTICLE_COUNT_JSON},
+    "particle_speed": ${PARTICLE_SPEED_JSON},
+    "terminal_overlay_asset": "${TERMINAL_OVERLAY_ASSET_JSON}",
+    "terminal_overlay_opacity": ${TERMINAL_OVERLAY_OPACITY_JSON},
     "scheme_type": "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}",
     "color_index": ${MATUGEN_COLOR_INDEX:-0},
     "contrast": ${MATUGEN_CONTRAST:-0.0},
