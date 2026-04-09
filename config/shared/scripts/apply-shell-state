@@ -4,20 +4,18 @@
 # =============================================================================
 # Gebruik: apply-shell-state [--verbose] [--wallpaper <pad>]
 #
-# Leest wallpaper-pad uit `--wallpaper` of session.json (met cache fallback).
-# Leest scheme/mode/color_index uit quickshell/theme.json (gezet door theme-switch).
-# Draait matugen, optioneel color-transform, herlaadt alle apps.
+# Resolve't wallpaper + theme-matugen-instellingen via `kingstra-matugen-run`
+# en laat uitsluitend die runner Matugen uitvoeren.
+# Daarna: optionele color-transform + app reloads.
 # =============================================================================
 set -euo pipefail
 
 SESSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
-THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
-MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
 MODES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/modes"
-THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes"
 MATUGEN_RUNNER="${HOME}/.local/bin/kingstra-matugen-run"
+SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 LOG_PREFIX="[apply-shell-state]"
 VERBOSE=false
 WALLPAPER_ARG=""
@@ -25,18 +23,28 @@ WALLPAPER_ARG=""
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
 
-_set_toml_value() {
-    local file="$1"
-    local key="$2"
-    local value="$3"
+_sync_skwd_config() {
+    local scheme="$1"
+    local mode="$2"
 
-    mkdir -p "$(dirname "$file")"
-    [[ -f "$file" ]] || touch "$file"
+    [[ -f "$SKWD_CONFIG" ]] || return 0
+    if ! command -v jq >/dev/null 2>&1; then
+        _warn "jq ontbreekt — skwd config sync overgeslagen"
+        return 0
+    fi
 
-    if grep -Eq "^[[:space:]]*${key}[[:space:]]*=" "$file"; then
-        sed -i -E "s|^[[:space:]]*${key}[[:space:]]*=.*|${key} = ${value}|" "$file"
+    local tmp_file
+    tmp_file="$(mktemp)"
+    if jq --arg scheme "$scheme" --arg mode "$mode" \
+        '.features.matugen = false
+         | .features.wallhaven = true
+         | .matugen.schemeType = $scheme
+         | .matugen.mode = $mode' \
+        "$SKWD_CONFIG" > "$tmp_file" 2>/dev/null; then
+        mv "$tmp_file" "$SKWD_CONFIG"
     else
-        printf '%s = %s\n' "$key" "$value" >> "$file"
+        rm -f "$tmp_file"
+        _warn "Kon skwd-wall config niet synchroniseren"
     fi
 }
 
@@ -79,52 +87,36 @@ fi
 trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT
 
 # ---------------------------------------------------------------------------
-# Stap 1 — Wallpaper pad bepalen (arg > session.json > fallback cache)
+# Stap 1 — Resolve inputs via centrale matugen-runner
 # ---------------------------------------------------------------------------
-WALLPAPER=""
-
-if [[ -n "$WALLPAPER_ARG" ]]; then
-    if [[ -f "$WALLPAPER_ARG" ]]; then
-        WALLPAPER="$WALLPAPER_ARG"
-    else
-        _warn "Meegegeven --wallpaper bestaat niet: $WALLPAPER_ARG"
-    fi
-fi
-
-if [[ -z "$WALLPAPER" && -f "$SESSION_FILE" ]]; then
-    WALLPAPER=$(jq -r '.wallpaper // ""' "$SESSION_FILE" 2>/dev/null || echo "")
-fi
-
-if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
-    WALLPAPER="$(cat "$CACHE_DIR/last-wallpaper" 2>/dev/null || echo "")"
-fi
-
-if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
-    _warn "Geen geldig wallpaper gevonden — matugen overgeslagen, apps wel herladen"
-fi
-
-# ---------------------------------------------------------------------------
-# Stap 2 — Theme valideren + matugen parameters bepalen
-# ---------------------------------------------------------------------------
+THEME_NAME="botanical"
 SCHEME="scheme-tonal-spot"
 COLOR_IDX=0
 MODE="dark"
+WALLPAPER=""
 
-if [[ -f "$THEME_JSON" ]]; then
-    THEME_NAME=$(jq -r '.theme // "botanical"' "$THEME_JSON" 2>/dev/null || echo "botanical")
-    SCHEME=$(jq -r '.scheme_type // "scheme-tonal-spot"' "$THEME_JSON" 2>/dev/null || echo "scheme-tonal-spot")
-    COLOR_IDX=$(jq -r '.color_index // 0' "$THEME_JSON" 2>/dev/null || echo "0")
-    MODE=$(jq -r '.mode // "dark"' "$THEME_JSON" 2>/dev/null || echo "dark")
-
-    # Fallback: onbekend theme → botanical
-    if [[ ! -f "$THEMES_DIR/${THEME_NAME}.toml" ]]; then
-        _warn "Onbekend theme '${THEME_NAME}' — fallback naar botanical"
-        THEME_NAME="botanical"
-        SCHEME="scheme-vibrant"
-        COLOR_IDX=2
-        MODE="dark"
+if [[ ! -x "$MATUGEN_RUNNER" ]]; then
+    _warn "kingstra-matugen-run niet gevonden — matugen stap overgeslagen"
+else
+    RUNNER_RESOLVE_ARGS=()
+    if [[ -n "$WALLPAPER_ARG" ]]; then
+        RUNNER_RESOLVE_ARGS+=(--wallpaper "$WALLPAPER_ARG")
     fi
+
+    RESOLVED_JSON="$("$MATUGEN_RUNNER" "${RUNNER_RESOLVE_ARGS[@]}" --resolved-json 2>/dev/null || echo '{}')"
+
+    THEME_NAME="$(echo "$RESOLVED_JSON" | jq -r '.theme // "botanical"' 2>/dev/null || echo "botanical")"
+    SCHEME="$(echo "$RESOLVED_JSON" | jq -r '.scheme_type // "scheme-tonal-spot"' 2>/dev/null || echo "scheme-tonal-spot")"
+    COLOR_IDX="$(echo "$RESOLVED_JSON" | jq -r '.color_index // 0' 2>/dev/null || echo "0")"
+    MODE="$(echo "$RESOLVED_JSON" | jq -r '.mode // "dark"' 2>/dev/null || echo "dark")"
+    WALLPAPER="$(echo "$RESOLVED_JSON" | jq -r '.wallpaper // ""' 2>/dev/null || echo "")"
 fi
+
+if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
+    _warn "Geen geldige wallpaper gevonden — matugen overgeslagen, apps wel herladen"
+fi
+
+_sync_skwd_config "$SCHEME" "$MODE"
 
 # Fallback: onbekende mode → office
 SESSION_MODE=$(jq -r '.mode // "office"' "$SESSION_FILE" 2>/dev/null || echo "office")
@@ -135,12 +127,6 @@ case "$SESSION_MODE" in
         SESSION_MODE="office"
         ;;
 esac
-
-# Sync matugen-config expliciet naar het actieve theme-contract.
-# Dit voorkomt dat externe tools (zoals skwd-wall) een afwijkend scheme forceren.
-_set_toml_value "$MATUGEN_CONF" "scheme_type" "\"$SCHEME\""
-_set_toml_value "$MATUGEN_CONF" "mode" "\"$MODE\""
-_set_toml_value "$MATUGEN_CONF" "color_index" "$COLOR_IDX"
 
 # Houd wallpaper state/cache gelijk met de centrale apply-run.
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
@@ -163,7 +149,7 @@ _log "Theme: ${THEME_NAME:-?} | Scheme: $SCHEME | Matugen mode: $MODE | Color in
 _log "Mode: $SESSION_MODE"
 
 # ---------------------------------------------------------------------------
-# Stap 3 — Matugen draaien (genereert alle templates)
+# Stap 3 — Matugen draaien (altijd via kingstra-matugen-run)
 # ---------------------------------------------------------------------------
 COLORS_JSON="{}"
 
@@ -176,27 +162,8 @@ if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
             "$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" --show-colors 2>/dev/null || true
         fi
 
-        # JSON kleuren opvangen voor color-transform
+        # JSON-kleuren voor color-transform; runner blijft de enige Matugen caller.
         COLORS_JSON=$("$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" --json hex 2>/dev/null || echo "{}")
-    else
-        _warn "kingstra-matugen-run niet gevonden — fallback naar directe matugen call"
-
-        MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
-        MATUGEN_ARGS=("image" "$WALLPAPER"
-            "--type"               "$SCHEME"
-            "--mode"               "$MODE"
-            "--source-color-index" "$COLOR_IDX")
-        [[ -f "$MATUGEN_CONF" ]] && MATUGEN_ARGS+=("--config" "$MATUGEN_CONF")
-
-        matugen "${MATUGEN_ARGS[@]}" 2>/dev/null || _warn "matugen mislukt"
-        _log "Matugen templates gegenereerd"
-
-        if $VERBOSE; then
-            matugen "${MATUGEN_ARGS[@]}" --show-colors 2>/dev/null || true
-        fi
-
-        # JSON kleuren opvangen voor color-transform
-        COLORS_JSON=$(matugen "${MATUGEN_ARGS[@]}" --json hex 2>/dev/null || echo "{}")
     fi
 
     # Sla laatste geldige palette op als fallback

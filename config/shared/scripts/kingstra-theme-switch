@@ -702,7 +702,22 @@ _log "GTK/Qt interface bijgewerkt"
 # ---------------------------------------------------------------------------
 APPLY="${HOME}/.local/bin/apply-shell-state"
 if [[ -x "$APPLY" ]]; then
-    "$APPLY" || _warn "apply-shell-state mislukt"
+    CURRENT_WALLPAPER=""
+    if command -v swww >/dev/null 2>&1; then
+        _line="$(swww query 2>/dev/null | grep -m1 'image:' || true)"
+        if [[ -n "$_line" ]]; then
+            CURRENT_WALLPAPER="${_line#*image: }"
+            CURRENT_WALLPAPER="${CURRENT_WALLPAPER%% (}"
+        fi
+    fi
+    if [[ -z "$CURRENT_WALLPAPER" || ! -f "$CURRENT_WALLPAPER" ]] && [[ -f "$STATE_FILE" ]]; then
+        CURRENT_WALLPAPER="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+    fi
+    if [[ -n "$CURRENT_WALLPAPER" && -f "$CURRENT_WALLPAPER" ]]; then
+        "$APPLY" --wallpaper "$CURRENT_WALLPAPER" || _warn "apply-shell-state mislukt"
+    else
+        "$APPLY" || _warn "apply-shell-state mislukt"
+    fi
     _log "Kleuren hergegenereerd en apps herladen"
 else
     _warn "apply-shell-state niet gevonden — kleuren en apps niet herladen"

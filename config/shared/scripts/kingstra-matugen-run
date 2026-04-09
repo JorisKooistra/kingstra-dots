@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
-# kingstra-matugen-run — Run matugen with active Kingstra theme settings
+# kingstra-matugen-run — Run Matugen from active Kingstra theme contract
 # =============================================================================
 # Gebruik:
 #   kingstra-matugen-run --wallpaper <bestand> [extra matugen args]
-#   kingstra-matugen-run [extra matugen args]   # gebruikt wallpaper uit state
+#   kingstra-matugen-run [extra matugen args]          # gebruikt huidige wallpaper
+#   kingstra-matugen-run --resolved-json               # toon resolved inputs en stop
 # Voorbeelden:
 #   kingstra-matugen-run --wallpaper ~/Pictures/wall.png
 #   kingstra-matugen-run --wallpaper ~/Pictures/wall.png --json hex
@@ -13,14 +14,21 @@ set -euo pipefail
 
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes"
+ACTIVE_THEME_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/active-theme"
+STATE_THEME_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/theme.json"
+STATE_WALLPAPER_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/wallpaper.json"
 SESSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
 CACHE_WALLPAPER="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
 
 DEFAULT_SCHEME="scheme-tonal-spot"
 DEFAULT_MODE="dark"
 DEFAULT_COLOR_INDEX="0"
+DEFAULT_THEME="botanical"
 
 WALLPAPER=""
+THEME_OVERRIDE=""
+PRINT_RESOLVED_JSON=false
 EXTRA_ARGS=()
 
 _warn() { echo "[kingstra-matugen-run] WARN: $*" >&2; }
@@ -31,47 +39,21 @@ _usage() {
 Gebruik:
   kingstra-matugen-run --wallpaper <bestand> [extra matugen args]
   kingstra-matugen-run [extra matugen args]
+  kingstra-matugen-run --resolved-json
 EOF
 }
 
-_cfg_val() {
-    local key="$1"
-    local fallback="$2"
-    grep -m1 "^${key}\s*=" "$MATUGEN_CONF" 2>/dev/null \
-        | sed 's/[^=]*=\s*"\?\([^"]*\)"\?.*/\1/' \
-        || echo "$fallback"
-}
-
-_json_val() {
-    local key="$1"
-    local value=""
-    if [[ -f "$THEME_JSON" ]] && command -v jq &>/dev/null; then
-        value="$(jq -r --arg k "$key" '.[$k] // empty' "$THEME_JSON" 2>/dev/null || echo "")"
+_set_toml_value() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+    mkdir -p "$(dirname "$file")"
+    [[ -f "$file" ]] || touch "$file"
+    if grep -Eq "^[[:space:]]*${key}[[:space:]]*=" "$file"; then
+        sed -i -E "s|^[[:space:]]*${key}[[:space:]]*=.*|${key} = ${value}|" "$file"
+    else
+        printf '%s = %s\n' "$key" "$value" >> "$file"
     fi
-    echo "$value"
-}
-
-_pick_setting() {
-    local json_key="$1"
-    local cfg_key="$2"
-    local fallback="$3"
-    local value=""
-
-    value="$(_json_val "$json_key")"
-    if [[ -n "$value" && "$value" != "null" ]]; then
-        echo "$value"
-        return 0
-    fi
-
-    if [[ -f "$MATUGEN_CONF" ]]; then
-        value="$(_cfg_val "$cfg_key" "$fallback")"
-        if [[ -n "$value" ]]; then
-            echo "$value"
-            return 0
-        fi
-    fi
-
-    echo "$fallback"
 }
 
 _valid_mode() {
@@ -81,8 +63,133 @@ _valid_mode() {
     esac
 }
 
+_resolve_theme_id() {
+    local theme_id=""
+
+    if [[ -n "$THEME_OVERRIDE" ]]; then
+        theme_id="$THEME_OVERRIDE"
+    fi
+
+    if [[ -z "$theme_id" && -f "$THEME_JSON" ]] && command -v jq &>/dev/null; then
+        theme_id="$(jq -r '.theme // ""' "$THEME_JSON" 2>/dev/null || echo "")"
+    fi
+
+    if [[ -z "$theme_id" && -f "$ACTIVE_THEME_FILE" ]]; then
+        theme_id="$(cat "$ACTIVE_THEME_FILE" 2>/dev/null || echo "")"
+    fi
+
+    if [[ -z "$theme_id" && -f "$STATE_THEME_FILE" ]] && command -v jq &>/dev/null; then
+        theme_id="$(jq -r '.name // ""' "$STATE_THEME_FILE" 2>/dev/null || echo "")"
+    fi
+
+    if [[ -z "$theme_id" ]]; then
+        theme_id="$DEFAULT_THEME"
+    fi
+
+    echo "$theme_id"
+}
+
+_resolve_theme_file() {
+    local theme_id="$1"
+    local theme_file="$THEMES_DIR/${theme_id}.toml"
+    if [[ -f "$theme_file" ]]; then
+        printf '%s|%s\n' "$theme_id" "$theme_file"
+        return 0
+    fi
+
+    local fallback_file="$THEMES_DIR/${DEFAULT_THEME}.toml"
+    if [[ -f "$fallback_file" ]]; then
+        _warn "Theme '${theme_id}' niet gevonden, fallback naar '${DEFAULT_THEME}'"
+        printf '%s|%s\n' "$DEFAULT_THEME" "$fallback_file"
+        return 0
+    fi
+
+    _warn "Geen theme TOML gevonden in $THEMES_DIR, defaults gebruikt"
+    printf '%s|\n' "$DEFAULT_THEME"
+}
+
+_read_theme_matugen() {
+    local theme_file="$1"
+    local default_scheme="$2"
+    local default_mode="$3"
+    local default_index="$4"
+
+    if [[ -z "$theme_file" || ! -f "$theme_file" ]]; then
+        printf '%s|%s|%s\n' "$default_scheme" "$default_mode" "$default_index"
+        return 0
+    fi
+
+    python3 - "$theme_file" "$default_scheme" "$default_mode" "$default_index" <<'PY'
+import sys
+from pathlib import Path
+try:
+    import tomllib
+except Exception:
+    import tomli as tomllib
+
+theme_file = Path(sys.argv[1])
+default_scheme = sys.argv[2]
+default_mode = sys.argv[3]
+default_index = sys.argv[4]
+
+scheme = default_scheme
+mode = default_mode
+index = default_index
+
+try:
+    data = tomllib.loads(theme_file.read_text(encoding="utf-8"))
+    matugen = data.get("matugen", {}) if isinstance(data, dict) else {}
+    if isinstance(matugen, dict):
+        v = matugen.get("scheme_type")
+        if isinstance(v, str) and v.strip():
+            scheme = v.strip()
+        v = matugen.get("mode")
+        if isinstance(v, str) and v.strip():
+            mode = v.strip()
+        v = matugen.get("color_index")
+        if isinstance(v, int):
+            index = str(v)
+        elif isinstance(v, str) and v.strip():
+            index = v.strip()
+except Exception:
+    pass
+
+print(f"{scheme}|{mode}|{index}")
+PY
+}
+
 _resolve_wallpaper() {
     local candidate="$WALLPAPER"
+
+    if [[ -n "$candidate" && -f "$candidate" ]]; then
+        echo "$candidate"
+        return 0
+    fi
+
+    if [[ -n "$candidate" && ! -f "$candidate" ]]; then
+        _warn "Meegegeven wallpaper bestaat niet: $candidate"
+    fi
+
+    if command -v swww >/dev/null 2>&1; then
+        local line
+        line="$(swww query 2>/dev/null | grep -m1 'image:' || true)"
+        if [[ -n "$line" ]]; then
+            candidate="${line#*image: }"
+            candidate="${candidate%% (}"
+            if [[ -n "$candidate" && -f "$candidate" ]]; then
+                echo "$candidate"
+                return 0
+            fi
+        fi
+    fi
+
+    if [[ -f "$STATE_WALLPAPER_FILE" ]] && command -v jq &>/dev/null; then
+        candidate="$(jq -r '.path // ""' "$STATE_WALLPAPER_FILE" 2>/dev/null || echo "")"
+        if [[ -n "$candidate" && -f "$candidate" ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    fi
 
     if [[ -z "$candidate" && -f "$SESSION_FILE" ]] && command -v jq &>/dev/null; then
         candidate="$(jq -r '.wallpaper // ""' "$SESSION_FILE" 2>/dev/null || echo "")"
@@ -95,12 +202,48 @@ _resolve_wallpaper() {
     echo "$candidate"
 }
 
+_emit_resolved_json() {
+    local theme_id="$1"
+    local theme_file="$2"
+    local wallpaper="$3"
+    local scheme="$4"
+    local mode="$5"
+    local color_index="$6"
+
+    python3 - "$theme_id" "$theme_file" "$wallpaper" "$scheme" "$mode" "$color_index" <<'PY'
+import json, sys
+theme_id, theme_file, wallpaper, scheme, mode, color_index = sys.argv[1:7]
+try:
+    idx = int(color_index)
+except Exception:
+    idx = 0
+print(json.dumps({
+    "theme": theme_id,
+    "theme_file": theme_file,
+    "wallpaper": wallpaper,
+    "scheme_type": scheme,
+    "mode": mode,
+    "color_index": idx,
+}))
+PY
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --wallpaper|-w)
             shift
             [[ $# -gt 0 ]] || _die "Optie --wallpaper verwacht een pad"
             WALLPAPER="$1"
+            shift
+            ;;
+        --theme|-t)
+            shift
+            [[ $# -gt 0 ]] || _die "Optie --theme verwacht een naam"
+            THEME_OVERRIDE="$1"
+            shift
+            ;;
+        --resolved-json)
+            PRINT_RESOLVED_JSON=true
             shift
             ;;
         --help|-h)
@@ -119,16 +262,17 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-command -v matugen &>/dev/null || _die "matugen niet gevonden in PATH"
+THEME_ID="$(_resolve_theme_id)"
+THEME_RESOLVED="$(_resolve_theme_file "$THEME_ID")"
+THEME_ID="${THEME_RESOLVED%%|*}"
+THEME_FILE="${THEME_RESOLVED#*|}"
+THEME_SETTINGS="$(_read_theme_matugen "$THEME_FILE" "$DEFAULT_SCHEME" "$DEFAULT_MODE" "$DEFAULT_COLOR_INDEX")"
+SCHEME_TYPE="${THEME_SETTINGS%%|*}"
+MODE_AND_INDEX="${THEME_SETTINGS#*|}"
+MODE="${MODE_AND_INDEX%%|*}"
+COLOR_INDEX="${MODE_AND_INDEX#*|}"
 
 WALLPAPER="$(_resolve_wallpaper)"
-if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
-    _die "Geen geldig wallpaperbestand gevonden"
-fi
-
-SCHEME_TYPE="$(_pick_setting "scheme_type" "scheme_type" "$DEFAULT_SCHEME")"
-MODE="$(_pick_setting "mode" "mode" "$DEFAULT_MODE")"
-COLOR_INDEX="$(_pick_setting "color_index" "color_index" "$DEFAULT_COLOR_INDEX")"
 
 if [[ -z "$SCHEME_TYPE" ]]; then
     _warn "Lege scheme_type gevonden, fallback naar $DEFAULT_SCHEME"
@@ -148,6 +292,21 @@ fi
 if (( COLOR_INDEX < 0 )); then
     COLOR_INDEX=0
 fi
+
+if $PRINT_RESOLVED_JSON; then
+    _emit_resolved_json "$THEME_ID" "$THEME_FILE" "$WALLPAPER" "$SCHEME_TYPE" "$MODE" "$COLOR_INDEX"
+    exit 0
+fi
+
+command -v matugen &>/dev/null || _die "matugen niet gevonden in PATH"
+if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
+    _die "Geen geldig wallpaperbestand gevonden"
+fi
+
+# Houd matugen/config.toml gelijk aan actieve theme-contract settings.
+_set_toml_value "$MATUGEN_CONF" "scheme_type" "\"$SCHEME_TYPE\""
+_set_toml_value "$MATUGEN_CONF" "mode" "\"$MODE\""
+_set_toml_value "$MATUGEN_CONF" "color_index" "$COLOR_INDEX"
 
 MATUGEN_ARGS=(
     image "$WALLPAPER"

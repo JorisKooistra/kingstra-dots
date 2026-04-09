@@ -5,9 +5,9 @@ icon = "󰙷"
 preview_image = "cyber.jpg"
 
 [matugen]
-scheme_type = "scheme-rainbow"
-color_index = 1
-contrast = 0.5
+scheme_type = "scheme-fidelity"
+color_index = 0
+contrast = 0.2
 mode = "dark"
 
 [appearance]

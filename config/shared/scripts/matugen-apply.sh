@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # =============================================================================
-# matugen-apply.sh — Centrale theme-apply pipeline
+# matugen-apply.sh — Compat wrapper rond apply-shell-state
 # =============================================================================
 # Gebruik: kingstra-theme-apply <pad/naar/wallpaper>
 #          kingstra-theme-apply --reload   (herlaad zonder wallpaper te wisselen)
+# Matugen zelf wordt uitsluitend gestart via kingstra-matugen-run.
 # =============================================================================
 set -euo pipefail
 
 WALLPAPER="${1:-}"
 STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
-MATUGEN_RUNNER="${HOME}/.local/bin/kingstra-matugen-run"
+APPLY_SCRIPT="${HOME}/.local/bin/apply-shell-state"
 LOG_PREFIX="[kingstra-theme]"
 
 # ---------------------------------------------------------------------------
@@ -47,30 +48,7 @@ if [[ ! -f "$WALLPAPER" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Stap 1 — Matugen uitvoeren (genereert alle template-outputs)
-# ---------------------------------------------------------------------------
-_log "Matugen uitvoeren op: $WALLPAPER"
-if [[ -x "$MATUGEN_RUNNER" ]]; then
-    "$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" 2>/dev/null || true
-else
-    _warn "kingstra-matugen-run niet gevonden — fallback naar directe matugen call"
-    MATUGEN_CONF_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
-    _cfg_val() { grep -m1 "^${1}\s*=" "$MATUGEN_CONF_FILE" 2>/dev/null | sed 's/[^=]*=\s*"\?\([^"]*\)"\?.*/\1/' || echo "${2}"; }
-    _SCHEME=$(_cfg_val scheme_type "scheme-tonal-spot")
-    _COLOR_IDX=$(_cfg_val color_index "0")
-    _MODE=$(_cfg_val mode "dark")
-    matugen image "$WALLPAPER" \
-        --config "$MATUGEN_CONF_FILE" \
-        --type "${_SCHEME}" \
-        --source-color-index "${_COLOR_IDX}" \
-        --mode "${_MODE}" \
-        2>/dev/null || true
-fi
-
-_log "Templates gegenereerd"
-
-# ---------------------------------------------------------------------------
-# Stap 2 — Wallpaper toepassen (tenzij --reload)
+# Stap 1 — Wallpaper toepassen (tenzij --reload)
 # ---------------------------------------------------------------------------
 if ! $RELOAD_ONLY; then
     _log "Wallpaper instellen: $WALLPAPER"
@@ -86,52 +64,18 @@ if ! $RELOAD_ONLY; then
 fi
 
 # ---------------------------------------------------------------------------
-# Stap 3 — Apps herladen met nieuwe kleuren
+# Stap 2 — Centrale apply uitvoeren (runner + reloads)
 # ---------------------------------------------------------------------------
-
-# Hyprland — colors.conf is al geschreven door matugen, reload triggert het
-if command -v hyprctl &>/dev/null; then
-    hyprctl reload 2>/dev/null || true
-    _log "Hyprland herladen"
+if [[ ! -x "$APPLY_SCRIPT" ]]; then
+    _warn "apply-shell-state niet gevonden: $APPLY_SCRIPT"
+    exit 1
 fi
 
-# Quickshell — herstart (laadt colors.json opnieuw)
-if pgrep -f "quickshell.*shell.qml" &>/dev/null; then
-    pkill -f "quickshell.*shell.qml" 2>/dev/null || true
-    sleep 0.4
-    quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/shell.qml" &
-    disown
-    _log "Quickshell herstart"
+if $RELOAD_ONLY; then
+    "$APPLY_SCRIPT" || true
+else
+    "$APPLY_SCRIPT" --wallpaper "$WALLPAPER" || true
 fi
 
-# SwayNC — herstart voor nieuwe CSS
-if pgrep -x swaync &>/dev/null; then
-    pkill -x swaync 2>/dev/null || true
-    sleep 0.2
-    swaync &
-    disown
-    _log "SwayNC herstart"
-fi
-
-# Kitty — stuur SIGUSR1 voor config-reload (kleuren.conf is bijgewerkt)
-if pgrep -x kitty &>/dev/null; then
-    pkill -USR1 kitty 2>/dev/null || true
-    _log "Kitty herladen"
-fi
-
-# GTK — gsettings prikkel voor thema-refresh
-gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" 2>/dev/null || true
-
-# SDDM — wallpaper bijwerken in theme.conf (zodat loginscherm klopt)
-SDDM_THEME_CONF="/usr/share/sddm/themes/kingstra/theme.conf"
-if [[ -f "$SDDM_THEME_CONF" ]]; then
-    if sudo -n sed -i "s|^background=.*|background=$WALLPAPER|" "$SDDM_THEME_CONF" 2>/dev/null; then
-        _log "SDDM-wallpaper bijgewerkt"
-    fi
-fi
-
-# ---------------------------------------------------------------------------
-# Stap 4 — Afgerond
-# ---------------------------------------------------------------------------
-_log "Kleurapplicatie voltooid"
+_log "Kleurapplicatie voltooid via apply-shell-state"
 _notify "Thema bijgewerkt" "Kleuren gegenereerd vanuit $(basename "$WALLPAPER")"
