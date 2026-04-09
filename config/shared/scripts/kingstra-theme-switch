@@ -14,7 +14,6 @@ THEME_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/35-theme.conf"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
-STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
 
 READER="${HOME}/.local/bin/kingstra-theme-read"
 
@@ -702,22 +701,9 @@ _log "GTK/Qt interface bijgewerkt"
 # ---------------------------------------------------------------------------
 APPLY="${HOME}/.local/bin/apply-shell-state"
 if [[ -x "$APPLY" ]]; then
-    CURRENT_WALLPAPER=""
-    if command -v swww >/dev/null 2>&1; then
-        _line="$(swww query 2>/dev/null | grep -m1 'image:' || true)"
-        if [[ -n "$_line" ]]; then
-            CURRENT_WALLPAPER="${_line#*image: }"
-            CURRENT_WALLPAPER="${CURRENT_WALLPAPER%% (}"
-        fi
-    fi
-    if [[ -z "$CURRENT_WALLPAPER" || ! -f "$CURRENT_WALLPAPER" ]] && [[ -f "$STATE_FILE" ]]; then
-        CURRENT_WALLPAPER="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
-    fi
-    if [[ -n "$CURRENT_WALLPAPER" && -f "$CURRENT_WALLPAPER" ]]; then
-        "$APPLY" --wallpaper "$CURRENT_WALLPAPER" || _warn "apply-shell-state mislukt"
-    else
-        "$APPLY" || _warn "apply-shell-state mislukt"
-    fi
+    # Gebruik altijd de centrale resolver (kingstra-matugen-run) via apply-shell-state.
+    # Zo gebruiken wallpaper- en theme-picker exact dezelfde input-resolutie.
+    "$APPLY" || _warn "apply-shell-state mislukt"
     _log "Kleuren hergegenereerd en apps herladen"
 else
     _warn "apply-shell-state niet gevonden — kleuren en apps niet herladen"

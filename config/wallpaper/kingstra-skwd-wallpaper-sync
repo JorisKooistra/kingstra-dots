@@ -21,20 +21,35 @@ LOG_PREFIX="[kingstra-skwd-sync]"
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
 
+_query_wallpaper_from_daemon() {
+    local daemon_cmd="$1"
+    command -v "$daemon_cmd" >/dev/null 2>&1 || return 1
+
+    local line path
+    line="$("$daemon_cmd" query 2>/dev/null | grep -m1 'image:' || true)"
+    [[ -n "$line" ]] || return 1
+
+    path="${line#*image: }"
+    path="${path%% (}"
+    [[ -n "$path" && -f "$path" ]] || return 1
+
+    printf '%s\n' "$path"
+    return 0
+}
+
 _current_wallpaper() {
     local path=""
 
-    if command -v swww >/dev/null 2>&1; then
-        local line
-        line="$(swww query 2>/dev/null | grep -m1 'image:' || true)"
-        if [[ -n "$line" ]]; then
-            path="${line#*image: }"
-            path="${path%% (}"
-            if [[ -n "$path" && -f "$path" ]]; then
-                printf '%s\n' "$path"
-                return 0
-            fi
-        fi
+    path="$(_query_wallpaper_from_daemon awww || true)"
+    if [[ -n "$path" && -f "$path" ]]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+
+    path="$(_query_wallpaper_from_daemon swww || true)"
+    if [[ -n "$path" && -f "$path" ]]; then
+        printf '%s\n' "$path"
+        return 0
     fi
 
     local candidate

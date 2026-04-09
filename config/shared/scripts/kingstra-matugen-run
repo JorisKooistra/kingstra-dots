@@ -158,6 +158,32 @@ print(f"{scheme}|{mode}|{index}")
 PY
 }
 
+_expand_user_path() {
+    local raw="${1:-}"
+    if [[ "$raw" == "~/"* ]]; then
+        printf '%s\n' "$HOME/${raw#~/}"
+    else
+        printf '%s\n' "$raw"
+    fi
+}
+
+_query_wallpaper_from_daemon() {
+    local daemon_cmd="$1"
+    command -v "$daemon_cmd" >/dev/null 2>&1 || return 1
+
+    local line candidate
+    line="$("$daemon_cmd" query 2>/dev/null | grep -m1 'image:' || true)"
+    [[ -n "$line" ]] || return 1
+
+    candidate="${line#*image: }"
+    candidate="${candidate%% (}"
+    candidate="$(_expand_user_path "$candidate")"
+    [[ -n "$candidate" && -f "$candidate" ]] || return 1
+
+    printf '%s\n' "$candidate"
+    return 0
+}
+
 _resolve_wallpaper() {
     local candidate="$WALLPAPER"
 
@@ -168,38 +194,59 @@ _resolve_wallpaper() {
 
     if [[ -n "$candidate" && ! -f "$candidate" ]]; then
         _warn "Meegegeven wallpaper bestaat niet: $candidate"
+        candidate=""
     fi
 
-    if command -v swww >/dev/null 2>&1; then
-        local line
-        line="$(swww query 2>/dev/null | grep -m1 'image:' || true)"
-        if [[ -n "$line" ]]; then
-            candidate="${line#*image: }"
-            candidate="${candidate%% (}"
-            if [[ -n "$candidate" && -f "$candidate" ]]; then
-                echo "$candidate"
-                return 0
-            fi
+    for daemon_cmd in awww swww; do
+        candidate="$(_query_wallpaper_from_daemon "$daemon_cmd" || true)"
+        if [[ -n "$candidate" && -f "$candidate" ]]; then
+            echo "$candidate"
+            return 0
         fi
-    fi
+    done
 
     if [[ -f "$STATE_WALLPAPER_FILE" ]] && command -v jq &>/dev/null; then
         candidate="$(jq -r '.path // ""' "$STATE_WALLPAPER_FILE" 2>/dev/null || echo "")"
+        candidate="$(_expand_user_path "$candidate")"
         if [[ -n "$candidate" && -f "$candidate" ]]; then
             echo "$candidate"
             return 0
         fi
     fi
 
-    if [[ -z "$candidate" && -f "$SESSION_FILE" ]] && command -v jq &>/dev/null; then
+    if [[ -f "$SESSION_FILE" ]] && command -v jq &>/dev/null; then
         candidate="$(jq -r '.wallpaper // ""' "$SESSION_FILE" 2>/dev/null || echo "")"
+        candidate="$(_expand_user_path "$candidate")"
+        if [[ -n "$candidate" && -f "$candidate" ]]; then
+            echo "$candidate"
+            return 0
+        fi
     fi
 
-    if [[ -z "$candidate" && -f "$CACHE_WALLPAPER" ]]; then
+    for skwd_cache in \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/current_wallpaper" \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/current-wallpaper" \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/last_wallpaper" \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/last-wallpaper"; do
+        [[ -f "$skwd_cache" ]] || continue
+        candidate="$(cat "$skwd_cache" 2>/dev/null || echo "")"
+        candidate="$(_expand_user_path "$candidate")"
+        if [[ -n "$candidate" && -f "$candidate" ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    if [[ -f "$CACHE_WALLPAPER" ]]; then
         candidate="$(cat "$CACHE_WALLPAPER" 2>/dev/null || echo "")"
+        candidate="$(_expand_user_path "$candidate")"
+        if [[ -n "$candidate" && -f "$candidate" ]]; then
+            echo "$candidate"
+            return 0
+        fi
     fi
 
-    echo "$candidate"
+    echo ""
 }
 
 _emit_resolved_json() {
