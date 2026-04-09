@@ -189,7 +189,6 @@ Item {
         "scheme-fidelity",
         "scheme-content",
         "scheme-expressive",
-        "scheme-vibrant",
         "scheme-rainbow",
         "scheme-fruit-salad"
     ]
@@ -228,6 +227,11 @@ Item {
         let parsed = parseFloat(value);
         if (isNaN(parsed)) return String(fallback);
         return String(parsed);
+    }
+
+    function normalizeOption(value, options, fallback) {
+        let normalized = String(value || "");
+        return options.indexOf(normalized) >= 0 ? normalized : fallback;
     }
 
     function themeSection(themeData, name) {
@@ -281,7 +285,11 @@ Item {
         editLetterSpacing = toFloatString(themeValue(themeData, "fonts", "letter_spacing", 0.0), 0.0);
 
         editIconTheme = String(themeValue(themeData, "icons", "icon_theme", "Papirus-Dark"));
-        editSchemeType = String(themeValue(themeData, "matugen", "scheme_type", "scheme-tonal-spot"));
+        editSchemeType = normalizeOption(
+            themeValue(themeData, "matugen", "scheme_type", "scheme-tonal-spot"),
+            schemeOptions,
+            "scheme-tonal-spot"
+        );
         editColorIndex = Math.max(0, toIntValue(themeValue(themeData, "matugen", "color_index", 0), 0));
         editContrast = toFloatString(themeValue(themeData, "matugen", "contrast", 0.0), 0.0);
         editBarHeight = Math.max(30, toIntValue(themeValue(themeData, "quickshell", "bar_height", 40), 40));
@@ -317,7 +325,7 @@ Item {
             "fonts.font_weight", String(editFontWeight || "regular"),
             "fonts.letter_spacing", toFloatString(editLetterSpacing, 0.0),
             "icons.icon_theme", String(editIconTheme || "Papirus-Dark"),
-            "matugen.scheme_type", String(editSchemeType || "scheme-tonal-spot"),
+            "matugen.scheme_type", normalizeOption(editSchemeType, schemeOptions, "scheme-tonal-spot"),
             "matugen.color_index", String(Math.max(0, editColorIndex)),
             "matugen.contrast", toFloatString(editContrast, 0.0),
             "quickshell.bar_height", String(Math.max(30, editBarHeight)),
@@ -392,6 +400,9 @@ Item {
     component ThemedComboBox : ComboBox {
         id: combo
         implicitHeight: root.s(34)
+        Layout.fillWidth: true
+        Layout.preferredWidth: root.s(220)
+        Layout.maximumWidth: root.s(300)
         font.family: root.uiFontFamily
         font.pixelSize: root.s(11)
         leftPadding: root.s(10)
@@ -472,6 +483,9 @@ Item {
     component ThemedSpinBox : SpinBox {
         id: spin
         implicitHeight: root.s(34)
+        Layout.fillWidth: true
+        Layout.preferredWidth: root.s(220)
+        Layout.maximumWidth: root.s(300)
         font.family: root.uiFontFamily
         font.pixelSize: root.s(11)
         leftPadding: root.s(8)
@@ -1822,6 +1836,8 @@ Item {
 
                             Rectangle {
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: root.s(700)
+                                Layout.alignment: Qt.AlignHCenter
                                 implicitHeight: appearanceEditor.implicitHeight + root.s(24)
                                 radius: root.s(10)
                                 color: Qt.alpha(root.surface0, 0.48)
@@ -1877,6 +1893,8 @@ Item {
 
                             Rectangle {
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: root.s(700)
+                                Layout.alignment: Qt.AlignHCenter
                                 implicitHeight: fontsEditor.implicitHeight + root.s(24)
                                 radius: root.s(10)
                                 color: Qt.alpha(root.surface0, 0.48)
@@ -1971,6 +1989,8 @@ Item {
 
                             Rectangle {
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: root.s(700)
+                                Layout.alignment: Qt.AlignHCenter
                                 implicitHeight: colorEditor.implicitHeight + root.s(24)
                                 radius: root.s(10)
                                 color: Qt.alpha(root.surface0, 0.48)
@@ -2046,6 +2066,8 @@ Item {
 
                             Rectangle {
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: root.s(700)
+                                Layout.alignment: Qt.AlignHCenter
                                 implicitHeight: shellEditor.implicitHeight + root.s(24)
                                 radius: root.s(10)
                                 color: Qt.alpha(root.surface0, 0.48)
