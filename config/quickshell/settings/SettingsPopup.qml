@@ -155,9 +155,79 @@ Item {
     property var themeAppearance: ({})
     property var activeThemeData: ({})
     property bool showAllThemeVariables: false
+    property bool themeSaveBusy: false
+    property string themeSaveError: ""
+    property string themeEditThemeId: ""
+
+    // In-app editable theme fields
+    property int editBorderRadius: 12
+    property int editBorderWidth: 2
+    property int editGapsIn: 5
+    property int editGapsOut: 10
+    property int editBlurSize: 8
+    property int editBlurPasses: 3
+
+    property string editUiFont: "Inter"
+    property int editUiFontSize: 13
+    property string editMonoFont: "JetBrainsMono Nerd Font"
+    property int editMonoFontSize: 12
+    property string editDisplayFont: "Inter"
+    property string editFontWeight: "regular"
+    property string editLetterSpacing: "0.0"
+
+    property string editIconTheme: "Papirus-Dark"
+    property string editSchemeType: "scheme-tonal-spot"
+    property int editColorIndex: 0
+    property string editContrast: "0.0"
+    property int editBarHeight: 40
+    property string editBarPosition: "top"
+
+    property var schemeOptions: [
+        "scheme-tonal-spot",
+        "scheme-monochrome",
+        "scheme-neutral",
+        "scheme-fidelity",
+        "scheme-content",
+        "scheme-expressive",
+        "scheme-vibrant",
+        "scheme-rainbow",
+        "scheme-fruit-salad"
+    ]
+    property var fontOptions: [
+        "Inter",
+        "JetBrains Mono",
+        "JetBrainsMono Nerd Font",
+        "Fira Sans",
+        "Fira Code",
+        "Noto Sans",
+        "Space Grotesk",
+        "Share Tech Mono",
+        "Nunito",
+        "Iosevka Nerd Font"
+    ]
+    property var iconThemeOptions: [
+        "Papirus-Dark",
+        "Papirus",
+        "Breeze",
+        "Tela-circle-dark",
+        "Adwaita"
+    ]
+    property var barPositionOptions: ["top", "bottom", "left", "right"]
+    property var fontWeightOptions: ["light", "regular", "medium", "bold"]
 
     function refreshActiveTheme() {
         loadThemeProc.running = true;
+    }
+
+    function toIntValue(value, fallback) {
+        let parsed = parseInt(value);
+        return isNaN(parsed) ? fallback : parsed;
+    }
+
+    function toFloatString(value, fallback) {
+        let parsed = parseFloat(value);
+        if (isNaN(parsed)) return String(fallback);
+        return String(parsed);
     }
 
     function themeSection(themeData, name) {
@@ -190,26 +260,74 @@ Item {
         return Quickshell.env("HOME") + "/.config/kingstra/themes/" + safeId + ".toml";
     }
 
-    function openThemeEditor(themeId) {
-        let filePath = themeFilePath(themeId);
-        if (filePath === "") {
+    function loadThemeEditForm(themeData, themeId) {
+        let safeThemeId = normalizeThemeId(themeId || themeCarousel.selectedThemeId || activeThemeId);
+        if (safeThemeId === "") return;
+        themeEditThemeId = safeThemeId;
+
+        editBorderRadius = toIntValue(themeValue(themeData, "appearance", "border_radius", 12), 12);
+        editBorderWidth = toIntValue(themeValue(themeData, "appearance", "border_width", 2), 2);
+        editGapsIn = toIntValue(themeValue(themeData, "appearance", "gaps_in", 5), 5);
+        editGapsOut = toIntValue(themeValue(themeData, "appearance", "gaps_out", 10), 10);
+        editBlurSize = toIntValue(themeValue(themeData, "appearance", "blur_size", 8), 8);
+        editBlurPasses = toIntValue(themeValue(themeData, "appearance", "blur_passes", 3), 3);
+
+        editUiFont = String(themeValue(themeData, "fonts", "ui_font", "Inter"));
+        editUiFontSize = toIntValue(themeValue(themeData, "fonts", "ui_font_size", 13), 13);
+        editMonoFont = String(themeValue(themeData, "fonts", "mono_font", "JetBrainsMono Nerd Font"));
+        editMonoFontSize = toIntValue(themeValue(themeData, "fonts", "mono_font_size", 12), 12);
+        editDisplayFont = String(themeValue(themeData, "fonts", "display_font", editUiFont));
+        editFontWeight = String(themeValue(themeData, "fonts", "font_weight", "regular"));
+        editLetterSpacing = toFloatString(themeValue(themeData, "fonts", "letter_spacing", 0.0), 0.0);
+
+        editIconTheme = String(themeValue(themeData, "icons", "icon_theme", "Papirus-Dark"));
+        editSchemeType = String(themeValue(themeData, "matugen", "scheme_type", "scheme-tonal-spot"));
+        editColorIndex = Math.max(0, toIntValue(themeValue(themeData, "matugen", "color_index", 0), 0));
+        editContrast = toFloatString(themeValue(themeData, "matugen", "contrast", 0.0), 0.0);
+        editBarHeight = Math.max(30, toIntValue(themeValue(themeData, "quickshell", "bar_height", 40), 40));
+        editBarPosition = String(themeValue(themeData, "quickshell", "bar_position", "top"));
+    }
+
+    function saveThemeEdits() {
+        if (themeEditThemeId === "") {
             notify("Theme", "Geen geldig theme geselecteerd");
             return;
         }
-        let escapedPath = filePath.replace(/(["\\$`])/g, "\\$1");
-        let cmd = `FILE="${escapedPath}"
-if [ ! -f "$FILE" ]; then
-  notify-send "Theme" "Bestand niet gevonden: $FILE"
-  exit 0
-fi
-if command -v kitty >/dev/null 2>&1; then
-  kitty --hold bash -lc "editor=\${EDITOR:-nano}; \"\$editor\" \"$FILE\""
-elif command -v xdg-open >/dev/null 2>&1; then
-  xdg-open "$FILE"
-else
-  notify-send "Theme" "Geen editor gevonden"
-fi`;
-        Quickshell.execDetached(["bash", "-lc", cmd]);
+        if (themeSaveBusy) return;
+
+        themeSaveBusy = true;
+        themeSaveError = "";
+
+        let scriptPath = Quickshell.env("HOME") + "/.config/shared/scripts/kingstra-theme-update.py";
+        let cmd = [
+            "python3",
+            scriptPath,
+            themeEditThemeId,
+            "appearance.border_radius", String(Math.max(0, editBorderRadius)),
+            "appearance.border_width", String(Math.max(0, editBorderWidth)),
+            "appearance.gaps_in", String(Math.max(0, editGapsIn)),
+            "appearance.gaps_out", String(Math.max(0, editGapsOut)),
+            "appearance.blur_size", String(Math.max(0, editBlurSize)),
+            "appearance.blur_passes", String(Math.max(0, editBlurPasses)),
+            "fonts.ui_font", String(editUiFont || "Inter"),
+            "fonts.ui_font_size", String(Math.max(8, editUiFontSize)),
+            "fonts.mono_font", String(editMonoFont || "JetBrainsMono Nerd Font"),
+            "fonts.mono_font_size", String(Math.max(8, editMonoFontSize)),
+            "fonts.display_font", String(editDisplayFont || editUiFont || "Inter"),
+            "fonts.font_weight", String(editFontWeight || "regular"),
+            "fonts.letter_spacing", toFloatString(editLetterSpacing, 0.0),
+            "icons.icon_theme", String(editIconTheme || "Papirus-Dark"),
+            "matugen.scheme_type", String(editSchemeType || "scheme-tonal-spot"),
+            "matugen.color_index", String(Math.max(0, editColorIndex)),
+            "matugen.contrast", toFloatString(editContrast, 0.0),
+            "quickshell.bar_height", String(Math.max(30, editBarHeight)),
+            "quickshell.bar_position", String(editBarPosition || "top")
+        ];
+
+        themeWriteProc.themeId = themeEditThemeId;
+        themeWriteProc.applyAfterSave = (themeEditThemeId === activeThemeId);
+        themeWriteProc.command = cmd;
+        themeWriteProc.running = true;
     }
 
     function stringifyThemeValue(value) {
@@ -334,7 +452,54 @@ fi`;
                     root.activeThemeName = meta.name || loadThemeDetailProc.themeId;
                     root.activeThemeIcon = meta.icon || "󰏘";
                     root.themeAppearance = data.appearance || {};
+                    if (root.themeEditThemeId === "" || root.themeEditThemeId === loadThemeDetailProc.themeId) {
+                        root.loadThemeEditForm(data, loadThemeDetailProc.themeId);
+                    }
                 } catch(e) {}
+            }
+        }
+    }
+
+    Process {
+        id: themeWriteProc
+        property string themeId: ""
+        property bool applyAfterSave: false
+        stderr: StdioCollector {
+            onStreamFinished: {
+                root.themeSaveError = this.text.trim();
+            }
+        }
+        onExited: {
+            root.themeSaveBusy = false;
+            if (root.themeSaveError !== "") {
+                root.notify("Theme", "Opslaan mislukt: " + root.themeSaveError);
+                root.themeSaveError = "";
+                return;
+            }
+
+            root.notify("Theme", "Thema opgeslagen: " + themeWriteProc.themeId);
+            loadThemeDetailProc.themeId = themeWriteProc.themeId;
+            loadThemeDetailProc.running = true;
+
+            if (themeCarouselLoader.item && themeCarouselLoader.item.refreshThemes) {
+                themeCarouselLoader.item.refreshThemes();
+            }
+
+            if (themeWriteProc.applyAfterSave) {
+                themeReapplyProc.themeName = themeWriteProc.themeId;
+                themeReapplyProc.running = true;
+            }
+        }
+    }
+
+    Process {
+        id: themeReapplyProc
+        property string themeName: ""
+        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-switch " + themeName]
+        onExited: {
+            root.refreshActiveTheme();
+            if (themeCarouselLoader.item && themeCarouselLoader.item.refreshThemes) {
+                themeCarouselLoader.item.refreshThemes();
             }
         }
     }
@@ -1338,6 +1503,9 @@ fi`;
                                         themeCarousel.selectedThemeId = item.selectedThemeId || "";
                                         themeCarousel.selectedThemeData = item.selectedThemeData || ({});
                                         themeCarousel.isApplying = !!item.isApplying;
+                                        if (themeCarousel.selectedThemeId !== "") {
+                                            root.loadThemeEditForm(themeCarousel.selectedThemeData, themeCarousel.selectedThemeId);
+                                        }
                                     }
                                 }
                             }
@@ -1349,12 +1517,18 @@ fi`;
                                 function onThemeSelected(themeId) {
                                     themeCarousel.selectedThemeId = themeId || "";
                                     themeCarousel.selectedThemeData = themeCarouselLoader.item && themeCarouselLoader.item.selectedThemeData ? themeCarouselLoader.item.selectedThemeData : ({});
+                                    if (themeCarousel.selectedThemeId !== "") {
+                                        root.loadThemeEditForm(themeCarousel.selectedThemeData, themeCarousel.selectedThemeId);
+                                    }
                                 }
 
                                 function onThemeApplied(themeId) {
                                     themeCarousel.selectedThemeId = themeId || themeCarousel.selectedThemeId;
                                     themeCarousel.selectedThemeData = themeCarouselLoader.item && themeCarouselLoader.item.selectedThemeData ? themeCarouselLoader.item.selectedThemeData : themeCarousel.selectedThemeData;
                                     themeCarousel.isApplying = false;
+                                    if (themeCarousel.selectedThemeId !== "") {
+                                        root.loadThemeEditForm(themeCarousel.selectedThemeData, themeCarousel.selectedThemeId);
+                                    }
                                     root.refreshActiveTheme();
                                 }
                             }
@@ -1369,6 +1543,7 @@ fi`;
                                         if (themeCarousel.selectedThemeId === "" && themeCarouselLoader.item.selectedThemeId) {
                                             themeCarousel.selectedThemeId = themeCarouselLoader.item.selectedThemeId;
                                             themeCarousel.selectedThemeData = themeCarouselLoader.item.selectedThemeData || ({});
+                                            root.loadThemeEditForm(themeCarousel.selectedThemeData, themeCarousel.selectedThemeId);
                                         }
                                     }
                                 }
@@ -1438,18 +1613,18 @@ fi`;
 
                             Rectangle {
                                 Layout.preferredHeight: root.s(34)
-                                Layout.preferredWidth: root.s(180)
+                                Layout.preferredWidth: root.s(220)
                                 radius: root.s(8)
                                 color: themeEditMa.containsMouse ? Qt.alpha(root.green, 0.90) : root.green
-                                opacity: themeCarousel.selectedThemeId === "" ? 0.55 : 1.0
+                                opacity: themeCarousel.selectedThemeId === "" || root.themeSaveBusy ? 0.55 : 1.0
                                 border.color: "transparent"
                                 border.width: 1
 
                                 RowLayout {
                                     anchors.centerIn: parent
                                     spacing: root.s(6)
-                                    Text { text: "󰏫"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: root.base }
-                                    Text { text: "Bewerk thema"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.base }
+                                    Text { text: root.themeSaveBusy ? "󰔟" : "󰆓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: root.base }
+                                    Text { text: root.themeSaveBusy ? "Opslaan..." : "Opslaan in thema"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.base }
                                 }
 
                                 MouseArea {
@@ -1457,12 +1632,158 @@ fi`;
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    enabled: themeCarousel.selectedThemeId !== ""
-                                    onClicked: root.openThemeEditor(themeCarousel.selectedThemeId)
+                                    enabled: themeCarousel.selectedThemeId !== "" && !root.themeSaveBusy
+                                    onClicked: root.saveThemeEdits()
                                 }
                             }
 
                             Item { Layout.fillWidth: true }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: themeEditorCol.implicitHeight + root.s(24)
+                            radius: root.s(10)
+                            color: Qt.alpha(root.surface0, 0.45)
+                            border.color: root.green
+                            border.width: 1
+
+                            ColumnLayout {
+                                id: themeEditorCol
+                                anchors.fill: parent
+                                anchors.margins: root.s(12)
+                                spacing: root.s(10)
+
+                                Text { text: "In-app thema bewerken"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                                Text {
+                                    text: "Pas waarden direct hier aan. Opslaan schrijft naar <theme>.toml zonder terminal of externe editor."
+                                    font.family: "JetBrains Mono"
+                                    font.pixelSize: root.s(10)
+                                    color: root.subtext0
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                }
+
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    columns: width > root.s(980) ? 4 : 2
+                                    rowSpacing: root.s(8)
+                                    columnSpacing: root.s(10)
+
+                                    Text { text: "Hoekrondheid"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 0; to: 64; value: root.editBorderRadius; editable: true; onValueChanged: root.editBorderRadius = value; Layout.fillWidth: true }
+                                    Text { text: "Randdikte"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 0; to: 12; value: root.editBorderWidth; editable: true; onValueChanged: root.editBorderWidth = value; Layout.fillWidth: true }
+
+                                    Text { text: "Binnenmarge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 0; to: 60; value: root.editGapsIn; editable: true; onValueChanged: root.editGapsIn = value; Layout.fillWidth: true }
+                                    Text { text: "Buitenmarge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 0; to: 80; value: root.editGapsOut; editable: true; onValueChanged: root.editGapsOut = value; Layout.fillWidth: true }
+
+                                    Text { text: "Blur size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 0; to: 64; value: root.editBlurSize; editable: true; onValueChanged: root.editBlurSize = value; Layout.fillWidth: true }
+                                    Text { text: "Blur passes"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 0; to: 12; value: root.editBlurPasses; editable: true; onValueChanged: root.editBlurPasses = value; Layout.fillWidth: true }
+
+                                    Text { text: "UI font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    ComboBox {
+                                        model: root.fontOptions
+                                        currentIndex: Math.max(0, model.indexOf(root.editUiFont))
+                                        onActivated: root.editUiFont = currentText
+                                        Layout.fillWidth: true
+                                    }
+                                    Text { text: "UI size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 8; to: 28; value: root.editUiFontSize; editable: true; onValueChanged: root.editUiFontSize = value; Layout.fillWidth: true }
+
+                                    Text { text: "Mono font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    ComboBox {
+                                        model: root.fontOptions
+                                        currentIndex: Math.max(0, model.indexOf(root.editMonoFont))
+                                        onActivated: root.editMonoFont = currentText
+                                        Layout.fillWidth: true
+                                    }
+                                    Text { text: "Mono size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 8; to: 28; value: root.editMonoFontSize; editable: true; onValueChanged: root.editMonoFontSize = value; Layout.fillWidth: true }
+
+                                    Text { text: "Display font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    ComboBox {
+                                        model: root.fontOptions
+                                        currentIndex: Math.max(0, model.indexOf(root.editDisplayFont))
+                                        onActivated: root.editDisplayFont = currentText
+                                        Layout.fillWidth: true
+                                    }
+                                    Text { text: "Font weight"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    ComboBox {
+                                        model: root.fontWeightOptions
+                                        currentIndex: Math.max(0, model.indexOf(root.editFontWeight))
+                                        onActivated: root.editFontWeight = currentText
+                                        Layout.fillWidth: true
+                                    }
+
+                                    Text { text: "Scene"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    ComboBox {
+                                        model: root.schemeOptions
+                                        currentIndex: Math.max(0, model.indexOf(root.editSchemeType))
+                                        onActivated: root.editSchemeType = currentText
+                                        Layout.fillWidth: true
+                                    }
+                                    Text { text: "Color index"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 0; to: 12; value: root.editColorIndex; editable: true; onValueChanged: root.editColorIndex = value; Layout.fillWidth: true }
+
+                                    Text { text: "Contrast"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox {
+                                        from: -100
+                                        to: 100
+                                        stepSize: 1
+                                        value: Math.round(parseFloat(root.editContrast) * 100)
+                                        editable: true
+                                        textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                        valueFromText: function(text, locale) {
+                                            var n = parseFloat(text);
+                                            if (isNaN(n)) return 0;
+                                            return Math.round(n * 100);
+                                        }
+                                        onValueChanged: root.editContrast = (value / 100.0).toFixed(2)
+                                        Layout.fillWidth: true
+                                    }
+                                    Text { text: "Letter spacing"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox {
+                                        from: -300
+                                        to: 300
+                                        stepSize: 1
+                                        value: Math.round(parseFloat(root.editLetterSpacing) * 100)
+                                        editable: true
+                                        textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                        valueFromText: function(text, locale) {
+                                            var n = parseFloat(text);
+                                            if (isNaN(n)) return 0;
+                                            return Math.round(n * 100);
+                                        }
+                                        onValueChanged: root.editLetterSpacing = (value / 100.0).toFixed(2)
+                                        Layout.fillWidth: true
+                                    }
+
+                                    Text { text: "Icon theme"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    ComboBox {
+                                        model: root.iconThemeOptions
+                                        currentIndex: Math.max(0, model.indexOf(root.editIconTheme))
+                                        onActivated: root.editIconTheme = currentText
+                                        Layout.fillWidth: true
+                                    }
+                                    Text { text: "Bar height"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    SpinBox { from: 30; to: 72; value: root.editBarHeight; editable: true; onValueChanged: root.editBarHeight = value; Layout.fillWidth: true }
+
+                                    Text { text: "Bar position"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    ComboBox {
+                                        model: root.barPositionOptions
+                                        currentIndex: Math.max(0, model.indexOf(root.editBarPosition))
+                                        onActivated: root.editBarPosition = currentText
+                                        Layout.fillWidth: true
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                    Item { Layout.fillWidth: true }
+                                }
+                            }
                         }
 
                         GridLayout {
@@ -1650,7 +1971,7 @@ fi`;
                                 }
 
                                 Text {
-                                    text: "Volledige key-paths uit het geselecteerde thema. Gebruik 'Bewerk thema' om waarden aan te passen."
+                                    text: "Volledige key-paths uit het geselecteerde thema. Pas waarden bovenaan aan en klik 'Opslaan in thema'."
                                     font.family: "JetBrains Mono"
                                     font.pixelSize: root.s(10)
                                     color: root.subtext0

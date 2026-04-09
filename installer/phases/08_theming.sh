@@ -50,6 +50,7 @@ phase_run() {
     validate_file "$HOME/.local/bin/kingstra-theme-apply"         "kingstra-theme-apply"
     validate_file "$HOME/.local/bin/kingstra-theme-switch"        "kingstra-theme-switch"
     validate_file "$HOME/.local/bin/kingstra-theme-read"          "kingstra-theme-read"
+    validate_file "$HOME/.local/bin/kingstra-theme-update"        "kingstra-theme-update"
     validate_file "$HOME/.local/bin/apply-shell-state"            "apply-shell-state"
     validate_file "$HOME/.local/bin/kingstra-state-read"          "kingstra-state-read"
     validate_file "$HOME/.local/bin/kingstra-state-write"         "kingstra-state-write"
@@ -93,6 +94,8 @@ _phase08_deploy_theme_scripts() {
     local switch_dest="$HOME/.local/bin/kingstra-theme-switch"
     local read_src="$REPO_ROOT/config/shared/scripts/kingstra-theme-read.py"
     local read_dest="$HOME/.local/bin/kingstra-theme-read"
+    local update_src="$REPO_ROOT/config/shared/scripts/kingstra-theme-update.py"
+    local update_dest="$HOME/.local/bin/kingstra-theme-update"
 
     if "${DRY_RUN:-false}"; then
         log_dry "Theme-scripts zouden worden gedeployed"
@@ -104,7 +107,9 @@ _phase08_deploy_theme_scripts() {
     chmod +x "$switch_src"
     deploy_link "$read_src" "$read_dest"
     chmod +x "$read_src"
-    log_ok "Thema-scripts beschikbaar: kingstra-theme-switch, kingstra-theme-read"
+    deploy_link "$update_src" "$update_dest"
+    chmod +x "$update_src"
+    log_ok "Thema-scripts beschikbaar: kingstra-theme-switch, kingstra-theme-read, kingstra-theme-update"
 }
 
 _phase08_deploy_state_scripts() {

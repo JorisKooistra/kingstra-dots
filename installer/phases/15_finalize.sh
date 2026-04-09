@@ -81,6 +81,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/matugen/config.toml"                  "matugen/config.toml"
     validate_file "$HOME/.local/bin/kingstra-theme-apply"              "kingstra-theme-apply"
     validate_file "$HOME/.local/bin/kingstra-matugen-run"              "kingstra-matugen-run"
+    validate_file "$HOME/.local/bin/kingstra-theme-update"             "kingstra-theme-update"
     validate_file "$HOME/.local/bin/kingstra-touch-detect"             "kingstra-touch-detect"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"                "kingstra-wallpaper"
     validate_file "$HOME/.local/bin/kingstra-skwd-wallpaper-sync"      "kingstra-skwd-wallpaper-sync"
@@ -111,6 +112,8 @@ _phase15_validate_links() {
     validate_link "$HOME/.config/hypridle"   "$cfg/hypridle"   "~/.config/hypridle"
     validate_link "$HOME/.local/bin/kingstra-theme-apply" \
                   "$cfg/shared/scripts/matugen-apply.sh"  "kingstra-theme-apply"
+    validate_link "$HOME/.local/bin/kingstra-theme-update" \
+                  "$cfg/shared/scripts/kingstra-theme-update.py"  "kingstra-theme-update"
     validate_link "$HOME/.local/bin/kingstra-matugen-run" \
                   "$cfg/shared/scripts/kingstra-matugen-run"  "kingstra-matugen-run"
     validate_link "$HOME/.local/bin/kingstra-touch-detect" \
