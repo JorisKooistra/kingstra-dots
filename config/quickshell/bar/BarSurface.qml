@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import ".."
 import "ornaments"
 import "effects"
@@ -38,6 +39,39 @@ Item {
     }
 
     readonly property bool continuousBarMode: surface.skinBool("continuousBar", false) && shell.edgeAttachedBar
+    readonly property bool themeHasDefaultTexture: activeTheme === "botanical"
+                                                   || activeTheme === "rocky"
+                                                   || activeTheme === "ocean"
+                                                   || activeTheme === "space"
+    readonly property string configuredTextureOverlaySource: String(shell.textureOverlayAsset || "")
+    readonly property string fallbackTextureOverlayPrimary: themeHasDefaultTexture
+                                                           ? (Quickshell.env("HOME") + "/kingstra-dots/assets/themes/" + activeTheme + "/texture-overlay.png")
+                                                           : ""
+    readonly property string fallbackTextureOverlaySecondary: themeHasDefaultTexture
+                                                             ? (Quickshell.env("HOME") + "/.config/kingstra-dots/assets/themes/" + activeTheme + "/texture-overlay.png")
+                                                             : ""
+    property string activeTextureOverlaySource: ""
+    readonly property real minTextureOpacity: activeTheme === "rocky" ? 0.14
+                                            : (activeTheme === "botanical" ? 0.12 : 0.08)
+    readonly property real textureOverlayOpacity: activeTextureOverlaySource !== ""
+                                                 ? Math.max(minTextureOpacity, ThemeConfig.materialOverlayOpacity)
+                                                 : 0.0
+
+    function resetTextureOverlaySource() {
+        if (configuredTextureOverlaySource !== "") {
+            activeTextureOverlaySource = configuredTextureOverlaySource;
+            return;
+        }
+        if (fallbackTextureOverlayPrimary !== "") {
+            activeTextureOverlaySource = fallbackTextureOverlayPrimary;
+            return;
+        }
+        activeTextureOverlaySource = "";
+    }
+
+    onConfiguredTextureOverlaySourceChanged: resetTextureOverlaySource()
+    onActiveThemeChanged: resetTextureOverlaySource()
+    Component.onCompleted: resetTextureOverlaySource()
 
     property int panelRadius: shell.s(Math.max(6, ThemeConfig.styleWidgetRadius + skinNumber("cornerRadiusDelta", 0)))
     property int innerPillRadius: shell.s(Math.max(6, ThemeConfig.styleWidgetRadius - 4 + Math.floor(skinNumber("cornerRadiusDelta", 0) / 2)))
@@ -91,6 +125,31 @@ Item {
             border.color: surface.basePanelBorderColor
         }
 
+        Image {
+            id: textureOverlay
+            anchors.fill: parent
+            z: 0.35
+            source: surface.activeTextureOverlaySource
+            fillMode: Image.Tile
+            opacity: surface.textureOverlayOpacity
+            visible: surface.textureOverlayOpacity > 0.0 && source !== "" && status !== Image.Error
+            smooth: true
+            asynchronous: true
+            sourceSize.width: Math.max(64, shell.s(240))
+            sourceSize.height: Math.max(32, shell.s(100))
+            onStatusChanged: {
+                if (status !== Image.Error) return;
+                if (surface.activeTextureOverlaySource === surface.fallbackTextureOverlayPrimary
+                        && surface.fallbackTextureOverlaySecondary !== "") {
+                    surface.activeTextureOverlaySource = surface.fallbackTextureOverlaySecondary;
+                    return;
+                }
+                if (surface.configuredTextureOverlaySource !== "") {
+                    console.warn("[BarSurface] texture overlay asset missing: " + surface.configuredTextureOverlaySource);
+                }
+            }
+        }
+
         ParticleLayer {
             anchors.fill: parent
             shell: surface.shell
@@ -135,6 +194,7 @@ Item {
         OrnamentLayer {
             anchors.fill: parent
             shell: surface.shell
+            mocha: surface.mocha
             z: 2
         }
     }

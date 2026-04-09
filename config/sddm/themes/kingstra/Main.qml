@@ -18,6 +18,15 @@ Rectangle {
     property bool inputActive: false
     property bool loginFailed: false
     property int  currentUserIndex: 0
+    property bool autoPamKickDone: false
+
+    function kickPamAuthOnce() {
+        if (autoPamKickDone)
+            return
+        if (!currentUserName || currentUserName === "gebruiker")
+            return
+        autoPamKickTimer.restart()
+    }
 
     Component.onCompleted: {
         // Herstel laatste gebruiker
@@ -27,11 +36,27 @@ Rectangle {
                 break
             }
         }
+        kickPamAuthOnce()
     }
 
     property string currentUserName: userModel.count > 0
         ? userModel.data(userModel.index(currentUserIndex, 0), 257)
         : "gebruiker"
+    onCurrentUserNameChanged: kickPamAuthOnce()
+
+    Timer {
+        id: autoPamKickTimer
+        interval: 550
+        repeat: false
+        onTriggered: {
+            if (root.autoPamKickDone || !root.currentUserName || root.currentUserName === "gebruiker")
+                return
+            root.autoPamKickDone = true
+            root.inputActive = true
+            passwordField.forceActiveFocus()
+            sddm.login(root.currentUserName, "", sessionModel.lastIndex)
+        }
+    }
 
     // Fout-afhandeling vanuit SDDM
     Connections {
@@ -268,7 +293,7 @@ Rectangle {
 
         Text {
             Layout.alignment: Qt.AlignHCenter
-            text: "Tip: druk Enter op leeg veld om fingerprint/PAM-auth te starten"
+            text: "Fingerprint/PAM start automatisch; druk Enter op leeg veld als fallback"
             font { family: "JetBrains Mono"; pixelSize: 11 }
             color: Colors.outline
             opacity: 0.9

@@ -47,6 +47,7 @@ Item {
     property string particleType: "none"
     property int particleCount: 0
     property real particleSpeed: 0.0
+    property string textureOverlayAsset: ""
     property string terminalOverlayAsset: ""
     property real terminalOverlayOpacity: 0.0
 
@@ -151,10 +152,12 @@ Item {
                     if (data.particle_type !== undefined) root.particleType = String(data.particle_type);
                     if (data.particle_count !== undefined) root.particleCount = parseInt(root.clamp(Number(data.particle_count), 0, 50));
                     if (data.particle_speed !== undefined) root.particleSpeed = root.clamp(Number(data.particle_speed), 0.0, 2.0);
+                    if (data.texture_overlay_asset !== undefined) root.textureOverlayAsset = String(data.texture_overlay_asset);
                     if (data.terminal_overlay_asset !== undefined) root.terminalOverlayAsset = String(data.terminal_overlay_asset);
                     if (data.terminal_overlay_opacity !== undefined) root.terminalOverlayOpacity = root.clamp(Number(data.terminal_overlay_opacity), 0.0, 1.0);
 
                     if (material.texture !== undefined) root.materialTexture = String(material.texture);
+                    if (material.texture_asset !== undefined) root.textureOverlayAsset = String(material.texture_asset);
                     if (material.overlay_opacity !== undefined) root.materialOverlayOpacity = root.clamp(Number(material.overlay_opacity), 0.0, 0.35);
                     if (material.glow_intensity !== undefined) root.materialGlowIntensity = root.clamp(Number(material.glow_intensity), 0.0, 0.35);
 

@@ -68,10 +68,10 @@ shape = "hard-rect"
 surface = "stone-matte"
 
 [ornaments]
-enabled = false
+enabled = true
 top_left = ""
 top_right = ""
-opacity = 0.0
+opacity = 0.16
 
 [effects]
 particles = "none"

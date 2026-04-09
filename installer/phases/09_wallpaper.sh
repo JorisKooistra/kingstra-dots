@@ -83,7 +83,8 @@ _phase09_write_skwd_wall_config() {
     fi
 
     if [[ -f "$config_dest" ]]; then
-        log_info "skwd-wall config.json bestaat al — niet overschreven"
+        log_info "skwd-wall config.json bestaat al — matugen integratie uitschakelen voor centrale Kingstra pipeline"
+        _phase09_disable_skwd_matugen "$config_dest"
         return 0
     fi
 
@@ -107,7 +108,7 @@ _phase09_write_skwd_wall_config() {
         "steamWeAssets": ""
     },
     "features": {
-        "matugen": true,
+        "matugen": false,
         "ollama": false,
         "steam": false,
         "wallhaven": false
@@ -145,6 +146,34 @@ _phase09_write_skwd_wall_config() {
 }
 EOF
     log_ok "skwd-wall config.json aangemaakt: $config_dest"
+    _phase09_disable_skwd_matugen "$config_dest"
+}
+
+_phase09_disable_skwd_matugen() {
+    local config_file="$1"
+
+    if [[ ! -f "$config_file" ]]; then
+        return 0
+    fi
+
+    if ! command -v jq &>/dev/null; then
+        log_warn "jq niet gevonden — skwd-wall matugen setting niet aangepast"
+        return 0
+    fi
+
+    local tmp_file
+    tmp_file="$(mktemp)"
+
+    if jq '
+        .features.matugen = false
+        | .matugen.schemeType = "scheme-tonal-spot"
+    ' "$config_file" > "$tmp_file" 2>/dev/null; then
+        mv "$tmp_file" "$config_file"
+        log_ok "skwd-wall matugen integratie uitgeschakeld: $config_file"
+    else
+        rm -f "$tmp_file"
+        log_warn "Kon skwd-wall config niet patchen: $config_file"
+    fi
 }
 
 _phase09_install_mpvpaper() {

@@ -96,6 +96,9 @@ it calls Matugen to generate a Material You palette from the current wallpaper, 
 an optional per-theme color transform, then reloads Quickshell, Hyprland, kitty, and SwayNC.
 The actual Matugen call is centralized in `kingstra-matugen-run`, which always reads
 the active `scheme_type`, `mode`, and `color_index` before running.
+`skwd-wall` does not run Matugen in this setup (`features.matugen=false`): it is only used
+as wallpaper source/picker backend, while Kingstra scripts own the color pipeline.
+Both static and video wallpaper picks go through the same state flow (`apply-shell-state`).
 
 ### Wallpaper
 

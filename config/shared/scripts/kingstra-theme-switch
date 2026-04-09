@@ -196,6 +196,31 @@ resolve_asset_path() {
     echo ""
 }
 
+asset_exists() {
+    local raw="${1:-}"
+    if [[ -z "$raw" ]]; then
+        return 1
+    fi
+
+    local expanded="$raw"
+    if [[ "$expanded" == "~/"* ]]; then
+        expanded="$HOME/${expanded#~/}"
+    fi
+
+    if [[ "$expanded" == /* ]]; then
+        [[ -f "$expanded" ]]
+        return $?
+    fi
+
+    local candidate
+    for candidate in "$REPO_ROOT/$expanded" "${XDG_CONFIG_HOME:-$HOME/.config}/$expanded" "$HOME/$expanded"; do
+        if [[ -f "$candidate" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 # ---------------------------------------------------------------------------
 # Arguments
 # ---------------------------------------------------------------------------
@@ -254,6 +279,15 @@ PARTICLE_SPEED_JSON=$(sanitize_float "${EFFECTS_PARTICLE_SPEED:-0.0}" "0.0" "0.0
 
 TERMINAL_OVERLAY_ASSET_JSON=$(resolve_asset_path "${TERMINAL_VISUAL_OVERLAY_ASSET:-}" "terminal_visual.overlay_asset")
 TERMINAL_OVERLAY_OPACITY_JSON=$(sanitize_float "${TERMINAL_VISUAL_OVERLAY_OPACITY:-0.0}" "0.0" "0.0" "1.0" "terminal_visual.overlay_opacity")
+TEXTURE_OVERLAY_ASSET_JSON=""
+if [[ -n "${MATERIAL_TEXTURE_ASSET:-}" ]]; then
+    TEXTURE_OVERLAY_ASSET_JSON=$(resolve_asset_path "${MATERIAL_TEXTURE_ASSET}" "material.texture_asset")
+else
+    DEFAULT_TEXTURE_REL="assets/themes/${THEME_NAME}/texture-overlay.png"
+    if asset_exists "$DEFAULT_TEXTURE_REL"; then
+        TEXTURE_OVERLAY_ASSET_JSON=$(resolve_asset_path "$DEFAULT_TEXTURE_REL" "material.texture_asset")
+    fi
+fi
 
 # ---------------------------------------------------------------------------
 # Theme style profiles — one coherent visual language per theme
@@ -421,6 +455,7 @@ cat > "$THEME_JSON" <<EOF
     "particle_type": "${PARTICLE_TYPE_JSON}",
     "particle_count": ${PARTICLE_COUNT_JSON},
     "particle_speed": ${PARTICLE_SPEED_JSON},
+    "texture_overlay_asset": "${TEXTURE_OVERLAY_ASSET_JSON}",
     "terminal_overlay_asset": "${TERMINAL_OVERLAY_ASSET_JSON}",
     "terminal_overlay_opacity": ${TERMINAL_OVERLAY_OPACITY_JSON},
     "scheme_type": "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}",
@@ -438,6 +473,7 @@ cat > "$THEME_JSON" <<EOF
     },
     "material": {
         "texture": "${MATERIAL_TEXTURE:-none}",
+        "texture_asset": "${TEXTURE_OVERLAY_ASSET_JSON}",
         "overlay_opacity": ${MATERIAL_OVERLAY_OPACITY:-0.0},
         "glow_intensity": ${MATERIAL_GLOW_INTENSITY:-0.0}
     },

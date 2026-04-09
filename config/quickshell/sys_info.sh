@@ -110,8 +110,10 @@ toggle_mute() {
 
 adjust_volume() {
     local direction="${1:-up}"
-    local step="${2:-5}"
-    [[ "$step" =~ ^[0-9]+$ ]] || step=5
+    local step="${2:-1}"
+    [[ "$step" =~ ^[0-9]+$ ]] || step=1
+    if [ "$step" -lt 1 ]; then step=1; fi
+    if [ "$step" -gt 25 ]; then step=25; fi
 
     if command -v wpctl &> /dev/null; then
         if [ "$direction" = "up" ]; then
@@ -194,8 +196,8 @@ case $1 in
     --wifi-toggle) toggle_wifi ;;
     --bt-toggle) toggle_bt ;;
     --toggle-mute) toggle_mute ;;
-    --vol-up) adjust_volume up 5 ;;
-    --vol-down) adjust_volume down 5 ;;
+    --vol-up) adjust_volume up "${2:-1}" ;;
+    --vol-down) adjust_volume down "${2:-1}" ;;
     *)
         # If no arguments are passed, output the full state as JSON
         jq -n -c \

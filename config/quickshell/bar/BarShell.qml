@@ -47,6 +47,15 @@ Variants {
             property string displayFontFamily: ThemeConfig.displayFont
             property real themeLetterSpacing: ThemeConfig.letterSpacing
             property int themeFontWeight: ThemeConfig.fontWeight
+            property string activeThemeName: ThemeConfig.theme
+            property bool ornamentEnabled: ThemeConfig.ornamentEnabled
+            property string ornamentTopLeft: ThemeConfig.ornamentTopLeft
+            property string ornamentTopRight: ThemeConfig.ornamentTopRight
+            property real ornamentOpacity: ThemeConfig.ornamentOpacity
+            property string particleType: ThemeConfig.particleType
+            property int particleCount: ThemeConfig.particleCount
+            property real particleSpeed: ThemeConfig.particleSpeed
+            property string textureOverlayAsset: ThemeConfig.textureOverlayAsset
 
             // THICKER BAR, MINIMAL MARGINS (Scaled)
             implicitHeight: barHeight
@@ -115,6 +124,38 @@ Variants {
 
             function refreshUpdates() {
                 updatesPoller.running = true;
+            }
+
+            function openUpdatesTerminal() {
+                let cmd = "~/.config/quickshell/package_upgrade.sh";
+                Quickshell.execDetached(["kitty", "--hold", "bash", "-lc", cmd]);
+                Quickshell.execDetached(["notify-send", "Updates", "Update gestart in terminal"]);
+            }
+
+            function volumeIconFor(volumePercent, muted) {
+                let vol = Math.max(0, Math.min(150, parseInt(volumePercent) || 0));
+                if (muted || vol === 0) return "󰝟";
+                if (vol >= 70) return "󰕾";
+                if (vol >= 30) return "󰖀";
+                return "󰕿";
+            }
+
+            function handleVolumeWheel(deltaY) {
+                if (!deltaY || deltaY === 0) return;
+                let steps = Math.max(1, Math.round(Math.abs(deltaY) / 120));
+                let current = parseInt(String(barWindow.volPercent).replace("%", "")) || 0;
+                let next = current + (deltaY > 0 ? steps : -steps);
+                next = Math.max(0, Math.min(150, next));
+
+                barWindow.volPercent = next.toString() + "%";
+                barWindow.isMuted = false;
+                barWindow.volIcon = volumeIconFor(next, false);
+
+                if (deltaY > 0) {
+                    Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-up " + steps]);
+                } else {
+                    Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-down " + steps]);
+                }
             }
 
             Process {

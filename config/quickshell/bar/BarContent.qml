@@ -692,7 +692,7 @@ Item {
                                     id: updatesMouse
                                     hoverEnabled: true
                                     anchors.fill: parent
-                                    onClicked: shell.refreshUpdates()
+                                    onClicked: shell.openUpdatesTerminal()
                                 }
                             }
 
@@ -853,11 +853,7 @@ Item {
                                     anchors.fill: parent
                                     onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"])
                                     onWheel: (wheel) => {
-                                        if (wheel.angleDelta.y > 0) {
-                                            Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-up"]);
-                                        } else if (wheel.angleDelta.y < 0) {
-                                            Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-down"]);
-                                        }
+                                        shell.handleVolumeWheel(wheel.angleDelta.y);
                                         wheel.accepted = true;
                                     }
                                 }
