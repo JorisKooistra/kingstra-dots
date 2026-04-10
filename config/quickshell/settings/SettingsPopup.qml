@@ -184,6 +184,8 @@ Item {
     property string editSchemeType: "scheme-tonal-spot"
     property int editColorIndex: 0
     property string editContrast: "0.0"
+    property string editMode: "dark"
+    property var modeOptions: ["dark", "light"]
     property int editBarHeight: 40
     property string editBarPosition: "top"
     property string editBarWidthMode: "full"
@@ -322,6 +324,11 @@ Item {
         );
         editColorIndex = Math.max(0, toIntValue(themeValue(themeData, "matugen", "color_index", 0), 0));
         editContrast = toFloatString(themeValue(themeData, "matugen", "contrast", 0.0), 0.0);
+        editMode = normalizeOption(
+            themeValue(themeData, "matugen", "mode", "dark"),
+            modeOptions,
+            "dark"
+        );
         editBarHeight = Math.max(30, toIntValue(themeValue(themeData, "quickshell", "bar_height", 40), 40));
         editBarPosition = normalizeOption(
             themeValue(themeData, "quickshell", "bar_position", "top"),
@@ -386,6 +393,7 @@ Item {
             "matugen.scheme_type", normalizeOption(editSchemeType, schemeOptions, "scheme-tonal-spot"),
             "matugen.color_index", String(Math.max(0, editColorIndex)),
             "matugen.contrast", toFloatString(editContrast, 0.0),
+            "matugen.mode", normalizeOption(editMode, modeOptions, "dark"),
             "quickshell.bar_height", String(Math.max(30, editBarHeight)),
             "quickshell.bar_position", normalizeOption(editBarPosition, barPositionOptions, "top"),
             "bar.width_mode", normalizeOption(editBarWidthMode, barWidthModeOptions, "full"),
@@ -2174,6 +2182,19 @@ Item {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
+                                        Text { text: "Mode"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox {
+                                            model: root.modeOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editMode))
+                                            onActivated: root.editMode = currentText
+                                            Layout.fillWidth: false
+                                            Layout.preferredWidth: themeEditorsGrid.comboWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
                                         Text { text: "Color index"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 12; value: root.editColorIndex; onValueChanged: root.editColorIndex = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
@@ -2201,7 +2222,7 @@ Item {
                                     }
 
                                     Text {
-                                        text: "Scene bepaalt de Matugen-kleurberekening; icon theme wordt toegepast op GTK en Qt6."
+                                        text: "Scene bepaalt de Matugen-kleurberekening; mode schakelt donker/licht; icon theme wordt toegepast op GTK en Qt6."
                                         font.family: "JetBrains Mono"
                                         font.pixelSize: root.s(10)
                                         color: root.subtext0

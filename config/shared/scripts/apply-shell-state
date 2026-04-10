@@ -181,15 +181,16 @@ COLORS_JSON="{}"
 
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
     if [[ -x "$MATUGEN_RUNNER" ]]; then
-        "$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" 2>/dev/null || _warn "matugen runner mislukt"
-        _log "Matugen templates gegenereerd"
-
+        # Eén aanroep: genereert templates én geeft kleur-JSON terug
+        COLORS_JSON=$("$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" --json hex 2>/dev/null || echo "{}")
+        if [[ "$COLORS_JSON" == "{}" ]]; then
+            _warn "matugen runner mislukt"
+        else
+            _log "Matugen templates gegenereerd"
+        fi
         if $VERBOSE; then
             "$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" --show-colors 2>/dev/null || true
         fi
-
-        # JSON-kleuren voor color-transform; runner blijft de enige Matugen caller.
-        COLORS_JSON=$("$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" --json hex 2>/dev/null || echo "{}")
     fi
 
     # Sla laatste geldige palette op als fallback
@@ -263,7 +264,11 @@ if command -v quickshell &>/dev/null; then
     # anders sterft de aanroepende QML-process mogelijk voordat TopBar terugkomt.
     if $had_topbar || $had_main; then
         pkill -f "quickshell.*TopBar.qml" 2>/dev/null || true
-        sleep 0.2
+        # Wacht tot het process echt gestopt is (max 1s in stappen van 100ms)
+        for _qs_i in $(seq 1 10); do
+            pgrep -f "quickshell.*TopBar.qml" &>/dev/null || break
+            sleep 0.1
+        done
 
         if [[ -f "$QS_TOPBAR_QML" ]]; then
             nohup quickshell -p "$QS_TOPBAR_QML" >/dev/null 2>&1 &
@@ -281,11 +286,15 @@ if command -v quickshell &>/dev/null; then
 fi
 
 if pgrep -x swaync &>/dev/null; then
-    pkill -x swaync 2>/dev/null || true
-    sleep 0.2
-    swaync &
-    disown
-    _log "SwayNC herstart"
+    if swaync-client -rs 2>/dev/null; then
+        _log "SwayNC CSS herladen"
+    else
+        pkill -x swaync 2>/dev/null || true
+        sleep 0.3
+        swaync &
+        disown
+        _log "SwayNC hard herstart"
+    fi
 fi
 
 if pgrep -x kitty &>/dev/null; then

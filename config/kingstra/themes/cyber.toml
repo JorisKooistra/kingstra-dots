@@ -19,7 +19,7 @@ bar_opacity = 0.92
 popup_opacity = 0.95
 blur_size = 4
 blur_passes = 2
-animation_speed = 1.3
+animation_speed = 1.5
 
 [fonts]
 ui_font = "Share Tech Mono"
@@ -39,14 +39,14 @@ bar_position = "top"
 
 [color_transform]
 hue_shift = 0
-saturation_adjust = 0.25
+saturation_adjust = 0.30
 lightness_adjust = 0.08
 thematic_mix = 0.05
 
 [material]
 texture = "gridline"
 overlay_opacity = 0.05
-glow_intensity = 0.30
+glow_intensity = 0.45
 
 [terminal]
 bg_opacity = 0.92

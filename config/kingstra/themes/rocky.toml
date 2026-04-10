@@ -15,11 +15,11 @@ border_radius = 2
 border_width = 4
 gaps_in = 2
 gaps_out = 4
-bar_opacity = 0.98
-popup_opacity = 0.98
+bar_opacity = 0.99
+popup_opacity = 0.99
 blur_size = 2
 blur_passes = 1
-animation_speed = 1.4
+animation_speed = 1.6
 
 [fonts]
 ui_font = "JetBrains Mono"

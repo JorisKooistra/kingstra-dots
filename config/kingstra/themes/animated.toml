@@ -15,11 +15,11 @@ border_radius = 20
 border_width = 1
 gaps_in = 8
 gaps_out = 16
-bar_opacity = 0.80
-popup_opacity = 0.88
+bar_opacity = 0.75
+popup_opacity = 0.86
 blur_size = 16
 blur_passes = 3
-animation_speed = 0.6
+animation_speed = 0.50
 
 [fonts]
 ui_font = "Nunito"
@@ -46,7 +46,7 @@ thematic_mix = 0.18
 [material]
 texture = "motion"
 overlay_opacity = 0.04
-glow_intensity = 0.10
+glow_intensity = 0.18
 
 [terminal]
 bg_opacity = 0.85

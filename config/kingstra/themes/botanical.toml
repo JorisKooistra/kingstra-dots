@@ -15,11 +15,11 @@ border_radius = 24
 border_width = 1
 gaps_in = 10
 gaps_out = 20
-bar_opacity = 0.78
-popup_opacity = 0.84
+bar_opacity = 0.75
+popup_opacity = 0.82
 blur_size = 22
-blur_passes = 3
-animation_speed = 0.85
+blur_passes = 4
+animation_speed = 0.80
 
 [fonts]
 ui_font = "Fira Sans"
@@ -69,7 +69,7 @@ surface = "wood-matte"
 
 [effects]
 particles = "fireflies"
-particle_count = 4
+particle_count = 8
 particle_speed = 0.18
 
 [terminal_visual]
