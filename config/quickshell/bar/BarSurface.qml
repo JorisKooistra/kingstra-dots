@@ -98,6 +98,13 @@ Item {
                                             ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.14)
                                             : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.18))
                                        : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.98, ThemeConfig.popupOpacity * (0.58 + ThemeConfig.styleGlassStrength * 0.6 + skinNumber("innerBoost", 0.0))))
+    readonly property bool cyberTopWithBulge: isCyberContinuousBar && shell.isTopBar
+    readonly property int cyberRailHeight: cyberTopWithBulge
+                                           ? Math.max(shell.s(22), Math.round(shell.barHeight * 0.62))
+                                           : barSurfaceRoot.height
+    readonly property int continuousRailHeight: continuousBarMode
+                                                ? (cyberTopWithBulge ? cyberRailHeight : barSurfaceRoot.height)
+                                                : barSurfaceRoot.height
 
     Item {
         anchors.fill: parent
@@ -127,7 +134,10 @@ Item {
         }
 
         Rectangle {
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: barSurfaceRoot.continuousRailHeight
             visible: barSurfaceRoot.continuousBarMode
             z: 0.25
             radius: 0
@@ -138,7 +148,10 @@ Item {
 
         Image {
             id: textureOverlay
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
             z: 0.35
             source: barSurfaceRoot.activeTextureOverlaySource
             fillMode: Image.Tile
@@ -162,22 +175,29 @@ Item {
         }
 
         ParticleLayer {
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
             shell: barSurfaceRoot.shell
             mocha: barSurfaceRoot.mocha
             z: 0
         }
 
         Item {
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
             visible: barSurfaceRoot.skinBool("showCyberGrid", false)
             z: 0.5
+            clip: true
 
             Repeater {
                 model: Math.ceil(barSurfaceRoot.width / shell.s(13))
                 Rectangle {
                     width: 1
-                    height: barSurfaceRoot.height
+                    height: parent.height
                     x: index * shell.s(13)
                     color: Qt.rgba(
                         mocha.blue.r,
@@ -195,7 +215,7 @@ Item {
             }
 
             Repeater {
-                model: Math.ceil(barSurfaceRoot.height / shell.s(26))
+                model: Math.ceil(parent.height / shell.s(26))
                 Rectangle {
                     width: barSurfaceRoot.width
                     height: 1
@@ -216,7 +236,7 @@ Item {
             }
 
             Repeater {
-                model: Math.ceil(barSurfaceRoot.height / shell.s(6))
+                model: Math.ceil(parent.height / shell.s(6))
                 Rectangle {
                     width: barSurfaceRoot.width
                     height: 1

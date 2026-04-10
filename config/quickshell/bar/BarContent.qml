@@ -27,19 +27,20 @@ Item {
     readonly property color cyberWeatherTempOnColor: Qt.lighter(mocha.peach, 1.15)
     readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.20)
     readonly property real cyberCenterScale: cyberCenterFeature ? 1.6 : 1.0
-    readonly property int cyberCenterYOffset: cyberCenterFeature ? shell.s(6) : 0
+    readonly property int cyberCenterYOffset: 0
     readonly property int cyberCenterBulgeBridgeHeight: cyberCenterFeature ? shell.s(7) : 0
     readonly property int cyberCenterBulgeHeight: cyberCenterFeature ? shell.s(14) : 0
     readonly property int cyberCenterBodyHeight: cyberCenterFeature
-                                                ? Math.max(shell.s(54), Math.round(root.cyberSideModuleHeight * root.cyberCenterScale))
+                                                ? Math.min(shell.barHeight, Math.max(shell.s(36), Math.round(root.cyberSideModuleHeight * root.cyberCenterScale)))
                                                 : shell.barHeight
     readonly property int cyberCenterClickExtraHeight: cyberCenterFeature
                                                       ? (root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight)
                                                       : 0
-    readonly property int cyberSideYOffset: cyberCenterFeature ? -shell.s(4) : 0
+    readonly property int cyberSideYOffset: cyberCenterFeature ? -shell.s(8) : 0
     readonly property int cyberSideModuleHeight: cyberCenterFeature
-                                                ? Math.max(shell.s(30), shell.barHeight - shell.s(10))
+                                                ? Math.max(shell.s(22), Math.round(shell.barHeight * 0.62))
                                                 : shell.barHeight
+    readonly property int cyberCenterContentOffset: cyberCenterFeature ? shell.s(3) : 0
     readonly property color rightGroupColor: surface.continuousBarMode
                                             ? (cyberContinuousLine
                                                 ? Qt.rgba(0, 0, 0, 0)
@@ -138,6 +139,7 @@ Item {
                     RowLayout {
                         id: centerLayout
                         anchors.centerIn: parent
+                        anchors.verticalCenterOffset: root.cyberCenterContentOffset
                         spacing: shell.s(24)
 
                         // Clockbox
