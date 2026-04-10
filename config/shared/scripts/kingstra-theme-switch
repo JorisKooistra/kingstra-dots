@@ -16,6 +16,7 @@ MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 
 READER="${HOME}/.local/bin/kingstra-theme-read"
+APPLY=""
 
 LOG_PREFIX="[kingstra-theme-switch]"
 _log()  { echo "$LOG_PREFIX $*"; }
@@ -23,6 +24,27 @@ _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
 
 SCRIPT_REALPATH="$(readlink -f "${BASH_SOURCE[0]}")"
 REPO_ROOT="$(cd "$(dirname "$SCRIPT_REALPATH")/../../.." && pwd)"
+
+resolve_apply_cmd() {
+    if [[ -x "${HOME}/.local/bin/apply-shell-state" ]]; then
+        printf '%s\n' "${HOME}/.local/bin/apply-shell-state"
+        return 0
+    fi
+
+    local found=""
+    found="$(command -v apply-shell-state 2>/dev/null || true)"
+    if [[ -n "$found" ]]; then
+        printf '%s\n' "$found"
+        return 0
+    fi
+
+    if [[ -x "$REPO_ROOT/config/shared/scripts/apply-shell-state" ]]; then
+        printf '%s\n' "$REPO_ROOT/config/shared/scripts/apply-shell-state"
+        return 0
+    fi
+
+    return 1
+}
 
 _notify() {
     notify-send --icon=preferences-desktop-theme \
@@ -690,15 +712,19 @@ _log "GTK/Qt interface bijgewerkt"
 # ---------------------------------------------------------------------------
 # Step 6 — Kleuren hergenereren + apps herladen via apply-shell-state
 # ---------------------------------------------------------------------------
-APPLY="${HOME}/.local/bin/apply-shell-state"
-if [[ -x "$APPLY" ]]; then
-    # Gebruik altijd de centrale resolver (kingstra-matugen-run) via apply-shell-state.
-    # Zo gebruiken wallpaper- en theme-picker exact dezelfde input-resolutie.
-    "$APPLY" || _warn "apply-shell-state mislukt"
-    _log "Kleuren hergegenereerd en apps herladen"
-else
-    _warn "apply-shell-state niet gevonden — kleuren en apps niet herladen"
+APPLY="$(resolve_apply_cmd || true)"
+if [[ -z "$APPLY" ]]; then
+    _warn "apply-shell-state niet gevonden — kleuren/apps niet herladen"
+    exit 1
 fi
+
+# Gebruik altijd de centrale resolver (kingstra-matugen-run) via apply-shell-state.
+# Zo gebruiken wallpaper- en theme-picker exact dezelfde input-resolutie.
+if ! "$APPLY"; then
+    _warn "apply-shell-state mislukt"
+    exit 1
+fi
+_log "Kleuren hergegenereerd en apps herladen"
 
 # ---------------------------------------------------------------------------
 # Step 7 — Save active theme

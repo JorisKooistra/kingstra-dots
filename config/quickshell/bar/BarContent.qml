@@ -24,10 +24,18 @@ Item {
     readonly property color cyberCenterHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
     readonly property color cyberCenterBorderColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.64)
     readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.78)
-    readonly property int cyberCenterYOffset: 0
-    readonly property int cyberCenterBulgeBridgeHeight: cyberCenterFeature ? shell.s(6) : 0
-    readonly property int cyberCenterBulgeHeight: cyberCenterFeature ? shell.s(12) : 0
-    readonly property int cyberCenterBodyHeight: shell.barHeight
+    readonly property color cyberWeatherTempOnColor: Qt.lighter(mocha.peach, 1.15)
+    readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.20)
+    readonly property real cyberCenterScale: cyberCenterFeature ? 1.6 : 1.0
+    readonly property int cyberCenterYOffset: cyberCenterFeature ? shell.s(6) : 0
+    readonly property int cyberCenterBulgeBridgeHeight: cyberCenterFeature ? shell.s(7) : 0
+    readonly property int cyberCenterBulgeHeight: cyberCenterFeature ? shell.s(14) : 0
+    readonly property int cyberCenterBodyHeight: cyberCenterFeature
+                                                ? Math.max(shell.s(54), Math.round(root.cyberSideModuleHeight * root.cyberCenterScale))
+                                                : shell.barHeight
+    readonly property int cyberCenterClickExtraHeight: cyberCenterFeature
+                                                      ? (root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight)
+                                                      : 0
     readonly property int cyberSideYOffset: cyberCenterFeature ? -shell.s(4) : 0
     readonly property int cyberSideModuleHeight: cyberCenterFeature
                                                 ? Math.max(shell.s(30), shell.barHeight - shell.s(10))
@@ -118,7 +126,10 @@ Item {
                     
                     MouseArea {
                         id: centerMouse
-                        anchors.fill: parent
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        height: parent.height + root.cyberCenterClickExtraHeight
                         hoverEnabled: true
                         onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle calendar"])
                     }
@@ -193,14 +204,40 @@ Item {
                                 font.pixelSize: shell.s(24); 
                                 color: Qt.tint(shell.weatherHex, Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.4)) 
                             }
-                            Text { 
-                                text: shell.weatherTemp; 
-                                Layout.alignment: Qt.AlignVCenter;
-                                font.family: shell.monoFontFamily; 
-                                font.pixelSize: shell.s(17); 
-                                font.weight: shell.themeFontWeight; 
-                                font.letterSpacing: shell.themeLetterSpacing;
-                                color: mocha.peach 
+                            Item {
+                                Layout.alignment: Qt.AlignVCenter
+                                implicitWidth: weatherTempLoader.implicitWidth
+                                implicitHeight: weatherTempLoader.implicitHeight
+
+                                Loader {
+                                    id: weatherTempLoader
+                                    anchors.centerIn: parent
+                                    sourceComponent: root.cyberCenterFeature ? cyberWeatherTempComponent : defaultWeatherTempComponent
+                                }
+
+                                Component {
+                                    id: cyberWeatherTempComponent
+                                    SevenSegmentText {
+                                        text: String(shell.weatherTemp || "--°C")
+                                        glyphWidth: shell.s(12)
+                                        glyphHeight: shell.s(20)
+                                        glyphSpacing: shell.s(2)
+                                        segmentOnColor: root.cyberWeatherTempOnColor
+                                        segmentOffColor: root.cyberWeatherTempOffColor
+                                    }
+                                }
+
+                                Component {
+                                    id: defaultWeatherTempComponent
+                                    Text {
+                                        text: shell.weatherTemp
+                                        font.family: shell.monoFontFamily
+                                        font.pixelSize: shell.s(17)
+                                        font.weight: shell.themeFontWeight
+                                        font.letterSpacing: shell.themeLetterSpacing
+                                        color: mocha.peach
+                                    }
+                                }
                             }
                         }
                     }

@@ -14,7 +14,7 @@ SESSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
 MODES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/modes"
-MATUGEN_RUNNER="${HOME}/.local/bin/kingstra-matugen-run"
+MATUGEN_RUNNER=""
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 LOG_PREFIX="[apply-shell-state]"
 VERBOSE=false
@@ -22,6 +22,30 @@ WALLPAPER_ARG=""
 
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
+
+SCRIPT_REALPATH="$(readlink -f "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(cd "$(dirname "$SCRIPT_REALPATH")/../../.." && pwd)"
+
+resolve_matugen_runner() {
+    if [[ -x "${HOME}/.local/bin/kingstra-matugen-run" ]]; then
+        printf '%s\n' "${HOME}/.local/bin/kingstra-matugen-run"
+        return 0
+    fi
+
+    local found=""
+    found="$(command -v kingstra-matugen-run 2>/dev/null || true)"
+    if [[ -n "$found" ]]; then
+        printf '%s\n' "$found"
+        return 0
+    fi
+
+    if [[ -x "$REPO_ROOT/config/shared/scripts/kingstra-matugen-run" ]]; then
+        printf '%s\n' "$REPO_ROOT/config/shared/scripts/kingstra-matugen-run"
+        return 0
+    fi
+
+    return 1
+}
 
 _sync_skwd_config() {
     local scheme="$1"
@@ -80,9 +104,9 @@ done
 # ---------------------------------------------------------------------------
 LOCK_FILE="/tmp/apply-shell-state.lock"
 exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
-    _warn "apply-shell-state draait al — overgeslagen"
-    exit 0
+if ! flock -w 20 9; then
+    _warn "apply-shell-state lock timeout (20s) — afgebroken"
+    exit 1
 fi
 trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT
 
@@ -94,9 +118,11 @@ SCHEME="scheme-tonal-spot"
 COLOR_IDX=0
 MODE="dark"
 WALLPAPER=""
+MATUGEN_RUNNER="$(resolve_matugen_runner || true)"
 
 if [[ ! -x "$MATUGEN_RUNNER" ]]; then
-    _warn "kingstra-matugen-run niet gevonden — matugen stap overgeslagen"
+    _warn "kingstra-matugen-run niet gevonden — apply afgebroken"
+    exit 1
 else
     RUNNER_RESOLVE_ARGS=()
     if [[ -n "$WALLPAPER_ARG" ]]; then
