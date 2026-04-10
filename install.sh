@@ -24,6 +24,7 @@ OVERRIDE_FILE=""    # Optioneel override-bestand na auto-detectie
 SELECTED_PHASE=""
 FROM_PHASE=""
 SKIP_CONFIRM=false
+INSTALL_VERBOSE_COMMANDS="${INSTALL_VERBOSE_COMMANDS:-false}"
 
 PHASES_DIR="$REPO_ROOT/installer/phases"
 
@@ -83,7 +84,7 @@ parse_args() {
         esac
     done
 
-    export DRY_RUN OVERRIDE_FILE SELECTED_PHASE FROM_PHASE SKIP_CONFIRM
+    export DRY_RUN OVERRIDE_FILE SELECTED_PHASE FROM_PHASE SKIP_CONFIRM INSTALL_VERBOSE_COMMANDS
 }
 
 usage() {
@@ -145,15 +146,19 @@ resolve_phases() {
 run_phases() {
     local -a phases
     read -r -a phases <<< "$(resolve_phases)"
+    local total="${#phases[@]}"
+    local idx=0
 
     for phase in "${phases[@]}"; do
+        idx=$((idx + 1))
         local phase_file="$PHASES_DIR/${phase}.sh"
         if [[ ! -f "$phase_file" ]]; then
             log_warn "Fasescript niet gevonden: $phase_file — overgeslagen"
             continue
         fi
 
-        log_phase "$phase"
+        set_phase_progress "$total" "$idx"
+        log_phase "$phase" "$idx" "$total"
         # shellcheck source=/dev/null
         source "$phase_file"
 
@@ -192,6 +197,9 @@ main() {
 
     if $DRY_RUN; then
         log_warn "DRY-RUN modus actief — geen wijzigingen worden doorgevoerd."
+    elif command -v sudo &>/dev/null && [[ -t 0 ]]; then
+        log_step "Sudo-sessie valideren..."
+        sudo -v || { log_error "Sudo-validatie mislukt."; exit 1; }
     fi
 
     # Pre-flight: back-up alle bestaande dotfiles vóór de eerste fase
