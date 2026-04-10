@@ -20,7 +20,8 @@ Item {
     readonly property int panelBottomRightRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isRightBar) ? 0 : surface.panelRadius
     readonly property bool cyberContinuousLine: surface.continuousBarMode
                                                && String(shell.activeThemeName || "").toLowerCase() === "cyber"
-    readonly property bool cyberCenterFeature: cyberContinuousLine && shell.isTopBar
+    readonly property bool cyberCenterFeature: String(shell.activeThemeName || "").toLowerCase() === "cyber"
+                                             && shell.isTopBar
     readonly property color cyberCenterColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.92)
     readonly property color cyberCenterHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
     readonly property color cyberCenterBorderColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.64)
@@ -28,7 +29,8 @@ Item {
     readonly property color cyberWeatherTempOnColor: Qt.lighter(mocha.peach, 1.15)
     readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.20)
     readonly property real cyberCenterScale: cyberCenterFeature ? 1.6 : 1.0
-    readonly property int cyberCenterYOffset: cyberCenterFeature ? shell.s(2) : 0
+    readonly property int cyberWindowUnderhang: Number(shell.cyberUnderhang || 0)
+    readonly property int cyberCenterYOffset: cyberCenterFeature ? (shell.s(2) - Math.round(cyberWindowUnderhang * 0.5)) : 0
     readonly property int cyberCenterBulgeBridgeHeight: cyberCenterFeature ? shell.s(7) : 0
     readonly property int cyberCenterBulgeHeight: cyberCenterFeature ? shell.s(14) : 0
     readonly property int cyberCenterBodyHeight: cyberCenterFeature
@@ -37,7 +39,7 @@ Item {
     readonly property int cyberCenterClickExtraHeight: cyberCenterFeature
                                                       ? (root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight)
                                                       : 0
-    readonly property int cyberSideYOffset: cyberCenterFeature ? -shell.s(8) : 0
+    readonly property int cyberSideYOffset: cyberCenterFeature ? (-shell.s(8) - Math.round(cyberWindowUnderhang * 0.5)) : 0
     readonly property int cyberSideModuleHeight: shell.barHeight
     readonly property int cyberCenterContentOffset: cyberCenterFeature ? shell.s(3) : 0
     readonly property color rightGroupColor: surface.continuousBarMode
@@ -99,7 +101,7 @@ Item {
                         width: Math.max(shell.s(196), centerBox.width * 0.82)
                         height: root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight
                         anchors.horizontalCenter: parent.horizontalCenter
-                        y: parent.height - (root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight) + shell.s(1)
+                        y: parent.height - root.cyberCenterBulgeBridgeHeight + shell.s(1)
                         z: -1
 
                         Rectangle {

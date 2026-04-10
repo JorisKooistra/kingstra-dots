@@ -65,13 +65,17 @@ Variants {
             property real themeLetterSpacing: ThemeConfig.letterSpacing
             property int themeFontWeight: ThemeConfig.fontWeight
             property string activeThemeName: ThemeConfig.theme
+            property string activeThemeNormalized: String(activeThemeName || "").toLowerCase()
+            property int cyberUnderhang: (isHorizontalBar && isTopBar && activeThemeNormalized === "cyber") ? s(14) : 0
             property string particleType: ThemeConfig.particleType
             property int particleCount: ThemeConfig.particleCount
             property real particleSpeed: ThemeConfig.particleSpeed
             property string textureOverlayAsset: ThemeConfig.textureOverlayAsset
 
             // THICKER BAR, MINIMAL MARGINS (Scaled)
-            implicitHeight: barWindow.isHorizontalBar ? barHeight : 0
+            implicitHeight: barWindow.isHorizontalBar
+                            ? (barHeight + (barWindow.isTopBar ? cyberUnderhang : 0))
+                            : 0
             implicitWidth: barWindow.isVerticalBar ? barThickness : 0
             margins {
                 top: barWindow.isHorizontalBar
