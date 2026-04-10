@@ -36,6 +36,7 @@ Item {
     readonly property int previewDecodeWidth: Math.max(1, Math.round(maxPreviewWidth * Screen.devicePixelRatio))
     readonly property int previewDecodeHeight: Math.max(1, Math.round(maxPreviewHeight * Screen.devicePixelRatio))
     readonly property int previewCacheBuffer: Math.round(itemWidth * 8)
+    readonly property string themeSwitchSafeCmd: Quickshell.env("HOME") + "/.config/hypr/scripts/theme-switch-safe.sh"
 
     property string activeTheme: ""
     property string selectedThemeId: ""
@@ -156,7 +157,7 @@ Item {
 
     Process {
         id: loadThemes
-        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-read --list \"${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes\""]
+        command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" --list"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let raw = this.text.trim();
@@ -180,10 +181,11 @@ Item {
 
     Process {
         id: loadActiveTheme
-        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-switch --current"]
+        command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" --current"]
         stdout: StdioCollector {
             onStreamFinished: {
-                let active = this.text.trim();
+                let activeFromConfig = String(ThemeConfig.theme || "").trim();
+                let active = activeFromConfig !== "" ? activeFromConfig : this.text.trim();
                 if (active !== "") root.activeTheme = active;
                 focusActiveTheme();
             }
@@ -193,12 +195,19 @@ Item {
     Process {
         id: applyProc
         property string themeName: ""
-        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-switch " + themeName]
+        command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" \"" + themeName + "\""]
         stdout: StdioCollector {
             onStreamFinished: {
+                // handled in onExited to avoid false-positive "applied" feedback
+            }
+        }
+        onExited: (exitCode) => {
+            root.isApplying = false;
+            if (exitCode === 0) {
                 root.activeTheme = applyProc.themeName;
-                root.isApplying = false;
                 root.themeApplied(applyProc.themeName);
+            } else {
+                Quickshell.execDetached(["notify-send", "Theme", "Thema toepassen mislukt"]);
             }
         }
     }

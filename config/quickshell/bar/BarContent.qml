@@ -24,13 +24,13 @@ Item {
     readonly property color cyberCenterHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
     readonly property color cyberCenterBorderColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.64)
     readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.78)
-    readonly property int cyberCenterYOffset: cyberCenterFeature ? -shell.s(8) : 0
-    readonly property int cyberCenterNotchDepth: cyberCenterFeature ? shell.s(20) : 0
-    readonly property int cyberCenterShoulderHeight: cyberCenterFeature ? shell.s(10) : 0
-    readonly property int cyberCenterShoulderWidth: cyberCenterFeature ? shell.s(34) : 0
-    readonly property int cyberCenterBridgeHeight: cyberCenterFeature ? shell.s(8) : 0
-    readonly property int cyberCenterBodyHeight: cyberCenterFeature
-                                                ? Math.max(shell.s(24), shell.barHeight - root.cyberCenterNotchDepth + shell.s(6))
+    readonly property int cyberCenterYOffset: 0
+    readonly property int cyberCenterBulgeBridgeHeight: cyberCenterFeature ? shell.s(6) : 0
+    readonly property int cyberCenterBulgeHeight: cyberCenterFeature ? shell.s(12) : 0
+    readonly property int cyberCenterBodyHeight: shell.barHeight
+    readonly property int cyberSideYOffset: cyberCenterFeature ? -shell.s(4) : 0
+    readonly property int cyberSideModuleHeight: cyberCenterFeature
+                                                ? Math.max(shell.s(30), shell.barHeight - shell.s(10))
                                                 : shell.barHeight
     readonly property color rightGroupColor: surface.continuousBarMode
                                             ? (cyberContinuousLine
@@ -88,27 +88,16 @@ Item {
 
                     Item {
                         visible: root.cyberCenterFeature
-                        width: Math.max(shell.s(170), centerBox.width * 0.72)
-                        height: root.cyberCenterNotchDepth + root.cyberCenterShoulderHeight + root.cyberCenterBridgeHeight
+                        width: Math.max(shell.s(196), centerBox.width * 0.82)
+                        height: root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight
                         anchors.horizontalCenter: parent.horizontalCenter
-                        y: parent.height - shell.s(5)
+                        y: parent.height - (root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight) + shell.s(1)
                         z: -1
 
                         Rectangle {
                             width: parent.width
-                            height: root.cyberCenterBridgeHeight
+                            height: root.cyberCenterBulgeBridgeHeight
                             anchors.top: parent.top
-                            radius: shell.s(4)
-                            color: centerBox.color
-                            border.width: 1
-                            border.color: centerBox.border.color
-                        }
-
-                        Rectangle {
-                            width: Math.max(shell.s(120), parent.width * 0.56)
-                            height: root.cyberCenterShoulderHeight
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            y: root.cyberCenterBridgeHeight - shell.s(1)
                             radius: shell.s(5)
                             color: centerBox.color
                             border.width: 1
@@ -116,39 +105,11 @@ Item {
                         }
 
                         Rectangle {
-                            width: root.cyberCenterShoulderWidth
-                            height: root.cyberCenterShoulderHeight
-                            anchors.top: parent.top
-                            anchors.right: parent.horizontalCenter
-                            anchors.rightMargin: shell.s(2)
-                            radius: shell.s(4)
-                            color: centerBox.color
-                            border.width: 1
-                            border.color: centerBox.border.color
-                            rotation: 6
-                            transformOrigin: Item.TopRight
-                        }
-
-                        Rectangle {
-                            width: root.cyberCenterShoulderWidth
-                            height: root.cyberCenterShoulderHeight
-                            anchors.top: parent.top
-                            anchors.left: parent.horizontalCenter
-                            anchors.leftMargin: shell.s(2)
-                            radius: shell.s(4)
-                            color: centerBox.color
-                            border.width: 1
-                            border.color: centerBox.border.color
-                            rotation: -6
-                            transformOrigin: Item.TopLeft
-                        }
-
-                        Rectangle {
-                            width: Math.max(shell.s(126), parent.width * 0.52)
-                            height: root.cyberCenterNotchDepth
+                            width: Math.max(shell.s(150), parent.width * 0.66)
+                            height: root.cyberCenterBulgeHeight
                             anchors.horizontalCenter: parent.horizontalCenter
-                            y: root.cyberCenterBridgeHeight + root.cyberCenterShoulderHeight - shell.s(2)
-                            radius: shell.s(8)
+                            y: root.cyberCenterBulgeBridgeHeight - shell.s(2)
+                            radius: shell.s(10)
                             color: centerBox.color
                             border.width: 1
                             border.color: centerBox.border.color
@@ -253,6 +214,7 @@ Item {
                     anchors.right: centerBox.left  // Hard boundary to prevent overlaps
                     anchors.rightMargin: shell.s(12)
                     anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenterOffset: root.cyberSideYOffset
                     spacing: shell.s(4) 
 
                     // Staggered Main Transition
@@ -271,7 +233,7 @@ Item {
 
                     Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
 
-                    property int moduleHeight: shell.barHeight
+                    property int moduleHeight: root.cyberSideModuleHeight
 
                     // Search 
                     Rectangle {
@@ -607,6 +569,7 @@ Item {
                     anchors.left: centerBox.right // Hard boundary to prevent overlaps
                     anchors.leftMargin: shell.s(12)
                     anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenterOffset: root.cyberSideYOffset
                     spacing: shell.s(4)
 
                     // Staggered Right Transition
@@ -630,7 +593,7 @@ Item {
 
                     // Dedicated System Tray Pill
                     Rectangle {
-                        Layout.preferredHeight: shell.barHeight // THE FIX: Replaced basic "height"
+                        Layout.preferredHeight: root.cyberSideModuleHeight
                         Layout.alignment: Qt.AlignVCenter
                         radius: surface.panelRadius
                         topLeftRadius: root.panelTopLeftRadius
@@ -724,7 +687,7 @@ Item {
 
                     // System Elements Pill
                     Rectangle {
-                        Layout.preferredHeight: shell.barHeight // THE FIX: Replaced basic "height"
+                        Layout.preferredHeight: root.cyberSideModuleHeight
                         Layout.alignment: Qt.AlignVCenter
                         radius: surface.panelRadius
                         topLeftRadius: root.panelTopLeftRadius

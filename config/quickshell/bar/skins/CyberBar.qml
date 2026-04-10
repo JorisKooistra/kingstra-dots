@@ -9,5 +9,5 @@ QtObject {
     readonly property bool continuousBar: true
     readonly property bool continuousBarTopOnly: true
     readonly property bool showCyberGrid: true
-    readonly property real gridAlpha: 0.34
+    readonly property real gridAlpha: 0.42
 }

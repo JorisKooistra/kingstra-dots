@@ -158,6 +158,7 @@ Item {
     property bool themeSaveBusy: false
     property string themeSaveError: ""
     property string themeEditThemeId: ""
+    readonly property string themeSwitchSafeCmd: Quickshell.env("HOME") + "/.config/hypr/scripts/theme-switch-safe.sh"
     property bool topbarReloadBusy: false
     property string topbarReloadError: ""
 
@@ -661,10 +662,11 @@ Item {
     // Load active theme info
     Process {
         id: loadThemeProc
-        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-switch --current"]
+        command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" --current"]
         stdout: StdioCollector {
             onStreamFinished: {
-                let active = this.text.trim();
+                let activeFromConfig = String(ThemeConfig.theme || "").trim();
+                let active = activeFromConfig !== "" ? activeFromConfig : this.text.trim();
                 if (active !== "") {
                     loadThemeDetailProc.themeId = active;
                     loadThemeDetailProc.running = true;
@@ -729,7 +731,7 @@ Item {
     Process {
         id: themeReapplyProc
         property string themeName: ""
-        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-switch " + themeName]
+        command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" \"" + themeName + "\""]
         onExited: {
             root.refreshActiveTheme();
             if (themeCarouselLoader.item && themeCarouselLoader.item.refreshThemes) {
