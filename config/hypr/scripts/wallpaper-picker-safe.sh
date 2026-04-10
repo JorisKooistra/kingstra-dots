@@ -31,10 +31,5 @@ if [[ -n "$SYNC_CMD" ]] && "$SYNC_CMD" >/dev/null 2>&1; then
     exit 0
 fi
 
-# Last-resort fallback: open Quickshell wallpaper widget directly.
-if [[ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/qs_manager.sh" ]]; then
-    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/qs_manager.sh" toggle wallpaper >/dev/null 2>&1 && exit 0
-fi
-
-notify-send "Wallpaper" "Wallpaper picker kon niet gestart worden" 2>/dev/null || true
+notify-send "Wallpaper" "skwd-wall picker kon niet gestart worden" 2>/dev/null || true
 exit 1

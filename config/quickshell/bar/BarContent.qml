@@ -11,11 +11,23 @@ Item {
     required property var surface
     required property var mocha
     readonly property int edgeInset: shell.edgeAttachedBar ? shell.s(10) : 0
+    readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
+                                                     && String(shell.activeThemeName || "").toLowerCase() === "botanical"
+    readonly property int panelTopLeftRadius: flattenScreenEdgeCorners && (shell.isTopBar || shell.isLeftBar) ? 0 : surface.panelRadius
+    readonly property int panelTopRightRadius: flattenScreenEdgeCorners && (shell.isTopBar || shell.isRightBar) ? 0 : surface.panelRadius
+    readonly property int panelBottomLeftRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isLeftBar) ? 0 : surface.panelRadius
+    readonly property int panelBottomRightRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isRightBar) ? 0 : surface.panelRadius
+    readonly property bool cyberContinuousLine: surface.continuousBarMode
+                                               && String(shell.activeThemeName || "").toLowerCase() === "cyber"
     readonly property color rightGroupColor: surface.continuousBarMode
-                                            ? Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.42)
+                                            ? (cyberContinuousLine
+                                                ? Qt.rgba(0, 0, 0, 0)
+                                                : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.42))
                                             : surface.panelColor
     readonly property color rightGroupBorderColor: surface.continuousBarMode
-                                                  ? Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.48)
+                                                  ? (cyberContinuousLine
+                                                        ? Qt.rgba(0, 0, 0, 0)
+                                                        : Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.48))
                                                   : surface.panelBorderColor
 
                 Rectangle {
@@ -23,7 +35,13 @@ Item {
                     anchors.centerIn: parent
                     property bool isHovered: centerMouse.containsMouse
                     color: isHovered ? surface.panelHoverColor : surface.panelColor
-                    radius: surface.panelRadius; border.width: 1; border.color: isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor
+                    radius: surface.panelRadius
+                    topLeftRadius: root.panelTopLeftRadius
+                    topRightRadius: root.panelTopRightRadius
+                    bottomLeftRadius: root.panelBottomLeftRadius
+                    bottomRightRadius: root.panelBottomRightRadius
+                    border.width: 1
+                    border.color: isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor
                     height: shell.barHeight
                     
                     width: centerLayout.implicitWidth + shell.s(36)
@@ -172,7 +190,13 @@ Item {
                     Rectangle {
                         property bool isHovered: searchMouse.containsMouse
                         color: isHovered ? surface.panelHoverColor : surface.panelColor
-                        radius: surface.panelRadius; border.width: 1; border.color: isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor
+                        radius: surface.panelRadius
+                        topLeftRadius: root.panelTopLeftRadius
+                        topRightRadius: root.panelTopRightRadius
+                        bottomLeftRadius: root.panelBottomLeftRadius
+                        bottomRightRadius: root.panelBottomRightRadius
+                        border.width: 1
+                        border.color: isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: shell.barHeight
                         
                         scale: isHovered ? 1.05 : 1.0
@@ -199,7 +223,13 @@ Item {
                         visible: shell.moduleList.includes("notifications")
                         property bool isHovered: notifMouse.containsMouse
                         color: isHovered ? surface.panelHoverColor : surface.panelColor
-                        radius: surface.panelRadius; border.width: 1; border.color: isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor
+                        radius: surface.panelRadius
+                        topLeftRadius: root.panelTopLeftRadius
+                        topRightRadius: root.panelTopRightRadius
+                        bottomLeftRadius: root.panelBottomLeftRadius
+                        bottomRightRadius: root.panelBottomRightRadius
+                        border.width: 1
+                        border.color: isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: shell.barHeight
                         
                         scale: isHovered ? 1.05 : 1.0
@@ -228,7 +258,13 @@ Item {
                     // Workspaces
                     Rectangle {
                         color: surface.panelColor
-                        radius: surface.panelRadius; border.width: 1; border.color: surface.panelBorderColor
+                        radius: surface.panelRadius
+                        topLeftRadius: root.panelTopLeftRadius
+                        topRightRadius: root.panelTopRightRadius
+                        bottomLeftRadius: root.panelBottomLeftRadius
+                        bottomRightRadius: root.panelBottomRightRadius
+                        border.width: 1
+                        border.color: surface.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight
                         clip: true
 
@@ -329,7 +365,13 @@ Item {
                     Rectangle {
                         id: mediaBox
                         color: surface.panelColor
-                        radius: surface.panelRadius; border.width: 1; border.color: surface.panelBorderColor
+                        radius: surface.panelRadius
+                        topLeftRadius: root.panelTopLeftRadius
+                        topRightRadius: root.panelTopRightRadius
+                        bottomLeftRadius: root.panelBottomLeftRadius
+                        bottomRightRadius: root.panelBottomRightRadius
+                        border.width: 1
+                        border.color: surface.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight
                         clip: true
 
@@ -504,6 +546,10 @@ Item {
                         Layout.preferredHeight: shell.barHeight // THE FIX: Replaced basic "height"
                         Layout.alignment: Qt.AlignVCenter
                         radius: surface.panelRadius
+                        topLeftRadius: root.panelTopLeftRadius
+                        topRightRadius: root.panelTopRightRadius
+                        bottomLeftRadius: root.panelBottomLeftRadius
+                        bottomRightRadius: root.panelBottomRightRadius
                         border.color: root.rightGroupBorderColor
                         border.width: 1
                         color: root.rightGroupColor
@@ -594,6 +640,10 @@ Item {
                         Layout.preferredHeight: shell.barHeight // THE FIX: Replaced basic "height"
                         Layout.alignment: Qt.AlignVCenter
                         radius: surface.panelRadius
+                        topLeftRadius: root.panelTopLeftRadius
+                        topRightRadius: root.panelTopRightRadius
+                        bottomLeftRadius: root.panelBottomLeftRadius
+                        bottomRightRadius: root.panelBottomRightRadius
                         border.color: root.rightGroupBorderColor
                         border.width: 1
                         color: root.rightGroupColor

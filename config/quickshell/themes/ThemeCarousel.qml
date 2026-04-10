@@ -252,6 +252,9 @@ Item {
 
         MouseArea {
             anchors.fill: parent
+            // In de embedded settings-weergave moet verticaal wielscrollen de
+            // bovenliggende Theme-tab scrollen, niet de carousel zelf.
+            enabled: !root.embedded
             acceptedButtons: Qt.NoButton
             onWheel: (wheel) => {
                 if (root.isApplying || scrollThrottle.running) {

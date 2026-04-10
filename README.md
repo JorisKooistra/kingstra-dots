@@ -119,7 +119,9 @@ kingstra-wallpaper pick
 kingstra-wallpaper status
 ```
 
-Keybind: `Super + W` opens the visual wallpaper picker.
+Keybinds:
+- `Super + Shift + W` selects a random wallpaper from the `skwd-wall` folder.
+- `Super + Ctrl + W` opens the visual wallpaper picker.
 
 ### Themes
 

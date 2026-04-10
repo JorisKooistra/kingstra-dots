@@ -12,6 +12,12 @@ Item {
     required property var mocha
 
     readonly property int outerMargin: shell.edgeAttachedBar ? shell.s(8) : shell.s(10)
+    readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
+                                                     && String(shell.activeThemeName || "").toLowerCase() === "botanical"
+    readonly property int panelTopLeftRadius: flattenScreenEdgeCorners && (shell.isTopBar || shell.isLeftBar) ? 0 : surface.panelRadius
+    readonly property int panelTopRightRadius: flattenScreenEdgeCorners && (shell.isTopBar || shell.isRightBar) ? 0 : surface.panelRadius
+    readonly property int panelBottomLeftRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isLeftBar) ? 0 : surface.panelRadius
+    readonly property int panelBottomRightRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isRightBar) ? 0 : surface.panelRadius
     readonly property int sectionSpacing: shell.s(6)
     readonly property int moduleHeight: shell.s(34)
     readonly property int iconButtonSize: shell.s(34)
@@ -34,6 +40,10 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: shell.s(98)
             radius: surface.panelRadius
+            topLeftRadius: root.panelTopLeftRadius
+            topRightRadius: root.panelTopRightRadius
+            bottomLeftRadius: root.panelBottomLeftRadius
+            bottomRightRadius: root.panelBottomRightRadius
             border.width: 1
             border.color: surface.panelBorderColor
             color: surface.panelColor
@@ -205,6 +215,10 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: wsColumn.implicitHeight + shell.s(16)
             radius: surface.panelRadius
+            topLeftRadius: root.panelTopLeftRadius
+            topRightRadius: root.panelTopRightRadius
+            bottomLeftRadius: root.panelBottomLeftRadius
+            bottomRightRadius: root.panelBottomRightRadius
             border.width: 1
             border.color: surface.panelBorderColor
             color: surface.panelColor
@@ -261,6 +275,10 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: shell.s(74)
             radius: surface.panelRadius
+            topLeftRadius: root.panelTopLeftRadius
+            topRightRadius: root.panelTopRightRadius
+            bottomLeftRadius: root.panelBottomLeftRadius
+            bottomRightRadius: root.panelBottomRightRadius
             border.width: 1
             border.color: surface.panelBorderColor
             color: surface.panelColor
@@ -335,6 +353,10 @@ Item {
             Layout.preferredHeight: trayColumn.implicitHeight + shell.s(16)
             visible: trayRepeater.count > 0
             radius: surface.panelRadius
+            topLeftRadius: root.panelTopLeftRadius
+            topRightRadius: root.panelTopRightRadius
+            bottomLeftRadius: root.panelBottomLeftRadius
+            bottomRightRadius: root.panelBottomRightRadius
             border.width: 1
             border.color: surface.panelBorderColor
             color: surface.panelColor

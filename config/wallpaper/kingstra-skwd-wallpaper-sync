@@ -11,7 +11,6 @@ DAEMON_QML="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/daemon.qml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 APPLY_SCRIPT="${HOME}/.local/bin/apply-shell-state"
-QS_MANAGER="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/qs_manager.sh"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 LOCK_FILE="/tmp/kingstra-skwd-wallpaper-sync.lock"
 MAX_POLLS=320
@@ -113,22 +112,14 @@ _open_picker() {
         if quickshell ipc -p "$DAEMON_QML" call wallpaper toggle >/dev/null 2>&1; then
             opened=true
         else
-            _warn "skwd-wall ipc call faalde; fallback naar Quickshell wallpaper widget"
+            _warn "skwd-wall ipc call faalde"
         fi
     else
         _warn "skwd-wall daemon niet gevonden: $DAEMON_QML"
     fi
 
-    if [[ "$opened" == "false" && -x "$QS_MANAGER" ]]; then
-        if "$QS_MANAGER" toggle wallpaper >/dev/null 2>&1; then
-            opened=true
-        else
-            _warn "Quickshell wallpaper fallback faalde: $QS_MANAGER"
-        fi
-    fi
-
     if [[ "$opened" == "false" ]]; then
-        notify-send "Wallpaper" "Kon wallpaper picker niet openen" 2>/dev/null || true
+        notify-send "Wallpaper" "Kon skwd-wall picker niet openen" 2>/dev/null || true
         return 1
     fi
 

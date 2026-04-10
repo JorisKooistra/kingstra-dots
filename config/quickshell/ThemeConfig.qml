@@ -31,6 +31,7 @@ Item {
 
     property int barHeight: 40
     property string barPosition: "top"
+    property int topBarLooseBlocksOverride: -1
     property string barShape: "rounded"
     property string barWidthMode: "full"
     property bool barFloating: false
@@ -144,6 +145,11 @@ Item {
                         }
                     }
                     if (data.bar_position !== undefined) root.barPosition = root.normalizeBarPosition(data.bar_position);
+                    if (data.topbar_loose_blocks !== undefined) {
+                        root.topBarLooseBlocksOverride = data.topbar_loose_blocks ? 1 : 0;
+                    } else {
+                        root.topBarLooseBlocksOverride = -1;
+                    }
                     if (data.bar_shape !== undefined) root.barShape = String(data.bar_shape);
                     if (data.bar_width_mode !== undefined) root.barWidthMode = String(data.bar_width_mode);
                     if (data.bar_floating !== undefined) root.barFloating = !!data.bar_floating;

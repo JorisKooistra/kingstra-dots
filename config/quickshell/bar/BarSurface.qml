@@ -38,7 +38,13 @@ Item {
         return !!skin[name];
     }
 
-    readonly property bool continuousBarMode: barSurfaceRoot.skinBool("continuousBar", false) && shell.edgeAttachedBar
+    readonly property bool skinContinuousBarMode: barSurfaceRoot.skinBool("continuousBar", false)
+                                                && (!barSurfaceRoot.skinBool("continuousBarTopOnly", false) || shell.isTopBar)
+    readonly property bool topBarLooseBlocksOverrideActive: shell.isTopBar && ThemeConfig.topBarLooseBlocksOverride >= 0
+    readonly property bool topBarLooseBlocksEnabled: ThemeConfig.topBarLooseBlocksOverride === 1
+    readonly property bool continuousBarMode: shell.edgeAttachedBar
+                                            && (topBarLooseBlocksOverrideActive ? !topBarLooseBlocksEnabled : skinContinuousBarMode)
+    readonly property bool isCyberContinuousBar: continuousBarMode && activeTheme === "cyber"
     readonly property bool themeHasDefaultTexture: activeTheme === "botanical"
                                                    || activeTheme === "rocky"
                                                    || activeTheme === "ocean"
@@ -84,10 +90,14 @@ Item {
     property color panelBorderColor: continuousBarMode ? Qt.rgba(0, 0, 0, 0) : basePanelBorderColor
     property color panelBorderHoverColor: continuousBarMode ? Qt.rgba(0, 0, 0, 0) : basePanelBorderHoverColor
     property color innerPillColor: continuousBarMode
-                                  ? Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.10)
+                                  ? (isCyberContinuousBar
+                                        ? Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.0)
+                                        : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.10))
                                   : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, Math.min(0.95, ThemeConfig.popupOpacity * (0.42 + ThemeConfig.styleGlassStrength * 0.5 + skinNumber("innerBoost", 0.0))))
     property color innerPillHoverColor: continuousBarMode
-                                       ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.18)
+                                       ? (isCyberContinuousBar
+                                            ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.14)
+                                            : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.18))
                                        : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.98, ThemeConfig.popupOpacity * (0.58 + ThemeConfig.styleGlassStrength * 0.6 + skinNumber("innerBoost", 0.0))))
 
     Item {
