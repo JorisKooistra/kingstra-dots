@@ -100,7 +100,7 @@ Item {
                                        : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.98, ThemeConfig.popupOpacity * (0.58 + ThemeConfig.styleGlassStrength * 0.6 + skinNumber("innerBoost", 0.0))))
     readonly property bool cyberTopWithBulge: isCyberContinuousBar && shell.isTopBar
     readonly property int cyberRailHeight: cyberTopWithBulge
-                                           ? Math.max(shell.s(22), Math.round(shell.barHeight * 0.62))
+                                           ? shell.barHeight
                                            : barSurfaceRoot.height
     readonly property int continuousRailHeight: continuousBarMode
                                                 ? (cyberTopWithBulge ? cyberRailHeight : barSurfaceRoot.height)

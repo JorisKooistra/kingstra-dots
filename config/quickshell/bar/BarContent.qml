@@ -27,19 +27,17 @@ Item {
     readonly property color cyberWeatherTempOnColor: Qt.lighter(mocha.peach, 1.15)
     readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.20)
     readonly property real cyberCenterScale: cyberCenterFeature ? 1.6 : 1.0
-    readonly property int cyberCenterYOffset: 0
+    readonly property int cyberCenterYOffset: cyberCenterFeature ? shell.s(2) : 0
     readonly property int cyberCenterBulgeBridgeHeight: cyberCenterFeature ? shell.s(7) : 0
     readonly property int cyberCenterBulgeHeight: cyberCenterFeature ? shell.s(14) : 0
     readonly property int cyberCenterBodyHeight: cyberCenterFeature
-                                                ? Math.min(shell.barHeight, Math.max(shell.s(36), Math.round(root.cyberSideModuleHeight * root.cyberCenterScale)))
+                                                ? Math.max(shell.barHeight, Math.round(root.cyberSideModuleHeight * 1.14))
                                                 : shell.barHeight
     readonly property int cyberCenterClickExtraHeight: cyberCenterFeature
                                                       ? (root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight)
                                                       : 0
     readonly property int cyberSideYOffset: cyberCenterFeature ? -shell.s(8) : 0
-    readonly property int cyberSideModuleHeight: cyberCenterFeature
-                                                ? Math.max(shell.s(22), Math.round(shell.barHeight * 0.62))
-                                                : shell.barHeight
+    readonly property int cyberSideModuleHeight: shell.barHeight
     readonly property int cyberCenterContentOffset: cyberCenterFeature ? shell.s(3) : 0
     readonly property color rightGroupColor: surface.continuousBarMode
                                             ? (cyberContinuousLine
@@ -160,7 +158,11 @@ Item {
 
                             Component {
                                 id: digitalClockComponent
-                                DigitalClock { shell: root.shell; mocha: root.mocha }
+                                DigitalClock {
+                                    shell: root.shell
+                                    mocha: root.mocha
+                                    cyberScale: root.cyberCenterFeature ? 1.36 : 1.0
+                                }
                             }
 
                             Component {

@@ -159,6 +159,8 @@ Item {
     property string themeSaveError: ""
     property string themeEditThemeId: ""
     readonly property string themeSwitchSafeCmd: Quickshell.env("HOME") + "/.config/hypr/scripts/theme-switch-safe.sh"
+    readonly property string themeReadSafeCmd: Quickshell.env("HOME") + "/.config/hypr/scripts/theme-read-safe.sh"
+    readonly property string themeUpdateSafeCmd: Quickshell.env("HOME") + "/.config/hypr/scripts/theme-update-safe.sh"
     property bool topbarReloadBusy: false
     property string topbarReloadError: ""
 
@@ -185,6 +187,10 @@ Item {
     property int editBarHeight: 40
     property string editBarPosition: "top"
     property string editBarWidthMode: "full"
+    property string editBarShape: "rounded"
+    property string editBarTopEdgeStyle: "soft"
+    property string editBarBottomEdgeStyle: "soft"
+    property string editClockStyle: "digital"
     property bool editTopbarLooseBlocks: true
 
     property var schemeOptions: [
@@ -216,8 +222,11 @@ Item {
         "Tela-circle-dark",
         "Adwaita"
     ]
-    property var barPositionOptions: ["top", "bottom", "left", "right"]
+    property var barPositionOptions: ["top", "bottom"]
     property var barWidthModeOptions: ["full", "floating"]
+    property var barShapeOptions: ["rounded", "organic-grown", "capsule", "block", "segmented-capsule", "beveled"]
+    property var barEdgeStyleOptions: ["flush", "soft", "hard", "beveled", "ornate-rounded"]
+    property var clockStyleOptions: ["digital", "analog", "hybrid"]
     property var fontWeightOptions: ["light", "regular", "medium", "bold"]
 
     function refreshActiveTheme() {
@@ -314,11 +323,35 @@ Item {
         editColorIndex = Math.max(0, toIntValue(themeValue(themeData, "matugen", "color_index", 0), 0));
         editContrast = toFloatString(themeValue(themeData, "matugen", "contrast", 0.0), 0.0);
         editBarHeight = Math.max(30, toIntValue(themeValue(themeData, "quickshell", "bar_height", 40), 40));
-        editBarPosition = String(themeValue(themeData, "quickshell", "bar_position", "top"));
+        editBarPosition = normalizeOption(
+            themeValue(themeData, "quickshell", "bar_position", "top"),
+            barPositionOptions,
+            "top"
+        );
         editBarWidthMode = normalizeOption(
             themeValue(themeData, "bar", "width_mode", "full"),
             barWidthModeOptions,
             "full"
+        );
+        editBarShape = normalizeOption(
+            themeValue(themeData, "bar", "shape", "rounded"),
+            barShapeOptions,
+            "rounded"
+        );
+        editBarTopEdgeStyle = normalizeOption(
+            themeValue(themeData, "bar", "top_edge_style", "soft"),
+            barEdgeStyleOptions,
+            "soft"
+        );
+        editBarBottomEdgeStyle = normalizeOption(
+            themeValue(themeData, "bar", "bottom_edge_style", "soft"),
+            barEdgeStyleOptions,
+            "soft"
+        );
+        editClockStyle = normalizeOption(
+            themeValue(themeData, "bar", "clock_style", "digital"),
+            clockStyleOptions,
+            "digital"
         );
         editTopbarLooseBlocks = defaultTopbarLooseBlocks(themeData, safeThemeId);
     }
@@ -333,10 +366,8 @@ Item {
         themeSaveBusy = true;
         themeSaveError = "";
 
-        let scriptPath = Quickshell.env("HOME") + "/.config/shared/scripts/kingstra-theme-update.py";
         let cmd = [
-            "python3",
-            scriptPath,
+            root.themeUpdateSafeCmd,
             themeEditThemeId,
             "appearance.border_radius", String(Math.max(0, editBorderRadius)),
             "appearance.border_width", String(Math.max(0, editBorderWidth)),
@@ -356,10 +387,14 @@ Item {
             "matugen.color_index", String(Math.max(0, editColorIndex)),
             "matugen.contrast", toFloatString(editContrast, 0.0),
             "quickshell.bar_height", String(Math.max(30, editBarHeight)),
-            "quickshell.bar_position", String(editBarPosition || "top"),
+            "quickshell.bar_position", normalizeOption(editBarPosition, barPositionOptions, "top"),
             "bar.width_mode", normalizeOption(editBarWidthMode, barWidthModeOptions, "full"),
             "bar.floating", String(editBarWidthMode === "floating"),
             "bar.attach_to_screen_edge", String(editBarWidthMode !== "floating"),
+            "bar.shape", normalizeOption(editBarShape, barShapeOptions, "rounded"),
+            "bar.top_edge_style", normalizeOption(editBarTopEdgeStyle, barEdgeStyleOptions, "soft"),
+            "bar.bottom_edge_style", normalizeOption(editBarBottomEdgeStyle, barEdgeStyleOptions, "soft"),
+            "bar.clock_style", normalizeOption(editClockStyle, clockStyleOptions, "digital"),
             "bar.topbar_loose_blocks", String(!!editTopbarLooseBlocks)
         ];
 
@@ -677,7 +712,7 @@ Item {
     Process {
         id: loadThemeDetailProc
         property string themeId: ""
-        command: ["bash", "-c", "$HOME/.local/bin/kingstra-theme-read --json \"${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes/" + themeId + ".toml\""]
+        command: [root.themeReadSafeCmd, "--json", "${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes/" + themeId + ".toml"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -2231,6 +2266,58 @@ Item {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
+                                        Text { text: "Bar shape"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox {
+                                            model: root.barShapeOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editBarShape))
+                                            onActivated: root.editBarShape = currentText
+                                            Layout.fillWidth: false
+                                            Layout.preferredWidth: themeEditorsGrid.comboWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Top edge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox {
+                                            model: root.barEdgeStyleOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editBarTopEdgeStyle))
+                                            onActivated: root.editBarTopEdgeStyle = currentText
+                                            Layout.fillWidth: false
+                                            Layout.preferredWidth: themeEditorsGrid.comboWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Bottom edge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox {
+                                            model: root.barEdgeStyleOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editBarBottomEdgeStyle))
+                                            onActivated: root.editBarBottomEdgeStyle = currentText
+                                            Layout.fillWidth: false
+                                            Layout.preferredWidth: themeEditorsGrid.comboWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Clock style"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox {
+                                            model: root.clockStyleOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editClockStyle))
+                                            onActivated: root.editClockStyle = currentText
+                                            Layout.fillWidth: false
+                                            Layout.preferredWidth: themeEditorsGrid.comboWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
                                         Text { text: "Topbar stijl"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: ["losse blokken", "strakke lijn"]
@@ -2273,7 +2360,7 @@ Item {
                                     }
 
                                     Text {
-                                        text: "Positie, hoogte, breedte en topbar-stijl gelden na toepassen van het thema."
+                                        text: "Shell-instellingen worden per theme opgeslagen en blijven behouden na herstart of theme-switch."
                                         font.family: "JetBrains Mono"
                                         font.pixelSize: root.s(10)
                                         color: root.subtext0

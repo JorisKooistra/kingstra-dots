@@ -15,7 +15,6 @@ THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 
-READER="${HOME}/.local/bin/kingstra-theme-read"
 APPLY=""
 
 LOG_PREFIX="[kingstra-theme-switch]"
@@ -44,6 +43,37 @@ resolve_apply_cmd() {
     fi
 
     return 1
+}
+
+resolve_reader_cmd() {
+    if [[ -x "${HOME}/.local/bin/kingstra-theme-read" ]]; then
+        printf '%s\n' "${HOME}/.local/bin/kingstra-theme-read"
+        return 0
+    fi
+
+    local found=""
+    found="$(command -v kingstra-theme-read 2>/dev/null || true)"
+    if [[ -n "$found" ]]; then
+        printf '%s\n' "$found"
+        return 0
+    fi
+
+    if [[ -f "$REPO_ROOT/config/shared/scripts/kingstra-theme-read.py" ]]; then
+        printf '%s\n' "$REPO_ROOT/config/shared/scripts/kingstra-theme-read.py"
+        return 0
+    fi
+
+    return 1
+}
+
+run_reader_cmd() {
+    local reader_cmd="$1"
+    shift
+    if [[ "$reader_cmd" == *.py ]]; then
+        python3 "$reader_cmd" "$@"
+    else
+        "$reader_cmd" "$@"
+    fi
 }
 
 _notify() {
@@ -282,7 +312,13 @@ if [[ "${1:-}" == "--current" ]]; then
 fi
 
 if [[ "${1:-}" == "--list" ]]; then
-    "$READER" --list "$THEMES_DIR"
+    READER_CMD="$(resolve_reader_cmd || true)"
+    if [[ -z "$READER_CMD" ]]; then
+        _warn "kingstra-theme-read niet gevonden"
+        echo "[]"
+        exit 1
+    fi
+    run_reader_cmd "$READER_CMD" --list "$THEMES_DIR"
     exit 0
 fi
 
@@ -296,10 +332,21 @@ fi
 
 _log "Overschakelen naar thema: $THEME_NAME"
 
+READER_CMD="$(resolve_reader_cmd || true)"
+if [[ -z "$READER_CMD" ]]; then
+    _warn "kingstra-theme-read niet gevonden — thema niet toepasbaar"
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
 # Read theme values via Python helper
 # ---------------------------------------------------------------------------
-eval "$("$READER" "$THEME_FILE")"
+READER_OUTPUT="$(run_reader_cmd "$READER_CMD" "$THEME_FILE" 2>/dev/null || true)"
+if [[ -z "$READER_OUTPUT" ]]; then
+    _warn "Kon themawaarden niet lezen uit: $THEME_FILE"
+    exit 1
+fi
+eval "$READER_OUTPUT"
 
 # Variables are now available as: META_NAME, MATUGEN_SCHEME_TYPE, APPEARANCE_BORDER_RADIUS, etc.
 MATUGEN_SCHEME_JSON=$(pick_enum "${MATUGEN_SCHEME_TYPE:-scheme-tonal-spot}" "scheme-tonal-spot" "matugen.scheme_type" \
@@ -324,6 +371,11 @@ BAR_BOTTOM_EDGE_STYLE_JSON=$(pick_enum "${BAR_BOTTOM_EDGE_STYLE:-soft}" "soft" "
     flush soft hard beveled ornate-rounded)
 CLOCK_STYLE_JSON=$(pick_enum "${BAR_CLOCK_STYLE:-digital}" "digital" "bar.clock_style" \
     digital analog hybrid)
+
+TOPBAR_LOOSE_BLOCKS_LINE=""
+if [[ -n "${BAR_TOPBAR_LOOSE_BLOCKS+x}" ]]; then
+    TOPBAR_LOOSE_BLOCKS_LINE="    \"topbar_loose_blocks\": ${BAR_TOPBAR_LOOSE_BLOCKS_JSON},"
+fi
 
 WIDGET_SHAPE_JSON="${WIDGETS_SHAPE:-rounded}"
 WIDGET_SURFACE_JSON="${WIDGETS_SURFACE:-standard}"
@@ -427,6 +479,20 @@ case "$THEME_NAME" in
         ;;
 esac
 
+STYLE_FAMILY=$(pick_enum "${STYLE_PROFILE_FAMILY:-$STYLE_FAMILY}" "$STYLE_FAMILY" "style_profile.family" \
+    botanical cyber rocky ocean space animated)
+STYLE_DENSITY=$(pick_enum "${STYLE_PROFILE_DENSITY:-$STYLE_DENSITY}" "$STYLE_DENSITY" "style_profile.density" \
+    compact comfortable airy)
+STYLE_SURFACE_MODE=$(pick_enum "${STYLE_PROFILE_SURFACE_MODE:-$STYLE_SURFACE_MODE}" "$STYLE_SURFACE_MODE" "style_profile.surface_mode" \
+    soft-glass vivid-glass hard-surface mist solid cinematic-glass)
+STYLE_MOTION=$(pick_enum "${STYLE_PROFILE_MOTION:-$STYLE_MOTION}" "$STYLE_MOTION" "style_profile.motion" \
+    gentle snappy smooth firm float playful)
+STYLE_PANEL_SHADOW=$(sanitize_float "${STYLE_PROFILE_PANEL_SHADOW:-$STYLE_PANEL_SHADOW}" "$STYLE_PANEL_SHADOW" "0.0" "0.5" "style_profile.panel_shadow")
+STYLE_OUTLINE_STRENGTH=$(sanitize_float "${STYLE_PROFILE_OUTLINE_STRENGTH:-$STYLE_OUTLINE_STRENGTH}" "$STYLE_OUTLINE_STRENGTH" "0.0" "0.5" "style_profile.outline_strength")
+STYLE_GLASS_STRENGTH=$(sanitize_float "${STYLE_PROFILE_GLASS_STRENGTH:-$STYLE_GLASS_STRENGTH}" "$STYLE_GLASS_STRENGTH" "0.0" "0.5" "style_profile.glass_strength")
+STYLE_WIDGET_RADIUS=$(sanitize_int "${STYLE_PROFILE_WIDGET_RADIUS:-$STYLE_WIDGET_RADIUS}" "$STYLE_WIDGET_RADIUS" "4" "48" "style_profile.widget_radius")
+STYLE_PANEL_PADDING=$(sanitize_int "${STYLE_PROFILE_PANEL_PADDING:-$STYLE_PANEL_PADDING}" "$STYLE_PANEL_PADDING" "6" "28" "style_profile.panel_padding")
+
 # ---------------------------------------------------------------------------
 # Step 1 — Update matugen config.toml (scheme_type + color_index)
 # ---------------------------------------------------------------------------
@@ -489,7 +555,7 @@ cat > "$THEME_JSON" <<EOF
     "icon_theme": "${ICONS_ICON_THEME:-Papirus-Dark}",
     "bar_height": ${QUICKSHELL_BAR_HEIGHT:-36},
     "bar_position": "${BAR_POSITION_JSON}",
-${BAR_TOPBAR_LOOSE_BLOCKS:+    "topbar_loose_blocks": ${BAR_TOPBAR_LOOSE_BLOCKS_JSON},}
+${TOPBAR_LOOSE_BLOCKS_LINE}
     "bar_shape": "${BAR_SHAPE_JSON}",
     "bar_width_mode": "${BAR_WIDTH_MODE_JSON}",
     "bar_floating": ${BAR_FLOATING_JSON},

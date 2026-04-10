@@ -34,7 +34,7 @@ letter_spacing = 1.2
 icon_theme = "Papirus-Dark"
 
 [quickshell]
-bar_height = 34
+bar_height = 40
 bar_position = "top"
 
 [color_transform]
