@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.SystemTray
 import "../clock"
+import "../monitors"
 
 Item {
     id: root
@@ -849,6 +850,33 @@ Item {
                                 }
                             }
 
+                            // CPU Temperatuur (Gaming mode)
+                            CpuTemp {
+                                id: cpuTempPill
+                                visible: shell.moduleList.includes("cpu_temp")
+                                mocha: root.mocha
+                                pillHeight: sysLayout.pillHeight
+                                radius: surface.innerPillRadius
+                            }
+
+                            // GPU Temperatuur (Gaming mode)
+                            GpuTemp {
+                                id: gpuTempPill
+                                visible: shell.moduleList.includes("gpu_temp")
+                                mocha: root.mocha
+                                pillHeight: sysLayout.pillHeight
+                                radius: surface.innerPillRadius
+                            }
+
+                            // RAM Gebruik (Gaming mode)
+                            RamUsage {
+                                id: ramUsagePill
+                                visible: shell.moduleList.includes("ram_usage")
+                                mocha: root.mocha
+                                pillHeight: sysLayout.pillHeight
+                                radius: surface.innerPillRadius
+                            }
+
                             // WiFi
                             Rectangle {
                                 id: wifiPill
@@ -1010,6 +1038,24 @@ Item {
                                         wheel.accepted = true;
                                     }
                                 }
+                            }
+
+                            // Helderheid (Media mode)
+                            BrightnessControl {
+                                id: brightnessPill
+                                visible: shell.moduleList.includes("brightness")
+                                mocha: root.mocha
+                                pillHeight: sysLayout.pillHeight
+                                radius: surface.innerPillRadius
+                            }
+
+                            // Game Launcher (Gaming mode)
+                            GameLauncher {
+                                id: gameLauncherPill
+                                visible: shell.moduleList.includes("game_launcher")
+                                mocha: root.mocha
+                                pillHeight: sysLayout.pillHeight
+                                radius: surface.innerPillRadius
                             }
 
                             // Battery

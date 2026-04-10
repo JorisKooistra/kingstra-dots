@@ -1,25 +1,25 @@
 [meta]
 name = "Botanical"
-description = "Temperate rainforest — mos, hout, gefilterd licht"
+description = "Donker woud — mos, hout, gefilterd maanlicht"
 icon = "󰌪"
 preview_image = "botanical.jpg"
 
 [matugen]
 scheme_type = "scheme-content"
 color_index = 1
-contrast = 0.1
-mode = "light"
+contrast = 0.05
+mode = "dark"
 
 [appearance]
-border_radius = 24
+border_radius = 32
 border_width = 1
-gaps_in = 10
-gaps_out = 20
-bar_opacity = 0.75
-popup_opacity = 0.82
-blur_size = 22
-blur_passes = 4
-animation_speed = 0.80
+gaps_in = 12
+gaps_out = 24
+bar_opacity = 0.72
+popup_opacity = 0.80
+blur_size = 26
+blur_passes = 5
+animation_speed = 0.75
 
 [fonts]
 ui_font = "Fira Sans"
@@ -38,20 +38,20 @@ bar_height = 40
 bar_position = "top"
 
 [color_transform]
-hue_shift = 5
-saturation_adjust = -0.05
-lightness_adjust = 0.02
-thematic_mix = 0.15
+hue_shift = 8
+saturation_adjust = -0.08
+lightness_adjust = -0.05
+thematic_mix = 0.20
 
 [material]
 texture = "grain"
-overlay_opacity = 0.04
-glow_intensity = 0.02
+overlay_opacity = 0.06
+glow_intensity = 0.04
 
 [terminal]
-bg_opacity = 0.85
+bg_opacity = 0.80
 blur = true
-padding = 12
+padding = 16
 cursor_style = "beam"
 
 [bar]

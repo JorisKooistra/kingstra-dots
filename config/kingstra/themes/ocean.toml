@@ -1,25 +1,25 @@
 [meta]
 name = "Ocean"
-description = "Diepe zee — koel, rustig, vloeiend"
+description = "Diepe zee — koel, stil, bioluminescent donker"
 icon = "󰇙"
 preview_image = "ocean.jpg"
 
 [matugen]
 scheme_type = "scheme-fidelity"
 color_index = 2
-contrast = 0.0
-mode = "light"
+contrast = 0.1
+mode = "dark"
 
 [appearance]
-border_radius = 18
+border_radius = 20
 border_width = 1
-gaps_in = 8
-gaps_out = 16
-bar_opacity = 0.66
-popup_opacity = 0.76
-blur_size = 24
+gaps_in = 10
+gaps_out = 20
+bar_opacity = 0.62
+popup_opacity = 0.72
+blur_size = 28
 blur_passes = 5
-animation_speed = 0.88
+animation_speed = 0.85
 
 [fonts]
 ui_font = "Noto Sans"
@@ -38,18 +38,18 @@ bar_height = 38
 bar_position = "top"
 
 [color_transform]
-hue_shift = -10
-saturation_adjust = 0.10
-lightness_adjust = 0.05
-thematic_mix = 0.20
+hue_shift = -15
+saturation_adjust = 0.12
+lightness_adjust = -0.06
+thematic_mix = 0.22
 
 [material]
 texture = "flow"
-overlay_opacity = 0.03
-glow_intensity = 0.05
+overlay_opacity = 0.04
+glow_intensity = 0.08
 
 [terminal]
-bg_opacity = 0.82
+bg_opacity = 0.76
 blur = true
 padding = 14
 cursor_style = "beam"

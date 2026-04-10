@@ -1,25 +1,25 @@
 [meta]
 name = "Space"
-description = "Kosmisch — diep, donker, zwevend"
+description = "Kosmisch — diep, donker, zwevend tussen de sterren"
 icon = "󰁛"
 preview_image = "space.jpg"
 
 [matugen]
 scheme_type = "scheme-expressive"
 color_index = 0
-contrast = 0.3
+contrast = 0.4
 mode = "dark"
 
 [appearance]
 border_radius = 14
 border_width = 1
-gaps_in = 12
-gaps_out = 24
-bar_opacity = 0.65
-popup_opacity = 0.70
-blur_size = 32
-blur_passes = 5
-animation_speed = 1.1
+gaps_in = 16
+gaps_out = 32
+bar_opacity = 0.55
+popup_opacity = 0.65
+blur_size = 36
+blur_passes = 6
+animation_speed = 1.0
 
 [fonts]
 ui_font = "Space Grotesk"
@@ -28,7 +28,7 @@ mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
 display_font = "Space Grotesk"
 font_weight = "medium"
-letter_spacing = 0.8
+letter_spacing = 1.0
 
 [icons]
 icon_theme = "Papirus-Dark"
@@ -38,20 +38,20 @@ bar_height = 38
 bar_position = "top"
 
 [color_transform]
-hue_shift = 15
-saturation_adjust = 0.08
-lightness_adjust = -0.05
-thematic_mix = 0.25
+hue_shift = 20
+saturation_adjust = 0.10
+lightness_adjust = -0.08
+thematic_mix = 0.30
 
 [material]
 texture = "star-specks"
-overlay_opacity = 0.05
+overlay_opacity = 0.06
 glow_intensity = 0.20
 
 [terminal]
-bg_opacity = 0.78
+bg_opacity = 0.72
 blur = true
-padding = 12
+padding = 14
 cursor_style = "beam"
 
 [bar]
@@ -69,8 +69,8 @@ surface = "deep-glass"
 
 [effects]
 particles = "space-specks"
-particle_count = 12
-particle_speed = 0.05
+particle_count = 16
+particle_speed = 0.04
 
 [terminal_visual]
 overlay_asset = ""

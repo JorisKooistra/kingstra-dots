@@ -1,13 +1,13 @@
 [meta]
 name = "Rocky"
-description = "Graniet — hoekig, solide, geen nonsens"
+description = "Graniet — hoekig, solide, rauw en onverbiddelijk"
 icon = "󰋘"
 preview_image = "rocky.jpg"
 
 [matugen]
 scheme_type = "scheme-monochrome"
 color_index = 0
-contrast = 0.0
+contrast = 0.2
 mode = "dark"
 
 [appearance]
@@ -17,8 +17,8 @@ gaps_in = 2
 gaps_out = 4
 bar_opacity = 0.99
 popup_opacity = 0.99
-blur_size = 2
-blur_passes = 1
+blur_size = 0
+blur_passes = 0
 animation_speed = 1.6
 
 [fonts]
@@ -39,17 +39,17 @@ bar_position = "top"
 
 [color_transform]
 hue_shift = 0
-saturation_adjust = -0.15
-lightness_adjust = -0.03
-thematic_mix = 0.10
+saturation_adjust = -0.20
+lightness_adjust = -0.05
+thematic_mix = 0.08
 
 [material]
 texture = "noise"
-overlay_opacity = 0.03
+overlay_opacity = 0.04
 glow_intensity = 0.0
 
 [terminal]
-bg_opacity = 0.95
+bg_opacity = 0.98
 blur = false
 padding = 8
 cursor_style = "block"

@@ -7,18 +7,18 @@ preview_image = "cyber.jpg"
 [matugen]
 scheme_type = "scheme-rainbow"
 color_index = 1
-contrast = 0.5
+contrast = 0.6
 mode = "dark"
 
 [appearance]
-border_radius = 4
+border_radius = 2
 border_width = 2
 gaps_in = 4
 gaps_out = 8
-bar_opacity = 0.92
-popup_opacity = 0.95
-blur_size = 4
-blur_passes = 2
+bar_opacity = 0.95
+popup_opacity = 0.96
+blur_size = 2
+blur_passes = 1
 animation_speed = 1.5
 
 [fonts]
@@ -28,28 +28,28 @@ mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
 display_font = "Share Tech Mono"
 font_weight = "regular"
-letter_spacing = 1.2
+letter_spacing = 1.5
 
 [icons]
 icon_theme = "Papirus-Dark"
 
 [quickshell]
-bar_height = 40
+bar_height = 44
 bar_position = "top"
 
 [color_transform]
 hue_shift = 0
 saturation_adjust = 0.30
-lightness_adjust = 0.08
+lightness_adjust = 0.10
 thematic_mix = 0.05
 
 [material]
 texture = "gridline"
-overlay_opacity = 0.05
+overlay_opacity = 0.06
 glow_intensity = 0.45
 
 [terminal]
-bg_opacity = 0.92
+bg_opacity = 0.94
 blur = false
 padding = 8
 cursor_style = "block"
