@@ -73,6 +73,30 @@ phase_run() {
 # ---------------------------------------------------------------------------
 
 _phase11_optional_apps() {
+    # Office-suite (gevraagd als "OpenOffice"; op Arch gebruiken we LibreOffice)
+    if [[ "${ENABLE_OPTIONAL_OFFICE:-false}" == "true" ]]; then
+        log_info "Office-suite installeren (ENABLE_OPTIONAL_OFFICE=true)..."
+        pacman_install libreoffice-fresh
+    else
+        log_info "Office-suite overgeslagen (ENABLE_OPTIONAL_OFFICE=false)"
+    fi
+
+    # Heroic Games Launcher
+    if [[ "${ENABLE_OPTIONAL_HEROIC:-false}" == "true" ]]; then
+        log_info "Heroic Games Launcher installeren (ENABLE_OPTIONAL_HEROIC=true)..."
+        aur_install heroic-games-launcher-bin
+    else
+        log_info "Heroic Games Launcher overgeslagen (ENABLE_OPTIONAL_HEROIC=false)"
+    fi
+
+    # VLC mediaspeler
+    if [[ "${ENABLE_OPTIONAL_VLC:-false}" == "true" ]]; then
+        log_info "VLC installeren (ENABLE_OPTIONAL_VLC=true)..."
+        pacman_install vlc
+    else
+        log_info "VLC overgeslagen (ENABLE_OPTIONAL_VLC=false)"
+    fi
+
     # Spicetify (Spotify-theming)
     if [[ "${ENABLE_SPICETIFY:-false}" == "true" ]]; then
         log_info "Spicetify installeren (ENABLE_SPICETIFY=true)..."

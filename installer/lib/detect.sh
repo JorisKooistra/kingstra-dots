@@ -31,6 +31,9 @@
 #     MATUGEN_COLOR_INDEX      — 0
 #     ENABLE_SPICETIFY         — false (nooit auto-enabled)
 #     ENABLE_VESKTOP           — false (nooit auto-enabled)
+#     ENABLE_OPTIONAL_OFFICE   — false (keuze in bootstrap/install wizard)
+#     ENABLE_OPTIONAL_HEROIC   — false (keuze in bootstrap/install wizard)
+#     ENABLE_OPTIONAL_VLC      — false (keuze in bootstrap/install wizard)
 # =============================================================================
 
 detect_system() {
@@ -56,6 +59,7 @@ detect_system() {
     export TOUCHPAD_NATURAL_SCROLL ENABLE_FINGERPRINT
     export ENABLE_SDDM MATUGEN_ENABLED MATUGEN_COLOR_INDEX
     export ENABLE_SPICETIFY ENABLE_VESKTOP
+    export ENABLE_OPTIONAL_OFFICE ENABLE_OPTIONAL_HEROIC ENABLE_OPTIONAL_VLC
 }
 
 # ---------------------------------------------------------------------------
@@ -181,6 +185,9 @@ _derive_feature_flags() {
     # Nooit auto-enabled — gebruiker kiest dit bewust
     ENABLE_SPICETIFY=false
     ENABLE_VESKTOP=false
+    ENABLE_OPTIONAL_OFFICE=false
+    ENABLE_OPTIONAL_HEROIC=false
+    ENABLE_OPTIONAL_VLC=false
 }
 
 # ---------------------------------------------------------------------------
@@ -202,6 +209,7 @@ apply_overrides() {
     export ENABLE_VIDEO_WALLPAPER ENABLE_POWER_PROFILES ENABLE_BRIGHTNESS_CONTROL
     export TOUCHPAD_NATURAL_SCROLL ENABLE_FINGERPRINT ENABLE_SDDM
     export MATUGEN_ENABLED MATUGEN_COLOR_INDEX ENABLE_SPICETIFY ENABLE_VESKTOP
+    export ENABLE_OPTIONAL_OFFICE ENABLE_OPTIONAL_HEROIC ENABLE_OPTIONAL_VLC
 }
 
 # ---------------------------------------------------------------------------
@@ -220,5 +228,8 @@ _print_detected_features() {
     log_info " TOUCHPAD_NATURAL_SCROLL:   $TOUCHPAD_NATURAL_SCROLL"
     log_info " ENABLE_FINGERPRINT:        $ENABLE_FINGERPRINT"
     log_info " ENABLE_VIDEO_WALLPAPER:    $ENABLE_VIDEO_WALLPAPER"
+    log_info " ENABLE_OPTIONAL_OFFICE:    $ENABLE_OPTIONAL_OFFICE"
+    log_info " ENABLE_OPTIONAL_HEROIC:    $ENABLE_OPTIONAL_HEROIC"
+    log_info " ENABLE_OPTIONAL_VLC:       $ENABLE_OPTIONAL_VLC"
     log_info "────────────────────────────────────────────────────"
 }

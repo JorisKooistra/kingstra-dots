@@ -13,7 +13,9 @@ run_cmd() {
     if "${DRY_RUN:-false}"; then
         log_dry "$*"
     else
-        log_step "$ $*"
+        if [[ "${INSTALL_VERBOSE_COMMANDS:-false}" == "true" ]]; then
+            log_step "$ $*"
+        fi
         "$@"
     fi
 }
