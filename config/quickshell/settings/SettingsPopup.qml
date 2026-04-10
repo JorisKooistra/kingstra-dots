@@ -882,6 +882,11 @@ Item {
         var command = "bash <(curl -fsSL " + bootstrapUrl + ")";
         Quickshell.execDetached(["kitty", "--hold", "bash", "-lc", command]);
         notify("Settings", "Update gestart in terminal");
+        // Sluit meteen zonder close-animatie.
+        introContent = 0.0;
+        introSidebar = 0.0;
+        introBase = 0.0;
+        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
     }
 
     // -------------------------------------------------------------------------
