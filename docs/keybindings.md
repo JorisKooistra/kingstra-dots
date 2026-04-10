@@ -85,7 +85,7 @@
 | `Super + Ctrl + M` | Mode picker (office / gaming / media) |
 | `Super + Ctrl + G` | Game launcher |
 | `Super + Shift + M` | Music popup |
-| `Super + C` | Calendar popup |
+| `Super + Ctrl + C` | Calendar popup |
 | `Super + O` | Monitor overview |
 | `Super + X` | FocusTime / power menu |
 | `Super + Ctrl + I` | Settings panel |
