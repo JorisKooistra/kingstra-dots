@@ -11,8 +11,8 @@
 # =============================================================================
 
 phase_run() {
-    log_step "Matugen installeren..."
-    aur_install matugen-bin
+    log_step "Theming-pakketten installeren..."
+    install_from_manifest "$REPO_ROOT/manifest/packages/theme.txt"
 
     log_step "Matugen config deployen..."
     deploy_config "matugen"

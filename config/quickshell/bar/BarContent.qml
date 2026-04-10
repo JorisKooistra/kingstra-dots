@@ -19,6 +19,12 @@ Item {
     readonly property int panelBottomRightRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isRightBar) ? 0 : surface.panelRadius
     readonly property bool cyberContinuousLine: surface.continuousBarMode
                                                && String(shell.activeThemeName || "").toLowerCase() === "cyber"
+    readonly property bool cyberCenterFeature: cyberContinuousLine && shell.isTopBar
+    readonly property color cyberCenterColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.92)
+    readonly property color cyberCenterHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
+    readonly property color cyberCenterBorderColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.64)
+    readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.78)
+    readonly property int cyberCenterYOffset: cyberCenterFeature ? shell.s(2) : 0
     readonly property color rightGroupColor: surface.continuousBarMode
                                             ? (cyberContinuousLine
                                                 ? Qt.rgba(0, 0, 0, 0)
@@ -33,15 +39,20 @@ Item {
                 Rectangle {
                     id: centerBox
                     anchors.centerIn: parent
+                    anchors.verticalCenterOffset: root.cyberCenterYOffset
                     property bool isHovered: centerMouse.containsMouse
-                    color: isHovered ? surface.panelHoverColor : surface.panelColor
+                    color: root.cyberCenterFeature
+                           ? (isHovered ? root.cyberCenterHoverColor : root.cyberCenterColor)
+                           : (isHovered ? surface.panelHoverColor : surface.panelColor)
                     radius: surface.panelRadius
                     topLeftRadius: root.panelTopLeftRadius
                     topRightRadius: root.panelTopRightRadius
                     bottomLeftRadius: root.panelBottomLeftRadius
                     bottomRightRadius: root.panelBottomRightRadius
                     border.width: 1
-                    border.color: isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor
+                    border.color: root.cyberCenterFeature
+                                  ? (isHovered ? root.cyberCenterBorderHoverColor : root.cyberCenterBorderColor)
+                                  : (isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor)
                     height: shell.barHeight
                     
                     width: centerLayout.implicitWidth + shell.s(36)
@@ -67,6 +78,20 @@ Item {
                     scale: isHovered ? 1.03 : 1.0
                     Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutExpo } }
                     Behavior on color { ColorAnimation { duration: 250 } }
+
+                    Rectangle {
+                        // Cyber topbar accent: gives the middle capsule a subtle bottom "tab".
+                        visible: root.cyberCenterFeature
+                        width: Math.max(shell.s(72), centerBox.width * 0.46)
+                        height: shell.s(6)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: parent.height - shell.s(2)
+                        radius: shell.s(3)
+                        color: centerBox.color
+                        border.width: 1
+                        border.color: centerBox.border.color
+                        z: -1
+                    }
                     
                     MouseArea {
                         id: centerMouse

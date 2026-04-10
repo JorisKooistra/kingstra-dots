@@ -9,6 +9,7 @@ aur:matugen-bin
 aur:ttf-jetbrains-mono-nerd
 ttf-fira-code
 aur:ttf-fira-sans
+aur:ttf-digital-7
 
 # Material Design Icons (supplementair voor Quickshell)
 aur:ttf-material-design-icons-variable

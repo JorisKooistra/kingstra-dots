@@ -13,6 +13,9 @@
 # Fira Sans — UI-tekst in Quickshell
 # Pakket: ttf-fira-sans
 
+# Digital-7 — Cyber klok (7-segmentstijl)
+# Pakket: ttf-digital-7
+
 # Material Design Icons — Quickshell iconen (supplementair)
 # Pakket: ttf-material-design-icons-variable
 
