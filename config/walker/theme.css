@@ -1,1 +1,38 @@
-#window {}
+#window {
+  background: color-mix(in srgb, var(--mantle) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline) 18%, transparent);
+  border-radius: 20px;
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) 22%, transparent);
+  font-family: "Fira Sans", sans-serif;
+}
+
+#search {
+  font-size: 13px;
+  padding: 15px 19px;
+}
+
+row {
+  border-radius: 12px;
+  margin: 2px 2px;
+  padding: 6px 13px;
+}
+
+row:selected,
+row:hover {
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface));
+}
+
+#name {
+  font-family: "Fira Sans", sans-serif;
+  font-weight: 600;
+}
+
+#description,
+#label,
+#typeahead {
+  font-family: "Fira Sans", sans-serif;
+}
+
+#calc-result {
+  font-family: "Fira Code", monospace;
+}

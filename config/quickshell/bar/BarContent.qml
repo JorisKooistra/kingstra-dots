@@ -30,7 +30,10 @@ Item {
     readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.20)
     readonly property real cyberCenterScale: cyberCenterFeature ? 1.6 : 1.0
     readonly property int cyberWindowUnderhang: Number(shell.cyberUnderhang || 0)
-    readonly property int cyberCenterYOffset: cyberCenterFeature ? (shell.s(2) - Math.round(cyberWindowUnderhang * 0.5)) : 0
+    readonly property int cyberRailCenterOffset: cyberCenterFeature
+                                                ? -Math.round(cyberWindowUnderhang * 0.5)
+                                                : 0
+    readonly property int cyberCenterYOffset: cyberRailCenterOffset
     readonly property int cyberCenterBulgeBridgeHeight: cyberCenterFeature ? shell.s(7) : 0
     readonly property int cyberCenterBulgeHeight: cyberCenterFeature ? shell.s(14) : 0
     readonly property int cyberCenterBodyHeight: cyberCenterFeature
@@ -39,7 +42,7 @@ Item {
     readonly property int cyberCenterClickExtraHeight: cyberCenterFeature
                                                       ? (root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight)
                                                       : 0
-    readonly property int cyberSideYOffset: cyberCenterFeature ? (-shell.s(8) - Math.round(cyberWindowUnderhang * 0.5)) : 0
+    readonly property int cyberSideYOffset: cyberRailCenterOffset
     readonly property int cyberSideModuleHeight: shell.barHeight
     readonly property int cyberCenterContentOffset: cyberCenterFeature ? shell.s(3) : 0
     readonly property color rightGroupColor: surface.continuousBarMode
