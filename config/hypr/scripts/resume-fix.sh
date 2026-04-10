@@ -9,6 +9,18 @@ set -euo pipefail
 
 LOG_PREFIX="[kingstra-resume]"
 _log()  { echo "$LOG_PREFIX $*" | systemd-cat --identifier=kingstra-resume 2>/dev/null || echo "$LOG_PREFIX $*"; }
+_run_timeout() {
+    local seconds="$1"
+    shift
+    if command -v timeout &>/dev/null; then
+        timeout --kill-after=2 "$seconds" "$@" 2>/dev/null || true
+    else
+        "$@" 2>/dev/null || true
+    fi
+}
+_spawn_detached() {
+    nohup "$@" >/dev/null 2>&1 &
+}
 
 # Wacht even zodat het systeem en netwerk stabiliseren na resume
 sleep 2
@@ -17,17 +29,18 @@ sleep 2
 # 1 — WiFi rescan
 # ---------------------------------------------------------------------------
 if command -v nmcli &>/dev/null; then
-    nmcli dev wifi rescan 2>/dev/null && _log "WiFi rescan gestart" || true
+    _run_timeout 6 nmcli dev wifi rescan
+    _log "WiFi rescan gestart"
 fi
 
 # ---------------------------------------------------------------------------
 # 2 — Bluetooth rescan (korte scan, dan stoppen)
 # ---------------------------------------------------------------------------
 if command -v bluetoothctl &>/dev/null; then
-    bluetoothctl power on 2>/dev/null || true
-    bluetoothctl scan on  2>/dev/null &
+    _run_timeout 5 bluetoothctl power on
+    _run_timeout 5 bluetoothctl scan on &
     sleep 5
-    bluetoothctl scan off 2>/dev/null || true
+    _run_timeout 5 bluetoothctl scan off
     _log "Bluetooth rescan voltooid"
 fi
 
@@ -35,7 +48,7 @@ fi
 # 3 — Hyprland DPMS herstellen (scherm kan uit zijn na resume)
 # ---------------------------------------------------------------------------
 if command -v hyprctl &>/dev/null; then
-    hyprctl dispatch dpms on 2>/dev/null || true
+    _run_timeout 4 hyprctl dispatch dpms on
 fi
 
 # ---------------------------------------------------------------------------
@@ -43,13 +56,11 @@ fi
 # ---------------------------------------------------------------------------
 if ! pgrep -f "quickshell.*TopBar.qml" &>/dev/null; then
     _log "Quickshell TopBar niet actief — herstart..."
-    quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/TopBar.qml" &
-    disown
+    _spawn_detached quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/TopBar.qml"
 fi
 if ! pgrep -f "quickshell.*Main.qml" &>/dev/null; then
     _log "Quickshell Main niet actief — herstart..."
-    quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/Main.qml" &
-    disown
+    _spawn_detached quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/Main.qml"
 fi
 
 # ---------------------------------------------------------------------------
@@ -57,8 +68,7 @@ fi
 # ---------------------------------------------------------------------------
 if ! pgrep -x swaync &>/dev/null; then
     _log "SwayNC niet actief — herstart..."
-    swaync &
-    disown
+    _spawn_detached swaync
 fi
 
 # ---------------------------------------------------------------------------
@@ -66,10 +76,10 @@ fi
 # ---------------------------------------------------------------------------
 if ! pgrep -x hyprpaper &>/dev/null; then
     _log "Hyprpaper niet actief — herstart..."
-    hyprpaper &
+    _spawn_detached hyprpaper
     sleep 0.8
     if command -v kingstra-wallpaper &>/dev/null; then
-        kingstra-wallpaper reload 2>/dev/null || true
+        _run_timeout 6 kingstra-wallpaper reload
     fi
 fi
 

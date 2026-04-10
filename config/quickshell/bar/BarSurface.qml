@@ -174,22 +174,64 @@ Item {
             z: 0.5
 
             Repeater {
-                model: Math.ceil(barSurfaceRoot.width / shell.s(48))
+                model: Math.ceil(barSurfaceRoot.width / shell.s(24))
                 Rectangle {
                     width: 1
                     height: barSurfaceRoot.height
-                    x: index * shell.s(48)
-                    color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, Math.max(0.0, Math.min(0.6, barSurfaceRoot.skinNumber("gridAlpha", 0.0))))
+                    x: index * shell.s(24)
+                    color: Qt.rgba(
+                        mocha.blue.r,
+                        mocha.blue.g,
+                        mocha.blue.b,
+                        Math.max(
+                            0.0,
+                            Math.min(
+                                0.55,
+                                barSurfaceRoot.skinNumber("gridAlpha", 0.0) * ((index % 3) === 0 ? 0.85 : 0.35)
+                            )
+                        )
+                    )
                 }
             }
 
             Repeater {
-                model: Math.ceil(barSurfaceRoot.height / shell.s(22))
+                model: Math.ceil(barSurfaceRoot.height / shell.s(10))
                 Rectangle {
                     width: barSurfaceRoot.width
                     height: 1
-                    y: index * shell.s(22)
-                    color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, Math.max(0.0, Math.min(0.4, barSurfaceRoot.skinNumber("gridAlpha", 0.0) * 0.7)))
+                    y: index * shell.s(10)
+                    color: Qt.rgba(
+                        mocha.teal.r,
+                        mocha.teal.g,
+                        mocha.teal.b,
+                        Math.max(
+                            0.0,
+                            Math.min(
+                                0.38,
+                                barSurfaceRoot.skinNumber("gridAlpha", 0.0) * ((index % 2) === 0 ? 0.60 : 0.24)
+                            )
+                        )
+                    )
+                }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: shell.s(2)
+                color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, Math.max(0.0, Math.min(0.42, barSurfaceRoot.skinNumber("gridAlpha", 0.0) * 1.25)))
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: shell.s(9)
+                gradient: Gradient {
+                    orientation: Gradient.Vertical
+                    GradientStop { position: 0.0; color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.0) }
+                    GradientStop { position: 1.0; color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, Math.max(0.0, Math.min(0.22, barSurfaceRoot.skinNumber("gridAlpha", 0.0) * 0.95))) }
                 }
             }
         }

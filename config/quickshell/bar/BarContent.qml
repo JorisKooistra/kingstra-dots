@@ -24,7 +24,14 @@ Item {
     readonly property color cyberCenterHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
     readonly property color cyberCenterBorderColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.64)
     readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.78)
-    readonly property int cyberCenterYOffset: cyberCenterFeature ? shell.s(2) : 0
+    readonly property int cyberCenterYOffset: cyberCenterFeature ? -shell.s(8) : 0
+    readonly property int cyberCenterNotchDepth: cyberCenterFeature ? shell.s(20) : 0
+    readonly property int cyberCenterShoulderHeight: cyberCenterFeature ? shell.s(10) : 0
+    readonly property int cyberCenterShoulderWidth: cyberCenterFeature ? shell.s(34) : 0
+    readonly property int cyberCenterBridgeHeight: cyberCenterFeature ? shell.s(8) : 0
+    readonly property int cyberCenterBodyHeight: cyberCenterFeature
+                                                ? Math.max(shell.s(24), shell.barHeight - root.cyberCenterNotchDepth + shell.s(6))
+                                                : shell.barHeight
     readonly property color rightGroupColor: surface.continuousBarMode
                                             ? (cyberContinuousLine
                                                 ? Qt.rgba(0, 0, 0, 0)
@@ -53,9 +60,9 @@ Item {
                     border.color: root.cyberCenterFeature
                                   ? (isHovered ? root.cyberCenterBorderHoverColor : root.cyberCenterBorderColor)
                                   : (isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor)
-                    height: shell.barHeight
+                    height: root.cyberCenterBodyHeight
                     
-                    width: centerLayout.implicitWidth + shell.s(36)
+                    width: centerLayout.implicitWidth + (root.cyberCenterFeature ? shell.s(54) : shell.s(36))
                     Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
                     
                     // Staggered Center Transition
@@ -79,18 +86,73 @@ Item {
                     Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutExpo } }
                     Behavior on color { ColorAnimation { duration: 250 } }
 
-                    Rectangle {
-                        // Cyber topbar accent: gives the middle capsule a subtle bottom "tab".
+                    Item {
                         visible: root.cyberCenterFeature
-                        width: Math.max(shell.s(72), centerBox.width * 0.46)
-                        height: shell.s(6)
+                        width: Math.max(shell.s(170), centerBox.width * 0.72)
+                        height: root.cyberCenterNotchDepth + root.cyberCenterShoulderHeight + root.cyberCenterBridgeHeight
                         anchors.horizontalCenter: parent.horizontalCenter
-                        y: parent.height - shell.s(2)
-                        radius: shell.s(3)
-                        color: centerBox.color
-                        border.width: 1
-                        border.color: centerBox.border.color
+                        y: parent.height - shell.s(5)
                         z: -1
+
+                        Rectangle {
+                            width: parent.width
+                            height: root.cyberCenterBridgeHeight
+                            anchors.top: parent.top
+                            radius: shell.s(4)
+                            color: centerBox.color
+                            border.width: 1
+                            border.color: centerBox.border.color
+                        }
+
+                        Rectangle {
+                            width: Math.max(shell.s(120), parent.width * 0.56)
+                            height: root.cyberCenterShoulderHeight
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: root.cyberCenterBridgeHeight - shell.s(1)
+                            radius: shell.s(5)
+                            color: centerBox.color
+                            border.width: 1
+                            border.color: centerBox.border.color
+                        }
+
+                        Rectangle {
+                            width: root.cyberCenterShoulderWidth
+                            height: root.cyberCenterShoulderHeight
+                            anchors.top: parent.top
+                            anchors.right: parent.horizontalCenter
+                            anchors.rightMargin: shell.s(2)
+                            radius: shell.s(4)
+                            color: centerBox.color
+                            border.width: 1
+                            border.color: centerBox.border.color
+                            rotation: 6
+                            transformOrigin: Item.TopRight
+                        }
+
+                        Rectangle {
+                            width: root.cyberCenterShoulderWidth
+                            height: root.cyberCenterShoulderHeight
+                            anchors.top: parent.top
+                            anchors.left: parent.horizontalCenter
+                            anchors.leftMargin: shell.s(2)
+                            radius: shell.s(4)
+                            color: centerBox.color
+                            border.width: 1
+                            border.color: centerBox.border.color
+                            rotation: -6
+                            transformOrigin: Item.TopLeft
+                        }
+
+                        Rectangle {
+                            width: Math.max(shell.s(126), parent.width * 0.52)
+                            height: root.cyberCenterNotchDepth
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: root.cyberCenterBridgeHeight + root.cyberCenterShoulderHeight - shell.s(2)
+                            radius: shell.s(8)
+                            color: centerBox.color
+                            border.width: 1
+                            border.color: centerBox.border.color
+                        }
                     }
                     
                     MouseArea {

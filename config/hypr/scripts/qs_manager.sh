@@ -56,6 +56,18 @@ restore_focus() {
     echo "$prev_addr"
 }
 
+qs_master_workspace() {
+    hyprctl clients -j 2>/dev/null \
+        | jq -r '.[] | select(.title == "qs-master") | .workspace.name' \
+        | head -n 1
+}
+
+qs_master_visible() {
+    local ws_name
+    ws_name="$(qs_master_workspace)"
+    [[ -n "$ws_name" && "$ws_name" != "null" && "$ws_name" != special:* ]]
+}
+
 # -----------------------------------------------------------------------------
 # FAST PATH: WORKSPACE SWITCHING
 # -----------------------------------------------------------------------------
@@ -247,6 +259,16 @@ fi
 if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     ACTIVE_WIDGET=$(cat /tmp/qs_active_widget 2>/dev/null)
     CURRENT_MODE=$(cat "$NETWORK_MODE_FILE" 2>/dev/null)
+    QS_VISIBLE=false
+    if qs_master_visible; then
+        QS_VISIBLE=true
+    fi
+
+    # Guard tegen stale state-file (bijv. na herstart/login zonder actieve popup).
+    # Toggle-close mag alleen als qs-master daadwerkelijk zichtbaar is.
+    if [[ "$QS_VISIBLE" != "true" ]]; then
+        ACTIVE_WIDGET="hidden"
+    fi
 
     # Dynamically fetch focused monitor geometry and adjust for Wayland layout scale
     ACTIVE_MON=$(hyprctl monitors -j | jq -r '.[] | select(.focused==true)')

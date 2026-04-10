@@ -5,9 +5,12 @@ After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate
 
 [Service]
 Type=oneshot
+TimeoutStartSec=20
+TimeoutStopSec=5
+KillMode=mixed
 # Wacht na resume zodat het systeem stabiel is
 ExecStartPre=/bin/sleep 1
-ExecStart=%h/.config/hypr/scripts/resume-fix.sh
+ExecStart=/usr/bin/timeout --kill-after=3 20 %h/.config/hypr/scripts/resume-fix.sh
 Environment=DISPLAY=:0
 Environment=WAYLAND_DISPLAY=wayland-1
 Environment=XDG_RUNTIME_DIR=/run/user/%U
