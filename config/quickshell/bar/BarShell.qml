@@ -65,10 +65,6 @@ Variants {
             property real themeLetterSpacing: ThemeConfig.letterSpacing
             property int themeFontWeight: ThemeConfig.fontWeight
             property string activeThemeName: ThemeConfig.theme
-            property bool ornamentEnabled: ThemeConfig.ornamentEnabled
-            property string ornamentTopLeft: ThemeConfig.ornamentTopLeft
-            property string ornamentTopRight: ThemeConfig.ornamentTopRight
-            property real ornamentOpacity: ThemeConfig.ornamentOpacity
             property string particleType: ThemeConfig.particleType
             property int particleCount: ThemeConfig.particleCount
             property real particleSpeed: ThemeConfig.particleSpeed

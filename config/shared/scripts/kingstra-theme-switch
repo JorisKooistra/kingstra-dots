@@ -306,11 +306,6 @@ CLOCK_STYLE_JSON=$(pick_enum "${BAR_CLOCK_STYLE:-digital}" "digital" "bar.clock_
 WIDGET_SHAPE_JSON="${WIDGETS_SHAPE:-rounded}"
 WIDGET_SURFACE_JSON="${WIDGETS_SURFACE:-standard}"
 
-ORNAMENT_ENABLED_JSON=$(bool_json "${ORNAMENTS_ENABLED:-false}")
-ORNAMENT_TOP_LEFT_JSON=$(resolve_asset_path "${ORNAMENTS_TOP_LEFT:-}" "ornaments.top_left")
-ORNAMENT_TOP_RIGHT_JSON=$(resolve_asset_path "${ORNAMENTS_TOP_RIGHT:-}" "ornaments.top_right")
-ORNAMENT_OPACITY_JSON=$(sanitize_float "${ORNAMENTS_OPACITY:-0.0}" "0.0" "0.0" "1.0" "ornaments.opacity")
-
 PARTICLE_TYPE_JSON=$(pick_enum "${EFFECTS_PARTICLES:-none}" "none" "effects.particles" \
     none fireflies space-specks)
 PARTICLE_COUNT_JSON=$(sanitize_int "${EFFECTS_PARTICLE_COUNT:-0}" "0" "0" "50" "effects.particle_count")
@@ -335,7 +330,6 @@ STYLE_FAMILY="botanical"
 STYLE_DENSITY="comfortable"
 STYLE_SURFACE_MODE="soft-glass"
 STYLE_MOTION="gentle"
-STYLE_ORNAMENT="organic"
 STYLE_PANEL_SHADOW=0.22
 STYLE_OUTLINE_STRENGTH=0.18
 STYLE_GLASS_STRENGTH=0.10
@@ -348,7 +342,6 @@ case "$THEME_NAME" in
         STYLE_DENSITY="comfortable"
         STYLE_SURFACE_MODE="vivid-glass"
         STYLE_MOTION="playful"
-        STYLE_ORNAMENT="kinetic"
         STYLE_PANEL_SHADOW=0.28
         STYLE_OUTLINE_STRENGTH=0.22
         STYLE_GLASS_STRENGTH=0.16
@@ -360,7 +353,6 @@ case "$THEME_NAME" in
         STYLE_DENSITY="comfortable"
         STYLE_SURFACE_MODE="soft-glass"
         STYLE_MOTION="gentle"
-        STYLE_ORNAMENT="organic"
         STYLE_PANEL_SHADOW=0.22
         STYLE_OUTLINE_STRENGTH=0.18
         STYLE_GLASS_STRENGTH=0.10
@@ -372,7 +364,6 @@ case "$THEME_NAME" in
         STYLE_DENSITY="compact"
         STYLE_SURFACE_MODE="hard-surface"
         STYLE_MOTION="snappy"
-        STYLE_ORNAMENT="grid"
         STYLE_PANEL_SHADOW=0.34
         STYLE_OUTLINE_STRENGTH=0.40
         STYLE_GLASS_STRENGTH=0.03
@@ -384,7 +375,6 @@ case "$THEME_NAME" in
         STYLE_DENSITY="airy"
         STYLE_SURFACE_MODE="mist"
         STYLE_MOTION="smooth"
-        STYLE_ORNAMENT="flow"
         STYLE_PANEL_SHADOW=0.26
         STYLE_OUTLINE_STRENGTH=0.16
         STYLE_GLASS_STRENGTH=0.12
@@ -396,7 +386,6 @@ case "$THEME_NAME" in
         STYLE_DENSITY="compact"
         STYLE_SURFACE_MODE="solid"
         STYLE_MOTION="firm"
-        STYLE_ORNAMENT="minimal"
         STYLE_PANEL_SHADOW=0.12
         STYLE_OUTLINE_STRENGTH=0.34
         STYLE_GLASS_STRENGTH=0.02
@@ -408,7 +397,6 @@ case "$THEME_NAME" in
         STYLE_DENSITY="airy"
         STYLE_SURFACE_MODE="cinematic-glass"
         STYLE_MOTION="float"
-        STYLE_ORNAMENT="cosmic"
         STYLE_PANEL_SHADOW=0.32
         STYLE_OUTLINE_STRENGTH=0.18
         STYLE_GLASS_STRENGTH=0.14
@@ -489,10 +477,6 @@ ${BAR_TOPBAR_LOOSE_BLOCKS:+    "topbar_loose_blocks": ${BAR_TOPBAR_LOOSE_BLOCKS_
     "clock_style": "${CLOCK_STYLE_JSON}",
     "widget_shape": "${WIDGET_SHAPE_JSON}",
     "widget_surface": "${WIDGET_SURFACE_JSON}",
-    "ornament_enabled": ${ORNAMENT_ENABLED_JSON},
-    "ornament_top_left": "${ORNAMENT_TOP_LEFT_JSON}",
-    "ornament_top_right": "${ORNAMENT_TOP_RIGHT_JSON}",
-    "ornament_opacity": ${ORNAMENT_OPACITY_JSON},
     "particle_type": "${PARTICLE_TYPE_JSON}",
     "particle_count": ${PARTICLE_COUNT_JSON},
     "particle_speed": ${PARTICLE_SPEED_JSON},
@@ -523,7 +507,6 @@ ${BAR_TOPBAR_LOOSE_BLOCKS:+    "topbar_loose_blocks": ${BAR_TOPBAR_LOOSE_BLOCKS_
         "density": "${STYLE_DENSITY}",
         "surface_mode": "${STYLE_SURFACE_MODE}",
         "motion": "${STYLE_MOTION}",
-        "ornament": "${STYLE_ORNAMENT}",
         "panel_shadow": ${STYLE_PANEL_SHADOW},
         "outline_strength": ${STYLE_OUTLINE_STRENGTH},
         "glass_strength": ${STYLE_GLASS_STRENGTH},

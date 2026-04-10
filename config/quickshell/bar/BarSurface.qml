@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import ".."
-import "ornaments"
 import "effects"
 import "skins"
 
@@ -220,11 +219,5 @@ Item {
             }
         }
 
-        OrnamentLayer {
-            anchors.fill: parent
-            shell: barSurfaceRoot.shell
-            mocha: barSurfaceRoot.mocha
-            z: 0.8
-        }
     }
 }

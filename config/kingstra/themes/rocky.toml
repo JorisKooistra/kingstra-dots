@@ -67,12 +67,6 @@ clock_style = "digital"
 shape = "hard-rect"
 surface = "stone-matte"
 
-[ornaments]
-enabled = true
-top_left = ""
-top_right = ""
-opacity = 0.24
-
 [effects]
 particles = "none"
 particle_count = 0

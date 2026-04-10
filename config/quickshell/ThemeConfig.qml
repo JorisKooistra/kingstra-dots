@@ -41,10 +41,6 @@ Item {
     property string clockStyle: "digital"
     property string widgetShape: "rounded"
     property string widgetSurfaceStyle: "standard"
-    property bool ornamentEnabled: false
-    property string ornamentTopLeft: ""
-    property string ornamentTopRight: ""
-    property real ornamentOpacity: 0.0
     property string particleType: "none"
     property int particleCount: 0
     property real particleSpeed: 0.0
@@ -60,7 +56,6 @@ Item {
     property string styleDensity: "comfortable"
     property string styleSurfaceMode: "soft-glass"
     property string styleMotion: "gentle"
-    property string styleOrnament: "organic"
     property real stylePanelShadow: 0.22
     property real styleOutlineStrength: 0.18
     property real styleGlassStrength: 0.10
@@ -159,10 +154,6 @@ Item {
                     if (data.clock_style !== undefined) root.clockStyle = String(data.clock_style);
                     if (data.widget_shape !== undefined) root.widgetShape = String(data.widget_shape);
                     if (data.widget_surface !== undefined) root.widgetSurfaceStyle = String(data.widget_surface);
-                    if (data.ornament_enabled !== undefined) root.ornamentEnabled = !!data.ornament_enabled;
-                    if (data.ornament_top_left !== undefined) root.ornamentTopLeft = String(data.ornament_top_left);
-                    if (data.ornament_top_right !== undefined) root.ornamentTopRight = String(data.ornament_top_right);
-                    if (data.ornament_opacity !== undefined) root.ornamentOpacity = root.clamp(Number(data.ornament_opacity), 0.0, 1.0);
                     if (data.particle_type !== undefined) root.particleType = String(data.particle_type);
                     if (data.particle_count !== undefined) root.particleCount = parseInt(root.clamp(Number(data.particle_count), 0, 50));
                     if (data.particle_speed !== undefined) root.particleSpeed = root.clamp(Number(data.particle_speed), 0.0, 2.0);
@@ -180,7 +171,6 @@ Item {
                     if (style.density !== undefined) root.styleDensity = String(style.density);
                     if (style.surface_mode !== undefined) root.styleSurfaceMode = String(style.surface_mode);
                     if (style.motion !== undefined) root.styleMotion = String(style.motion);
-                    if (style.ornament !== undefined) root.styleOrnament = String(style.ornament);
                     if (style.panel_shadow !== undefined) root.stylePanelShadow = root.clamp(Number(style.panel_shadow), 0.0, 0.5);
                     if (style.outline_strength !== undefined) root.styleOutlineStrength = root.clamp(Number(style.outline_strength), 0.0, 0.5);
                     if (style.glass_strength !== undefined) root.styleGlassStrength = root.clamp(Number(style.glass_strength), 0.0, 0.5);

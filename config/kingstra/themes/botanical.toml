@@ -67,12 +67,6 @@ clock_style = "analog"
 shape = "soft-organic"
 surface = "wood-matte"
 
-[ornaments]
-enabled = true
-top_left = "assets/themes/botanical/ornament-top-left.svg"
-top_right = "assets/themes/botanical/ornament-top-right.svg"
-opacity = 0.42
-
 [effects]
 particles = "fireflies"
 particle_count = 4

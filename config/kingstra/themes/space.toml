@@ -67,12 +67,6 @@ clock_style = "hybrid"
 shape = "dark-capsule"
 surface = "deep-glass"
 
-[ornaments]
-enabled = false
-top_left = ""
-top_right = ""
-opacity = 0.0
-
 [effects]
 particles = "space-specks"
 particle_count = 12
