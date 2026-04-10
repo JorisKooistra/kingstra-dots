@@ -10,7 +10,7 @@
 | Keys | Action |
 |---|---|
 | `Super + H/J/K/L` | Focus left / down / up / right |
-| `Super + ←↓↑→` | Focus (arrow keys) |
+| `Super + ←↓↑→` | Focus (arrow keys, with monitor fallback) |
 | `Super + Shift + H/J/K/L` | Move window |
 | `Super + Shift + ←↓↑→` | Move window (arrow keys) |
 | `Super + Ctrl + ←↓↑→` | Resize window |
@@ -20,7 +20,7 @@
 | `Super + F` | Fullscreen |
 | `Super + M` | Maximize (keep bar/gaps) |
 | `Super + T` | Toggle floating |
-| `Super + Shift + T` | Pin (always visible) |
+| `Super + Alt + T` | Pin (always visible across workspaces) |
 | `Super + Shift + Space` | Center floating window |
 | `Super + P` | Pseudotile (dwindle) |
 | `Super + \` | Toggle split direction (dwindle) |
@@ -34,7 +34,7 @@
 | `Super + G` | Toggle group |
 | `Super + Alt + →` | Next tab in group |
 | `Super + Alt + ←` | Previous tab in group |
-| `Super + Ctrl + G` | Lock/unlock group |
+| `Super + Ctrl + Shift + G` | Lock/unlock group |
 | `Super + Shift + G` | Move window out of group |
 
 ---
@@ -65,7 +65,7 @@
 | `Super + V` | Clipboard history (cliphist) |
 | `Super + Shift + Return` | btop in kitty |
 | `Super + Shift + C` | cava in kitty |
-| `Super + Alt + N` | nmtui (network manager in kitty) |
+| `Super + Alt + I` | nmtui (network manager in kitty) |
 | `Super + Alt + B` | Blueman (Bluetooth) |
 | `Super + Ctrl + B` | Reload Hyprland config |
 
@@ -78,15 +78,17 @@
 | `Super + N` | Toggle SwayNC control center |
 | `Super + Shift + N` | Dismiss all notifications |
 | `Super + Alt + N` | Toggle do-not-disturb |
-| `Super + W` | Wallpaper picker |
+| `Super + Shift + W` | Random wallpaper (from skwd-wall folder) |
+| `Super + Ctrl + W` | Wallpaper picker |
+| `Super + Shift + T` | Apply next theme (cyclic) |
 | `Super + Ctrl + T` | Theme picker |
 | `Super + Ctrl + M` | Mode picker (office / gaming / media) |
-| `Super + Alt + G` | Game launcher (quickshell-games-launchers) |
+| `Super + Ctrl + G` | Game launcher |
 | `Super + Shift + M` | Music popup |
 | `Super + C` | Calendar popup |
 | `Super + O` | Monitor overview |
 | `Super + X` | FocusTime / power menu |
-| `Super + Shift + I` | Settings panel |
+| `Super + Ctrl + I` | Settings panel |
 | Click CPU/RAM pill | Stats popup |
 
 ---
@@ -126,7 +128,7 @@ Screenshots are saved to `~/Pictures/Screenshots/`.
 
 | Keys | Action |
 |---|---|
-| `Super + Ctrl + L` | Lock (Quickshell lock, fallback hyprlock) |
+| `Super + Ctrl + L` | Lock (hyprlock+fingerprint if available, otherwise Quickshell) |
 | `Super + Ctrl + R` | Reload Hyprland |
 | `Super + Ctrl + Q` | End session |
 
@@ -135,9 +137,9 @@ Screenshots are saved to `~/Pictures/Screenshots/`.
 ## Design rules
 
 1. `Super` = window management and navigation  
-2. `Super + Shift` = action on current window  
-3. `Super + Ctrl` = system/session or window size  
-4. `Super + Alt` = silent move, group nav, or media  
+2. `Super + Shift` = direct quick actions  
+3. `Super + Ctrl` = panels/pickers/session controls  
+4. `Super + Alt` = secondary window/group/media actions  
 5. Media keys = direct hardware functions  
 6. Widget binds don't interrupt workflow  
 7. No duplicate combos — checked by installer

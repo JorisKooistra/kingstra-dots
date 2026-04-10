@@ -216,9 +216,10 @@ _phase14_fingerprint_setup() {
         return 0
     fi
 
-    # PAM configureren voor sudo + SDDM
+    # PAM configureren voor sudo + SDDM + hyprlock
     _phase14_pam_enable_fprintd "/etc/pam.d/sudo" "sudo"
-    _phase14_pam_enable_fprintd "/etc/pam.d/sddm" "sddm"
+    _phase14_pam_enable_fprintd "/etc/pam.d/sddm" "sddm" "max-tries=1 timeout=7"
+    _phase14_pam_enable_fprintd "/etc/pam.d/hyprlock" "hyprlock" "max-tries=1 timeout=7"
 
     log_info "Vingerafdruk inschrijven: fprintd-enroll (na installatie uitvoeren)"
 }
@@ -226,18 +227,18 @@ _phase14_fingerprint_setup() {
 _phase14_pam_enable_fprintd() {
     local pam_file="$1"
     local label="$2"
+    local pam_opts="${3:-}"
+    local pam_line="auth       sufficient   pam_fprintd.so"
+    [[ -n "$pam_opts" ]] && pam_line="$pam_line $pam_opts"
 
     if [[ ! -f "$pam_file" ]]; then
         log_warn "PAM-bestand ontbreekt: $pam_file ($label)"
         return 0
     fi
 
-    if grep -Eq '^[[:space:]]*auth[[:space:]]+sufficient[[:space:]]+pam_fprintd\.so([[:space:]].*)?$' "$pam_file"; then
-        log_info "fprintd al geconfigureerd in $pam_file"
-        return 0
-    fi
-
-    if sudo sed -i '1s/^/auth       sufficient   pam_fprintd.so\n/' "$pam_file" 2>/dev/null; then
+    # Ensure exactly one pam_fprintd auth line, then place it at the top.
+    if sudo sed -i -E '/^[[:space:]]*auth[[:space:]]+.*pam_fprintd\.so([[:space:]].*)?$/d' "$pam_file" 2>/dev/null && \
+       sudo sed -i "1i $pam_line" "$pam_file" 2>/dev/null; then
         log_ok "fprintd PAM-entry toegevoegd aan $pam_file"
     else
         log_warn "PAM aanpassen mislukt voor $pam_file — handmatig toevoegen"

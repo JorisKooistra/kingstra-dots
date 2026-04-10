@@ -4,11 +4,23 @@ set -u
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 LOCK_QML="$CONFIG_HOME/quickshell/Lock.qml"
 
+fingerprint_lock_available() {
+    command -v hyprlock >/dev/null 2>&1 || return 1
+    command -v fprintd-verify >/dev/null 2>&1 || return 1
+    grep -Eq '^[[:space:]]*auth[[:space:]]+sufficient[[:space:]]+pam_fprintd\.so([[:space:]].*)?$' /etc/pam.d/hyprlock 2>/dev/null
+}
+
 # Prevent duplicate lock instances
 if pgrep -f "quickshell.*Lock.qml" >/dev/null 2>&1; then
     exit 0
 fi
 if pgrep -x hyprlock >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Prefer hyprlock when fingerprint auth is available there.
+if fingerprint_lock_available; then
+    hyprlock >/dev/null 2>&1 &
     exit 0
 fi
 
