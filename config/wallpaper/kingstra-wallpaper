@@ -20,6 +20,7 @@ DEFAULT_WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 STATE_FILE="$CACHE_DIR/last-wallpaper"
+IMAGE_STATE_FILE="$CACHE_DIR/last-image-wallpaper"
 MODE_FILE="$CACHE_DIR/wallpaper-mode"          # "static" of "video"
 LOG_PREFIX="[kingstra-wallpaper]"
 
@@ -182,6 +183,9 @@ _save_state() {
     local file="$1" mode="$2"
     echo "$file"  > "$STATE_FILE"
     echo "$mode"  > "$MODE_FILE"
+    if [[ "$mode" == "static" ]]; then
+        echo "$file" > "$IMAGE_STATE_FILE"
+    fi
 }
 
 _update_wallpaper_json() {
@@ -232,6 +236,16 @@ cmd_video() {
     _save_state "$file" "video"
     _update_wallpaper_json "$file"
     _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
+
+    local last_image
+    last_image="$(cat "$IMAGE_STATE_FILE" 2>/dev/null || echo "")"
+    if [[ -f "$last_image" ]]; then
+        local APPLY="${HOME}/.local/bin/apply-shell-state"
+        if [[ -f "$APPLY" ]]; then
+            _run_helper "$APPLY" --wallpaper "$last_image" 2>/dev/null || true
+        fi
+    fi
+
     _notify "Videowallpaper" "$(basename "$file")"
 }
 
@@ -279,6 +293,12 @@ cmd_reload() {
 
     if [[ "$mode" == "video" ]]; then
         _set_video "$file"
+        local last_image
+        last_image="$(cat "$IMAGE_STATE_FILE" 2>/dev/null || echo "")"
+        if [[ -f "$last_image" ]]; then
+            local APPLY="${HOME}/.local/bin/apply-shell-state"
+            [[ -f "$APPLY" ]] && _run_helper "$APPLY" --wallpaper "$last_image" 2>/dev/null || true
+        fi
     else
         _set_static "$file"
         # Herlaad kleuren + apps
@@ -331,10 +351,13 @@ cmd_stop_video() {
 
     # Herstel laatste statisch wallpaper
     local file
-    file="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+    file="$(cat "$IMAGE_STATE_FILE" 2>/dev/null || echo "")"
     if [[ -f "$file" ]] && _is_image "$file"; then
         _set_static "$file"
         echo "static" > "$MODE_FILE"
+        _save_state "$file" "static"
+        local APPLY="${HOME}/.local/bin/apply-shell-state"
+        [[ -f "$APPLY" ]] && _run_helper "$APPLY" --wallpaper "$file" 2>/dev/null || true
         _log "Statisch wallpaper hersteld: $(basename "$file")"
     else
         _warn "Geen statisch wallpaper in state — gebruik: kingstra-wallpaper set <bestand>"
