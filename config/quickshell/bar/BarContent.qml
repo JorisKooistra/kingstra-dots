@@ -41,26 +41,29 @@ Item {
         themeAccentBorderColor.b,
         Math.min(0.9, themeAccentBorderColor.a + 0.18)
     )
-    readonly property color cyberCenterColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.88)
-    readonly property color cyberCenterHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.94)
-    readonly property color cyberCenterBorderColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.64)
-    readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.78)
-    readonly property color cyberCenterInnerLineColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.20)
-    readonly property color cyberCenterAccentColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.56)
-    readonly property color cyberCenterDividerColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.48)
-    readonly property color cyberWeatherTempOnColor: Qt.lighter(mocha.peach, 1.15)
-    readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.20)
-    readonly property color cyberModuleColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.10)
-    readonly property color cyberModuleHoverColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.16)
-    readonly property color cyberModuleBorderColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.24)
-    readonly property color cyberModuleBorderHoverColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.48)
-    readonly property color cyberModuleTickColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.52)
+    readonly property color cyberCenterColor: Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, 0.44)
+    readonly property color cyberCenterHoverColor: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.56)
+    readonly property color cyberCenterBorderColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.88)
+    readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.94)
+    readonly property color cyberCenterInnerLineColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.30)
+    readonly property color cyberCenterAccentColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.82)
+    readonly property color cyberCenterDividerColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.62)
+    readonly property color cyberWeatherTempOnColor: Qt.lighter(mocha.yellow, 1.06)
+    readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.14)
+    readonly property color cyberModuleColor: Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, 0.42)
+    readonly property color cyberModuleHoverColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
+    readonly property color cyberModuleBorderColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.92)
+    readonly property color cyberModuleBorderHoverColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 1.0)
+    readonly property color cyberModuleTickColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 1.0)
+    readonly property color cyberTextColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.98)
+    readonly property color cyberTextMutedColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.84)
+    readonly property color cyberTextHotColor: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 1.0)
     readonly property color cyberWorkspaceActiveColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.88)
     readonly property color cyberWorkspaceOccupiedColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.18)
     readonly property real cyberCenterScale: cyberCenterFeature ? 1.6 : 1.0
     readonly property int cyberWindowUnderhang: Number(shell.cyberUnderhang || 0)
     readonly property int cyberRailCenterOffset: cyberCenterFeature ? -Math.round(cyberWindowUnderhang * 0.5) : 0
-    readonly property int cyberCenterPaddingY: cyberCenterFeature ? shell.s(8) : 0
+    readonly property int cyberCenterPaddingY: 0
     readonly property int cyberCenterBodyHeight: shell.barHeight
     readonly property int cyberSideYOffset: cyberRailCenterOffset
     readonly property int cyberSideModuleHeight: shell.barHeight
@@ -72,18 +75,18 @@ Item {
     readonly property color rightGroupBorderColor: surface.continuousBarMode
                                                   ? (cyberContinuousLine
                                                         ? cyberModuleBorderColor
-                                                        : Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.48))
+                                                        : Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.70))
                                                   : themeAccentBorderColor
 
                 Rectangle {
                     id: centerBox
                     anchors.horizontalCenter: parent.horizontalCenter
-                    y: root.cyberCenterFeature ? 0 : Math.round((parent.height - height) / 2)
+                    y: Math.round((parent.height - height) / 2)
                     property bool isHovered: centerMouse.containsMouse
                     color: root.cyberCenterFeature
                            ? (isHovered ? root.cyberCenterHoverColor : root.cyberCenterColor)
                            : (isHovered ? surface.panelHoverColor : surface.panelColor)
-                    radius: surface.panelRadius
+                    radius: root.cyberCenterFeature ? shell.s(6) : surface.panelRadius
                     topLeftRadius: root.panelTopLeftRadius
                     topRightRadius: root.panelTopRightRadius
                     bottomLeftRadius: root.panelBottomLeftRadius
@@ -92,11 +95,9 @@ Item {
                     border.color: root.cyberCenterFeature
                                   ? (isHovered ? root.cyberCenterBorderHoverColor : root.cyberCenterBorderColor)
                                   : (isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor)
-                    height: root.cyberCenterFeature
-                            ? Math.max(shell.barHeight, centerLayout.implicitHeight + (root.cyberCenterPaddingY * 2))
-                            : root.cyberCenterBodyHeight
+                    height: root.cyberCenterBodyHeight
                     
-                    width: centerLayout.implicitWidth + (root.cyberCenterFeature ? shell.s(42) : shell.s(36))
+                    width: centerLayout.implicitWidth + (root.cyberCenterFeature ? shell.s(12) : shell.s(36))
                     Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
                     
                     // Staggered Center Transition
@@ -116,26 +117,26 @@ Item {
                     Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
 
                     // Hover Scaling
-                    scale: isHovered ? 1.03 : 1.0
+                    scale: root.cyberCenterFeature ? 1.0 : (isHovered ? 1.03 : 1.0)
                     Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutExpo } }
                     Behavior on color { ColorAnimation { duration: 250 } }
 
                     Rectangle {
-                        visible: root.cyberCenterFeature
+                        visible: false
                         anchors.fill: parent
-                        anchors.margins: shell.s(4)
-                        radius: Math.max(1, parent.radius - shell.s(2))
+                        anchors.margins: shell.s(3)
+                        radius: Math.max(2, parent.radius - shell.s(2))
                         color: "transparent"
                         border.width: 1
                         border.color: root.cyberCenterInnerLineColor
                     }
 
                     Rectangle {
-                        visible: root.cyberCenterFeature
+                        visible: false
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.top: parent.top
                         anchors.topMargin: shell.s(4)
-                        width: Math.min(parent.width - shell.s(52), shell.s(170))
+                        width: Math.min(parent.width - shell.s(30), shell.s(120))
                         height: 1
                         color: root.cyberCenterAccentColor
                     }
@@ -154,10 +155,11 @@ Item {
                     RowLayout {
                         id: centerLayout
                         anchors.centerIn: parent
-                        spacing: root.cyberCenterFeature ? shell.s(16) : shell.s(24)
+                        spacing: root.cyberCenterFeature ? shell.s(6) : shell.s(24)
 
                         // Clockbox
                         Item {
+                            Layout.alignment: Qt.AlignVCenter
                             implicitWidth: clockLoader.implicitWidth
                             implicitHeight: clockLoader.implicitHeight
 
@@ -177,7 +179,7 @@ Item {
                                 DigitalClock {
                                     shell: root.shell
                                     mocha: root.mocha
-                                    cyberScale: root.cyberCenterFeature ? 1.36 : 1.0
+                                    cyberScale: root.cyberCenterFeature ? 1.0 : 1.0
                                 }
                             }
 
@@ -215,7 +217,7 @@ Item {
                         }
 
                         Item {
-                            visible: root.cyberCenterFeature
+                            visible: false
                             Layout.alignment: Qt.AlignVCenter
                             Layout.preferredWidth: shell.s(10)
                             Layout.preferredHeight: shell.s(48)
@@ -247,13 +249,16 @@ Item {
 
                         // Weatherbox
                         RowLayout {
-                            spacing: shell.s(8)
+                            spacing: shell.s(7)
+                            Layout.alignment: Qt.AlignVCenter
                             Text { 
                                 text: shell.weatherIcon; 
                                 Layout.alignment: Qt.AlignVCenter;
                                 font.family: "Iosevka Nerd Font"; 
-                                font.pixelSize: shell.s(24); 
-                                color: Qt.tint(shell.weatherHex, Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.4)) 
+                                font.pixelSize: shell.s(20); 
+                                color: root.cyberChrome
+                                       ? root.cyberTextHotColor
+                                       : Qt.tint(shell.weatherHex, Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.4)) 
                             }
                             Item {
                                 Layout.alignment: Qt.AlignVCenter
@@ -270,9 +275,9 @@ Item {
                                     id: cyberWeatherTempComponent
                                     SevenSegmentText {
                                         text: String(shell.weatherTemp || "--°C")
-                                        glyphWidth: shell.s(12)
-                                        glyphHeight: shell.s(20)
-                                        glyphSpacing: shell.s(2)
+                                        glyphWidth: shell.s(9)
+                                        glyphHeight: shell.s(14)
+                                        glyphSpacing: shell.s(1)
                                         segmentOnColor: root.cyberWeatherTempOnColor
                                         segmentOffColor: root.cyberWeatherTempOffColor
                                     }
@@ -283,10 +288,10 @@ Item {
                                     Text {
                                         text: shell.weatherTemp
                                         font.family: shell.monoFontFamily
-                                        font.pixelSize: shell.s(17)
+                                        font.pixelSize: shell.s(14)
                                         font.weight: shell.themeFontWeight
                                         font.letterSpacing: shell.themeLetterSpacing
-                                        color: mocha.peach
+                                        color: root.cyberChrome ? root.cyberTextHotColor : mocha.peach
                                     }
                                 }
                             }
@@ -348,7 +353,7 @@ Item {
                             anchors.centerIn: parent
                             text: "󰍉"
                             font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(24)
-                            color: parent.isHovered ? mocha.blue : mocha.text
+                            color: root.cyberChrome ? (parent.isHovered ? root.cyberTextHotColor : root.cyberTextColor) : (parent.isHovered ? mocha.blue : mocha.text)
                             Behavior on color { ColorAnimation { duration: 200 } }
                         }
 
@@ -397,7 +402,7 @@ Item {
                             anchors.centerIn: parent
                             text: ""
                             font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(18)
-                            color: parent.isHovered ? mocha.yellow : mocha.text
+                            color: root.cyberChrome ? (parent.isHovered ? root.cyberTextHotColor : root.cyberTextColor) : (parent.isHovered ? mocha.yellow : mocha.text)
                             Behavior on color { ColorAnimation { duration: 200 } }
                         }
 
@@ -792,7 +797,7 @@ Item {
                                     
                                     property bool isHovered: trayMouse.containsMouse
                                     property bool initAnimTrigger: false
-                                    opacity: initAnimTrigger ? (isHovered ? 1.0 : 0.8) : 0.0
+                                    opacity: initAnimTrigger ? (root.cyberChrome ? 1.0 : (isHovered ? 1.0 : 0.8)) : 0.0
                                     scale: initAnimTrigger ? (isHovered ? 1.15 : 1.0) : 0.0
 
                                     Component.onCompleted: {
@@ -887,7 +892,9 @@ Item {
                             Rectangle {
                                 id: kbPill
                                 property bool isHovered: kbMouse.containsMouse
-                                color: isHovered ? surface.innerPillHoverColor : surface.innerPillColor
+                                color: root.cyberChrome
+                                       ? (isHovered ? root.cyberModuleHoverColor : root.cyberModuleColor)
+                                       : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
                                 radius: surface.innerPillRadius; height: sysLayout.pillHeight;
                                 clip: true
 
@@ -907,8 +914,8 @@ Item {
 
                                 Row { 
                                     id: kbLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                                    Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: parent.parent.isHovered ? mocha.text : mocha.overlay2 }
-                                    Text { anchors.verticalCenter: parent.verticalCenter; text: shell.kbLayout; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: mocha.text }
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: root.cyberChrome ? root.cyberTextColor : (parent.parent.isHovered ? mocha.text : mocha.overlay2) }
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: shell.kbLayout; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: root.cyberChrome ? root.cyberTextColor : mocha.text }
                                 }
                                 MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true }
                             }
@@ -922,12 +929,14 @@ Item {
                                 radius: surface.innerPillRadius
                                 height: sysLayout.pillHeight
                                 clip: true
-                                color: isHovered ? surface.innerPillHoverColor : surface.innerPillColor
+                                color: root.cyberChrome
+                                       ? (isHovered ? root.cyberModuleHoverColor : root.cyberModuleColor)
+                                       : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
 
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: surface.innerPillRadius
-                                    opacity: updatesPill.updates > 0 ? 1.0 : 0.0
+                                    opacity: root.cyberChrome ? 0.0 : (updatesPill.updates > 0 ? 1.0 : 0.0)
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
                                         orientation: Gradient.Horizontal
@@ -960,7 +969,7 @@ Item {
                                         text: "󰚰"
                                         font.family: "Iosevka Nerd Font"
                                         font.pixelSize: shell.s(16)
-                                        color: updatesPill.updates > 0 ? mocha.base : mocha.subtext0
+                                        color: root.cyberChrome ? root.cyberTextHotColor : (updatesPill.updates > 0 ? mocha.base : mocha.subtext0)
                                     }
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
@@ -969,7 +978,7 @@ Item {
                                         font.pixelSize: shell.s(13)
                                         font.weight: shell.themeFontWeight
                                         font.letterSpacing: shell.themeLetterSpacing
-                                        color: updatesPill.updates > 0 ? mocha.base : mocha.text
+                                        color: root.cyberChrome ? root.cyberTextColor : (updatesPill.updates > 0 ? mocha.base : mocha.text)
                                     }
                                 }
 
@@ -1014,13 +1023,15 @@ Item {
                                 visible: shell.moduleList.includes("network")
                                 property bool isHovered: wifiMouse.containsMouse
                                 radius: surface.innerPillRadius; height: sysLayout.pillHeight; 
-                                color: isHovered ? surface.innerPillHoverColor : surface.innerPillColor
+                                color: root.cyberChrome
+                                       ? (isHovered ? root.cyberModuleHoverColor : root.cyberModuleColor)
+                                       : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
                                 clip: true
                                 
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: surface.innerPillRadius
-                                    opacity: shell.isWifiOn ? 1.0 : 0.0
+                                    opacity: root.cyberChrome ? 0.0 : (shell.isWifiOn ? 1.0 : 0.0)
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
                                         orientation: Gradient.Horizontal
@@ -1045,14 +1056,14 @@ Item {
 
                                 Row { 
                                     id: wifiLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                                    Text { anchors.verticalCenter: parent.verticalCenter; text: shell.wifiIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: shell.isWifiOn ? mocha.base : mocha.subtext0 }
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: shell.wifiIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: root.cyberChrome ? (shell.isWifiOn ? root.cyberTextColor : root.cyberTextMutedColor) : (shell.isWifiOn ? mocha.base : mocha.subtext0) }
                                     Text { 
                                         id: wifiText
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: shell.sysPollerLoaded ? (shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off") : ""
                                         visible: text !== ""
                                         font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing;
-                                        color: shell.isWifiOn ? mocha.base : mocha.text; 
+                                        color: root.cyberChrome ? (shell.isWifiOn ? root.cyberTextColor : root.cyberTextMutedColor) : (shell.isWifiOn ? mocha.base : mocha.text); 
                                         width: Math.min(implicitWidth, shell.s(100)); elide: Text.ElideRight 
                                     }
                                 }
@@ -1066,12 +1077,14 @@ Item {
                                 property bool isHovered: btMouse.containsMouse
                                 radius: surface.innerPillRadius; height: sysLayout.pillHeight
                                 clip: true
-                                color: isHovered ? surface.innerPillHoverColor : surface.innerPillColor
+                                color: root.cyberChrome
+                                       ? (isHovered ? root.cyberModuleHoverColor : root.cyberModuleColor)
+                                       : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
                                 
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: surface.innerPillRadius
-                                    opacity: shell.isBtOn ? 1.0 : 0.0
+                                    opacity: root.cyberChrome ? 0.0 : (shell.isBtOn ? 1.0 : 0.0)
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
                                         orientation: Gradient.Horizontal
@@ -1096,14 +1109,14 @@ Item {
 
                                 Row { 
                                     id: btLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                                    Text { anchors.verticalCenter: parent.verticalCenter; text: shell.btIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: shell.isBtOn ? mocha.base : mocha.subtext0 }
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: shell.btIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: root.cyberChrome ? (shell.isBtOn ? root.cyberTextColor : root.cyberTextMutedColor) : (shell.isBtOn ? mocha.base : mocha.subtext0) }
                                     Text { 
                                         id: btText
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: shell.sysPollerLoaded ? shell.btDevice : ""
                                         visible: text !== ""; 
                                         font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing;
-                                        color: shell.isBtOn ? mocha.base : mocha.text; 
+                                        color: root.cyberChrome ? (shell.isBtOn ? root.cyberTextColor : root.cyberTextMutedColor) : (shell.isBtOn ? mocha.base : mocha.text); 
                                         width: Math.min(implicitWidth, shell.s(100)); elide: Text.ElideRight 
                                     }
                                 }
@@ -1115,14 +1128,16 @@ Item {
                                 id: volPill
                                 visible: shell.moduleList.includes("volume")
                                 property bool isHovered: volMouse.containsMouse
-                                color: isHovered ? surface.innerPillHoverColor : surface.innerPillColor
+                                color: root.cyberChrome
+                                       ? (isHovered ? root.cyberModuleHoverColor : root.cyberModuleColor)
+                                       : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
                                 radius: surface.innerPillRadius; height: sysLayout.pillHeight;
                                 clip: true
 
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: surface.innerPillRadius
-                                    opacity: shell.isSoundActive ? 1.0 : 0.0
+                                    opacity: root.cyberChrome ? 0.0 : (shell.isSoundActive ? 1.0 : 0.0)
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
                                         orientation: Gradient.Horizontal
@@ -1150,13 +1165,13 @@ Item {
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: shell.volIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); 
-                                        color: shell.isSoundActive ? mocha.base : mocha.subtext0 
+                                        color: root.cyberChrome ? (shell.isSoundActive ? root.cyberTextColor : root.cyberTextMutedColor) : (shell.isSoundActive ? mocha.base : mocha.subtext0) 
                                     }
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: shell.volPercent; 
                                         font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing;
-                                        color: shell.isSoundActive ? mocha.base : mocha.text; 
+                                        color: root.cyberChrome ? (shell.isSoundActive ? root.cyberTextColor : root.cyberTextMutedColor) : (shell.isSoundActive ? mocha.base : mocha.text); 
                                     }
                                 }
                                 MouseArea {
@@ -1194,14 +1209,16 @@ Item {
                                 id: batPill
                                 visible: shell.moduleList.includes("battery")
                                 property bool isHovered: batMouse.containsMouse
-                                color: isHovered ? surface.innerPillHoverColor : surface.innerPillColor;
+                                color: root.cyberChrome
+                                       ? (isHovered ? root.cyberModuleHoverColor : root.cyberModuleColor)
+                                       : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor);
                                 radius: surface.innerPillRadius; height: sysLayout.pillHeight;
                                 clip: true
 
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: surface.innerPillRadius
-                                    opacity: (shell.isCharging || shell.batCap <= 20) ? 1.0 : 0.0
+                                    opacity: root.cyberChrome ? 0.0 : ((shell.isCharging || shell.batCap <= 20) ? 1.0 : 0.0)
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
                                         orientation: Gradient.Horizontal
@@ -1229,13 +1246,13 @@ Item {
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: shell.batIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); 
-                                        color: (shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor
+                                        color: root.cyberChrome ? ((shell.isCharging || shell.batCap <= 20) ? root.cyberTextHotColor : root.cyberTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor)
                                         Behavior on color { ColorAnimation { duration: 300 } }
                                     }
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: shell.batPercent; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing;
-                                        color: (shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor
+                                        color: root.cyberChrome ? ((shell.isCharging || shell.batCap <= 20) ? root.cyberTextHotColor : root.cyberTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor)
                                         Behavior on color { ColorAnimation { duration: 300 } }
                                     }
                                 }

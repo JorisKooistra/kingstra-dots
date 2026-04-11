@@ -4,8 +4,11 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-QtObject {
+Item {
     id: root
+    visible: false
+    width: 0
+    height: 0
     property string language: "nl"
     property var defaultStrings: ({})
     property var activeStrings: ({})

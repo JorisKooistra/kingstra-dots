@@ -9,6 +9,9 @@ QtObject {
     readonly property bool showCyberGrid: false
     readonly property real gridAlpha: 0.0
     readonly property bool showRainbowShift: true
-    readonly property real rainbowCycleMs: 8000
-    readonly property real rainbowAlpha: 0.07
+    readonly property real rainbowCycleMs: 5200
+    readonly property real rainbowAlpha: 0.14
+    readonly property bool showAuroraSweep: true
+    readonly property real auroraAlpha: 0.13
+    readonly property real auroraCycleMs: 4200
 }

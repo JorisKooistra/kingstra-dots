@@ -66,7 +66,7 @@ Variants {
             property int themeFontWeight: ThemeConfig.fontWeight
             property string activeThemeName: ThemeConfig.theme
             property string activeThemeNormalized: String(activeThemeName || "").toLowerCase()
-            property int cyberUnderhang: (isHorizontalBar && isTopBar && activeThemeNormalized === "cyber") ? s(36) : 0
+            property int cyberUnderhang: (isHorizontalBar && isTopBar && activeThemeNormalized === "cyber") ? 0 : 0
             property string particleType: ThemeConfig.particleType
             property int particleCount: ThemeConfig.particleCount
             property real particleSpeed: ThemeConfig.particleSpeed

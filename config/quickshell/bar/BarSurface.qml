@@ -286,6 +286,43 @@ Item {
             }
         }
 
+        Item {
+            visible: barSurfaceRoot.isAnimated && barSurfaceRoot.skinBool("showAuroraSweep", false)
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
+            z: 0.12
+            clip: true
+
+            Rectangle {
+                id: auroraSweep
+                width: parent.width * 0.55
+                height: parent.height * 1.4
+                y: -parent.height * 0.2
+                x: -width
+                opacity: barSurfaceRoot.skinNumber("auroraAlpha", 0.13)
+                rotation: -8
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: "transparent" }
+                    GradientStop { position: 0.25; color: Qt.rgba(mocha.pink.r, mocha.pink.g, mocha.pink.b, 0.95) }
+                    GradientStop { position: 0.7; color: Qt.rgba(mocha.sapphire.r, mocha.sapphire.g, mocha.sapphire.b, 0.9) }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
+                SequentialAnimation on x {
+                    running: barSurfaceRoot.isAnimated
+                    loops: Animation.Infinite
+                    NumberAnimation {
+                        to: parent.width + auroraSweep.width * 0.2
+                        duration: barSurfaceRoot.skinNumber("auroraCycleMs", 4200)
+                        easing.type: Easing.InOutSine
+                    }
+                    NumberAnimation { to: -auroraSweep.width; duration: 0 }
+                }
+            }
+        }
+
         Rectangle {
             visible: barSurfaceRoot.isRocky && barSurfaceRoot.skinBool("showBevelHighlight", false)
             anchors.left: parent.left
@@ -315,12 +352,46 @@ Item {
             z: 0.5
             clip: true
 
+            Rectangle {
+                anchors.fill: parent
+                opacity: Math.max(
+                    0.0,
+                    Math.min(
+                        0.26,
+                        barSurfaceRoot.skinNumber("gridAlpha", 0.0)
+                        * ((barSurfaceRoot.activeTheme === "cyber") ? 0.9 : 0.35)
+                    )
+                )
+                gradient: Gradient {
+                    orientation: Gradient.Vertical
+                    GradientStop { position: 0.0; color: Qt.rgba(mocha.sapphire.r, mocha.sapphire.g, mocha.sapphire.b, 0.55) }
+                    GradientStop { position: 1.0; color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.15) }
+                }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                color: Qt.rgba(
+                    mocha.crust.r,
+                    mocha.crust.g,
+                    mocha.crust.b,
+                    Math.max(
+                        0.0,
+                        Math.min(
+                            0.34,
+                            barSurfaceRoot.skinNumber("gridAlpha", 0.0)
+                            * ((barSurfaceRoot.activeTheme === "cyber") ? 0.52 : 0.18)
+                        )
+                    )
+                )
+            }
+
             Repeater {
-                model: Math.ceil(barSurfaceRoot.width / shell.s(13))
+                model: barSurfaceRoot.activeTheme === "cyber" ? 0 : Math.ceil(barSurfaceRoot.width / shell.s(22))
                 Rectangle {
                     width: 1
                     height: parent.height
-                    x: index * shell.s(13)
+                    x: index * shell.s(22)
                     color: Qt.rgba(
                         mocha.blue.r,
                         mocha.blue.g,
@@ -328,8 +399,10 @@ Item {
                         Math.max(
                             0.0,
                             Math.min(
-                                0.60,
-                                barSurfaceRoot.skinNumber("gridAlpha", 0.0) * ((index % 3) === 0 ? 0.72 : 0.22)
+                                0.30,
+                                barSurfaceRoot.skinNumber("gridAlpha", 0.0)
+                                * ((barSurfaceRoot.activeTheme === "cyber") ? 1.7 : 1.0)
+                                * ((index % 4) === 0 ? 0.95 : 0.42)
                             )
                         )
                     )
@@ -337,11 +410,11 @@ Item {
             }
 
             Repeater {
-                model: Math.ceil(parent.height / shell.s(26))
+                model: Math.ceil(parent.height / shell.s(20))
                 Rectangle {
                     width: barSurfaceRoot.width
                     height: 1
-                    y: index * shell.s(26)
+                    y: index * shell.s(20)
                     color: Qt.rgba(
                         mocha.teal.r,
                         mocha.teal.g,
@@ -349,29 +422,10 @@ Item {
                         Math.max(
                             0.0,
                             Math.min(
-                                0.44,
-                                barSurfaceRoot.skinNumber("gridAlpha", 0.0) * 0.56
-                            )
-                        )
-                    )
-                }
-            }
-
-            Repeater {
-                model: Math.ceil(parent.height / shell.s(6))
-                Rectangle {
-                    width: barSurfaceRoot.width
-                    height: 1
-                    y: index * shell.s(6)
-                    color: Qt.rgba(
-                        mocha.teal.r,
-                        mocha.teal.g,
-                        mocha.teal.b,
-                        Math.max(
-                            0.0,
-                            Math.min(
-                                0.34,
-                                barSurfaceRoot.skinNumber("gridAlpha", 0.0) * ((index % 2) === 0 ? 0.52 : 0.30)
+                                0.24,
+                                barSurfaceRoot.skinNumber("gridAlpha", 0.0)
+                                * ((barSurfaceRoot.activeTheme === "cyber") ? 1.7 : 1.0)
+                                * 0.62
                             )
                         )
                     )
@@ -383,7 +437,20 @@ Item {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 height: 1
-                color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, Math.max(0.0, Math.min(0.34, barSurfaceRoot.skinNumber("gridAlpha", 0.0) * 0.82)))
+                color: Qt.rgba(
+                    mocha.teal.r,
+                    mocha.teal.g,
+                    mocha.teal.b,
+                    Math.max(
+                        0.0,
+                        Math.min(
+                            0.28,
+                            barSurfaceRoot.skinNumber("gridAlpha", 0.0)
+                            * ((barSurfaceRoot.activeTheme === "cyber") ? 1.7 : 1.0)
+                            * 0.85
+                        )
+                    )
+                )
             }
 
             Rectangle {
@@ -391,18 +458,47 @@ Item {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 height: shell.s(2)
-                color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, Math.max(0.0, Math.min(0.48, barSurfaceRoot.skinNumber("gridAlpha", 0.0) * 1.3)))
+                color: Qt.rgba(
+                    mocha.blue.r,
+                    mocha.blue.g,
+                    mocha.blue.b,
+                    Math.max(
+                        0.0,
+                        Math.min(
+                            0.42,
+                            barSurfaceRoot.skinNumber("gridAlpha", 0.0)
+                            * ((barSurfaceRoot.activeTheme === "cyber") ? 1.7 : 1.0)
+                            * 1.05
+                        )
+                    )
+                )
             }
 
             Rectangle {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                height: shell.s(9)
+                id: cyberSweep
+                width: shell.s(72)
+                height: parent.height
+                x: -width
+                opacity: Math.max(
+                    0.0,
+                    Math.min(
+                        0.24,
+                        barSurfaceRoot.skinNumber("gridAlpha", 0.0)
+                        * ((barSurfaceRoot.activeTheme === "cyber") ? 1.8 : 1.0)
+                        * 0.55
+                    )
+                )
                 gradient: Gradient {
-                    orientation: Gradient.Vertical
-                    GradientStop { position: 0.0; color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.0) }
-                    GradientStop { position: 1.0; color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, Math.max(0.0, Math.min(0.22, barSurfaceRoot.skinNumber("gridAlpha", 0.0) * 0.95))) }
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: "transparent" }
+                    GradientStop { position: 0.5; color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 1.0) }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
+                SequentialAnimation on x {
+                    running: barSurfaceRoot.skinBool("showCyberGrid", false)
+                    loops: Animation.Infinite
+                    NumberAnimation { to: parent.width; duration: 5200; easing.type: Easing.Linear }
+                    NumberAnimation { to: -cyberSweep.width; duration: 0 }
                 }
             }
         }
