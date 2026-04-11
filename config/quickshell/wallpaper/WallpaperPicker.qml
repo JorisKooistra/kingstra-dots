@@ -98,18 +98,20 @@ Item {
         const applyThemeStateScript = (fileVarName) => `
             mkdir -p "${Quickshell.env("HOME")}/.cache/kingstra" "${Quickshell.env("HOME")}/.config/kingstra/state"
             printf '%s\n' "$${fileVarName}" > "${Quickshell.env("HOME")}/.cache/kingstra/last-wallpaper"
-            SCHEME=$(jq -r '.scheme_type // "scheme-tonal-spot"' "${Quickshell.env("HOME")}/.config/quickshell/theme.json" 2>/dev/null || echo "scheme-tonal-spot")
-            MODE=$(jq -r '.mode // "dark"' "${Quickshell.env("HOME")}/.config/quickshell/theme.json" 2>/dev/null || echo "dark")
             jq -n \
                 --arg name "$(basename "$${fileVarName}")" \
                 --arg path "$${fileVarName}" \
-                --arg matugen_scheme "$SCHEME" \
-                --arg matugen_mode "$MODE" \
-                '{"name":$name,"path":$path,"matugen_scheme":$matugen_scheme,"matugen_mode":$matugen_mode}' \
+                '{"name":$name,"path":$path}' \
                 > "${Quickshell.env("HOME")}/.config/kingstra/state/wallpaper.json"
-            "${Quickshell.env("HOME")}/.local/bin/kingstra-session-update" >/dev/null 2>&1 || true
+            if [ -x "${Quickshell.env("HOME")}/.local/bin/kingstra-session-update" ]; then
+                "${Quickshell.env("HOME")}/.local/bin/kingstra-session-update" >/dev/null 2>&1 || true
+            elif [ -f "${Quickshell.env("HOME")}/.local/bin/kingstra-session-update" ]; then
+                bash "${Quickshell.env("HOME")}/.local/bin/kingstra-session-update" >/dev/null 2>&1 || true
+            fi
             if [ -x "${Quickshell.env("HOME")}/.local/bin/apply-shell-state" ]; then
                 "${Quickshell.env("HOME")}/.local/bin/apply-shell-state" --wallpaper "$${fileVarName}" >/dev/null 2>&1 || true
+            elif [ -f "${Quickshell.env("HOME")}/.local/bin/apply-shell-state" ]; then
+                bash "${Quickshell.env("HOME")}/.local/bin/apply-shell-state" --wallpaper "$${fileVarName}" >/dev/null 2>&1 || true
             fi
         `;
         

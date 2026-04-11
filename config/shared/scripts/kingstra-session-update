@@ -11,6 +11,8 @@ set -euo pipefail
 
 STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
 SESSION_FILE="$STATE_DIR/session.json"
+THEME_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
+CACHE_WALLPAPER="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
 LOG_PREFIX="[kingstra-session-update]"
 
 _log()  { echo "$LOG_PREFIX $*"; }
@@ -32,8 +34,13 @@ mode="office"
 if [[ -f "$WALLPAPER_FILE" ]]; then
     wallpaper=$(jq -r '.path // ""' "$WALLPAPER_FILE")
 fi
+if [[ -z "$wallpaper" && -f "$CACHE_WALLPAPER" ]]; then
+    wallpaper="$(cat "$CACHE_WALLPAPER" 2>/dev/null || echo "")"
+fi
 
-if [[ -f "$THEME_FILE" ]]; then
+if [[ -f "$THEME_CONFIG" ]]; then
+    theme=$(jq -r '.theme // "botanical"' "$THEME_CONFIG")
+elif [[ -f "$THEME_FILE" ]]; then
     theme=$(jq -r '.name // "botanical"' "$THEME_FILE")
 fi
 

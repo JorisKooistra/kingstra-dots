@@ -14,6 +14,7 @@ THEME_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/35-theme.conf"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
 
 APPLY=""
 
@@ -21,11 +22,27 @@ LOG_PREFIX="[kingstra-theme-switch]"
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
 
+run_helper() {
+    local helper="$1"
+    shift
+
+    if [[ -x "$helper" ]]; then
+        "$helper" "$@"
+    elif [[ -f "$helper" ]]; then
+        case "$(head -n 1 "$helper" 2>/dev/null || true)" in
+            *python*) python3 "$helper" "$@" ;;
+            *) bash "$helper" "$@" ;;
+        esac
+    else
+        return 127
+    fi
+}
+
 SCRIPT_REALPATH="$(readlink -f "${BASH_SOURCE[0]}")"
 REPO_ROOT="$(cd "$(dirname "$SCRIPT_REALPATH")/../../.." && pwd)"
 
 resolve_apply_cmd() {
-    if [[ -x "${HOME}/.local/bin/apply-shell-state" ]]; then
+    if [[ -f "${HOME}/.local/bin/apply-shell-state" ]]; then
         printf '%s\n' "${HOME}/.local/bin/apply-shell-state"
         return 0
     fi
@@ -37,7 +54,7 @@ resolve_apply_cmd() {
         return 0
     fi
 
-    if [[ -x "$REPO_ROOT/config/shared/scripts/apply-shell-state" ]]; then
+    if [[ -f "$REPO_ROOT/config/shared/scripts/apply-shell-state" ]]; then
         printf '%s\n' "$REPO_ROOT/config/shared/scripts/apply-shell-state"
         return 0
     fi
@@ -786,7 +803,7 @@ fi
 
 # Gebruik altijd de centrale resolver (kingstra-matugen-run) via apply-shell-state.
 # Zo gebruiken wallpaper- en theme-picker exact dezelfde input-resolutie.
-if ! "$APPLY"; then
+if ! run_helper "$APPLY"; then
     _warn "apply-shell-state mislukt"
     exit 1
 fi
@@ -802,15 +819,23 @@ _log "Actief thema opgeslagen: $THEME_NAME"
 # ---------------------------------------------------------------------------
 # Step 8 — Update state/theme.json + session.json
 # ---------------------------------------------------------------------------
-STATE_WRITE="${HOME}/.local/bin/kingstra-state-write"
-if [[ -x "$STATE_WRITE" ]]; then
-    "$STATE_WRITE" theme.json name "$THEME_NAME"
+mkdir -p "$STATE_DIR"
+STATE_THEME_FILE="$STATE_DIR/theme.json"
+if command -v jq &>/dev/null; then
+    jq -n --arg name "$THEME_NAME" '{"name":$name}' > "$STATE_THEME_FILE"
     _log "state/theme.json bijgewerkt"
 fi
 
+STATE_WRITE="${HOME}/.local/bin/kingstra-state-write"
+if [[ -x "$STATE_WRITE" ]]; then
+    "$STATE_WRITE" theme.json name "$THEME_NAME"
+elif [[ -f "$STATE_WRITE" ]]; then
+    run_helper "$STATE_WRITE" theme.json name "$THEME_NAME" >/dev/null 2>&1 || true
+fi
+
 SESSION_UPDATE="${HOME}/.local/bin/kingstra-session-update"
-if [[ -x "$SESSION_UPDATE" ]]; then
-    "$SESSION_UPDATE"
+if [[ -f "$SESSION_UPDATE" ]]; then
+    run_helper "$SESSION_UPDATE"
     _log "session.json bijgewerkt"
 fi
 

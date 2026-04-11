@@ -23,6 +23,22 @@ WALLPAPER_ARG=""
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
 
+_run_helper() {
+    local helper="$1"
+    shift
+
+    if [[ -x "$helper" ]]; then
+        "$helper" "$@"
+    elif [[ -f "$helper" ]]; then
+        case "$(head -n 1 "$helper" 2>/dev/null || true)" in
+            *python*) python3 "$helper" "$@" ;;
+            *) bash "$helper" "$@" ;;
+        esac
+    else
+        return 127
+    fi
+}
+
 SCRIPT_REALPATH="$(readlink -f "${BASH_SOURCE[0]}")"
 REPO_ROOT="$(cd "$(dirname "$SCRIPT_REALPATH")/../../.." && pwd)"
 
@@ -161,13 +177,16 @@ if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
     jq -n \
         --arg name "$(basename "$WALLPAPER")" \
         --arg path "$WALLPAPER" \
-        --arg matugen_scheme "$SCHEME" \
-        --arg matugen_mode "$MODE" \
-        '{"name":$name,"path":$path,"matugen_scheme":$matugen_scheme,"matugen_mode":$matugen_mode}' \
+        '{"name":$name,"path":$path}' \
         > "$STATE_DIR/wallpaper.json"
 
+    jq -n \
+        --arg name "$THEME_NAME" \
+        '{"name":$name}' \
+        > "$STATE_DIR/theme.json"
+
     SESSION_UPDATE="${HOME}/.local/bin/kingstra-session-update"
-    [[ -x "$SESSION_UPDATE" ]] && "$SESSION_UPDATE" >/dev/null 2>&1 || true
+    _run_helper "$SESSION_UPDATE" >/dev/null 2>&1 || true
 fi
 
 _log "Wallpaper: $(basename "${WALLPAPER:-leeg}")"
