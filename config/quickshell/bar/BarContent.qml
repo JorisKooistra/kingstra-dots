@@ -23,6 +23,24 @@ Item {
     readonly property bool cyberCenterFeature: String(shell.activeThemeName || "").toLowerCase() === "cyber"
                                              && shell.isTopBar
     readonly property bool cyberChrome: String(shell.activeThemeName || "").toLowerCase() === "cyber"
+    readonly property bool oceanChrome: String(shell.activeThemeName || "").toLowerCase() === "ocean"
+    readonly property bool spaceChrome: String(shell.activeThemeName || "").toLowerCase() === "space"
+    readonly property bool botanicalChrome: String(shell.activeThemeName || "").toLowerCase() === "botanical"
+    readonly property bool rockyChrome: String(shell.activeThemeName || "").toLowerCase() === "rocky"
+    readonly property bool animatedChrome: String(shell.activeThemeName || "").toLowerCase() === "animated"
+    readonly property color themeAccentBorderColor:
+        oceanChrome     ? Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.28) :
+        spaceChrome     ? Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.28) :
+        botanicalChrome ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.24) :
+        rockyChrome     ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.30) :
+        animatedChrome  ? Qt.rgba(mocha.pink.r, mocha.pink.g, mocha.pink.b, 0.28) :
+                          surface.panelBorderColor
+    readonly property color themeAccentBorderHoverColor: Qt.rgba(
+        themeAccentBorderColor.r,
+        themeAccentBorderColor.g,
+        themeAccentBorderColor.b,
+        Math.min(0.9, themeAccentBorderColor.a + 0.18)
+    )
     readonly property color cyberCenterColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.88)
     readonly property color cyberCenterHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.94)
     readonly property color cyberCenterBorderColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.64)
@@ -55,7 +73,7 @@ Item {
                                                   ? (cyberContinuousLine
                                                         ? cyberModuleBorderColor
                                                         : Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.48))
-                                                  : surface.panelBorderColor
+                                                  : themeAccentBorderColor
 
                 Rectangle {
                     id: centerBox
@@ -319,7 +337,7 @@ Item {
                         border.width: 1
                         border.color: root.cyberChrome
                                       ? (isHovered ? root.cyberModuleBorderHoverColor : root.cyberModuleBorderColor)
-                                      : (isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor)
+                                      : (isHovered ? root.themeAccentBorderHoverColor : root.themeAccentBorderColor)
                         Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: shell.barHeight
                         
                         scale: isHovered ? 1.05 : 1.0
@@ -368,7 +386,7 @@ Item {
                         border.width: 1
                         border.color: root.cyberChrome
                                       ? (isHovered ? root.cyberModuleBorderHoverColor : root.cyberModuleBorderColor)
-                                      : (isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor)
+                                      : (isHovered ? root.themeAccentBorderHoverColor : root.themeAccentBorderColor)
                         Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: shell.barHeight
                         
                         scale: isHovered ? 1.05 : 1.0
@@ -414,7 +432,7 @@ Item {
                         bottomLeftRadius: root.panelBottomLeftRadius
                         bottomRightRadius: root.panelBottomRightRadius
                         border.width: 1
-                        border.color: root.cyberChrome ? root.cyberModuleBorderColor : surface.panelBorderColor
+                        border.color: root.cyberChrome ? root.cyberModuleBorderColor : root.themeAccentBorderColor
                         Layout.preferredHeight: parent.moduleHeight
                         clip: true
 
@@ -534,7 +552,7 @@ Item {
                         bottomLeftRadius: root.panelBottomLeftRadius
                         bottomRightRadius: root.panelBottomRightRadius
                         border.width: 1
-                        border.color: root.cyberChrome ? root.cyberModuleBorderColor : surface.panelBorderColor
+                        border.color: root.cyberChrome ? root.cyberModuleBorderColor : root.themeAccentBorderColor
                         Layout.preferredHeight: parent.moduleHeight
                         clip: true
 
@@ -828,6 +846,7 @@ Item {
 
                     // System Elements Pill
                     Rectangle {
+                        id: systemElementsPill
                         Layout.preferredHeight: root.cyberSideModuleHeight
                         Layout.alignment: Qt.AlignVCenter
                         radius: surface.panelRadius
@@ -838,7 +857,7 @@ Item {
                         border.color: root.rightGroupBorderColor
                         border.width: 1
                         color: root.rightGroupColor
-                        clip: true
+                        clip: false
                         
                         property real targetWidth: sysLayout.width + shell.s(20)
                         Layout.preferredWidth: targetWidth
@@ -1222,6 +1241,17 @@ Item {
                                 }
                                 MouseArea { id: batMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) }
                             }
+                        }
+
+                        GamingPopup {
+                            id: gamingPopup
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.top
+                            anchors.bottomMargin: shell.s(8)
+                            shell: root.shell
+                            mocha: root.mocha
+                            surface: root.surface
+                            isVisible: cpuTempPill.isHovered || gpuTempPill.isHovered || ramUsagePill.isHovered
                         }
                     }
                 }

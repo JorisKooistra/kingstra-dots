@@ -47,6 +47,22 @@ Item {
     signal themesLoaded()
 
     ListModel { id: themeModel }
+    Repeater {
+        id: preloadRepeater
+        model: themeModel
+        delegate: Image {
+            visible: false
+            source: (model.preview_path || "") !== ""
+                ? model.preview_path
+                : ((model.preview_image || "") !== ""
+                    ? ("file://" + Quickshell.env("HOME") + "/.config/kingstra/themes/previews/" + model.preview_image)
+                    : "")
+            cache: true
+            asynchronous: true
+            sourceSize.width: root.previewDecodeWidth
+            sourceSize.height: root.previewDecodeHeight
+        }
+    }
 
     Component.onCompleted: refreshThemes()
 
@@ -297,8 +313,9 @@ Item {
             readonly property string themeIcon: icon !== undefined ? String(icon) : "󰏘"
             readonly property string themeDesc: description !== undefined ? String(description) : ""
             readonly property string previewImg: preview_image !== undefined ? String(preview_image) : ""
-            readonly property string previewSource: previewImg !== "" ?
-                "file://" + Quickshell.env("HOME") + "/.config/kingstra/themes/previews/" + previewImg : ""
+            readonly property string previewPath: preview_path !== undefined ? String(preview_path) : ""
+            readonly property string previewSource: previewPath !== "" ? previewPath :
+                (previewImg !== "" ? "file://" + Quickshell.env("HOME") + "/.config/kingstra/themes/previews/" + previewImg : "")
             readonly property string schemeType: matugenData.scheme_type !== undefined ? String(matugenData.scheme_type) : (scheme_type !== undefined ? String(scheme_type) : "")
             readonly property string iconTheme: iconsData.icon_theme !== undefined ? String(iconsData.icon_theme) : "Papirus-Dark"
             readonly property int borderRadius: appearanceData.border_radius !== undefined ? appearanceData.border_radius : (border_radius !== undefined ? border_radius : 12)
@@ -381,7 +398,7 @@ Item {
                             height: parent.height
                             fillMode: Image.PreserveAspectCrop
                             source: delegateRoot.previewSource
-                            asynchronous: true
+                            asynchronous: !delegateRoot.isCurrent
                             cache: true
                             mipmap: true
                             sourceSize.width: root.previewDecodeWidth

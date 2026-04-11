@@ -1,0 +1,13 @@
+{
+  "mode_title": "Mode kiezen",
+  "mode_label_office": "Office",
+  "mode_label_gaming": "Gaming",
+  "mode_label_media": "Media",
+  "mode_desc_office": "Werk & productiviteit",
+  "mode_desc_gaming": "Prestaties & hardware",
+  "mode_desc_media": "Muziek & video",
+  "mode_hint_browse": "Bladeren",
+  "mode_hint_apply": "Toepassen",
+  "mode_hint_close": "Sluiten",
+  "mode_applying": "Mode wordt toegepast..."
+}

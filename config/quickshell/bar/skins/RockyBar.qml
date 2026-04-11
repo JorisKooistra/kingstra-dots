@@ -9,4 +9,7 @@ QtObject {
     readonly property bool continuousBar: true
     readonly property bool showCyberGrid: false
     readonly property real gridAlpha: 0.0
+    readonly property bool showBevelHighlight: true
+    readonly property real bevelLightAlpha: 0.12
+    readonly property real bevelDarkAlpha: 0.18
 }

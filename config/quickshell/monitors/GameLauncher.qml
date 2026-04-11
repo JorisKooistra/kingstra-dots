@@ -37,7 +37,7 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: Quickshell.execDetached(["bash", "-c",
-            "quickshell-game 2>/dev/null || steam 2>/dev/null || true"
+            "LC_ALL=C LANG=C quickshell-game 2>/dev/null || steam 2>/dev/null || true"
         ])
     }
 }

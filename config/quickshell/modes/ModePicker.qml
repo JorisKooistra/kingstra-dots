@@ -18,9 +18,9 @@ Item {
     MatugenColors { id: _theme }
 
     property var modeModel: [
-        { id: "office", icon: "\uf0b1", label: "Office", desc: "Werk & productiviteit" },
-        { id: "gaming", icon: "\uf11b", label: "Gaming", desc: "Prestaties & hardware" },
-        { id: "media", icon: "\uf001", label: "Media", desc: "Muziek & video" }
+        { id: "office", icon: "\uf0b1", labelKey: "mode_label_office", labelFallback: "Office", descKey: "mode_desc_office", descFallback: "Werk & productiviteit" },
+        { id: "gaming", icon: "\uf11b", labelKey: "mode_label_gaming", labelFallback: "Gaming", descKey: "mode_desc_gaming", descFallback: "Prestaties & hardware" },
+        { id: "media", icon: "\uf001", labelKey: "mode_label_media", labelFallback: "Media", descKey: "mode_desc_media", descFallback: "Muziek & video" }
     ]
     property string activeMode: "office"
     property int selectedIndex: 0
@@ -111,7 +111,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
-                text: "Mode kiezen"
+                text: I18n.t("mode_title", "Mode kiezen")
                 font.pixelSize: window.sf(18, 18)
                 font.bold: true
                 color: _theme.text
@@ -174,7 +174,7 @@ Item {
                     }
 
                     Text {
-                        text: modelData.label
+                        text: I18n.t(modelData.labelKey, modelData.labelFallback)
                         font.pixelSize: window.sf(18, 18)
                         font.bold: true
                         color: (isActive || isSelected) ? _theme.text : _theme.subtext0
@@ -183,7 +183,7 @@ Item {
                     }
 
                     Text {
-                        text: modelData.desc
+                        text: I18n.t(modelData.descKey, modelData.descFallback)
                         width: parent.width
                         wrapMode: Text.WordWrap
                         horizontalAlignment: Text.AlignHCenter
@@ -242,7 +242,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     Text { anchors.centerIn: parent; text: "→"; font.pixelSize: window.sf(13, 13); color: _theme.text; font.bold: true }
                 }
-                Text { text: "Bladeren"; font.pixelSize: window.sf(13, 13); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: I18n.t("mode_hint_browse", "Bladeren"); font.pixelSize: window.sf(13, 13); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
             }
 
             Rectangle { width: 1; height: window.sf(24, 24); color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.5); anchors.verticalCenter: parent.verticalCenter }
@@ -255,7 +255,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     Text { anchors.centerIn: parent; text: "Enter"; font.pixelSize: window.sf(12, 12); color: _theme.text; font.bold: true }
                 }
-                Text { text: "Toepassen"; font.pixelSize: window.sf(13, 13); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: I18n.t("mode_hint_apply", "Toepassen"); font.pixelSize: window.sf(13, 13); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
             }
 
             Rectangle { width: 1; height: window.sf(24, 24); color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.5); anchors.verticalCenter: parent.verticalCenter }
@@ -268,7 +268,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     Text { anchors.centerIn: parent; text: "Esc"; font.pixelSize: window.sf(12, 12); color: _theme.text; font.bold: true }
                 }
-                Text { text: "Sluiten"; font.pixelSize: window.sf(13, 13); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: I18n.t("mode_hint_close", "Sluiten"); font.pixelSize: window.sf(13, 13); color: _theme.subtext0; anchors.verticalCenter: parent.verticalCenter }
             }
         }
     }
@@ -298,7 +298,7 @@ Item {
             }
 
             Text {
-                text: "Mode wordt toegepast…"
+                text: I18n.t("mode_applying", "Mode wordt toegepast...")
                 font.pixelSize: window.sf(16, 16)
                 color: _theme.text
                 anchors.horizontalCenter: parent.horizontalCenter

@@ -30,6 +30,7 @@ MODE_FILE="$STATE_DIR/mode.json"
 wallpaper=""
 theme="botanical"
 mode="office"
+language="nl"
 
 if [[ -f "$WALLPAPER_FILE" ]]; then
     wallpaper=$(jq -r '.path // ""' "$WALLPAPER_FILE")
@@ -47,6 +48,9 @@ fi
 if [[ -f "$MODE_FILE" ]]; then
     mode=$(jq -r '.name // "office"' "$MODE_FILE")
 fi
+if [[ -f "$SESSION_FILE" ]]; then
+    language=$(jq -r '.language // "nl"' "$SESSION_FILE")
+fi
 
 # ---------------------------------------------------------------------------
 # Schrijf session.json
@@ -57,7 +61,8 @@ jq -n \
     --arg wallpaper "$wallpaper" \
     --arg theme "$theme" \
     --arg mode "$mode" \
-    '{"wallpaper":$wallpaper,"theme":$theme,"mode":$mode}' \
+    --arg language "$language" \
+    '{"wallpaper":$wallpaper,"theme":$theme,"mode":$mode,"language":$language}' \
     > "$SESSION_FILE"
 
-_log "session.json bijgewerkt: wallpaper=$(basename "$wallpaper" 2>/dev/null || echo '(leeg)'), theme=$theme, mode=$mode"
+_log "session.json bijgewerkt: wallpaper=$(basename "$wallpaper" 2>/dev/null || echo '(leeg)'), theme=$theme, mode=$mode, language=$language"

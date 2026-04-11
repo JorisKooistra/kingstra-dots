@@ -10,6 +10,11 @@ Item {
     required property var mocha
 
     readonly property string activeTheme: String(ThemeConfig.theme || "botanical").toLowerCase()
+    readonly property bool isOcean: activeTheme === "ocean"
+    readonly property bool isSpace: activeTheme === "space"
+    readonly property bool isBotanical: activeTheme === "botanical"
+    readonly property bool isRocky: activeTheme === "rocky"
+    readonly property bool isAnimated: activeTheme === "animated"
     readonly property string skinSource: {
         if (activeTheme === "rocky") return "skins/RockyBar.qml";
         if (activeTheme === "ocean") return "skins/OceanBar.qml";
@@ -181,7 +186,124 @@ Item {
             height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
             shell: barSurfaceRoot.shell
             mocha: barSurfaceRoot.mocha
+            fireflyBoost: barSurfaceRoot.isBotanical ? 1.25 : 1.0
             z: 0
+        }
+
+        Rectangle {
+            visible: barSurfaceRoot.isBotanical && barSurfaceRoot.skinBool("showWarmGlow", false)
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
+            z: 0.1
+            opacity: barSurfaceRoot.skinNumber("warmGlowAlpha", 0.04)
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 1.0) }
+                GradientStop { position: 0.5; color: Qt.rgba(mocha.peach.r, mocha.peach.g, mocha.peach.b, 0.4) }
+                GradientStop { position: 1.0; color: Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.6) }
+            }
+        }
+
+        Item {
+            visible: barSurfaceRoot.isOcean && barSurfaceRoot.skinBool("showWaveShimmer", false)
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
+            clip: true
+            z: 0.1
+
+            Rectangle {
+                id: oceanWave
+                width: parent.width * 2
+                height: parent.height
+                x: -parent.width
+                opacity: barSurfaceRoot.skinNumber("waveShimmerAlpha", 0.055)
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: "transparent" }
+                    GradientStop { position: 0.4; color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 1.0) }
+                    GradientStop { position: 0.6; color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 1.0) }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
+                SequentialAnimation on x {
+                    running: barSurfaceRoot.isOcean
+                    loops: Animation.Infinite
+                    NumberAnimation {
+                        to: 0
+                        duration: barSurfaceRoot.skinNumber("waveCycleMs", 6000)
+                        easing.type: Easing.InOutSine
+                    }
+                    NumberAnimation {
+                        to: -parent.width
+                        duration: barSurfaceRoot.skinNumber("waveCycleMs", 6000)
+                        easing.type: Easing.InOutSine
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            visible: barSurfaceRoot.isSpace && barSurfaceRoot.skinBool("showNebulaGlow", false)
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
+            z: 0.1
+            opacity: barSurfaceRoot.skinNumber("nebulaAlpha", 0.06)
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 1.0) }
+                GradientStop { position: 0.5; color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.5) }
+                GradientStop { position: 1.0; color: Qt.rgba(mocha.pink.r, mocha.pink.g, mocha.pink.b, 1.0) }
+            }
+        }
+
+        Rectangle {
+            id: rainbowLayer
+            visible: barSurfaceRoot.isAnimated && barSurfaceRoot.skinBool("showRainbowShift", false)
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
+            z: 0.1
+            property color c1: mocha.mauve
+            property color c2: mocha.blue
+            opacity: barSurfaceRoot.skinNumber("rainbowAlpha", 0.07)
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: rainbowLayer.c1 }
+                GradientStop { position: 1.0; color: rainbowLayer.c2 }
+            }
+            SequentialAnimation {
+                running: barSurfaceRoot.isAnimated
+                loops: Animation.Infinite
+                ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.pink; duration: barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4 }
+                ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.peach; duration: barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4 }
+                ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.teal; duration: barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4 }
+                ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.green; duration: barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4 }
+            }
+        }
+
+        Rectangle {
+            visible: barSurfaceRoot.isRocky && barSurfaceRoot.skinBool("showBevelHighlight", false)
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: 2
+            z: 0.6
+            color: Qt.rgba(1, 1, 1, barSurfaceRoot.skinNumber("bevelLightAlpha", 0.12))
+        }
+
+        Rectangle {
+            visible: barSurfaceRoot.isRocky && barSurfaceRoot.skinBool("showBevelHighlight", false)
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 2
+            z: 0.6
+            color: Qt.rgba(0, 0, 0, barSurfaceRoot.skinNumber("bevelDarkAlpha", 0.18))
         }
 
         Item {

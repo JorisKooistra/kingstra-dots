@@ -21,6 +21,7 @@ Rectangle {
     Behavior on color { ColorAnimation { duration: 200 } }
 
     property string tempStr: "--°C"
+    property string usagePct: "--%"
     property color tempColor: mocha.green
 
     function _colorForTemp(t) {
@@ -34,15 +35,19 @@ Rectangle {
         id: gpuPoller
         command: ["bash", "-c",
             // Nvidia → nvidia-smi; AMD → /sys/class/drm
-            "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | awk '{print $1\"°C\"; exit}' || " +
-            "cat /sys/class/drm/card0/device/hwmon/hwmon*/temp1_input 2>/dev/null | head -1 | awk '{printf \"%.0f°C\\n\", $1/1000}' || echo '--°C'"
+            "nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null | awk -F', ' '{print $1\"%|\"$2\"°C\"; exit}' || " +
+            "busy=$(cat /sys/class/drm/card*/device/gpu_busy_percent 2>/dev/null | head -1); " +
+            "temp=$(cat /sys/class/drm/card*/device/hwmon/hwmon*/temp1_input 2>/dev/null | head -1); " +
+            "if [ -n \"$temp\" ]; then temp_c=$(awk -v t=\"$temp\" 'BEGIN{printf \"%.0f\", t/1000}'); printf \"%s%%|%s°C\\n\" \"${busy:---}\" \"$temp_c\"; else echo '--%|--°C'; fi"
         ]
         stdout: StdioCollector {
             onStreamFinished: {
                 let t = this.text.trim();
                 if (t !== "") {
-                    root.tempStr = t;
-                    let val = parseFloat(t);
+                    let parts = t.split("|");
+                    root.usagePct = parts[0] || "--%";
+                    root.tempStr = parts.length > 1 ? parts[1] : "--°C";
+                    let val = parseFloat(root.tempStr);
                     if (!isNaN(val)) root.tempColor = root._colorForTemp(val);
                 }
             }
@@ -69,6 +74,13 @@ Rectangle {
             Behavior on color { ColorAnimation { duration: 300 } }
         }
         Text {
+            text: root.usagePct
+            font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
+            color: root.tempColor
+            anchors.verticalCenter: parent.verticalCenter
+            Behavior on color { ColorAnimation { duration: 300 } }
+        }
+        Text {
             text: root.tempStr
             font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
             color: root.tempColor
@@ -81,5 +93,6 @@ Rectangle {
         id: gpuMouse
         anchors.fill: parent
         hoverEnabled: true
+        onClicked: Quickshell.execDetached(["bash", "-c", "kitty --class floating-btop -e btop 2>/dev/null || btop 2>/dev/null || true"])
     }
 }

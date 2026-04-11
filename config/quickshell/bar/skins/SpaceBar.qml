@@ -8,4 +8,6 @@ QtObject {
     readonly property int cornerRadiusDelta: 1
     readonly property bool showCyberGrid: false
     readonly property real gridAlpha: 0.0
+    readonly property bool showNebulaGlow: true
+    readonly property real nebulaAlpha: 0.06
 }

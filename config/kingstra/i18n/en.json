@@ -1,0 +1,13 @@
+{
+  "mode_title": "Choose mode",
+  "mode_label_office": "Office",
+  "mode_label_gaming": "Gaming",
+  "mode_label_media": "Media",
+  "mode_desc_office": "Work & productivity",
+  "mode_desc_gaming": "Performance & hardware",
+  "mode_desc_media": "Music & video",
+  "mode_hint_browse": "Browse",
+  "mode_hint_apply": "Apply",
+  "mode_hint_close": "Close",
+  "mode_applying": "Applying mode..."
+}

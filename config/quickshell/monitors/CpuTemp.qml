@@ -21,6 +21,7 @@ Rectangle {
     Behavior on color { ColorAnimation { duration: 200 } }
 
     property string tempStr: "--°C"
+    property string usagePct: "--%"
     property color tempColor: mocha.green
 
     function _colorForTemp(t) {
@@ -49,8 +50,25 @@ Rectangle {
         }
     }
 
+    Process {
+        id: cpuUsagePoller
+        command: ["bash", "-c",
+            "awk '/^cpu /{u=$2+$4; t=$2+$3+$4+$5; if(prevt>0){printf \"%.0f%%\",(u-prevu)*100/(t-prevt)} else {print \"--%\"}; prevt=t; prevu=u}' <(cat /proc/stat; sleep 0.25; cat /proc/stat)"
+        ]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let t = this.text.trim();
+                if (t !== "") root.usagePct = t;
+            }
+        }
+    }
+
     Timer { interval: 3000; running: true; repeat: true; onTriggered: cpuPoller.running = true }
-    Component.onCompleted: cpuPoller.running = true
+    Timer { interval: 3000; running: true; repeat: true; onTriggered: cpuUsagePoller.running = true }
+    Component.onCompleted: {
+        cpuPoller.running = true;
+        cpuUsagePoller.running = true;
+    }
 
     property real targetWidth: cpuRow.width + 24
     width: targetWidth
@@ -69,6 +87,13 @@ Rectangle {
             Behavior on color { ColorAnimation { duration: 300 } }
         }
         Text {
+            text: root.usagePct
+            font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
+            color: root.tempColor
+            anchors.verticalCenter: parent.verticalCenter
+            Behavior on color { ColorAnimation { duration: 300 } }
+        }
+        Text {
             text: root.tempStr
             font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
             color: root.tempColor
@@ -81,5 +106,6 @@ Rectangle {
         id: cpuMouse
         anchors.fill: parent
         hoverEnabled: true
+        onClicked: Quickshell.execDetached(["bash", "-c", "kitty --class floating-btop -e btop 2>/dev/null || btop 2>/dev/null || true"])
     }
 }

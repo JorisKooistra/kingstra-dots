@@ -30,6 +30,9 @@ log_init() {
     else
         INSTALL_UI_MODE=false
     fi
+    if [[ "$INSTALL_UI_MODE" == "true" ]]; then
+        trap '_ui_restore_scroll_region' EXIT
+    fi
     export INSTALL_UI_MODE
     _log_raw "=== kingstra-dots installatie gestart: $(date '+%Y-%m-%d %H:%M:%S') ==="
 }
@@ -77,6 +80,31 @@ _ui_clear() {
     fi
 }
 
+_tput_safe() {
+    command -v tput >/dev/null 2>&1 || return 0
+    tput "$@" 2>/dev/null || return 0
+}
+
+_ui_banner_rows() {
+    echo 11
+}
+
+_ui_restore_scroll_region() {
+    local term_rows
+    term_rows="$(_tput_safe lines)"
+    [[ -n "$term_rows" ]] || term_rows=24
+    _tput_safe csr 0 "$((term_rows - 1))"
+}
+
+_ui_enable_scroll_region() {
+    local banner_rows term_rows
+    banner_rows="$(_ui_banner_rows)"
+    term_rows="$(_tput_safe lines)"
+    [[ -n "$term_rows" ]] || term_rows=24
+    _tput_safe csr "$banner_rows" "$((term_rows - 1))"
+    _tput_safe cup "$banner_rows" 0
+}
+
 _render_progress_bar() {
     local total="${1:-0}"
     local current="${2:-0}"
@@ -107,8 +135,10 @@ log_phase() {
     local total="${3:-$INSTALL_TOTAL_PHASES}"
 
     if [[ "$INSTALL_UI_MODE" == "true" ]]; then
+        _ui_restore_scroll_region
         _ui_clear
         print_banner
+        _ui_enable_scroll_region
         if (( total > 0 )); then
             printf "  ${_BOLD}Fase:${_RESET} %s (%d/%d)\n" "$name" "$current" "$total"
             printf "  ${_BOLD}Voortgang:${_RESET} %s\n\n" "$(_render_progress_bar "$total" "$current")"

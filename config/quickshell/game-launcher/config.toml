@@ -23,6 +23,9 @@ favorites_first = true
 show_new_badge  = true
 show_recent_badge = true
 
+[localization]
+language       = "en"       # Indien ondersteund door de launcher
+
 [steam]
 enabled        = true
 # library_path = "~/.local/share/Steam"   # auto-detect indien leeg

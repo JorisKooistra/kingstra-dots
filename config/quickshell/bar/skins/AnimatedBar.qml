@@ -8,4 +8,7 @@ QtObject {
     readonly property int cornerRadiusDelta: 6
     readonly property bool showCyberGrid: false
     readonly property real gridAlpha: 0.0
+    readonly property bool showRainbowShift: true
+    readonly property real rainbowCycleMs: 8000
+    readonly property real rainbowAlpha: 0.07
 }

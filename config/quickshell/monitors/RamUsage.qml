@@ -79,5 +79,6 @@ Rectangle {
         id: ramMouse
         anchors.fill: parent
         hoverEnabled: true
+        onClicked: Quickshell.execDetached(["bash", "-c", "kitty --class floating-btop -e btop 2>/dev/null || btop 2>/dev/null || true"])
     }
 }
