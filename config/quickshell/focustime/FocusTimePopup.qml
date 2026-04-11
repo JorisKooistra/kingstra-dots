@@ -261,14 +261,23 @@ Item {
         if (window.selectedAppClass === "" && getIsoDate(window.activeDate) === getIsoDate(new Date())) {
             liveFileReader.running = true;
         } else {
-            let cmd = ["python3", window.scriptsDir + "/get_stats.py", getIsoDate(window.activeDate)];
-            if (window.selectedAppClass !== "") {
-                cmd.push("--app");
-                cmd.push(window.selectedAppClass);
-            }
-            statsPoller.command = cmd;
+            statsPoller.command = statsCommand();
             statsPoller.running = true;
         }
+    }
+
+    function statsCommand() {
+        let cmd = ["python3", window.scriptsDir + "/get_stats.py", getIsoDate(window.activeDate)];
+        if (window.selectedAppClass !== "") {
+            cmd.push("--app");
+            cmd.push(window.selectedAppClass);
+        }
+        return cmd;
+    }
+
+    function requestStatsFallback() {
+        statsPoller.command = statsCommand();
+        statsPoller.running = true;
     }
 
     // --- LIVE FILE READER (For Global Today) ---
@@ -278,11 +287,20 @@ Item {
         stdout: StdioCollector {
             onStreamFinished: {
                 let raw = this.text.trim();
-                if (raw === "") return;
+                if (raw === "") {
+                    window.requestStatsFallback();
+                    return;
+                }
                 try {
                     let data = JSON.parse(raw);
+                    if (data.selected_date !== getIsoDate(window.activeDate)) {
+                        window.requestStatsFallback();
+                        return;
+                    }
                     window.updateFromData(data);
-                } catch(e) {}
+                } catch(e) {
+                    window.requestStatsFallback();
+                }
             }
         }
     }

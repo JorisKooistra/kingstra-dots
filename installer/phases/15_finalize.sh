@@ -54,6 +54,7 @@ _phase15_validate_commands() {
     validate_cmd nautilus
     validate_cmd yazi
     validate_cmd cliphist
+    validate_cmd wtype
     validate_cmd grim
     validate_cmd slurp
     validate_cmd playerctl

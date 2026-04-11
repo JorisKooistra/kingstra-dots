@@ -62,6 +62,10 @@ if ! pgrep -f "quickshell.*Main.qml" &>/dev/null; then
     _log "Quickshell Main niet actief — herstart..."
     _spawn_detached quickshell -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/Main.qml"
 fi
+if ! pgrep -f "python3 .*focustime/focus_daemon\\.py" &>/dev/null; then
+    _log "FocusTime daemon niet actief — herstart..."
+    _spawn_detached python3 "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/focustime/focus_daemon.py"
+fi
 
 # ---------------------------------------------------------------------------
 # 5 — SwayNC herstart als hij is afgesloten

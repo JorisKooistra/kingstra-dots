@@ -42,6 +42,7 @@ _phase03_install_packages() {
         xdg-desktop-portal-gtk \
         wl-clipboard \
         cliphist \
+        wtype \
         grim \
         slurp \
         swaync \

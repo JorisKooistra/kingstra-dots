@@ -62,7 +62,7 @@
 | `Super + B` | Browser (default) |
 | `Super + E` | Nautilus (files) |
 | `Super + Shift + E` | Yazi (terminal file manager) |
-| `Super + V` | Clipboard history (cliphist) |
+| `Super + V` | Clipboard history (cliphist, paste selection) |
 | `Super + Shift + Return` | btop in kitty |
 | `Super + Shift + C` | cava in kitty |
 | `Super + Alt + I` | nmtui (network manager in kitty) |

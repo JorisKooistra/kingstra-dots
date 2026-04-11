@@ -33,6 +33,7 @@ nautilus
 
 # Klembord
 cliphist
+wtype
 
 # Media
 playerctl

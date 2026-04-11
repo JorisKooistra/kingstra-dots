@@ -34,6 +34,7 @@ phase_run() {
     log_info "  awww-daemon &"
     log_info "  quickshell -p ~/.config/quickshell/TopBar.qml &"
     log_info "  quickshell -p ~/.config/quickshell/Main.qml &"
+    log_info "  python3 ~/.config/quickshell/focustime/focus_daemon.py &"
     log_info "  walker --daemon &"
 }
 
@@ -69,6 +70,11 @@ exec-once = quickshell -p ~/.config/skwd-wall/daemon.qml
 # ---------------------------------------------------------------------------
 exec-once = quickshell -p ~/.config/quickshell/TopBar.qml
 exec-once = quickshell -p ~/.config/quickshell/Main.qml
+
+# ---------------------------------------------------------------------------
+# FocusTime tracker
+# ---------------------------------------------------------------------------
+exec-once = python3 ~/.config/quickshell/focustime/focus_daemon.py
 
 # ---------------------------------------------------------------------------
 # Launcher daemon (elephant + walker)
@@ -112,6 +118,7 @@ _phase05_validate() {
     validate_file "$HOME/.config/quickshell/TopBar.qml"        "TopBar.qml"
     validate_file "$HOME/.config/quickshell/Main.qml"          "Main.qml"
     validate_file "$HOME/.config/quickshell/MatugenColors.qml" "MatugenColors.qml"
+    validate_file "$HOME/.config/quickshell/focustime/focus_daemon.py" "FocusTime daemon"
     validate_file "$HOME/.config/quickshell/sys_info.sh"       "sys_info.sh"
     validate_file "$HOME/.config/hypr/scripts/qs_manager.sh"   "qs_manager.sh"
     validate_report

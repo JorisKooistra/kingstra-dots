@@ -20,6 +20,7 @@ phase_run() {
     log_step "Klembord installeren..."
     pacman_install cliphist
     pacman_install wl-clipboard         # wl-copy / wl-paste
+    pacman_install wtype                # fallback voor automatisch plakken na cliphist
 
     log_step "Media-tools installeren..."
     pacman_install playerctl
@@ -53,6 +54,7 @@ phase_run() {
     validate_cmd nautilus
     validate_cmd cliphist
     validate_cmd wl-copy
+    validate_cmd wtype
     validate_cmd playerctl
     validate_cmd grim
     validate_cmd slurp
@@ -66,7 +68,7 @@ phase_run() {
 
     log_ok "Fase 11 voltooid — Apps en dagelijkse tools beschikbaar."
     log_info "Bestandsbeheer:  yazi (Super+E opent nautilus, Super+Shift+E start yazi)"
-    log_info "Klembord:        Super+V — cliphist via Walker"
+    log_info "Klembord:        Super+V — cliphist via Walker, plakt selectie"
     log_info "Screenshot:      Print / Super+Print / Shift+Print"
 }
 

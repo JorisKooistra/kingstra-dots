@@ -8,6 +8,7 @@ BT_PID_FILE="$HOME/.cache/bt_scan_pid"
 BT_SCAN_LOG="$HOME/.cache/bt_scan.log"
 SRC_DIR="$HOME/Pictures/Wallpapers"
 THUMB_DIR="$HOME/.cache/wallpaper_picker/thumbs"
+FOCUSTIME_DAEMON="$HOME/.config/quickshell/focustime/focus_daemon.py"
 
 IPC_FILE="/tmp/qs_widget_state"
 NETWORK_MODE_FILE="/tmp/qs_network_mode"
@@ -16,6 +17,18 @@ PREV_FOCUS_FILE="/tmp/qs_prev_focus"
 ACTION="$1"
 TARGET="$2"
 SUBTARGET="$3"
+
+ensure_focustime_daemon() {
+    [[ -f "$FOCUSTIME_DAEMON" ]] || return 0
+    if ! pgrep -f "python3 .*focustime/focus_daemon\\.py" >/dev/null 2>&1; then
+        python3 "$FOCUSTIME_DAEMON" >/dev/null 2>&1 &
+        disown
+    fi
+}
+
+if [[ "$TARGET" == "focustime" ]]; then
+    ensure_focustime_daemon
+fi
 
 # -----------------------------------------------------------------------------
 # HYPRLAND 0.54+ FIX: ASYNC HIDE WITH FOCUS RE-ASSERTION
