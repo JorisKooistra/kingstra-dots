@@ -43,4 +43,13 @@ config/quickshell/theme.json
 config/kingstra/active-theme
 config/matugen/config.toml
 
+# Kingstra runtime state (gegenereerd bij theme/mode/wallpaper switch)
+config/kingstra/state/mode.json
+config/kingstra/state/session.json
+config/kingstra/state/theme.json
+config/kingstra/state/wallpaper.json
+
+# Gegenereerde kleurentransformatie cache
+config/quickshell/colors-transformed.json
+
 aanleveringen/
