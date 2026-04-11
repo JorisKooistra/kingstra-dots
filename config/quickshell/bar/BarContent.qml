@@ -22,44 +22,45 @@ Item {
                                                && String(shell.activeThemeName || "").toLowerCase() === "cyber"
     readonly property bool cyberCenterFeature: String(shell.activeThemeName || "").toLowerCase() === "cyber"
                                              && shell.isTopBar
-    readonly property color cyberCenterColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.92)
-    readonly property color cyberCenterHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
+    readonly property bool cyberChrome: String(shell.activeThemeName || "").toLowerCase() === "cyber"
+    readonly property color cyberCenterColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.88)
+    readonly property color cyberCenterHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.94)
     readonly property color cyberCenterBorderColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.64)
     readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.78)
+    readonly property color cyberCenterInnerLineColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.20)
+    readonly property color cyberCenterAccentColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.56)
+    readonly property color cyberCenterDividerColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.48)
     readonly property color cyberWeatherTempOnColor: Qt.lighter(mocha.peach, 1.15)
     readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.20)
+    readonly property color cyberModuleColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.10)
+    readonly property color cyberModuleHoverColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.16)
+    readonly property color cyberModuleBorderColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.24)
+    readonly property color cyberModuleBorderHoverColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.48)
+    readonly property color cyberModuleTickColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.52)
+    readonly property color cyberWorkspaceActiveColor: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.88)
+    readonly property color cyberWorkspaceOccupiedColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.18)
     readonly property real cyberCenterScale: cyberCenterFeature ? 1.6 : 1.0
     readonly property int cyberWindowUnderhang: Number(shell.cyberUnderhang || 0)
-    readonly property int cyberRailCenterOffset: cyberCenterFeature
-                                                ? -Math.round(cyberWindowUnderhang * 0.5)
-                                                : 0
-    readonly property int cyberCenterYOffset: cyberRailCenterOffset
-    readonly property int cyberCenterBulgeBridgeHeight: cyberCenterFeature ? shell.s(7) : 0
-    readonly property int cyberCenterBulgeHeight: cyberCenterFeature ? shell.s(14) : 0
-    readonly property int cyberCenterBodyHeight: cyberCenterFeature
-                                                ? Math.max(shell.barHeight, Math.round(root.cyberSideModuleHeight * 1.14))
-                                                : shell.barHeight
-    readonly property int cyberCenterClickExtraHeight: cyberCenterFeature
-                                                      ? (root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight)
-                                                      : 0
+    readonly property int cyberRailCenterOffset: cyberCenterFeature ? -Math.round(cyberWindowUnderhang * 0.5) : 0
+    readonly property int cyberCenterPaddingY: cyberCenterFeature ? shell.s(8) : 0
+    readonly property int cyberCenterBodyHeight: shell.barHeight
     readonly property int cyberSideYOffset: cyberRailCenterOffset
     readonly property int cyberSideModuleHeight: shell.barHeight
-    readonly property int cyberCenterContentOffset: cyberCenterFeature ? shell.s(3) : 0
     readonly property color rightGroupColor: surface.continuousBarMode
                                             ? (cyberContinuousLine
-                                                ? Qt.rgba(0, 0, 0, 0)
+                                                ? cyberModuleColor
                                                 : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.42))
                                             : surface.panelColor
     readonly property color rightGroupBorderColor: surface.continuousBarMode
                                                   ? (cyberContinuousLine
-                                                        ? Qt.rgba(0, 0, 0, 0)
+                                                        ? cyberModuleBorderColor
                                                         : Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.48))
                                                   : surface.panelBorderColor
 
                 Rectangle {
                     id: centerBox
-                    anchors.centerIn: parent
-                    anchors.verticalCenterOffset: root.cyberCenterYOffset
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: root.cyberCenterFeature ? 0 : Math.round((parent.height - height) / 2)
                     property bool isHovered: centerMouse.containsMouse
                     color: root.cyberCenterFeature
                            ? (isHovered ? root.cyberCenterHoverColor : root.cyberCenterColor)
@@ -73,9 +74,11 @@ Item {
                     border.color: root.cyberCenterFeature
                                   ? (isHovered ? root.cyberCenterBorderHoverColor : root.cyberCenterBorderColor)
                                   : (isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor)
-                    height: root.cyberCenterBodyHeight
+                    height: root.cyberCenterFeature
+                            ? Math.max(shell.barHeight, centerLayout.implicitHeight + (root.cyberCenterPaddingY * 2))
+                            : root.cyberCenterBodyHeight
                     
-                    width: centerLayout.implicitWidth + (root.cyberCenterFeature ? shell.s(54) : shell.s(36))
+                    width: centerLayout.implicitWidth + (root.cyberCenterFeature ? shell.s(42) : shell.s(36))
                     Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
                     
                     // Staggered Center Transition
@@ -99,42 +102,32 @@ Item {
                     Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutExpo } }
                     Behavior on color { ColorAnimation { duration: 250 } }
 
-                    Item {
+                    Rectangle {
                         visible: root.cyberCenterFeature
-                        width: Math.max(shell.s(196), centerBox.width * 0.82)
-                        height: root.cyberCenterBulgeBridgeHeight + root.cyberCenterBulgeHeight
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        y: parent.height - root.cyberCenterBulgeBridgeHeight + shell.s(1)
-                        z: -1
-
-                        Rectangle {
-                            width: parent.width
-                            height: root.cyberCenterBulgeBridgeHeight
-                            anchors.top: parent.top
-                            radius: shell.s(5)
-                            color: centerBox.color
-                            border.width: 1
-                            border.color: centerBox.border.color
-                        }
-
-                        Rectangle {
-                            width: Math.max(shell.s(150), parent.width * 0.66)
-                            height: root.cyberCenterBulgeHeight
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            y: root.cyberCenterBulgeBridgeHeight - shell.s(2)
-                            radius: shell.s(10)
-                            color: centerBox.color
-                            border.width: 1
-                            border.color: centerBox.border.color
-                        }
+                        anchors.fill: parent
+                        anchors.margins: shell.s(4)
+                        radius: Math.max(1, parent.radius - shell.s(2))
+                        color: "transparent"
+                        border.width: 1
+                        border.color: root.cyberCenterInnerLineColor
                     }
-                    
+
+                    Rectangle {
+                        visible: root.cyberCenterFeature
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.top: parent.top
+                        anchors.topMargin: shell.s(4)
+                        width: Math.min(parent.width - shell.s(52), shell.s(170))
+                        height: 1
+                        color: root.cyberCenterAccentColor
+                    }
+
                     MouseArea {
                         id: centerMouse
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
-                        height: parent.height + root.cyberCenterClickExtraHeight
+                        height: parent.height
                         hoverEnabled: true
                         onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle calendar"])
                     }
@@ -143,8 +136,7 @@ Item {
                     RowLayout {
                         id: centerLayout
                         anchors.centerIn: parent
-                        anchors.verticalCenterOffset: root.cyberCenterContentOffset
-                        spacing: shell.s(24)
+                        spacing: root.cyberCenterFeature ? shell.s(16) : shell.s(24)
 
                         // Clockbox
                         Item {
@@ -201,6 +193,37 @@ Item {
                                         color: mocha.blue
                                     }
                                 }
+                            }
+                        }
+
+                        Item {
+                            visible: root.cyberCenterFeature
+                            Layout.alignment: Qt.AlignVCenter
+                            Layout.preferredWidth: shell.s(10)
+                            Layout.preferredHeight: shell.s(48)
+
+                            Rectangle {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 1
+                                height: parent.height
+                                color: root.cyberCenterDividerColor
+                            }
+
+                            Rectangle {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                y: 0
+                                width: shell.s(5)
+                                height: shell.s(2)
+                                color: root.cyberCenterDividerColor
+                            }
+
+                            Rectangle {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.bottom: parent.bottom
+                                width: shell.s(5)
+                                height: shell.s(2)
+                                color: root.cyberCenterDividerColor
                             }
                         }
 
@@ -285,14 +308,18 @@ Item {
                     // Search 
                     Rectangle {
                         property bool isHovered: searchMouse.containsMouse
-                        color: isHovered ? surface.panelHoverColor : surface.panelColor
+                        color: root.cyberChrome
+                               ? (isHovered ? root.cyberModuleHoverColor : root.cyberModuleColor)
+                               : (isHovered ? surface.panelHoverColor : surface.panelColor)
                         radius: surface.panelRadius
                         topLeftRadius: root.panelTopLeftRadius
                         topRightRadius: root.panelTopRightRadius
                         bottomLeftRadius: root.panelBottomLeftRadius
                         bottomRightRadius: root.panelBottomRightRadius
                         border.width: 1
-                        border.color: isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor
+                        border.color: root.cyberChrome
+                                      ? (isHovered ? root.cyberModuleBorderHoverColor : root.cyberModuleBorderColor)
+                                      : (isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor)
                         Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: shell.barHeight
                         
                         scale: isHovered ? 1.05 : 1.0
@@ -306,6 +333,18 @@ Item {
                             color: parent.isHovered ? mocha.blue : mocha.text
                             Behavior on color { ColorAnimation { duration: 200 } }
                         }
+
+                        Rectangle {
+                            visible: root.cyberChrome
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: shell.s(4)
+                            width: parent.isHovered ? shell.s(18) : shell.s(10)
+                            height: 1
+                            color: root.cyberModuleTickColor
+                            Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                        }
+
                         MouseArea {
                             id: searchMouse
                             anchors.fill: parent
@@ -318,14 +357,18 @@ Item {
                     Rectangle {
                         visible: shell.moduleList.includes("notifications")
                         property bool isHovered: notifMouse.containsMouse
-                        color: isHovered ? surface.panelHoverColor : surface.panelColor
+                        color: root.cyberChrome
+                               ? (isHovered ? root.cyberModuleHoverColor : root.cyberModuleColor)
+                               : (isHovered ? surface.panelHoverColor : surface.panelColor)
                         radius: surface.panelRadius
                         topLeftRadius: root.panelTopLeftRadius
                         topRightRadius: root.panelTopRightRadius
                         bottomLeftRadius: root.panelBottomLeftRadius
                         bottomRightRadius: root.panelBottomRightRadius
                         border.width: 1
-                        border.color: isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor
+                        border.color: root.cyberChrome
+                                      ? (isHovered ? root.cyberModuleBorderHoverColor : root.cyberModuleBorderColor)
+                                      : (isHovered ? surface.panelBorderHoverColor : surface.panelBorderColor)
                         Layout.preferredHeight: parent.moduleHeight; Layout.preferredWidth: shell.barHeight
                         
                         scale: isHovered ? 1.05 : 1.0
@@ -338,6 +381,17 @@ Item {
                             font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(18)
                             color: parent.isHovered ? mocha.yellow : mocha.text
                             Behavior on color { ColorAnimation { duration: 200 } }
+                        }
+
+                        Rectangle {
+                            visible: root.cyberChrome
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: shell.s(4)
+                            width: parent.isHovered ? shell.s(18) : shell.s(10)
+                            height: 1
+                            color: root.cyberModuleTickColor
+                            Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                         }
 
                         MouseArea {
@@ -353,14 +407,14 @@ Item {
 
                     // Workspaces
                     Rectangle {
-                        color: surface.panelColor
+                        color: root.cyberChrome ? root.cyberModuleColor : surface.panelColor
                         radius: surface.panelRadius
                         topLeftRadius: root.panelTopLeftRadius
                         topRightRadius: root.panelTopRightRadius
                         bottomLeftRadius: root.panelBottomLeftRadius
                         bottomRightRadius: root.panelBottomRightRadius
                         border.width: 1
-                        border.color: surface.panelBorderColor
+                        border.color: root.cyberChrome ? root.cyberModuleBorderColor : surface.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight
                         clip: true
 
@@ -370,6 +424,19 @@ Item {
                         opacity: workspacesModel.count > 0 ? 1 : 0
                         
                         Behavior on opacity { NumberAnimation { duration: 300 } }
+
+                        Rectangle {
+                            visible: root.cyberChrome
+                            anchors.left: parent.left
+                            anchors.leftMargin: shell.s(10)
+                            anchors.right: parent.right
+                            anchors.rightMargin: shell.s(10)
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: shell.s(4)
+                            height: 1
+                            color: root.cyberModuleTickColor
+                            opacity: 0.52
+                        }
 
                         // Using standard Row completely removes internal width sizing bugs
                         Row {
@@ -393,12 +460,12 @@ Item {
                                     
                                     height: shell.s(32); radius: surface.innerPillRadius
                                     
-                                    color: stateLabel === "active" 
-                                            ? mocha.mauve 
+                                    color: stateLabel === "active"
+                                            ? (root.cyberChrome ? root.cyberWorkspaceActiveColor : mocha.mauve)
                                             : (isHovered 
-                                                ? Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.9) 
-                                                : (stateLabel === "occupied" 
-                                                    ? Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.9) 
+                                                ? (root.cyberChrome ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.26) : Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.9))
+                                                : (stateLabel === "occupied"
+                                                    ? (root.cyberChrome ? root.cyberWorkspaceOccupiedColor : Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.9))
                                                     : "transparent"))
 
                                     scale: isHovered && stateLabel !== "active" ? 1.08 : 1.0
@@ -439,9 +506,9 @@ Item {
                                         font.letterSpacing: shell.themeLetterSpacing
                                         
                                         color: stateLabel === "active" 
-                                                ? mocha.crust 
+                                                ? (root.cyberChrome ? mocha.base : mocha.crust)
                                                 : (isHovered 
-                                                    ? mocha.crust 
+                                                    ? (root.cyberChrome ? mocha.text : mocha.crust)
                                                     : (stateLabel === "occupied" ? mocha.text : mocha.overlay0))
                                         
                                         Behavior on color { ColorAnimation { duration: 250 } }
@@ -460,14 +527,14 @@ Item {
                     // Media Player
                     Rectangle {
                         id: mediaBox
-                        color: surface.panelColor
+                        color: root.cyberChrome ? root.cyberModuleColor : surface.panelColor
                         radius: surface.panelRadius
                         topLeftRadius: root.panelTopLeftRadius
                         topRightRadius: root.panelTopRightRadius
                         bottomLeftRadius: root.panelBottomLeftRadius
                         bottomRightRadius: root.panelBottomRightRadius
                         border.width: 1
-                        border.color: surface.panelBorderColor
+                        border.color: root.cyberChrome ? root.cyberModuleBorderColor : surface.panelBorderColor
                         Layout.preferredHeight: parent.moduleHeight
                         clip: true
 
@@ -481,6 +548,20 @@ Item {
 
                         Behavior on targetWidth { NumberAnimation { duration: 700; easing.type: Easing.OutQuint } }
                         Behavior on opacity { NumberAnimation { duration: 400 } }
+
+                        Rectangle {
+                            visible: root.cyberChrome
+                            anchors.left: parent.left
+                            anchors.leftMargin: shell.s(10)
+                            anchors.right: parent.right
+                            anchors.rightMargin: shell.s(10)
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: shell.s(4)
+                            height: 1
+                            color: root.cyberModuleTickColor
+                            opacity: shell.isMediaActive ? 0.62 : 0.0
+                            Behavior on opacity { NumberAnimation { duration: 250 } }
+                        }
                         
                         Item {
                             id: mediaLayoutContainer
@@ -660,6 +741,19 @@ Item {
                         opacity: targetWidth > 0 ? 1 : 0
                         Behavior on opacity { NumberAnimation { duration: 300 } }
 
+                        Rectangle {
+                            visible: root.cyberChrome
+                            anchors.left: parent.left
+                            anchors.leftMargin: shell.s(8)
+                            anchors.right: parent.right
+                            anchors.rightMargin: shell.s(8)
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: shell.s(4)
+                            height: 1
+                            color: root.cyberModuleTickColor
+                            opacity: 0.48
+                        }
+
                         Row {
                             id: trayLayout
                             anchors.centerIn: parent
@@ -749,6 +843,19 @@ Item {
                         property real targetWidth: sysLayout.width + shell.s(20)
                         Layout.preferredWidth: targetWidth
                         Layout.maximumWidth: targetWidth
+
+                        Rectangle {
+                            visible: root.cyberChrome
+                            anchors.left: parent.left
+                            anchors.leftMargin: shell.s(10)
+                            anchors.right: parent.right
+                            anchors.rightMargin: shell.s(10)
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: shell.s(4)
+                            height: 1
+                            color: root.cyberModuleTickColor
+                            opacity: 0.48
+                        }
 
                         Row {
                             id: sysLayout

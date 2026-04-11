@@ -90,12 +90,12 @@ Item {
     property color panelBorderHoverColor: continuousBarMode ? Qt.rgba(0, 0, 0, 0) : basePanelBorderHoverColor
     property color innerPillColor: continuousBarMode
                                   ? (isCyberContinuousBar
-                                        ? Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.0)
+                                        ? Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.08)
                                         : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.10))
                                   : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, Math.min(0.95, ThemeConfig.popupOpacity * (0.42 + ThemeConfig.styleGlassStrength * 0.5 + skinNumber("innerBoost", 0.0))))
     property color innerPillHoverColor: continuousBarMode
                                        ? (isCyberContinuousBar
-                                            ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.14)
+                                            ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.22)
                                             : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.18))
                                        : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.98, ThemeConfig.popupOpacity * (0.58 + ThemeConfig.styleGlassStrength * 0.6 + skinNumber("innerBoost", 0.0))))
     readonly property bool cyberTopWithBulge: isCyberContinuousBar && shell.isTopBar
@@ -254,6 +254,14 @@ Item {
                         )
                     )
                 }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: 1
+                color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, Math.max(0.0, Math.min(0.34, barSurfaceRoot.skinNumber("gridAlpha", 0.0) * 0.82)))
             }
 
             Rectangle {
