@@ -60,7 +60,7 @@ Item {
         id: cyberClockComponent
         ColumnLayout {
             anchors.centerIn: parent
-            spacing: shell.s(4)
+            spacing: shell.s(2)
 
             RowLayout {
                 spacing: shell.s(3)
@@ -82,8 +82,8 @@ Item {
                 font.family: shell.monoFontFamily
                 font.pixelSize: root.cyberDateFontSize
                 font.weight: Font.DemiBold
-                font.letterSpacing: 1.9
-                color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.92)
+                font.letterSpacing: 2.4
+                color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.74)
                 renderType: Text.NativeRendering
             }
         }
