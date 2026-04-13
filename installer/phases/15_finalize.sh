@@ -71,6 +71,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/hypr/colors.conf"                     "hypr/colors.conf"
     validate_file "$HOME/.config/hypr/conf.d/72-hardware.conf"         "72-hardware.conf"
     validate_file "$HOME/.config/hypr/scripts/lock.sh"                 "hypr/scripts/lock.sh"
+    validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"             "hypr/scripts/lid-lock.sh"
     # Shell
     validate_file "$HOME/.config/kitty/kitty.conf"                     "kitty.conf"
     validate_file "$HOME/.config/zsh/kingstra.omp.toml"                "kingstra.omp.toml"

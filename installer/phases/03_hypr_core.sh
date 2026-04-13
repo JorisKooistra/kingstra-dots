@@ -144,5 +144,6 @@ _phase03_validate() {
     validate_dir  "$HOME/.config/hypr/conf.d"        "~/.config/hypr/conf.d/"
     validate_file "$HOME/.config/hypr/conf.d/30-general.conf"    "30-general.conf"
     validate_file "$HOME/.config/hypr/conf.d/70-autostart.conf"  "70-autostart.conf"
+    validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"       "lid-lock.sh"
     validate_report
 }
