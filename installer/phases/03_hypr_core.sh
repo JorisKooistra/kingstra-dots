@@ -57,8 +57,28 @@ _phase03_deploy_configs() {
     # User-state bestanden initialiseren vanuit .default templates
     deploy_defaults "$REPO_ROOT/config/hypr"
 
+    # Git bewaart executable bits, maar expliciet zetten voorkomt stille regressies
+    # na handmatige kopieën of filesystems die modebits verliezen.
+    _phase03_prepare_hypr_scripts
+
     # GTK-instellingen schrijven (niet via symlink, direct in home)
     _phase03_apply_gtk_settings
+}
+
+_phase03_prepare_hypr_scripts() {
+    local lid_script="$REPO_ROOT/config/hypr/scripts/lid-lock.sh"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Hypr helper-script zou uitvoerbaar worden gemaakt: $lid_script"
+        return 0
+    fi
+
+    if [[ -f "$lid_script" ]]; then
+        chmod +x "$lid_script"
+        log_ok "Hypr helper-script uitvoerbaar: $lid_script"
+    else
+        log_warn "Hypr helper-script niet gevonden: $lid_script"
+    fi
 }
 
 _phase03_apply_gtk_settings() {

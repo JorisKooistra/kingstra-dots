@@ -9,13 +9,14 @@ exec 9>"$lock_file"
 flock -n 9 || exit 0
 
 lock_screen() {
+    if command -v loginctl >/dev/null 2>&1; then
+        loginctl lock-session >/dev/null 2>&1 || true
+        sleep 0.2
+    fi
+
     if [[ -x "$lock_script" ]]; then
         "$lock_script" >/dev/null 2>&1 &
         return
-    fi
-
-    if command -v loginctl >/dev/null 2>&1; then
-        loginctl lock-session >/dev/null 2>&1 || true
     fi
 }
 

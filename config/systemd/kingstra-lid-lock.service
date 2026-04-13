@@ -1,0 +1,15 @@
+[Unit]
+Description=Kingstra lid-close lock watcher
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/hypr/scripts/lid-lock.sh
+Restart=on-failure
+RestartSec=2
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+
+[Install]
+WantedBy=default.target

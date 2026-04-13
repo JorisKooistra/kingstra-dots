@@ -97,6 +97,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/yazi/yazi.toml"                       "yazi.toml"
     # Netwerk
     validate_file "$HOME/.config/systemd/user/kingstra-resume.service" "kingstra-resume.service"
+    validate_file "$HOME/.config/systemd/user/kingstra-lid-lock.service" "kingstra-lid-lock.service"
     # Wallpaper
     validate_dir  "$HOME/Pictures/Wallpapers"                          "Pictures/Wallpapers"
 }
