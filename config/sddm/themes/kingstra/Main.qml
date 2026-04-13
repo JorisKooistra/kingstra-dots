@@ -19,6 +19,15 @@ Rectangle {
     property bool loginFailed: false
     property int  currentUserIndex: 0
     property bool autoPamKickDone: false
+    property bool biometricActive: false
+    property string authStatusText: "Fingerprint/PAM wordt gestart..."
+    property string authHintText: "Raak de scanner aan of gebruik je wachtwoord"
+
+    function setAuthFeedback(statusText, hintText, biometric) {
+        authStatusText = statusText
+        authHintText = hintText
+        biometricActive = biometric
+    }
 
     function kickPamAuthOnce() {
         if (autoPamKickDone)
@@ -53,6 +62,7 @@ Rectangle {
                 return
             root.autoPamKickDone = true
             root.inputActive = true
+            root.setAuthFeedback("Raak de vingerafdrukscanner aan", "Wachtwoord blijft beschikbaar als fallback", true)
             passwordField.forceActiveFocus()
             sddm.login(root.currentUserName, "", sessionModel.lastIndex)
         }
@@ -64,6 +74,7 @@ Rectangle {
         function onLoginFailed() {
             passwordField.text = ""
             root.loginFailed   = true
+            root.setAuthFeedback("Vingerafdruk of wachtwoord mislukt", "Probeer opnieuw of typ je wachtwoord", false)
             shakeAnim.restart()
             errorTimer.restart()
         }
@@ -72,7 +83,10 @@ Rectangle {
     Timer {
         id: errorTimer
         interval: 3000
-        onTriggered: root.loginFailed = false
+        onTriggered: {
+            root.loginFailed = false
+            root.setAuthFeedback("Klaar voor fingerprint of wachtwoord", "Druk Enter op leeg veld om fingerprint te starten", false)
+        }
     }
 
     // Klik overal → inputveld activeren
@@ -284,19 +298,132 @@ Rectangle {
                 Keys.onEscapePressed: root.inputActive = false
 
                 onAccepted: {
+                    root.setAuthFeedback(
+                        text.length === 0 ? "Vingerafdruk controleren..." : "Wachtwoord controleren...",
+                        text.length === 0 ? "Raak de scanner aan" : "Even controleren via PAM",
+                        text.length === 0
+                    )
                     sddm.login(root.currentUserName, text, sessionModel.lastIndex)
                 }
 
-                onTextChanged: root.loginFailed = false
+                onTextChanged: {
+                    root.loginFailed = false
+                    if (text.length > 0) {
+                        root.setAuthFeedback("Wachtwoord invoer actief", "Druk Enter om in te loggen", false)
+                    } else if (!root.biometricActive) {
+                        root.setAuthFeedback("Klaar voor fingerprint of wachtwoord", "Druk Enter op leeg veld om fingerprint te starten", false)
+                    }
+                }
             }
         }
 
-        Text {
+        Rectangle {
             Layout.alignment: Qt.AlignHCenter
-            text: "Fingerprint/PAM start automatisch; druk Enter op leeg veld als fallback"
-            font { family: "JetBrains Mono"; pixelSize: 11 }
-            color: Colors.outline
-            opacity: 0.9
+            width: 300; height: 78; radius: 22
+            color: Qt.rgba(Colors.surface0.r, Colors.surface0.g, Colors.surface0.b, 0.34)
+            border {
+                width: 1
+                color: root.loginFailed
+                       ? Qt.rgba(Colors.red.r, Colors.red.g, Colors.red.b, 0.78)
+                       : (root.biometricActive
+                          ? Qt.rgba(Colors.green.r, Colors.green.g, Colors.green.b, 0.72)
+                          : Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.42))
+            }
+            Behavior on color { ColorAnimation { duration: 220 } }
+            Behavior on border.color { ColorAnimation { duration: 220 } }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 12
+
+                Item {
+                    Layout.preferredWidth: 48
+                    Layout.preferredHeight: 48
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 48; height: 48; radius: 24
+                        color: "transparent"
+                        border.width: 2
+                        border.color: root.loginFailed
+                                      ? Qt.rgba(Colors.red.r, Colors.red.g, Colors.red.b, 0.68)
+                                      : Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.46)
+                        opacity: root.biometricActive ? 0.85 : 0.35
+                        scale: fingerprintPulse.running ? 1.14 : 1.0
+                        Behavior on opacity { NumberAnimation { duration: 220 } }
+                        Behavior on border.color { ColorAnimation { duration: 220 } }
+                        Behavior on scale { NumberAnimation { duration: 900; easing.type: Easing.InOutSine } }
+                    }
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 34; height: 34; radius: 17
+                        color: root.loginFailed
+                               ? Qt.rgba(Colors.red.r, Colors.red.g, Colors.red.b, 0.16)
+                               : Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.15)
+                        border.width: 1
+                        border.color: Qt.rgba(Colors.text.r, Colors.text.g, Colors.text.b, 0.12)
+                        Behavior on color { ColorAnimation { duration: 220 } }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.loginFailed ? "󰌾" : "󰈷"
+                        font { family: "JetBrainsMono Nerd Font"; pixelSize: 21 }
+                        color: root.loginFailed
+                               ? Colors.red
+                               : (root.biometricActive ? Colors.green : Colors.primary)
+                        scale: root.biometricActive ? 1.08 : 1.0
+                        Behavior on color { ColorAnimation { duration: 220 } }
+                        Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                    }
+
+                    SequentialAnimation {
+                        id: fingerprintPulse
+                        running: root.biometricActive && !root.loginFailed
+                        loops: Animation.Infinite
+                        NumberAnimation { target: fingerprintHalo; property: "opacity"; from: 0.55; to: 0.0; duration: 1200; easing.type: Easing.OutCubic }
+                        PauseAnimation { duration: 220 }
+                    }
+
+                    Rectangle {
+                        id: fingerprintHalo
+                        anchors.centerIn: parent
+                        width: 46; height: 46; radius: 23
+                        color: "transparent"
+                        border.width: 2
+                        border.color: Qt.rgba(Colors.green.r, Colors.green.g, Colors.green.b, 0.72)
+                        opacity: 0.0
+                        scale: opacity > 0.0 ? 1.45 - opacity * 0.42 : 1.0
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 3
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.authStatusText
+                        font { family: "JetBrains Mono"; pixelSize: 12; bold: true }
+                        color: root.loginFailed
+                               ? Colors.red
+                               : (root.biometricActive ? Colors.text : Colors.subtext0)
+                        elide: Text.ElideRight
+                        Behavior on color { ColorAnimation { duration: 220 } }
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.authHintText
+                        font { family: "JetBrains Mono"; pixelSize: 10 }
+                        color: Colors.outline
+                        opacity: 0.95
+                        elide: Text.ElideRight
+                    }
+                }
+            }
         }
 
         // Foutmelding

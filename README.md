@@ -219,7 +219,7 @@ ENABLE_VIDEO_WALLPAPER=false
 ENABLE_SPICETIFY=true
 ```
 
-Note about SDDM fingerprint flow: unlike GDM, SDDM themes do not always start biometric auth automatically when the greeter appears. In this setup, press `Enter` on an empty password field to trigger PAM/fingerprint auth.
+Note about SDDM fingerprint flow: the Kingstra greeter starts an empty PAM login once and shows a fingerprint status card while waiting for the scanner. If SDDM or PAM misses that first attempt, press `Enter` on an empty password field to trigger fingerprint auth again; typing a password remains the fallback.
 
 ---
 
