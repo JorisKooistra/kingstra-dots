@@ -70,6 +70,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/hypr/hyprland.conf"                   "hyprland.conf"
     validate_file "$HOME/.config/hypr/colors.conf"                     "hypr/colors.conf"
     validate_file "$HOME/.config/hypr/conf.d/72-hardware.conf"         "72-hardware.conf"
+    validate_file "$HOME/.config/hypr/scripts/hardware-switches.sh"    "hypr/scripts/hardware-switches.sh"
     validate_file "$HOME/.config/hypr/scripts/lock.sh"                 "hypr/scripts/lock.sh"
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"             "hypr/scripts/lid-lock.sh"
     validate_file "$HOME/.config/hypr/scripts/tablet-mode.sh"          "hypr/scripts/tablet-mode.sh"

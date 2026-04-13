@@ -20,8 +20,38 @@ lock_screen() {
     fi
 }
 
+lid_state() {
+    local state_file
+    for state_file in /proc/acpi/button/lid/*/state; do
+        [[ -r "$state_file" ]] || continue
+        if grep -qi "closed" "$state_file" 2>/dev/null; then
+            printf 'closed\n'
+            return 0
+        fi
+    done
+    printf 'open\n'
+}
+
+poll_lid_state() {
+    local last_state="open"
+    local current_state
+
+    while true; do
+        current_state="$(lid_state)"
+        if [[ "$current_state" == "closed" && "$last_state" != "closed" ]]; then
+            lock_screen
+        fi
+        last_state="$current_state"
+        sleep 1
+    done
+}
+
+poll_lid_state &
+poll_pid=$!
+trap 'kill "$poll_pid" 2>/dev/null || true' EXIT
+
 if ! command -v dbus-monitor >/dev/null 2>&1; then
-    exit 0
+    wait "$poll_pid"
 fi
 
 while true; do
