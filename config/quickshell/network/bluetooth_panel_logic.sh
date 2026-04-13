@@ -3,16 +3,40 @@
 SCAN_LOG="$HOME/.cache/bt_scan.log"
 PID_FILE="$HOME/.cache/bt_scan_pid"
 CACHE_DIR="/tmp/quickshell_network_cache"
-AGENT_STAMP="/tmp/qs_bt_agent_registered"
 mkdir -p "$CACHE_DIR"
 
-# Register a default agent once per session so pairing works for
-# "just works" devices (Logitech mice/keyboards, etc.)
-ensure_agent() {
-    if [ -f "$AGENT_STAMP" ]; then return; fi
-    bluetoothctl agent NoInputNoOutput 2>/dev/null
-    bluetoothctl default-agent 2>/dev/null
-    touch "$AGENT_STAMP"
+btctl_with_agent() {
+    local timeout_seconds="$1"
+    shift
+    local shown_pairing_code=""
+    local btctl_cmd=(bluetoothctl)
+
+    if command -v stdbuf >/dev/null 2>&1; then
+        btctl_cmd=(stdbuf -oL bluetoothctl)
+    fi
+
+    printf 'agent KeyboardDisplay\ndefault-agent\n%s\n' "$*" |
+        timeout "$timeout_seconds" "${btctl_cmd[@]}" 2>&1 |
+        while IFS= read -r line; do
+            if [[ "$line" =~ ([0-9]{6}) ]] && [[ "${BASH_REMATCH[1]}" != "$shown_pairing_code" ]]; then
+                shown_pairing_code="${BASH_REMATCH[1]}"
+                if command -v notify-send >/dev/null 2>&1; then
+                    notify-send -u normal -i bluetooth-active \
+                        "Bluetooth pairing" \
+                        "Typ ${shown_pairing_code} op het toetsenbord en druk Enter"
+                fi
+            fi
+            printf '%s\n' "$line"
+        done
+    return "${PIPESTATUS[1]}"
+}
+
+json_error() {
+    jq -n -c --arg error "$1" '{ok: false, error: $error}'
+}
+
+is_valid_mac() {
+    [[ "${1:-}" =~ ^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$ ]]
 }
 
 get_icon() {
@@ -45,7 +69,6 @@ get_audio_profile() {
 }
 
 get_status() {
-    ensure_agent
     power="off"
     if bluetoothctl show | grep -q "Powered: yes"; then power="on"; fi
 
@@ -157,28 +180,33 @@ toggle_power() {
 
 connect_dev() {
     local mac="$1"
-    ensure_agent
+
+    if ! is_valid_mac "$mac"; then
+        json_error "Ongeldig Bluetooth-adres"
+        return 1
+    fi
 
     # 1. Check if already paired; if not, pair first
     if ! bluetoothctl info "$mac" 2>/dev/null | grep -q "Paired: yes"; then
         local pair_out
-        pair_out=$(timeout 12 bluetoothctl pair "$mac" 2>&1)
+        pair_out=$(btctl_with_agent 45 "pair $mac")
         if [ $? -ne 0 ]; then
-            echo "{\"ok\":false,\"error\":\"Pairing mislukt: ${pair_out//\"/\\\"}\"}"
+            json_error "Pairing mislukt: $pair_out"
             return 1
         fi
     fi
 
     # 2. Trust the device (idempotent)
-    bluetoothctl trust "$mac" > /dev/null 2>&1
+    bluetoothctl trust "$mac" > /dev/null 2>&1 || true
 
     # 3. Connect with wait-loop (poll every 0.5s, max 15s)
     local connect_out
-    connect_out=$(timeout 10 bluetoothctl connect "$mac" 2>&1)
+    connect_out=$(btctl_with_agent 20 "trust $mac
+connect $mac")
     local rc=$?
 
     if [ $rc -ne 0 ]; then
-        echo "{\"ok\":false,\"error\":\"Verbinding mislukt: ${connect_out//\"/\\\"}\"}"
+        json_error "Verbinding mislukt: $connect_out"
         return 1
     fi
 
@@ -195,15 +223,31 @@ connect_dev() {
         waited=$((waited + 1))
     done
 
-    echo "{\"ok\":false,\"error\":\"Timeout: apparaat reageert niet\"}"
+    json_error "Timeout: apparaat reageert niet"
     return 1
 }
 
 disconnect_dev() {
     local mac="$1"
+    if ! is_valid_mac "$mac"; then
+        json_error "Ongeldig Bluetooth-adres"
+        return 1
+    fi
+
     # Remove cache so a fresh connect regenerates the profile
     rm -f "/tmp/quickshell_network_cache/bt_stat_${mac//:/_}" 2>/dev/null
     bluetoothctl disconnect "$mac"
+}
+
+forget_dev() {
+    local mac="$1"
+    if ! is_valid_mac "$mac"; then
+        json_error "Ongeldig Bluetooth-adres"
+        return 1
+    fi
+
+    rm -f "/tmp/quickshell_network_cache/bt_stat_${mac//:/_}" 2>/dev/null
+    bluetoothctl remove "$mac"
 }
 
 cmd="$1"
@@ -212,8 +256,8 @@ case $cmd in
     --toggle) toggle_power ;;
     --connect) connect_dev "$2" ;;
     --disconnect) disconnect_dev "$2" ;;
+    --forget) forget_dev "$2" ;;
     --scan-on)
-        ensure_agent
         bluetoothctl scan on > "$SCAN_LOG" 2>&1 &
         echo $! > "$PID_FILE"
         ;;

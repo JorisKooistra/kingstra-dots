@@ -135,7 +135,7 @@ Item {
     property var disconnectingDevices: ({})
     
     Timer { 
-        id: busyTimeout; interval: 15000; 
+        id: busyTimeout; interval: window.activeMode === "bt" ? 90000 : 15000;
         onTriggered: {
             if (Object.keys(window.busyTasks).length > 0 && window.activeMode === "bt") {
                 window.btConnectError = "Verbinding mislukt (timeout)";
@@ -1149,15 +1149,16 @@ Item {
                                 id: coreMa
                                 anchors.fill: parent
                                 hoverEnabled: true
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 cursorShape: window.currentConn && !isMyDisconnecting ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 
-                                onPressed: {
+                                onPressed: function(mouse) {
                                     if (window.currentConn && !isMyDisconnecting && !centralCore.disconnectTriggered) {
                                         coreDrainAnim.stop();
                                         coreFillAnim.start();
                                     }
                                 }
-                                onReleased: {
+                                onReleased: function(mouse) {
                                     if (!centralCore.disconnectTriggered && !isMyDisconnecting) {
                                         coreFillAnim.stop();
                                         coreDrainAnim.start();
@@ -1402,6 +1403,9 @@ Item {
                                 property real flashOpacity: 0.0
                                 
                                 property real renderFill: (isCurrentlyConnected) ? 1.0 : fillLevel
+                                property string holdAction: "connect"
+                                readonly property bool canForgetBT: window.activeMode === "bt" && !isInfoNode && !isCurrentlyConnected && !isSpecialAction
+                                readonly property string holdLabel: holdAction === "forget" ? "Forget..." : "Hold..."
                                 
                                 onIsMyBusyChanged: {
                                     if (!isMyBusy && triggered) {
@@ -1602,7 +1606,7 @@ Item {
                                             font.family: "JetBrains Mono"
                                             font.pixelSize: window.s(10)
                                             color: floatCard.isMyBusy ? window.activeColor : window.overlay0
-                                            text: floatCard.isMyBusy ? "Connecting..." : (floatCard.renderFill > 0.1 && floatCard.renderFill < 1.0 ? "Hold..." : action)
+                                            text: floatCard.isMyBusy ? "Connecting..." : (floatCard.renderFill > 0.1 && floatCard.renderFill < 1.0 ? floatCard.holdLabel : action)
                                             Behavior on color { ColorAnimation { duration: 200 } }
                                         }
                                     }
@@ -1650,7 +1654,7 @@ Item {
                                             }
                                             Text {
                                                 font.family: "JetBrains Mono"; font.pixelSize: window.s(10); color: window.crust
-                                                text: floatCard.isMyBusy ? "Connecting..." : (floatCard.renderFill > 0.1 && floatCard.renderFill < 1.0 ? "Hold..." : action)
+                                                text: floatCard.isMyBusy ? "Connecting..." : (floatCard.renderFill > 0.1 && floatCard.renderFill < 1.0 ? floatCard.holdLabel : action)
                                             }
                                         }
                                     }
@@ -1660,16 +1664,20 @@ Item {
                                     id: floatMa
                                     anchors.fill: parent
                                     hoverEnabled: floatCard.isInteractable
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                                     
                                     cursorShape: (floatCard.triggered || floatCard.isMyBusy || floatCard.renderFill === 1.0 || !floatCard.isInteractable) ? Qt.ArrowCursor : Qt.PointingHandCursor
                                     
-                                    onPressed: { 
-                                        if (floatCard.isInteractable && !floatCard.triggered && !floatCard.isMyBusy && floatCard.fillLevel === 0.0) {
+                                    onPressed: function(mouse) {
+                                        let isForgetPress = mouse.button === Qt.RightButton && floatCard.canForgetBT;
+                                        let isPrimaryPress = mouse.button === Qt.LeftButton;
+                                        if ((isPrimaryPress || isForgetPress) && floatCard.isInteractable && !floatCard.triggered && !floatCard.isMyBusy && floatCard.fillLevel === 0.0) {
+                                            floatCard.holdAction = isForgetPress ? "forget" : "connect";
                                             drainAnim.stop()
                                             fillAnim.start()
                                         }
                                     }
-                                    onReleased: {
+                                    onReleased: function(mouse) {
                                         if (floatCard.isInteractable && !floatCard.triggered && !floatCard.isMyBusy && floatCard.fillLevel < 1.0) {
                                             fillAnim.stop()
                                             drainAnim.start()
@@ -1690,7 +1698,13 @@ Item {
                                         cardFlashAnim.start();
                                         cardBumpAnim.start();
                                         
-                                        if (cmdStr === "TOGGLE_VIEW") {
+                                        if (floatCard.holdAction === "forget") {
+                                            window.playSfx("disconnect.wav");
+                                            Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--forget", mac]);
+                                            floatCard.triggered = false;
+                                            floatCard.fillLevel = 0.0;
+                                            btPoller.running = true;
+                                        } else if (cmdStr === "TOGGLE_VIEW") {
                                             window.playSfx("switch.wav");
                                             window.showInfoView = !window.showInfoView;
                                             floatCard.triggered = false;
