@@ -48,30 +48,43 @@ Item {
             Rectangle {
                 visible: isFireflies
                 anchors.centerIn: parent
-                width: parent.width * (root.fireflyBoost > 1.0 ? 7.8 : 5.6)
+                width: parent.width * (root.fireflyBoost > 1.0 ? 11.0 : 8.0)
                 height: width
                 radius: width / 2
-                scale: 0.78 + particle.glowPulse * 0.34
-                opacity: (root.fireflyBoost > 1.0 ? 0.34 : 0.22) * particle.glowPulse
-                color: Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.55)
+                scale: 0.70 + particle.glowPulse * 0.44
+                opacity: (root.fireflyBoost > 1.0 ? 0.14 : 0.09) * particle.glowPulse
+                color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.55)
             }
 
             Rectangle {
                 visible: isFireflies
                 anchors.centerIn: parent
-                width: parent.width * (root.fireflyBoost > 1.0 ? 4.6 : 3.4)
+                width: parent.width * (root.fireflyBoost > 1.0 ? 7.0 : 5.2)
                 height: width
                 radius: width / 2
-                scale: 0.88 + particle.glowPulse * 0.24
-                opacity: (root.fireflyBoost > 1.0 ? 0.48 : 0.32) * particle.glowPulse
-                color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.70)
+                scale: 0.78 + particle.glowPulse * 0.34
+                opacity: (root.fireflyBoost > 1.0 ? 0.26 : 0.18) * particle.glowPulse
+                color: Qt.rgba(mocha.sapphire.r, mocha.sapphire.g, mocha.sapphire.b, 0.68)
+            }
+
+            Rectangle {
+                visible: isFireflies
+                anchors.centerIn: parent
+                width: parent.width * (root.fireflyBoost > 1.0 ? 4.2 : 3.2)
+                height: width
+                radius: width / 2
+                scale: 0.88 + particle.glowPulse * 0.22
+                opacity: (root.fireflyBoost > 1.0 ? 0.48 : 0.34) * particle.glowPulse
+                color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.76)
             }
 
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
                 color: isFireflies
-                    ? Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.9)
+                    ? ((index % 4) === 0
+                       ? Qt.rgba(mocha.sapphire.r, mocha.sapphire.g, mocha.sapphire.b, 0.92)
+                       : Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.96))
                     : Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, largeLayeredSpeck ? 0.88 : 0.72)
             }
 
