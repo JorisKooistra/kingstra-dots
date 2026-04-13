@@ -29,9 +29,32 @@ Item {
 
             property real baseX: ((index * 137) % Math.max(1, root.width))
             property real baseY: ((index * 97) % Math.max(1, root.height))
+            property real glowPulse: 0.0
             x: baseX
             y: baseY
             opacity: isFireflies ? (root.fireflyBoost > 1.0 ? 0.35 : 0.25) : (largeLayeredSpeck ? 0.22 : 0.16)
+
+            Rectangle {
+                visible: isFireflies
+                anchors.centerIn: parent
+                width: parent.width * (root.fireflyBoost > 1.0 ? 7.8 : 5.6)
+                height: width
+                radius: width / 2
+                scale: 0.78 + particle.glowPulse * 0.34
+                opacity: (root.fireflyBoost > 1.0 ? 0.34 : 0.22) * particle.glowPulse
+                color: Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.55)
+            }
+
+            Rectangle {
+                visible: isFireflies
+                anchors.centerIn: parent
+                width: parent.width * (root.fireflyBoost > 1.0 ? 4.6 : 3.4)
+                height: width
+                radius: width / 2
+                scale: 0.88 + particle.glowPulse * 0.24
+                opacity: (root.fireflyBoost > 1.0 ? 0.48 : 0.32) * particle.glowPulse
+                color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.70)
+            }
 
             Rectangle {
                 anchors.fill: parent
@@ -39,6 +62,21 @@ Item {
                 color: isFireflies
                     ? Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.9)
                     : Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, largeLayeredSpeck ? 0.88 : 0.72)
+            }
+
+            SequentialAnimation on glowPulse {
+                running: particle.isFireflies
+                loops: Animation.Infinite
+                NumberAnimation {
+                    to: 1.0
+                    duration: (1500 + (index % 5) * 180) / root.safeSpeed
+                    easing.type: Easing.InOutSine
+                }
+                NumberAnimation {
+                    to: 0.28
+                    duration: (1800 + (index % 5) * 220) / root.safeSpeed
+                    easing.type: Easing.InOutSine
+                }
             }
 
             SequentialAnimation on opacity {
