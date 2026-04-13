@@ -1154,16 +1154,56 @@ Item {
                                 
                                 onPressed: function(mouse) {
                                     if (window.currentConn && !isMyDisconnecting && !centralCore.disconnectTriggered) {
-                                        coreDrainAnim.stop();
-                                        coreFillAnim.start();
+                                        if (mouse.button === Qt.RightButton) {
+                                            coreRightHoldTimer.restart();
+                                        } else {
+                                            coreDrainAnim.stop();
+                                            coreFillAnim.start();
+                                        }
                                     }
                                 }
                                 onReleased: function(mouse) {
+                                    if (mouse.button === Qt.RightButton) {
+                                        coreRightHoldTimer.stop();
+                                        return;
+                                    }
                                     if (!centralCore.disconnectTriggered && !isMyDisconnecting) {
                                         coreFillAnim.stop();
                                         coreDrainAnim.start();
                                     }
                                 }
+                            }
+
+                            Timer {
+                                id: coreRightHoldTimer
+                                interval: 650
+                                onTriggered: coreDisconnectNow()
+                            }
+
+                            function coreDisconnectNow() {
+                                if (!window.currentConn || isMyDisconnecting || centralCore.disconnectTriggered || !coreContainer.myDevice) return;
+
+                                centralCore.disconnectTriggered = true;
+                                centralCore.flashOpacity = 0.6;
+                                coreFlashAnim.start();
+                                coreBumpAnim.start();
+
+                                window.playSfx("disconnect.wav");
+
+                                let dd = window.disconnectingDevices;
+                                dd[coreContainer.myId] = true;
+                                window.disconnectingDevices = Object.assign({}, dd);
+                                busyTimeout.restart();
+
+                                let cmd = window.activeMode === "wifi"
+                                    ? "nmcli device disconnect $(nmcli -t -f DEVICE,TYPE d | grep wifi | cut -d: -f1 | head -n1)"
+                                    : "bash " + window.scriptsDir + "/bluetooth_panel_logic.sh --disconnect '" + coreContainer.myDevice.mac + "'"
+                                Quickshell.execDetached(["sh", "-c", cmd])
+
+                                centralCore.disconnectFill = 0.0;
+                                centralCore.disconnectTriggered = false;
+
+                                if (window.activeMode === "wifi") wifiPoller.running = true; else btPoller.running = true;
                             }
 
                             NumberAnimation {
@@ -1173,29 +1213,7 @@ Item {
                                 to: 1.0
                                 duration: 700 * (1.0 - centralCore.disconnectFill) 
                                 easing.type: Easing.InSine
-                                onFinished: {
-                                    centralCore.disconnectTriggered = true;
-                                    centralCore.flashOpacity = 0.6;
-                                    coreFlashAnim.start();
-                                    coreBumpAnim.start();
-                                    
-                                    window.playSfx("disconnect.wav");
-                                    
-                                    let dd = window.disconnectingDevices;
-                                    dd[coreContainer.myId] = true;
-                                    window.disconnectingDevices = Object.assign({}, dd);
-                                    busyTimeout.restart();
-                                    
-                                    let cmd = window.activeMode === "wifi" 
-                                        ? "nmcli device disconnect $(nmcli -t -f DEVICE,TYPE d | grep wifi | cut -d: -f1 | head -n1)"
-                                        : "bash " + window.scriptsDir + "/bluetooth_panel_logic.sh --disconnect '" + coreContainer.myDevice.mac + "'"
-                                    Quickshell.execDetached(["sh", "-c", cmd])
-                                    
-                                    centralCore.disconnectFill = 0.0;
-                                    centralCore.disconnectTriggered = false;
-                                    
-                                    if (window.activeMode === "wifi") wifiPoller.running = true; else btPoller.running = true;
-                                }
+                                onFinished: coreDisconnectNow()
                             }
                             
                             NumberAnimation {
@@ -1669,19 +1687,44 @@ Item {
                                     cursorShape: (floatCard.triggered || floatCard.isMyBusy || floatCard.renderFill === 1.0 || !floatCard.isInteractable) ? Qt.ArrowCursor : Qt.PointingHandCursor
                                     
                                     onPressed: function(mouse) {
-                                        let isForgetPress = mouse.button === Qt.RightButton && floatCard.canForgetBT;
-                                        let isPrimaryPress = mouse.button === Qt.LeftButton;
-                                        if ((isPrimaryPress || isForgetPress) && floatCard.isInteractable && !floatCard.triggered && !floatCard.isMyBusy && floatCard.fillLevel === 0.0) {
-                                            floatCard.holdAction = isForgetPress ? "forget" : "connect";
+                                        if (mouse.button === Qt.RightButton && floatCard.canForgetBT && !floatCard.triggered && !floatCard.isMyBusy) {
+                                            forgetHoldTimer.restart();
+                                            return;
+                                        }
+
+                                        if (mouse.button === Qt.LeftButton && floatCard.isInteractable && !floatCard.triggered && !floatCard.isMyBusy && floatCard.fillLevel === 0.0) {
+                                            floatCard.holdAction = "connect";
                                             drainAnim.stop()
                                             fillAnim.start()
                                         }
                                     }
                                     onReleased: function(mouse) {
+                                        if (mouse.button === Qt.RightButton) {
+                                            forgetHoldTimer.stop();
+                                            return;
+                                        }
+
                                         if (floatCard.isInteractable && !floatCard.triggered && !floatCard.isMyBusy && floatCard.fillLevel < 1.0) {
                                             fillAnim.stop()
                                             drainAnim.start()
                                         }
+                                    }
+                                }
+
+                                Timer {
+                                    id: forgetHoldTimer
+                                    interval: 650
+                                    onTriggered: {
+                                        if (!floatCard.canForgetBT || floatCard.triggered || floatCard.isMyBusy) return;
+                                        floatCard.triggered = true;
+                                        floatCard.holdAction = "forget";
+                                        floatCard.flashOpacity = 0.6;
+                                        cardFlashAnim.start();
+                                        cardBumpAnim.start();
+                                        window.playSfx("disconnect.wav");
+                                        Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--forget", mac]);
+                                        floatCard.triggered = false;
+                                        btPoller.running = true;
                                     }
                                 }
 
@@ -1698,13 +1741,7 @@ Item {
                                         cardFlashAnim.start();
                                         cardBumpAnim.start();
                                         
-                                        if (floatCard.holdAction === "forget") {
-                                            window.playSfx("disconnect.wav");
-                                            Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--forget", mac]);
-                                            floatCard.triggered = false;
-                                            floatCard.fillLevel = 0.0;
-                                            btPoller.running = true;
-                                        } else if (cmdStr === "TOGGLE_VIEW") {
+                                        if (cmdStr === "TOGGLE_VIEW") {
                                             window.playSfx("switch.wav");
                                             window.showInfoView = !window.showInfoView;
                                             floatCard.triggered = false;
