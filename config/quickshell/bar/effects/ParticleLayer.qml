@@ -31,17 +31,18 @@ Item {
             property real baseY: ((index * 97) % Math.max(1, root.height))
             property real glowPulse: 0.0
             property real pathPhase: 0.0
+            readonly property real pathOffset: index * 1.37
             readonly property real fireflyDriftX: shell.s(root.fireflyBoost > 1.0 ? 18 : 13)
             readonly property real fireflyDriftY: shell.s(root.fireflyBoost > 1.0 ? 12 : 9)
             x: isFireflies
                ? baseX
-                 + Math.sin(pathPhase + index * 1.7) * fireflyDriftX
-                 + Math.sin(pathPhase * 0.43 + index * 2.1) * fireflyDriftX * 0.45
+                 + Math.cos(pathPhase + pathOffset) * fireflyDriftX
+                 + Math.cos(pathPhase * 2 + pathOffset * 0.7) * fireflyDriftX * 0.28
                : baseX
             y: isFireflies
                ? baseY
-                 + Math.cos(pathPhase * 0.74 + index * 1.3) * fireflyDriftY
-                 + Math.sin(pathPhase * 1.31 + index * 0.9) * fireflyDriftY * 0.50
+                 + Math.sin(pathPhase + pathOffset) * fireflyDriftY
+                 + Math.sin(pathPhase * 2 + pathOffset * 0.7) * fireflyDriftY * 0.24
                : baseY
             opacity: isFireflies ? (root.fireflyBoost > 1.0 ? 0.35 : 0.25) : (largeLayeredSpeck ? 0.22 : 0.16)
 
@@ -109,7 +110,7 @@ Item {
                 to: Math.PI * 2
                 duration: (9000 + (index % 6) * 650) / root.safeSpeed
                 loops: Animation.Infinite
-                easing.type: Easing.InOutSine
+                easing.type: Easing.Linear
             }
 
             SequentialAnimation on opacity {
