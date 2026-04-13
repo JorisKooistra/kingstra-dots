@@ -209,6 +209,8 @@ The installer automatically detects:
 | Laptop/battery | `DETECT_IS_LAPTOP=true` | power-profiles, short timeouts |
 | Backlight | `DETECT_HAS_BACKLIGHT=true` | brightnessctl, hypridle dim |
 | Touchpad | `DETECT_HAS_TOUCHPAD=true` | natural scroll, tap-to-click |
+| Touchscreen | `DETECT_HAS_TOUCHSCREEN=true` | touch profile, enables tablet mode on laptops |
+| Tablet mode switch | `DETECT_HAS_TABLET_MODE_SWITCH=true` | rotate internal display + OSK on tablet switch |
 | Fingerprint | `DETECT_HAS_FINGERPRINT=true` | fprintd, PAM configuration for sudo + SDDM |
 
 To override detected values:

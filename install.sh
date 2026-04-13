@@ -109,6 +109,7 @@ Voorbeelden:
 
 Override-bestand formaat (optioneel, overschrijft auto-detectie):
   ENABLE_FINGERPRINT=false
+  ENABLE_TABLET_MODE=true
   ENABLE_VIDEO_WALLPAPER=false
   ENABLE_SPICETIFY=true
 EOF

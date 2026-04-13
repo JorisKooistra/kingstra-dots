@@ -225,6 +225,8 @@ print_system_info() {
     printf "  ${_BOLD}GPU:${_RESET}        %s\n" "${DETECT_GPU:-onbekend}"
     printf "  ${_BOLD}Laptop:${_RESET}     %s\n" "${DETECT_IS_LAPTOP:-false}"
     printf "  ${_BOLD}Touchpad:${_RESET}   %s\n" "${DETECT_HAS_TOUCHPAD:-false}"
+    printf "  ${_BOLD}Touchscreen:${_RESET}%s\n" "${DETECT_HAS_TOUCHSCREEN:-false}"
+    printf "  ${_BOLD}Tablet mode:${_RESET}%s\n" "${ENABLE_TABLET_MODE:-false}"
     printf "  ${_BOLD}Fingerprint:${_RESET}%s\n" "${DETECT_HAS_FINGERPRINT:-false}"
     printf "  ${_BOLD}AUR-helper:${_RESET} %s\n" "${AUR_HELPER:-geen}"
     printf "  ${_BOLD}Dry-run:${_RESET}    %s\n" "${DRY_RUN:-false}"

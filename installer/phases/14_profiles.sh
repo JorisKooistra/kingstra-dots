@@ -4,10 +4,10 @@
 # =============================================================================
 # Doel:
 #   - 72-hardware.conf genereren op basis van gedetecteerde hardware
-#     (GPU env vars, touchpad-instellingen)
+#     (GPU env vars, touchpad/tablet-instellingen)
 #   - Optionele pakketten installeren op basis van detectie
 #     (power-profiles-daemon, fprintd, brightnessctl)
-#   - Laptop-specifieke hypridle tweaks toepassen
+#   - Laptop/tablet-specifieke tweaks toepassen
 #   - Nvidia: hyprland nvidia-pakketten + render fixes
 # =============================================================================
 
@@ -20,6 +20,9 @@ phase_run() {
 
     log_step "Laptop-features installeren (indien gedetecteerd)..."
     _phase14_laptop_features
+
+    log_step "Tablet-mode features installeren (indien gedetecteerd)..."
+    _phase14_tablet_mode_features
 
     log_step "Vingerafdruk configureren (indien gedetecteerd)..."
     _phase14_fingerprint_setup
@@ -42,6 +45,8 @@ _phase14_write_hardware_conf() {
         log_dry "  GPU:     ${DETECT_GPU:-unknown}"
         log_dry "  Laptop:  ${DETECT_IS_LAPTOP:-false}"
         log_dry "  Touchpad:${DETECT_HAS_TOUCHPAD:-false}"
+        log_dry "  Touch:   ${DETECT_HAS_TOUCHSCREEN:-false}"
+        log_dry "  Tablet:  ${ENABLE_TABLET_MODE:-false}"
         return 0
     fi
 
@@ -52,7 +57,7 @@ _phase14_write_hardware_conf() {
         echo "# ============================================================================="
         echo "# 72-hardware.conf — Automatisch gegenereerd door fase 14"
         echo "# Gegenereerd op: $(date '+%Y-%m-%d %H:%M')"
-        echo "# GPU: ${DETECT_GPU:-unknown} | Laptop: ${DETECT_IS_LAPTOP:-false} | Touchpad: ${DETECT_HAS_TOUCHPAD:-false}"
+        echo "# GPU: ${DETECT_GPU:-unknown} | Laptop: ${DETECT_IS_LAPTOP:-false} | Touchpad: ${DETECT_HAS_TOUCHPAD:-false} | Touchscreen: ${DETECT_HAS_TOUCHSCREEN:-false} | Tablet mode: ${ENABLE_TABLET_MODE:-false}"
         echo "# ============================================================================="
         echo ""
 
@@ -128,6 +133,20 @@ _phase14_write_hardware_conf() {
             echo ""
         fi
 
+        if [[ "${ENABLE_TABLET_MODE:-false}" == "true" ]]; then
+            echo "# ---------------------------------------------------------------------------"
+            echo "# Tablet mode — 2-in-1 / touchscreen laptop"
+            echo "# ---------------------------------------------------------------------------"
+            echo "# Automatisch via de hardware tablet-mode switch. De extra keybind is een"
+            echo "# fallback voor touch-laptops die geen switch-event aan Hyprland doorgeven."
+            echo "bindl = , switch:on:Tablet Mode Switch, exec, ~/.config/hypr/scripts/tablet-mode.sh on"
+            echo "bindl = , switch:off:Tablet Mode Switch, exec, ~/.config/hypr/scripts/tablet-mode.sh off"
+            echo "bindl = , switch:on:Tablet Mode, exec, ~/.config/hypr/scripts/tablet-mode.sh on"
+            echo "bindl = , switch:off:Tablet Mode, exec, ~/.config/hypr/scripts/tablet-mode.sh off"
+            echo "bind = \$mainMod CTRL, F12, exec, ~/.config/hypr/scripts/tablet-mode.sh toggle"
+            echo ""
+        fi
+
     } > "$dest"
 
     log_ok "72-hardware.conf gegenereerd: $dest"
@@ -196,6 +215,37 @@ _phase14_laptop_features() {
     fi
 }
 
+_phase14_tablet_mode_features() {
+    local tablet_script="$REPO_ROOT/config/hypr/scripts/tablet-mode.sh"
+
+    if [[ "${ENABLE_TABLET_MODE:-false}" != "true" ]]; then
+        log_info "Tablet-mode niet gedetecteerd — overgeslagen"
+        return 0
+    fi
+
+    log_info "Tablet-mode gedetecteerd — OSK en tablet-helper installeren"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "wvkbd zou worden geïnstalleerd en tablet-mode.sh uitvoerbaar gemaakt"
+        return 0
+    fi
+
+    if [[ -f "$tablet_script" ]]; then
+        chmod +x "$tablet_script"
+        log_ok "Tablet-mode script uitvoerbaar: $tablet_script"
+    else
+        log_warn "Tablet-mode script niet gevonden: $tablet_script"
+    fi
+
+    if pacman_install wvkbd; then
+        log_ok "On-screen keyboard geïnstalleerd: wvkbd"
+    elif aur_install wvkbd; then
+        log_ok "On-screen keyboard geïnstalleerd via AUR: wvkbd"
+    else
+        log_warn "wvkbd installeren mislukt — tablet-mode werkt, maar zonder automatisch schermtoetsenbord"
+    fi
+}
+
 _phase14_fingerprint_setup() {
     if [[ "${DETECT_HAS_FINGERPRINT:-false}" != "true" ]]; then
         log_info "Geen vingerafdrukscanner gedetecteerd — overgeslagen"
@@ -249,6 +299,8 @@ _phase14_print_summary() {
     log_info "─── Toegepaste hardware-aanpassingen ──────────────"
     log_info " GPU-config:   ${DETECT_GPU:-unknown}"
     log_info " Touchpad:     ${DETECT_HAS_TOUCHPAD:-false}"
+    log_info " Touchscreen:  ${DETECT_HAS_TOUCHSCREEN:-false}"
+    log_info " Tablet mode:  ${ENABLE_TABLET_MODE:-false}"
     log_info " Power profs:  ${ENABLE_POWER_PROFILES:-false}"
     log_info " Brightness:   ${ENABLE_BRIGHTNESS_CONTROL:-false}"
     log_info " Fingerprint:  ${ENABLE_FINGERPRINT:-false}"

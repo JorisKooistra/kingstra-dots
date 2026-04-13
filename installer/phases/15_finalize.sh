@@ -72,6 +72,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/hypr/conf.d/72-hardware.conf"         "72-hardware.conf"
     validate_file "$HOME/.config/hypr/scripts/lock.sh"                 "hypr/scripts/lock.sh"
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"             "hypr/scripts/lid-lock.sh"
+    validate_file "$HOME/.config/hypr/scripts/tablet-mode.sh"          "hypr/scripts/tablet-mode.sh"
     # Shell
     validate_file "$HOME/.config/kitty/kitty.conf"                     "kitty.conf"
     validate_file "$HOME/.config/zsh/kingstra.omp.toml"                "kingstra.omp.toml"
@@ -142,6 +143,8 @@ _phase15_write_marker() {
         echo "GPU:         ${DETECT_GPU:-onbekend}"
         echo "Laptop:      ${DETECT_IS_LAPTOP:-false}"
         echo "Touchpad:    ${DETECT_HAS_TOUCHPAD:-false}"
+        echo "Touchscreen: ${DETECT_HAS_TOUCHSCREEN:-false}"
+        echo "Tablet mode: ${ENABLE_TABLET_MODE:-false}"
         echo "Fingerprint: ${DETECT_HAS_FINGERPRINT:-false}"
         echo "Repo:        $REPO_ROOT"
     } > "$marker_file"

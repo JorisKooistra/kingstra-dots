@@ -130,6 +130,8 @@ Screenshots are saved to `~/Pictures/Screenshots/`.
 |---|---|
 | `Super + Ctrl + L` | Lock (hyprlock+fingerprint if available, otherwise Quickshell) |
 | Lid close | Lock screen |
+| Tablet mode switch | Rotate internal display and open on-screen keyboard (touchscreen/2-in-1 only) |
+| `Super + Ctrl + F12` | Toggle tablet mode fallback (touchscreen/2-in-1 only) |
 | `Super + Ctrl + R` | Reload Hyprland |
 | `Super + Ctrl + Q` | End session |
 

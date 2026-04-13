@@ -66,19 +66,25 @@ _phase03_deploy_configs() {
 }
 
 _phase03_prepare_hypr_scripts() {
-    local lid_script="$REPO_ROOT/config/hypr/scripts/lid-lock.sh"
+    local -a scripts=(
+        "$REPO_ROOT/config/hypr/scripts/lid-lock.sh"
+        "$REPO_ROOT/config/hypr/scripts/tablet-mode.sh"
+    )
 
     if "${DRY_RUN:-false}"; then
-        log_dry "Hypr helper-script zou uitvoerbaar worden gemaakt: $lid_script"
+        log_dry "Hypr helper-scripts zouden uitvoerbaar worden gemaakt"
         return 0
     fi
 
-    if [[ -f "$lid_script" ]]; then
-        chmod +x "$lid_script"
-        log_ok "Hypr helper-script uitvoerbaar: $lid_script"
-    else
-        log_warn "Hypr helper-script niet gevonden: $lid_script"
-    fi
+    local script
+    for script in "${scripts[@]}"; do
+        if [[ -f "$script" ]]; then
+            chmod +x "$script"
+            log_ok "Hypr helper-script uitvoerbaar: $script"
+        else
+            log_warn "Hypr helper-script niet gevonden: $script"
+        fi
+    done
 }
 
 _phase03_apply_gtk_settings() {
@@ -165,5 +171,6 @@ _phase03_validate() {
     validate_file "$HOME/.config/hypr/conf.d/30-general.conf"    "30-general.conf"
     validate_file "$HOME/.config/hypr/conf.d/70-autostart.conf"  "70-autostart.conf"
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"       "lid-lock.sh"
+    validate_file "$HOME/.config/hypr/scripts/tablet-mode.sh"    "tablet-mode.sh"
     validate_report
 }
