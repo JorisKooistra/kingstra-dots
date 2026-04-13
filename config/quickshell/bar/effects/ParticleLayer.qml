@@ -30,8 +30,19 @@ Item {
             property real baseX: ((index * 137) % Math.max(1, root.width))
             property real baseY: ((index * 97) % Math.max(1, root.height))
             property real glowPulse: 0.0
-            x: baseX
-            y: baseY
+            property real pathPhase: 0.0
+            readonly property real fireflyDriftX: shell.s(root.fireflyBoost > 1.0 ? 18 : 13)
+            readonly property real fireflyDriftY: shell.s(root.fireflyBoost > 1.0 ? 12 : 9)
+            x: isFireflies
+               ? baseX
+                 + Math.sin(pathPhase + index * 1.7) * fireflyDriftX
+                 + Math.sin(pathPhase * 0.43 + index * 2.1) * fireflyDriftX * 0.45
+               : baseX
+            y: isFireflies
+               ? baseY
+                 + Math.cos(pathPhase * 0.74 + index * 1.3) * fireflyDriftY
+                 + Math.sin(pathPhase * 1.31 + index * 0.9) * fireflyDriftY * 0.50
+               : baseY
             opacity: isFireflies ? (root.fireflyBoost > 1.0 ? 0.35 : 0.25) : (largeLayeredSpeck ? 0.22 : 0.16)
 
             Rectangle {
@@ -79,6 +90,15 @@ Item {
                 }
             }
 
+            NumberAnimation on pathPhase {
+                running: particle.isFireflies
+                from: 0
+                to: Math.PI * 2
+                duration: (9000 + (index % 6) * 650) / root.safeSpeed
+                loops: Animation.Infinite
+                easing.type: Easing.InOutSine
+            }
+
             SequentialAnimation on opacity {
                 running: root.normalizedType !== "none"
                 loops: Animation.Infinite
@@ -95,31 +115,16 @@ Item {
             }
 
             SequentialAnimation on y {
-                running: root.normalizedType !== "none"
+                running: root.normalizedType !== "none" && !particle.isFireflies
                 loops: Animation.Infinite
                 NumberAnimation {
-                    to: particle.baseY + (isFireflies ? shell.s(14) : (largeLayeredSpeck ? shell.s(5) : shell.s(3)))
+                    to: particle.baseY + (largeLayeredSpeck ? shell.s(5) : shell.s(3))
                     duration: (3800 + (index % 5) * 220) / (root.safeSpeed * (largeLayeredSpeck ? 1.15 : 0.75))
                     easing.type: Easing.InOutSine
                 }
                 NumberAnimation {
-                    to: particle.baseY - (isFireflies ? shell.s(10) : (largeLayeredSpeck ? shell.s(4) : shell.s(2)))
+                    to: particle.baseY - (largeLayeredSpeck ? shell.s(4) : shell.s(2))
                     duration: (3600 + (index % 5) * 260) / (root.safeSpeed * (largeLayeredSpeck ? 1.05 : 0.7))
-                    easing.type: Easing.InOutSine
-                }
-            }
-
-            SequentialAnimation on x {
-                running: root.normalizedType === "fireflies"
-                loops: Animation.Infinite
-                NumberAnimation {
-                    to: particle.baseX + shell.s(10)
-                    duration: (4300 + (index % 6) * 180) / root.safeSpeed
-                    easing.type: Easing.InOutSine
-                }
-                NumberAnimation {
-                    to: particle.baseX - shell.s(8)
-                    duration: (4100 + (index % 6) * 210) / root.safeSpeed
                     easing.type: Easing.InOutSine
                 }
             }
