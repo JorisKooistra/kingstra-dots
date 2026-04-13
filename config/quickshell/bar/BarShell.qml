@@ -128,7 +128,9 @@ Variants {
                 interval: 2000
                 running: true
                 repeat: true
-                onTriggered: loadTopBarSettingsProc.running = true
+                onTriggered: {
+                    if (!loadTopBarSettingsProc.running) loadTopBarSettingsProc.running = true;
+                }
             }
 
             // --- Mode State ---
@@ -237,7 +239,9 @@ Variants {
             }
             Timer {
                 interval: 2000; running: true; repeat: true
-                onTriggered: loadModeProc.running = true
+                onTriggered: {
+                    if (!loadModeProc.running) loadModeProc.running = true;
+                }
             }
 
             // --- State Variables ---
@@ -309,14 +313,14 @@ Variants {
                 repeat: true
                 triggeredOnStart: true
                 onTriggered: {
-                    if (barWindow.moduleList.includes("updates")) {
+                    if (barWindow.moduleList.includes("updates") && !updatesPoller.running) {
                         updatesPoller.running = true;
                     }
                 }
             }
 
             onActiveModeChanged: {
-                if (barWindow.activeMode === "office") {
+                if (barWindow.activeMode === "office" && !updatesPoller.running) {
                     updatesPoller.running = true;
                 }
             }
@@ -384,7 +388,9 @@ Variants {
                 interval: 50 
                 running: true 
                 repeat: true 
-                onTriggered: wsReader.running = true 
+                onTriggered: {
+                    if (!wsReader.running) wsReader.running = true;
+                }
             }
 
             // Music -------------------------------------
@@ -423,7 +429,9 @@ Variants {
                 running: true
                 repeat: true
                 triggeredOnStart: true
-                onTriggered: musicPoller.running = true
+                onTriggered: {
+                    if (!musicPoller.running) musicPoller.running = true;
+                }
             }
 
             // Unified System Info ------------------------
@@ -461,8 +469,8 @@ Variants {
                             } catch(e) {}
                         }
                         // When the system/music waiter finishes, instantly refresh the music state
-                        musicForceRefresh.running = true; 
-                        sysWaiter.running = true;
+                        if (!musicForceRefresh.running) musicForceRefresh.running = true;
+                        if (!sysWaiter.running) sysWaiter.running = true;
                     }
                 }
             }
@@ -536,7 +544,15 @@ Variants {
                     }
                 }
             }
-            Timer { interval: 150000; running: true; repeat: true; triggeredOnStart: true; onTriggered: weatherPoller.running = true }
+            Timer {
+                interval: 150000
+                running: true
+                repeat: true
+                triggeredOnStart: true
+                onTriggered: {
+                    if (!weatherPoller.running) weatherPoller.running = true;
+                }
+            }
 
             // Native Qt Time Formatting
             Timer {

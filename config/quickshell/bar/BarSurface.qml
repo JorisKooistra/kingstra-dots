@@ -15,6 +15,13 @@ Item {
     readonly property bool isBotanical: activeTheme === "botanical"
     readonly property bool isRocky: activeTheme === "rocky"
     readonly property bool isAnimated: activeTheme === "animated"
+    property real introProgress: 0.0
+    readonly property int introSlideDistance: shell.s(activeTheme === "rocky" ? 4 : 10)
+    readonly property real introOffsetX: (1.0 - introProgress)
+                                         * (shell.isLeftBar ? -introSlideDistance : (shell.isRightBar ? introSlideDistance : 0))
+    readonly property real introOffsetY: (1.0 - introProgress)
+                                         * (shell.isTopBar ? -introSlideDistance : (shell.isBottomBar ? introSlideDistance : 0))
+    readonly property real introScale: 0.985 + (introProgress * 0.015)
     readonly property string skinSource: {
         if (activeTheme === "rocky") return "skins/RockyBar.qml";
         if (activeTheme === "ocean") return "skins/OceanBar.qml";
@@ -81,7 +88,20 @@ Item {
 
     onConfiguredTextureOverlaySourceChanged: resetTextureOverlaySource()
     onActiveThemeChanged: resetTextureOverlaySource()
-    Component.onCompleted: resetTextureOverlaySource()
+    Component.onCompleted: {
+        resetTextureOverlaySource();
+        introReveal.start();
+    }
+
+    NumberAnimation {
+        id: introReveal
+        target: barSurfaceRoot
+        property: "introProgress"
+        from: 0.0
+        to: 1.0
+        duration: ThemeConfig.duration(520)
+        easing.type: Easing.OutCubic
+    }
 
     property int panelRadius: shell.s(Math.max(6, ThemeConfig.styleWidgetRadius + skinNumber("cornerRadiusDelta", 0)))
     property int innerPillRadius: shell.s(Math.max(6, ThemeConfig.styleWidgetRadius - 4 + Math.floor(skinNumber("cornerRadiusDelta", 0) / 2)))
@@ -113,14 +133,21 @@ Item {
 
     Item {
         anchors.fill: parent
-        opacity: (!shell.barAutoHide || shell.autoHideVisible) ? 1.0 : 0.0
-        Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutSine } }
-        transform: Translate {
-            x: shell.autoHideOffsetX
-            y: shell.autoHideOffsetY
-            Behavior on x { NumberAnimation { duration: 300; easing.type: Easing.InOutSine } }
-            Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.InOutSine } }
-        }
+        opacity: ((!shell.barAutoHide || shell.autoHideVisible) ? 1.0 : 0.0) * barSurfaceRoot.introProgress
+        scale: barSurfaceRoot.introScale
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.InOutSine } }
+        transform: [
+            Translate {
+                x: shell.autoHideOffsetX
+                y: shell.autoHideOffsetY
+                Behavior on x { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.InOutSine } }
+                Behavior on y { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.InOutSine } }
+            },
+            Translate {
+                x: barSurfaceRoot.introOffsetX
+                y: barSurfaceRoot.introOffsetY
+            }
+        ]
 
         MouseArea {
             anchors.fill: parent
@@ -232,12 +259,12 @@ Item {
                     loops: Animation.Infinite
                     NumberAnimation {
                         to: 0
-                        duration: barSurfaceRoot.skinNumber("waveCycleMs", 6000)
+                        duration: ThemeConfig.duration(barSurfaceRoot.skinNumber("waveCycleMs", 6000))
                         easing.type: Easing.InOutSine
                     }
                     NumberAnimation {
                         to: -parent.width
-                        duration: barSurfaceRoot.skinNumber("waveCycleMs", 6000)
+                        duration: ThemeConfig.duration(barSurfaceRoot.skinNumber("waveCycleMs", 6000))
                         easing.type: Easing.InOutSine
                     }
                 }
@@ -279,10 +306,10 @@ Item {
             SequentialAnimation {
                 running: barSurfaceRoot.isAnimated
                 loops: Animation.Infinite
-                ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.pink; duration: barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4 }
-                ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.peach; duration: barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4 }
-                ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.teal; duration: barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4 }
-                ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.green; duration: barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4 }
+                ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.pink; duration: ThemeConfig.duration(barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4) }
+                ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.peach; duration: ThemeConfig.duration(barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4) }
+                ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.teal; duration: ThemeConfig.duration(barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4) }
+                ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.green; duration: ThemeConfig.duration(barSurfaceRoot.skinNumber("rainbowCycleMs", 8000) / 4) }
             }
         }
 
@@ -315,7 +342,7 @@ Item {
                     loops: Animation.Infinite
                     NumberAnimation {
                         to: parent.width + auroraSweep.width * 0.2
-                        duration: barSurfaceRoot.skinNumber("auroraCycleMs", 4200)
+                        duration: ThemeConfig.duration(barSurfaceRoot.skinNumber("auroraCycleMs", 4200))
                         easing.type: Easing.InOutSine
                     }
                     NumberAnimation { to: -auroraSweep.width; duration: 0 }
@@ -497,7 +524,7 @@ Item {
                 SequentialAnimation on x {
                     running: barSurfaceRoot.skinBool("showCyberGrid", false)
                     loops: Animation.Infinite
-                    NumberAnimation { to: parent.width; duration: 5200; easing.type: Easing.Linear }
+                    NumberAnimation { to: parent.width; duration: ThemeConfig.duration(5200); easing.type: Easing.Linear }
                     NumberAnimation { to: -cyberSweep.width; duration: 0 }
                 }
             }

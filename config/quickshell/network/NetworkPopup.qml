@@ -59,10 +59,12 @@ Item {
     }
 
     Timer {
-        interval: 100
+        interval: 150
         running: true
         repeat: true
-        onTriggered: modeReader.running = true
+        onTriggered: {
+            if (!modeReader.running) modeReader.running = true;
+        }
     }
 
     Component.onCompleted: {

@@ -70,9 +70,24 @@ Item {
     property string rawJson: ""
 
     readonly property int fontWeight: mapFontWeight(fontWeightName)
+    readonly property real motionDurationScale: {
+        let speed = clamp(Number(animationSpeed) || 1.0, 0.25, 3.0);
+        let motion = String(styleMotion || "gentle").toLowerCase();
+        let motionModifier = 1.0;
+        if (motion === "firm") motionModifier = 0.78;
+        if (motion === "gentle") motionModifier = 1.08;
+        if (motion === "minimal") motionModifier = 0.60;
+        return motionModifier / speed;
+    }
 
     function clamp(value, minimum, maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    function duration(ms) {
+        let parsed = Number(ms);
+        if (isNaN(parsed) || parsed <= 0) return 0;
+        return Math.max(1, Math.round(parsed * motionDurationScale));
     }
 
     function mapFontWeight(value) {
