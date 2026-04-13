@@ -67,6 +67,7 @@ Variants {
             property string activeThemeName: ThemeConfig.theme
             property string activeThemeNormalized: String(activeThemeName || "").toLowerCase()
             property int cyberUnderhang: (isHorizontalBar && isTopBar && activeThemeNormalized === "cyber") ? 0 : 0
+            property int topEdgeBleed: (isHorizontalBar && isTopBar && edgeAttachedBar && activeThemeNormalized === "botanical") ? 2 : 0
             property string particleType: ThemeConfig.particleType
             property int particleCount: ThemeConfig.particleCount
             property real particleSpeed: ThemeConfig.particleSpeed
@@ -79,7 +80,7 @@ Variants {
             implicitWidth: barWindow.isVerticalBar ? barThickness : 0
             margins {
                 top: barWindow.isHorizontalBar
-                     ? (barWindow.isBottomBar ? 0 : (barWindow.edgeAttachedBar ? 0 : s(8)))
+                     ? (barWindow.isBottomBar ? 0 : (barWindow.edgeAttachedBar ? -barWindow.topEdgeBleed : s(8)))
                      : (barWindow.edgeAttachedBar ? 0 : s(8))
                 bottom: barWindow.isHorizontalBar
                         ? (barWindow.isBottomBar ? (barWindow.edgeAttachedBar ? 0 : s(8)) : 0)
