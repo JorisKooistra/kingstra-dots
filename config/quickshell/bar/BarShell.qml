@@ -67,7 +67,12 @@ Variants {
             property string activeThemeName: ThemeConfig.theme
             property string activeThemeNormalized: String(activeThemeName || "").toLowerCase()
             property int cyberUnderhang: (isHorizontalBar && isTopBar && activeThemeNormalized === "cyber") ? 0 : 0
-            property int topEdgeBleed: (isHorizontalBar && isTopBar && edgeAttachedBar && activeThemeNormalized === "botanical") ? 2 : 0
+            property int topEdgeBleed: (isHorizontalBar
+                                        && isTopBar
+                                        && edgeAttachedBar
+                                        && (activeThemeNormalized === "botanical"
+                                            || activeThemeNormalized === "rocky"
+                                            || activeThemeNormalized === "cyber")) ? 2 : 0
             property string particleType: ThemeConfig.particleType
             property int particleCount: ThemeConfig.particleCount
             property real particleSpeed: ThemeConfig.particleSpeed
