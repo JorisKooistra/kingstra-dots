@@ -10,13 +10,13 @@ Rectangle {
     required property var surface
     required property var mocha
     required property var ctx           // BarContent root — supplies theme chrome colors/flags
-    required property var workspacesModel
 
     Layout.preferredHeight: ctx.cyberSideModuleHeight
-    property real targetWidth: workspacesModel.count > 0 ? wsLayout.implicitWidth + shell.s(20) : 0
+    property real targetWidth: shell.workspacesModel && shell.workspacesModel.count > 0 ? wsLayout.implicitWidth + shell.s(20) : 0
     Layout.preferredWidth: targetWidth
-    visible: shell.moduleList && shell.moduleList.includes("workspaces") && workspacesModel.count > 0
-    opacity: workspacesModel.count > 0 ? 1 : 0
+    width: targetWidth
+    visible: shell.moduleList && shell.moduleList.includes("workspaces") && shell.workspacesModel && shell.workspacesModel.count > 0
+    opacity: shell.workspacesModel && shell.workspacesModel.count > 0 ? 1 : 0
     clip: true
 
     color: ctx.cyberChrome ? ctx.cyberModuleColor : surface.panelColor
@@ -47,7 +47,7 @@ Rectangle {
         spacing: shell.s(6)
 
         Repeater {
-            model: workspacesModel
+            model: shell.workspacesModel
             delegate: Rectangle {
                 id: wsPill
                 property bool isHovered: wsPillMouse.containsMouse

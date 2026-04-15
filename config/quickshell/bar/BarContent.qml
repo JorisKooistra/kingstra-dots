@@ -157,7 +157,7 @@ Item {
         NotificationsButton { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
 
         // Zichtbaar als "workspaces" in de lijst staat → office + gaming
-        WorkspacesModule    { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root; workspacesModel: workspacesModel }
+        WorkspacesModule    { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
 
         // Zichtbaar als "media_controls" in de lijst staat én er muziek speelt → media
         MediaPlayerModule   { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root; musicRefreshProc: musicForceRefresh }

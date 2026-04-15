@@ -211,7 +211,7 @@ Item {
 
         Rectangle {
             id: workspacesCard
-            visible: shell.moduleList.includes("workspaces") && workspacesModel.count > 0
+            visible: shell.moduleList.includes("workspaces") && shell.workspacesModel && shell.workspacesModel.count > 0
             Layout.fillWidth: true
             Layout.preferredHeight: wsColumn.implicitHeight + shell.s(16)
             radius: surface.panelRadius
@@ -231,7 +231,7 @@ Item {
                 spacing: shell.s(5)
 
                 Repeater {
-                    model: workspacesModel
+                    model: shell.workspacesModel
                     delegate: Rectangle {
                         property string stateLabel: model.wsState
                         property string wsName: model.wsId
