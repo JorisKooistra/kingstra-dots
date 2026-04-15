@@ -195,6 +195,20 @@ Item {
     property string editClockStyle: "digital"
     property bool editTopbarLooseBlocks: true
 
+    // Transparantie & animatie
+    property string editBarOpacity: "0.72"
+    property string editPopupOpacity: "0.80"
+    property string editAnimationSpeed: "0.75"
+
+    // Materiaal
+    property string editOverlayOpacity: "0.06"
+    property string editGlowIntensity: "0.04"
+
+    // Effecten
+    property string editParticleType: "none"
+    property int editParticleCount: 0
+    property string editParticleSpeed: "0.18"
+
     property var schemeOptions: [
         "scheme-tonal-spot",
         "scheme-monochrome",
@@ -230,6 +244,7 @@ Item {
     property var barEdgeStyleOptions: ["flush", "soft", "hard", "beveled", "ornate-rounded"]
     property var clockStyleOptions: ["digital", "analog", "hybrid"]
     property var fontWeightOptions: ["light", "regular", "medium", "bold"]
+    property var particleTypeOptions: ["none", "fireflies", "sparkles", "rain", "snow", "dust"]
 
     function refreshActiveTheme() {
         loadThemeProc.running = true;
@@ -361,6 +376,19 @@ Item {
             "digital"
         );
         editTopbarLooseBlocks = defaultTopbarLooseBlocks(themeData, safeThemeId);
+
+        editBarOpacity = toFloatString(themeValue(themeData, "appearance", "bar_opacity", 0.72), 0.72);
+        editPopupOpacity = toFloatString(themeValue(themeData, "appearance", "popup_opacity", 0.80), 0.80);
+        editAnimationSpeed = toFloatString(themeValue(themeData, "appearance", "animation_speed", 0.75), 0.75);
+        editOverlayOpacity = toFloatString(themeValue(themeData, "material", "overlay_opacity", 0.06), 0.06);
+        editGlowIntensity = toFloatString(themeValue(themeData, "material", "glow_intensity", 0.04), 0.04);
+        editParticleType = normalizeOption(
+            String(themeValue(themeData, "effects", "particles", "none")),
+            particleTypeOptions,
+            "none"
+        );
+        editParticleCount = Math.max(0, toIntValue(themeValue(themeData, "effects", "particle_count", 0), 0));
+        editParticleSpeed = toFloatString(themeValue(themeData, "effects", "particle_speed", 0.18), 0.18);
     }
 
     function saveThemeEdits() {
@@ -403,7 +431,15 @@ Item {
             "bar.top_edge_style", normalizeOption(editBarTopEdgeStyle, barEdgeStyleOptions, "soft"),
             "bar.bottom_edge_style", normalizeOption(editBarBottomEdgeStyle, barEdgeStyleOptions, "soft"),
             "bar.clock_style", normalizeOption(editClockStyle, clockStyleOptions, "digital"),
-            "bar.topbar_loose_blocks", String(!!editTopbarLooseBlocks)
+            "bar.topbar_loose_blocks", String(!!editTopbarLooseBlocks),
+            "appearance.bar_opacity", toFloatString(editBarOpacity, 0.72),
+            "appearance.popup_opacity", toFloatString(editPopupOpacity, 0.80),
+            "appearance.animation_speed", toFloatString(editAnimationSpeed, 0.75),
+            "material.overlay_opacity", toFloatString(editOverlayOpacity, 0.06),
+            "material.glow_intensity", toFloatString(editGlowIntensity, 0.04),
+            "effects.particles", String(editParticleType || "none"),
+            "effects.particle_count", String(Math.max(0, editParticleCount)),
+            "effects.particle_speed", toFloatString(editParticleSpeed, 0.18)
         ];
 
         themeWriteProc.themeId = themeEditThemeId;
@@ -2350,6 +2386,129 @@ Item {
                                         }
                                         Item { Layout.fillWidth: true }
                                     }
+                                    // ── Transparantie & animatie ──────────────────────────────────────
+                                    Text { text: "Transparantie & animatie"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay1; topPadding: root.s(4) }
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Bar opacity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox {
+                                            from: 10; to: 100; stepSize: 1
+                                            value: Math.round(parseFloat(root.editBarOpacity) * 100)
+                                            textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                            valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 72 : Math.round(n * 100); }
+                                            onValueChanged: root.editBarOpacity = (value / 100.0).toFixed(2)
+                                            Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Popup opacity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox {
+                                            from: 10; to: 100; stepSize: 1
+                                            value: Math.round(parseFloat(root.editPopupOpacity) * 100)
+                                            textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                            valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 80 : Math.round(n * 100); }
+                                            onValueChanged: root.editPopupOpacity = (value / 100.0).toFixed(2)
+                                            Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Animatiesnelheid"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox {
+                                            from: 10; to: 300; stepSize: 5
+                                            value: Math.round(parseFloat(root.editAnimationSpeed) * 100)
+                                            textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                            valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 75 : Math.round(n * 100); }
+                                            onValueChanged: root.editAnimationSpeed = (value / 100.0).toFixed(2)
+                                            Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+
+                                    // ── Materiaal ────────────────────────────────────────────────────
+                                    Text { text: "Materiaal"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay1; topPadding: root.s(4) }
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Overlay opacity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox {
+                                            from: 0; to: 50; stepSize: 1
+                                            value: Math.round(parseFloat(root.editOverlayOpacity) * 100)
+                                            textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                            valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 6 : Math.round(n * 100); }
+                                            onValueChanged: root.editOverlayOpacity = (value / 100.0).toFixed(2)
+                                            Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Glow intensiteit"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox {
+                                            from: 0; to: 50; stepSize: 1
+                                            value: Math.round(parseFloat(root.editGlowIntensity) * 100)
+                                            textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                            valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 4 : Math.round(n * 100); }
+                                            onValueChanged: root.editGlowIntensity = (value / 100.0).toFixed(2)
+                                            Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+
+                                    // ── Effecten ─────────────────────────────────────────────────────
+                                    Text { text: "Effecten"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay1; topPadding: root.s(4) }
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Particle type"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox {
+                                            model: root.particleTypeOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editParticleType))
+                                            onActivated: root.editParticleType = currentText
+                                            Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Particle count"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox {
+                                            from: 0; to: 100; stepSize: 1
+                                            value: root.editParticleCount
+                                            onValueChanged: root.editParticleCount = value
+                                            Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Particle speed"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox {
+                                            from: 1; to: 500; stepSize: 1
+                                            value: Math.round(parseFloat(root.editParticleSpeed) * 100)
+                                            textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
+                                            valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 18 : Math.round(n * 100); }
+                                            onValueChanged: root.editParticleSpeed = (value / 100.0).toFixed(2)
+                                            Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+
+                                    // ── Topbar acties ─────────────────────────────────────────────────
+                                    Text { text: "Acties"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay1; topPadding: root.s(4) }
+
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
