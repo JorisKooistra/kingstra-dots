@@ -13,9 +13,9 @@ Rectangle {
     required property var workspacesModel
 
     Layout.preferredHeight: ctx.cyberSideModuleHeight
-    property real targetWidth: workspacesModel.count > 0 ? wsLayout.width + shell.s(20) : 0
+    property real targetWidth: workspacesModel.count > 0 ? wsLayout.implicitWidth + shell.s(20) : 0
     Layout.preferredWidth: targetWidth
-    visible: targetWidth > 0 && shell.moduleList.includes("workspaces")
+    visible: shell.moduleList && shell.moduleList.includes("workspaces") && workspacesModel.count > 0
     opacity: workspacesModel.count > 0 ? 1 : 0
     clip: true
 
