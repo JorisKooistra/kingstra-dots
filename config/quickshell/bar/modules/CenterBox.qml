@@ -1,7 +1,7 @@
 import QtQuick        // basisbouwstenen: Rectangle, Text, Item, Timer, ...
 import QtQuick.Layouts // RowLayout, ColumnLayout (zoals flexbox)
 import Quickshell      // execDetached en andere shell-functies
-import "../clock"      // DigitalClock, AnalogClock, SevenSegmentText
+import "../../clock"   // DigitalClock, AnalogClock, SevenSegmentText
 
 // ── Wat is dit bestand? ───────────────────────────────────────────────────────
 // Dit is een herbruikbare QML-component: de middelste pill van de bar met

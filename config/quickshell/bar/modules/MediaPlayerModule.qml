@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 
 // Left-bar pill: now-playing info + prev/play/next controls.

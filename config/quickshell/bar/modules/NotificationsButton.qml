@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 
 // Left-bar button: left-click opens swaync panel, right-click toggles DnD.
