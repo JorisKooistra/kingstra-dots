@@ -2387,7 +2387,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     // ── Transparantie & animatie ──────────────────────────────────────
-                                    Text { text: "Transparantie & animatie"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay1; topPadding: root.s(4) }
+                                    Text { text: "Transparantie & animatie"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         Layout.fillWidth: true
@@ -2433,7 +2433,7 @@ Item {
                                     }
 
                                     // ── Materiaal ────────────────────────────────────────────────────
-                                    Text { text: "Materiaal"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay1; topPadding: root.s(4) }
+                                    Text { text: "Materiaal"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         Layout.fillWidth: true
@@ -2465,7 +2465,7 @@ Item {
                                     }
 
                                     // ── Effecten ─────────────────────────────────────────────────────
-                                    Text { text: "Effecten"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay1; topPadding: root.s(4) }
+                                    Text { text: "Effecten"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         Layout.fillWidth: true
@@ -2507,7 +2507,7 @@ Item {
                                     }
 
                                     // ── Topbar acties ─────────────────────────────────────────────────
-                                    Text { text: "Acties"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay1; topPadding: root.s(4) }
+                                    Text { text: "Acties"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         Layout.fillWidth: true
