@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
 import Quickshell.Services.Pipewire
+import Quickshell.Services.PowerProfiles
 import "../"
 
 Item {
@@ -62,14 +63,15 @@ Item {
     // -------------------------------------------------------------------------
 
     // Battery — UPower (event-driven)
-    readonly property int batCapacity: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage) : 0
-    readonly property bool isCharging: UPower.displayDevice
+    readonly property int batCapacity: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage * 100) : 0
+    readonly property bool isCharging: (UPower.displayDevice && UPower.displayDevice.ready)
         ? (UPower.displayDevice.state === UPowerDeviceState.Charging
            || UPower.displayDevice.state === UPowerDeviceState.FullyCharged
            || UPower.displayDevice.state === UPowerDeviceState.PendingCharge)
         : false
-    readonly property string batStatus: isCharging ? "Charging"
-        : (UPower.displayDevice ? UPowerDeviceState.toString(UPower.displayDevice.state) : "Unknown")
+    readonly property string batStatus: (UPower.displayDevice && UPower.displayDevice.ready)
+        ? (isCharging ? "Charging" : UPowerDeviceState.toString(UPower.displayDevice.state))
+        : "…"
 
     // Power profile — UPower PowerProfiles (event-driven)
     readonly property string powerProfile: {
@@ -81,8 +83,8 @@ Item {
 
     // Volume — Pipewire (event-driven)
     readonly property var _sink: Pipewire.defaultAudioSink
-    readonly property real sysVolume: _sink ? Math.round(_sink.audio.volume * 100) : 0
-    readonly property bool sysMuted: _sink ? _sink.audio.muted : false
+    readonly property real sysVolume: (_sink && _sink.audio && _sink.audio.ready) ? Math.round(_sink.audio.volume * 100) : -1
+    readonly property bool sysMuted: (_sink && _sink.audio && _sink.audio.ready) ? _sink.audio.muted : false
 
     // Brightness — still via brightnessctl (no native module)
     property real sysBrightness: 0

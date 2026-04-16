@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
+import Quickshell.Services.Mpris
 import "../clock"
 
 Item {
@@ -297,9 +298,12 @@ Item {
             color: surface.panelColor
 
             ColumnLayout {
+                id: mediaCard
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(4)
+
+                readonly property var player: shell._activePlayer
 
                 Text {
                     text: shell.musicData.title
@@ -322,10 +326,7 @@ Item {
                         color: mocha.overlay2
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: {
-                                Quickshell.execDetached(["playerctl", "previous"]);
-                                Quickshell.execDetached(["bash", "-c", "bash ~/.config/quickshell/music/music_info.sh > /tmp/music_info.json"]);
-                            }
+                            onClicked: { if (mediaCard.player && mediaCard.player.canGoPrevious) mediaCard.player.previous(); }
                         }
                     }
                     Text {
@@ -335,10 +336,7 @@ Item {
                         color: mocha.green
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: {
-                                Quickshell.execDetached(["playerctl", "play-pause"]);
-                                Quickshell.execDetached(["bash", "-c", "bash ~/.config/quickshell/music/music_info.sh > /tmp/music_info.json"]);
-                            }
+                            onClicked: { if (mediaCard.player && mediaCard.player.canTogglePlaying) mediaCard.player.togglePlaying(); }
                         }
                     }
                     Text {
@@ -348,10 +346,7 @@ Item {
                         color: mocha.overlay2
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: {
-                                Quickshell.execDetached(["playerctl", "next"]);
-                                Quickshell.execDetached(["bash", "-c", "bash ~/.config/quickshell/music/music_info.sh > /tmp/music_info.json"]);
-                            }
+                            onClicked: { if (mediaCard.player && mediaCard.player.canGoNext) mediaCard.player.next(); }
                         }
                     }
                     Item { Layout.fillWidth: true }
@@ -509,7 +504,7 @@ Item {
                     color: shell.isWifiOn ? mocha.blue : mocha.subtext0
                 }
                 Text {
-                    text: shell.sysPollerLoaded ? (shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off") : ""
+                    text: shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off"
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
                     font.pixelSize: shell.s(11)
@@ -544,7 +539,7 @@ Item {
                     color: shell.isBtOn ? mocha.mauve : mocha.subtext0
                 }
                 Text {
-                    text: shell.sysPollerLoaded ? shell.btDevice : ""
+                    text: shell.btDevice
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
                     font.pixelSize: shell.s(11)

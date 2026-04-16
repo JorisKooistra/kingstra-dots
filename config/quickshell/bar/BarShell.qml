@@ -3,6 +3,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import Quickshell.Bluetooth
+import Quickshell.Networking
 import Quickshell.Services.UPower
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
@@ -188,7 +189,7 @@ Variants {
                 while (barWindow.volumeWheelAccumulator >= 120) { steps += 1; barWindow.volumeWheelAccumulator -= 120; }
                 while (barWindow.volumeWheelAccumulator <= -120) { steps -= 1; barWindow.volumeWheelAccumulator += 120; }
                 if (steps === 0) return;
-                let sink = Pipewire.defaultAudioSink;
+                let sink = Pipewire.preferredDefaultAudioSink ?? Pipewire.defaultAudioSink;
                 if (!sink) return;
                 let next = Math.max(0, Math.min(1.5, sink.audio.volume + (steps * 0.01)));
                 sink.audio.volume = next;
@@ -248,16 +249,39 @@ Variants {
             property string weatherTemp: "--°"
             property string weatherHex: mocha.yellow
             
-            property string wifiStatus: "Off"
-            property string wifiIcon: "󰤮"
-            property string wifiSsid: ""
+            // WiFi — Quickshell.Networking (event-driven)
+            readonly property var _wifiDevice: {
+                var devs = Networking.devices.values;
+                for (var i = 0; i < devs.length; i++) {
+                    if (devs[i].type === DeviceType.Wifi) return devs[i];
+                }
+                return null;
+            }
+            readonly property var _wifiNetwork: {
+                if (!_wifiDevice) return null;
+                var nets = _wifiDevice.networks.values;
+                for (var i = 0; i < nets.length; i++) {
+                    if (nets[i].connected) return nets[i];
+                }
+                return null;
+            }
+            readonly property bool isWifiOn: _wifiDevice ? _wifiDevice.connected : false
+            readonly property string wifiSsid: _wifiNetwork ? _wifiNetwork.name : ""
+            readonly property string wifiIcon: {
+                if (!_wifiDevice || !isWifiOn) return "󰤮";
+                var sig = _wifiNetwork ? _wifiNetwork.signalStrength : 0;
+                if (sig > 0.75) return "󰤨";
+                if (sig > 0.5)  return "󰤥";
+                if (sig > 0.25) return "󰤢";
+                return "󰤟";
+            }
 
             // Bluetooth — Quickshell.Bluetooth (event-driven)
             readonly property bool isBtOn: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
             readonly property string btIcon: isBtOn ? "󰂱" : "󰂲"
             readonly property string btDevice: {
                 if (!Bluetooth.defaultAdapter || !isBtOn) return "";
-                var devs = Bluetooth.defaultAdapter.devices;
+                var devs = Bluetooth.defaultAdapter.devices.values;
                 for (var i = 0; i < devs.length; i++) {
                     if (devs[i].connected) return devs[i].name || "";
                 }
@@ -266,7 +290,9 @@ Variants {
             readonly property string btStatus: isBtOn ? "On" : "Off"
 
             // Volume — Quickshell.Services.Pipewire (event-driven)
-            readonly property var _defaultSink: Pipewire.defaultAudioSink
+            // preferredDefaultAudioSink is the user-selected sink (e.g. Bluetooth);
+            // defaultAudioSink can differ (e.g. a passthrough ALSA node with volume=0).
+            readonly property var _defaultSink: Pipewire.preferredDefaultAudioSink ?? Pipewire.defaultAudioSink
             readonly property bool isMuted: _defaultSink ? _defaultSink.audio.muted : false
             readonly property int _volRaw: _defaultSink ? Math.round(_defaultSink.audio.volume * 100) : 0
             readonly property string volPercent: _volRaw + "%"
@@ -278,7 +304,7 @@ Variants {
             }
 
             // Battery — Quickshell.Services.UPower (event-driven)
-            readonly property int batCap: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage) : 0
+            readonly property int batCap: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage * 100) : 0
             readonly property bool isCharging: UPower.displayDevice
                 ? (UPower.displayDevice.state === UPowerDeviceState.Charging
                    || UPower.displayDevice.state === UPowerDeviceState.FullyCharged
@@ -364,7 +390,6 @@ Variants {
             }
 
             // Derived properties for UI logic
-            property bool isWifiOn: barWindow.wifiStatus.toLowerCase() === "enabled" || barWindow.wifiStatus.toLowerCase() === "on"
             property bool isSoundActive: !barWindow.isMuted && barWindow._volRaw > 0
 
             // ==========================================
@@ -382,9 +407,6 @@ Variants {
                         if (txt !== "") {
                             try {
                                 let data = JSON.parse(txt);
-                                if (barWindow.wifiStatus !== data.wifi.status) barWindow.wifiStatus = data.wifi.status;
-                                if (barWindow.wifiIcon !== data.wifi.icon) barWindow.wifiIcon = data.wifi.icon;
-                                if (barWindow.wifiSsid !== data.wifi.ssid) barWindow.wifiSsid = data.wifi.ssid;
                                 if (barWindow.kbLayout !== data.keyboard.layout) barWindow.kbLayout = data.keyboard.layout;
                                 barWindow.sysPollerLoaded = true;
                                 barWindow.fastPollerLoaded = true;
