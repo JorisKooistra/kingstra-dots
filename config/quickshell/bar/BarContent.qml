@@ -160,7 +160,7 @@ Item {
         WorkspacesModule    { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
 
         // Zichtbaar als "media_controls" in de lijst staat én er muziek speelt → media
-        MediaPlayerModule   { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root; musicRefreshProc: musicForceRefresh }
+        MediaPlayerModule   { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
 
         Item { Layout.fillWidth: true }
     }

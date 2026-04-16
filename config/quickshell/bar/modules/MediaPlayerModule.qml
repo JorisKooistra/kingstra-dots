@@ -1,26 +1,47 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Services.Mpris
 
 // Left-bar pill: now-playing info + prev/play/next controls.
-// musicRefreshProc is the Process owned by barWindow (BarShell) that force-refreshes music state.
+// Uses Quickshell.Services.Mpris for event-driven playback state (no polling).
 Rectangle {
     id: root
     required property var shell
     required property var surface
     required property var mocha
     required property var ctx           // BarContent root — supplies theme chrome colors/flags
-    required property var musicRefreshProc  // barWindow.musicForceRefresh
+
+    // Pick the first non-stopped player, fall back to any player
+    readonly property var _player: {
+        var players = Mpris.players;
+        for (var i = 0; i < players.length; i++) {
+            if (players[i].playbackState !== MprisPlaybackState.Stopped) return players[i];
+        }
+        return null;
+    }
+    readonly property bool _isPlaying: _player ? _player.playbackState === MprisPlaybackState.Playing : false
+    readonly property bool _isActive:  _player !== null && _player.trackTitle !== ""
+    readonly property string _timeStr: {
+        if (!_player || !_player.positionSupported) return "";
+        var pos = Math.floor(_player.position / 1000000);
+        var fmt = Math.floor(pos / 60) + ":" + String(pos % 60).padStart(2, '0');
+        if (_player.lengthSupported && _player.length > 0) {
+            var len = Math.floor(_player.length / 1000000);
+            fmt += " / " + Math.floor(len / 60) + ":" + String(len % 60).padStart(2, '0');
+        }
+        return fmt;
+    }
 
     Layout.preferredHeight: ctx.cyberSideModuleHeight
     clip: true
 
     property bool isMediaMode: shell.activeMode === "media"
-    property real targetWidth: shell.isMediaActive ? mediaLayoutContainer.width + shell.s(24) : 0
+    property real targetWidth: _isActive ? mediaLayoutContainer.width + shell.s(24) : 0
     Layout.maximumWidth: isMediaMode ? shell.s(220) : targetWidth
     Layout.preferredWidth: targetWidth
     visible: (targetWidth > 0 || opacity > 0) && shell.moduleList.includes("media_controls")
-    opacity: shell.isMediaActive ? 1.0 : 0.0
+    opacity: _isActive ? 1.0 : 0.0
 
     color: ctx.cyberChrome ? ctx.cyberModuleColor : surface.panelColor
     radius: surface.panelRadius
@@ -42,7 +63,7 @@ Rectangle {
         anchors.bottom: parent.bottom; anchors.bottomMargin: shell.s(4)
         height: 1
         color: ctx.cyberModuleTickColor
-        opacity: shell.isMediaActive ? 0.62 : 0.0
+        opacity: _isActive ? 0.62 : 0.0
         Behavior on opacity { NumberAnimation { duration: 250 } }
     }
 
@@ -54,9 +75,9 @@ Rectangle {
         height: parent.height
         width: innerMediaLayout.width
 
-        opacity: shell.isMediaActive ? 1.0 : 0.0
+        opacity: _isActive ? 1.0 : 0.0
         transform: Translate {
-            x: shell.isMediaActive ? 0 : shell.s(-20)
+            x: _isActive ? 0 : shell.s(-20)
             Behavior on x { NumberAnimation { duration: 700; easing.type: Easing.OutQuint } }
         }
         Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
@@ -85,12 +106,12 @@ Rectangle {
                     Rectangle {
                         width: shell.s(32); height: shell.s(32); radius: shell.s(8)
                         color: mocha.surface1
-                        border.width: shell.musicData.status === "Playing" ? 1 : 0
+                        border.width: root._isPlaying ? 1 : 0
                         border.color: mocha.mauve
                         clip: true
                         Image {
                             anchors.fill: parent
-                            source: shell.musicData.artUrl || ""
+                            source: root._player ? (root._player.trackArtUrl || "") : ""
                             fillMode: Image.PreserveAspectCrop
                         }
                         Rectangle {
@@ -107,7 +128,7 @@ Rectangle {
                         width: maxColWidth
 
                         Text {
-                            text: shell.musicData.title
+                            text: root._player ? (root._player.trackTitle || "") : ""
                             font.family: "JetBrains Mono"; font.weight: Font.Black
                             font.pixelSize: root.isMediaMode ? shell.s(11) : shell.s(13)
                             color: mocha.text
@@ -115,7 +136,7 @@ Rectangle {
                             elide: Text.ElideRight
                         }
                         Text {
-                            text: shell.musicData.timeStr
+                            text: root._timeStr
                             font.family: "JetBrains Mono"; font.weight: Font.Black
                             font.pixelSize: shell.s(10)
                             color: mocha.subtext0
@@ -142,7 +163,7 @@ Rectangle {
                     }
                     MouseArea {
                         id: prevMouse; hoverEnabled: true; anchors.fill: parent
-                        onClicked: { Quickshell.execDetached(["playerctl", "previous"]); musicRefreshProc.running = true; }
+                        onClicked: { if (root._player && root._player.canGoPrevious) root._player.previous(); }
                     }
                 }
 
@@ -150,7 +171,7 @@ Rectangle {
                     width: shell.s(28); height: shell.s(28)
                     Text {
                         anchors.centerIn: parent
-                        text: shell.musicData.status === "Playing" ? "󰏤" : "󰐊"
+                        text: root._isPlaying ? "󰏤" : "󰐊"
                         font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(30)
                         color: playMouse.containsMouse ? mocha.green : mocha.text
                         Behavior on color { ColorAnimation { duration: 150 } }
@@ -159,7 +180,7 @@ Rectangle {
                     }
                     MouseArea {
                         id: playMouse; hoverEnabled: true; anchors.fill: parent
-                        onClicked: { Quickshell.execDetached(["playerctl", "play-pause"]); musicRefreshProc.running = true; }
+                        onClicked: { if (root._player && root._player.canTogglePlaying) root._player.togglePlaying(); }
                     }
                 }
 
@@ -175,7 +196,7 @@ Rectangle {
                     }
                     MouseArea {
                         id: nextMouse; hoverEnabled: true; anchors.fill: parent
-                        onClicked: { Quickshell.execDetached(["playerctl", "next"]); musicRefreshProc.running = true; }
+                        onClicked: { if (root._player && root._player.canGoNext) root._player.next(); }
                     }
                 }
             }

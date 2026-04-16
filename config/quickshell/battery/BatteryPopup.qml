@@ -3,6 +3,8 @@ import QtQuick.Layouts
 import QtQuick.Window
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.UPower
+import Quickshell.Services.Pipewire
 import "../"
 
 Item {
@@ -56,29 +58,41 @@ Item {
     readonly property color glassFill: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, Math.min(0.88, ThemeConfig.popupOpacity * 0.4))
 
     // -------------------------------------------------------------------------
-    // STATE & POLLING
+    // STATE & DATA
     // -------------------------------------------------------------------------
-    property int batCapacity: 0
-    property string batStatus: "Unknown"
-    property string powerProfile: "balanced"
-    
-    property int upHours: 0
-    property int upMins: 0
 
-    property real sysVolume: 0
-    property bool sysMuted: false
+    // Battery — UPower (event-driven)
+    readonly property int batCapacity: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage) : 0
+    readonly property bool isCharging: UPower.displayDevice
+        ? (UPower.displayDevice.state === UPowerDeviceState.Charging
+           || UPower.displayDevice.state === UPowerDeviceState.FullyCharged
+           || UPower.displayDevice.state === UPowerDeviceState.PendingCharge)
+        : false
+    readonly property string batStatus: isCharging ? "Charging"
+        : (UPower.displayDevice ? UPowerDeviceState.toString(UPower.displayDevice.state) : "Unknown")
+
+    // Power profile — UPower PowerProfiles (event-driven)
+    readonly property string powerProfile: {
+        var p = PowerProfiles.profile;
+        if (p === PowerProfile.Performance) return "performance";
+        if (p === PowerProfile.PowerSaver)  return "power-saver";
+        return "balanced";
+    }
+
+    // Volume — Pipewire (event-driven)
+    readonly property var _sink: Pipewire.defaultAudioSink
+    readonly property real sysVolume: _sink ? Math.round(_sink.audio.volume * 100) : 0
+    readonly property bool sysMuted: _sink ? _sink.audio.muted : false
+
+    // Brightness — still via brightnessctl (no native module)
     property real sysBrightness: 0
-    
-    property string currentUserName: ""
-
-    // Anti-Jitter Sync States
-    property bool isDraggingVol: false
     property bool isDraggingBri: false
-
-    Timer { id: volSyncDelay; interval: 800; onTriggered: window.isDraggingVol = false; triggeredOnStart: true; }
     Timer { id: briSyncDelay; interval: 800; onTriggered: window.isDraggingBri = false; triggeredOnStart: true; }
 
-    readonly property bool isCharging: batStatus === "Charging"
+    // Uptime + username — still via /proc/uptime (no native module)
+    property int upHours: 0
+    property int upMins: 0
+    property string currentUserName: ""
 
     // Unified hue for Battery
     readonly property color batColorStart: {
@@ -108,57 +122,33 @@ Item {
 
     property real animCapacity: 0
     Behavior on animCapacity { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
-    
+    onBatCapacityChanged: animCapacity = batCapacity
+    Component.onCompleted: animCapacity = batCapacity
+
     onAnimCapacityChanged: batCanvas.requestPaint()
     onBatColorStartChanged: batCanvas.requestPaint()
 
-    Process {
-        id: userPoller
-        command: ["bash", "-c", "echo $USER"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: {
-                window.currentUserName = this.text.trim();
-            }
-        }
-    }
-
+    // Uptime + username + brightness poller (battery/volume/power-profile now native)
     Process {
         id: sysPoller
-        command: ["bash", "-c", 
-            "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1 || echo '0'; " +
-            "cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1 || echo 'Unknown'; " +
-            "powerprofilesctl get 2>/dev/null || echo 'balanced'; " +
+        command: ["bash", "-c",
+            "echo $USER; " +
             "awk '{print int($1/3600)\"h \"int(($1%3600)/60)\"m\"}' /proc/uptime 2>/dev/null || echo '0h 0m'; " +
-            "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{print int($2*100), ($3==\"[MUTED]\"?\"off\":\"on\")}' || echo '0 on'; " +
             "brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' || echo '0'"
         ]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
                 let lines = this.text.trim().split("\n");
-                if (lines.length >= 6) {
-                    if (window.batCapacity !== parseInt(lines[0])) {
-                        window.batCapacity = parseInt(lines[0]);
-                        window.animCapacity = window.batCapacity;
-                    }
-                    window.batStatus = lines[1];
-                    window.powerProfile = lines[2];
-                    
-                    let upParts = lines[3].split("h ");
+                if (lines.length >= 3) {
+                    window.currentUserName = lines[0];
+                    let upParts = lines[1].split("h ");
                     if (upParts.length === 2) {
                         window.upHours = parseInt(upParts[0]) || 0;
                         window.upMins = parseInt(upParts[1].replace("m", "")) || 0;
                     }
-
-                    if (!window.isDraggingVol) {
-                        let volParts = (lines[4] || "0 on").trim().split(" ");
-                        window.sysVolume = parseInt(volParts[0]) || 0;
-                        window.sysMuted = (volParts[1] === "off");
-                    }
-                    
                     if (!window.isDraggingBri) {
-                        window.sysBrightness = parseInt(lines[5]) || 0;
+                        window.sysBrightness = parseInt(lines[2]) || 0;
                     }
                 }
             }
@@ -166,7 +156,7 @@ Item {
     }
 
     Timer {
-        interval: 1500; running: true; repeat: true; triggeredOnStart: true;
+        interval: 5000; running: true; repeat: true; triggeredOnStart: true;
         onTriggered: sysPoller.running = true
     }
 
@@ -796,11 +786,8 @@ Item {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        volSyncDelay.stop();
-                                        window.isDraggingVol = true; 
-                                        window.sysMuted = !window.sysMuted;
-                                        Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]);
-                                        volSyncDelay.restart();
+                                        if (Pipewire.defaultAudioSink)
+                                            Pipewire.defaultAudioSink.audio.muted = !Pipewire.defaultAudioSink.audio.muted;
                                     }
                                 }
                             }
@@ -812,15 +799,13 @@ Item {
                                 Timer {
                                     id: volCmdThrottle
                                     interval: 50
-                                    property int targetPct: -1
+                                    property real targetVol: -1
                                     onTriggered: {
-                                        if (targetPct >= 0) {
-                                            if (targetPct > 0 && window.sysMuted) {
-                                                window.sysMuted = false;
-                                                Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "0"]);
-                                            }
-                                            Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", targetPct + "%"]);
-                                            targetPct = -1;
+                                        if (targetVol >= 0 && Pipewire.defaultAudioSink) {
+                                            Pipewire.defaultAudioSink.audio.volume = targetVol;
+                                            if (targetVol > 0 && Pipewire.defaultAudioSink.audio.muted)
+                                                Pipewire.defaultAudioSink.audio.muted = false;
+                                            targetVol = -1;
                                         }
                                     }
                                 }
@@ -853,14 +838,13 @@ Item {
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    onPressed: (mouse) => { volSyncDelay.stop(); window.isDraggingVol = true; updateVol(mouse.x); }
+                                    onPressed: (mouse) => { updateVol(mouse.x); }
                                     onPositionChanged: (mouse) => { if (pressed) updateVol(mouse.x); }
-                                    onReleased: { volSyncDelay.restart(); }
+                                    onReleased: {}
                                     
                                     function updateVol(mx) {
                                         let pct = Math.max(0, Math.min(100, Math.round((mx / width) * 100)));
-                                        window.sysVolume = pct;
-                                        volCmdThrottle.targetPct = pct;
+                                        volCmdThrottle.targetVol = pct / 100.0;
                                         if (!volCmdThrottle.running) volCmdThrottle.start();
                                     }
                                 }
@@ -1127,7 +1111,11 @@ Item {
                                 MouseArea {
                                     id: profileMa
                                     anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: { Quickshell.execDetached(["powerprofilesctl", "set", name]); sysPoller.running = true; }
+                                    onClicked: {
+                                        if (name === "performance") PowerProfiles.profile = PowerProfile.Performance;
+                                        else if (name === "power-saver") PowerProfiles.profile = PowerProfile.PowerSaver;
+                                        else PowerProfiles.profile = PowerProfile.Balanced;
+                                    }
                                 }
                             }
                         }

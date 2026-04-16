@@ -2,6 +2,10 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
+import Quickshell.Bluetooth
+import Quickshell.Services.UPower
+import Quickshell.Services.Pipewire
+import Quickshell.Services.Mpris
 import ".."
 
 Variants {
@@ -177,53 +181,18 @@ Variants {
                 Quickshell.execDetached(["notify-send", "Updates", "Update gestart in terminal"]);
             }
 
-            function volumeIconFor(volumePercent, muted) {
-                let vol = Math.max(0, Math.min(150, parseInt(volumePercent) || 0));
-                if (muted || vol === 0) return "󰝟";
-                if (vol >= 70) return "󰕾";
-                if (vol >= 30) return "󰖀";
-                return "󰕿";
-            }
-
-            function applyAudioState(volumePercent, muted) {
-                let vol = Math.max(0, Math.min(150, parseInt(volumePercent) || 0));
-                let mutedBool = (muted === true || muted === "true");
-                let newVol = vol.toString() + "%";
-                let newIcon = volumeIconFor(vol, mutedBool);
-                if (barWindow.volPercent !== newVol) barWindow.volPercent = newVol;
-                if (barWindow.isMuted !== mutedBool) barWindow.isMuted = mutedBool;
-                if (barWindow.volIcon !== newIcon) barWindow.volIcon = newIcon;
-            }
-
             function handleVolumeWheel(deltaY) {
                 if (!deltaY || deltaY === 0) return;
                 barWindow.volumeWheelAccumulator += deltaY;
                 let steps = 0;
-
-                while (barWindow.volumeWheelAccumulator >= 120) {
-                    steps += 1;
-                    barWindow.volumeWheelAccumulator -= 120;
-                }
-                while (barWindow.volumeWheelAccumulator <= -120) {
-                    steps -= 1;
-                    barWindow.volumeWheelAccumulator += 120;
-                }
-
+                while (barWindow.volumeWheelAccumulator >= 120) { steps += 1; barWindow.volumeWheelAccumulator -= 120; }
+                while (barWindow.volumeWheelAccumulator <= -120) { steps -= 1; barWindow.volumeWheelAccumulator += 120; }
                 if (steps === 0) return;
-
-                let current = parseInt(String(barWindow.volPercent).replace("%", "")) || 0;
-                let next = current + steps;
-                next = Math.max(0, Math.min(150, next));
-
-                applyAudioState(next, false);
-
-                if (steps > 0) {
-                    Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-up " + steps]);
-                } else {
-                    Quickshell.execDetached(["bash", "-c", "~/.config/quickshell/sys_info.sh --vol-down " + Math.abs(steps)]);
-                }
-
-                if (!audioPoller.running) audioPoller.running = true;
+                let sink = Pipewire.defaultAudioSink;
+                if (!sink) return;
+                let next = Math.max(0, Math.min(1.5, sink.audio.volume + (steps * 0.01)));
+                sink.audio.volume = next;
+                if (steps > 0 && sink.audio.muted) sink.audio.muted = false;
             }
 
             Process {
@@ -282,24 +251,87 @@ Variants {
             property string wifiStatus: "Off"
             property string wifiIcon: "󰤮"
             property string wifiSsid: ""
-            
-            property string btStatus: "Off"
-            property string btIcon: "󰂲"
-            property string btDevice: ""
-            
-            property string volPercent: "0%"
-            property string volIcon: "󰕾"
-            property bool isMuted: false
-            
-            property string batPercent: "100%"
-            property string batIcon: "󰁹"
-            property string batStatus: "Unknown"
-            
+
+            // Bluetooth — Quickshell.Bluetooth (event-driven)
+            readonly property bool isBtOn: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
+            readonly property string btIcon: isBtOn ? "󰂱" : "󰂲"
+            readonly property string btDevice: {
+                if (!Bluetooth.defaultAdapter || !isBtOn) return "";
+                var devs = Bluetooth.defaultAdapter.devices;
+                for (var i = 0; i < devs.length; i++) {
+                    if (devs[i].connected) return devs[i].name || "";
+                }
+                return "";
+            }
+            readonly property string btStatus: isBtOn ? "On" : "Off"
+
+            // Volume — Quickshell.Services.Pipewire (event-driven)
+            readonly property var _defaultSink: Pipewire.defaultAudioSink
+            readonly property bool isMuted: _defaultSink ? _defaultSink.audio.muted : false
+            readonly property int _volRaw: _defaultSink ? Math.round(_defaultSink.audio.volume * 100) : 0
+            readonly property string volPercent: _volRaw + "%"
+            readonly property string volIcon: {
+                if (isMuted || _volRaw === 0) return "󰝟";
+                if (_volRaw >= 70) return "󰕾";
+                if (_volRaw >= 30) return "󰖀";
+                return "󰕿";
+            }
+
+            // Battery — Quickshell.Services.UPower (event-driven)
+            readonly property int batCap: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage) : 0
+            readonly property bool isCharging: UPower.displayDevice
+                ? (UPower.displayDevice.state === UPowerDeviceState.Charging
+                   || UPower.displayDevice.state === UPowerDeviceState.FullyCharged
+                   || UPower.displayDevice.state === UPowerDeviceState.PendingCharge)
+                : false
+            readonly property string batPercent: batCap + "%"
+            readonly property string batStatus: isCharging ? "Charging"
+                : (UPower.displayDevice ? UPowerDeviceState.toString(UPower.displayDevice.state) : "Unknown")
+            readonly property string batIcon: {
+                if (isCharging) return "󰂄";
+                if (batCap > 90) return "󰁹";
+                if (batCap > 70) return "󰁸";
+                if (batCap > 50) return "󰁷";
+                if (batCap > 30) return "󰁶";
+                if (batCap > 10) return "󰁺";
+                return "󰂃";
+            }
+            readonly property color batDynamicColor: {
+                if (isCharging) return mocha.green;
+                if (batCap >= 70) return mocha.blue;
+                if (batCap >= 30) return mocha.yellow;
+                return mocha.red;
+            }
+
+            // Media — Quickshell.Services.Mpris (event-driven)
+            readonly property var _activePlayer: {
+                var players = Mpris.players;
+                for (var i = 0; i < players.length; i++) {
+                    if (players[i].playbackState !== MprisPlaybackState.Stopped) return players[i];
+                }
+                return players.length > 0 ? players[0] : null;
+            }
+            readonly property bool isMediaActive: _activePlayer !== null
+                && _activePlayer.playbackState !== MprisPlaybackState.Stopped
+                && _activePlayer.trackTitle !== ""
+            readonly property var musicData: {
+                if (!_activePlayer || !isMediaActive)
+                    return { "status": "Stopped", "title": "", "artUrl": "", "timeStr": "" };
+                var state = _activePlayer.playbackState;
+                var status = state === MprisPlaybackState.Playing ? "Playing"
+                           : state === MprisPlaybackState.Paused  ? "Paused" : "Stopped";
+                var timeStr = "";
+                if (_activePlayer.positionSupported && _activePlayer.lengthSupported && _activePlayer.length > 0) {
+                    var pos = Math.floor(_activePlayer.position / 1000000);
+                    var len = Math.floor(_activePlayer.length / 1000000);
+                    timeStr = Math.floor(pos/60) + ":" + String(pos%60).padStart(2,'0')
+                            + " / " + Math.floor(len/60) + ":" + String(len%60).padStart(2,'0');
+                }
+                return { "status": status, "title": _activePlayer.trackTitle || "",
+                         "artUrl": _activePlayer.trackArtUrl || "", "timeStr": timeStr };
+            }
+
             property string kbLayout: "us"
-            
-            ListModel { id: workspacesModel }
-            
-            property var musicData: { "status": "Stopped", "title": "", "artUrl": "", "timeStr": "" }
 
             Process {
                 id: updatesPoller
@@ -332,113 +364,12 @@ Variants {
             }
 
             // Derived properties for UI logic
-            property bool isMediaActive: barWindow.musicData.status !== "Stopped" && barWindow.musicData.title !== ""
             property bool isWifiOn: barWindow.wifiStatus.toLowerCase() === "enabled" || barWindow.wifiStatus.toLowerCase() === "on"
-            property bool isBtOn: barWindow.btStatus.toLowerCase() === "enabled" || barWindow.btStatus.toLowerCase() === "on"
-            
-            property bool isSoundActive: !barWindow.isMuted && parseInt(barWindow.volPercent) > 0
-            property int batCap: parseInt(barWindow.batPercent) || 0
-            property bool isCharging: barWindow.batStatus === "Charging" || barWindow.batStatus === "Full"
-            property color batDynamicColor: {
-                if (isCharging) return mocha.green;
-                if (batCap >= 70) return mocha.blue;
-                if (batCap >= 30) return mocha.yellow;
-                return mocha.red;
-            }
+            property bool isSoundActive: !barWindow.isMuted && barWindow._volRaw > 0
 
             // ==========================================
             // DATA FETCHING 
             // ==========================================
-
-            // Workspaces --------------------------------
-            // 1. The continuous background daemon
-            Process {
-                id: wsDaemon
-                command: ["bash", "-c", "~/.config/quickshell/workspaces.sh"]
-                running: true
-            }
-
-            // 2. The lightweight reader
-            Process {
-                id: wsReader
-                command: ["bash", "-c", "cat /tmp/qs_workspaces.json 2>/dev/null"]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        let txt = this.text.trim();
-                        if (txt !== "") {
-                            try { 
-                                let newData = JSON.parse(txt);
-                                if (workspacesModel.count !== newData.length) {
-                                    workspacesModel.clear();
-                                    for (let i = 0; i < newData.length; i++) {
-                                        workspacesModel.append({ "wsId": newData[i].id.toString(), "wsState": newData[i].state });
-                                    }
-                                } else {
-                                    for (let i = 0; i < newData.length; i++) {
-                                        if (workspacesModel.get(i).wsState !== newData[i].state) {
-                                            workspacesModel.setProperty(i, "wsState", newData[i].state);
-                                        }
-                                        if (workspacesModel.get(i).wsId !== newData[i].id.toString()) {
-                                            workspacesModel.setProperty(i, "wsId", newData[i].id.toString());
-                                        }
-                                    }
-                                }
-                            } catch(e) {}
-                        }
-                    }
-                }
-            }
-
-            // 3. Ultra-fast 50ms loop.
-            Timer { 
-                interval: 50 
-                running: true 
-                repeat: true 
-                onTriggered: {
-                    if (!wsReader.running) wsReader.running = true;
-                }
-            }
-
-            // Music -------------------------------------
-            // 1. Fast cache reader to smoothly update the timestamp 
-            Process {
-                id: musicPoller
-                command: ["bash", "-c", "cat /tmp/music_info.json 2>/dev/null"]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        let txt = this.text.trim();
-                        if (txt !== "") {
-                            try { barWindow.musicData = JSON.parse(txt); } catch(e) {}
-                        }
-                    }
-                }
-            }
-
-            // 2. Direct executor for zero-latency UI state changes (play/pause skips)
-            Process {
-                id: musicForceRefresh
-                running: true
-                command: ["bash", "-c", "bash ~/.config/quickshell/music/music_info.sh | tee /tmp/music_info.json"]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        let txt = this.text.trim();
-                        if (txt !== "") {
-                            try { barWindow.musicData = JSON.parse(txt); } catch(e) {}
-                        }
-                    }
-                }
-            }
-
-            // 3. Lightweight timer to update the progress clock without freezing
-            Timer {
-                interval: 1000
-                running: true
-                repeat: true
-                triggeredOnStart: true
-                onTriggered: {
-                    if (!musicPoller.running) musicPoller.running = true;
-                }
-            }
 
             // Unified System Info ------------------------
             Process {
@@ -451,31 +382,14 @@ Variants {
                         if (txt !== "") {
                             try {
                                 let data = JSON.parse(txt);
-                                
-                                // Targeted Updates
                                 if (barWindow.wifiStatus !== data.wifi.status) barWindow.wifiStatus = data.wifi.status;
                                 if (barWindow.wifiIcon !== data.wifi.icon) barWindow.wifiIcon = data.wifi.icon;
                                 if (barWindow.wifiSsid !== data.wifi.ssid) barWindow.wifiSsid = data.wifi.ssid;
-
-                                if (barWindow.btStatus !== data.bt.status) barWindow.btStatus = data.bt.status;
-                                if (barWindow.btIcon !== data.bt.icon) barWindow.btIcon = data.bt.icon;
-                                if (barWindow.btDevice !== data.bt.connected) barWindow.btDevice = data.bt.connected;
-
-                                applyAudioState(data.audio.volume, data.audio.is_muted);
-
-                                let newBat = data.battery.percent.toString() + "%";
-                                if (barWindow.batPercent !== newBat) barWindow.batPercent = newBat;
-                                if (barWindow.batIcon !== data.battery.icon) barWindow.batIcon = data.battery.icon;
-                                if (barWindow.batStatus !== data.battery.status) barWindow.batStatus = data.battery.status;
-
                                 if (barWindow.kbLayout !== data.keyboard.layout) barWindow.kbLayout = data.keyboard.layout;
-
                                 barWindow.sysPollerLoaded = true;
                                 barWindow.fastPollerLoaded = true;
                             } catch(e) {}
                         }
-                        // When the system/music waiter finishes, instantly refresh the music state
-                        if (!musicForceRefresh.running) musicForceRefresh.running = true;
                         if (!sysWaiter.running) sysWaiter.running = true;
                     }
                 }
@@ -486,49 +400,6 @@ Variants {
                 command: ["bash", "-c", "~/.config/quickshell/sys_waiter.sh"]
                 // Strictly use onExited. Quickshell will no longer hook into stdout, preventing pipe deadlocks.
                 onExited: sysPoller.running = true 
-            }
-
-            // Fast audio poller so topbar volume stays in sync with external changes.
-            Process {
-                id: audioPoller
-                command: ["bash", "-c", `
-                    if command -v wpctl >/dev/null 2>&1; then
-                        line="$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || true)"
-                        vol="$(printf '%s\\n' "$line" | grep -oE '[0-9]+(\\.[0-9]+)?' | head -n1)"
-                        if [[ -z "$vol" ]]; then vol="0"; fi
-                        pct="$(awk "BEGIN { v=$vol; if (v < 0) v=0; if (v > 1.5) v=1.5; printf \\"%d\\", int(v*100) }")"
-                        if printf '%s' "$line" | grep -q "MUTED"; then muted="true"; else muted="false"; fi
-                        printf '%s|%s\\n' "$pct" "$muted"
-                    elif command -v pamixer >/dev/null 2>&1; then
-                        vol="$(pamixer --get-volume 2>/dev/null || echo 0)"
-                        muted="$(pamixer --get-mute 2>/dev/null || echo false)"
-                        printf '%s|%s\\n' "$vol" "$muted"
-                    elif command -v pactl >/dev/null 2>&1; then
-                        vol="$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | grep -oE '[0-9]+%' | head -n1 | tr -d '%' || echo 0)"
-                        if pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null | grep -q 'yes'; then muted="true"; else muted="false"; fi
-                        printf '%s|%s\\n' "$vol" "$muted"
-                    else
-                        printf '0|false\\n'
-                    fi
-                `]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        let line = this.text.trim();
-                        if (line === "") return;
-                        let parts = line.split("|");
-                        if (parts.length < 2) return;
-                        applyAudioState(parts[0], parts[1]);
-                    }
-                }
-            }
-            Timer {
-                interval: 450
-                running: true
-                repeat: true
-                triggeredOnStart: true
-                onTriggered: {
-                    if (!audioPoller.running) audioPoller.running = true;
-                }
             }
 
             // Weather remains a slow poll since it fetches from web

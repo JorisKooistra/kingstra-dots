@@ -1,9 +1,10 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 
 // Left-bar pill: clickable workspace indicator dots.
-// workspacesModel is a ListModel owned by barWindow (BarShell) and passed in explicitly.
+// Uses Quickshell.Hyprland for event-driven workspace state (no polling).
 Rectangle {
     id: root
     required property var shell
@@ -11,12 +12,14 @@ Rectangle {
     required property var mocha
     required property var ctx           // BarContent root — supplies theme chrome colors/flags
 
+    readonly property int wsCount: 8
+
     Layout.preferredHeight: ctx.cyberSideModuleHeight
-    property real targetWidth: shell.workspacesModel && shell.workspacesModel.count > 0 ? wsLayout.implicitWidth + shell.s(20) : 0
+    property real targetWidth: wsLayout.implicitWidth + shell.s(20)
     Layout.preferredWidth: targetWidth
     width: targetWidth
-    visible: shell.moduleList && shell.moduleList.includes("workspaces") && shell.workspacesModel && shell.workspacesModel.count > 0
-    opacity: shell.workspacesModel && shell.workspacesModel.count > 0 ? 1 : 0
+    visible: shell.moduleList && shell.moduleList.includes("workspaces")
+    opacity: visible ? 1 : 0
     clip: true
 
     color: ctx.cyberChrome ? ctx.cyberModuleColor : surface.panelColor
@@ -47,12 +50,23 @@ Rectangle {
         spacing: shell.s(6)
 
         Repeater {
-            model: shell.workspacesModel
+            model: root.wsCount
             delegate: Rectangle {
                 id: wsPill
+                required property int index
+                property int wsId: index + 1
                 property bool isHovered: wsPillMouse.containsMouse
-                property string stateLabel: model.wsState
-                property string wsName: model.wsId
+
+                property string stateLabel: {
+                    if (Hyprland.focusedWorkspace !== null && Hyprland.focusedWorkspace.id === wsId)
+                        return "active";
+                    var wsList = Hyprland.workspaces;
+                    for (var i = 0; i < wsList.length; i++) {
+                        if (wsList[i].id === wsId)
+                            return wsList[i].windows > 0 ? "occupied" : "empty";
+                    }
+                    return "empty";
+                }
 
                 property real targetWidth: shell.s(32)
                 width: targetWidth
@@ -102,7 +116,7 @@ Rectangle {
 
                 Text {
                     anchors.centerIn: parent
-                    text: wsName
+                    text: wsPill.wsId.toString()
                     font.family: shell.monoFontFamily
                     font.pixelSize: shell.s(14)
                     font.weight: stateLabel === "active" ? Font.Black : (stateLabel === "occupied" ? Font.Bold : Font.Medium)
@@ -119,7 +133,7 @@ Rectangle {
                     id: wsPillMouse
                     hoverEnabled: true
                     anchors.fill: parent
-                    onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + wsName])
+                    onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + wsPill.wsId])
                 }
             }
         }

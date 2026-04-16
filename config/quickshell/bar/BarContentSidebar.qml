@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
 import "../clock"
 
@@ -211,7 +212,7 @@ Item {
 
         Rectangle {
             id: workspacesCard
-            visible: shell.moduleList.includes("workspaces") && shell.workspacesModel && shell.workspacesModel.count > 0
+            visible: shell.moduleList.includes("workspaces")
             Layout.fillWidth: true
             Layout.preferredHeight: wsColumn.implicitHeight + shell.s(16)
             radius: surface.panelRadius
@@ -231,11 +232,23 @@ Item {
                 spacing: shell.s(5)
 
                 Repeater {
-                    model: shell.workspacesModel
+                    model: 8
                     delegate: Rectangle {
-                        property string stateLabel: model.wsState
-                        property string wsName: model.wsId
+                        required property int index
+                        property int wsId: index + 1
                         property bool hovered: wsMouse.containsMouse
+
+                        property string stateLabel: {
+                            if (Hyprland.focusedWorkspace !== null && Hyprland.focusedWorkspace.id === wsId)
+                                return "active";
+                            var wsList = Hyprland.workspaces;
+                            for (var i = 0; i < wsList.length; i++) {
+                                if (wsList[i].id === wsId)
+                                    return wsList[i].windows > 0 ? "occupied" : "empty";
+                            }
+                            return "empty";
+                        }
+
                         width: wsColumn.width
                         height: shell.s(30)
                         radius: surface.innerPillRadius
@@ -251,7 +264,7 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: wsName
+                            text: wsId.toString()
                             font.family: shell.monoFontFamily
                             font.pixelSize: shell.s(13)
                             font.weight: stateLabel === "active" ? Font.Black : Font.Bold
@@ -263,7 +276,7 @@ Item {
                             id: wsMouse
                             anchors.fill: parent
                             hoverEnabled: true
-                            onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + wsName])
+                            onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + wsId])
                         }
                     }
                 }
