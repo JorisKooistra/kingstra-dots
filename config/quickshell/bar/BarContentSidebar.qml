@@ -68,6 +68,84 @@ Item {
         return active ? Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.85) : mocha.subtext0;
     }
 
+    function workspaceForId(wsId) {
+        var wsList = Hyprland.workspaces.values;
+        for (var i = 0; i < wsList.length; i++) {
+            if (wsList[i].id === wsId)
+                return wsList[i];
+        }
+        return null;
+    }
+
+    function toplevelIconName(toplevel) {
+        if (!toplevel)
+            return "";
+
+        var ipc = toplevel.lastIpcObject || {};
+        var iconName = String(ipc.initialClass || ipc.class || "");
+
+        if (iconName === "" && toplevel.wayland)
+            iconName = String(toplevel.wayland.appId || "");
+
+        return desktopIconForName(iconName);
+    }
+
+    function desktopIconForName(name) {
+        var raw = String(name || "").replace(/\.desktop$/i, "");
+        if (raw === "")
+            return "";
+
+        var lower = raw.toLowerCase();
+        var candidates = [raw, lower, raw + ".desktop", lower + ".desktop"];
+        for (var i = 0; i < candidates.length; i++) {
+            var exactEntry = DesktopEntries.byId(candidates[i]);
+            if (exactEntry && exactEntry.icon)
+                return String(exactEntry.icon);
+        }
+
+        var apps = DesktopEntries.applications.values;
+        for (var j = 0; j < apps.length; j++) {
+            var entry = apps[j];
+            var entryId = String(entry.id || "").replace(/\.desktop$/i, "").toLowerCase();
+            var startupClass = String(entry.startupClass || "").toLowerCase();
+            var entryName = String(entry.name || "").toLowerCase();
+
+            if ((entryId === lower || startupClass === lower || entryName === lower) && entry.icon)
+                return String(entry.icon);
+        }
+
+        var heuristicEntry = DesktopEntries.heuristicLookup(raw);
+        if (heuristicEntry && heuristicEntry.icon)
+            return String(heuristicEntry.icon);
+
+        return raw;
+    }
+
+    function workspaceAppIcons(wsId) {
+        var workspace = workspaceForId(wsId);
+        if (!workspace)
+            return [];
+
+        var icons = [];
+        var windows = workspace.toplevels.values;
+        for (var i = 0; i < windows.length; i++) {
+            var iconName = toplevelIconName(windows[i]);
+            if (iconName !== "")
+                icons.push(iconName);
+        }
+
+        return icons;
+    }
+
+    function visibleAppIcons(icons) {
+        if (icons.length <= 8)
+            return icons;
+
+        var visibleIcons = icons.slice(0, 7);
+        visibleIcons.push("+" + (icons.length - 7));
+        return visibleIcons;
+    }
+
     Timer {
         interval: 1000
         running: true
@@ -260,6 +338,15 @@ Item {
             color: surface.panelColor
             clip: true
 
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                onWheel: (wheel) => {
+                    shell.handleWorkspaceWheel(wheel.angleDelta.y, 8);
+                    wheel.accepted = true;
+                }
+            }
+
             Column {
                 id: wsColumn
                 anchors.fill: parent
@@ -272,15 +359,19 @@ Item {
                         required property int index
                         property int wsId: index + 1
                         property bool hovered: wsMouse.containsMouse
+                        readonly property var appIcons: hovered ? root.workspaceAppIcons(wsId) : []
+                        readonly property var visibleAppIcons: root.visibleAppIcons(appIcons)
+                        readonly property bool showAppIcons: appIcons.length > 0
+                        readonly property bool useIconGrid: visibleAppIcons.length >= 3
+                        readonly property int iconSize: shell.s(useIconGrid ? 10 : (root.compactAnimatedSidebar ? 13 : 15))
+                        readonly property int iconColumns: useIconGrid ? Math.ceil(visibleAppIcons.length / 2) : visibleAppIcons.length
 
                         property string stateLabel: {
                             if (Hyprland.focusedWorkspace !== null && Hyprland.focusedWorkspace.id === wsId)
                                 return "active";
-                            var wsList = Hyprland.workspaces;
-                            for (var i = 0; i < wsList.length; i++) {
-                                if (wsList[i].id === wsId)
-                                    return wsList[i].windows > 0 ? "occupied" : "empty";
-                            }
+                            var workspace = root.workspaceForId(wsId);
+                            if (workspace)
+                                return workspace.toplevels.values.length > 0 ? "occupied" : "empty";
                             return "empty";
                         }
 
@@ -303,12 +394,56 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
+                            opacity: showAppIcons ? 0 : 1
                             text: wsId.toString()
                             font.family: shell.monoFontFamily
                             font.pixelSize: shell.s(13)
                             font.weight: stateLabel === "active" ? Font.Black : Font.Bold
                             font.letterSpacing: shell.themeLetterSpacing
                             color: stateLabel === "active" ? mocha.crust : mocha.text
+                            Behavior on opacity { NumberAnimation { duration: 120 } }
+                        }
+
+                        Grid {
+                            anchors.centerIn: parent
+                            columns: Math.max(1, iconColumns)
+                            rowSpacing: shell.s(2)
+                            columnSpacing: shell.s(useIconGrid ? 3 : 4)
+                            opacity: showAppIcons ? 1 : 0
+                            visible: opacity > 0
+                            Behavior on opacity { NumberAnimation { duration: 140 } }
+
+                            Repeater {
+                                model: visibleAppIcons
+
+                                delegate: Item {
+                                    id: appIconSlot
+                                    required property string modelData
+                                    width: iconSize
+                                    height: iconSize
+                                    readonly property bool overflowLabel: modelData.charAt(0) === "+"
+
+                                    Image {
+                                        anchors.fill: parent
+                                        visible: !appIconSlot.overflowLabel
+                                        sourceSize.width: width
+                                        sourceSize.height: height
+                                        fillMode: Image.PreserveAspectFit
+                                        smooth: true
+                                        source: appIconSlot.modelData.startsWith("/") ? "file://" + appIconSlot.modelData : "image://icon/" + appIconSlot.modelData
+                                    }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        visible: appIconSlot.overflowLabel
+                                        text: appIconSlot.modelData
+                                        font.family: shell.monoFontFamily
+                                        font.pixelSize: shell.s(9)
+                                        font.weight: Font.Bold
+                                        color: stateLabel === "active" ? mocha.crust : mocha.text
+                                    }
+                                }
+                            }
                         }
 
                         MouseArea {
@@ -316,6 +451,10 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + wsId])
+                            onWheel: (wheel) => {
+                                shell.handleWorkspaceWheel(wheel.angleDelta.y, 8);
+                                wheel.accepted = true;
+                            }
                         }
                     }
                 }

@@ -7,6 +7,7 @@ import Quickshell.Networking
 import Quickshell.Services.UPower
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
+import Quickshell.Hyprland
 import ".."
 
 Variants {
@@ -155,6 +156,7 @@ Variants {
             property bool barVisible: true
             property int updateCount: 0
             property int volumeWheelAccumulator: 0
+            property int workspaceWheelAccumulator: 0
 
             function _defaultModules(mode) {
                 if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "battery", "volume", "game_launcher", "clock"];
@@ -207,6 +209,25 @@ Variants {
                     Quickshell.execDetached(["bash", "-c", "pactl set-sink-volume @DEFAULT_SINK@ " + steps + "%"]);
                 }
                 if (!volPoller.running) volPoller.running = true;
+            }
+
+            function handleWorkspaceWheel(deltaY, workspaceCount) {
+                if (!deltaY || deltaY === 0) return;
+                barWindow.workspaceWheelAccumulator += deltaY;
+                let steps = 0;
+                while (barWindow.workspaceWheelAccumulator >= 120) { steps -= 1; barWindow.workspaceWheelAccumulator -= 120; }
+                while (barWindow.workspaceWheelAccumulator <= -120) { steps += 1; barWindow.workspaceWheelAccumulator += 120; }
+                if (steps === 0) return;
+
+                let count = Math.max(1, workspaceCount || 8);
+                let current = Hyprland.focusedWorkspace !== null ? Hyprland.focusedWorkspace.id : 1;
+                let target = current + steps;
+                while (target < 1) target += count;
+                while (target > count) target -= count;
+
+                if (target !== current) {
+                    Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + target]);
+                }
             }
 
             Process {

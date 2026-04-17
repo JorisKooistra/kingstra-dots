@@ -87,6 +87,11 @@ qs_master_visible() {
 if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
     WORKSPACE_NUM="$ACTION"
     MOVE_OPT="$2"
+    CURRENT_WS=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // 1')
+    if ! [[ "$CURRENT_WS" =~ ^-?[0-9]+$ ]] || (( CURRENT_WS < 1 )); then
+        CURRENT_WS=1
+    fi
+    TARGET_WS=$(( ((CURRENT_WS - 1) / 10) * 10 + WORKSPACE_NUM ))
     
     echo "close" > "$IPC_FILE"
 
@@ -98,10 +103,10 @@ if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
         hyprctl dispatch movetoworkspacesilent "special:qs-hidden,address:$QS_ADDR" >/dev/null 2>&1
     fi
     
-    CMD="workspace $WORKSPACE_NUM"
-    [[ "$MOVE_OPT" == "move" ]] && CMD="movetoworkspace $WORKSPACE_NUM"
+    CMD="workspace $TARGET_WS"
+    [[ "$MOVE_OPT" == "move" ]] && CMD="movetoworkspace $TARGET_WS"
 
-    TARGET_ADDR=$(hyprctl clients -j | jq -r ".[] | select(.workspace.id == $WORKSPACE_NUM and .class != \"qs-master\") | .address" | head -n 1)
+    TARGET_ADDR=$(hyprctl clients -j | jq -r ".[] | select(.workspace.id == $TARGET_WS and .class != \"qs-master\") | .address" | head -n 1)
 
     if [[ -n "$TARGET_ADDR" && "$TARGET_ADDR" != "null" ]]; then
         hyprctl --batch "dispatch $CMD ; keyword cursor:no_warps true ; dispatch focuswindow address:$TARGET_ADDR ; keyword cursor:no_warps false" >/dev/null 2>&1
