@@ -18,6 +18,8 @@ Item {
     function s(val) { 
         return scaler.s(val); 
     }
+
+    readonly property string monitorApplyScript: Quickshell.env("HOME") + "/.config/hypr/scripts/monitor-apply-save.sh"
     
     // -------------------------------------------------------------------------
     // COLORS (Dynamic Matugen Palette)
@@ -1079,8 +1081,7 @@ Item {
                         if (monitorsModel.count === 1) {
                             let mon = monitorsModel.get(0);
                             let monitorStr = mon.name + "," + mon.resW + "x" + mon.resH + "@" + mon.rate + ",0x0," + mon.sysScale;
-                            Quickshell.execDetached(["notify-send", "Display Update", "Applied: " + mon.resW + "x" + mon.resH + " @ " + mon.rate + "Hz"]);
-                            Quickshell.execDetached(["sh", "-c", "hyprctl keyword monitor " + monitorStr]);
+                            Quickshell.execDetached([window.monitorApplyScript, monitorStr]);
                         } else {
                             let rects = [];
                             for (let i = 0; i < monitorsModel.count; i++) {
@@ -1144,7 +1145,7 @@ Item {
                                 if (rects[i].y < finalMinY) finalMinY = rects[i].y;
                             }
                             
-                            let batchCmds = [];
+                            let applyArgs = [window.monitorApplyScript];
                             let summaryString = "";
                             for (let i = 0; i < rects.length; i++) {
                                 let r = rects[i];
@@ -1154,15 +1155,14 @@ Item {
                                 r.y = Math.round(r.y - finalMinY);
                                 
                                 let monitorStr = r.name + "," + r.resW + "x" + r.resH + "@" + r.rate + "," + r.x + "x" + r.y + "," + r.sysScale;
-                                batchCmds.push("keyword monitor " + monitorStr);
+                                applyArgs.push(monitorStr);
                                 summaryString += r.name + " ";
                             }
                             
-                            let fullCommand = "hyprctl --batch '" + batchCmds.join(" ; ") + "'";
-                            
                             let postReloadCmd = "swww kill ; sleep 0.2 ; swww-daemon &";
                             
-                            Quickshell.execDetached(["sh", "-c", fullCommand + " ; " + postReloadCmd]);
+                            Quickshell.execDetached(applyArgs);
+                            Quickshell.execDetached(["sh", "-c", postReloadCmd]);
                             Quickshell.execDetached(["notify-send", "Display Update", "Applied layout for: " + summaryString]);
                         }
                     }

@@ -69,6 +69,7 @@ _phase03_prepare_hypr_scripts() {
     local -a scripts=(
         "$REPO_ROOT/config/hypr/scripts/hardware-switches.sh"
         "$REPO_ROOT/config/hypr/scripts/lid-lock.sh"
+        "$REPO_ROOT/config/hypr/scripts/monitor-apply-save.sh"
         "$REPO_ROOT/config/hypr/scripts/tablet-mode.sh"
     )
 
