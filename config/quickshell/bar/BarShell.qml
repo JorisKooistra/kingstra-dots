@@ -189,11 +189,12 @@ Variants {
                 while (barWindow.volumeWheelAccumulator >= 120) { steps += 1; barWindow.volumeWheelAccumulator -= 120; }
                 while (barWindow.volumeWheelAccumulator <= -120) { steps -= 1; barWindow.volumeWheelAccumulator += 120; }
                 if (steps === 0) return;
-                let sink = Pipewire.preferredDefaultAudioSink ?? Pipewire.defaultAudioSink;
-                if (!sink) return;
-                let next = Math.max(0, Math.min(1.5, sink.audio.volume + (steps * 0.01)));
-                sink.audio.volume = next;
-                if (steps > 0 && sink.audio.muted) sink.audio.muted = false;
+                if (steps > 0) {
+                    Quickshell.execDetached(["bash", "-c", "pactl set-sink-volume @DEFAULT_SINK@ +" + steps + "%"]);
+                } else {
+                    Quickshell.execDetached(["bash", "-c", "pactl set-sink-volume @DEFAULT_SINK@ " + steps + "%"]);
+                }
+                if (!volPoller.running) volPoller.running = true;
             }
 
             Process {
@@ -289,12 +290,27 @@ Variants {
             }
             readonly property string btStatus: isBtOn ? "On" : "Off"
 
-            // Volume — Quickshell.Services.Pipewire (event-driven)
-            // preferredDefaultAudioSink is the user-selected sink (e.g. Bluetooth);
-            // defaultAudioSink can differ (e.g. a passthrough ALSA node with volume=0).
-            readonly property var _defaultSink: Pipewire.preferredDefaultAudioSink ?? Pipewire.defaultAudioSink
-            readonly property bool isMuted: _defaultSink ? _defaultSink.audio.muted : false
-            readonly property int _volRaw: _defaultSink ? Math.round(_defaultSink.audio.volume * 100) : 0
+            // Volume — pactl (meest betrouwbaar, zelfde waarde als VolumePopup)
+            property int _volRaw: 0
+            property bool isMuted: false
+
+            Process {
+                id: volPoller
+                command: ["bash", "-c", "pactl get-sink-volume @DEFAULT_SINK@ | grep -oP '\\d+(?=%)' | head -1; pactl get-sink-mute @DEFAULT_SINK@ | grep -oP '(?<=Mute: )\\S+'"]
+                running: true
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        let lines = this.text.trim().split("\n");
+                        if (lines.length >= 1) barWindow._volRaw = parseInt(lines[0]) || 0;
+                        if (lines.length >= 2) barWindow.isMuted = lines[1].trim() === "yes";
+                    }
+                }
+            }
+            Timer {
+                interval: 1000; running: true; repeat: true
+                onTriggered: if (!volPoller.running) volPoller.running = true
+            }
+
             readonly property string volPercent: _volRaw + "%"
             readonly property string volIcon: {
                 if (isMuted || _volRaw === 0) return "󰝟";
