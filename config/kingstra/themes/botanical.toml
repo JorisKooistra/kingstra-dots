@@ -35,7 +35,7 @@ icon_theme = "Papirus"
 
 [quickshell]
 bar_height = 44
-bar_position = "bottom"
+bar_position = "right"
 
 [color_transform]
 hue_shift = 8
@@ -56,7 +56,7 @@ cursor_style = "beam"
 
 [bar]
 shape = "organic-grown"
-template = "horizontal"
+template = "compact-sidebar"
 width_mode = "full"
 floating = false
 attach_to_screen_edge = true

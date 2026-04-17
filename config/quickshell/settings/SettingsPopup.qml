@@ -275,6 +275,24 @@ Item {
         return options.indexOf(normalized) >= 0 ? normalized : fallback;
     }
 
+    function isVerticalBarPosition(position) {
+        let normalized = normalizeOption(position, barPositionOptions, "top");
+        return normalized === "left" || normalized === "right";
+    }
+
+    function derivedBarTemplate(position, template) {
+        let normalizedTemplate = normalizeOption(template, barTemplateOptions, "auto");
+        if (isVerticalBarPosition(position)) {
+            return normalizedTemplate === "compact-sidebar" ? "compact-sidebar" : "sidebar";
+        }
+        return "horizontal";
+    }
+
+    function setEditBarPosition(position) {
+        editBarPosition = normalizeOption(position, barPositionOptions, "top");
+        editBarTemplate = derivedBarTemplate(editBarPosition, editBarTemplate);
+    }
+
     function defaultTopbarLooseBlocks(themeData, themeId) {
         let raw = themeValue(themeData, "bar", "topbar_loose_blocks", "__unset__");
         if (raw !== "__unset__") {
@@ -335,7 +353,7 @@ Item {
             editBorderRadius, editBorderWidth, editGapsIn, editGapsOut, editBlurSize, editBlurPasses,
             editUiFont, editUiFontSize, editMonoFont, editMonoFontSize, editDisplayFont, editFontWeight, editLetterSpacing,
             editIconTheme, editSchemeType, editColorIndex, editContrast, editMode,
-            editBarHeight, editBarPosition, editBarTemplate, editBarWidthMode, editBarShape,
+            editBarHeight, editBarPosition, derivedBarTemplate(editBarPosition, editBarTemplate), editBarWidthMode, editBarShape,
             editBarTopEdgeStyle, editBarBottomEdgeStyle, editClockStyle, editTopbarLooseBlocks,
             editBarOpacity, editPopupOpacity, editAnimationSpeed, editOverlayOpacity, editGlowIntensity,
             editParticleType, editParticleCount, editParticleSpeed
@@ -385,11 +403,7 @@ Item {
             barPositionOptions,
             "top"
         );
-        editBarTemplate = normalizeOption(
-            themeValue(themeData, "bar", "template", "auto"),
-            barTemplateOptions,
-            "auto"
-        );
+        editBarTemplate = derivedBarTemplate(editBarPosition, themeValue(themeData, "bar", "template", "auto"));
         editBarWidthMode = normalizeOption(
             themeValue(themeData, "bar", "width_mode", "full"),
             barWidthModeOptions,
@@ -467,7 +481,7 @@ Item {
             "matugen.mode", normalizeOption(editMode, modeOptions, "dark"),
             "quickshell.bar_height", String(Math.max(30, editBarHeight)),
             "quickshell.bar_position", normalizeOption(editBarPosition, barPositionOptions, "top"),
-            "bar.template", normalizeOption(editBarTemplate, barTemplateOptions, "auto"),
+            "bar.template", derivedBarTemplate(editBarPosition, editBarTemplate),
             "bar.width_mode", normalizeOption(editBarWidthMode, barWidthModeOptions, "full"),
             "bar.floating", String(editBarWidthMode === "floating"),
             "bar.attach_to_screen_edge", String(editBarWidthMode !== "floating"),
@@ -567,15 +581,29 @@ Item {
         return out;
     }
 
-    function scrollFlickableByWheel(flickable, deltaY) {
+    function scrollFlickableByWheel(flickable, wheel) {
         if (!flickable || flickable.contentHeight === undefined || flickable.height === undefined) return false;
+
+        let deltaY = 0;
+        let hasPixelDelta = false;
+        if (wheel && wheel.pixelDelta !== undefined && Number(wheel.pixelDelta.y) !== 0) {
+            deltaY = Number(wheel.pixelDelta.y);
+            hasPixelDelta = true;
+        } else if (wheel && wheel.angleDelta !== undefined) {
+            deltaY = Number(wheel.angleDelta.y);
+        } else {
+            deltaY = Number(wheel);
+        }
+
         if (!deltaY || deltaY === 0) return false;
 
         let maxY = Math.max(0, Number(flickable.contentHeight) - Number(flickable.height));
         if (maxY <= 0) return false;
 
-        // 120 wheel units ~= one notch. Keep this moderate so wheel scrolling stays controllable.
-        let travel = -(Number(deltaY) / 120.0) * root.s(52);
+        // 120 angle units ~= one mouse-wheel notch. Pixel deltas come from touchpads.
+        let travel = hasPixelDelta
+            ? -deltaY * 1.15
+            : -(deltaY / 120.0) * root.s(156);
         let nextY = Number(flickable.contentY) + travel;
         if (isNaN(nextY)) return false;
 
@@ -1575,7 +1603,7 @@ Item {
                     hoverEnabled: true
                     propagateComposedEvents: true
                     onWheel: (wheel) => {
-                        if (root.scrollFlickableByWheel(keybindScroll.contentItem, wheel.angleDelta.y)) {
+                        if (root.scrollFlickableByWheel(keybindScroll.contentItem, wheel)) {
                             wheel.accepted = true;
                         }
                     }
@@ -2449,7 +2477,7 @@ Item {
 
                                     Text { text: "Shell"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
                                     Text {
-                                        text: "Positie kiest de schermrand. Template kiest de module-indeling; compact-sidebar is bedoeld voor smalle zijbalken."
+                                        text: "Positie kiest de schermrand en bepaalt automatisch of de bar horizontaal of verticaal loopt."
                                         font.family: "JetBrains Mono"
                                         font.pixelSize: root.s(10)
                                         color: root.subtext0
@@ -2471,20 +2499,7 @@ Item {
                                         ThemedComboBox {
                                             model: root.barPositionOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editBarPosition))
-                                            onActivated: root.editBarPosition = currentText
-                                            Layout.fillWidth: false
-                                            Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                        }
-                                        Item { Layout.fillWidth: true }
-                                    }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: root.s(10)
-                                        Text { text: "Bar template"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                        ThemedComboBox {
-                                            model: root.barTemplateOptions
-                                            currentIndex: Math.max(0, model.indexOf(root.editBarTemplate))
-                                            onActivated: root.editBarTemplate = currentText
+                                            onActivated: root.setEditBarPosition(currentText)
                                             Layout.fillWidth: false
                                             Layout.preferredWidth: themeEditorsGrid.comboWidth
                                         }
@@ -2837,7 +2852,7 @@ Item {
                                         hoverEnabled: true
                                         propagateComposedEvents: true
                                         onWheel: (wheel) => {
-                                            if (root.scrollFlickableByWheel(allVarsScroll.contentItem, wheel.angleDelta.y)) {
+                                            if (root.scrollFlickableByWheel(allVarsScroll.contentItem, wheel)) {
                                                 wheel.accepted = true;
                                             }
                                         }
@@ -2896,11 +2911,11 @@ Item {
                         if (root.showAllThemeVariables
                                 && allVarsScroll.visible
                                 && allVarsWheelCatcher.containsMouse
-                                && root.scrollFlickableByWheel(allVarsScroll.contentItem, wheel.angleDelta.y)) {
+                                && root.scrollFlickableByWheel(allVarsScroll.contentItem, wheel)) {
                             wheel.accepted = true;
                             return;
                         }
-                        if (root.scrollFlickableByWheel(themeScroll.contentItem, wheel.angleDelta.y)) {
+                        if (root.scrollFlickableByWheel(themeScroll.contentItem, wheel)) {
                             wheel.accepted = true;
                         }
                     }

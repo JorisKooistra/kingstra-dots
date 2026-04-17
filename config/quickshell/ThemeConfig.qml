@@ -71,6 +71,7 @@ Item {
     property string rawJson: ""
 
     readonly property int fontWeight: mapFontWeight(fontWeightName)
+    readonly property string effectiveBarTemplate: deriveBarTemplate(barPosition, barTemplate)
     readonly property real motionDurationScale: {
         let speed = clamp(Number(animationSpeed) || 1.0, 0.25, 3.0);
         let motion = String(styleMotion || "gentle").toLowerCase();
@@ -118,6 +119,15 @@ Item {
             return normalized;
         }
         return "auto";
+    }
+
+    function deriveBarTemplate(position, template) {
+        let normalizedPosition = normalizeBarPosition(position);
+        let normalizedTemplate = normalizeBarTemplate(template);
+        if (normalizedPosition === "left" || normalizedPosition === "right") {
+            return normalizedTemplate === "compact-sidebar" ? "compact-sidebar" : "sidebar";
+        }
+        return "horizontal";
     }
 
     Process {

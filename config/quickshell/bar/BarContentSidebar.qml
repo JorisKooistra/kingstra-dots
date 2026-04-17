@@ -15,7 +15,7 @@ Item {
     required property var mocha
 
     property var currentDate: new Date()
-    readonly property bool compactAnimatedSidebar: ThemeConfig.barTemplate === "compact-sidebar"
+    readonly property bool compactAnimatedSidebar: ThemeConfig.effectiveBarTemplate === "compact-sidebar"
                                                   || String(shell.activeThemeName || "").toLowerCase() === "animated"
     readonly property int outerMargin: compactAnimatedSidebar ? shell.s(4) : (shell.edgeAttachedBar ? shell.s(8) : shell.s(10))
     readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
