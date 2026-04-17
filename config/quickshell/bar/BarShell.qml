@@ -58,7 +58,9 @@ Variants {
             property bool touchOptimized: TouchProfile.isTouchscreen
             property string activeThemeName: ThemeConfig.theme
             property string activeThemeNormalized: String(activeThemeName || "").toLowerCase()
-            property bool animatedVerticalBar: isVerticalBar && activeThemeNormalized === "animated"
+            property string activeBarTemplate: ThemeConfig.barTemplate
+            property bool compactSidebarTemplate: activeBarTemplate === "compact-sidebar"
+            property bool animatedVerticalBar: isVerticalBar && (activeThemeNormalized === "animated" || compactSidebarTemplate)
             property int minBarHeight: s(touchOptimized ? 44 : 40)
             property int themedBarHeight: s(ThemeConfig.barHeight > 0 ? ThemeConfig.barHeight : 48)
             property int barHeight: Math.max(minBarHeight, themedBarHeight)

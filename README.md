@@ -14,8 +14,9 @@ The file `99-custom.conf` is never touched by the installer — user tweaks surv
 
 ### Bar — Quickshell (QML)
 
-~24k lines of QML across 64 files. The bar adapts to position (`top`, `bottom`, `left`, `right`):
-horizontal layout for top/bottom, vertical sidebar for left/right.
+~24k lines of QML across 64 files. The bar separates position from content templates:
+`top`, `bottom`, `left`, and `right` choose the screen edge, while `horizontal`, `sidebar`, and
+`compact-sidebar` templates keep the module layout consistent when switching themes.
 
 Modules: workspaces, active window title, system stats (CPU/RAM/network/battery),
 media controls, notifications button, clock, tray icons, and more.

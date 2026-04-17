@@ -31,6 +31,7 @@ Item {
 
     property int barHeight: 40
     property string barPosition: "top"
+    property string barTemplate: "auto"
     property int topBarLooseBlocksOverride: -1
     property string barShape: "rounded"
     property string barWidthMode: "full"
@@ -111,6 +112,14 @@ Item {
         return "top";
     }
 
+    function normalizeBarTemplate(value) {
+        let normalized = String(value || "auto").toLowerCase();
+        if (normalized === "horizontal" || normalized === "sidebar" || normalized === "compact-sidebar") {
+            return normalized;
+        }
+        return "auto";
+    }
+
     Process {
         id: themeReader
         command: ["bash", "-c", "cat ~/.config/quickshell/theme.json 2>/dev/null"]
@@ -155,6 +164,7 @@ Item {
                         }
                     }
                     if (data.bar_position !== undefined) root.barPosition = root.normalizeBarPosition(data.bar_position);
+                    if (data.bar_template !== undefined) root.barTemplate = root.normalizeBarTemplate(data.bar_template);
                     if (data.topbar_loose_blocks !== undefined) {
                         root.topBarLooseBlocksOverride = data.topbar_loose_blocks ? 1 : 0;
                     } else {

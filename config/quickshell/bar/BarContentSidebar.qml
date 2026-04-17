@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
 import Quickshell.Services.Mpris
+import ".."
 import "../clock"
 
 Item {
@@ -14,7 +15,8 @@ Item {
     required property var mocha
 
     property var currentDate: new Date()
-    readonly property bool compactAnimatedSidebar: String(shell.activeThemeName || "").toLowerCase() === "animated"
+    readonly property bool compactAnimatedSidebar: ThemeConfig.barTemplate === "compact-sidebar"
+                                                  || String(shell.activeThemeName || "").toLowerCase() === "animated"
     readonly property int outerMargin: compactAnimatedSidebar ? shell.s(4) : (shell.edgeAttachedBar ? shell.s(8) : shell.s(10))
     readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
                                                      && String(shell.activeThemeName || "").toLowerCase() === "botanical"

@@ -53,6 +53,10 @@ Item {
     readonly property bool isBotanical: activeTheme === "botanical"
     readonly property bool isRocky:     activeTheme === "rocky"
     readonly property bool isAnimated:  activeTheme === "animated"
+    readonly property string activeBarTemplate: String(ThemeConfig.barTemplate || "auto").toLowerCase()
+    readonly property bool useSidebarTemplate: activeBarTemplate === "sidebar"
+                                             || activeBarTemplate === "compact-sidebar"
+                                             || (activeBarTemplate === "auto" && shell.isVerticalBar)
 
     readonly property string skinSource: {
         if (activeTheme === "rocky")    return "skins/RockyBar.qml";
@@ -250,7 +254,7 @@ Item {
         Loader {
             id: contentLoader
             anchors.fill: parent; z: 1
-            sourceComponent: shell.isVerticalBar ? sidebarContentComponent : horizontalContentComponent
+            sourceComponent: barSurfaceRoot.useSidebarTemplate ? sidebarContentComponent : horizontalContentComponent
         }
         Component {
             id: horizontalContentComponent

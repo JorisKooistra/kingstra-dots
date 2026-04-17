@@ -188,6 +188,7 @@ Item {
     property var modeOptions: ["dark", "light"]
     property int editBarHeight: 40
     property string editBarPosition: "top"
+    property string editBarTemplate: "auto"
     property string editBarWidthMode: "full"
     property string editBarShape: "rounded"
     property string editBarTopEdgeStyle: "soft"
@@ -238,7 +239,8 @@ Item {
         "Tela-circle-dark",
         "Adwaita"
     ]
-    property var barPositionOptions: ["top", "bottom"]
+    property var barPositionOptions: ["top", "bottom", "left", "right"]
+    property var barTemplateOptions: ["auto", "horizontal", "sidebar", "compact-sidebar"]
     property var barWidthModeOptions: ["full", "floating"]
     property var barShapeOptions: ["rounded", "organic-grown", "capsule", "block", "segmented-capsule", "beveled"]
     property var barEdgeStyleOptions: ["flush", "soft", "hard", "beveled", "ornate-rounded"]
@@ -350,6 +352,11 @@ Item {
             barPositionOptions,
             "top"
         );
+        editBarTemplate = normalizeOption(
+            themeValue(themeData, "bar", "template", "auto"),
+            barTemplateOptions,
+            "auto"
+        );
         editBarWidthMode = normalizeOption(
             themeValue(themeData, "bar", "width_mode", "full"),
             barWidthModeOptions,
@@ -424,6 +431,7 @@ Item {
             "matugen.mode", normalizeOption(editMode, modeOptions, "dark"),
             "quickshell.bar_height", String(Math.max(30, editBarHeight)),
             "quickshell.bar_position", normalizeOption(editBarPosition, barPositionOptions, "top"),
+            "bar.template", normalizeOption(editBarTemplate, barTemplateOptions, "auto"),
             "bar.width_mode", normalizeOption(editBarWidthMode, barWidthModeOptions, "full"),
             "bar.floating", String(editBarWidthMode === "floating"),
             "bar.attach_to_screen_edge", String(editBarWidthMode !== "floating"),
@@ -2302,6 +2310,19 @@ Item {
                                             model: root.barPositionOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editBarPosition))
                                             onActivated: root.editBarPosition = currentText
+                                            Layout.fillWidth: false
+                                            Layout.preferredWidth: themeEditorsGrid.comboWidth
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Bar template"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox {
+                                            model: root.barTemplateOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editBarTemplate))
+                                            onActivated: root.editBarTemplate = currentText
                                             Layout.fillWidth: false
                                             Layout.preferredWidth: themeEditorsGrid.comboWidth
                                         }

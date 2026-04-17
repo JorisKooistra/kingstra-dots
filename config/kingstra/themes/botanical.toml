@@ -56,6 +56,7 @@ cursor_style = "beam"
 
 [bar]
 shape = "organic-grown"
+template = "horizontal"
 width_mode = "full"
 floating = false
 attach_to_screen_edge = true

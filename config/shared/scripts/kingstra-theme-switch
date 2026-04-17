@@ -375,6 +375,8 @@ BAR_SHAPE_JSON=$(pick_enum "${BAR_SHAPE:-rounded}" "rounded" "bar.shape" \
     rounded organic-grown capsule block segmented-capsule beveled)
 BAR_POSITION_JSON=$(pick_enum "${QUICKSHELL_BAR_POSITION:-top}" "top" "quickshell.bar_position" \
     top bottom left right)
+BAR_TEMPLATE_JSON=$(pick_enum "${BAR_TEMPLATE:-auto}" "auto" "bar.template" \
+    auto horizontal sidebar compact-sidebar)
 if [[ -n "${BAR_TOPBAR_LOOSE_BLOCKS+x}" ]]; then
     BAR_TOPBAR_LOOSE_BLOCKS_JSON=$(bool_json "${BAR_TOPBAR_LOOSE_BLOCKS}")
 fi
@@ -572,6 +574,7 @@ cat > "$THEME_JSON" <<EOF
     "icon_theme": "${ICONS_ICON_THEME:-Papirus-Dark}",
     "bar_height": ${QUICKSHELL_BAR_HEIGHT:-36},
     "bar_position": "${BAR_POSITION_JSON}",
+    "bar_template": "${BAR_TEMPLATE_JSON}",
 ${TOPBAR_LOOSE_BLOCKS_LINE}
     "bar_shape": "${BAR_SHAPE_JSON}",
     "bar_width_mode": "${BAR_WIDTH_MODE_JSON}",

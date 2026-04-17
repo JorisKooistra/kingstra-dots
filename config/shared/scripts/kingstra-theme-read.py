@@ -81,6 +81,9 @@ def list_themes(themes_dir):
             color_transform = data.get("color_transform", {})
             material = data.get("material", {})
             terminal = data.get("terminal", {})
+            bar = data.get("bar", {})
+            widgets = data.get("widgets", {})
+            effects = data.get("effects", {})
             entry = {
                 "id": theme_id,
                 "name": meta.get("name", theme_id.title()),
@@ -96,6 +99,9 @@ def list_themes(themes_dir):
                 "color_transform": color_transform,
                 "material": material,
                 "terminal": terminal,
+                "bar": bar,
+                "widgets": widgets,
+                "effects": effects,
             }
             # Include key settings for preview
             entry["scheme_type"] = matugen.get("scheme_type", "scheme-tonal-spot")
