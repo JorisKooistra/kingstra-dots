@@ -24,8 +24,12 @@ Item {
     property int activeWorkspaceId: 1
     property int hoveredWorkspaceId: -1
     property int dropTargetWorkspaceId: -1
+    property int dropTargetWindowWorkspaceId: -1
     property string draggedWindowAddress: ""
+    property string dropTargetWindowAddress: ""
     property var windows: []
+    property var gridOrder: ({})
+    readonly property string gridStateScript: Quickshell.env("HOME") + "/.config/quickshell/workspaces/workspace-grid-state.sh"
 
     function s(value) {
         return scaler.s(value);
@@ -41,13 +45,89 @@ Item {
         });
     }
 
+    function orderedWindowsForWorkspace(wsId) {
+        var list = windowsForWorkspace(wsId).slice();
+        var key = String(wsId);
+        var order = Array.isArray(gridOrder[key]) ? gridOrder[key] : [];
+
+        return list.sort(function(a, b) {
+            var ai = order.indexOf(String(a.address || ""));
+            var bi = order.indexOf(String(b.address || ""));
+            if (ai === -1 && bi === -1)
+                return 0;
+            if (ai === -1)
+                return 1;
+            if (bi === -1)
+                return -1;
+            return ai - bi;
+        });
+    }
+
+    function addressOrderForWorkspace(wsId) {
+        var ordered = orderedWindowsForWorkspace(wsId);
+        var addresses = [];
+        for (var i = 0; i < ordered.length; i++) {
+            var address = String(ordered[i].address || "");
+            if (address !== "")
+                addresses.push(address);
+        }
+        return addresses;
+    }
+
+    function setWorkspaceOrder(wsId, addresses) {
+        var next = Object.assign({}, gridOrder);
+        next[String(wsId)] = addresses;
+        gridOrder = next;
+        saveGridOrder();
+    }
+
+    function saveGridOrder() {
+        Quickshell.execDetached(["bash", gridStateScript, "save", JSON.stringify(gridOrder)]);
+    }
+
+    function removeAddressFromOrder(wsId, address) {
+        var addresses = addressOrderForWorkspace(wsId).filter(function(item) {
+            return item !== address;
+        });
+        setWorkspaceOrder(wsId, addresses);
+    }
+
+    function appendAddressToOrder(wsId, address) {
+        var addresses = addressOrderForWorkspace(wsId).filter(function(item) {
+            return item !== address;
+        });
+        addresses.push(address);
+        setWorkspaceOrder(wsId, addresses);
+    }
+
+    function reorderWindowInWorkspace(wsId, draggedAddress, targetAddress) {
+        if (!draggedAddress || !targetAddress || draggedAddress === targetAddress)
+            return;
+
+        var addresses = addressOrderForWorkspace(wsId);
+        var draggedIndex = addresses.indexOf(draggedAddress);
+        var targetIndex = addresses.indexOf(targetAddress);
+        if (draggedIndex === -1 || targetIndex === -1)
+            return;
+
+        addresses.splice(draggedIndex, 1);
+        targetIndex = addresses.indexOf(targetAddress);
+        addresses.splice(targetIndex, 0, draggedAddress);
+        setWorkspaceOrder(wsId, addresses);
+    }
+
     function switchWorkspace(wsId) {
         Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh close && hyprctl dispatch workspace " + wsId]);
     }
 
-    function moveWindowToWorkspace(address, wsId) {
+    function moveWindowToWorkspace(address, wsId, sourceWsId) {
         if (!address || wsId < 1)
             return;
+
+        if (sourceWsId && sourceWsId !== wsId) {
+            removeAddressFromOrder(sourceWsId, address);
+            appendAddressToOrder(wsId, address);
+        }
 
         Hyprland.dispatch("movetoworkspacesilent " + wsId + ", address:" + address);
         refreshTimer.restart();
@@ -87,6 +167,7 @@ Item {
 
     Component.onCompleted: {
         forceActiveFocus();
+        gridStateLoadProcess.running = true;
         refresh();
     }
 
@@ -187,6 +268,20 @@ Item {
         }
     }
 
+    Process {
+        id: gridStateLoadProcess
+        command: ["bash", root.gridStateScript, "load"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.gridOrder = JSON.parse(this.text || "{}");
+                } catch (e) {
+                    root.gridOrder = ({});
+                }
+            }
+        }
+    }
+
     Rectangle {
         anchors.fill: parent
         radius: root.s(Math.max(12, ThemeConfig.styleWidgetRadius + 4))
@@ -216,7 +311,7 @@ Item {
                     }
 
                     Text {
-                        text: "Sleep vensters naar een andere plek. Klik om te gaan."
+                        text: "Sleep vensters binnen of tussen workspaces. Klik om te gaan."
                         font.family: ThemeConfig.uiFont
                         font.pixelSize: root.s(13)
                         color: theme.subtext0
@@ -256,7 +351,7 @@ Item {
                         id: workspaceCard
                         required property int index
                         readonly property int wsId: root.workspaceIdAt(index)
-                        readonly property var wsWindows: root.windowsForWorkspace(wsId)
+                        readonly property var wsWindows: root.orderedWindowsForWorkspace(wsId)
                         readonly property bool active: root.activeWorkspaceId === wsId
                         readonly property bool dropTarget: root.dropTargetWorkspaceId === wsId && root.draggedWindowAddress !== ""
 
@@ -280,7 +375,11 @@ Item {
 
                         DropArea {
                             anchors.fill: parent
-                            onEntered: root.dropTargetWorkspaceId = workspaceCard.wsId
+                            onEntered: {
+                                root.dropTargetWorkspaceId = workspaceCard.wsId;
+                                root.dropTargetWindowAddress = "";
+                                root.dropTargetWindowWorkspaceId = -1;
+                            }
                             onExited: {
                                 if (root.dropTargetWorkspaceId === workspaceCard.wsId)
                                     root.dropTargetWorkspaceId = -1;
@@ -340,6 +439,7 @@ Item {
                                     delegate: Item {
                                         id: windowSlot
                                         required property var modelData
+                                        readonly property string windowAddress: String(modelData.address || "")
                                         width: root.s(82)
                                         height: root.s(42)
 
@@ -352,12 +452,33 @@ Item {
                                                 ? Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.28)
                                                 : Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.8)
                                             border.width: 1
-                                            border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.10)
+                                            border.color: root.dropTargetWindowAddress === windowSlot.windowAddress
+                                                ? Qt.rgba(theme.teal.r, theme.teal.g, theme.teal.b, 0.82)
+                                                : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.10)
                                             z: dragMouse.drag.active ? 50 : 1
 
                                             Drag.active: dragMouse.drag.active
                                             Drag.hotSpot.x: width / 2
                                             Drag.hotSpot.y: height / 2
+
+                                            Behavior on border.color { ColorAnimation { duration: 140 } }
+
+                                            DropArea {
+                                                anchors.fill: parent
+                                                onEntered: {
+                                                    if (root.draggedWindowAddress !== "" && root.draggedWindowAddress !== windowSlot.windowAddress) {
+                                                        root.dropTargetWorkspaceId = workspaceCard.wsId;
+                                                        root.dropTargetWindowWorkspaceId = workspaceCard.wsId;
+                                                        root.dropTargetWindowAddress = windowSlot.windowAddress;
+                                                    }
+                                                }
+                                                onExited: {
+                                                    if (root.dropTargetWindowAddress === windowSlot.windowAddress) {
+                                                        root.dropTargetWindowAddress = "";
+                                                        root.dropTargetWindowWorkspaceId = -1;
+                                                    }
+                                                }
+                                            }
 
                                             RowLayout {
                                                 anchors.fill: parent
@@ -392,15 +513,22 @@ Item {
                                                 drag.target: windowChip
                                                 drag.threshold: root.s(8)
                                                 onPressed: {
-                                                    root.draggedWindowAddress = String(windowSlot.modelData.address || "");
+                                                    root.draggedWindowAddress = windowSlot.windowAddress;
                                                     root.dropTargetWorkspaceId = workspaceCard.wsId;
+                                                    root.dropTargetWindowWorkspaceId = -1;
+                                                    root.dropTargetWindowAddress = "";
                                                 }
                                                 onReleased: {
-                                                    if (root.dropTargetWorkspaceId !== -1 && root.dropTargetWorkspaceId !== workspaceCard.wsId)
-                                                        root.moveWindowToWorkspace(root.draggedWindowAddress, root.dropTargetWorkspaceId);
+                                                    if (root.dropTargetWindowAddress !== "" && root.dropTargetWindowWorkspaceId === workspaceCard.wsId) {
+                                                        root.reorderWindowInWorkspace(workspaceCard.wsId, root.draggedWindowAddress, root.dropTargetWindowAddress);
+                                                    } else if (root.dropTargetWorkspaceId !== -1 && root.dropTargetWorkspaceId !== workspaceCard.wsId) {
+                                                        root.moveWindowToWorkspace(root.draggedWindowAddress, root.dropTargetWorkspaceId, workspaceCard.wsId);
+                                                    }
 
                                                     root.draggedWindowAddress = "";
                                                     root.dropTargetWorkspaceId = -1;
+                                                    root.dropTargetWindowWorkspaceId = -1;
+                                                    root.dropTargetWindowAddress = "";
                                                     windowChip.x = 0;
                                                     windowChip.y = 0;
                                                 }
