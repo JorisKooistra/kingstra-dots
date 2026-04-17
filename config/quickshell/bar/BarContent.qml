@@ -124,7 +124,9 @@ Item {
     CenterBox {
         id: centerBox
         anchors.horizontalCenter: parent.horizontalCenter
-        y: Math.round((parent.height - height) / 2)
+        anchors.top: shell.isTopBar && shell.edgeAttachedBar ? parent.top : undefined
+        anchors.bottom: shell.isBottomBar && shell.edgeAttachedBar ? parent.bottom : undefined
+        anchors.verticalCenter: shell.edgeAttachedBar && (shell.isTopBar || shell.isBottomBar) ? undefined : parent.verticalCenter
         shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root
     }
 
@@ -135,8 +137,10 @@ Item {
         anchors.leftMargin: root.edgeInset
         anchors.right: centerBox.left
         anchors.rightMargin: shell.s(12)
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root.cyberSideYOffset
+        anchors.top: shell.isTopBar && shell.edgeAttachedBar ? parent.top : undefined
+        anchors.bottom: shell.isBottomBar && shell.edgeAttachedBar ? parent.bottom : undefined
+        anchors.verticalCenter: shell.edgeAttachedBar && (shell.isTopBar || shell.isBottomBar) ? undefined : parent.verticalCenter
+        anchors.verticalCenterOffset: shell.edgeAttachedBar && (shell.isTopBar || shell.isBottomBar) ? 0 : root.cyberSideYOffset
         spacing: shell.s(4)
 
         property int moduleHeight: root.cyberSideModuleHeight
@@ -173,8 +177,10 @@ Item {
         anchors.rightMargin: root.edgeInset
         anchors.left: centerBox.right
         anchors.leftMargin: shell.s(12)
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root.cyberSideYOffset
+        anchors.top: shell.isTopBar && shell.edgeAttachedBar ? parent.top : undefined
+        anchors.bottom: shell.isBottomBar && shell.edgeAttachedBar ? parent.bottom : undefined
+        anchors.verticalCenter: shell.edgeAttachedBar && (shell.isTopBar || shell.isBottomBar) ? undefined : parent.verticalCenter
+        anchors.verticalCenterOffset: shell.edgeAttachedBar && (shell.isTopBar || shell.isBottomBar) ? 0 : root.cyberSideYOffset
         spacing: shell.s(4)
 
         // Staggered right slide-in

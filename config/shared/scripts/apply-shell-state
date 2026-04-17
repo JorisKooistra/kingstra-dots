@@ -274,18 +274,18 @@ if command -v quickshell &>/dev/null; then
     had_main=false
     had_shell=false
 
-    if pgrep -f "quickshell.*TopBar.qml" &>/dev/null; then had_topbar=true; fi
-    if pgrep -f "quickshell.*Main.qml" &>/dev/null; then had_main=true; fi
-    if pgrep -f "quickshell.*shell.qml" &>/dev/null; then had_shell=true; fi
+    if pgrep -f "quickshell.*[T]opBar.qml" &>/dev/null; then had_topbar=true; fi
+    if pgrep -f "quickshell.*[M]ain.qml" &>/dev/null; then had_main=true; fi
+    if pgrep -f "quickshell.*[s]hell.qml" &>/dev/null; then had_shell=true; fi
 
     # Nieuwe setup: aparte TopBar + Main processen.
     # Belangrijk: Main NIET herstarten tijdens theme-apply vanuit de ThemePicker,
     # anders sterft de aanroepende QML-process mogelijk voordat TopBar terugkomt.
     if $had_topbar || $had_main; then
-        pkill -f "quickshell.*TopBar.qml" 2>/dev/null || true
+        pkill -f "quickshell.*[T]opBar.qml" 2>/dev/null || true
         # Wacht tot het process echt gestopt is (max 1s in stappen van 100ms)
         for _qs_i in $(seq 1 10); do
-            pgrep -f "quickshell.*TopBar.qml" &>/dev/null || break
+            pgrep -f "quickshell.*[T]opBar.qml" &>/dev/null || break
             sleep 0.1
         done
 
@@ -295,7 +295,7 @@ if command -v quickshell &>/dev/null; then
         _log "Quickshell herstart (TopBar)"
     elif $had_shell; then
         # Legacy setup: single shell.qml entrypoint.
-        pkill -f "quickshell.*shell.qml" 2>/dev/null || true
+        pkill -f "quickshell.*[s]hell.qml" 2>/dev/null || true
         sleep 0.4
         if [[ -f "$QS_SHELL_QML" ]]; then
             nohup quickshell -p "$QS_SHELL_QML" >/dev/null 2>&1 &

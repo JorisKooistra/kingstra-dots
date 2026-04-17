@@ -55,9 +55,10 @@ Item {
     readonly property string displayFontFamily: ThemeConfig.displayFont
     readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
     readonly property int themedFontWeight: ThemeConfig.fontWeight
-    readonly property color popupFill: Qt.rgba(root.base.r, root.base.g, root.base.b, ThemeConfig.popupOpacity)
-    readonly property color popupPanelFill: Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, Math.min(0.90, ThemeConfig.popupOpacity * (0.46 + ThemeConfig.styleGlassStrength * 0.5)))
-    readonly property color popupPanelHoverFill: Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, Math.min(0.96, ThemeConfig.popupOpacity * (0.62 + ThemeConfig.styleGlassStrength * 0.6)))
+    readonly property real settingsOpacity: Math.max(0.92, ThemeConfig.popupOpacity)
+    readonly property color popupFill: Qt.rgba(root.base.r, root.base.g, root.base.b, settingsOpacity)
+    readonly property color popupPanelFill: Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, Math.max(0.68, Math.min(0.94, settingsOpacity * (0.52 + ThemeConfig.styleGlassStrength * 0.5))))
+    readonly property color popupPanelHoverFill: Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, Math.max(0.76, Math.min(0.98, settingsOpacity * (0.66 + ThemeConfig.styleGlassStrength * 0.6))))
 
     property real colorBlend: 0.0
     SequentialAnimation on colorBlend {
@@ -158,6 +159,12 @@ Item {
     property bool themeSaveBusy: false
     property string themeSaveError: ""
     property string themeEditThemeId: ""
+    property string themeLoadedSignature: ""
+    property string themeStatusText: ""
+    property string themeStatusKind: "info"
+    readonly property bool themeDirty: themeEditThemeId !== ""
+                                        && themeLoadedSignature !== ""
+                                        && currentThemeSignature() !== themeLoadedSignature
     readonly property string themeSwitchSafeCmd: Quickshell.env("HOME") + "/.config/hypr/scripts/theme-switch-safe.sh"
     readonly property string themeReadSafeCmd: Quickshell.env("HOME") + "/.config/hypr/scripts/theme-read-safe.sh"
     readonly property string themeUpdateSafeCmd: Quickshell.env("HOME") + "/.config/hypr/scripts/theme-update-safe.sh"
@@ -307,15 +314,41 @@ Item {
         return String(themeId || "").replace(/[^a-zA-Z0-9_-]/g, "");
     }
 
+    function configHome() {
+        let xdg = String(Quickshell.env("XDG_CONFIG_HOME") || "");
+        return xdg !== "" ? xdg : Quickshell.env("HOME") + "/.config";
+    }
+
     function themeFilePath(themeId) {
         let safeId = normalizeThemeId(themeId);
         if (safeId === "") return "";
-        return Quickshell.env("HOME") + "/.config/kingstra/themes/" + safeId + ".toml";
+        return configHome() + "/kingstra/themes/" + safeId + ".toml";
+    }
+
+    function setThemeStatus(text, kind) {
+        themeStatusText = String(text || "");
+        themeStatusKind = String(kind || "info");
+    }
+
+    function currentThemeSignature() {
+        return JSON.stringify([
+            editBorderRadius, editBorderWidth, editGapsIn, editGapsOut, editBlurSize, editBlurPasses,
+            editUiFont, editUiFontSize, editMonoFont, editMonoFontSize, editDisplayFont, editFontWeight, editLetterSpacing,
+            editIconTheme, editSchemeType, editColorIndex, editContrast, editMode,
+            editBarHeight, editBarPosition, editBarTemplate, editBarWidthMode, editBarShape,
+            editBarTopEdgeStyle, editBarBottomEdgeStyle, editClockStyle, editTopbarLooseBlocks,
+            editBarOpacity, editPopupOpacity, editAnimationSpeed, editOverlayOpacity, editGlowIntensity,
+            editParticleType, editParticleCount, editParticleSpeed
+        ]);
     }
 
     function loadThemeEditForm(themeData, themeId) {
         let safeThemeId = normalizeThemeId(themeId || themeCarousel.selectedThemeId || activeThemeId);
         if (safeThemeId === "") return;
+        if (themeDirty && safeThemeId !== themeEditThemeId && !themeSaveBusy) {
+            setThemeStatus("Onopgeslagen wijzigingen in " + themeEditThemeId + ". Sla eerst op of herstel de waarden.", "warn");
+            return;
+        }
         themeEditThemeId = safeThemeId;
 
         editBorderRadius = toIntValue(themeValue(themeData, "appearance", "border_radius", 12), 12);
@@ -396,6 +429,8 @@ Item {
         );
         editParticleCount = Math.max(0, toIntValue(themeValue(themeData, "effects", "particle_count", 0), 0));
         editParticleSpeed = toFloatString(themeValue(themeData, "effects", "particle_speed", 0.18), 0.18);
+        themeLoadedSignature = currentThemeSignature();
+        setThemeStatus("Geladen uit " + safeThemeId + ".toml", "info");
     }
 
     function saveThemeEdits() {
@@ -407,6 +442,7 @@ Item {
 
         themeSaveBusy = true;
         themeSaveError = "";
+        setThemeStatus("Opslaan naar " + themeEditThemeId + ".toml...", "info");
 
         let cmd = [
             root.themeUpdateSafeCmd,
@@ -465,11 +501,27 @@ Item {
             "bash", "-lc",
             "if ! command -v quickshell >/dev/null 2>&1; then echo 'quickshell niet gevonden' >&2; exit 1; fi; " +
             "if [ ! -f \"$HOME/.config/quickshell/TopBar.qml\" ]; then echo 'TopBar.qml niet gevonden' >&2; exit 1; fi; " +
-            "pkill -f 'quickshell.*TopBar.qml' >/dev/null 2>&1 || true; " +
+            "pkill -f 'quickshell.*[T]opBar.qml' >/dev/null 2>&1 || true; " +
             "sleep 0.2; " +
             "nohup quickshell -p \"$HOME/.config/quickshell/TopBar.qml\" >/dev/null 2>&1 &"
         ];
         topbarReloadProc.running = true;
+    }
+
+    function applyTopbarEdits() {
+        if (themeEditThemeId !== "" && themeDirty) {
+            saveThemeEdits();
+            return;
+        }
+        reloadTopbar();
+    }
+
+    function resetThemeEdits() {
+        if (themeCarousel.selectedThemeId !== "" && themeCarousel.selectedThemeData) {
+            themeLoadedSignature = "";
+            loadThemeEditForm(themeCarousel.selectedThemeData, themeCarousel.selectedThemeId);
+            setThemeStatus("Wijzigingen hersteld naar laatst geladen waarden", "info");
+        }
     }
 
     function stringifyThemeValue(value) {
@@ -764,7 +816,7 @@ Item {
     Process {
         id: loadThemeDetailProc
         property string themeId: ""
-        command: [root.themeReadSafeCmd, "--json", "${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes/" + themeId + ".toml"]
+        command: [root.themeReadSafeCmd, "--json", root.themeFilePath(themeId)]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -796,11 +848,19 @@ Item {
             root.themeSaveBusy = false;
             if (root.themeSaveError !== "") {
                 root.notify("Theme", "Opslaan mislukt: " + root.themeSaveError);
+                root.setThemeStatus("Opslaan mislukt: " + root.themeSaveError, "error");
                 root.themeSaveError = "";
                 return;
             }
 
             root.notify("Theme", "Thema opgeslagen: " + themeWriteProc.themeId);
+            root.themeLoadedSignature = root.currentThemeSignature();
+            root.setThemeStatus(
+                themeWriteProc.applyAfterSave
+                    ? "Opgeslagen. Actief thema wordt toegepast..."
+                    : "Opgeslagen in " + themeWriteProc.themeId + ".toml",
+                themeWriteProc.applyAfterSave ? "info" : "ok"
+            );
             loadThemeDetailProc.themeId = themeWriteProc.themeId;
             loadThemeDetailProc.running = true;
 
@@ -821,6 +881,7 @@ Item {
         command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" \"" + themeName + "\""]
         onExited: {
             root.refreshActiveTheme();
+            root.setThemeStatus("Opgeslagen en toegepast: " + themeName, "ok");
             if (themeCarouselLoader.item && themeCarouselLoader.item.refreshThemes) {
                 themeCarouselLoader.item.refreshThemes();
             }
@@ -839,10 +900,12 @@ Item {
             root.topbarReloadBusy = false;
             if (root.topbarReloadError !== "") {
                 root.notify("Topbar", "Herladen mislukt: " + root.topbarReloadError);
+                root.setThemeStatus("Topbar herladen mislukt: " + root.topbarReloadError, "error");
                 root.topbarReloadError = "";
                 return;
             }
             root.notify("Topbar", "Topbar herladen voltooid");
+            root.setThemeStatus("Topbar herladen voltooid", "ok");
         }
     }
 
@@ -1970,7 +2033,9 @@ Item {
                                 Layout.preferredHeight: root.s(34)
                                 Layout.preferredWidth: root.s(220)
                                 radius: root.s(8)
-                                color: themeEditMa.containsMouse ? Qt.alpha(root.green, 0.90) : root.green
+                                color: root.themeDirty
+                                       ? (themeEditMa.containsMouse ? Qt.alpha(root.green, 0.90) : root.green)
+                                       : Qt.alpha(root.surface1, 0.72)
                                 opacity: themeCarousel.selectedThemeId === "" || root.themeSaveBusy ? 0.55 : 1.0
                                 border.color: "transparent"
                                 border.width: 1
@@ -1978,8 +2043,23 @@ Item {
                                 RowLayout {
                                     anchors.centerIn: parent
                                     spacing: root.s(6)
-                                    Text { text: root.themeSaveBusy ? "󰔟" : "󰆓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: root.base }
-                                    Text { text: root.themeSaveBusy ? "Opslaan..." : "Opslaan in thema"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.base }
+                                    Text {
+                                        text: root.themeSaveBusy ? "󰔟" : (root.themeDirty ? "󰆓" : "󰄬")
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: root.s(14)
+                                        color: root.themeDirty ? root.base : root.subtext0
+                                    }
+                                    Text {
+                                        text: root.themeSaveBusy
+                                              ? "Opslaan..."
+                                              : (root.themeDirty
+                                                  ? (root.themeEditThemeId === root.activeThemeId ? "Opslaan & toepassen" : "Opslaan")
+                                                  : "Geen wijzigingen")
+                                        font.family: "JetBrains Mono"
+                                        font.weight: Font.Bold
+                                        font.pixelSize: root.s(11)
+                                        color: root.themeDirty ? root.base : root.subtext0
+                                    }
                                 }
 
                                 MouseArea {
@@ -1987,12 +2067,86 @@ Item {
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    enabled: themeCarousel.selectedThemeId !== "" && !root.themeSaveBusy
+                                    enabled: themeCarousel.selectedThemeId !== "" && !root.themeSaveBusy && root.themeDirty
                                     onClicked: root.saveThemeEdits()
                                 }
                             }
 
+                            Rectangle {
+                                Layout.preferredHeight: root.s(34)
+                                Layout.preferredWidth: root.s(150)
+                                radius: root.s(8)
+                                color: resetThemeMa.containsMouse ? Qt.alpha(root.peach, 0.20) : Qt.alpha(root.surface0, 0.65)
+                                opacity: root.themeDirty && !root.themeSaveBusy ? 1.0 : 0.45
+                                border.color: resetThemeMa.containsMouse ? root.peach : root.surface2
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: root.s(6)
+                                    Text { text: "󰑓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(13); color: root.peach }
+                                    Text { text: "Herstel"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.text }
+                                }
+
+                                MouseArea {
+                                    id: resetThemeMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    enabled: root.themeDirty && !root.themeSaveBusy
+                                    onClicked: root.resetThemeEdits()
+                                }
+                            }
+
                             Item { Layout.fillWidth: true }
+                        }
+
+                        Rectangle {
+                            visible: root.themeEditThemeId !== ""
+                            Layout.fillWidth: true
+                            implicitHeight: themeStatusRow.implicitHeight + root.s(14)
+                            radius: root.s(8)
+                            color: root.themeDirty
+                                   ? Qt.alpha(root.yellow, 0.12)
+                                   : (root.themeStatusKind === "error"
+                                      ? Qt.alpha(root.red, 0.14)
+                                      : (root.themeStatusKind === "ok"
+                                         ? Qt.alpha(root.green, 0.12)
+                                         : Qt.alpha(root.surface0, 0.46)))
+                            border.width: 1
+                            border.color: root.themeDirty
+                                          ? Qt.alpha(root.yellow, 0.55)
+                                          : (root.themeStatusKind === "error"
+                                             ? Qt.alpha(root.red, 0.65)
+                                             : (root.themeStatusKind === "ok"
+                                                ? Qt.alpha(root.green, 0.55)
+                                                : Qt.alpha(root.surface2, 0.72)))
+
+                            RowLayout {
+                                id: themeStatusRow
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.margins: root.s(10)
+                                spacing: root.s(8)
+
+                                Text {
+                                    text: root.themeDirty ? "󰐖" : (root.themeStatusKind === "error" ? "󰅚" : (root.themeStatusKind === "ok" ? "󰄬" : "󰋼"))
+                                    font.family: "Iosevka Nerd Font"
+                                    font.pixelSize: root.s(13)
+                                    color: root.themeDirty ? root.yellow : (root.themeStatusKind === "error" ? root.red : (root.themeStatusKind === "ok" ? root.green : root.blue))
+                                }
+                                Text {
+                                    text: root.themeDirty
+                                          ? "Onopgeslagen wijzigingen in " + root.themeEditThemeId + ".toml"
+                                          : (root.themeStatusText !== "" ? root.themeStatusText : "Klaar")
+                                    Layout.fillWidth: true
+                                    font.family: "JetBrains Mono"
+                                    font.pixelSize: root.s(10)
+                                    color: root.text
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
                         }
 
                         GridLayout {
@@ -2294,6 +2448,14 @@ Item {
                                     spacing: root.s(8)
 
                                     Text { text: "Shell"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                                    Text {
+                                        text: "Positie kiest de schermrand. Template kiest de module-indeling; compact-sidebar is bedoeld voor smalle zijbalken."
+                                        font.family: "JetBrains Mono"
+                                        font.pixelSize: root.s(10)
+                                        color: root.subtext0
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
+                                    }
 
                                     RowLayout {
                                         Layout.fillWidth: true
@@ -2541,20 +2703,20 @@ Item {
                                             color: topbarReloadMa.containsMouse ? Qt.alpha(root.blue, 0.24) : Qt.alpha(root.surface1, 0.68)
                                             border.width: 1
                                             border.color: topbarReloadMa.containsMouse ? root.blue : root.surface2
-                                            opacity: root.topbarReloadBusy ? 0.65 : 1.0
+                                            opacity: root.topbarReloadBusy || root.themeSaveBusy ? 0.65 : 1.0
                                             RowLayout {
                                                 anchors.centerIn: parent
                                                 spacing: root.s(6)
-                                                Text { text: root.topbarReloadBusy ? "󰔟" : "󰑓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(13); color: root.text }
-                                                Text { text: root.topbarReloadBusy ? "Herladen..." : "Topbar herladen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.text }
+                                                Text { text: root.topbarReloadBusy || root.themeSaveBusy ? "󰔟" : "󰑓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(13); color: root.text }
+                                                Text { text: root.topbarReloadBusy || root.themeSaveBusy ? "Toepassen..." : "Topbar toepassen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.text }
                                             }
                                             MouseArea {
                                                 id: topbarReloadMa
                                                 anchors.fill: parent
                                                 hoverEnabled: true
                                                 cursorShape: Qt.PointingHandCursor
-                                                enabled: !root.topbarReloadBusy
-                                                onClicked: root.reloadTopbar()
+                                                enabled: !root.topbarReloadBusy && !root.themeSaveBusy
+                                                onClicked: root.applyTopbarEdits()
                                             }
                                         }
                                         Item { Layout.fillWidth: true }
