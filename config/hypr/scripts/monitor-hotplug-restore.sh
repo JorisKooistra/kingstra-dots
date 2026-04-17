@@ -2,6 +2,7 @@
 set -u
 
 conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/10-monitors.conf"
+tablet_state_file="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/kingstra/tablet-mode"
 begin_marker="# BEGIN KINGSTRA MONITOR UI"
 end_marker="# END KINGSTRA MONITOR UI"
 log_prefix="[kingstra-monitor-hotplug]"
@@ -50,6 +51,14 @@ is_connected() {
     return 1
 }
 
+tablet_mode_active() {
+    [[ -f "$tablet_state_file" ]]
+}
+
+is_internal_monitor() {
+    [[ "$1" =~ ^(eDP|LVDS|DSI) ]]
+}
+
 apply_saved_layout() {
     command -v hyprctl >/dev/null 2>&1 || return 0
     command -v jq >/dev/null 2>&1 || return 0
@@ -65,6 +74,11 @@ apply_saved_layout() {
     for rule in "${rules[@]}"; do
         output="$(trim "${rule%%,*}")"
         [[ -n "$output" ]] || continue
+
+        if tablet_mode_active && is_internal_monitor "$output"; then
+            log "Tablet mode actief; monitorregel overgeslagen: $rule"
+            continue
+        fi
 
         if is_connected "$output"; then
             if hyprctl keyword monitor "$rule" >/dev/null 2>&1; then
