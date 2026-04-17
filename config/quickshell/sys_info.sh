@@ -184,11 +184,62 @@ get_battery_icon() {
     fi
 }
 
-## SYSTEM
+## KEYBOARD
+get_kb_layout_config() {
+    local layout=""
+
+    if command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        layout=$(timeout 1 hyprctl getoption input:kb_layout -j 2>/dev/null | jq -r '.str // .value // empty' 2>/dev/null)
+    fi
+
+    if [ -z "$layout" ]; then
+        layout=$(
+            awk -F= '
+                /^[[:space:]]*kb_layout[[:space:]]*=/ {
+                    value = $2
+                    sub(/#.*/, "", value)
+                    gsub(/[[:space:]]/, "", value)
+                    if (value != "") layout = value
+                }
+                END { print layout }
+            ' "$HOME"/.config/hypr/hyprland.conf "$HOME"/.config/hypr/conf.d/*.conf 2>/dev/null
+        )
+    fi
+
+    echo "${layout:-us}"
+}
+
+get_kb_layout_count() {
+    local layouts="$1"
+    awk -v list="$layouts" 'BEGIN {
+        n = split(list, parts, ",")
+        count = 0
+        for (i = 1; i <= n; i++) {
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", parts[i])
+            if (parts[i] != "") count++
+        }
+        print count
+    }'
+}
+
 get_kb_layout() {
-    local layout=$(timeout 1 hyprctl devices -j 2>/dev/null | jq -r '.keyboards[]? | select(.main == true) | .active_keymap' | head -n1)
-    [[ -z "$layout" || "$layout" == "null" ]] && layout="US"
-    echo "$layout" | cut -c1-2 | tr '[:lower:]' '[:upper:]'
+    local layout=""
+    local bracket_layout=""
+
+    if command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        layout=$(timeout 1 hyprctl devices -j 2>/dev/null | jq -r '.keyboards[]? | select(.main == true) | .active_keymap' 2>/dev/null | head -n1)
+    fi
+
+    bracket_layout=$(printf '%s\n' "$layout" | sed -n 's/.*(\([^)]*\)).*/\1/p')
+    if [ -n "$bracket_layout" ]; then
+        layout="$bracket_layout"
+    elif [ -n "$layout" ] && [ "$layout" != "null" ]; then
+        layout="${layout:0:2}"
+    else
+        layout="${1%%,*}"
+    fi
+
+    echo "${layout:-us}" | tr '[:lower:]' '[:upper:]'
 }
 
 ## EXECUTION
@@ -199,6 +250,8 @@ case $1 in
     --vol-up) adjust_volume up "${2:-1}" ;;
     --vol-down) adjust_volume down "${2:-1}" ;;
     *)
+        kb_layouts="$(get_kb_layout_config)"
+        kb_count="$(get_kb_layout_count "$kb_layouts")"
         # If no arguments are passed, output the full state as JSON
         jq -n -c \
           --arg wifi_status "$(get_wifi_status)" \
@@ -213,13 +266,15 @@ case $1 in
           --arg bat_percent "$(get_battery_percent)" \
           --arg bat_status "$(get_battery_status)" \
           --arg bat_icon "$(get_battery_icon)" \
-          --arg kb_layout "$(get_kb_layout)" \
+          --arg kb_layout "$(get_kb_layout "$kb_layouts")" \
+          --arg kb_layouts "$kb_layouts" \
+          --argjson kb_count "${kb_count:-1}" \
           '{
              wifi: { status: $wifi_status, ssid: $wifi_ssid, icon: $wifi_icon },
              bt: { status: $bt_status, icon: $bt_icon, connected: $bt_connected },
              audio: { volume: $volume, icon: $volume_icon, is_muted: $is_muted },
              battery: { percent: $bat_percent, status: $bat_status, icon: $bat_icon },
-             keyboard: { layout: $kb_layout }
+             keyboard: { layout: $kb_layout, layouts: $kb_layouts, count: $kb_count }
            }'
     ;;
 esac

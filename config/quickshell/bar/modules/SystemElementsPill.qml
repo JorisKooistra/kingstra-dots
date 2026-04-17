@@ -10,7 +10,7 @@ import "../../monitors"
 //
 //   Sub-pill        moduleList-naam   office  gaming  media
 //   ─────────────── ─────────────── ──────── ─────── ──────
-//   Keyboard        (altijd aan)       ✓       ✓       ✓
+//   Keyboard        auto (>1 layout)   ✓       ✓       ✓
 //   Updates         "updates"          ✓       –       –
 //   CpuTemp         "cpu_temp"         –       ✓       –
 //   GpuTemp         "gpu_temp"         –       ✓       –
@@ -65,39 +65,45 @@ Rectangle {
         spacing: shell.s(8)
         property int pillHeight: shell.s(34)
 
-        // ── Keyboard layout ────────────────────────────────────────────────
+        // ── Keyboard layout switcher (only with multiple layouts) ─────────
         Rectangle {
             id: kbPill
+            visible: shell.kbLayoutCount > 1
             property bool isHovered: kbMouse.containsMouse
             color: ctx.cyberChrome
                    ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
                    : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
             radius: surface.innerPillRadius
             height: sysLayout.pillHeight
+            width: sysLayout.pillHeight
             clip: true
-
-            property real targetWidth: kbLayoutRow.width + shell.s(24)
-            width: targetWidth
-            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
 
             scale: isHovered ? 1.05 : 1.0
             Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
             Behavior on color { ColorAnimation { duration: 200 } }
 
             property bool initAnimTrigger: false
-            Timer { running: root.layoutVisible && !kbPill.initAnimTrigger; interval: 0; onTriggered: kbPill.initAnimTrigger = true }
+            Timer { running: root.layoutVisible && kbPill.visible && !kbPill.initAnimTrigger; interval: 0; onTriggered: kbPill.initAnimTrigger = true }
             opacity: initAnimTrigger ? 1 : 0
             transform: Translate { y: kbPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
             Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
-            Row {
-                id: kbLayoutRow
+            Text {
                 anchors.centerIn: parent
-                spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.cyberChrome ? ctx.cyberTextColor : (kbPill.isHovered ? mocha.text : mocha.overlay2) }
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.kbLayout; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.cyberChrome ? ctx.cyberTextColor : mocha.text }
+                text: shell.kbLayout
+                font.family: shell.monoFontFamily
+                font.pixelSize: shell.s(12)
+                font.weight: Font.Black
+                font.letterSpacing: shell.themeLetterSpacing
+                color: ctx.cyberChrome ? ctx.cyberTextColor : (kbPill.isHovered ? mocha.text : mocha.overlay2)
             }
-            MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true }
+            MouseArea {
+                id: kbMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: shell.switchKeyboardLayout()
+            }
         }
 
         // ── Package updates (office mode) ─────────────────────────────────

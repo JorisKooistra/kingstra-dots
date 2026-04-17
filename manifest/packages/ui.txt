@@ -4,6 +4,7 @@
 
 # Quickshell en Qt6
 aur:quickshell-git
+pacman-contrib
 qt6-base
 qt6-declarative
 qt6-multimedia

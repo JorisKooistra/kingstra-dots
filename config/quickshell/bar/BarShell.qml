@@ -182,6 +182,11 @@ Variants {
                 Quickshell.execDetached(["notify-send", "Updates", "Update gestart in terminal"]);
             }
 
+            function switchKeyboardLayout() {
+                Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"]);
+                keyboardRefreshTimer.restart();
+            }
+
             function handleVolumeWheel(deltaY) {
                 if (!deltaY || deltaY === 0) return;
                 barWindow.volumeWheelAccumulator += deltaY;
@@ -249,6 +254,8 @@ Variants {
             property string weatherIcon: ""
             property string weatherTemp: "--°"
             property string weatherHex: mocha.yellow
+            property string kbLayout: "US"
+            property int kbLayoutCount: 1
             
             // WiFi — Quickshell.Networking (event-driven)
             readonly property var _wifiDevice: {
@@ -370,8 +377,6 @@ Variants {
                          "artUrl": _activePlayer.trackArtUrl || "", "timeStr": timeStr };
             }
 
-            property string kbLayout: "us"
-
             Process {
                 id: updatesPoller
                 command: ["bash", "-c", "~/.config/quickshell/package_updates.sh 2>/dev/null || echo 0"]
@@ -420,7 +425,12 @@ Variants {
                         if (txt !== "") {
                             try {
                                 let data = JSON.parse(txt);
-                                if (barWindow.kbLayout !== data.keyboard.layout) barWindow.kbLayout = data.keyboard.layout;
+                                if (data.keyboard) {
+                                    let nextLayout = data.keyboard.layout || "US";
+                                    let nextCount = parseInt(data.keyboard.count || 1);
+                                    barWindow.kbLayout = nextLayout;
+                                    barWindow.kbLayoutCount = isNaN(nextCount) ? 1 : nextCount;
+                                }
                                 barWindow.sysPollerLoaded = true;
                                 barWindow.fastPollerLoaded = true;
                             } catch(e) {}
@@ -435,6 +445,15 @@ Variants {
                 command: ["bash", "-c", "~/.config/quickshell/sys_waiter.sh"]
                 // Strictly use onExited. Quickshell will no longer hook into stdout, preventing pipe deadlocks.
                 onExited: sysPoller.running = true 
+            }
+
+            Timer {
+                id: keyboardRefreshTimer
+                interval: 180
+                repeat: false
+                onTriggered: {
+                    if (!sysPoller.running) sysPoller.running = true;
+                }
             }
 
             // Weather remains a slow poll since it fetches from web

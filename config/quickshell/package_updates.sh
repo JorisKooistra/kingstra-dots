@@ -40,64 +40,89 @@ cache_is_fresh() {
 }
 
 compute_updates_count() {
-    local raw=""
     local raw_repo=""
     local raw_aur=""
+    local combined=""
     local count=0
-    local status=0
     local status_repo=0
     local status_aur=0
-    local backend=""
+    local aur_helper=""
+    local repo_ok=false
+    local aur_ok=false
 
-    if command -v yay >/dev/null 2>&1; then
-        backend="yay"
+    if command -v checkupdates >/dev/null 2>&1; then
+        # checkupdates synchroniseert een tijdelijke package database. Daardoor
+        # ziet de bar nieuwe repo-updates zonder dat de gebruiker eerst -Sy draait.
+        set +e
+        raw_repo="$(timeout "$QUERY_TIMEOUT_SECONDS" checkupdates 2>/dev/null)"
+        status_repo=$?
+        set -e
+        if [[ $status_repo -eq 124 ]]; then
+            return 1
+        fi
+        if [[ $status_repo -eq 0 || $status_repo -eq 2 ]]; then
+            repo_ok=true
+        else
+            return 1
+        fi
+    elif command -v yay >/dev/null 2>&1; then
+        # Fallback: dit leest alleen de lokale pacman database en kan dus
+        # achterlopen totdat iets anders de package databases ververst.
         set +e
         raw_repo="$(timeout "$QUERY_TIMEOUT_SECONDS" yay -Qu 2>/dev/null)"
         status_repo=$?
-        raw_aur="$(timeout "$QUERY_TIMEOUT_SECONDS" yay -Qua 2>/dev/null)"
+        set -e
+        if [[ $status_repo -eq 124 ]]; then
+            return 1
+        fi
+        if [[ $status_repo -eq 0 ]]; then
+            repo_ok=true
+        else
+            return 1
+        fi
+    elif command -v paru >/dev/null 2>&1; then
+        # Zelfde fallback voor paru-gebruikers.
+        set +e
+        raw_repo="$(timeout "$QUERY_TIMEOUT_SECONDS" paru -Qu 2>/dev/null)"
+        status_repo=$?
+        set -e
+        if [[ $status_repo -eq 124 ]]; then
+            return 1
+        fi
+        if [[ $status_repo -eq 0 ]]; then
+            repo_ok=true
+        else
+            return 1
+        fi
+    fi
+
+    if command -v yay >/dev/null 2>&1; then
+        aur_helper="yay"
+    elif command -v paru >/dev/null 2>&1; then
+        aur_helper="paru"
+    fi
+
+    if [[ -n "$aur_helper" ]]; then
+        set +e
+        raw_aur="$(timeout "$QUERY_TIMEOUT_SECONDS" "$aur_helper" -Qua 2>/dev/null)"
         status_aur=$?
         set -e
-        # Combineer repo + AUR zodat teller gelijkloopt met `yay -Syu`.
-        raw="$(printf "%s\n%s\n" "$raw_repo" "$raw_aur" | sed '/^[[:space:]]*$/d')"
-        # Gebruik een simpele samengestelde status voor fallback-logica.
-        if [[ $status_repo -eq 0 || $status_aur -eq 0 ]]; then
-            status=0
-        elif [[ $status_repo -eq 124 || $status_aur -eq 124 ]]; then
-            status=124
-        else
-            status=1
+        if [[ $status_aur -eq 124 ]]; then
+            return 1
         fi
-    elif command -v checkupdates >/dev/null 2>&1; then
-        backend="checkupdates"
-        set +e
-        raw="$(timeout "$QUERY_TIMEOUT_SECONDS" checkupdates 2>/dev/null)"
-        status=$?
-        set -e
-    else
+        if [[ $status_aur -eq 0 ]]; then
+            aur_ok=true
+        fi
+    fi
+
+    if [[ "$repo_ok" != true && "$aur_ok" != true ]]; then
         echo "0"
         return 0
     fi
 
-    # Timeout of harde fout: geef failure terug zodat caller cache kan behouden.
-    if [[ $status -eq 124 ]]; then
-        return 1
-    fi
-
-    # checkupdates geeft exitcode 2 bij "geen updates" (geen fout).
-    if [[ -z "$raw" ]]; then
-        if [[ "$backend" == "checkupdates" && $status -eq 2 ]]; then
-            echo "0"
-            return 0
-        fi
-        if [[ "$backend" == "yay" && $status -eq 0 ]]; then
-            echo "0"
-            return 0
-        fi
-        # Geen output + onverwachte status behandelen als mislukte meting.
-        return 1
-    fi
-
-    count="$(printf "%s\n" "$raw" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+    # Combineer repo + AUR zodat teller gelijkloopt met `yay -Syu`.
+    combined="$(printf "%s\n%s\n" "$raw_repo" "$raw_aur" | sed '/^[[:space:]]*$/d')"
+    count="$(printf "%s\n" "$combined" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
     [[ "$count" =~ ^[0-9]+$ ]] || count=0
     echo "$count"
     return 0

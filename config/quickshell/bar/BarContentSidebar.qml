@@ -449,30 +449,27 @@ Item {
         }
 
         Rectangle {
-            Layout.fillWidth: true
+            visible: shell.kbLayoutCount > 1
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: root.iconButtonSize
             Layout.preferredHeight: root.moduleHeight
             radius: surface.innerPillRadius
-            color: surface.innerPillColor
-            RowLayout {
+            color: kbMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
+            Text {
+                anchors.centerIn: parent
+                text: shell.kbLayout
+                font.family: shell.monoFontFamily
+                font.pixelSize: shell.s(12)
+                font.weight: Font.Black
+                font.letterSpacing: shell.themeLetterSpacing
+                color: kbMouse.containsMouse ? mocha.text : mocha.overlay2
+            }
+            MouseArea {
+                id: kbMouse
                 anchors.fill: parent
-                anchors.margins: shell.s(8)
-                spacing: shell.s(8)
-                Text {
-                    text: "󰌌"
-                    font.family: "Iosevka Nerd Font"
-                    font.pixelSize: shell.s(15)
-                    color: mocha.overlay2
-                }
-                Text {
-                    text: shell.kbLayout
-                    Layout.fillWidth: true
-                    font.family: shell.monoFontFamily
-                    font.pixelSize: shell.s(12)
-                    font.weight: shell.themeFontWeight
-                    font.letterSpacing: shell.themeLetterSpacing
-                    color: mocha.text
-                    elide: Text.ElideRight
-                }
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: shell.switchKeyboardLayout()
             }
         }
 
