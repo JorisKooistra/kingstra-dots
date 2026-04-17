@@ -357,9 +357,10 @@ Item {
         Item { Layout.fillHeight: true }
 
         Rectangle {
+            id: trayPanel
             Layout.fillWidth: true
             Layout.preferredHeight: trayColumn.implicitHeight + shell.s(16)
-            visible: trayRepeater.count > 0
+            visible: trayColumn.implicitHeight > 0
             radius: surface.panelRadius
             topLeftRadius: root.panelTopLeftRadius
             topRightRadius: root.panelTopRightRadius
@@ -368,6 +369,29 @@ Item {
             border.width: 1
             border.color: surface.panelBorderColor
             color: surface.panelColor
+
+            function trayField(item, key) {
+                try {
+                    var value = item[key];
+                    return value === undefined || value === null ? "" : String(value);
+                } catch(e) {
+                    return "";
+                }
+            }
+
+            function isHiddenTrayItem(item) {
+                var haystack = [
+                    trayField(item, "id"),
+                    trayField(item, "title"),
+                    trayField(item, "tooltipTitle"),
+                    trayField(item, "icon")
+                ].join(" ").toLowerCase();
+
+                return haystack.indexOf("nm-applet") !== -1
+                    || haystack.indexOf("networkmanager") !== -1
+                    || haystack.indexOf("nm-signal") !== -1
+                    || haystack.indexOf("network-wireless-signal") !== -1;
+            }
 
             Column {
                 id: trayColumn
@@ -380,8 +404,10 @@ Item {
                     model: SystemTray.items
                     delegate: Rectangle {
                         required property var modelData
+                        property bool hiddenTrayItem: trayPanel.isHiddenTrayItem(modelData)
+                        visible: !hiddenTrayItem
                         width: trayColumn.width
-                        height: shell.s(28)
+                        height: visible ? shell.s(28) : 0
                         radius: surface.innerPillRadius
                         color: trayMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
                         Image {

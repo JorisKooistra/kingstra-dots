@@ -25,13 +25,36 @@ Rectangle {
     color: ctx.rightGroupColor
     clip: true
 
-    property real targetWidth: trayRepeater.count > 0 ? trayLayout.width + shell.s(24) : 0
+    property real targetWidth: trayLayout.width > 0 ? trayLayout.width + shell.s(24) : 0
     Layout.preferredWidth: targetWidth
     Behavior on targetWidth { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
 
     visible: targetWidth > 0
     opacity: targetWidth > 0 ? 1 : 0
     Behavior on opacity { NumberAnimation { duration: 300 } }
+
+    function trayField(item, key) {
+        try {
+            var value = item[key];
+            return value === undefined || value === null ? "" : String(value);
+        } catch(e) {
+            return "";
+        }
+    }
+
+    function isHiddenTrayItem(item) {
+        var haystack = [
+            trayField(item, "id"),
+            trayField(item, "title"),
+            trayField(item, "tooltipTitle"),
+            trayField(item, "icon")
+        ].join(" ").toLowerCase();
+
+        return haystack.indexOf("nm-applet") !== -1
+            || haystack.indexOf("networkmanager") !== -1
+            || haystack.indexOf("nm-signal") !== -1
+            || haystack.indexOf("network-wireless-signal") !== -1;
+    }
 
     // Cyber bottom tick line
     Rectangle {
@@ -54,10 +77,12 @@ Rectangle {
             model: SystemTray.items
             delegate: Image {
                 id: trayIcon
+                property bool hiddenTrayItem: root.isHiddenTrayItem(modelData)
                 source: modelData.icon || ""
                 fillMode: Image.PreserveAspectFit
                 sourceSize: Qt.size(shell.s(18), shell.s(18))
-                width: shell.s(18); height: shell.s(18)
+                visible: !hiddenTrayItem
+                width: visible ? shell.s(18) : 0; height: visible ? shell.s(18) : 0
                 anchors.verticalCenter: parent.verticalCenter
 
                 property bool isHovered: trayMouse.containsMouse

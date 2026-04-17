@@ -271,10 +271,11 @@ Variants {
             readonly property string wifiIcon: {
                 if (!_wifiDevice || !isWifiOn) return "󰤮";
                 var sig = _wifiNetwork ? _wifiNetwork.signalStrength : 0;
-                if (sig > 0.75) return "󰤨";
-                if (sig > 0.5)  return "󰤥";
-                if (sig > 0.25) return "󰤢";
-                return "󰤟";
+                if (sig >= 0.80) return "󰤨";
+                if (sig >= 0.60) return "󰤥";
+                if (sig >= 0.40) return "󰤢";
+                if (sig >= 0.20) return "󰤟";
+                return "󰤯";
             }
 
             // Bluetooth — Quickshell.Bluetooth (event-driven)
