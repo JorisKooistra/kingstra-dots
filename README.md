@@ -58,7 +58,7 @@ Theme identity (shape, ornaments, particles) stays fixed — only content and be
 
 | Mode | Bar | Modules |
 |---|---|---|
-| `office` (default) | Always visible | Workspaces, window title, clock, network, battery, volume, bluetooth, notifications |
+| `office` (default) | Always visible | Workspaces, window title, clock, CPU/RAM monitor, network, battery, volume, bluetooth, notifications |
 | `gaming` | Always visible | Workspaces, CPU/GPU/RAM temps, audio device, mic mute, game launcher, clock |
 | `media` | Auto-hide (3 s) | Volume, brightness, media controls, clock |
 
@@ -124,7 +124,7 @@ or automatically visible in gaming mode.
 
 ### Monitoring
 
-StatsPopup widget and btop for system monitoring. Gaming mode shows per-core CPU and GPU temperature.
+StatsPopup widget and btop for system monitoring. Office mode shows a compact CPU/RAM monitor that opens btop; gaming mode shows the full CPU/GPU/RAM set with temperatures.
 lm_sensors provides hardware sensor data.
 
 ### Clipboard — cliphist

@@ -19,12 +19,13 @@ import "modules"
 //
 // De drie modi en hun standaard moduleList (zie BarShell._defaultModules):
 //
-//   office  → workspaces · clock · updates · network · bluetooth · volume · notifications · battery
+//   office  → workspaces · clock · updates · cpu_temp · network · bluetooth · volume · notifications · battery
 //   gaming  → workspaces · clock · cpu_temp · gpu_temp · ram_usage · volume · game_launcher · battery
 //   media   → clock · volume · brightness · media_controls · battery
 //
-// Daarnaast zorgt _normalizeModules dat "updates" altijd aanwezig is in office-mode
-// en "battery" altijd aanwezig is in alle modi, ook als mode.json ze weglaat.
+// Daarnaast zorgt _normalizeModules dat "updates" en "cpu_temp" altijd aanwezig
+// zijn in office-mode en "battery" altijd aanwezig is in alle modi, ook als
+// mode.json ze weglaat.
 //
 // De namen in de array matchen exact de strings die modules checken — wil je een
 // module aan/uitzetten, pas dan mode.json aan of de _defaultModules functie in

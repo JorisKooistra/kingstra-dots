@@ -60,8 +60,8 @@ Rectangle {
         spacing: 6
 
         Text {
-            text: "󰍺"
-            font.family: "Iosevka Nerd Font"; font.pixelSize: 16
+            text: "󰘚"
+            font.family: "Iosevka Nerd Font"; font.pixelSize: 15
             color: root.usageColor
             anchors.verticalCenter: parent.verticalCenter
             Behavior on color { ColorAnimation { duration: 300 } }

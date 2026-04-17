@@ -12,7 +12,7 @@ import "../../monitors"
 //   ─────────────── ─────────────── ──────── ─────── ──────
 //   Keyboard        auto (>1 layout)   ✓       ✓       ✓
 //   Updates         "updates"          ✓       –       –
-//   CpuTemp         "cpu_temp"         –       ✓       –
+//   CpuTemp         "cpu_temp"         ✓       ✓       –
 //   GpuTemp         "gpu_temp"         –       ✓       –
 //   RamUsage        "ram_usage"        –       ✓       –
 //   WiFi            "network"          ✓       –       –
@@ -156,13 +156,14 @@ Rectangle {
             MouseArea { id: updatesMouse; hoverEnabled: true; anchors.fill: parent; onClicked: shell.openUpdatesTerminal() }
         }
 
-        // ── CPU temperature (gaming mode) — external component ─────────────
+        // ── CPU monitor: office shows CPU/RAM, gaming shows CPU/temp ───────
         CpuTemp {
             id: cpuTempPill
             visible: shell.moduleList.includes("cpu_temp")
             mocha: root.mocha
             pillHeight: sysLayout.pillHeight
             radius: surface.innerPillRadius
+            showTemperature: shell.activeMode === "gaming"
         }
 
         // ── GPU temperature (gaming mode) — external component ─────────────
@@ -404,6 +405,6 @@ Rectangle {
         shell: root.shell
         mocha: root.mocha
         surface: root.surface
-        isVisible: cpuTempPill.isHovered || gpuTempPill.isHovered || ramUsagePill.isHovered
+        isVisible: shell.activeMode === "gaming" && (cpuTempPill.isHovered || gpuTempPill.isHovered || ramUsagePill.isHovered)
     }
 }
