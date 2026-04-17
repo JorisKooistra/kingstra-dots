@@ -6,19 +6,153 @@ Personal Hyprland rice for Arch Linux. Modular, reproducible, fully automated in
 
 ## Features
 
-- **Compositor** — Hyprland with modular `conf.d` structure
-- **Bar** — Quickshell (QML): workspaces, clock, active window, CPU/RAM, media, notifications
-- **Theme** — Matugen generates Material You colors from the wallpaper
-- **Shell** — zsh + oh-my-posh, theme follows wallpaper colors
-- **Terminal** — kitty with Matugen colors and JetBrains Mono
-- **Launcher** — Walker (`Super+Ctrl+Return`)
-- **Notifications** — SwayNC (control center, top-left)
-- **Wallpaper** — hyprpaper (static) + mpvpaper (video, optional)
-- **Game launcher** — [quickshell-games-launchers](https://github.com/Eaquo/quickshell-games-launchers): Steam, Epic, GOG, Heroic met cover art
-- **Lockscreen** — hyprlock, styled with Matugen colors
-- **OSD** — SwayOSD (volume, brightness)
-- **File manager** — Nautilus + Yazi (terminal)
-- **Hardware** — automatic detection: Nvidia/AMD/Intel, laptop, touchpad, fingerprint
+### Compositor — Hyprland
+
+Hyprland with a 16-file `conf.d` modular config. Every concern lives in its own file:
+colors, theme, decoration, animations, window rules, autostart, keybindings, and hardware overrides.
+The file `99-custom.conf` is never touched by the installer — user tweaks survive updates.
+
+### Bar — Quickshell (QML)
+
+~24k lines of QML across 64 files. The bar adapts to position (`top`, `bottom`, `left`, `right`):
+horizontal layout for top/bottom, vertical sidebar for left/right.
+
+Modules: workspaces, active window title, system stats (CPU/RAM/network/battery),
+media controls, notifications button, clock, tray icons, and more.
+Each activity mode (see **Modes** below) activates a different module set.
+
+### Theming — Material You via Matugen
+
+Every wallpaper change triggers a full color pipeline:
+
+1. Matugen generates a Material You palette from the wallpaper image.
+2. The active theme applies a hue/saturation/lightness transform on top.
+3. Colors propagate to Hyprland, Quickshell, kitty, oh-my-posh, GTK 3/4, Qt6, SwayNC, Walker, and SDDM.
+
+The pipeline is centralized in `apply-shell-state` and `kingstra-matugen-run` — no per-app tweaking needed.
+
+### Themes
+
+Six distinct visual personalities. Each theme defines its own Matugen scheme type, blur, opacity,
+corner radius, fonts, color transforms, bar/widget shapes, ornaments, particle effects, and terminal style.
+
+| Theme | Description | Scheme |
+|---|---|---|
+| `botanical` | Temperate rainforest — moss, wood, filtered light | scheme-content |
+| `rocky` | Granite — angular, solid, no-nonsense | scheme-monochrome |
+| `ocean` | Deep sea — cool, calm, fluid | scheme-fidelity |
+| `space` | Cosmic — deep, dark, floating panels | scheme-expressive |
+| `cyber` | Neon — high contrast, sharp, electric | scheme-rainbow |
+| `animated` | Vibrant — colourful, dynamic, expressive | scheme-fruit-salad |
+
+Switch from the terminal or with `Super + Ctrl + T` to open the visual theme carousel.
+
+```bash
+kingstra-theme-switch botanical
+```
+
+### Modes
+
+Modes reconfigure the bar module set and autohide behaviour for the current activity.
+Theme identity (shape, ornaments, particles) stays fixed — only content and behaviour change.
+
+| Mode | Bar | Modules |
+|---|---|---|
+| `office` (default) | Always visible | Workspaces, window title, clock, network, battery, volume, bluetooth, notifications |
+| `gaming` | Always visible | Workspaces, CPU/GPU/RAM temps, audio device, mic mute, game launcher, clock |
+| `media` | Auto-hide (3 s) | Volume, brightness, media controls, clock |
+
+Switch with `Super + Ctrl + M` or from the terminal:
+
+```bash
+kingstra-mode-switch gaming
+```
+
+### Shell — zsh + oh-my-posh
+
+Modular zsh config with a `conf.d/` pattern. The prompt theme (`kingstra.omp.toml`) uses the
+active Material You palette, so it automatically matches the wallpaper.
+
+### Terminal — kitty
+
+Configured with JetBrains Mono and Matugen-generated colors. Background, foreground, and accent
+colors update automatically on every wallpaper or theme change.
+
+### Wallpaper
+
+Supports both static images (hyprpaper) and video backgrounds (mpvpaper). All picks flow through
+the same `apply-shell-state` pipeline to keep colors in sync.
+
+```bash
+kingstra-wallpaper set ~/Pictures/photo.png    # static
+kingstra-wallpaper video ~/Videos/bg.mp4       # video (mpvpaper)
+kingstra-wallpaper random                      # random from collection
+kingstra-wallpaper pick                        # interactive fzf picker with preview
+kingstra-wallpaper status                      # show active wallpaper
+```
+
+Keybinds: `Super + Shift + W` (random) and `Super + Ctrl + W` (visual picker).
+
+### Launcher — Walker
+
+Walker app launcher with sub-modes for SSH hosts, calculator, and more.
+Opens with `Super + Ctrl + Return`. Colors follow the active theme.
+
+### Notifications — SwayNC
+
+SwayNC as notification daemon and control center. Supports MPRIS media controls inline,
+do-not-disturb, and is styled with Matugen colors. Toggle with `Super + N`.
+
+### OSD — SwayOSD
+
+On-screen display for volume and brightness changes. Appears on hardware key presses.
+
+### Lockscreen — hyprlock
+
+Styled with Material You colors. Supports fingerprint unlock via PAM (see **Hardware detection**).
+
+### Game launcher
+
+[quickshell-games-launchers](https://github.com/Eaquo/quickshell-games-launchers) integrated
+into the bar: Steam, Epic, GOG, and Heroic with cover art. Accessible via `Super + Alt + G`
+or automatically visible in gaming mode.
+
+### File management
+
+- **Nautilus** — GUI file manager (`Super + E`)
+- **Yazi** — Terminal file manager with image previews (`Super + Shift + E`)
+
+### Monitoring
+
+StatsPopup widget and btop for system monitoring. Gaming mode shows per-core CPU and GPU temperature.
+lm_sensors provides hardware sensor data.
+
+### Clipboard — cliphist
+
+Clipboard history with `Super + V`. Stores text and images.
+
+### Touchscreen support
+
+Auto-detects touchscreen hardware and applies a touch profile: larger UI scale, bigger bar hit
+targets, touch-friendly scrolling. Tablet mode switch (rotate display + on-screen keyboard) is
+also handled automatically.
+
+Override: `KINGSTRA_FORCE_TOUCH=1` / `KINGSTRA_FORCE_TOUCH=0`.
+
+### Hardware detection
+
+The installer auto-detects and configures:
+
+| Hardware | Variable | Action |
+|---|---|---|
+| Nvidia GPU | `DETECT_GPU=nvidia` | env vars, cursor fix, nvidia-utils |
+| AMD GPU | `DETECT_GPU=amd` | VA-API driver (radeonsi) |
+| Laptop/battery | `DETECT_IS_LAPTOP=true` | power-profiles, short idle timeouts |
+| Backlight | `DETECT_HAS_BACKLIGHT=true` | brightnessctl, hypridle dim |
+| Touchpad | `DETECT_HAS_TOUCHPAD=true` | natural scroll, tap-to-click |
+| Touchscreen | `DETECT_HAS_TOUCHSCREEN=true` | touch profile, tablet mode on laptops |
+| Tablet mode switch | `DETECT_HAS_TABLET_MODE_SWITCH=true` | rotate internal display + OSK on tablet switch |
+| Fingerprint | `DETECT_HAS_FINGERPRINT=true` | fprintd, PAM for sudo + SDDM |
 
 ---
 
@@ -89,142 +223,6 @@ An AUR helper is no longer a manual prerequisite for the bootstrap flow: when mi
 
 ---
 
-## Wallpaper and theming
-
-Every time the wallpaper, theme, or mode changes, `apply-shell-state` runs automatically:
-it calls Matugen to generate a Material You palette from the current wallpaper, applies
-an optional per-theme color transform, then reloads Quickshell, Hyprland, kitty, and SwayNC.
-The actual Matugen call is centralized in `kingstra-matugen-run`, which always reads
-the active `scheme_type`, `mode`, and `color_index` before running.
-`skwd-wall` does not run Matugen in this setup (`features.matugen=false`): it is only used
-as wallpaper source/picker backend, while Kingstra scripts own the color pipeline.
-Both static and video wallpaper picks go through the same state flow (`apply-shell-state`).
-
-### Wallpaper
-
-```bash
-# Set static wallpaper
-kingstra-wallpaper set ~/Pictures/Wallpapers/photo.png
-
-# Video wallpaper (mpvpaper)
-kingstra-wallpaper video ~/Videos/background.mp4
-
-# Random wallpaper
-kingstra-wallpaper random
-
-# Interactive picker (fzf + preview)
-kingstra-wallpaper pick
-
-# Status
-kingstra-wallpaper status
-```
-
-Keybinds:
-- `Super + Shift + W` selects a random wallpaper from the `skwd-wall` folder.
-- `Super + Ctrl + W` opens the visual wallpaper picker.
-
-### Themes
-
-Themes control the visual personality of the desktop: Matugen scheme type, blur, transparency,
-corner radius, fonts, and subtle color transforms on top of the generated palette.
-
-Theme data now also includes visual skin blocks in each `config/kingstra/themes/*.toml`:
-- `[bar]`
-- `[widgets]`
-- `[ornaments]`
-- `[effects]`
-- `[terminal_visual]`
-
-These fields flow through `kingstra-theme-switch` into `~/.config/quickshell/theme.json`,
-then into `ThemeConfig.qml` with safe fallbacks for invalid or missing values.
-`TopBar.qml` stays the entrypoint and delegates to the bar architecture in `config/quickshell/bar/`
-(`BarShell.qml` -> `BarSurface.qml` -> `BarContent.qml` / `BarContentSidebar.qml`).
-
-`quickshell.bar_position` supports `top`, `bottom`, `left`, `right`.
-- `top`/`bottom`: horizontal bar layout.
-- `left`/`right`: sidebar layout with clock+weather at the top, workspaces vertical, and system controls stacked vertically.
-
-| Theme | Description | Scheme |
-|---|---|---|
-| `botanical` | Temperate rainforest — moss, wood, filtered light | scheme-content |
-| `rocky` | Granite — angular, solid, no-nonsense | scheme-monochrome |
-| `ocean` | Deep sea — cool, calm, fluid | scheme-fidelity |
-| `space` | Cosmic — deep, dark, floating panels | scheme-expressive |
-| `cyber` | Neon — high contrast, sharp, electric | scheme-rainbow |
-| `animated` | Vibrant — colourful, dynamic, expressive | scheme-fruit-salad |
-
-Switch theme from the terminal or keybind:
-
-```bash
-kingstra-theme-switch botanical
-```
-
-Keybind: `Super + Ctrl + T` opens the visual theme picker.
-
-### Modes
-
-Modes reconfigure the TopBar module set and bar behaviour for the current activity.
-Mode changes should only affect content/behaviour (`modules`, `bar_autohide`), while theme identity
-(shape, ornaments, clock style, particle style, widget/bar skin) remains controlled by the active theme.
-
-| Mode | Bar | Modules |
-|---|---|---|
-| `office` (default) | Always visible | Workspaces, window title, clock, network, battery, volume, bluetooth, notifications |
-| `gaming` | Always visible | Workspaces, CPU/GPU/RAM temp, audio device, mic mute, game launcher, clock |
-| `media` | Auto-hide (3 s) | Volume, brightness, media controls, clock |
-
-Switch mode from the terminal or keybind:
-
-```bash
-kingstra-mode-switch gaming
-```
-
-Keybind: `Super + Ctrl + M` opens the visual mode picker.
-
----
-
-## Touchscreen
-
-The shell now auto-detects touchscreen hardware and applies a touch profile:
-- larger UI scale and popup dimensions
-- larger bar hit targets
-- touch-friendly settings scrolling (finger drag stays native; mouse-wheel catchers disable on touch)
-
-Detector command: `kingstra-touch-detect --json`
-
-Optional override:
-- `KINGSTRA_FORCE_TOUCH=1` force touch mode
-- `KINGSTRA_FORCE_TOUCH=0` force non-touch mode
-
----
-
-## Hardware detection
-
-The installer automatically detects:
-
-| Hardware | Variable | Action |
-|---|---|---|
-| Nvidia GPU | `DETECT_GPU=nvidia` | env vars, cursor fix, nvidia-utils |
-| AMD GPU | `DETECT_GPU=amd` | VA-API driver (radeonsi) |
-| Laptop/battery | `DETECT_IS_LAPTOP=true` | power-profiles, short timeouts |
-| Backlight | `DETECT_HAS_BACKLIGHT=true` | brightnessctl, hypridle dim |
-| Touchpad | `DETECT_HAS_TOUCHPAD=true` | natural scroll, tap-to-click |
-| Touchscreen | `DETECT_HAS_TOUCHSCREEN=true` | touch profile, enables tablet mode on laptops |
-| Tablet mode switch | `DETECT_HAS_TABLET_MODE_SWITCH=true` | rotate internal display + OSK on tablet switch |
-| Fingerprint | `DETECT_HAS_FINGERPRINT=true` | fprintd, PAM configuration for sudo + SDDM |
-
-To override detected values:
-```bash
-# my-overrides.conf
-ENABLE_FINGERPRINT=false
-ENABLE_VIDEO_WALLPAPER=false
-ENABLE_SPICETIFY=true
-```
-
-Note about SDDM fingerprint flow: the Kingstra greeter starts an empty PAM login once and shows a fingerprint status card while waiting for the scanner. If SDDM or PAM misses that first attempt, press `Enter` on an empty password field to trigger fingerprint auth again; typing a password remains the fallback.
-
----
-
 ## Important paths
 
 | Path | Contents |
@@ -257,7 +255,32 @@ Quick overview:
 | `Super + X` | Power menu |
 | `Super + Alt + G` | Game launcher |
 | `Super + Alt + N` | nmtui (network) |
+| `Super + Ctrl + T` | Theme picker |
+| `Super + Ctrl + W` | Wallpaper picker |
+| `Super + Ctrl + M` | Mode picker |
+| `Super + Shift + W` | Random wallpaper |
 | `Print` | Screenshot |
+
+---
+
+## Notes
+
+### SDDM fingerprint flow
+
+The Kingstra greeter starts an empty PAM login once and shows a fingerprint status card while
+waiting for the scanner. If SDDM or PAM misses that first attempt, press `Enter` on an empty
+password field to trigger fingerprint auth again; typing a password remains the fallback.
+
+### Overriding detected hardware values
+
+```bash
+# my-overrides.conf
+ENABLE_FINGERPRINT=false
+ENABLE_VIDEO_WALLPAPER=false
+ENABLE_SPICETIFY=true
+```
+
+Pass with `bash install.sh --override my-overrides.conf`.
 
 ---
 

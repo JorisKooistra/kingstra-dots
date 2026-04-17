@@ -1,148 +1,169 @@
 # Keybindings — kingstra-dots
 
 > **Super** = Windows/Meta key  
-> Binds are split across `config/hypr/conf.d/80-84-binds-*.conf`
+> Binds zijn verdeeld over `config/hypr/conf.d/80–84-binds-*.conf`
 
 ---
 
-## Windows
+## Ontwerpregels
 
-| Keys | Action |
+| Modifier | Gebruik |
 |---|---|
-| `Super + H/J/K/L` | Focus left / down / up / right |
-| `Super + ←↓↑→` | Focus (arrow keys, with monitor fallback) |
-| `Super + Shift + H/J/K/L` | Move window |
-| `Super + Shift + ←↓↑→` | Move window (arrow keys) |
-| `Super + Ctrl + ←↓↑→` | Resize window |
-| `Super + LMB drag` | Move window (mouse) |
-| `Super + RMB drag` | Resize window (mouse) |
-| `Super + Q` | Close window |
-| `Super + F` | Fullscreen |
-| `Super + M` | Maximize (keep bar/gaps) |
-| `Super + T` | Toggle floating |
-| `Super + Alt + T` | Pin (always visible across workspaces) |
-| `Super + Shift + Space` | Center floating window |
-| `Super + P` | Pseudotile (dwindle) |
-| `Super + \` | Toggle split direction (dwindle) |
+| `Super` | Vensterbeheer en navigatie |
+| `Super + Shift` | Directe snelacties |
+| `Super + Ctrl` | Panelen, pickers en sessiebeheer |
+| `Super + Alt` | Secundaire venster-, groep- en media-acties |
+| Mediatoetsen | Directe hardwarefuncties |
+
+Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 
 ---
 
-## Window groups (tabs)
+## Vensters — focus
 
-| Keys | Action |
+| Toetsen | Actie |
 |---|---|
-| `Super + G` | Toggle group |
-| `Super + Alt + →` | Next tab in group |
-| `Super + Alt + ←` | Previous tab in group |
-| `Super + Ctrl + Shift + G` | Lock/unlock group |
-| `Super + Shift + G` | Move window out of group |
+| `Super + H` | Focus naar links |
+| `Super + J` | Focus naar beneden |
+| `Super + K` | Focus naar boven |
+| `Super + L` | Focus naar rechts |
+| `Super + ←↓↑→` | Focus (pijltoetsen, met monitor-fallback) |
 
 ---
 
-## Workspaces
+## Vensters — verplaatsen en aanpassen
 
-| Keys | Action |
+| Toetsen | Actie |
 |---|---|
-| `Super + 1–0` | Switch to workspace 1–10 |
-| `Super + Tab` | Previous workspace |
-| `Super + Scroll` | Cycle workspaces |
-| `Super + Shift + 1–0` | Move window to workspace 1–10 |
-| `Super + Alt + 1–0` | Move window silently (keep focus) |
-| `Super + S` | Toggle scratchpad |
-| `Super + Shift + S` | Move window to scratchpad |
+| `Super + Shift + H/J/K/L` | Venster verplaatsen |
+| `Super + Shift + ←↓↑→` | Venster verplaatsen (pijltoetsen) |
+| `Super + Ctrl + ←↓↑→` | Venster aanpassen (60px per druk) |
+| `Super + LMB slepen` | Venster verslepen (muis) |
+| `Super + RMB slepen` | Venster aanpassen (muis) |
 
 ---
 
-## Apps
+## Vensters — toestand
 
-| Keys | Action |
+| Toetsen | Actie |
+|---|---|
+| `Super + Q` | Venster sluiten |
+| `Super + F` | Volledig scherm |
+| `Super + M` | Maximaliseren (balk + gaps blijven zichtbaar) |
+| `Super + T` | Zwevend/geplaatst wisselen |
+| `Super + Alt + T` | Vastzetten op alle werkruimten (pin) |
+| `Super + Shift + Space` | Zwevend venster centreren |
+| `Super + P` | Pseudo-tiling (dwindle) |
+| `Super + \` | Split-richting wisselen (dwindle) |
+
+---
+
+## Venstergroepen (tabs)
+
+| Toetsen | Actie |
+|---|---|
+| `Super + G` | Groepsmodus in-/uitschakelen |
+| `Super + Alt + →` | Volgende tab in groep |
+| `Super + Alt + ←` | Vorige tab in groep |
+| `Super + Ctrl + Shift + G` | Groep vergrendelen/ontgrendelen |
+| `Super + Shift + G` | Venster uit groep halen |
+
+---/
+
+## Werkruimten
+
+| Toetsen | Actie |
+|---|---|
+| `Super + 1–0` | Naar werkruimte 1–10 |
+| `Super + Tab` | Vorige werkruimte |
+| `Super + Scroll` | Door werkruimten bladeren |
+| `Super + Shift + 1–0` | Venster naar werkruimte 1–10 verplaatsen |
+| `Super + Alt + 1–0` | Venster stil verplaatsen (focus blijft hier) |
+| `Super + S` | Scratchpad in-/uitschakelen |
+| `Super + Shift + S` | Venster naar scratchpad sturen |
+
+---/
+
+## Applicaties
+
+| Toetsen | Actie |
 |---|---|
 | `Super + Return` | Kitty (terminal) |
 | `Super + Ctrl + Return` | Walker (launcher) |
-| `Super + B` | Browser (default) |
-| `Super + E` | Nautilus (files) |
-| `Super + Shift + E` | Yazi (terminal file manager) |
-| `Super + V` | Clipboard history (cliphist, paste selection) |
-| `Super + Shift + Return` | btop in kitty |
-| `Super + Shift + C` | cava in kitty |
-| `Super + Alt + I` | nmtui (network manager in kitty) |
+| `Super + B` | Browser (standaard) |
+| `Super + E` | Nautilus (bestandsbeheer) |
+| `Super + Shift + E` | Yazi (terminal bestandsbeheer) |
+| `Super + V` | Klembordgeschiedenis (cliphist) |
+| `Super + Shift + Return` | btop in Kitty |
+| `Super + Shift + C` | cava (audio visualizer) in Kitty |
+| `Super + Alt + I` | nmtui (netwerk) in Kitty |
 | `Super + Alt + B` | Blueman (Bluetooth) |
-| `Super + Ctrl + B` | Reload Hyprland config |
+| `Super + Ctrl + B` | Hyprland config herladen (+ melding) |
 
 ---
 
 ## Widgets
 
-| Keys | Action |
+| Toetsen | Actie |
 |---|---|
-| `Super + N` | Toggle SwayNC control center |
-| `Super + Shift + N` | Dismiss all notifications |
-| `Super + Alt + N` | Toggle do-not-disturb |
-| `Super + Shift + W` | Random wallpaper (from skwd-wall folder) |
+| `Super + N` | SwayNC meldingscentrum in-/uitschakelen |
+| `Super + Shift + N` | Alle meldingen sluiten |
+| `Super + Alt + N` | Niet-storen in-/uitschakelen |
+| `Super + Shift + W` | Willekeurige wallpaper (uit skwd-map) |
 | `Super + Ctrl + W` | Wallpaper picker |
-| `Super + Shift + T` | Apply next theme (cyclic) |
-| `Super + Ctrl + T` | Theme picker |
-| `Super + Ctrl + M` | Mode picker (office / gaming / media) |
+| `Super + Shift + T` | Volgend thema (cyclisch) |
+| `Super + Ctrl + T` | Thema picker |
+| `Super + Ctrl + M` | Modus picker (office / gaming / media) |
 | `Super + Ctrl + G` | Game launcher |
-| `Super + Shift + M` | Music popup |
-| `Super + Ctrl + C` | Calendar popup |
-| `Super + O` | Monitor overview |
+| `Super + Shift + M` | Muziek popup |
+| `Super + Ctrl + C` | Kalender popup |
+| `Super + O` | Monitor overzicht |
 | `Super + X` | FocusTime / power menu |
-| `Super + Ctrl + I` | Settings panel |
-| Click CPU/RAM pill | Stats popup |
+| `Super + Ctrl + I` | Instellingenpaneel |
+| Klik op CPU/RAM-pil | Systeemstats popup |
 
 ---
 
 ## Screenshots
 
-| Keys | Action |
+| Toetsen | Actie |
 |---|---|
-| `Print` | Select area → save + copy |
-| `Super + Print` | Select area → copy only |
-| `Shift + Print` | Select area → annotate (satty) |
-| `Super + Shift + P` | Full screen capture |
+| `Print` | Gebied selecteren → opslaan + kopiëren |
+| `Super + Print` | Gebied selecteren → alleen kopiëren |
+| `Shift + Print` | Gebied selecteren → bewerken in satty |
+| `Super + Shift + P` | Volledig scherm opslaan |
 
-Screenshots are saved to `~/Pictures/Screenshots/`.
+Opgeslagen in `~/Pictures/Screenshots/`.
 
 ---
 
 ## Media
 
-| Keys | Action |
+| Toetsen | Actie |
 |---|---|
-| `XF86AudioRaiseVolume` | Volume up |
-| `XF86AudioLowerVolume` | Volume down |
-| `XF86AudioMute` | Toggle mute |
-| `XF86AudioMicMute` | Toggle mic mute |
-| `XF86MonBrightnessUp` | Brightness up |
-| `XF86MonBrightnessDown` | Brightness down |
-| `XF86AudioPlay/Pause` | Play/pause |
-| `XF86AudioNext/Prev` | Next/previous track |
-| `Super + Alt + P` | Play/pause |
-| `Super + Alt + .` | Next track |
-| `Super + Alt + ,` | Previous track |
+| `XF86AudioRaiseVolume` | Volume omhoog (SwayOSD) |
+| `XF86AudioLowerVolume` | Volume omlaag (SwayOSD) |
+| `XF86AudioMute` | Geluid dempen |
+| `XF86AudioMicMute` | Microfoon dempen |
+| `XF86MonBrightnessUp` | Helderheid omhoog (SwayOSD) |
+| `XF86MonBrightnessDown` | Helderheid omlaag (SwayOSD) |
+| `XF86AudioPlay` / `XF86AudioPause` | Afspelen/pauzeren |
+| `XF86AudioNext` | Volgend nummer |
+| `XF86AudioPrev` | Vorig nummer |
+| `XF86AudioStop` | Stoppen |
+| `Super + Alt + P` | Afspelen/pauzeren (zonder mediatoets) |
+| `Super + Alt + .` | Volgend nummer |
+| `Super + Alt + ,` | Vorig nummer |
 
 ---
 
-## Session
+## Sessie
 
-| Keys | Action |
+| Toetsen | Actie |
 |---|---|
-| `Super + Ctrl + L` | Lock (hyprlock+fingerprint if available, otherwise Quickshell) |
-| Lid close | Lock screen |
-| Tablet mode switch | Rotate internal display and open on-screen keyboard (touchscreen/2-in-1 only) |
-| `Super + Ctrl + F12` | Toggle tablet mode fallback (touchscreen/2-in-1 only) |
-| `Super + Ctrl + R` | Reload Hyprland |
-| `Super + Ctrl + Q` | End session |
-
----
-
-## Design rules
-
-1. `Super` = window management and navigation  
-2. `Super + Shift` = direct quick actions  
-3. `Super + Ctrl` = panels/pickers/session controls  
-4. `Super + Alt` = secondary window/group/media actions  
-5. Media keys = direct hardware functions  
-6. Widget binds don't interrupt workflow  
-7. No duplicate combos — checked by installer
+| `Super + Ctrl + L` | Scherm vergrendelen (hyprlock + vingerafdruk indien beschikbaar) |
+| Laptop dichtklappen | Scherm vergrendelen |
+| `Super + Ctrl + R` | Hyprland herladen |
+| `Super + Ctrl + Q` | Sessie afsluiten |
+| `Super + Ctrl + F12` | Tabletmodus handmatig wisselen (touchscreen/2-in-1) |
+| Tabletmodus-schakelaar | Intern scherm roteren + schermtoetsenbord openen (automatisch) |

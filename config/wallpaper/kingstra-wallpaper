@@ -42,7 +42,7 @@ _expand_user_path() {
     local path="${1:-}"
     case "$path" in
         "~") echo "$HOME" ;;
-        "~/"*) echo "$HOME/${path#~/}" ;;
+        "~/"*) echo "$HOME/${path#\~/}" ;;
         *) echo "$path" ;;
     esac
 }
