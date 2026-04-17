@@ -128,7 +128,9 @@ FloatingWindow {
             masterWindow.activeMy,
             masterWindow.activeMw,
             masterWindow.activeMh,
-            TouchProfile.windowScale
+            TouchProfile.windowScale,
+            ThemeConfig.theme,
+            ThemeConfig.barPosition
         );
     }
     

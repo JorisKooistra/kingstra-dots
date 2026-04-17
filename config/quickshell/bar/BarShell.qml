@@ -56,11 +56,15 @@ Variants {
             property bool isVerticalBar: isLeftBar || isRightBar
             property bool isHorizontalBar: !isVerticalBar
             property bool touchOptimized: TouchProfile.isTouchscreen
+            property string activeThemeName: ThemeConfig.theme
+            property string activeThemeNormalized: String(activeThemeName || "").toLowerCase()
+            property bool animatedVerticalBar: isVerticalBar && activeThemeNormalized === "animated"
             property int minBarHeight: s(touchOptimized ? 44 : 40)
             property int themedBarHeight: s(ThemeConfig.barHeight > 0 ? ThemeConfig.barHeight : 48)
             property int barHeight: Math.max(minBarHeight, themedBarHeight)
-            property int minBarThickness: s(touchOptimized ? 102 : 86)
-            property int barThickness: Math.max(minBarThickness, barHeight + s(18))
+            property int minBarThickness: animatedVerticalBar ? s(touchOptimized ? 66 : 52) : s(touchOptimized ? 78 : 62)
+            property int verticalBarPadding: animatedVerticalBar ? s(6) : s(18)
+            property int barThickness: Math.max(minBarThickness, barHeight + verticalBarPadding)
             property bool edgeAttachedBar: ThemeConfig.barAttachToScreenEdge
                                           && ThemeConfig.barWidthMode === "full"
                                           && !ThemeConfig.barFloating
@@ -69,8 +73,6 @@ Variants {
             property string displayFontFamily: ThemeConfig.displayFont
             property real themeLetterSpacing: ThemeConfig.letterSpacing
             property int themeFontWeight: ThemeConfig.fontWeight
-            property string activeThemeName: ThemeConfig.theme
-            property string activeThemeNormalized: String(activeThemeName || "").toLowerCase()
             property int cyberUnderhang: (isHorizontalBar && isTopBar && activeThemeNormalized === "cyber") ? 0 : 0
             property int topEdgeBleed: (isHorizontalBar
                                         && isTopBar
@@ -91,16 +93,16 @@ Variants {
             margins {
                 top: barWindow.isHorizontalBar
                      ? (barWindow.isBottomBar ? 0 : (barWindow.edgeAttachedBar ? -barWindow.topEdgeBleed : s(8)))
-                     : (barWindow.edgeAttachedBar ? 0 : s(8))
+                     : (barWindow.animatedVerticalBar || barWindow.edgeAttachedBar ? 0 : s(8))
                 bottom: barWindow.isHorizontalBar
                         ? (barWindow.isBottomBar ? (barWindow.edgeAttachedBar ? 0 : s(8)) : 0)
-                        : (barWindow.edgeAttachedBar ? 0 : s(8))
+                        : (barWindow.animatedVerticalBar || barWindow.edgeAttachedBar ? 0 : s(8))
                 left: barWindow.isHorizontalBar
                       ? (barWindow.edgeAttachedBar ? 0 : s(8))
-                      : (barWindow.isLeftBar ? (barWindow.edgeAttachedBar ? 0 : s(8)) : 0)
+                      : (barWindow.isLeftBar ? (barWindow.animatedVerticalBar || barWindow.edgeAttachedBar ? 0 : s(8)) : 0)
                 right: barWindow.isHorizontalBar
                        ? (barWindow.edgeAttachedBar ? 0 : s(8))
-                       : (barWindow.isRightBar ? (barWindow.edgeAttachedBar ? 0 : s(8)) : 0)
+                       : (barWindow.isRightBar ? (barWindow.animatedVerticalBar || barWindow.edgeAttachedBar ? 0 : s(8)) : 0)
             }
             
             // exclusiveZone = 0 bij auto-hide (media mode), anders bar-dikte + randmarge

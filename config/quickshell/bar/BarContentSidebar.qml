@@ -13,16 +13,38 @@ Item {
     required property var surface
     required property var mocha
 
-    readonly property int outerMargin: shell.edgeAttachedBar ? shell.s(8) : shell.s(10)
+    property var currentDate: new Date()
+    readonly property bool compactAnimatedSidebar: String(shell.activeThemeName || "").toLowerCase() === "animated"
+    readonly property int outerMargin: compactAnimatedSidebar ? shell.s(4) : (shell.edgeAttachedBar ? shell.s(8) : shell.s(10))
     readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
                                                      && String(shell.activeThemeName || "").toLowerCase() === "botanical"
     readonly property int panelTopLeftRadius: flattenScreenEdgeCorners && (shell.isTopBar || shell.isLeftBar) ? 0 : surface.panelRadius
     readonly property int panelTopRightRadius: flattenScreenEdgeCorners && (shell.isTopBar || shell.isRightBar) ? 0 : surface.panelRadius
     readonly property int panelBottomLeftRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isLeftBar) ? 0 : surface.panelRadius
     readonly property int panelBottomRightRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isRightBar) ? 0 : surface.panelRadius
-    readonly property int sectionSpacing: shell.s(6)
-    readonly property int moduleHeight: shell.s(34)
-    readonly property int iconButtonSize: shell.s(34)
+    readonly property int sectionSpacing: shell.s(compactAnimatedSidebar ? 5 : 6)
+    readonly property int moduleHeight: shell.s(compactAnimatedSidebar ? 28 : 32)
+    readonly property int iconButtonSize: shell.s(compactAnimatedSidebar ? 28 : 32)
+    readonly property int moduleInnerMargin: shell.s(compactAnimatedSidebar ? 0 : 8)
+    readonly property int moduleSpacing: shell.s(compactAnimatedSidebar ? 0 : 8)
+    readonly property string compactTimeText: {
+        if (compactAnimatedSidebar) return Qt.formatDateTime(currentDate, "hh:mm");
+        let parts = String(shell.timeStr || "--:--").split(":");
+        if (parts.length >= 2) return parts[0] + ":" + parts[1];
+        return String(shell.timeStr || "--:--");
+    }
+    readonly property string compactSecondsText: {
+        if (compactAnimatedSidebar) return "";
+        let parts = String(shell.timeStr || "").split(":");
+        if (parts.length < 3) return "";
+        let seconds = parts[2].replace(/[^0-9].*$/, "");
+        return seconds !== "" ? seconds : "";
+    }
+    readonly property string compactDateText: Qt.formatDateTime(currentDate, "ddd dd")
+    readonly property string compactWeatherText: {
+        let txt = String(shell.weatherTemp || "--°").replace("°C", "°").replace(" C", "");
+        return txt;
+    }
 
     function _titleTextColor(active) {
         return active ? mocha.base : mocha.text;
@@ -30,6 +52,14 @@ Item {
 
     function _subtitleTextColor(active) {
         return active ? Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.85) : mocha.subtext0;
+    }
+
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.currentDate = new Date()
     }
 
     ColumnLayout {
@@ -40,7 +70,7 @@ Item {
         Rectangle {
             id: infoCard
             Layout.fillWidth: true
-            Layout.preferredHeight: shell.s(98)
+            Layout.preferredHeight: shell.s(compactAnimatedSidebar ? 76 : 88)
             radius: surface.panelRadius
             topLeftRadius: root.panelTopLeftRadius
             topRightRadius: root.panelTopRightRadius
@@ -58,108 +88,87 @@ Item {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: shell.s(10)
-                spacing: shell.s(4)
+                anchors.margins: shell.s(compactAnimatedSidebar ? 6 : 8)
+                spacing: shell.s(compactAnimatedSidebar ? 2 : 3)
 
-                Item {
+                RowLayout {
                     Layout.fillWidth: true
-                    implicitHeight: clockLoader.implicitHeight
+                    spacing: shell.s(root.compactAnimatedSidebar ? 0 : 3)
 
-                    Loader {
-                        id: clockLoader
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        sourceComponent: {
-                            let style = String(shell.clockStyle || "digital").toLowerCase();
-                            if (style === "analog") return analogClockComponent;
-                            if (style === "hybrid") return hybridClockComponent;
-                            return digitalClockComponent;
-                        }
+                    Text {
+                        text: root.compactTimeText
+                        Layout.fillWidth: true
+                        font.family: shell.displayFontFamily
+                        font.pixelSize: shell.s(root.compactAnimatedSidebar ? 12 : 15)
+                        minimumPixelSize: shell.s(9)
+                        fontSizeMode: Text.Fit
+                        font.weight: Font.Black
+                        font.letterSpacing: 0
+                        color: mocha.yellow
+                        horizontalAlignment: root.compactAnimatedSidebar ? Text.AlignHCenter : Text.AlignRight
+                        renderType: Text.NativeRendering
                     }
 
-                    Component {
-                        id: digitalClockComponent
-                        DigitalClock { shell: root.shell; mocha: root.mocha }
+                    Text {
+                        visible: root.compactSecondsText !== ""
+                        text: root.compactSecondsText
+                        Layout.preferredWidth: shell.s(root.compactAnimatedSidebar ? 11 : 15)
+                        font.family: shell.monoFontFamily
+                        font.pixelSize: shell.s(root.compactAnimatedSidebar ? 7 : 9)
+                        minimumPixelSize: shell.s(6)
+                        fontSizeMode: Text.Fit
+                        font.weight: Font.Bold
+                        font.letterSpacing: 0
+                        color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.72)
+                        horizontalAlignment: Text.AlignLeft
+                        renderType: Text.NativeRendering
                     }
+                }
 
-                    Component {
-                        id: analogClockComponent
-                        RowLayout {
-                            spacing: shell.s(8)
-                            AnalogClock {
-                                shell: root.shell
-                                mocha: root.mocha
-                                showSecondHand: false
-                            }
-                            Text {
-                                text: shell.timeStr
-                                Layout.alignment: Qt.AlignVCenter
-                                font.family: shell.displayFontFamily
-                                font.pixelSize: shell.s(12)
-                                font.weight: shell.themeFontWeight
-                                font.letterSpacing: shell.themeLetterSpacing
-                                color: mocha.blue
-                            }
-                        }
-                    }
-
-                    Component {
-                        id: hybridClockComponent
-                        RowLayout {
-                            spacing: shell.s(8)
-                            AnalogClock {
-                                shell: root.shell
-                                mocha: root.mocha
-                                showSecondHand: false
-                            }
-                            ColumnLayout {
-                                spacing: shell.s(1)
-                                Text {
-                                    text: shell.timeStr
-                                    font.family: shell.displayFontFamily
-                                    font.pixelSize: shell.s(12)
-                                    font.weight: shell.themeFontWeight
-                                    font.letterSpacing: shell.themeLetterSpacing
-                                    color: mocha.blue
-                                }
-                                Text {
-                                    text: shell.fullDateStr
-                                    font.family: shell.monoFontFamily
-                                    font.pixelSize: shell.s(9)
-                                    color: mocha.subtext0
-                                    elide: Text.ElideRight
-                                }
-                            }
-                        }
-                    }
+                Text {
+                    text: root.compactDateText
+                    Layout.fillWidth: true
+                    font.family: shell.uiFontFamily
+                    font.pixelSize: shell.s(root.compactAnimatedSidebar ? 8 : 10)
+                    minimumPixelSize: shell.s(7)
+                    fontSizeMode: Text.Fit
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0
+                    color: mocha.subtext0
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
+                    renderType: Text.NativeRendering
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: shell.s(6)
+                    spacing: shell.s(4)
                     Text {
                         text: shell.weatherIcon
                         font.family: "Iosevka Nerd Font"
-                        font.pixelSize: shell.s(18)
+                        font.pixelSize: shell.s(root.compactAnimatedSidebar ? 13 : 15)
                         color: Qt.tint(shell.weatherHex, Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.4))
                     }
                     Text {
-                        text: shell.weatherTemp
+                        text: root.compactWeatherText
                         Layout.fillWidth: true
                         font.family: shell.monoFontFamily
-                        font.pixelSize: shell.s(12)
+                        font.pixelSize: shell.s(root.compactAnimatedSidebar ? 8 : 10)
+                        minimumPixelSize: shell.s(7)
+                        fontSizeMode: Text.Fit
                         font.weight: shell.themeFontWeight
-                        font.letterSpacing: shell.themeLetterSpacing
+                        font.letterSpacing: 0
                         color: mocha.peach
-                        elide: Text.ElideRight
+                        horizontalAlignment: Text.AlignRight
+                        elide: Text.ElideNone
                     }
                 }
             }
         }
 
-        RowLayout {
+        ColumnLayout {
             Layout.fillWidth: true
-            spacing: shell.s(6)
+            spacing: shell.s(5)
 
             Rectangle {
                 Layout.fillWidth: true
@@ -172,7 +181,7 @@ Item {
                     anchors.centerIn: parent
                     text: "󰍉"
                     font.family: "Iosevka Nerd Font"
-                    font.pixelSize: shell.s(18)
+                    font.pixelSize: shell.s(root.compactAnimatedSidebar ? 15 : 18)
                     color: searchMouse.containsMouse ? mocha.blue : mocha.text
                 }
                 MouseArea {
@@ -195,7 +204,7 @@ Item {
                     anchors.centerIn: parent
                     text: ""
                     font.family: "Iosevka Nerd Font"
-                    font.pixelSize: shell.s(16)
+                    font.pixelSize: shell.s(root.compactAnimatedSidebar ? 14 : 16)
                     color: notifMouse.containsMouse ? mocha.yellow : mocha.text
                 }
                 MouseArea {
@@ -482,6 +491,7 @@ Item {
             border.width: 1
             border.color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.4)
             RowLayout {
+                visible: !root.compactAnimatedSidebar
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(8)
@@ -502,6 +512,27 @@ Item {
                     horizontalAlignment: Text.AlignRight
                 }
             }
+            Row {
+                visible: root.compactAnimatedSidebar
+                anchors.centerIn: parent
+                spacing: shell.s(4)
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "󰚰"
+                    font.family: "Iosevka Nerd Font"
+                    font.pixelSize: shell.s(13)
+                    color: shell.updateCount > 0 ? mocha.yellow : mocha.subtext0
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: (parseInt(shell.updateCount) || 0).toString()
+                    font.family: shell.monoFontFamily
+                    font.pixelSize: shell.s(10)
+                    font.weight: Font.Bold
+                    font.letterSpacing: 0
+                    color: shell.updateCount > 0 ? mocha.text : mocha.subtext0
+                }
+            }
             MouseArea {
                 id: updatesMouse
                 anchors.fill: parent
@@ -518,15 +549,20 @@ Item {
             color: wifiMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: shell.s(8)
-                spacing: shell.s(8)
+                anchors.margins: root.moduleInnerMargin
+                spacing: root.moduleSpacing
                 Text {
                     text: shell.wifiIcon
+                    Layout.fillWidth: root.compactAnimatedSidebar
+                    Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                     font.family: "Iosevka Nerd Font"
                     font.pixelSize: shell.s(15)
                     color: shell.isWifiOn ? mocha.blue : mocha.subtext0
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
                 Text {
+                    visible: !root.compactAnimatedSidebar
                     text: shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off"
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
@@ -553,15 +589,20 @@ Item {
             color: btMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: shell.s(8)
-                spacing: shell.s(8)
+                anchors.margins: root.moduleInnerMargin
+                spacing: root.moduleSpacing
                 Text {
                     text: shell.btIcon
+                    Layout.fillWidth: root.compactAnimatedSidebar
+                    Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                     font.family: "Iosevka Nerd Font"
                     font.pixelSize: shell.s(15)
                     color: shell.isBtOn ? mocha.mauve : mocha.subtext0
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
                 Text {
+                    visible: !root.compactAnimatedSidebar
                     text: shell.btDevice
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
@@ -587,6 +628,7 @@ Item {
             radius: surface.innerPillRadius
             color: volMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
             RowLayout {
+                visible: !root.compactAnimatedSidebar
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(8)
@@ -605,6 +647,27 @@ Item {
                     font.letterSpacing: shell.themeLetterSpacing
                     color: shell.isSoundActive ? mocha.text : mocha.subtext0
                     horizontalAlignment: Text.AlignRight
+                }
+            }
+            Row {
+                visible: root.compactAnimatedSidebar
+                anchors.centerIn: parent
+                spacing: shell.s(4)
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: shell.volIcon
+                    font.family: "Iosevka Nerd Font"
+                    font.pixelSize: shell.s(13)
+                    color: shell.isSoundActive ? mocha.peach : mocha.subtext0
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: shell.volPercent
+                    font.family: shell.monoFontFamily
+                    font.pixelSize: shell.s(10)
+                    font.weight: Font.Bold
+                    font.letterSpacing: 0
+                    color: shell.isSoundActive ? mocha.text : mocha.subtext0
                 }
             }
             MouseArea {
@@ -626,6 +689,7 @@ Item {
             radius: surface.innerPillRadius
             color: batMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
             RowLayout {
+                visible: !root.compactAnimatedSidebar
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(8)
@@ -644,6 +708,27 @@ Item {
                     font.letterSpacing: shell.themeLetterSpacing
                     color: shell.batDynamicColor
                     horizontalAlignment: Text.AlignRight
+                }
+            }
+            Row {
+                visible: root.compactAnimatedSidebar
+                anchors.centerIn: parent
+                spacing: shell.s(4)
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: shell.batIcon
+                    font.family: "Iosevka Nerd Font"
+                    font.pixelSize: shell.s(13)
+                    color: shell.batDynamicColor
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: shell.batPercent
+                    font.family: shell.monoFontFamily
+                    font.pixelSize: shell.s(10)
+                    font.weight: Font.Bold
+                    font.letterSpacing: 0
+                    color: shell.batDynamicColor
                 }
             }
             MouseArea {

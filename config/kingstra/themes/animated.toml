@@ -35,7 +35,7 @@ icon_theme = "Papirus"
 
 [quickshell]
 bar_height = 42
-bar_position = "top"
+bar_position = "left"
 
 [color_transform]
 hue_shift = 12

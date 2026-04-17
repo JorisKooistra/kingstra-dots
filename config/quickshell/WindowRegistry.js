@@ -19,12 +19,21 @@ function s(val, scale) {
 }
 
 // Centralized registry for all widget dimensions and positional mathematics.
-function getLayout(name, mx, my, mw, mh, touchBoost) {
+function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
     let scale = getScale(mw);
     let boost = Number(touchBoost);
     if (!isFinite(boost) || boost < 1.0) boost = 1.0;
     boost = Math.min(1.35, boost);
     scale *= boost;
+
+    let theme = String(themeName || "").toLowerCase();
+    let position = String(barPosition || "top").toLowerCase();
+    let useAnimatedLeftSidebar = theme === "animated" && position === "left";
+    let sidebarRail = s(52, scale);
+    let sidebarGap = s(10, scale);
+    let sidebarX = sidebarRail + sidebarGap;
+    let sidebarTopY = s(12, scale);
+    let sidebarBottomMargin = s(16, scale);
 
     let base = {
         // Right-aligned: pinned 20px from the right edge dynamically
@@ -62,6 +71,20 @@ function getLayout(name, mx, my, mw, mh, touchBoost) {
     if (!base[name]) return null;
     
     let t = base[name];
+
+    if (useAnimatedLeftSidebar) {
+        if (name === "battery" || name === "volume") {
+            t.rx = sidebarX;
+            t.ry = Math.max(sidebarTopY, mh - t.h - sidebarBottomMargin);
+        } else if (name === "network") {
+            t.rx = sidebarX;
+            t.ry = Math.max(sidebarTopY, mh - t.h - sidebarBottomMargin);
+        } else if (name === "calendar" || name === "music") {
+            t.rx = sidebarX;
+            t.ry = sidebarTopY;
+        }
+    }
+
     // Calculate final absolute coordinates based on active monitor offset
     t.x = mx + t.rx;
     t.y = my + t.ry;
