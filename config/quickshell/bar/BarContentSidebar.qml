@@ -20,15 +20,27 @@ Item {
     readonly property int outerMargin: compactAnimatedSidebar ? shell.s(4) : (shell.edgeAttachedBar ? shell.s(8) : shell.s(10))
     readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
                                                      && String(shell.activeThemeName || "").toLowerCase() === "botanical"
+    readonly property bool edgeSidebarChrome: flattenScreenEdgeCorners && shell.isVerticalBar
+    readonly property int screenEdgeMargin: flattenScreenEdgeCorners ? 0 : outerMargin
+    readonly property int panelBorderWidth: edgeSidebarChrome ? 0 : 1
     readonly property int panelTopLeftRadius: flattenScreenEdgeCorners && (shell.isTopBar || shell.isLeftBar) ? 0 : surface.panelRadius
     readonly property int panelTopRightRadius: flattenScreenEdgeCorners && (shell.isTopBar || shell.isRightBar) ? 0 : surface.panelRadius
     readonly property int panelBottomLeftRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isLeftBar) ? 0 : surface.panelRadius
     readonly property int panelBottomRightRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isRightBar) ? 0 : surface.panelRadius
+    readonly property int pillTopLeftRadius: edgeSidebarChrome && shell.isLeftBar ? 0 : surface.innerPillRadius
+    readonly property int pillTopRightRadius: edgeSidebarChrome && shell.isRightBar ? 0 : surface.innerPillRadius
+    readonly property int pillBottomLeftRadius: edgeSidebarChrome && shell.isLeftBar ? 0 : surface.innerPillRadius
+    readonly property int pillBottomRightRadius: edgeSidebarChrome && shell.isRightBar ? 0 : surface.innerPillRadius
     readonly property int sectionSpacing: shell.s(compactAnimatedSidebar ? 5 : 6)
     readonly property int moduleHeight: shell.s(compactAnimatedSidebar ? 28 : 32)
     readonly property int iconButtonSize: shell.s(compactAnimatedSidebar ? 28 : 32)
     readonly property int moduleInnerMargin: shell.s(compactAnimatedSidebar ? 0 : 8)
     readonly property int moduleSpacing: shell.s(compactAnimatedSidebar ? 0 : 8)
+    readonly property bool statusDockVisible: shell.moduleList.includes("updates")
+                                             || shell.moduleList.includes("network")
+                                             || shell.moduleList.includes("bluetooth")
+                                             || shell.moduleList.includes("volume")
+                                             || shell.moduleList.includes("battery")
     readonly property string compactTimeText: {
         if (compactAnimatedSidebar) return Qt.formatDateTime(currentDate, "hh:mm");
         let parts = String(shell.timeStr || "--:--").split(":");
@@ -66,7 +78,10 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: root.outerMargin
+        anchors.topMargin: shell.isTopBar ? root.screenEdgeMargin : root.outerMargin
+        anchors.bottomMargin: shell.isBottomBar ? root.screenEdgeMargin : root.outerMargin
+        anchors.leftMargin: shell.isLeftBar ? root.screenEdgeMargin : root.outerMargin
+        anchors.rightMargin: shell.isRightBar ? root.screenEdgeMargin : root.outerMargin
         spacing: root.sectionSpacing
 
         Rectangle {
@@ -78,7 +93,7 @@ Item {
             topRightRadius: root.panelTopRightRadius
             bottomLeftRadius: root.panelBottomLeftRadius
             bottomRightRadius: root.panelBottomRightRadius
-            border.width: 1
+            border.width: root.panelBorderWidth
             border.color: surface.panelBorderColor
             color: surface.panelColor
 
@@ -176,8 +191,12 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: root.iconButtonSize
                 radius: surface.innerPillRadius
+                topLeftRadius: root.pillTopLeftRadius
+                topRightRadius: root.pillTopRightRadius
+                bottomLeftRadius: root.pillBottomLeftRadius
+                bottomRightRadius: root.pillBottomRightRadius
                 color: searchMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
-                border.width: 1
+                border.width: root.edgeSidebarChrome ? 0 : 1
                 border.color: searchMouse.containsMouse ? surface.panelBorderHoverColor : "transparent"
                 Text {
                     anchors.centerIn: parent
@@ -199,8 +218,12 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: root.iconButtonSize
                 radius: surface.innerPillRadius
+                topLeftRadius: root.pillTopLeftRadius
+                topRightRadius: root.pillTopRightRadius
+                bottomLeftRadius: root.pillBottomLeftRadius
+                bottomRightRadius: root.pillBottomRightRadius
                 color: notifMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
-                border.width: 1
+                border.width: root.edgeSidebarChrome ? 0 : 1
                 border.color: notifMouse.containsMouse ? surface.panelBorderHoverColor : "transparent"
                 Text {
                     anchors.centerIn: parent
@@ -232,7 +255,7 @@ Item {
             topRightRadius: root.panelTopRightRadius
             bottomLeftRadius: root.panelBottomLeftRadius
             bottomRightRadius: root.panelBottomRightRadius
-            border.width: 1
+            border.width: root.panelBorderWidth
             border.color: surface.panelBorderColor
             color: surface.panelColor
             clip: true
@@ -264,6 +287,10 @@ Item {
                         width: wsColumn.width
                         height: shell.s(30)
                         radius: surface.innerPillRadius
+                        topLeftRadius: root.pillTopLeftRadius
+                        topRightRadius: root.pillTopRightRadius
+                        bottomLeftRadius: root.pillBottomLeftRadius
+                        bottomRightRadius: root.pillBottomRightRadius
                         color: stateLabel === "active"
                                 ? mocha.mauve
                                 : (hovered
@@ -304,7 +331,7 @@ Item {
             topRightRadius: root.panelTopRightRadius
             bottomLeftRadius: root.panelBottomLeftRadius
             bottomRightRadius: root.panelBottomRightRadius
-            border.width: 1
+            border.width: root.panelBorderWidth
             border.color: surface.panelBorderColor
             color: surface.panelColor
 
@@ -377,7 +404,7 @@ Item {
             topRightRadius: root.panelTopRightRadius
             bottomLeftRadius: root.panelBottomLeftRadius
             bottomRightRadius: root.panelBottomRightRadius
-            border.width: 1
+            border.width: root.panelBorderWidth
             border.color: surface.panelBorderColor
             color: surface.panelColor
 
@@ -420,6 +447,10 @@ Item {
                         width: trayColumn.width
                         height: visible ? shell.s(28) : 0
                         radius: surface.innerPillRadius
+                        topLeftRadius: root.pillTopLeftRadius
+                        topRightRadius: root.pillTopRightRadius
+                        bottomLeftRadius: root.pillBottomLeftRadius
+                        bottomRightRadius: root.pillBottomRightRadius
                         color: trayMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
                         Image {
                             anchors.centerIn: parent
@@ -465,6 +496,10 @@ Item {
             Layout.preferredWidth: root.iconButtonSize
             Layout.preferredHeight: root.moduleHeight
             radius: surface.innerPillRadius
+            topLeftRadius: root.pillTopLeftRadius
+            topRightRadius: root.pillTopRightRadius
+            bottomLeftRadius: root.pillBottomLeftRadius
+            bottomRightRadius: root.pillBottomRightRadius
             color: kbMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
             Text {
                 anchors.centerIn: parent
@@ -485,12 +520,40 @@ Item {
         }
 
         Rectangle {
+            id: statusDock
+            visible: root.statusDockVisible
+            Layout.fillWidth: true
+            Layout.preferredHeight: statusDockColumn.implicitHeight + shell.s(10)
+            radius: surface.panelRadius
+            topLeftRadius: root.panelTopLeftRadius
+            topRightRadius: root.panelTopRightRadius
+            bottomLeftRadius: root.panelBottomLeftRadius
+            bottomRightRadius: root.panelBottomRightRadius
+            color: Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, root.edgeSidebarChrome ? 0.24 : 0.14)
+            border.width: root.edgeSidebarChrome ? 0 : 1
+            border.color: surface.panelBorderColor
+            clip: true
+
+            ColumnLayout {
+                id: statusDockColumn
+                anchors.fill: parent
+                anchors.topMargin: shell.s(5)
+                anchors.bottomMargin: shell.s(5)
+                anchors.leftMargin: shell.isLeftBar && root.edgeSidebarChrome ? 0 : shell.s(5)
+                anchors.rightMargin: shell.isRightBar && root.edgeSidebarChrome ? 0 : shell.s(5)
+                spacing: shell.s(5)
+
+        Rectangle {
             visible: shell.moduleList.includes("updates")
             Layout.fillWidth: true
             Layout.preferredHeight: root.moduleHeight
             radius: surface.innerPillRadius
-            color: updatesMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
-            border.width: 1
+            topLeftRadius: root.pillTopLeftRadius
+            topRightRadius: root.pillTopRightRadius
+            bottomLeftRadius: root.pillBottomLeftRadius
+            bottomRightRadius: root.pillBottomRightRadius
+            color: updatesMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.62)
+            border.width: root.edgeSidebarChrome ? 0 : 1
             border.color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.4)
             RowLayout {
                 visible: !root.compactAnimatedSidebar
@@ -548,7 +611,11 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.moduleHeight
             radius: surface.innerPillRadius
-            color: wifiMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
+            topLeftRadius: root.pillTopLeftRadius
+            topRightRadius: root.pillTopRightRadius
+            bottomLeftRadius: root.pillBottomLeftRadius
+            bottomRightRadius: root.pillBottomRightRadius
+            color: wifiMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
                 anchors.fill: parent
                 anchors.margins: root.moduleInnerMargin
@@ -588,7 +655,11 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.moduleHeight
             radius: surface.innerPillRadius
-            color: btMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
+            topLeftRadius: root.pillTopLeftRadius
+            topRightRadius: root.pillTopRightRadius
+            bottomLeftRadius: root.pillBottomLeftRadius
+            bottomRightRadius: root.pillBottomRightRadius
+            color: btMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
                 anchors.fill: parent
                 anchors.margins: root.moduleInnerMargin
@@ -628,7 +699,11 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.moduleHeight
             radius: surface.innerPillRadius
-            color: volMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
+            topLeftRadius: root.pillTopLeftRadius
+            topRightRadius: root.pillTopRightRadius
+            bottomLeftRadius: root.pillBottomLeftRadius
+            bottomRightRadius: root.pillBottomRightRadius
+            color: volMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
                 visible: !root.compactAnimatedSidebar
                 anchors.fill: parent
@@ -689,7 +764,11 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.moduleHeight
             radius: surface.innerPillRadius
-            color: batMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
+            topLeftRadius: root.pillTopLeftRadius
+            topRightRadius: root.pillTopRightRadius
+            bottomLeftRadius: root.pillBottomLeftRadius
+            bottomRightRadius: root.pillBottomRightRadius
+            color: batMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
                 visible: !root.compactAnimatedSidebar
                 anchors.fill: parent
@@ -738,6 +817,8 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"])
+            }
+        }
             }
         }
     }

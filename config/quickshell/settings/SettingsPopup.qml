@@ -162,6 +162,7 @@ Item {
     property string themeLoadedSignature: ""
     property string themeStatusText: ""
     property string themeStatusKind: "info"
+    property string themeEditorTab: "appearance"
     readonly property bool themeDirty: themeEditThemeId !== ""
                                         && themeLoadedSignature !== ""
                                         && currentThemeSignature() !== themeLoadedSignature
@@ -254,6 +255,13 @@ Item {
     property var clockStyleOptions: ["digital", "analog", "hybrid"]
     property var fontWeightOptions: ["light", "regular", "medium", "bold"]
     property var particleTypeOptions: ["none", "fireflies", "sparkles", "rain", "snow", "dust"]
+    property var themeEditorTabs: [
+        { id: "appearance", label: "Uiterlijk", icon: "󰉼" },
+        { id: "fonts", label: "Fonts", icon: "󰛖" },
+        { id: "colors", label: "Kleuren", icon: "󰏘" },
+        { id: "bar", label: "Bar", icon: "󰓡" },
+        { id: "effects", label: "Effecten", icon: "󰟤" }
+    ]
 
     function refreshActiveTheme() {
         loadThemeProc.running = true;
@@ -893,7 +901,7 @@ Item {
             loadThemeDetailProc.running = true;
 
             if (themeCarouselLoader.item && themeCarouselLoader.item.refreshThemes) {
-                themeCarouselLoader.item.refreshThemes();
+                themeCarouselLoader.item.refreshThemes(themeWriteProc.themeId);
             }
 
             if (themeWriteProc.applyAfterSave) {
@@ -911,7 +919,7 @@ Item {
             root.refreshActiveTheme();
             root.setThemeStatus("Opgeslagen en toegepast: " + themeName, "ok");
             if (themeCarouselLoader.item && themeCarouselLoader.item.refreshThemes) {
-                themeCarouselLoader.item.refreshThemes();
+                themeCarouselLoader.item.refreshThemes(themeName);
             }
         }
     }
@@ -2008,7 +2016,7 @@ Item {
 
                         Text { text: "Thema-instellingen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
                         Text {
-                            text: "Alle velden zijn direct bewerkbaar. Klik daarna op 'Opslaan in thema'."
+                            text: "Kies een groep, pas waarden aan en sla daarna het thema op."
                             font.family: "JetBrains Mono"
                             font.pixelSize: root.s(10)
                             color: root.subtext0
@@ -2129,6 +2137,57 @@ Item {
                             Item { Layout.fillWidth: true }
                         }
 
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: root.s(8)
+
+                            Repeater {
+                                model: root.themeEditorTabs
+
+                                Rectangle {
+                                    required property var modelData
+                                    readonly property bool active: root.themeEditorTab === modelData.id
+
+                                    width: tabContent.implicitWidth + root.s(22)
+                                    height: root.s(34)
+                                    radius: root.s(8)
+                                    color: active
+                                           ? Qt.alpha(root.blue, 0.24)
+                                           : (themeEditorTabMa.containsMouse ? Qt.alpha(root.surface1, 0.72) : Qt.alpha(root.surface0, 0.56))
+                                    border.width: 1
+                                    border.color: active ? root.blue : (themeEditorTabMa.containsMouse ? root.surface2 : Qt.alpha(root.surface2, 0.72))
+
+                                    RowLayout {
+                                        id: tabContent
+                                        anchors.centerIn: parent
+                                        spacing: root.s(6)
+
+                                        Text {
+                                            text: modelData.icon
+                                            font.family: "Iosevka Nerd Font"
+                                            font.pixelSize: root.s(13)
+                                            color: parent.parent.active ? root.blue : root.subtext0
+                                        }
+                                        Text {
+                                            text: modelData.label
+                                            font.family: "JetBrains Mono"
+                                            font.weight: parent.parent.active ? Font.Bold : Font.Normal
+                                            font.pixelSize: root.s(10)
+                                            color: parent.parent.active ? root.text : root.subtext0
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: themeEditorTabMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.themeEditorTab = modelData.id
+                                    }
+                                }
+                            }
+                        }
+
                         Rectangle {
                             visible: root.themeEditThemeId !== ""
                             Layout.fillWidth: true
@@ -2188,6 +2247,7 @@ Item {
                             property int comboWidth: root.s(220)
 
                             Rectangle {
+                                visible: root.themeEditorTab === "appearance"
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: root.s(470)
                                 Layout.maximumWidth: root.s(560)
@@ -2252,6 +2312,7 @@ Item {
                             }
 
                             Rectangle {
+                                visible: root.themeEditorTab === "fonts"
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: root.s(470)
                                 Layout.maximumWidth: root.s(560)
@@ -2361,6 +2422,7 @@ Item {
                             }
 
                             Rectangle {
+                                visible: root.themeEditorTab === "colors"
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: root.s(470)
                                 Layout.maximumWidth: root.s(560)
@@ -2459,6 +2521,7 @@ Item {
                             }
 
                             Rectangle {
+                                visible: root.themeEditorTab === "bar" || root.themeEditorTab === "effects"
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: root.s(470)
                                 Layout.maximumWidth: root.s(560)
@@ -2475,9 +2538,11 @@ Item {
                                     anchors.margins: root.s(12)
                                     spacing: root.s(8)
 
-                                    Text { text: "Shell"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                                    Text { text: root.themeEditorTab === "effects" ? "Effecten" : "Bar"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
                                     Text {
-                                        text: "Positie kiest de schermrand en bepaalt automatisch of de bar horizontaal of verticaal loopt."
+                                        text: root.themeEditorTab === "effects"
+                                              ? "Regel transparantie, materiaalgevoel, animaties en deeltjes."
+                                              : "Positie kiest de schermrand en bepaalt automatisch of de bar horizontaal of verticaal loopt."
                                         font.family: "JetBrains Mono"
                                         font.pixelSize: root.s(10)
                                         color: root.subtext0
@@ -2486,6 +2551,7 @@ Item {
                                     }
 
                                     RowLayout {
+                                        visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Bar height"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2493,6 +2559,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Bar position"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2506,6 +2573,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Bar width"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2519,6 +2587,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Bar shape"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2532,6 +2601,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Top edge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2545,6 +2615,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Bottom edge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2558,6 +2629,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Clock style"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2571,6 +2643,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Topbar stijl"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2585,9 +2658,10 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     // ── Transparantie & animatie ──────────────────────────────────────
-                                    Text { text: "Transparantie & animatie"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "effects"; text: "Transparantie & animatie"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
+                                        visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Bar opacity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2602,6 +2676,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Popup opacity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2616,6 +2691,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Animatiesnelheid"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2631,9 +2707,10 @@ Item {
                                     }
 
                                     // ── Materiaal ────────────────────────────────────────────────────
-                                    Text { text: "Materiaal"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "effects"; text: "Materiaal"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
+                                        visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Overlay opacity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2648,6 +2725,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Glow intensiteit"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2663,9 +2741,10 @@ Item {
                                     }
 
                                     // ── Effecten ─────────────────────────────────────────────────────
-                                    Text { text: "Effecten"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "effects"; text: "Deeltjes"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
+                                        visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Particle type"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2678,6 +2757,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Particle count"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2690,6 +2770,7 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
+                                        visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Particle speed"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2705,9 +2786,10 @@ Item {
                                     }
 
                                     // ── Topbar acties ─────────────────────────────────────────────────
-                                    Text { text: "Acties"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "bar"; text: "Acties"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
+                                        visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Topbar toepassen"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
@@ -2738,7 +2820,9 @@ Item {
                                     }
 
                                     Text {
-                                        text: "Shell-instellingen worden per theme opgeslagen en blijven behouden na herstart of theme-switch."
+                                        text: root.themeEditorTab === "effects"
+                                              ? "Effecten worden per theme opgeslagen en bewegen mee met theme-switches."
+                                              : "Bar-instellingen worden per theme opgeslagen en blijven behouden na herstart of theme-switch."
                                         font.family: "JetBrains Mono"
                                         font.pixelSize: root.s(10)
                                         color: root.subtext0

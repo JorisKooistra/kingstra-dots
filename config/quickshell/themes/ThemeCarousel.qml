@@ -42,6 +42,7 @@ Item {
     property string activeTheme: ""
     property string selectedThemeId: ""
     property var selectedThemeData: ({})
+    property string refreshFocusThemeId: ""
 
     signal themeSelected(string themeId)
     signal themeApplied(string themeId)
@@ -79,7 +80,9 @@ Item {
     }
     Timer { id: scrollThrottle; interval: 120 }
 
-    function refreshThemes() {
+    function refreshThemes(themeId) {
+        let requestedThemeId = String(themeId || "");
+        root.refreshFocusThemeId = requestedThemeId !== "" ? requestedThemeId : "";
         loadThemes.running = true;
     }
 
@@ -206,6 +209,12 @@ Item {
                 let activeFromConfig = String(ThemeConfig.theme || "").trim();
                 let active = activeFromConfig !== "" ? activeFromConfig : this.text.trim();
                 if (active !== "") root.activeTheme = active;
+                if (root.refreshFocusThemeId !== "" && focusThemeById(root.refreshFocusThemeId, false)) {
+                    root.refreshFocusThemeId = "";
+                    readyTimer.start();
+                    return;
+                }
+                root.refreshFocusThemeId = "";
                 focusActiveTheme();
             }
         }

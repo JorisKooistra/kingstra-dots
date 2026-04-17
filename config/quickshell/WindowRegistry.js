@@ -28,10 +28,11 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
 
     let theme = String(themeName || "").toLowerCase();
     let position = String(barPosition || "top").toLowerCase();
-    let useAnimatedLeftSidebar = theme === "animated" && position === "left";
+    let useLeftSidebarPopups = position === "left" && theme === "animated";
+    let useRightSidebarPopups = position === "right";
     let sidebarRail = s(52, scale);
     let sidebarGap = s(10, scale);
-    let sidebarX = sidebarRail + sidebarGap;
+    let leftSidebarPopupX = sidebarRail + sidebarGap;
     let sidebarTopY = s(12, scale);
     let sidebarBottomMargin = s(16, scale);
 
@@ -72,15 +73,23 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
     
     let t = base[name];
 
-    if (useAnimatedLeftSidebar) {
+    if (useLeftSidebarPopups) {
         if (name === "battery" || name === "volume") {
-            t.rx = sidebarX;
+            t.rx = leftSidebarPopupX;
             t.ry = Math.max(sidebarTopY, mh - t.h - sidebarBottomMargin);
         } else if (name === "network") {
-            t.rx = sidebarX;
+            t.rx = leftSidebarPopupX;
             t.ry = Math.max(sidebarTopY, mh - t.h - sidebarBottomMargin);
         } else if (name === "calendar" || name === "music") {
-            t.rx = sidebarX;
+            t.rx = leftSidebarPopupX;
+            t.ry = sidebarTopY;
+        }
+    } else if (useRightSidebarPopups) {
+        if (name === "battery" || name === "volume" || name === "network") {
+            t.rx = Math.max(sidebarGap, mw - sidebarRail - sidebarGap - t.w);
+            t.ry = Math.max(sidebarTopY, mh - t.h - sidebarBottomMargin);
+        } else if (name === "calendar" || name === "music") {
+            t.rx = Math.max(sidebarGap, mw - sidebarRail - sidebarGap - t.w);
             t.ry = sidebarTopY;
         }
     }
