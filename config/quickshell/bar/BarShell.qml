@@ -330,13 +330,9 @@ Variants {
             readonly property string batStatus: isCharging ? "Charging"
                 : (UPower.displayDevice ? UPowerDeviceState.toString(UPower.displayDevice.state) : "Unknown")
             readonly property string batIcon: {
-                if (isCharging) return "󰂄";
-                if (batCap > 90) return "󰁹";
-                if (batCap > 70) return "󰁸";
-                if (batCap > 50) return "󰁷";
-                if (batCap > 30) return "󰁶";
-                if (batCap > 10) return "󰁺";
-                return "󰂃";
+                if (batCap >= 75) return "\uf240";
+                if (batCap >= 30) return "\uf242";
+                return "\uf244";
             }
             readonly property color batDynamicColor: {
                 if (isCharging) return mocha.green;
