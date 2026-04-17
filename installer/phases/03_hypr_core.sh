@@ -69,6 +69,7 @@ _phase03_prepare_hypr_scripts() {
     local -a scripts=(
         "$REPO_ROOT/config/hypr/scripts/hardware-switches.sh"
         "$REPO_ROOT/config/hypr/scripts/lid-lock.sh"
+        "$REPO_ROOT/config/hypr/scripts/monitor-hotplug-restore.sh"
         "$REPO_ROOT/config/hypr/scripts/monitor-apply-save.sh"
         "$REPO_ROOT/config/hypr/scripts/tablet-mode.sh"
     )
@@ -174,6 +175,7 @@ _phase03_validate() {
     validate_file "$HOME/.config/hypr/conf.d/70-autostart.conf"  "70-autostart.conf"
     validate_file "$HOME/.config/hypr/scripts/hardware-switches.sh" "hardware-switches.sh"
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"       "lid-lock.sh"
+    validate_file "$HOME/.config/hypr/scripts/monitor-hotplug-restore.sh" "monitor-hotplug-restore.sh"
     validate_file "$HOME/.config/hypr/scripts/tablet-mode.sh"    "tablet-mode.sh"
     validate_report
 }
