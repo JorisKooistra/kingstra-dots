@@ -143,7 +143,7 @@ _phase14_write_hardware_conf() {
             echo "bindl = , switch:off:Tablet Mode Switch, exec, ~/.config/hypr/scripts/tablet-mode.sh off"
             echo "bindl = , switch:on:Tablet Mode, exec, ~/.config/hypr/scripts/tablet-mode.sh on"
             echo "bindl = , switch:off:Tablet Mode, exec, ~/.config/hypr/scripts/tablet-mode.sh off"
-            echo "bindl = , switch:on:Intel HID switches, exec, ~/.config/hypr/scripts/tablet-mode.sh toggle"
+            echo "bindl = , switch:on:Intel HID switches, exec, ~/.config/hypr/scripts/tablet-mode.sh on"
             echo "bindl = , switch:off:Intel HID switches, exec, ~/.config/hypr/scripts/tablet-mode.sh off"
             echo "bind = \$mainMod CTRL, F12, exec, ~/.config/hypr/scripts/tablet-mode.sh toggle"
             echo ""
