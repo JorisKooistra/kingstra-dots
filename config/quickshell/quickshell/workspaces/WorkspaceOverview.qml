@@ -106,26 +106,16 @@ Item {
         if (!draggedAddress || !targetAddress || draggedAddress === targetAddress)
             return;
 
-        // Swap positions in gridOrder
         var addresses = addressOrderForWorkspace(wsId);
-        var di = addresses.indexOf(draggedAddress);
-        var ti = addresses.indexOf(targetAddress);
+        var draggedIndex = addresses.indexOf(draggedAddress);
+        var targetIndex = addresses.indexOf(targetAddress);
+        if (draggedIndex === -1 || targetIndex === -1)
+            return;
 
-        // Ensure both are present
-        if (di === -1) { addresses.push(draggedAddress); di = addresses.length - 1; }
-        if (ti === -1) { addresses.push(targetAddress); ti = addresses.length - 1; }
-
-        var tmp = addresses[di];
-        addresses[di] = addresses[ti];
-        addresses[ti] = tmp;
+        addresses.splice(draggedIndex, 1);
+        targetIndex = addresses.indexOf(targetAddress);
+        addresses.splice(targetIndex, 0, draggedAddress);
         setWorkspaceOrder(wsId, addresses);
-
-        // Swap in Hyprland's tiling layout: focus dragged window first, then swap with target
-        Quickshell.execDetached(["bash", "-c",
-            "hyprctl dispatch focuswindow address:" + draggedAddress +
-            " && hyprctl dispatch swapwindow address:" + targetAddress
-        ]);
-        refreshTimer.restart();
     }
 
     function monitorForWindow(win) {

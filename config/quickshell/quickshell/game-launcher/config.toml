@@ -1,0 +1,51 @@
+# =============================================================================
+# quickshell-games-launchers — Kingstra default config
+# Volledig overzicht: ~/.config/quickshell/game-launcher/config.toml
+# =============================================================================
+
+[display]
+position       = "center"   # Positie op het scherm: "center" | "top" | "bottom"
+columns        = 4          # Aantal kolommen in de grid
+rows           = 3          # Aantal rijen zichtbaar
+card_width     = 200        # Breedte van een game card (px)
+card_height    = 280        # Hoogte van een game card (px)
+spacing        = 16         # Ruimte tussen cards (px)
+
+[appearance]
+use_wallust    = false      # Wallust/pywal theming (wij gebruiken matugen)
+transparency   = 0.85       # Achtergrond transparantie
+show_icons     = true       # Platform badges tonen
+blur           = true       # Blur achtergrond
+
+[behavior]
+sort_by        = "last_played"   # "name" | "last_played" | "playtime"
+favorites_first = true
+show_new_badge  = true
+show_recent_badge = true
+
+[localization]
+language       = "en"       # Indien ondersteund door de launcher
+
+[steam]
+enabled        = true
+# library_path = "~/.local/share/Steam"   # auto-detect indien leeg
+
+[heroic]
+enabled        = true
+scan_epic      = true
+scan_gog       = true
+scan_amazon    = true
+# library_path = "~/.config/heroic"       # auto-detect indien leeg
+
+[steamgriddb]
+enabled        = false
+# api_key      = ""                        # SteamGridDB API key voor artwork
+
+[filter]
+hide_non_steam = false
+min_playtime   = 0          # Verberg games met minder dan N minuten speeltijd
+
+[animations]
+enabled     = true
+duration_ms = 300
+ease_type   = "OutCubic"
