@@ -3,10 +3,17 @@ set -u
 
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 LOCK_QML="$CONFIG_HOME/quickshell/Lock.qml"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
+RUN_LOCK="$RUNTIME_DIR/kingstra-screen-lock.lock"
 LOG_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 LOG_FILE="$LOG_DIR/lock.log"
 
 mkdir -p "$LOG_DIR"
+
+exec 8>"$RUN_LOCK"
+if ! flock -n 8; then
+    exit 0
+fi
 
 log() {
     printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >>"$LOG_FILE"
