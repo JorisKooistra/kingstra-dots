@@ -37,6 +37,7 @@ Item {
     readonly property int previewDecodeHeight: Math.max(1, Math.round(maxPreviewHeight * Screen.devicePixelRatio))
     readonly property int previewCacheBuffer: Math.round(itemWidth * 8)
     readonly property string themeSwitchSafeCmd: Quickshell.env("HOME") + "/.config/hypr/scripts/theme-switch-safe.sh"
+    property bool preloadVisiblePreviews: false
 
     property string activeTheme: ""
     property string selectedThemeId: ""
@@ -49,7 +50,7 @@ Item {
     ListModel { id: themeModel }
     Repeater {
         id: preloadRepeater
-        model: themeModel
+        model: root.preloadVisiblePreviews ? themeModel : null
         delegate: Image {
             visible: false
             source: (model.preview_path || "") !== ""
@@ -67,6 +68,7 @@ Item {
     Component.onCompleted: refreshThemes()
 
     Timer { id: readyTimer; interval: 100; onTriggered: root.isReady = true }
+    Timer { id: preloadTimer; interval: 900; onTriggered: root.preloadVisiblePreviews = true }
     Timer {
         id: itemAnimationTimer; interval: 600
         onTriggered: root.isItemAnimating = false
@@ -191,6 +193,7 @@ Item {
 
                 root.themesLoaded();
                 loadActiveTheme.running = true;
+                preloadTimer.restart();
             }
         }
     }
@@ -240,6 +243,7 @@ Item {
 
         spacing: 0
         orientation: ListView.Horizontal
+        layoutDirection: Qt.LeftToRight
         clip: false
         interactive: !root.isApplying
         cacheBuffer: root.previewCacheBuffer
@@ -398,7 +402,7 @@ Item {
                             height: parent.height
                             fillMode: Image.PreserveAspectCrop
                             source: delegateRoot.previewSource
-                            asynchronous: !delegateRoot.isCurrent
+                            asynchronous: true
                             cache: true
                             mipmap: true
                             sourceSize.width: root.previewDecodeWidth
