@@ -18,9 +18,9 @@ Rectangle {
     property bool inputActive: false
     property bool loginFailed: false
     property int  currentUserIndex: 0
-    property bool autoPamKickDone: false
+    property bool loginInProgress: false
     property bool biometricActive: false
-    property string authStatusText: "Fingerprint/PAM wordt gestart..."
+    property string authStatusText: "Klaar voor fingerprint of wachtwoord"
     property string authHintText: "Raak de scanner aan of gebruik je wachtwoord"
 
     function setAuthFeedback(statusText, hintText, biometric) {
@@ -29,12 +29,27 @@ Rectangle {
         biometricActive = biometric
     }
 
-    function kickPamAuthOnce() {
-        if (autoPamKickDone)
+    function startFingerprintLogin() {
+        if (loginInProgress || !currentUserName || currentUserName === "gebruiker")
             return
-        if (!currentUserName || currentUserName === "gebruiker")
+
+        loginFailed = false
+        loginInProgress = true
+        inputActive = true
+        passwordField.text = ""
+        passwordField.forceActiveFocus()
+        setAuthFeedback("Raak de vingerafdrukscanner aan", "Typ iets om fingerprint over te slaan", true)
+        sddm.login(currentUserName, "", sessionModel.lastIndex)
+    }
+
+    function startPasswordLogin(password) {
+        if (loginInProgress || password.length === 0)
             return
-        autoPamKickTimer.restart()
+
+        loginFailed = false
+        loginInProgress = true
+        setAuthFeedback("Wachtwoord controleren...", "Even controleren via PAM", false)
+        sddm.login(currentUserName, password, sessionModel.lastIndex)
     }
 
     Component.onCompleted: {
@@ -45,34 +60,29 @@ Rectangle {
                 break
             }
         }
-        kickPamAuthOnce()
+        setAuthFeedback("Klaar voor fingerprint of wachtwoord", "Druk Enter op leeg veld of raak het icoon aan", false)
     }
 
     property string currentUserName: userModel.count > 0
         ? userModel.data(userModel.index(currentUserIndex, 0), 257)
         : "gebruiker"
-    onCurrentUserNameChanged: kickPamAuthOnce()
-
-    Timer {
-        id: autoPamKickTimer
-        interval: 550
-        repeat: false
-        onTriggered: {
-            if (root.autoPamKickDone || !root.currentUserName || root.currentUserName === "gebruiker")
-                return
-            root.autoPamKickDone = true
-            root.inputActive = true
-            root.setAuthFeedback("Raak de vingerafdrukscanner aan", "Wachtwoord blijft beschikbaar als fallback", true)
-            passwordField.forceActiveFocus()
-            sddm.login(root.currentUserName, "", sessionModel.lastIndex)
-        }
+    onCurrentUserNameChanged: {
+        loginFailed = false
+        loginInProgress = false
+        passwordField.text = ""
+        setAuthFeedback("Klaar voor fingerprint of wachtwoord", "Druk Enter op leeg veld of raak het icoon aan", false)
     }
 
     // Fout-afhandeling vanuit SDDM
     Connections {
         target: sddm
+        function onLoginSucceeded() {
+            root.loginInProgress = false
+        }
+
         function onLoginFailed() {
             passwordField.text = ""
+            root.loginInProgress = false
             root.loginFailed   = true
             root.setAuthFeedback("Vingerafdruk of wachtwoord mislukt", "Probeer opnieuw of typ je wachtwoord", false)
             shakeAnim.restart()
@@ -85,7 +95,7 @@ Rectangle {
         interval: 3000
         onTriggered: {
             root.loginFailed = false
-            root.setAuthFeedback("Klaar voor fingerprint of wachtwoord", "Druk Enter op leeg veld om fingerprint te starten", false)
+            root.setAuthFeedback("Klaar voor fingerprint of wachtwoord", "Druk Enter op leeg veld of raak het icoon aan", false)
         }
     }
 
@@ -298,20 +308,22 @@ Rectangle {
                 Keys.onEscapePressed: root.inputActive = false
 
                 onAccepted: {
-                    root.setAuthFeedback(
-                        text.length === 0 ? "Vingerafdruk controleren..." : "Wachtwoord controleren...",
-                        text.length === 0 ? "Raak de scanner aan" : "Even controleren via PAM",
-                        text.length === 0
-                    )
-                    sddm.login(root.currentUserName, text, sessionModel.lastIndex)
+                    if (text.length === 0) {
+                        root.startFingerprintLogin()
+                    } else {
+                        root.startPasswordLogin(text)
+                    }
                 }
 
                 onTextChanged: {
                     root.loginFailed = false
                     if (text.length > 0) {
-                        root.setAuthFeedback("Wachtwoord invoer actief", "Druk Enter om in te loggen", false)
+                        root.biometricActive = false
+                        if (!root.loginInProgress) {
+                            root.setAuthFeedback("Wachtwoord invoer actief", "Druk Enter om in te loggen", false)
+                        }
                     } else if (!root.biometricActive) {
-                        root.setAuthFeedback("Klaar voor fingerprint of wachtwoord", "Druk Enter op leeg veld om fingerprint te starten", false)
+                        root.setAuthFeedback("Klaar voor fingerprint of wachtwoord", "Druk Enter op leeg veld of raak het icoon aan", false)
                     }
                 }
             }
@@ -377,6 +389,14 @@ Rectangle {
                         scale: root.biometricActive ? 1.08 : 1.0
                         Behavior on color { ColorAnimation { duration: 220 } }
                         Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !root.loginInProgress
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.startFingerprintLogin()
                     }
 
                     SequentialAnimation {

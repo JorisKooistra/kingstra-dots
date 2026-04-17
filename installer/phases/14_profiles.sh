@@ -270,10 +270,35 @@ _phase14_fingerprint_setup() {
 
     # PAM configureren voor sudo + SDDM + hyprlock
     _phase14_pam_enable_fprintd "/etc/pam.d/sudo" "sudo"
-    _phase14_pam_enable_fprintd "/etc/pam.d/sddm" "sddm" "max-tries=1 timeout=7"
+    _phase14_pam_enable_sddm_fingerprint
     _phase14_pam_enable_fprintd "/etc/pam.d/hyprlock" "hyprlock" "max-tries=1 timeout=7"
 
     log_info "Vingerafdruk inschrijven: fprintd-enroll (na installatie uitvoeren)"
+}
+
+_phase14_pam_enable_sddm_fingerprint() {
+    local pam_file="/etc/pam.d/sddm"
+    local password_line="auth       [success=done new_authtok_reqd=done default=ignore] pam_unix.so try_first_pass likeauth nullok"
+    local fprint_line="auth       sufficient   pam_fprintd.so max-tries=1 timeout=7"
+
+    if [[ ! -f "$pam_file" ]]; then
+        log_warn "PAM-bestand ontbreekt: $pam_file (sddm)"
+        return 0
+    fi
+
+    # SDDM uses a single serialized PAM conversation. Put password first so a
+    # typed password can complete without waiting for fprintd; empty-password
+    # login attempts fall through to fingerprint.
+    if sudo sed -i -E \
+        -e '/^[[:space:]]*auth[[:space:]]+.*pam_fprintd\.so([[:space:]].*)?$/d' \
+        -e '/^[[:space:]]*auth[[:space:]]+\[[^]]*\][[:space:]]+pam_unix\.so[[:space:]].*try_first_pass.*$/d' \
+        "$pam_file" 2>/dev/null && \
+       sudo sed -i "1i $fprint_line" "$pam_file" 2>/dev/null && \
+       sudo sed -i "1i $password_line" "$pam_file" 2>/dev/null; then
+        log_ok "SDDM PAM ingesteld voor wachtwoord-eerst + fingerprint fallback"
+    else
+        log_warn "PAM aanpassen mislukt voor $pam_file — handmatig toevoegen"
+    fi
 }
 
 _phase14_pam_enable_fprintd() {

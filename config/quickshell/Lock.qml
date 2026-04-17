@@ -43,26 +43,142 @@ ShellRoot {
         id: lockUI
         property bool failed: false
         property bool authenticating: false
+        property bool fingerprintAvailable: false
+        property bool fingerprintEnabled: false
+        property bool passwordMode: false
+        property bool switchingAuthMode: false
+        property string pendingPassword: ""
         property string statusText: "Locked"
+        readonly property string fingerprintStatus: "Touch fingerprint"
+
+        function startFingerprintAuth(preserveFeedback) {
+            pendingPassword = "";
+            passwordMode = false;
+            fingerprintEnabled = fingerprintAvailable;
+            authenticating = false;
+            if (!preserveFeedback) failed = false;
+            pam.config = "hyprlock";
+            pam.start();
+            if (!preserveFeedback) statusText = fingerprintAvailable ? fingerprintStatus : "Locked";
+        }
+
+        function startPasswordAuth(preserveFeedback) {
+            fingerprintEnabled = false;
+            passwordMode = true;
+            authenticating = false;
+            if (!preserveFeedback) failed = false;
+            pam.config = "login";
+            pam.start();
+            if (!preserveFeedback) statusText = "Enter password";
+        }
+
+        function switchToPassword() {
+            if (passwordMode) return;
+            fingerprintEnabled = false;
+            switchingAuthMode = true;
+            statusText = "Enter password";
+
+            if (pam.active) {
+                pam.abort();
+            } else {
+                switchingAuthMode = false;
+                startPasswordAuth();
+            }
+        }
+
+        function submitPassword(password) {
+            if (password.length === 0 || authenticating) return;
+
+            pendingPassword = password;
+            if (!passwordMode && !pam.responseRequired) {
+                switchToPassword();
+                return;
+            }
+
+            if (!passwordMode) {
+                fingerprintEnabled = false;
+                passwordMode = true;
+            }
+
+            authenticating = true;
+            statusText = "Authenticating...";
+            failed = false;
+
+            if (pam.responseRequired) {
+                pam.respond(pendingPassword);
+                pendingPassword = "";
+            }
+        }
     }
 
     // System Authentication hook
     PamContext {
         id: pam
+        config: "hyprlock"
         
         Component.onCompleted: pam.start()
+
+        onPamMessage: {
+            if (responseRequired) {
+                lockUI.fingerprintEnabled = false;
+                lockUI.passwordMode = true;
+                if (!lockUI.authenticating) {
+                    lockUI.statusText = "Enter password";
+                }
+            } else if (!lockUI.passwordMode && message.toLowerCase().indexOf("finger") >= 0) {
+                lockUI.fingerprintEnabled = true;
+                lockUI.statusText = lockUI.fingerprintStatus;
+            } else if (!lockUI.passwordMode && message.toLowerCase().indexOf("timed out") >= 0) {
+                lockUI.fingerprintEnabled = false;
+                lockUI.statusText = "Enter password";
+            }
+
+            if (lockUI.passwordMode && responseRequired && lockUI.pendingPassword.length > 0) {
+                lockUI.authenticating = true;
+                lockUI.statusText = "Authenticating...";
+                lockUI.failed = false;
+                pam.respond(lockUI.pendingPassword);
+                lockUI.pendingPassword = "";
+            }
+        }
 
         onCompleted: (result) => {
             lockUI.authenticating = false;
             if (result === PamResult.Success) {
                 rootLock.locked = false;
                 Qt.quit();
+            } else if (lockUI.switchingAuthMode) {
+                lockUI.switchingAuthMode = false;
+                lockUI.startPasswordAuth();
             } else {
                 lockUI.failed = true;
                 lockUI.statusText = "Access Denied";
-                pam.start();
+                lockUI.pendingPassword = "";
+                if (lockUI.passwordMode) {
+                    lockUI.startPasswordAuth(true);
+                } else {
+                    lockUI.startFingerprintAuth(true);
+                }
             }
         }
+    }
+
+    Process {
+        id: fingerprintProbe
+        command: [
+            "bash",
+            "-c",
+            "command -v fprintd-verify >/dev/null 2>&1 && grep -Eq '^[[:space:]]*auth[[:space:]]+sufficient[[:space:]]+pam_fprintd\\.so([[:space:]].*)?$' /etc/pam.d/hyprlock 2>/dev/null"
+        ]
+        stdout: StdioCollector {}
+        onExited: (exitCode) => {
+            lockUI.fingerprintAvailable = exitCode === 0;
+            if (!lockUI.passwordMode) {
+                lockUI.fingerprintEnabled = lockUI.fingerprintAvailable;
+                lockUI.statusText = lockUI.fingerprintAvailable ? lockUI.fingerprintStatus : "Locked";
+            }
+        }
+        Component.onCompleted: running = true
     }
 
     Process {
@@ -481,12 +597,18 @@ ShellRoot {
 
                                     Text {
                                         anchors.centerIn: parent
-                                        text: lockUI.failed ? "󰌾" : (lockUI.authenticating ? "󰌿" : "󰌾")
+                                        text: {
+                                            if (lockUI.failed) return "󰌾";
+                                            if (lockUI.fingerprintEnabled && inputField.text.length === 0) return "󰈷";
+                                            return lockUI.authenticating ? "󰌿" : "󰌾";
+                                        }
                                         font.family: "Iosevka Nerd Font"
                                         font.pixelSize: 18 * screenRoot.sc
                                         color: lockUI.failed
                                             ? root.red
-                                            : (lockUI.authenticating ? root.peach : root.mauve)
+                                            : (lockUI.fingerprintEnabled && inputField.text.length === 0
+                                                ? root.green
+                                                : (lockUI.authenticating ? root.peach : root.mauve))
                                         Behavior on color { ColorAnimation { duration: 300 } }
                                     }
                                 }
@@ -573,11 +695,8 @@ ShellRoot {
                                     }
                                     
                                     onAccepted: {
-                                        if (text.length > 0 && pam.responseRequired && !lockUI.authenticating) {
-                                            lockUI.authenticating = true;
-                                            lockUI.statusText = "Authenticating...";
-                                            lockUI.failed = false;
-                                            pam.respond(text);
+                                        if (text.length > 0 && !lockUI.authenticating) {
+                                            lockUI.submitPassword(text);
                                             text = ""; 
                                             oldText = "";
                                             passModel.clear();
@@ -589,6 +708,10 @@ ShellRoot {
 
                                         if (text.length > 0 && !screenRoot.inputActive) {
                                             screenRoot.inputActive = true;
+                                        }
+
+                                        if (text.length > 0 && !lockUI.passwordMode) {
+                                            lockUI.switchToPassword();
                                         }
                                         
                                         idleTimer.restart();
@@ -614,9 +737,11 @@ ShellRoot {
 
                                         if (text.length > 0) {
                                             lockUI.failed = false;
-                                            lockUI.statusText = "Enter PIN";
+                                            lockUI.statusText = "Enter password";
                                         } else {
-                                            if (!lockUI.failed) lockUI.statusText = "Locked";
+                                            if (!lockUI.failed) {
+                                                lockUI.statusText = lockUI.fingerprintEnabled ? lockUI.fingerprintStatus : "Locked";
+                                            }
                                         }
                                     }
                                 }
