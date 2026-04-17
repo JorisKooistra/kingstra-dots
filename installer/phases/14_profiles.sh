@@ -114,6 +114,7 @@ _phase14_write_hardware_conf() {
             echo "        tap-and-drag = true"
             echo "        disable_while_typing = true"
             echo "        drag_lock = false"
+            echo "        clickfinger_behavior = false"
             echo "    }"
             echo "}"
             echo ""
