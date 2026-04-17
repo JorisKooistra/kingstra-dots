@@ -55,7 +55,9 @@ Rectangle {
 
     // Hoogte staat vast; breedte past zich aan aan de inhoud + wat padding.
     // shell.s(n) schaalt pixels mee met de schermresolutie.
-    height: ctx.cyberCenterBodyHeight
+    height: shell.isHorizontalBar && shell.edgeAttachedBar && parent
+            ? parent.height
+            : ctx.cyberCenterBodyHeight
     width: centerLayout.implicitWidth + (ctx.cyberCenterFeature ? shell.s(12) : shell.s(36))
 
     // ── Animaties ─────────────────────────────────────────────────────────────

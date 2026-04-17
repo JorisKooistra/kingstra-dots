@@ -123,9 +123,10 @@ Item {
     // ── Center pill ────────────────────────────────────────────────────────
     CenterBox {
         id: centerBox
+        z: 2
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: shell.isTopBar && shell.edgeAttachedBar ? parent.top : undefined
-        anchors.bottom: shell.isBottomBar && shell.edgeAttachedBar ? parent.bottom : undefined
+        anchors.top: shell.isHorizontalBar && shell.edgeAttachedBar ? parent.top : undefined
+        anchors.bottom: shell.isHorizontalBar && shell.edgeAttachedBar ? parent.bottom : undefined
         anchors.verticalCenter: shell.edgeAttachedBar && (shell.isTopBar || shell.isBottomBar) ? undefined : parent.verticalCenter
         shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root
     }
