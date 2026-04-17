@@ -167,13 +167,13 @@ _detect_touchscreen() {
 }
 
 _detect_tablet_mode_switch() {
-    if grep -qiE "tablet mode|tablet.*switch|convertible" /proc/bus/input/devices 2>/dev/null; then
+    if grep -qiE "tablet mode|tablet.*switch|convertible|intel hid switches" /proc/bus/input/devices 2>/dev/null; then
         DETECT_HAS_TABLET_MODE_SWITCH=true
     elif command -v hyprctl &>/dev/null && \
-         hyprctl devices 2>/dev/null | grep -qiE "tablet mode|tablet.*switch|convertible"; then
+         hyprctl devices 2>/dev/null | grep -qiE "tablet mode|tablet.*switch|convertible|intel hid switches"; then
         DETECT_HAS_TABLET_MODE_SWITCH=true
     elif command -v libinput &>/dev/null && \
-         libinput list-devices 2>/dev/null | grep -qiE "tablet mode|tablet.*switch|convertible"; then
+         libinput list-devices 2>/dev/null | grep -qiE "tablet mode|tablet.*switch|convertible|intel hid switches"; then
         DETECT_HAS_TABLET_MODE_SWITCH=true
     else
         DETECT_HAS_TABLET_MODE_SWITCH=false

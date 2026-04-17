@@ -11,7 +11,7 @@ normal_transform="${KINGSTRA_TABLET_NORMAL_TRANSFORM:-0}"
 mkdir -p "$runtime_dir"
 
 exec 9>"$lock_file"
-flock -n 9 || exit 0
+flock -w 3 9 || exit 0
 
 usage() {
     cat <<'EOF'
@@ -21,6 +21,8 @@ Environment overrides:
   KINGSTRA_TABLET_MONITOR       Monitor to rotate, for example eDP-1.
   KINGSTRA_TABLET_TRANSFORM     Tablet transform. Default: 2 (180 degrees).
   KINGSTRA_TABLET_KEYBOARD_CMD  On-screen keyboard command.
+  KINGSTRA_TABLET_KEYBOARD_HEIGHT
+                                wvkbd landscape height. Default: 260.
 EOF
 }
 
@@ -129,8 +131,18 @@ keyboard_command() {
         return 0
     fi
 
+    local height="${KINGSTRA_TABLET_KEYBOARD_HEIGHT:-260}"
+    if command -v wvkbd-mobintl >/dev/null 2>&1; then
+        printf 'wvkbd-mobintl -L %s -H %s\n' "$height" "$height"
+        return 0
+    fi
+    if command -v wvkbd >/dev/null 2>&1; then
+        printf 'wvkbd -L %s -H %s\n' "$height" "$height"
+        return 0
+    fi
+
     local candidate
-    for candidate in wvkbd-mobintl wvkbd squeekboard maliit-keyboard; do
+    for candidate in squeekboard maliit-keyboard; do
         if command -v "$candidate" >/dev/null 2>&1; then
             printf '%s\n' "$candidate"
             return 0
@@ -153,7 +165,7 @@ start_keyboard() {
             ;;
     esac
 
-    setsid sh -c "$cmd" >/dev/null 2>&1 &
+    setsid sh -c "$cmd" 9>&- >/dev/null 2>&1 &
 }
 
 stop_keyboard() {

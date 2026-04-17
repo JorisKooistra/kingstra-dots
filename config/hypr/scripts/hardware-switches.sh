@@ -73,6 +73,8 @@ bind_known_fallbacks() {
     bind_switch off "tablet mode switch" "$tablet_cmd off"
     bind_switch on  "tablet-mode-switch" "$tablet_cmd on"
     bind_switch off "tablet-mode-switch" "$tablet_cmd off"
+    bind_switch on  "Intel HID switches" "$tablet_cmd toggle"
+    bind_switch off "Intel HID switches" "$tablet_cmd off"
 }
 
 main() {
@@ -85,6 +87,10 @@ main() {
         case "$name" in
             *[Ll]id*)
                 bind_switch on "$name" "$lock_cmd"
+                ;;
+            *[Ii]ntel\ HID\ switches*)
+                bind_switch on "$name" "$tablet_cmd toggle"
+                bind_switch off "$name" "$tablet_cmd off"
                 ;;
             *[Tt]ablet*|*[Cc]onvertible*|*[Ff]old*)
                 bind_switch on "$name" "$tablet_cmd on"
