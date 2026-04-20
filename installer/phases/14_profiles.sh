@@ -211,11 +211,26 @@ _phase14_laptop_features() {
         fi
     fi
 
-    # Acpi events
-    pacman_install acpid
-    if ! "${DRY_RUN:-false}"; then
-        sudo systemctl enable --now acpid 2>/dev/null || true
+    # Acpi events zijn handig, maar niet kritisch: Hyprland/logind en scripts
+    # hebben fallback-paden. Laat dit pakket een clean install niet blokkeren.
+    if _phase14_optional_pacman_install acpid "ACPI event daemon"; then
+        if ! "${DRY_RUN:-false}"; then
+            sudo systemctl enable --now acpid 2>/dev/null || true
+        fi
     fi
+}
+
+_phase14_optional_pacman_install() {
+    local pkg="$1"
+    local label="$2"
+
+    if pacman_install "$pkg"; then
+        return 0
+    fi
+
+    log_warn "Optioneel pakket overgeslagen: $pkg ($label)"
+    log_warn "Dit mag de installatie niet blokkeren; controleer later pacman/DNS/mirrors als je dit pakket wilt."
+    return 1
 }
 
 _phase14_tablet_mode_features() {

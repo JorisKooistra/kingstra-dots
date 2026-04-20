@@ -12,7 +12,11 @@
 phase_run() {
     log_step "Monitoringpakketten installeren..."
     pacman_install lm_sensors       # temperatuursensoren (hwmon)
-    pacman_install acpi             # batterij/thermisch info (laptop)
+    if [[ "${DETECT_IS_LAPTOP:-false}" == "true" ]]; then
+        _phase13_optional_pacman_install acpi "batterij/thermische info"
+    else
+        log_info "Geen laptop gedetecteerd — acpi CLI overgeslagen"
+    fi
     pacman_install nvtop            # GPU monitor (nvidia/amd/intel)
     pacman_install htop             # lichtgewicht procesmontior
 
@@ -32,6 +36,19 @@ phase_run() {
 }
 
 # ---------------------------------------------------------------------------
+
+_phase13_optional_pacman_install() {
+    local pkg="$1"
+    local label="$2"
+
+    if pacman_install "$pkg"; then
+        return 0
+    fi
+
+    log_warn "Optioneel pakket overgeslagen: $pkg ($label)"
+    log_warn "Dit mag de installatie niet blokkeren; controleer later pacman/DNS/mirrors als je dit pakket wilt."
+    return 0
+}
 
 _phase13_sensors_detect() {
     if "${DRY_RUN:-false}"; then
@@ -58,4 +75,3 @@ _phase13_sensors_detect() {
     # Laad modules
     sudo systemctl enable --now lm_sensors 2>/dev/null || true
 }
-
