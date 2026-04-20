@@ -29,6 +29,20 @@ pacman_install() {
     fi
 }
 
+_package_refresh_sudo() {
+    "${DRY_RUN:-false}" && return 0
+    [[ "${EUID:-$(id -u)}" -eq 0 ]] && return 0
+    sudo -n true >/dev/null 2>&1 && return 0
+
+    if [[ -t 0 ]]; then
+        log_step "sudo-sessie verversen voor pakketinstallatie..."
+        sudo -v
+        return $?
+    fi
+
+    return 0
+}
+
 # Installeer een lijst van AUR-pakketten
 aur_install() {
     local -a pkgs=("$@")
@@ -53,15 +67,33 @@ aur_install() {
 
     log_step "$AUR_HELPER installeren: ${to_install[*]}"
 
-    # Voorkom dat de AUR-helper een pager opent (less/bat/diff-so-fancy) of de
-    # terminal manipuleert (alternate screen buffer, mouse tracking).
-    # --skipreview (paru) / --answerdiff=None etc. (yay) slaan PKGBUILD-reviews
-    # over. PAGER=cat garandeert geen interactieve pager ongeacht config.
+    # Voorkom dat de AUR-helper een pager opent (less/bat/diff-so-fancy), op
+    # verborgen prompts wacht, of de terminal manipuleert. PAGER=cat garandeert
+    # geen interactieve pager ongeacht user-config.
     local -a aur_flags=(--needed --noconfirm)
     case "${AUR_HELPER##*/}" in
         paru) aur_flags+=(--skipreview) ;;
-        yay)  aur_flags+=(--answerdiff=None --answerclean=None --answeredit=None) ;;
+        yay)
+            aur_flags+=(
+                --aur
+                --answerdiff=None
+                --answerclean=None
+                --answeredit=None
+                --answerupgrade=None
+                --batchinstall
+                --noredownload
+                --norebuild
+                --noremovemake
+                --noprogressbar
+                --sudoloop
+            )
+            ;;
     esac
+
+    if ! _package_refresh_sudo; then
+        _package_install_hint "sudo"
+        return 1
+    fi
 
     if ! PAGER=cat INSTALL_NEXT_RUN_LABEL="$AUR_HELPER installeren: ${to_install[*]}" \
         run_cmd "$AUR_HELPER" -S "${aur_flags[@]}" "${to_install[@]}"; then
