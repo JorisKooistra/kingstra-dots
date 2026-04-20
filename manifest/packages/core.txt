@@ -21,6 +21,8 @@ pipewire-alsa
 pipewire-pulse
 pipewire-jack
 wireplumber
+libpulse
+upower
 
 # Dbus / sessiebeheer
 dbus
