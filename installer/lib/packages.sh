@@ -63,8 +63,10 @@ aur_install() {
 
     # Herstel terminal-staat voor het geval de AUR-helper toch iets heeft
     # aangepast (alternate screen, mouse reporting, line discipline).
-    stty sane 2>/dev/null || true
-    printf '\033[?1049l\033[?1000l\033[?1002l\033[?1003l\033[?1006l' 2>/dev/null || true
+    if [[ -t 1 && "${TERM:-}" != "dumb" ]]; then
+        stty sane 2>/dev/null || true
+        printf '\033[?1049l\033[?1000l\033[?1002l\033[?1003l\033[?1006l' 2>/dev/null || true
+    fi
 }
 
 # Installeer pakketten vanuit een manifestbestand

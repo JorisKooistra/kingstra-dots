@@ -42,8 +42,8 @@ phase_run() {
 
 _phase05_install_packages() {
     install_from_manifest "$REPO_ROOT/manifest/packages/ui.txt"
-    # Fonts die Quickshell-iconen nodig hebben
-    aur_install ttf-material-design-icons-variable
+    # Supplementair icon-font uit de officiële repo; Nerd Fonts komen in fase 8.
+    pacman_install ttf-material-icons
 }
 
 _phase05_write_autostart_ui() {

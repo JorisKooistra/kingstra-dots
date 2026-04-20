@@ -3,7 +3,7 @@
 # =============================================================================
 
 # Quickshell en Qt6
-aur:quickshell-git
+quickshell
 pacman-contrib
 qt6-base
 qt6-declarative
@@ -15,7 +15,7 @@ qt6-svg
 swaync
 
 # SwayOSD (on-screen display voor volume/helderheid)
-aur:swayosd-git
+swayosd
 
 # Qt6ct (Qt-theming buiten KDE)
 qt6ct

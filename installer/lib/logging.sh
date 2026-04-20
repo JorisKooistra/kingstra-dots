@@ -129,6 +129,39 @@ _render_progress_bar() {
     printf "[%s] %3d%%" "$bar" "$percent"
 }
 
+_progress_line_columns() {
+    local cols
+    cols="$(_tput_safe cols)"
+    [[ "$cols" =~ ^[0-9]+$ ]] || cols="${COLUMNS:-80}"
+    [[ "$cols" =~ ^[0-9]+$ ]] || cols=80
+    (( cols >= 20 )) || cols=20
+    echo "$cols"
+}
+
+_progress_line_message() {
+    local prefix="$1"
+    local msg="$2"
+    local cols max
+    cols="$(_progress_line_columns)"
+
+    # Leave one column free so terminals do not auto-wrap the spinner row.
+    max=$((cols - ${#prefix} - 1))
+    (( max >= 10 )) || max=10
+
+    if (( ${#msg} > max )); then
+        printf "%s..." "${msg:0:$((max - 3))}"
+    else
+        printf "%s" "$msg"
+    fi
+}
+
+_progress_line_print() {
+    local marker="$1"
+    local msg="$2"
+    local prefix="  [$marker] "
+    printf "\r\033[K%s%s" "$prefix" "$(_progress_line_message "$prefix" "$msg")"
+}
+
 log_phase() {
     local name="$1"
     local current="${2:-$INSTALL_CURRENT_PHASE}"
@@ -172,7 +205,7 @@ _progress_task_start() {
         log_step "$msg"
         return 0
     fi
-    printf "  [..] %s" "$msg"
+    _progress_line_print ".." "$msg"
 }
 
 _progress_task_tick() {
@@ -181,7 +214,7 @@ _progress_task_tick() {
     if [[ "$INSTALL_UI_MODE" != "true" || "${INSTALL_VERBOSE_COMMANDS:-false}" == "true" ]]; then
         return 0
     fi
-    printf "\r  [%s] %s" "$spinner" "$msg"
+    _progress_line_print "$spinner" "$msg"
 }
 
 _progress_task_end() {
@@ -197,10 +230,12 @@ _progress_task_end() {
     fi
 
     if [[ "$rc" -eq 0 ]]; then
-        printf "\r  [OK] %s\n" "$msg"
+        _progress_line_print "OK" "$msg"
+        printf "\n"
         _log_raw "TASK OK: $msg"
     else
-        printf "\r  [!!] %s\n" "$msg"
+        _progress_line_print "!!" "$msg"
+        printf "\n"
         _log_raw "TASK FAIL($rc): $msg"
     fi
 }
