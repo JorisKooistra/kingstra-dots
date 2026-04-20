@@ -61,7 +61,6 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
         "settings": { w: s(1200, scale), h: s(750, scale), rx: Math.floor((mw/2)-(s(1200, scale)/2)), ry: Math.floor((mh/2)-(s(750, scale)/2)), comp: "settings/SettingsPopup.qml" },
 
         // Full width, centered vertically
-        "wallpaper": { w: mw, h: s(650, scale), rx: 0, ry: Math.floor((mh/2)-(s(650, scale)/2)), comp: "wallpaper/WallpaperPicker.qml" },
         "theme":     { w: mw, h: s(650, scale), rx: 0, ry: Math.floor((mh/2)-(s(650, scale)/2)), comp: "themes/ThemePicker.qml" },
 
         // Mode picker — groter voor leesbaarheid van kaarten + hintbalk

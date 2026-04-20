@@ -192,8 +192,8 @@ FloatingWindow {
     }
 
     function switchWidget(newWidget, arg) {
-        let involvesWallpaper = (newWidget === "wallpaper" || currentActive === "wallpaper" || newWidget === "theme" || currentActive === "theme");
-        masterWindow.isWallpaperTransition = involvesWallpaper;
+        let involvesThemePicker = (newWidget === "theme" || currentActive === "theme");
+        masterWindow.isWallpaperTransition = involvesThemePicker;
 
         if (newWidget === "hidden") {
             if (currentActive !== "hidden" && getLayout(currentActive)) {
@@ -232,7 +232,7 @@ FloatingWindow {
                 
             } else {
                 masterWindow.morphDuration = 500; 
-                if (involvesWallpaper) {
+                if (involvesThemePicker) {
                     masterWindow.disableMorph = true;
                     masterWindow.isVisible = false; 
                     teleportFadeOutTimer.newWidget = newWidget;
@@ -274,8 +274,7 @@ FloatingWindow {
 
             placeOnActiveWorkspace(t.x, t.y, t.w, t.h, true);
 
-            let props = newWidget === "wallpaper" ? { "widgetArg": newArg } : {};
-            widgetStack.replace(t.comp, props, StackView.Immediate);
+            widgetStack.replace(t.comp, {}, StackView.Immediate);
 
             teleportFadeInTimer.newWidget = newWidget;
             teleportFadeInTimer.newArg = newArg;
@@ -290,7 +289,7 @@ FloatingWindow {
         property string newArg: ""
         onTriggered: {
             masterWindow.isVisible = true; 
-            if (newWidget !== "wallpaper") resetMorphTimer.start();
+            resetMorphTimer.start();
         }
     }
 
@@ -316,12 +315,10 @@ FloatingWindow {
         
         masterWindow.isVisible = true;
         
-        let props = newWidget === "wallpaper" ? { "widgetArg": arg } : {};
-
         if (immediate) {
-            widgetStack.replace(t.comp, props, StackView.Immediate);
+            widgetStack.replace(t.comp, {}, StackView.Immediate);
         } else {
-            widgetStack.replace(t.comp, props);
+            widgetStack.replace(t.comp, {});
         }
     }
 

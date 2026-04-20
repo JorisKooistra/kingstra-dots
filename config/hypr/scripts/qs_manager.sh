@@ -6,8 +6,6 @@
 QS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BT_PID_FILE="$HOME/.cache/bt_scan_pid"
 BT_SCAN_LOG="$HOME/.cache/bt_scan.log"
-SRC_DIR="$HOME/Pictures/Wallpapers"
-THUMB_DIR="$HOME/.cache/wallpaper_picker/thumbs"
 FOCUSTIME_DAEMON="$HOME/.config/quickshell/focustime/focus_daemon.py"
 
 IPC_FILE="/tmp/qs_widget_state"
@@ -117,80 +115,6 @@ if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
     rm -f "$PREV_FOCUS_FILE"
     exit 0
 fi
-
-# -----------------------------------------------------------------------------
-# PREP FUNCTIONS
-# -----------------------------------------------------------------------------
-handle_wallpaper_prep() {
-    mkdir -p "$THUMB_DIR"
-    (
-        for thumb in "$THUMB_DIR"/*; do
-            [ -e "$thumb" ] || continue
-            filename=$(basename "$thumb")
-            clean_name="${filename#000_}"
-            if [ ! -f "$SRC_DIR/$clean_name" ]; then
-                rm -f "$thumb"
-            fi
-        done
-
-        for img in "$SRC_DIR"/*.{jpg,jpeg,png,webp,gif,mp4,mkv,mov,webm}; do
-            [ -e "$img" ] || continue
-            filename=$(basename "$img")
-            extension="${filename##*.}"
-
-            if [[ "${extension,,}" == "webp" ]]; then
-                new_img="${img%.*}.jpg"
-                magick "$img" "$new_img"
-                rm -f "$img"
-                img="$new_img"
-                filename=$(basename "$img")
-                extension="jpg"
-            fi
-
-            if [[ "${extension,,}" =~ ^(mp4|mkv|mov|webm)$ ]]; then
-                thumb="$THUMB_DIR/000_$filename"
-                [ -f "$THUMB_DIR/$filename" ] && rm -f "$THUMB_DIR/$filename"
-                if [ ! -f "$thumb" ]; then
-                     ffmpeg -y -ss 00:00:05 -i "$img" -vframes 1 -f image2 -q:v 2 "$thumb" > /dev/null 2>&1
-                fi
-            else
-                thumb="$THUMB_DIR/$filename"
-                if [ ! -f "$thumb" ]; then
-                    magick "$img" -resize x420 -quality 70 "$thumb"
-                fi
-            fi
-        done
-    ) &
-
-    TARGET_THUMB=""
-    CURRENT_SRC=""
-
-    if pgrep -a "mpvpaper" > /dev/null; then
-        CURRENT_SRC=$(pgrep -a mpvpaper | grep -o "$SRC_DIR/[^' ]*" | head -n1)
-        CURRENT_SRC=$(basename "$CURRENT_SRC")
-    fi
-
-    if [ -z "$CURRENT_SRC" ]; then
-        if command -v awww >/dev/null; then
-            CURRENT_SRC=$(awww query 2>/dev/null | grep -o "$SRC_DIR/[^ ]*" | head -n1)
-            CURRENT_SRC=$(basename "$CURRENT_SRC")
-        elif command -v swww >/dev/null; then
-            CURRENT_SRC=$(swww query 2>/dev/null | grep -o "$SRC_DIR/[^ ]*" | head -n1)
-            CURRENT_SRC=$(basename "$CURRENT_SRC")
-        fi
-    fi
-
-    if [ -n "$CURRENT_SRC" ]; then
-        EXT="${CURRENT_SRC##*.}"
-        if [[ "${EXT,,}" =~ ^(mp4|mkv|mov|webm)$ ]]; then
-            TARGET_THUMB="000_$CURRENT_SRC"
-        else
-            TARGET_THUMB="$CURRENT_SRC"
-        fi
-    fi
-    
-    export WALLPAPER_THUMB="$TARGET_THUMB"
-}
 
 handle_network_prep() {
     echo "" > "$BT_SCAN_LOG"
@@ -330,8 +254,8 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     fi
 
     if [[ "$TARGET" == "wallpaper" ]]; then
-        handle_wallpaper_prep
-        echo "$TARGET:$WALLPAPER_THUMB:$MON_DATA" > "$IPC_FILE"
+        "$QS_DIR/wallpaper-picker-safe.sh" >/dev/null 2>&1 &
+        exit 0
     elif [[ "$TARGET" == "theme" ]]; then
         echo "$TARGET::$MON_DATA" > "$IPC_FILE"
     else
