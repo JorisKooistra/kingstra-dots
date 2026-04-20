@@ -22,8 +22,7 @@ config/walker/colors.css
 config/zsh/omp-colors.toml
 config/yazi/theme.toml
 
-# Installer-gegenereerde configs
-config/hypr/conf.d/71-autostart-ui.conf
+# Installer-gegenereerde hardware config
 config/hypr/conf.d/72-hardware.conf
 
 # Thema-gegenereerde bestanden (kingstra-theme-switch)

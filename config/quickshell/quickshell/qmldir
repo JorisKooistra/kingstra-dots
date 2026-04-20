@@ -1,6 +1,0 @@
-MatugenColors 1.0 MatugenColors.qml
-singleton Colors 1.0 Colors.qml
-singleton ThemeConfig 1.0 ThemeConfig.qml
-singleton TouchProfile 1.0 TouchProfile.qml
-singleton I18n 1.0 I18n.qml
-Scaler 1.0 Scaler.qml

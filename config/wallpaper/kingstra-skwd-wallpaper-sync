@@ -11,6 +11,7 @@ LEGACY_DAEMON_QML="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/daemon.qml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 APPLY_SCRIPT="${HOME}/.local/bin/apply-shell-state"
+TAGS_SCRIPT="${HOME}/.local/bin/kingstra-wallhaven-tags"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 LOCK_FILE="/tmp/kingstra-skwd-wallpaper-sync.lock"
 MAX_POLLS=320
@@ -105,6 +106,22 @@ _sync_skwd_config() {
     fi
 }
 
+_run_helper() {
+    local helper="$1"
+    shift
+
+    if [[ -x "$helper" ]]; then
+        "$helper" "$@"
+    elif [[ -f "$helper" ]]; then
+        case "$(head -n 1 "$helper" 2>/dev/null || true)" in
+            *python*) python3 "$helper" "$@" ;;
+            *) bash "$helper" "$@" ;;
+        esac
+    else
+        return 127
+    fi
+}
+
 _open_picker() {
     local opened=false
 
@@ -155,6 +172,7 @@ _watch_and_apply() {
             else
                 _warn "apply-shell-state niet gevonden"
             fi
+            _run_helper "$TAGS_SCRIPT" "$current" >/dev/null 2>&1 || true
             exit 0
         fi
         sleep "$POLL_SLEEP"

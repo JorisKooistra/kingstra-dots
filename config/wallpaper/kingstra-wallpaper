@@ -90,6 +90,13 @@ _run_helper() {
     fi
 }
 
+_cache_wallhaven_tags() {
+    local file="$1"
+    local helper="${HOME}/.local/bin/kingstra-wallhaven-tags"
+
+    _run_helper "$helper" "$file" >/dev/null 2>&1 || true
+}
+
 _is_image() {
     local f="${1,,}"
     for ext in "${STATIC_EXTS[@]}"; do
@@ -225,6 +232,7 @@ cmd_set() {
         _warn "apply-shell-state niet gevonden — alleen wallpaper ingesteld"
         _notify "Wallpaper ingesteld" "$(basename "$file")"
     fi
+    _cache_wallhaven_tags "$file"
 }
 
 cmd_video() {
@@ -247,6 +255,7 @@ cmd_video() {
     fi
 
     _notify "Videowallpaper" "$(basename "$file")"
+    _cache_wallhaven_tags "$file"
 }
 
 cmd_random() {

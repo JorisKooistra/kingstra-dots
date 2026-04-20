@@ -33,8 +33,8 @@ phase_run() {
     log_info "Of start handmatig:"
     log_info "  awww-daemon &"
     log_info "  systemctl --user start skwd-daemon.service"
-    log_info "  quickshell -p ~/.config/quickshell/TopBar.qml &"
-    log_info "  quickshell -p ~/.config/quickshell/Main.qml &"
+    log_info "  quickshell --no-duplicate -p ~/.config/quickshell/TopBar.qml &"
+    log_info "  quickshell --no-duplicate -p ~/.config/quickshell/Main.qml &"
     log_info "  python3 ~/.config/quickshell/focustime/focus_daemon.py &"
     log_info "  walker --gapplication-service &"
 }
@@ -65,12 +65,13 @@ _phase05_write_autostart_ui() {
 # ---------------------------------------------------------------------------
 exec-once = awww-daemon
 exec-once = systemctl --user start skwd-daemon.service
+exec-once = ~/.config/hypr/scripts/wallpaper-init.sh
 
 # ---------------------------------------------------------------------------
 # Quickshell — topbar (één per scherm) en popup master window
 # ---------------------------------------------------------------------------
-exec-once = quickshell -p ~/.config/quickshell/TopBar.qml
-exec-once = quickshell -p ~/.config/quickshell/Main.qml
+exec-once = quickshell --no-duplicate -p ~/.config/quickshell/TopBar.qml
+exec-once = quickshell --no-duplicate -p ~/.config/quickshell/Main.qml
 
 # ---------------------------------------------------------------------------
 # FocusTime tracker

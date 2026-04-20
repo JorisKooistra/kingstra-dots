@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-wallhaven-tags - Cache Wallhaven metadata/tags for selected wallpaper
+# =============================================================================
+set -euo pipefail
+
+WALLPAPER="${1:-}"
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+KINGSTRA_CURRENT="$STATE_DIR/wallpaper-tags.json"
+KINGSTRA_INDEX="$STATE_DIR/wallhaven-tags.json"
+SKWD_STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall"
+SKWD_STATE_CURRENT="$SKWD_STATE_DIR/current-wallhaven-tags.json"
+SKWD_STATE_INDEX="$SKWD_STATE_DIR/wallhaven-tags.json"
+SKWD_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall"
+SKWD_CACHE_CURRENT="$SKWD_CACHE_DIR/current-wallhaven-tags.json"
+SKWD_CACHE_INDEX="$SKWD_CACHE_DIR/wallhaven-tags.json"
+LOG_PREFIX="[kingstra-wallhaven-tags]"
+
+_warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
+_log()  { echo "$LOG_PREFIX $*"; }
+
+_expand_path() {
+    local raw="${1:-}"
+    case "$raw" in
+        "~") printf '%s\n' "$HOME" ;;
+        "~/"*) printf '%s\n' "$HOME/${raw#\~/}" ;;
+        *) printf '%s\n' "$raw" ;;
+    esac
+}
+
+_wallhaven_id_from_path() {
+    local path="$1"
+    local base stem id=""
+    base="$(basename "$path")"
+    stem="${base%.*}"
+
+    if [[ "$stem" =~ (^|[^A-Za-z0-9])wallhaven[-_]?([A-Za-z0-9]{4,12})([^A-Za-z0-9]|$) ]]; then
+        id="${BASH_REMATCH[2]}"
+    elif [[ "$stem" =~ ^([A-Za-z0-9]{6})$ ]]; then
+        id="${BASH_REMATCH[1]}"
+    fi
+
+    printf '%s\n' "$id"
+}
+
+_read_api_key() {
+    if [[ -n "${WALLHAVEN_API_KEY:-}" ]]; then
+        printf '%s\n' "$WALLHAVEN_API_KEY"
+        return 0
+    fi
+
+    local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
+    if [[ -f "$cfg" ]] && command -v jq >/dev/null 2>&1; then
+        jq -r '.wallhaven.apiKey // .wallhaven.api_key // ""' "$cfg" 2>/dev/null || true
+    fi
+}
+
+_update_index_file() {
+    local index_file="$1"
+    local id="$2"
+    local record="$3"
+    local tmp
+
+    tmp="$(mktemp)"
+    if [[ -f "$index_file" ]]; then
+        jq --arg id "$id" --argjson rec "$record" '.[$id] = $rec' "$index_file" > "$tmp" 2>/dev/null \
+            || jq -n --arg id "$id" --argjson rec "$record" '{($id): $rec}' > "$tmp"
+    else
+        jq -n --arg id "$id" --argjson rec "$record" '{($id): $rec}' > "$tmp"
+    fi
+    mv "$tmp" "$index_file"
+}
+
+_write_record() {
+    local record="$1"
+    local id="$2"
+
+    mkdir -p "$STATE_DIR" "$SKWD_STATE_DIR" "$SKWD_CACHE_DIR"
+    printf '%s\n' "$record" > "$KINGSTRA_CURRENT"
+    printf '%s\n' "$record" > "$SKWD_STATE_CURRENT"
+    printf '%s\n' "$record" > "$SKWD_CACHE_CURRENT"
+
+    _update_index_file "$KINGSTRA_INDEX" "$id" "$record"
+    _update_index_file "$SKWD_STATE_INDEX" "$id" "$record"
+    _update_index_file "$SKWD_CACHE_INDEX" "$id" "$record"
+}
+
+_update_wallpaper_state() {
+    local record="$1"
+    local state_file="$STATE_DIR/wallpaper.json"
+    [[ -f "$state_file" ]] || return 0
+
+    local tmp
+    tmp="$(mktemp)"
+    if jq --argjson rec "$record" '.wallhaven = $rec | .tags = ($rec.tag_names // [])' "$state_file" > "$tmp" 2>/dev/null; then
+        mv "$tmp" "$state_file"
+    else
+        rm -f "$tmp"
+        _warn "Kon wallpaper.json niet bijwerken"
+    fi
+}
+
+main() {
+    if [[ -z "$WALLPAPER" ]]; then
+        _warn "Geen wallpaper opgegeven"
+        return 0
+    fi
+
+    WALLPAPER="$(_expand_path "$WALLPAPER")"
+    [[ -f "$WALLPAPER" ]] || { _warn "Wallpaper niet gevonden: $WALLPAPER"; return 0; }
+
+    local id
+    id="$(_wallhaven_id_from_path "$WALLPAPER")"
+    if [[ -z "$id" ]]; then
+        return 0
+    fi
+
+    if ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+        _warn "curl en jq zijn nodig om Wallhaven-tags op te slaan"
+        return 0
+    fi
+
+    local api_key url api_json fetched_at record
+    api_key="$(_read_api_key)"
+    url="https://wallhaven.cc/api/v1/w/$id"
+    if [[ -n "$api_key" ]]; then
+        url="${url}?apikey=${api_key}"
+    fi
+
+    api_json="$(curl -fsSL --connect-timeout 5 --max-time 12 "$url" 2>/dev/null || true)"
+    if [[ -z "$api_json" ]]; then
+        _warn "Geen Wallhaven metadata ontvangen voor id: $id"
+        return 0
+    fi
+
+    fetched_at="$(date -Is)"
+    record="$(jq \
+        --arg path "$WALLPAPER" \
+        --arg fetched_at "$fetched_at" \
+        '
+        .data as $d
+        | {
+            source: "wallhaven",
+            id: ($d.id // ""),
+            url: ($d.url // ""),
+            short_url: ($d.short_url // ""),
+            path: $path,
+            purity: ($d.purity // ""),
+            category: ($d.category // ""),
+            resolution: ($d.resolution // ""),
+            colors: ($d.colors // []),
+            tags: [($d.tags // [])[] | {
+                id: .id,
+                name: .name,
+                alias: (.alias // ""),
+                category_id: (.category_id // null),
+                category: (.category // ""),
+                purity: (.purity // ""),
+                created_at: (.created_at // "")
+            }],
+            tag_names: [($d.tags // [])[] | .name],
+            fetched_at: $fetched_at
+        }
+        ' <<< "$api_json" 2>/dev/null || true)"
+
+    if [[ -z "$record" || "$record" == "null" ]]; then
+        _warn "Kon Wallhaven metadata niet parsen voor id: $id"
+        return 0
+    fi
+
+    _write_record "$record" "$id"
+    _update_wallpaper_state "$record"
+    _log "Wallhaven-tags opgeslagen voor $id"
+}
+
+main "$@"

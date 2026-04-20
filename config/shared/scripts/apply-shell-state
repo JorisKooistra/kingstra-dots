@@ -16,6 +16,7 @@ STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
 MODES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/modes"
 MATUGEN_RUNNER=""
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
+TAGS_SCRIPT="${HOME}/.local/bin/kingstra-wallhaven-tags"
 LOG_PREFIX="[apply-shell-state]"
 VERBOSE=false
 WALLPAPER_ARG=""
@@ -179,6 +180,8 @@ if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
         --arg path "$WALLPAPER" \
         '{"name":$name,"path":$path}' \
         > "$STATE_DIR/wallpaper.json"
+
+    _run_helper "$TAGS_SCRIPT" "$WALLPAPER" >/dev/null 2>&1 || true
 
     jq -n \
         --arg name "$THEME_NAME" \

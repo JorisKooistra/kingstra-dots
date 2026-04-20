@@ -50,6 +50,7 @@ phase_run() {
     validate_file "$HOME/.local/bin/kingstra-wallpaper"    "kingstra-wallpaper"
     validate_file "$HOME/.local/bin/kingstra-skwd-wallpaper-sync" "kingstra-skwd-wallpaper-sync"
     validate_dir  "$HOME/Pictures/Wallpapers"              "Pictures/Wallpapers"
+    validate_file "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper" "last-wallpaper state"
     _phase09_validate_skwd_daemon
     validate_report
 
@@ -258,6 +259,8 @@ _phase09_ensure_wallpaper_dir() {
 
     if [[ "$count" -eq 0 ]]; then
         _phase09_generate_fallback_wallpaper "$wdir"
+    elif [[ ! -f "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper" ]]; then
+        _phase09_set_initial_wallpaper_from_dir "$wdir"
     fi
 }
 
@@ -290,5 +293,49 @@ _phase09_generate_fallback_wallpaper() {
         mkdir -p "$state_dir"
         echo "$out" > "$state_dir/last-wallpaper"
         echo "static"  > "$state_dir/wallpaper-mode"
+        _phase09_apply_initial_wallpaper "$out"
     } || log_warn "Kon geen fallbackwallpaper genereren"
+}
+
+_phase09_set_initial_wallpaper_from_dir() {
+    local wdir="$1"
+    local first_wallpaper
+
+    first_wallpaper="$(find "$wdir" -maxdepth 2 -type f \
+        \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) \
+        2>/dev/null | sort | head -1)"
+
+    if [[ -z "$first_wallpaper" || ! -f "$first_wallpaper" ]]; then
+        return 0
+    fi
+
+    local state_dir="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+    mkdir -p "$state_dir"
+    echo "$first_wallpaper" > "$state_dir/last-wallpaper"
+    echo "static" > "$state_dir/wallpaper-mode"
+    log_ok "Eerste wallpaper ingesteld in state: $first_wallpaper"
+    _phase09_apply_initial_wallpaper "$first_wallpaper"
+}
+
+_phase09_apply_initial_wallpaper() {
+    local wallpaper="$1"
+
+    [[ -f "$wallpaper" ]] || return 0
+
+    if command -v kingstra-wallpaper &>/dev/null; then
+        kingstra-wallpaper set "$wallpaper" >/dev/null 2>&1 && {
+            log_ok "Standaard wallpaper toegepast: $wallpaper"
+            return 0
+        }
+    fi
+
+    if command -v awww &>/dev/null; then
+        if ! pgrep -x awww-daemon >/dev/null 2>&1; then
+            awww-daemon >/dev/null 2>&1 &
+        fi
+        sleep 0.3
+        awww img "$wallpaper" >/dev/null 2>&1 && \
+            log_ok "Standaard wallpaper toegepast via awww: $wallpaper" || \
+            log_warn "Kon standaard wallpaper niet direct toepassen; Hyprland autostart herstelt hem later"
+    fi
 }
