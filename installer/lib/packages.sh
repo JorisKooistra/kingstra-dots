@@ -22,8 +22,11 @@ pacman_install() {
     [[ ${#to_install[@]} -eq 0 ]] && return 0
 
     log_step "pacman installeren: ${to_install[*]}"
-    INSTALL_NEXT_RUN_LABEL="pacman installeren: ${to_install[*]}" \
-        run_cmd sudo pacman -S --needed --noconfirm "${to_install[@]}"
+    if ! INSTALL_NEXT_RUN_LABEL="pacman installeren: ${to_install[*]}" \
+        run_cmd sudo pacman -S --needed --noconfirm "${to_install[@]}"; then
+        _package_install_hint "pacman"
+        return 1
+    fi
 }
 
 # Installeer een lijst van AUR-pakketten
@@ -60,8 +63,11 @@ aur_install() {
         yay)  aur_flags+=(--answerdiff=None --answerclean=None --answeredit=None) ;;
     esac
 
-    PAGER=cat INSTALL_NEXT_RUN_LABEL="$AUR_HELPER installeren: ${to_install[*]}" \
-        run_cmd "$AUR_HELPER" -S "${aur_flags[@]}" "${to_install[@]}"
+    if ! PAGER=cat INSTALL_NEXT_RUN_LABEL="$AUR_HELPER installeren: ${to_install[*]}" \
+        run_cmd "$AUR_HELPER" -S "${aur_flags[@]}" "${to_install[@]}"; then
+        _package_install_hint "$AUR_HELPER"
+        return 1
+    fi
 
     # Herstel terminal-staat voor het geval de AUR-helper toch iets heeft
     # aangepast (alternate screen, mouse reporting, line discipline).
@@ -69,6 +75,20 @@ aur_install() {
         stty sane 2>/dev/null || true
         printf '\033[?1049l\033[?1000l\033[?1002l\033[?1003l\033[?1006l' 2>/dev/null || true
     fi
+}
+
+_package_install_hint() {
+    local tool="$1"
+
+    log_warn "$tool kon pakketten niet installeren."
+    log_warn "Als de uitvoer 'could not resolve host' of 'Could not resolve host' noemt, is dit DNS/netwerk/mirror-resolutie en niet het pakket zelf."
+    log_warn "Controleer eerst netwerk en DNS:"
+    log_warn "  nmcli general status"
+    log_warn "  resolvectl status"
+    log_warn "  getent hosts archlinux.org"
+    log_warn "Daarna pacman database/mirrors verversen:"
+    log_warn "  sudo pacman -Syyu"
+    log_warn "Blijft het fout gaan, ververs mirrors met reflector of kies tijdelijk andere mirrors."
 }
 
 # Installeer pakketten vanuit een manifestbestand
