@@ -50,6 +50,7 @@ phase_run() {
     log_step "Fase 08 valideren..."
     validate_cmd matugen
     validate_dir  "$HOME/.config/matugen/templates"               "matugen/templates/"
+    validate_file "$HOME/.config/matugen/templates/palette-inspector.json" "matugen/templates/palette-inspector.json"
     validate_file "$HOME/.local/bin/kingstra-theme-apply"         "kingstra-theme-apply"
     validate_file "$HOME/.local/bin/kingstra-theme-switch"        "kingstra-theme-switch"
     validate_file "$HOME/.local/bin/kingstra-theme-read"          "kingstra-theme-read"
@@ -245,9 +246,15 @@ output_path = "~/.config/hyprlock/hyprlock.conf"
 [templates.omp]
 input_path = "~/.config/matugen/templates/zsh-omp-colors.toml"
 output_path = "~/.config/zsh/omp-colors.toml"
+
+[templates.palette_inspector]
+input_path = "~/.config/matugen/templates/palette-inspector.json"
+output_path = "~/.config/kingstra/state/matugen-palette.json"
 EOF
         log_ok "Matugen baseline config aangemaakt: $matugen_conf"
     fi
+
+    _phase08_ensure_palette_inspector_template "$matugen_conf"
 
     # 2) Quickshell colors fallback (valid JSON)
     if [[ ! -f "$qs_colors" ]]; then
@@ -318,6 +325,23 @@ $shadow_color    = rgba(11111bcc)
 EOF
         log_ok "Hypr fallback colors aangemaakt: $hypr_colors"
     fi
+}
+
+_phase08_ensure_palette_inspector_template() {
+    local matugen_conf="$1"
+    [[ -f "$matugen_conf" ]] || return 0
+
+    if grep -Eq '^[[:space:]]*\[templates\.palette_inspector\][[:space:]]*$' "$matugen_conf"; then
+        return 0
+    fi
+
+    cat >> "$matugen_conf" <<'EOF'
+
+[templates.palette_inspector]
+input_path = "~/.config/matugen/templates/palette-inspector.json"
+output_path = "~/.config/kingstra/state/matugen-palette.json"
+EOF
+    log_ok "Matugen palette-inspector template toegevoegd: $matugen_conf"
 }
 
 _phase08_install_game_launcher() {

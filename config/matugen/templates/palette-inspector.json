@@ -1,0 +1,48 @@
+{
+  "_comment": "Automatisch gegenereerd door matugen. Inspectiepalette voor styling/debugging.",
+  "colors": [
+    { "key": "primary", "label": "Primary", "hex": "{{colors.primary.default.hex}}" },
+    { "key": "on_primary", "label": "On primary", "hex": "{{colors.on_primary.default.hex}}" },
+    { "key": "primary_container", "label": "Primary container", "hex": "{{colors.primary_container.default.hex}}" },
+    { "key": "on_primary_container", "label": "On primary container", "hex": "{{colors.on_primary_container.default.hex}}" },
+
+    { "key": "secondary", "label": "Secondary", "hex": "{{colors.secondary.default.hex}}" },
+    { "key": "on_secondary", "label": "On secondary", "hex": "{{colors.on_secondary.default.hex}}" },
+    { "key": "secondary_container", "label": "Secondary container", "hex": "{{colors.secondary_container.default.hex}}" },
+    { "key": "on_secondary_container", "label": "On secondary container", "hex": "{{colors.on_secondary_container.default.hex}}" },
+
+    { "key": "tertiary", "label": "Tertiary", "hex": "{{colors.tertiary.default.hex}}" },
+    { "key": "on_tertiary", "label": "On tertiary", "hex": "{{colors.on_tertiary.default.hex}}" },
+    { "key": "tertiary_container", "label": "Tertiary container", "hex": "{{colors.tertiary_container.default.hex}}" },
+    { "key": "on_tertiary_container", "label": "On tertiary container", "hex": "{{colors.on_tertiary_container.default.hex}}" },
+
+    { "key": "error", "label": "Error", "hex": "{{colors.error.default.hex}}" },
+    { "key": "on_error", "label": "On error", "hex": "{{colors.on_error.default.hex}}" },
+    { "key": "error_container", "label": "Error container", "hex": "{{colors.error_container.default.hex}}" },
+    { "key": "on_error_container", "label": "On error container", "hex": "{{colors.on_error_container.default.hex}}" },
+
+    { "key": "background", "label": "Background", "hex": "{{colors.background.default.hex}}" },
+    { "key": "on_background", "label": "On background", "hex": "{{colors.on_background.default.hex}}" },
+    { "key": "surface", "label": "Surface", "hex": "{{colors.surface.default.hex}}" },
+    { "key": "on_surface", "label": "On surface", "hex": "{{colors.on_surface.default.hex}}" },
+    { "key": "surface_variant", "label": "Surface variant", "hex": "{{colors.surface_variant.default.hex}}" },
+    { "key": "on_surface_variant", "label": "On surface variant", "hex": "{{colors.on_surface_variant.default.hex}}" },
+
+    { "key": "outline", "label": "Outline", "hex": "{{colors.outline.default.hex}}" },
+    { "key": "outline_variant", "label": "Outline variant", "hex": "{{colors.outline_variant.default.hex}}" },
+    { "key": "shadow", "label": "Shadow", "hex": "{{colors.shadow.default.hex}}" },
+    { "key": "scrim", "label": "Scrim", "hex": "{{colors.scrim.default.hex}}" },
+
+    { "key": "inverse_surface", "label": "Inverse surface", "hex": "{{colors.inverse_surface.default.hex}}" },
+    { "key": "inverse_on_surface", "label": "Inverse on surface", "hex": "{{colors.inverse_on_surface.default.hex}}" },
+    { "key": "inverse_primary", "label": "Inverse primary", "hex": "{{colors.inverse_primary.default.hex}}" },
+
+    { "key": "surface_dim", "label": "Surface dim", "hex": "{{colors.surface_dim.default.hex}}" },
+    { "key": "surface_bright", "label": "Surface bright", "hex": "{{colors.surface_bright.default.hex}}" },
+    { "key": "surface_container_lowest", "label": "Surface container lowest", "hex": "{{colors.surface_container_lowest.default.hex}}" },
+    { "key": "surface_container_low", "label": "Surface container low", "hex": "{{colors.surface_container_low.default.hex}}" },
+    { "key": "surface_container", "label": "Surface container", "hex": "{{colors.surface_container.default.hex}}" },
+    { "key": "surface_container_high", "label": "Surface container high", "hex": "{{colors.surface_container_high.default.hex}}" },
+    { "key": "surface_container_highest", "label": "Surface container highest", "hex": "{{colors.surface_container_highest.default.hex}}" }
+  ]
+}
