@@ -5,8 +5,7 @@
 
 phase_run() {
     log_step "Walker + Elephant installeren..."
-    _phase07_warn_source_conflicts
-    aur_install elephant-bin walker
+    _phase07_install_launcher
 
     log_step "Walker config deployen..."
     deploy_config "walker"
@@ -21,7 +20,41 @@ phase_run() {
     log_step "Weather API configureren..."
     _phase07_weather_setup
 
-    log_ok "Fase 07 voltooid — Walker + Elephant-bin geïnstalleerd (Super+Ctrl+Return)."
+    log_ok "Fase 07 voltooid — Walker + Elephant geïnstalleerd (Super+Ctrl+Return)."
+}
+
+_phase07_install_launcher() {
+    local elephant_pkg="elephant-bin"
+
+    if _phase07_has_installed_source_elephant; then
+        log_warn "Elephant bronpakket staat al geïnstalleerd; gebruik bestaande route om conflicts te voorkomen"
+        elephant_pkg="elephant"
+    else
+        _phase07_warn_source_conflicts
+    fi
+
+    if aur_install "$elephant_pkg" walker; then
+        return 0
+    fi
+
+    if [[ "$elephant_pkg" == "elephant-bin" ]]; then
+        log_warn "Installatie van elephant-bin + walker faalde; fallback naar elephant + walker"
+        log_warn "Dit is trager, maar voorkomt dat een clean install hard stopt op de bin-package."
+        aur_install elephant walker
+        return $?
+    fi
+
+    return 1
+}
+
+_phase07_has_installed_source_elephant() {
+    local pkg
+    for pkg in elephant elephant-desktopapplications elephant-providerlist elephant-runner elephant-symbols elephant-calc elephant-clipboard elephant-files; do
+        if pacman -Qi "$pkg" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+    return 1
 }
 
 _phase07_warn_source_conflicts() {
