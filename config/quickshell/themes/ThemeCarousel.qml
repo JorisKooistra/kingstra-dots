@@ -132,8 +132,8 @@ Item {
     function stepToIndex(direction) {
         if (themeModel.count === 0) return;
         let newIdx = view.currentIndex + direction;
-        if (newIdx < 0) newIdx = 0;
-        if (newIdx >= themeModel.count) newIdx = themeModel.count - 1;
+        if (newIdx < 0) newIdx = themeModel.count - 1;
+        if (newIdx >= themeModel.count) newIdx = 0;
         view.currentIndex = newIdx;
     }
 

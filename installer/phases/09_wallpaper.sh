@@ -23,6 +23,9 @@ phase_run() {
     log_step "skwd-wall config aanmaken..."
     _phase09_write_skwd_wall_config
 
+    log_step "skwd-wall Kingstra-overlay toepassen..."
+    _phase09_apply_skwd_overlay
+
     log_step "skwd-wall user-service activeren..."
     _phase09_enable_skwd_daemon
 
@@ -49,6 +52,7 @@ phase_run() {
     validate_file "$HOME/.config/skwd-wall/config.json"    "skwd-wall/config.json"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"    "kingstra-wallpaper"
     validate_file "$HOME/.local/bin/kingstra-skwd-wallpaper-sync" "kingstra-skwd-wallpaper-sync"
+    validate_file "${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/skwd-wall-overlay/shell.qml" "skwd-wall Kingstra overlay"
     validate_dir  "$HOME/Pictures/Wallpapers"              "Pictures/Wallpapers"
     validate_file "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper" "last-wallpaper state"
     _phase09_validate_skwd_daemon
@@ -136,6 +140,27 @@ EOF
     _phase09_disable_skwd_matugen "$config_dest"
 }
 
+_phase09_apply_skwd_overlay() {
+    local patch_src="$REPO_ROOT/config/wallpaper/kingstra-skwd-wall-overlay-patch"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "skwd-wall overlay patch zou worden uitgevoerd: $patch_src"
+        return 0
+    fi
+
+    if [[ ! -f "$patch_src" ]]; then
+        log_warn "skwd-wall overlay patch ontbreekt: $patch_src"
+        return 0
+    fi
+
+    chmod +x "$patch_src"
+    if "$patch_src"; then
+        log_ok "skwd-wall Kingstra-overlay actief"
+    else
+        log_warn "skwd-wall Kingstra-overlay kon niet worden toegepast"
+    fi
+}
+
 _phase09_enable_skwd_daemon() {
     if "${DRY_RUN:-false}"; then
         log_dry "skwd-daemon.service zou worden ingeschakeld"
@@ -148,6 +173,7 @@ _phase09_enable_skwd_daemon() {
     fi
 
     if systemctl --user enable --now skwd-daemon.service >/dev/null 2>&1; then
+        systemctl --user restart skwd-daemon.service >/dev/null 2>&1 || true
         log_ok "skwd-daemon.service actief"
     else
         log_warn "Kon skwd-daemon.service niet direct starten — Hyprland autostart probeert dit opnieuw"

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-skwd-wall-overlay-patch
+# -----------------------------------------------------------------------------
+# Builds a user-owned skwd-wall QML overlay and points skwd-daemon at it.
+# This keeps Kingstra UI tweaks installer-managed without modifying /usr/share.
+# =============================================================================
+set -euo pipefail
+
+SRC_DIR="${SKWD_WALL_SYSTEM_DIR:-/usr/share/skwd-wall}"
+OVERLAY_DIR="${SKWD_WALL_OVERLAY_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/skwd-wall-overlay}"
+SERVICE_OVERRIDE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/skwd-daemon.service.d"
+SERVICE_OVERRIDE="$SERVICE_OVERRIDE_DIR/10-kingstra-overlay.conf"
+
+_log() { printf '[kingstra-skwd-overlay] %s\n' "$*"; }
+_warn() { printf '[kingstra-skwd-overlay] WARN: %s\n' "$*" >&2; }
+
+if [[ ! -f "$SRC_DIR/shell.qml" ]]; then
+    _warn "skwd-wall system QML niet gevonden: $SRC_DIR"
+    exit 0
+fi
+
+rm -rf "$OVERLAY_DIR"
+mkdir -p "$(dirname "$OVERLAY_DIR")"
+cp -a "$SRC_DIR" "$OVERLAY_DIR"
+
+python3 - "$OVERLAY_DIR" <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+
+def patch(path, replacements):
+    file_path = root / path
+    text = file_path.read_text()
+    original = text
+    for old, new in replacements:
+        if old not in text:
+            raise SystemExit(f"patch anchor not found in {file_path}: {old[:120]!r}")
+        text = text.replace(old, new, 1)
+    if text != original:
+        file_path.write_text(text)
+
+patch("qml/wallpaper/WallpaperSelectorService.qml", [
+    (
+        "  property var filteredModel: ListModel {}\n\n  signal modelUpdated()\n",
+        """  property var filteredModel: ListModel {}\n  property var sliceLoopModel: ListModel {}\n  property int sliceLoopBaseCount: 0\n  property string currentWallpaperPath: \"\"\n  property string currentWallpaperName: \"\"\n\n  property var _currentWallpaperState: FileView {\n    path: service.cacheBaseDir + \"/last-wallpaper.json\"\n    preload: true\n    watchChanges: true\n    onLoaded: service._refreshCurrentWallpaperState()\n    onFileChanged: { reload(); service._refreshCurrentWallpaperState() }\n  }\n\n  function _basename(path) {\n    var value = String(path || \"\")\n    var slash = value.lastIndexOf(\"/\")\n    return slash >= 0 ? value.substring(slash + 1) : value\n  }\n\n  function _refreshCurrentWallpaperState() {\n    var text = \"\"\n    try { text = _currentWallpaperState.text().trim() } catch(e) { text = \"\" }\n    if (!text) return\n    try {\n      var state = JSON.parse(text)\n      currentWallpaperPath = state.path || \"\"\n      currentWallpaperName = state.we_id || _basename(currentWallpaperPath)\n    } catch(e) {}\n  }\n\n  signal modelUpdated()\n""",
+    ),
+    (
+        "  function commitFilteredModel() {\n    filteredModel.clear()\n    if (_pendingItems.length > 0) filteredModel.append(_pendingItems)\n    _pendingItems = []\n    modelUpdated()\n  }\n",
+        """  function commitFilteredModel() {\n    filteredModel.clear()\n    sliceLoopModel.clear()\n    sliceLoopBaseCount = _pendingItems.length\n\n    if (_pendingItems.length > 0) {\n      filteredModel.append(_pendingItems)\n      if (_pendingItems.length === 1) {\n        sliceLoopModel.append(_pendingItems)\n      } else {\n        for (var pass = 0; pass < 3; pass++)\n          sliceLoopModel.append(_pendingItems)\n      }\n    }\n\n    _pendingItems = []\n    modelUpdated()\n  }\n""",
+    ),
+])
+
+patch("qml/wallpaper/WallpaperSelector.qml", [
+    (
+        "  function resetScroll() {\n    wallpaperSelector.lastContentX = 0\n    wallpaperSelector.lastIndex = 0\n    sliceListView.currentIndex = 0\n    if (service.filteredModel.count > 0)\n      sliceListView.positionViewAtIndex(0, ListView.Center)\n  }\n",
+        """  function _baseIndexForSliceIndex(idx) {\n    var base = service.sliceLoopBaseCount || service.filteredModel.count\n    if (base <= 0) return 0\n    var value = idx % base\n    return value < 0 ? value + base : value\n  }\n\n  function _sliceIndexForBase(baseIdx) {\n    var base = service.sliceLoopBaseCount || service.filteredModel.count\n    if (base <= 1) return Math.max(0, baseIdx)\n    return base + Math.max(0, Math.min(base - 1, baseIdx))\n  }\n\n  function _currentWallpaperBaseIndex() {\n    var currentPath = service.currentWallpaperPath || \"\"\n    var currentName = service.currentWallpaperName || \"\"\n    if (currentPath === \"\" && currentName === \"\") return -1\n\n    for (var i = 0; i < service.filteredModel.count; i++) {\n      var item = service.filteredModel.get(i)\n      if ((currentPath !== \"\" && item.path === currentPath) ||\n          (currentName !== \"\" && (item.name === currentName || item.weId === currentName)))\n        return i\n    }\n    return -1\n  }\n\n  function _preferredSliceIndex(fallbackIdx) {\n    var currentIdx = _currentWallpaperBaseIndex()\n    if (currentIdx >= 0) return _sliceIndexForBase(currentIdx)\n    return _sliceIndexForBase(_baseIndexForSliceIndex(fallbackIdx))\n  }\n\n  function resetScroll() {\n    wallpaperSelector.lastContentX = 0\n    wallpaperSelector.lastIndex = _sliceIndexForBase(0)\n    sliceListView.currentIndex = wallpaperSelector.lastIndex\n    if (service.sliceLoopModel.count > 0)\n      sliceListView.positionViewAtIndex(wallpaperSelector.lastIndex, ListView.Center)\n  }\n""",
+    ),
+    (
+        "        var idx = 0\n        if (wallpaperSelector._restorePending) {\n          wallpaperSelector._restorePending = false\n          if (Config.reopenAtLastSelection)\n            idx = Math.min(wallpaperSelector.lastIndex, service.filteredModel.count - 1)\n        } else if (wallpaperSelector.showing && wallpaperSelector._preCommitIndex >= 0) {\n          idx = Math.min(wallpaperSelector._preCommitIndex, service.filteredModel.count - 1)\n        }\n        wallpaperSelector._preCommitIndex = -1\n        sliceListView.currentIndex = idx\n        _positionTimer.posIdx = idx\n",
+        """        var idx = 0\n        if (wallpaperSelector._restorePending) {\n          wallpaperSelector._restorePending = false\n          if (Config.reopenAtLastSelection)\n            idx = Math.min(wallpaperSelector.lastIndex, service.sliceLoopModel.count - 1)\n        } else if (wallpaperSelector.showing && wallpaperSelector._preCommitIndex >= 0) {\n          idx = Math.min(wallpaperSelector._preCommitIndex, service.sliceLoopModel.count - 1)\n        }\n        idx = wallpaperSelector._preferredSliceIndex(idx)\n        wallpaperSelector._preCommitIndex = -1\n        sliceListView.currentIndex = idx\n        _positionTimer.posIdx = idx\n""",
+    ),
+    (
+        "      sliceListView.model = Qt.binding(function() { return service.filteredModel })\n      sliceListView.cacheBuffer = wallpaperSelector.expandedWidth\n      _positionTimer.posIdx = Math.min(Math.max(0, sliceListView.currentIndex), Math.max(0, (service.filteredModel ? service.filteredModel.count : 1) - 1))\n",
+        """      sliceListView.model = Qt.binding(function() { return service.sliceLoopModel })\n      sliceListView.cacheBuffer = wallpaperSelector.expandedWidth\n      _positionTimer.posIdx = Math.min(Math.max(0, sliceListView.currentIndex), Math.max(0, (service.sliceLoopModel ? service.sliceLoopModel.count : 1) - 1))\n""",
+    ),
+    (
+        "      model: service.filteredModel\n",
+        "      model: service.sliceLoopModel\n",
+    ),
+    (
+        "            sliceListView.currentIndex = Math.max(0, sliceListView.currentIndex - step)\n",
+        "            sliceListView.stepWrapped(-step)\n",
+    ),
+    (
+        "            sliceListView.currentIndex = Math.min(service.filteredModel.count - 1, sliceListView.currentIndex + step)\n",
+        "            sliceListView.stepWrapped(step)\n",
+    ),
+    (
+        "      Keys.onReturnPressed: {\n        if (currentIndex >= 0 && currentIndex < service.filteredModel.count) {\n          const item = service.filteredModel.get(currentIndex)\n          wallpaperSelector._applyItem(item)\n        }\n      }\n",
+        """      Keys.onReturnPressed: {\n        if (currentIndex >= 0 && currentIndex < sliceListView.count) {\n          const item = sliceListView.model.get(currentIndex)\n          wallpaperSelector._applyItem(item)\n        }\n      }\n""",
+    ),
+    (
+        "      Keys.onPressed: function(event) {\n\n        if (event.modifiers & Qt.ShiftModifier) {\n",
+        """      function stepWrapped(delta) {\n        var count = sliceListView.count\n        var base = service.sliceLoopBaseCount || count\n        if (count <= 0) return\n        if (count === 1) { currentIndex = 0; return }\n        var next = currentIndex + delta\n        if (next < 0) next = (base > 1 ? (base * 2 - 1) : count - 1)\n        else if (next >= count) next = (base > 1 ? base : 0)\n        currentIndex = Math.max(0, Math.min(count - 1, next))\n      }\n\n      Keys.onPressed: function(event) {\n\n        if (event.modifiers & Qt.ShiftModifier) {\n""",
+    ),
+    (
+        "          if (currentIndex > 0) {\n            currentIndex--\n          }\n",
+        "          sliceListView.stepWrapped(-1)\n",
+    ),
+    (
+        "          if (currentIndex < service.filteredModel.count - 1) {\n            currentIndex++\n          }\n",
+        "          sliceListView.stepWrapped(1)\n",
+    ),
+    (
+        "            hexListView.currentIndex = Math.max(0, hexListView.currentIndex - step)\n            hexListView._selectedCol = hexListView.currentIndex\n",
+        "            hexListView.currentIndex = hexListView.count > 0 ? (hexListView.currentIndex - step + hexListView.count) % hexListView.count : 0\n            hexListView._selectedCol = hexListView.currentIndex\n",
+    ),
+    (
+        "            hexListView.currentIndex = Math.min(hexListView.count - 1, hexListView.currentIndex + step)\n            hexListView._selectedCol = hexListView.currentIndex\n",
+        "            hexListView.currentIndex = hexListView.count > 0 ? (hexListView.currentIndex + step) % hexListView.count : 0\n            hexListView._selectedCol = hexListView.currentIndex\n",
+    ),
+    (
+        "          if (currentIndex > 0) { currentIndex--; _selectedCol = currentIndex }\n",
+        "          if (count > 0) { currentIndex = (currentIndex - 1 + count) % count; _selectedCol = currentIndex }\n",
+    ),
+    (
+        "          if (currentIndex < count - 1) { currentIndex++; _selectedCol = currentIndex }\n",
+        "          if (count > 0) { currentIndex = (currentIndex + 1) % count; _selectedCol = currentIndex }\n",
+    ),
+    (
+        "        if (currentIndex > 0) {\n          currentIndex--\n          hoveredIdx = currentIndex\n          _ensureVisible(currentIndex)\n        }\n",
+        """        if (count > 0) {\n          currentIndex = (currentIndex - 1 + count) % count\n          hoveredIdx = currentIndex\n          _ensureVisible(currentIndex)\n        }\n""",
+    ),
+    (
+        "        if (currentIndex < count - 1) {\n          currentIndex++\n          hoveredIdx = currentIndex\n          _ensureVisible(currentIndex)\n        }\n",
+        """        if (count > 0) {\n          currentIndex = (currentIndex + 1) % count\n          hoveredIdx = currentIndex\n          _ensureVisible(currentIndex)\n        }\n""",
+    ),
+])
+PY
+
+mkdir -p "$SERVICE_OVERRIDE_DIR"
+cat > "$SERVICE_OVERRIDE" <<EOF
+[Service]
+Environment=SKWD_SHELL_QML=$OVERLAY_DIR/shell.qml
+EOF
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+fi
+
+_log "overlay bijgewerkt: $OVERLAY_DIR"
+_log "service override: $SERVICE_OVERRIDE"

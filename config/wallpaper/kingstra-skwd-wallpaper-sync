@@ -122,6 +122,28 @@ _run_helper() {
     fi
 }
 
+_sync_skwd_current_wallpaper() {
+    local wallpaper="$1"
+    [[ -n "$wallpaper" && -f "$wallpaper" ]] || return 0
+
+    local skwd_cache="${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall"
+    mkdir -p "$skwd_cache"
+
+    local type="static"
+    case "${wallpaper##*.}" in
+        mp4|MP4|mkv|MKV|mov|MOV|webm|WEBM) type="video" ;;
+    esac
+
+    if command -v jq >/dev/null 2>&1; then
+        jq -n --arg path "$wallpaper" --arg type "$type" \
+            '{"path":$path,"type":$type}' \
+            > "$skwd_cache/last-wallpaper.json" 2>/dev/null || true
+    else
+        printf '{"path":"%s","type":"%s"}\n' "$wallpaper" "$type" \
+            > "$skwd_cache/last-wallpaper.json" 2>/dev/null || true
+    fi
+}
+
 _open_picker() {
     local opened=false
 
@@ -186,6 +208,7 @@ fi
 
 _sync_skwd_config
 before_wallpaper="$(_current_wallpaper)"
+_sync_skwd_current_wallpaper "$before_wallpaper"
 
 _open_picker || exit 1
 "$0" --watch "$before_wallpaper" >/dev/null 2>&1 &
