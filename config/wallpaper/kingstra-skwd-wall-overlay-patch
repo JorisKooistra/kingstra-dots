@@ -152,11 +152,11 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
     ),
     (
         "            hexListView.currentIndex = Math.max(0, hexListView.currentIndex - step)\n            hexListView._selectedCol = hexListView.currentIndex\n",
-        "            hexListView.currentIndex = hexListView.count > 0 ? (hexListView.currentIndex - step + hexListView.count) % hexListView.count : 0\n            hexListView._selectedCol = hexListView.currentIndex\n",
+        "            hexListView.stepWrapped(-step)\n",
     ),
     (
         "            hexListView.currentIndex = Math.min(hexListView.count - 1, hexListView.currentIndex + step)\n            hexListView._selectedCol = hexListView.currentIndex\n",
-        "            hexListView.currentIndex = hexListView.count > 0 ? (hexListView.currentIndex + step) % hexListView.count : 0\n            hexListView._selectedCol = hexListView.currentIndex\n",
+        "            hexListView.stepWrapped(step)\n",
     ),
     (
         "          if (Config.reopenAtLastSelection && wallpaperSelector.lastHexCol >= 0) {\n            startCol = Math.min(wallpaperSelector.lastHexCol, count - 1)\n            if (startCol >= 0) { currentIndex = startCol; _selectedCol = startCol; _selectedRow = wallpaperSelector.lastHexRow }\n            _restored = true\n          } else {\n            startCol = Math.min(Math.floor(wallpaperSelector.hexCols / 2), count - 1)\n            if (startCol >= 0) { currentIndex = startCol; _selectedCol = startCol; _selectedRow = 0 }\n          }\n",
@@ -191,12 +191,39 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
 """,
     ),
     (
+        "      property int _selectedRow: 0\n\n      Keys.onPressed: function(event) {\n",
+        """      property int _selectedRow: 0
+
+      function stepWrapped(delta) {
+        var base = service.filteredModel.count
+        var rows = Math.max(1, _rows)
+        var count = hexListView.count
+        if (base <= 0 || count <= 0) return
+        if (base === 1) { currentIndex = 0; _selectedCol = 0; _selectedRow = 0; return }
+
+        var baseCols = Math.max(1, Math.ceil(base / rows))
+        var next = currentIndex + delta
+        if (next < baseCols || next >= count - baseCols) {
+          var nextFlat = next * rows + _selectedRow
+          var visual = wallpaperSelector._sliceIndexForBase(wallpaperSelector._baseIndexForSliceIndex(nextFlat))
+          next = Math.floor(visual / rows)
+          _selectedRow = visual % rows
+        }
+
+        currentIndex = Math.max(0, Math.min(count - 1, next))
+        _selectedCol = currentIndex
+      }
+
+      Keys.onPressed: function(event) {
+""",
+    ),
+    (
         "          if (currentIndex > 0) { currentIndex--; _selectedCol = currentIndex }\n",
-        "          if (count > 0) { currentIndex = (currentIndex - 1 + count) % count; _selectedCol = currentIndex }\n",
+        "          hexListView.stepWrapped(-1)\n",
     ),
     (
         "          if (currentIndex < count - 1) { currentIndex++; _selectedCol = currentIndex }\n",
-        "          if (count > 0) { currentIndex = (currentIndex + 1) % count; _selectedCol = currentIndex }\n",
+        "          hexListView.stepWrapped(1)\n",
     ),
     (
         "        if (currentIndex > 0) {\n          currentIndex--\n          hoveredIdx = currentIndex\n          _ensureVisible(currentIndex)\n        }\n",
