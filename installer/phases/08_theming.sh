@@ -20,6 +20,9 @@ phase_run() {
     log_step "Thema- en mode-bestanden deployen..."
     deploy_config "kingstra"
 
+    log_step "Qt6ct config deployen..."
+    deploy_config "qt6ct"
+
     log_step "Apply-script deployen..."
     _phase08_deploy_apply_script
 

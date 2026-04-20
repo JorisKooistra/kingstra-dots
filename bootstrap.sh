@@ -223,6 +223,27 @@ _detect_repo_ref() {
     [[ -n "$REPO_REF" ]] || REPO_REF="main"
 }
 
+_ensure_bootstrap_packages() {
+    local -a missing=()
+
+    command -v git  &>/dev/null || missing+=("git")
+    command -v curl &>/dev/null || missing+=("curl")
+
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    if "$DRY_RUN"; then
+        _warn "Ontbrekende bootstrap-pakketten: ${missing[*]}"
+        _warn "Dry-run: deze zouden worden geïnstalleerd met pacman."
+        return 0
+    fi
+
+    command -v sudo &>/dev/null || _die "sudo niet gevonden. Installeer sudo en probeer opnieuw."
+    _log "Bootstrap-pakketten installeren: ${missing[*]}"
+    sudo pacman -S --needed --noconfirm "${missing[@]}" || _die "Kon bootstrap-pakketten niet installeren: ${missing[*]}"
+}
+
 _ensure_aur_helper() {
     if command -v yay &>/dev/null; then
         _ok "AUR-helper gevonden: yay"
@@ -316,14 +337,13 @@ _parse_bootstrap_flags "$@"
 
 _log "Vereisten controleren..."
 [[ -f /etc/arch-release ]] || _die "Alleen Arch Linux wordt ondersteund."
-command -v git  &>/dev/null || _die "git niet gevonden. Installeer met: sudo pacman -S git"
-command -v curl &>/dev/null || _die "curl niet gevonden. Installeer met: sudo pacman -S curl"
 command -v bash &>/dev/null || _die "bash niet gevonden."
 
 if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) )); then
     _die "bash 4.4+ vereist (huidig: $BASH_VERSION)"
 fi
 
+_ensure_bootstrap_packages
 _run_bootstrap_wizard
 
 _ensure_aur_helper

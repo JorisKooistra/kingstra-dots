@@ -33,7 +33,7 @@ phase_run() {
 
 _phase15_validate_commands() {
     # Kern
-    validate_cmd hyprland
+    validate_cmd Hyprland
     validate_cmd hyprctl
     validate_cmd awww
     validate_cmd hypridle
@@ -187,6 +187,11 @@ _phase15_print_next_steps() {
 _phase15_prompt_reboot() {
     if "${DRY_RUN:-false}"; then
         log_dry "Herstart-prompt zou verschijnen"
+        return 0
+    fi
+
+    if "${SKIP_CONFIRM:-false}" || [[ ! -t 0 ]]; then
+        log_info "Herstart later met: sudo reboot"
         return 0
     fi
 

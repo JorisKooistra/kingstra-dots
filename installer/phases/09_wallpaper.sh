@@ -32,6 +32,9 @@ phase_run() {
     log_step "Videowallpaper-pakket installeren (mpvpaper)..."
     _phase09_install_mpvpaper
 
+    log_step "Hyprpaper fallback-config deployen..."
+    deploy_config "hyprpaper"
+
     log_step "Wallpaper-orchestrator deployen..."
     _phase09_deploy_orchestrator
 
