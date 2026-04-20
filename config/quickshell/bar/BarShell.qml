@@ -3,7 +3,6 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import Quickshell.Bluetooth
-import Quickshell.Networking
 import Quickshell.Services.UPower
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
@@ -285,33 +284,11 @@ Variants {
             property string kbLayout: "US"
             property int kbLayoutCount: 1
             
-            // WiFi — Quickshell.Networking (event-driven)
-            readonly property var _wifiDevice: {
-                var devs = Networking.devices.values;
-                for (var i = 0; i < devs.length; i++) {
-                    if (devs[i].type === DeviceType.Wifi) return devs[i];
-                }
-                return null;
-            }
-            readonly property var _wifiNetwork: {
-                if (!_wifiDevice) return null;
-                var nets = _wifiDevice.networks.values;
-                for (var i = 0; i < nets.length; i++) {
-                    if (nets[i].connected) return nets[i];
-                }
-                return null;
-            }
-            readonly property bool isWifiOn: _wifiDevice ? _wifiDevice.connected : false
-            readonly property string wifiSsid: _wifiNetwork ? _wifiNetwork.name : ""
-            readonly property string wifiIcon: {
-                if (!_wifiDevice || !isWifiOn) return "󰤮";
-                var sig = _wifiNetwork ? _wifiNetwork.signalStrength : 0;
-                if (sig >= 0.80) return "󰤨";
-                if (sig >= 0.60) return "󰤥";
-                if (sig >= 0.40) return "󰤢";
-                if (sig >= 0.20) return "󰤟";
-                return "󰤯";
-            }
+            // WiFi — via sys_info.sh. Niet elke Quickshell build levert
+            // Quickshell.Networking mee; nmcli/procfs houdt de bar portable.
+            property bool isWifiOn: false
+            property string wifiSsid: ""
+            property string wifiIcon: "󰤮"
 
             // Bluetooth — Quickshell.Bluetooth (event-driven)
             readonly property bool isBtOn: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
@@ -458,6 +435,11 @@ Variants {
                                     let nextCount = parseInt(data.keyboard.count || 1);
                                     barWindow.kbLayout = nextLayout;
                                     barWindow.kbLayoutCount = isNaN(nextCount) ? 1 : nextCount;
+                                }
+                                if (data.wifi) {
+                                    barWindow.isWifiOn = data.wifi.status === "enabled" && String(data.wifi.ssid || "") !== "";
+                                    barWindow.wifiSsid = data.wifi.ssid || "";
+                                    barWindow.wifiIcon = data.wifi.icon || "󰤮";
                                 }
                                 barWindow.sysPollerLoaded = true;
                                 barWindow.fastPollerLoaded = true;
