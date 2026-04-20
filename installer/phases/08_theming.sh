@@ -236,6 +236,10 @@ output_path = "~/.config/qt6ct/colors/matugen.conf"
 input_path = "~/.config/matugen/templates/yazi-theme.toml"
 output_path = "~/.config/yazi/theme.toml"
 
+[templates.hyprlock]
+input_path = "~/.config/matugen/templates/hyprlock.conf"
+output_path = "~/.config/hyprlock/hyprlock.conf"
+
 [templates.omp]
 input_path = "~/.config/matugen/templates/zsh-omp-colors.toml"
 output_path = "~/.config/zsh/omp-colors.toml"

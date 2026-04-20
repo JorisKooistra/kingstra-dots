@@ -87,7 +87,6 @@ _phase10_install_sddm_theme() {
 _phase10_generate_hyprlock() {
     local hyprlock_dir="$HOME/.config/hyprlock"
     local hyprlock_conf="$hyprlock_dir/hyprlock.conf"
-    local template_src="$REPO_ROOT/config/matugen/templates/hyprlock.conf"
 
     if "${DRY_RUN:-false}"; then
         log_dry "Hyprlock-config zou worden gegenereerd via matugen → $hyprlock_conf"
@@ -95,16 +94,22 @@ _phase10_generate_hyprlock() {
     fi
 
     ensure_dir "$hyprlock_dir"
+    _phase10_ensure_hyprlock_matugen_template
 
     # Controleer of matugen beschikbaar is en al kleuren heeft gegenereerd
     if command -v kingstra-theme-apply &>/dev/null; then
         local state_file="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
         if [[ -f "$state_file" ]] && [[ -f "$(cat "$state_file")" ]]; then
             log_step "Matugen uitvoeren voor hyprlock kleuren..."
-            kingstra-theme-apply --reload 2>/dev/null && {
-                log_ok "Hyprlock-config gegenereerd via matugen"
-                return 0
-            }
+            if kingstra-theme-apply --reload 2>/dev/null; then
+                if [[ -f "$hyprlock_conf" ]]; then
+                    log_ok "Hyprlock-config gegenereerd via matugen"
+                    return 0
+                fi
+                log_warn "Matugen heeft geen hyprlock.conf geschreven — fallback wordt gebruikt"
+            else
+                log_warn "Matugen-run voor hyprlock mislukt — fallback wordt gebruikt"
+            fi
         fi
     fi
 
@@ -197,6 +202,44 @@ input-field {
 }
 EOF
     log_ok "Hyprlock fallback-config aangemaakt: $dest"
+}
+
+_phase10_ensure_hyprlock_matugen_template() {
+    local matugen_conf="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
+    local template_src="$REPO_ROOT/config/matugen/templates/hyprlock.conf"
+    local output_dest="${XDG_CONFIG_HOME:-$HOME/.config}/hyprlock/hyprlock.conf"
+
+    ensure_dir "$(dirname "$matugen_conf")"
+    ensure_dir "$(dirname "$output_dest")"
+
+    if [[ ! -f "$matugen_conf" ]]; then
+        cat > "$matugen_conf" <<EOF
+scheme_type = "scheme-tonal-spot"
+color_index = 0
+mode = "dark"
+
+[config]
+
+[templates.hyprlock]
+input_path = "$template_src"
+output_path = "$output_dest"
+EOF
+        log_ok "Matugen config aangemaakt met hyprlock-template: $matugen_conf"
+        return 0
+    fi
+
+    if grep -Eq '^[[:space:]]*\[templates\.hyprlock\][[:space:]]*$' "$matugen_conf"; then
+        log_info "Matugen hyprlock-template bestaat al"
+        return 0
+    fi
+
+    cat >> "$matugen_conf" <<EOF
+
+[templates.hyprlock]
+input_path = "$template_src"
+output_path = "$output_dest"
+EOF
+    log_ok "Matugen hyprlock-template toegevoegd: $matugen_conf"
 }
 
 _phase10_deploy_sddm_config() {
