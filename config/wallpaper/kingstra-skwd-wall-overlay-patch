@@ -111,6 +111,10 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
         "      hexListView.model = Qt.binding(function() { return Math.ceil(wallpaperSelector._carouselCount() / Math.max(1, hexListView._rows)) })\n",
     ),
     (
+        "      model: Math.ceil((service.filteredModel ? service.filteredModel.count : 0) / Math.max(1, _rows))\n",
+        "      model: Math.ceil(wallpaperSelector._carouselCount() / Math.max(1, _rows))\n",
+    ),
+    (
         "      model: service.filteredModel\n",
         "      model: wallpaperSelector._carouselCount()\n",
     ),
