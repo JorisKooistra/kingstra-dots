@@ -22,7 +22,8 @@ pacman_install() {
     [[ ${#to_install[@]} -eq 0 ]] && return 0
 
     log_step "pacman installeren: ${to_install[*]}"
-    run_cmd sudo pacman -S --needed --noconfirm "${to_install[@]}"
+    INSTALL_NEXT_RUN_LABEL="pacman installeren: ${to_install[*]}" \
+        run_cmd sudo pacman -S --needed --noconfirm "${to_install[@]}"
 }
 
 # Installeer een lijst van AUR-pakketten
@@ -59,7 +60,8 @@ aur_install() {
         yay)  aur_flags+=(--answerdiff=None --answerclean=None --answeredit=None) ;;
     esac
 
-    PAGER=cat run_cmd "$AUR_HELPER" -S "${aur_flags[@]}" "${to_install[@]}"
+    PAGER=cat INSTALL_NEXT_RUN_LABEL="$AUR_HELPER installeren: ${to_install[*]}" \
+        run_cmd "$AUR_HELPER" -S "${aur_flags[@]}" "${to_install[@]}"
 
     # Herstel terminal-staat voor het geval de AUR-helper toch iets heeft
     # aangepast (alternate screen, mouse reporting, line discipline).

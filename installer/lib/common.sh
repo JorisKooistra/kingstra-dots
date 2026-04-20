@@ -11,11 +11,16 @@ REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 # ---------------------------------------------------------------------------
 run_cmd() {
     if "${DRY_RUN:-false}"; then
-        log_dry "$*"
+        if [[ -n "${INSTALL_NEXT_RUN_LABEL:-}" ]]; then
+            log_dry "${INSTALL_NEXT_RUN_LABEL}: $*"
+        else
+            log_dry "$*"
+        fi
         return 0
     fi
 
     local cmd_pretty="$*"
+    local task_msg="${INSTALL_NEXT_RUN_LABEL:-$cmd_pretty}"
     local first_arg="${1:-}"
     local first_base
     first_base="$(basename "$first_arg" 2>/dev/null || echo "$first_arg")"
@@ -42,14 +47,15 @@ run_cmd() {
         local ch="."
 
         tmp_out="$(mktemp)"
-        _progress_task_start "$cmd_pretty"
+        _progress_task_start "$task_msg"
+        _log_raw "COMMAND: $cmd_pretty"
 
         "$@" >"$tmp_out" 2>&1 &
         pid=$!
 
         while kill -0 "$pid" 2>/dev/null; do
             ch="${spinner:i%4:1}"
-            _progress_task_tick "$ch" "$cmd_pretty"
+            _progress_task_tick "$ch" "$task_msg"
             i=$((i + 1))
             sleep 0.12
         done
@@ -63,18 +69,26 @@ run_cmd() {
         if [[ -s "$tmp_out" ]]; then
             cat "$tmp_out" >> "$LOG_FILE"
         fi
-        rm -f "$tmp_out"
 
-        _progress_task_end "$rc" "$cmd_pretty"
+        _progress_task_end "$rc" "$task_msg"
         if [[ "$rc" -ne 0 ]]; then
             log_error "Commando mislukt (exit $rc): $cmd_pretty"
+            if [[ -s "$tmp_out" ]]; then
+                log_error "Laatste uitvoer:"
+                tail -n 20 "$tmp_out" >&2
+            else
+                log_error "Geen uitvoer ontvangen. Volledige context: $LOG_FILE"
+            fi
+            rm -f "$tmp_out"
             return "$rc"
         fi
+        rm -f "$tmp_out"
         return 0
     fi
 
     # Fallback: normale uitvoer (bijv. sudo prompt, AUR helper interactie)
-    log_step "$cmd_pretty"
+    log_step "$task_msg"
+    _log_raw "COMMAND: $cmd_pretty"
     "$@"
 }
 

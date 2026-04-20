@@ -201,6 +201,7 @@ main() {
     elif command -v sudo &>/dev/null && [[ -t 0 ]]; then
         log_step "Sudo-sessie valideren..."
         sudo -v || { log_error "Sudo-validatie mislukt."; exit 1; }
+        suppress_kernel_console_messages
     fi
 
     # Pre-flight: back-up alle bestaande dotfiles vóór de eerste fase

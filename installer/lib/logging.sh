@@ -9,6 +9,7 @@ INSTALL_UI_MODE=false
 INSTALL_TOTAL_PHASES=0
 INSTALL_CURRENT_PHASE=0
 INSTALL_LAST_TASK_MSG=""
+INSTALL_KERNEL_PRINTK_OLD=""
 
 # ANSI kleuren
 _RESET='\033[0m'
@@ -31,7 +32,7 @@ log_init() {
         INSTALL_UI_MODE=false
     fi
     if [[ "$INSTALL_UI_MODE" == "true" ]]; then
-        trap '_ui_restore_scroll_region' EXIT
+        trap '_install_log_cleanup' EXIT
     fi
     export INSTALL_UI_MODE
     _log_raw "=== kingstra-dots installatie gestart: $(date '+%Y-%m-%d %H:%M:%S') ==="
@@ -94,6 +95,39 @@ _ui_restore_scroll_region() {
     term_rows="$(_tput_safe lines)"
     [[ -n "$term_rows" ]] || term_rows=24
     _tput_safe csr 0 "$((term_rows - 1))"
+}
+
+_restore_kernel_console_loglevel() {
+    [[ -n "${INSTALL_KERNEL_PRINTK_OLD:-}" ]] || return 0
+    command -v sudo >/dev/null 2>&1 || return 0
+    sudo -n true >/dev/null 2>&1 || return 0
+    sudo sysctl -q -w "kernel.printk=$INSTALL_KERNEL_PRINTK_OLD" >/dev/null 2>&1 || true
+    INSTALL_KERNEL_PRINTK_OLD=""
+}
+
+_install_log_cleanup() {
+    _restore_kernel_console_loglevel
+    _ui_restore_scroll_region
+}
+
+suppress_kernel_console_messages() {
+    [[ "${INSTALL_UI_MODE:-false}" == "true" ]] || return 0
+    [[ "${INSTALL_SUPPRESS_KERNEL_MESSAGES:-true}" == "true" ]] || return 0
+    [[ -r /proc/sys/kernel/printk ]] || return 0
+    command -v sudo >/dev/null 2>&1 || return 0
+    sudo -n true >/dev/null 2>&1 || return 0
+
+    local current default minimum boot
+    read -r current default minimum boot < /proc/sys/kernel/printk || return 0
+    [[ "$current" =~ ^[0-9]+$ ]] || return 0
+
+    INSTALL_KERNEL_PRINTK_OLD="$current $default $minimum $boot"
+    export INSTALL_KERNEL_PRINTK_OLD
+
+    if (( current > 3 )); then
+        sudo sysctl -q -w "kernel.printk=3 $default $minimum $boot" >/dev/null 2>&1 || true
+        _log_raw "Kernel console loglevel tijdelijk verlaagd: $INSTALL_KERNEL_PRINTK_OLD -> 3 $default $minimum $boot"
+    fi
 }
 
 _ui_enable_scroll_region() {
