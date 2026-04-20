@@ -211,5 +211,4 @@ before_wallpaper="$(_current_wallpaper)"
 _sync_skwd_current_wallpaper "$before_wallpaper"
 
 _open_picker || exit 1
-"$0" --watch "$before_wallpaper" >/dev/null 2>&1 &
-disown
+_log "Picker geopend; Kingstra apply draait per selectie vanuit de skwd-wall overlay"
