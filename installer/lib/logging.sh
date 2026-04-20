@@ -129,6 +129,15 @@ _render_progress_bar() {
     printf "[%s] %3d%%" "$bar" "$percent"
 }
 
+_render_detect_summary() {
+    printf "GPU:%s Laptop:%s Touch:%s Tablet:%s Finger:%s" \
+        "${DETECT_GPU:-?}" \
+        "${DETECT_IS_LAPTOP:-false}" \
+        "${DETECT_HAS_TOUCHSCREEN:-false}" \
+        "${ENABLE_TABLET_MODE:-false}" \
+        "${DETECT_HAS_FINGERPRINT:-false}"
+}
+
 _progress_line_columns() {
     local cols
     cols="$(_tput_safe cols)"
@@ -178,11 +187,13 @@ log_phase() {
         else
             printf "  ${_BOLD}Fase:${_RESET} %s\n\n" "$name"
         fi
+        printf "  ${_BOLD}Detectie:${_RESET} %s\n\n" "$(_render_detect_summary)"
     else
         echo ""
         printf "${_MAGENTA}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
         printf "${_MAGENTA}${_BOLD}  FASE: %s${_RESET}\n" "$name"
         printf "${_MAGENTA}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
+        printf "  Detectie: %s\n" "$(_render_detect_summary)"
     fi
 
     _log_raw ""
