@@ -32,10 +32,11 @@ phase_run() {
     log_info "Herstart je Hyprland-sessie om de UI-laag te activeren."
     log_info "Of start handmatig:"
     log_info "  awww-daemon &"
+    log_info "  systemctl --user start skwd-daemon.service"
     log_info "  quickshell -p ~/.config/quickshell/TopBar.qml &"
     log_info "  quickshell -p ~/.config/quickshell/Main.qml &"
     log_info "  python3 ~/.config/quickshell/focustime/focus_daemon.py &"
-    log_info "  walker --daemon &"
+    log_info "  walker --gapplication-service &"
 }
 
 # ---------------------------------------------------------------------------
@@ -60,10 +61,10 @@ _phase05_write_autostart_ui() {
 # =============================================================================
 
 # ---------------------------------------------------------------------------
-# Wallpaper daemon (awww) + skwd-wall picker daemon
+# Wallpaper daemons
 # ---------------------------------------------------------------------------
 exec-once = awww-daemon
-exec-once = quickshell -p ~/.config/skwd-wall/daemon.qml
+exec-once = systemctl --user start skwd-daemon.service
 
 # ---------------------------------------------------------------------------
 # Quickshell — topbar (één per scherm) en popup master window

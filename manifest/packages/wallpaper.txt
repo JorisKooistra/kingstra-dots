@@ -10,9 +10,14 @@ imagemagick
 ffmpeg
 curl
 sqlite
+chafa
 
 # Bestandssysteembewaking (wallpaper dir)
 inotify-tools
+
+# Wallpaper selector / engine
+aur:awww
+aur:skwd-wall
 
 # --- Optioneel (video wallpapers) ---
 # Schakel in via profiel: ENABLE_VIDEO_WALLPAPER=true

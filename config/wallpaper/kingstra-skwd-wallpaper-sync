@@ -7,7 +7,7 @@
 # =============================================================================
 set -euo pipefail
 
-DAEMON_QML="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/daemon.qml"
+LEGACY_DAEMON_QML="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/daemon.qml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 APPLY_SCRIPT="${HOME}/.local/bin/apply-shell-state"
@@ -108,14 +108,21 @@ _sync_skwd_config() {
 _open_picker() {
     local opened=false
 
-    if [[ -f "$DAEMON_QML" ]]; then
-        if quickshell ipc -p "$DAEMON_QML" call wallpaper toggle >/dev/null 2>&1; then
+    if command -v skwd >/dev/null 2>&1; then
+        systemctl --user start skwd-daemon.service >/dev/null 2>&1 || true
+        if skwd wall toggle >/dev/null 2>&1; then
             opened=true
         else
-            _warn "skwd-wall ipc call faalde"
+            _warn "skwd wall toggle faalde"
+        fi
+    elif [[ -f "$LEGACY_DAEMON_QML" ]]; then
+        if quickshell ipc -p "$LEGACY_DAEMON_QML" call wallpaper toggle >/dev/null 2>&1; then
+            opened=true
+        else
+            _warn "legacy skwd-wall ipc call faalde"
         fi
     else
-        _warn "skwd-wall daemon niet gevonden: $DAEMON_QML"
+        _warn "skwd commando en legacy daemon ontbreken"
     fi
 
     if [[ "$opened" == "false" ]]; then

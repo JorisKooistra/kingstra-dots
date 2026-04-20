@@ -3,31 +3,28 @@
 # Fase 09 — Wallpapermodule
 # =============================================================================
 # Doel:
-#   - Hyprpaper (statisch) en optioneel mpvpaper (video) installeren
+#   - skwd-wall, awww en optioneel mpvpaper installeren
 #   - config/hyprpaper deployen
 #   - kingstra-wallpaper orchestrator deployen naar ~/.local/bin/
-#   - Verbeterde wallpaper-init.sh deployen (vervangt fase 3-versie)
 #   - Wallpaper-map aanmaken als die nog niet bestaat
 #   - Voorbeeldwallpaper plaatsen als map leeg is (gegenereerde kleur-gradient)
 # =============================================================================
 
 phase_run() {
     log_step "Wallpaper-pakketten installeren..."
-    aur_install awww                    # wallpaper daemon (vervangt hyprpaper)
+    aur_install awww                    # wallpaper daemon voor statische wallpapers
+    aur_install skwd-wall               # standalone skwd-wall CLI + user daemon
     pacman_install imagemagick          # voor gradient-fallback + manipulatie
     pacman_install ffmpeg               # voor videothumbnails / -verwerking
     pacman_install sqlite               # walker/history dep, ook nuttig voor indexer
     pacman_install inotify-tools        # voor live-reloadwatcher (optioneel)
     pacman_install chafa                # ASCII/pixel-preview in fzf picker
 
-    log_step "skwd-wall installeren..."
-    _phase09_install_skwd_wall
-
     log_step "skwd-wall config aanmaken..."
     _phase09_write_skwd_wall_config
 
-    log_step "skwd-wall hex-layout patchen..."
-    _phase09_patch_skwd_hex_layout
+    log_step "skwd-wall user-service activeren..."
+    _phase09_enable_skwd_daemon
 
     log_step "Videowallpaper-pakket installeren (mpvpaper)..."
     _phase09_install_mpvpaper
@@ -42,45 +39,29 @@ phase_run() {
     _phase09_ensure_wallpaper_dir
 
     log_step "Fase 09 valideren..."
-    validate_cmd awww
-    validate_dir  "$HOME/.config/skwd-wall"                "skwd-wall"
-    validate_file "$HOME/.config/skwd-wall/daemon.qml"     "skwd-wall/daemon.qml"
+    if "${DRY_RUN:-false}"; then
+        log_dry "Commando-check overgeslagen (dry-run): awww"
+        log_dry "Commando-check overgeslagen (dry-run): skwd"
+    else
+        validate_cmd awww
+        validate_cmd skwd
+    fi
     validate_file "$HOME/.config/skwd-wall/config.json"    "skwd-wall/config.json"
-    validate_file "$HOME/.config/skwd-wall/qml/wallpaper/WallpaperSelector.qml" "skwd-wall/qml/wallpaper/WallpaperSelector.qml"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"    "kingstra-wallpaper"
     validate_file "$HOME/.local/bin/kingstra-skwd-wallpaper-sync" "kingstra-skwd-wallpaper-sync"
     validate_dir  "$HOME/Pictures/Wallpapers"              "Pictures/Wallpapers"
+    _phase09_validate_skwd_daemon
     validate_report
 
     log_ok "Fase 09 voltooid — Wallpapermodule actief."
     log_info "Wallpaper instellen: kingstra-wallpaper set <bestand>"
     log_info "Interactieve kiezer: kingstra-wallpaper pick"
+    log_info "skwd-wall UI:       skwd wall toggle"
     log_info "Willekeurig:        kingstra-wallpaper random"
     log_info "Videowallpaper:     kingstra-wallpaper video <bestand>"
 }
 
 # ---------------------------------------------------------------------------
-
-_phase09_install_skwd_wall() {
-    local dest="$HOME/.config/skwd-wall"
-
-    if "${DRY_RUN:-false}"; then
-        log_dry "skwd-wall zou worden gecloned naar: $dest"
-        return 0
-    fi
-
-    if [[ -d "$dest/.git" ]]; then
-        log_info "skwd-wall al aanwezig — updaten..."
-        git -C "$dest" pull --ff-only 2>/dev/null && \
-            log_ok "skwd-wall bijgewerkt" || \
-            log_warn "skwd-wall update mislukt — bestaande versie behouden"
-        return 0
-    fi
-
-    git clone --depth=1 https://github.com/liixini/skwd-wall "$dest" && \
-        log_ok "skwd-wall gecloned naar: $dest" || \
-        log_warn "skwd-wall klonen mislukt — controleer internetverbinding"
-}
 
 _phase09_write_skwd_wall_config() {
     local config_dest="$HOME/.config/skwd-wall/config.json"
@@ -96,10 +77,7 @@ _phase09_write_skwd_wall_config() {
         return 0
     fi
 
-    if [[ ! -d "$(dirname "$config_dest")" ]]; then
-        log_warn "skwd-wall map bestaat niet — config.json overgeslagen"
-        return 0
-    fi
+    ensure_dir "$(dirname "$config_dest")"
 
     cat > "$config_dest" <<'EOF'
 {
@@ -157,6 +135,45 @@ EOF
     _phase09_disable_skwd_matugen "$config_dest"
 }
 
+_phase09_enable_skwd_daemon() {
+    if "${DRY_RUN:-false}"; then
+        log_dry "skwd-daemon.service zou worden ingeschakeld"
+        return 0
+    fi
+
+    if ! command -v systemctl &>/dev/null; then
+        log_warn "systemctl niet gevonden — skwd-daemon service niet geactiveerd"
+        return 0
+    fi
+
+    if systemctl --user enable --now skwd-daemon.service >/dev/null 2>&1; then
+        log_ok "skwd-daemon.service actief"
+    else
+        log_warn "Kon skwd-daemon.service niet direct starten — Hyprland autostart probeert dit opnieuw"
+    fi
+}
+
+_phase09_validate_skwd_daemon() {
+    if "${DRY_RUN:-false}"; then
+        log_dry "Service-check overgeslagen (dry-run): skwd-daemon.service"
+        return 0
+    fi
+
+    local service_file
+    for service_file in \
+        "$HOME/.config/systemd/user/skwd-daemon.service" \
+        "/etc/systemd/user/skwd-daemon.service" \
+        "/usr/lib/systemd/user/skwd-daemon.service"; do
+        if [[ -f "$service_file" ]]; then
+            log_ok "User-service aanwezig: skwd-daemon.service"
+            return 0
+        fi
+    done
+
+    log_error "User-service ontbreekt: skwd-daemon.service"
+    (( VALIDATE_ERRORS++ )) || true
+}
+
 _phase09_disable_skwd_matugen() {
     local config_file="$1"
 
@@ -195,33 +212,6 @@ _phase09_install_mpvpaper() {
     else
         log_info "ENABLE_VIDEO_WALLPAPER=false — mpvpaper overgeslagen"
         log_info "  Zet ENABLE_VIDEO_WALLPAPER=true in je profiel om videowallpapers in te schakelen."
-    fi
-}
-
-_phase09_patch_skwd_hex_layout() {
-    local selector_qml="$HOME/.config/skwd-wall/qml/wallpaper/WallpaperSelector.qml"
-
-    if "${DRY_RUN:-false}"; then
-        log_dry "skwd-wall hex layout zou worden gepatcht: $selector_qml"
-        return 0
-    fi
-
-    if [[ ! -f "$selector_qml" ]]; then
-        log_warn "WallpaperSelector.qml niet gevonden — hex-layout patch overgeslagen"
-        return 0
-    fi
-
-    if grep -Fq 'property real _yOffset: Math.max(0, (height - _gridContentH) / 2)' "$selector_qml"; then
-        sed -i 's/property real _yOffset: Math.max(0, (height - _gridContentH) \/ 2)/property real _yOffset: 0/' "$selector_qml" && \
-            log_ok "skwd-wall hex-layout gepatcht: top-gap verwijderd" || \
-            log_warn "Hex-layout patch mislukt: $selector_qml"
-        return 0
-    fi
-
-    if grep -Fq 'property real _yOffset: 0' "$selector_qml"; then
-        log_info "skwd-wall hex-layout patch al aanwezig"
-    else
-        log_warn "Onbekende WallpaperSelector.qml variant — _yOffset patch niet toegepast"
     fi
 }
 
