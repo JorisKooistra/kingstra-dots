@@ -59,11 +59,63 @@ detect_from_hyprctl() {
     return 1
 }
 
+hex_mask_has_bit() {
+    local mask="${1//[[:space:]]/}"
+    local bit="${2:-}"
+    [[ -n "$mask" && "$mask" =~ ^[0-9A-Fa-f]+$ && "$bit" =~ ^[0-9]+$ ]] || return 1
+    (( (16#$mask & (1 << bit)) != 0 ))
+}
+
+detect_from_udev() {
+    command -v udevadm >/dev/null 2>&1 || return 1
+
+    local count=0
+    local event
+    for event in /sys/class/input/event*; do
+        [[ -e "$event" ]] || continue
+        if udevadm info --query=property --path="$event" 2>/dev/null | grep -qx "ID_INPUT_TOUCHSCREEN=1"; then
+            count=$((count + 1))
+        fi
+    done
+
+    if (( count > 0 )); then
+        printf '%s\n' "$count"
+        return 0
+    fi
+
+    return 1
+}
+
+detect_from_sysfs() {
+    local count=0
+    local input prop abs
+
+    for input in /sys/class/input/input*; do
+        [[ -r "$input/capabilities/prop" && -r "$input/capabilities/abs" ]] || continue
+        prop="$(<"$input/capabilities/prop")"
+        abs="$(<"$input/capabilities/abs")"
+
+        if hex_mask_has_bit "$prop" 1 && {
+            { hex_mask_has_bit "$abs" 0 && hex_mask_has_bit "$abs" 1; } ||
+            { hex_mask_has_bit "$abs" 53 && hex_mask_has_bit "$abs" 54; }
+        }; then
+            count=$((count + 1))
+        fi
+    done
+
+    if (( count > 0 )); then
+        printf '%s\n' "$count"
+        return 0
+    fi
+
+    return 1
+}
+
 detect_from_proc() {
     [[ -r /proc/bus/input/devices ]] || return 1
 
     local count
-    count="$(grep -Eic 'touchscreen|touch screen|touch digitizer|digitizer' /proc/bus/input/devices 2>/dev/null || echo 0)"
+    count="$(grep -Eic 'touchscreen|touch screen|touch digitizer|digitizer|wacom.*touch|elan.*touch|goodix.*touch' /proc/bus/input/devices 2>/dev/null || echo 0)"
     [[ "$count" =~ ^[0-9]+$ ]] || count=0
 
     if (( count > 0 )); then
@@ -96,10 +148,22 @@ main() {
             touch_count="$detected"
             source="hyprctl"
         else
-            detected="$(detect_from_proc || true)"
+            detected="$(detect_from_udev || true)"
             if [[ "$detected" =~ ^[0-9]+$ ]] && (( detected > 0 )); then
                 touch_count="$detected"
-                source="proc"
+                source="udev"
+            else
+                detected="$(detect_from_sysfs || true)"
+                if [[ "$detected" =~ ^[0-9]+$ ]] && (( detected > 0 )); then
+                    touch_count="$detected"
+                    source="sysfs"
+                else
+                    detected="$(detect_from_proc || true)"
+                    if [[ "$detected" =~ ^[0-9]+$ ]] && (( detected > 0 )); then
+                        touch_count="$detected"
+                        source="proc"
+                    fi
+                fi
             fi
         fi
     fi

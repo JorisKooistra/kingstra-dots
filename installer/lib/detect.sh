@@ -104,6 +104,172 @@ _detect_wayland() {
 # ---------------------------------------------------------------------------
 # Hardware — feiten
 # ---------------------------------------------------------------------------
+_hex_mask_has_bit() {
+    local mask="${1//[[:space:]]/}"
+    local bit="${2:-}"
+    [[ -n "$mask" && "$mask" =~ ^[0-9A-Fa-f]+$ && "$bit" =~ ^[0-9]+$ ]] || return 1
+    (( (16#$mask & (1 << bit)) != 0 ))
+}
+
+_input_udev_property_exists() {
+    local prop="$1"
+    local value="${2:-1}"
+    local event
+
+    command -v udevadm >/dev/null 2>&1 || return 1
+    for event in /sys/class/input/event*; do
+        [[ -e "$event" ]] || continue
+        if udevadm info --query=property --path="$event" 2>/dev/null | grep -qx "${prop}=${value}"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+_input_name_matches() {
+    local pattern="$1"
+    local input name
+
+    if grep -qiE "$pattern" /proc/bus/input/devices 2>/dev/null; then
+        return 0
+    fi
+
+    for input in /sys/class/input/input*; do
+        [[ -r "$input/name" ]] || continue
+        name="$(<"$input/name")"
+        if printf '%s\n' "$name" | grep -qiE "$pattern"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+_input_has_touchscreen_capabilities() {
+    local input prop abs
+
+    for input in /sys/class/input/input*; do
+        [[ -r "$input/capabilities/prop" && -r "$input/capabilities/abs" ]] || continue
+        prop="$(<"$input/capabilities/prop")"
+        abs="$(<"$input/capabilities/abs")"
+
+        # INPUT_PROP_DIRECT (bit 1) distinguishes screens from touchpads.
+        # Then require either ABS_X/ABS_Y or multitouch position axes.
+        if _hex_mask_has_bit "$prop" 1 && {
+            { _hex_mask_has_bit "$abs" 0 && _hex_mask_has_bit "$abs" 1; } ||
+            { _hex_mask_has_bit "$abs" 53 && _hex_mask_has_bit "$abs" 54; }
+        }; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+_input_has_tablet_mode_switch_capability() {
+    local input sw
+
+    for input in /sys/class/input/input*; do
+        [[ -r "$input/capabilities/sw" ]] || continue
+        sw="$(<"$input/capabilities/sw")"
+        # SW_TABLET_MODE is switch code 1.
+        if _hex_mask_has_bit "$sw" 1; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+_dmi_matches_convertible() {
+    local chassis product
+
+    chassis="$(cat /sys/class/dmi/id/chassis_type 2>/dev/null || true)"
+    # DMI chassis types: 31 = Convertible, 32 = Detachable.
+    if [[ "$chassis" == "31" || "$chassis" == "32" ]]; then
+        return 0
+    fi
+
+    product="$(
+        {
+            cat /sys/class/dmi/id/product_name /sys/class/dmi/id/product_family \
+                /sys/class/dmi/id/board_name 2>/dev/null
+        } | tr '[:upper:]' '[:lower:]'
+    )"
+    printf '%s\n' "$product" | grep -qiE "2[ -]?in[ -]?1|convertible|detachable|x360|yoga|spin|flex|duet|surface"
+}
+
+_sysfs_tree_matches_fingerprint() {
+    local root file text
+    local pattern="fingerprint|finger print|fprint|biometric|wbdi|validity.*sensor|synaptics.*(finger|prometheus)|goodix.*finger|elan.*finger|egistec|focaltech.*finger|fpc.*finger"
+
+    for root in /sys/class/hidraw /sys/class/input /sys/bus/hid/devices /sys/bus/i2c/devices /sys/bus/spi/devices /sys/bus/platform/devices; do
+        [[ -e "$root" ]] || continue
+        while IFS= read -r -d '' file; do
+            text="$(cat "$file" 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
+            if printf '%s\n' "$text" | grep -qiE "$pattern"; then
+                return 0
+            fi
+        done < <(find "$root" -maxdepth 3 -type f \( \
+            -name name -o -name modalias -o -name uevent -o -name product -o \
+            -name manufacturer -o -name interface -o -name description \
+        \) -print0 2>/dev/null)
+    done
+
+    return 1
+}
+
+_usb_device_matches_fingerprint() {
+    local dev vendor product text
+
+    for dev in /sys/bus/usb/devices/*; do
+        [[ -d "$dev" ]] || continue
+        vendor="$(cat "$dev/idVendor" 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
+        product="$(cat "$dev/idProduct" 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
+        text="$(
+            {
+                cat "$dev/product" "$dev/manufacturer" "$dev/interface" 2>/dev/null
+                find "$dev" -maxdepth 2 -type f \( -name product -o -name manufacturer -o -name interface \) -exec cat {} + 2>/dev/null
+            } | tr '[:upper:]' '[:lower:]'
+        )"
+
+        if printf '%s\n' "$text" | grep -qiE "fingerprint|finger print|fprint|biometric"; then
+            return 0
+        fi
+
+        case "$vendor:$product" in
+            0483:2016|04f3:0c00|04f3:0c03|04f3:0c4b|04f3:0903)
+                return 0
+                ;;
+        esac
+
+        case "$vendor" in
+            27c6|06cb|138a|1c7a|08ff|147e|10a5)
+                return 0
+                ;;
+        esac
+    done
+
+    return 1
+}
+
+_fprintd_has_device() {
+    local devices
+
+    if command -v fprintd-list >/dev/null 2>&1 && fprintd-list "$USER" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if command -v busctl >/dev/null 2>&1; then
+        devices="$(
+            busctl call net.reactivated.Fprint /net/reactivated/Fprint/Manager \
+                net.reactivated.Fprint.Manager GetDevices 2>/dev/null || true
+        )"
+        if [[ "$devices" =~ ^ao[[:space:]]+[1-9] ]]; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
 _detect_gpu() {
     local pci_out
     pci_out="$(lspci 2>/dev/null || true)"
@@ -136,10 +302,10 @@ _detect_backlight() {
 }
 
 _detect_touchpad() {
-    # Controleer /proc/bus/input/devices op "TouchPad" of "Synaptics"
-    if grep -qiE "touchpad|synaptics|trackpad" /proc/bus/input/devices 2>/dev/null; then
+    if _input_udev_property_exists "ID_INPUT_TOUCHPAD"; then
         DETECT_HAS_TOUCHPAD=true
-    # Fallback: libinput list-devices (als beschikbaar)
+    elif _input_name_matches "touchpad|synaptics|trackpad"; then
+        DETECT_HAS_TOUCHPAD=true
     elif command -v libinput &>/dev/null && \
          libinput list-devices 2>/dev/null | grep -qi "touchpad"; then
         DETECT_HAS_TOUCHPAD=true
@@ -149,10 +315,14 @@ _detect_touchpad() {
 }
 
 _detect_touchscreen() {
-    if grep -qiE "touchscreen|touch screen|touch digitizer|digitizer" /proc/bus/input/devices 2>/dev/null; then
+    if _input_udev_property_exists "ID_INPUT_TOUCHSCREEN"; then
+        DETECT_HAS_TOUCHSCREEN=true
+    elif _input_has_touchscreen_capabilities; then
+        DETECT_HAS_TOUCHSCREEN=true
+    elif _input_name_matches "touchscreen|touch screen|touch digitizer|digitizer|wacom.*touch|elan.*touch|goodix.*touch"; then
         DETECT_HAS_TOUCHSCREEN=true
     elif command -v libinput &>/dev/null && \
-         libinput list-devices 2>/dev/null | grep -qiE "touchscreen|touch screen|touch digitizer|digitizer"; then
+         libinput list-devices 2>/dev/null | grep -qiE "touchscreen|touch screen|touch digitizer|digitizer|capabilities:.*touch"; then
         DETECT_HAS_TOUCHSCREEN=true
     elif command -v hyprctl &>/dev/null && command -v jq &>/dev/null && \
          hyprctl devices -j 2>/dev/null | jq -e '
@@ -167,7 +337,11 @@ _detect_touchscreen() {
 }
 
 _detect_tablet_mode_switch() {
-    if grep -qiE "tablet mode|tablet.*switch|convertible|intel hid switches" /proc/bus/input/devices 2>/dev/null; then
+    if _input_has_tablet_mode_switch_capability; then
+        DETECT_HAS_TABLET_MODE_SWITCH=true
+    elif _input_name_matches "tablet mode|tablet.*switch|convertible|intel hid switches"; then
+        DETECT_HAS_TABLET_MODE_SWITCH=true
+    elif _dmi_matches_convertible; then
         DETECT_HAS_TABLET_MODE_SWITCH=true
     elif command -v hyprctl &>/dev/null && \
          hyprctl devices 2>/dev/null | grep -qiE "tablet mode|tablet.*switch|convertible|intel hid switches"; then
@@ -181,11 +355,14 @@ _detect_tablet_mode_switch() {
 }
 
 _detect_fingerprint() {
-    # Controleer op bekende fingerprint USB-vendorIDs of fprintd-apparaat
-    if lsusb 2>/dev/null | grep -qiE "fingerprint|27c6|06cb|138a|0483:2016|1c7a"; then
+    # Controleer op bekende fingerprint USB-vendorIDs, sysfs namen of fprintd.
+    if _usb_device_matches_fingerprint; then
         DETECT_HAS_FINGERPRINT=true
-    elif [[ -e /dev/fingerprint0 ]] || \
-         command -v fprintd-list &>/dev/null && fprintd-list "$USER" &>/dev/null 2>&1; then
+    elif _sysfs_tree_matches_fingerprint; then
+        DETECT_HAS_FINGERPRINT=true
+    elif lsusb 2>/dev/null | grep -qiE "fingerprint|finger print|fprint|biometric|27c6|06cb|138a|0483:2016|1c7a|04f3:0c00|04f3:0c03|04f3:0c4b|04f3:0903|08ff|147e|10a5"; then
+        DETECT_HAS_FINGERPRINT=true
+    elif [[ -e /dev/fingerprint0 ]] || _fprintd_has_device; then
         DETECT_HAS_FINGERPRINT=true
     else
         DETECT_HAS_FINGERPRINT=false
