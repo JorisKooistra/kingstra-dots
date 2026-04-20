@@ -29,21 +29,18 @@ phase_run() {
 
 _phase07_install_launcher() {
     local -a elephant_pkgs=(
-        elephant
-        elephant-desktopapplications
-        elephant-providerlist
-        elephant-runner
-        elephant-symbols
-        elephant-calc
-        elephant-clipboard
-        elephant-files
+        elephant-bin
+        elephant-desktopapplications-bin
+        elephant-providerlist-bin
+        elephant-runner-bin
+        elephant-symbols-bin
+        elephant-calc-bin
+        elephant-clipboard-bin
+        elephant-files-bin
+        elephant-websearch-bin
     )
 
-    if pacman -Qi elephant-bin >/dev/null 2>&1; then
-        log_warn "elephant-bin gevonden. Dat pakket levert geen providers mee; Walker blijft dan leeg."
-        log_warn "Fase 7 installeert daarom de source provider-stack: ${elephant_pkgs[*]}"
-    fi
-
+    log_info "Elephant core + providers installeren: ${elephant_pkgs[*]}"
     aur_install "${elephant_pkgs[@]}"
     aur_install walker
 }

@@ -14,14 +14,15 @@ zsh-syntax-highlighting
 aur:oh-my-posh-bin
 
 # Launcher
-aur:elephant
-aur:elephant-desktopapplications
-aur:elephant-providerlist
-aur:elephant-runner
-aur:elephant-symbols
-aur:elephant-calc
-aur:elephant-clipboard
-aur:elephant-files
+aur:elephant-bin
+aur:elephant-desktopapplications-bin
+aur:elephant-providerlist-bin
+aur:elephant-runner-bin
+aur:elephant-symbols-bin
+aur:elephant-calc-bin
+aur:elephant-clipboard-bin
+aur:elephant-files-bin
+aur:elephant-websearch-bin
 aur:walker
 
 # Systeeminfo
