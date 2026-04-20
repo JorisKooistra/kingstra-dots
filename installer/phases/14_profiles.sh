@@ -302,6 +302,12 @@ _phase14_schedule_fingerprint_first_run() {
 
     ensure_dir "$state_dir"
 
+    if [[ -f "$done_file" ]]; then
+        rm -f "$pending_file" "$attempts_file"
+        log_ok "Fingerprint first-run was al voltooid; update plant geen nieuwe enrollment"
+        return 0
+    fi
+
     if _phase14_has_enrolled_fingerprint; then
         rm -f "$pending_file" "$attempts_file"
         {
