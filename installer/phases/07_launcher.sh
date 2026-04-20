@@ -7,12 +7,16 @@ phase_run() {
     log_step "Walker + Elephant installeren..."
     _phase07_install_launcher
 
+    log_step "Elephant provider-config initialiseren..."
+    _phase07_generate_elephant_config
+
     log_step "Walker config deployen..."
     deploy_config "walker"
 
     log_step "Fase 07 valideren..."
     validate_cmd walker
     validate_cmd elephant
+    _phase07_validate_elephant_providers
     validate_file "$HOME/.config/walker/config.toml" "walker/config.toml"
     validate_file "$HOME/.config/walker/style.css"   "walker/style.css"
     validate_report
@@ -24,54 +28,59 @@ phase_run() {
 }
 
 _phase07_install_launcher() {
-    local elephant_pkg="elephant-bin"
+    local -a elephant_pkgs=(
+        elephant
+        elephant-desktopapplications
+        elephant-providerlist
+        elephant-runner
+        elephant-symbols
+        elephant-calc
+        elephant-clipboard
+        elephant-files
+    )
 
-    if _phase07_has_installed_source_elephant; then
-        log_warn "Elephant bronpakket staat al geïnstalleerd; gebruik bestaande route om conflicts te voorkomen"
-        elephant_pkg="elephant"
-    else
-        _phase07_warn_source_conflicts
+    if pacman -Qi elephant-bin >/dev/null 2>&1; then
+        log_warn "elephant-bin gevonden. Dat pakket levert geen providers mee; Walker blijft dan leeg."
+        log_warn "Fase 7 installeert daarom de source provider-stack: ${elephant_pkgs[*]}"
     fi
 
-    if aur_install "$elephant_pkg" && aur_install walker; then
+    aur_install "${elephant_pkgs[@]}"
+    aur_install walker
+}
+
+_phase07_generate_elephant_config() {
+    if "${DRY_RUN:-false}"; then
+        log_dry "Elephant provider-config zou worden gegenereerd"
         return 0
     fi
 
-    if [[ "$elephant_pkg" == "elephant-bin" ]]; then
-        log_warn "Installatie van elephant-bin + walker faalde; fallback naar elephant + walker"
-        log_warn "Dit is trager, maar voorkomt dat een clean install hard stopt op de bin-package."
-        aur_install elephant && aur_install walker
-        return $?
+    if ! command -v elephant &>/dev/null; then
+        log_warn "elephant niet gevonden — provider-config overgeslagen"
+        return 0
     fi
 
-    return 1
+    elephant generate config >/dev/null 2>&1 || \
+        log_warn "Kon Elephant provider-config niet genereren; Walker kan alsnog starten met provider defaults"
 }
 
-_phase07_has_installed_source_elephant() {
-    local pkg
-    for pkg in elephant elephant-desktopapplications elephant-providerlist elephant-runner elephant-symbols elephant-calc elephant-clipboard elephant-files; do
-        if pacman -Qi "$pkg" >/dev/null 2>&1; then
-            return 0
-        fi
-    done
-    return 1
-}
+_phase07_validate_elephant_providers() {
+    if "${DRY_RUN:-false}"; then
+        log_dry "Elephant provider-check overgeslagen (dry-run)"
+        return 0
+    fi
 
-_phase07_warn_source_conflicts() {
-    local -a conflicts=()
-    local pkg
+    if ! command -v elephant &>/dev/null; then
+        return 0
+    fi
 
-    for pkg in elephant elephant-desktopapplications elephant-providerlist elephant-runner elephant-symbols elephant-calc elephant-clipboard elephant-files; do
-        if pacman -Qi "$pkg" >/dev/null 2>&1; then
-            conflicts+=("$pkg")
-        fi
-    done
+    local providers=""
+    providers="$(elephant listproviders 2>/dev/null || true)"
 
-    if [[ ${#conflicts[@]} -gt 0 ]]; then
-        log_warn "Bestaande Elephant bronpakketten gevonden: ${conflicts[*]}"
-        log_warn "Deze conflicteren met elephant-bin, de snelle prebuilt variant die fase 7 nu gebruikt."
-        log_warn "Verwijder ze eerst handmatig als yay blijft melden dat elephant-bin en elephant conflicteren:"
-        log_warn "  yay -Rns ${conflicts[*]}"
+    if [[ "$providers" == *desktopapplications* ]]; then
+        log_ok "Elephant provider aanwezig: desktopapplications"
+    else
+        log_error "Elephant provider ontbreekt: desktopapplications — Walker toont dan geen applicaties"
+        (( VALIDATE_ERRORS++ )) || true
     fi
 }
 
