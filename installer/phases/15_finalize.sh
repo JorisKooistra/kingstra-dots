@@ -70,6 +70,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/hypr/hyprland.conf"                   "hyprland.conf"
     validate_file "$HOME/.config/hypr/colors.conf"                     "hypr/colors.conf"
     validate_file "$HOME/.config/hypr/conf.d/72-hardware.conf"         "72-hardware.conf"
+    validate_file "$HOME/.config/hypr/scripts/fingerprint-first-run.sh" "hypr/scripts/fingerprint-first-run.sh"
     validate_file "$HOME/.config/hypr/scripts/hardware-switches.sh"    "hypr/scripts/hardware-switches.sh"
     validate_file "$HOME/.config/hypr/scripts/lock.sh"                 "hypr/scripts/lock.sh"
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"             "hypr/scripts/lid-lock.sh"
@@ -169,7 +170,8 @@ _phase15_print_next_steps() {
     printf '       sudo systemctl enable --now sddm\n\n'
     if [[ "${DETECT_HAS_FINGERPRINT:-false}" == "true" ]]; then
         printf '  4. Vingerafdruk inschrijven:\n'
-        printf '       fprintd-enroll\n\n'
+        printf '       start Hyprland; de first-run helper opent automatisch fprintd-enroll\n'
+        printf '       handmatig kan ook: fprintd-enroll\n\n'
     fi
     printf '\033[1mHandige commando'"'"'s:\033[0m\n\n'
     printf '  kingstra-wallpaper set <bestand>   Wallpaper + Matugen-kleuren\n'

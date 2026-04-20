@@ -14,7 +14,7 @@ zsh-syntax-highlighting
 aur:oh-my-posh-bin
 
 # Launcher
-aur:elephant
+aur:elephant-bin
 aur:walker
 
 # Systeeminfo

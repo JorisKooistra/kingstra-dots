@@ -5,8 +5,8 @@
 
 phase_run() {
     log_step "Walker + Elephant installeren..."
-    _phase07_warn_bin_conflicts
-    aur_install elephant walker
+    _phase07_warn_source_conflicts
+    aur_install elephant-bin walker
 
     log_step "Walker config deployen..."
     deploy_config "walker"
@@ -21,22 +21,22 @@ phase_run() {
     log_step "Weather API configureren..."
     _phase07_weather_setup
 
-    log_ok "Fase 07 voltooid — Walker + Elephant geïnstalleerd (Super+Ctrl+Return)."
+    log_ok "Fase 07 voltooid — Walker + Elephant-bin geïnstalleerd (Super+Ctrl+Return)."
 }
 
-_phase07_warn_bin_conflicts() {
+_phase07_warn_source_conflicts() {
     local -a conflicts=()
     local pkg
 
-    for pkg in walker-bin elephant-bin elephant-desktopapplications-bin elephant-providerlist-bin; do
+    for pkg in elephant elephant-desktopapplications elephant-providerlist elephant-runner elephant-symbols elephant-calc elephant-clipboard elephant-files; do
         if pacman -Qi "$pkg" >/dev/null 2>&1; then
             conflicts+=("$pkg")
         fi
     done
 
     if [[ ${#conflicts[@]} -gt 0 ]]; then
-        log_warn "Bestaande Walker/Elephant -bin pakketten gevonden: ${conflicts[*]}"
-        log_warn "Deze conflicteren met de niet-bin AUR packages die fase 7 nu gebruikt."
+        log_warn "Bestaande Elephant bronpakketten gevonden: ${conflicts[*]}"
+        log_warn "Deze conflicteren met elephant-bin, de snelle prebuilt variant die fase 7 nu gebruikt."
         log_warn "Verwijder ze eerst handmatig als yay blijft melden dat elephant-bin en elephant conflicteren:"
         log_warn "  yay -Rns ${conflicts[*]}"
     fi

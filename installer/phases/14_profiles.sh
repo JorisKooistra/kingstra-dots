@@ -273,8 +273,49 @@ _phase14_fingerprint_setup() {
     _phase14_pam_enable_fprintd "/etc/pam.d/sudo" "sudo"
     _phase14_pam_enable_sddm_fingerprint
     _phase14_pam_enable_fprintd "/etc/pam.d/hyprlock" "hyprlock" "max-tries=1 timeout=7"
+    _phase14_schedule_fingerprint_first_run
 
-    log_info "Vingerafdruk inschrijven: fprintd-enroll (na installatie uitvoeren)"
+    log_info "Vingerafdruk inschrijven: automatisch bij eerste Hyprland-login"
+}
+
+_phase14_schedule_fingerprint_first_run() {
+    local state_dir="$HOME/.config/kingstra/state"
+    local pending_file="$state_dir/fingerprint-enroll.pending"
+    local done_file="$state_dir/fingerprint-enroll.done"
+    local attempts_file="$state_dir/fingerprint-enroll.attempts"
+    local helper="$REPO_ROOT/config/hypr/scripts/fingerprint-first-run.sh"
+
+    ensure_dir "$state_dir"
+
+    if _phase14_has_enrolled_fingerprint; then
+        rm -f "$pending_file" "$attempts_file"
+        {
+            echo "completed_at=$(date -Is)"
+            echo "user=$USER"
+            echo "reason=already-enrolled"
+        } > "$done_file"
+        log_ok "Fingerprint is al geregistreerd; first-run niet gepland"
+        return 0
+    fi
+
+    rm -f "$done_file" "$attempts_file"
+    {
+        echo "created_at=$(date -Is)"
+        echo "user=$USER"
+        echo "reason=fingerprint-detected"
+    } > "$pending_file"
+
+    if [[ -f "$helper" ]]; then
+        chmod +x "$helper"
+        log_ok "Fingerprint first-run helper gepland: $pending_file"
+    else
+        log_warn "Fingerprint first-run helper ontbreekt: $helper"
+    fi
+}
+
+_phase14_has_enrolled_fingerprint() {
+    command -v fprintd-list >/dev/null 2>&1 || return 1
+    timeout 7 fprintd-list "$USER" 2>/dev/null | grep -Eq '^[[:space:]]*-[[:space:]]*[A-Za-z0-9_-]+'
 }
 
 _phase14_pam_enable_sddm_fingerprint() {
