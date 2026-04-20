@@ -82,6 +82,27 @@ Item {
         "nature", "forest", "mountain", "ocean", "sky", "city",
         "night", "anime", "minimal", "dark", "space", "rain"
     ]
+    readonly property var matugenPaletteOrder: [
+        { key: "primary", label: "Primary" },
+        { key: "on_primary", label: "On primary" },
+        { key: "primary_container", label: "Primary container" },
+        { key: "secondary", label: "Secondary" },
+        { key: "tertiary", label: "Tertiary" },
+        { key: "error", label: "Error" },
+        { key: "background", label: "Background" },
+        { key: "surface", label: "Surface" },
+        { key: "surface_variant", label: "Surface variant" },
+        { key: "outline", label: "Outline" },
+        { key: "text", label: "Text" },
+        { key: "subtext0", label: "Subtext" },
+        { key: "blue", label: "Blue" },
+        { key: "mauve", label: "Mauve" },
+        { key: "green", label: "Green" },
+        { key: "red", label: "Red" },
+        { key: "yellow", label: "Yellow" },
+        { key: "pink", label: "Pink" }
+    ]
+    readonly property var matugenPalette: window.buildMatugenPalette(_theme.rawJson)
 
     // -------------------------------------------------------------------------
     // GLOBAL ACTION: APPLY WALLPAPER
@@ -332,6 +353,42 @@ Item {
             if (srcModel.get(i, "fileName") === name) return true;
         }
         return false;
+    }
+
+    function normalizeHex(value) {
+        let hex = String(value || "").trim();
+        if (!hex) return "";
+        if (hex[0] !== "#") hex = "#" + hex;
+        return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : "";
+    }
+
+    function buildMatugenPalette(rawJson) {
+        let data = {};
+        try {
+            data = rawJson && String(rawJson).trim() !== "" ? JSON.parse(rawJson) : {};
+        } catch (e) {
+            data = {};
+        }
+
+        let rows = [];
+        for (let i = 0; i < window.matugenPaletteOrder.length; i++) {
+            let entry = window.matugenPaletteOrder[i];
+            let hex = window.normalizeHex(data[entry.key]);
+            if (hex !== "") {
+                rows.push({ key: entry.key, label: entry.label, hex: hex });
+            }
+        }
+        return rows;
+    }
+
+    function readableTextColor(hex) {
+        let clean = window.normalizeHex(hex).replace("#", "");
+        if (clean.length !== 6) return "#FFFFFF";
+        let r = parseInt(clean.substring(0, 2), 16);
+        let g = parseInt(clean.substring(2, 4), 16);
+        let b = parseInt(clean.substring(4, 6), 16);
+        let luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.58 ? "#111111" : "#FFFFFF";
     }
 
     onWidgetArgChanged: {
@@ -849,7 +906,17 @@ Item {
         } 
     }
     
-    Shortcut { sequence: "Escape"; enabled: !window.isApplying; onActivated: { if (window.currentFilter === "Search") { window.currentFilter = "All"; } } }
+    Shortcut {
+        sequence: "Escape"
+        enabled: !window.isApplying
+        onActivated: {
+            if (window.currentFilter === "Search") {
+                window.currentFilter = "All";
+            } else {
+                Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
+            }
+        }
+    }
     Shortcut { sequence: "Tab"; enabled: !window.isApplying; onActivated: window.cycleFilter(1) }
     Shortcut { sequence: "Backtab"; enabled: !window.isApplying; onActivated: window.cycleFilter(-1) }
 
@@ -1686,6 +1753,129 @@ Item {
                         onClicked: {
                             searchInput.text = String(modelData);
                             window.triggerOnlineSearch();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        id: matugenPalettePanel
+        visible: window.matugenPalette.length > 0 && window.currentFilter !== "Search"
+        opacity: visible && window.isReady ? 1.0 : 0.0
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: window.isReady ? window.s(24) : window.s(-120)
+        anchors.horizontalCenter: parent.horizontalCenter
+        z: 18
+        width: Math.min(window.s(1180), parent.width - window.s(48))
+        height: paletteContent.implicitHeight + window.s(22)
+        radius: window.s(8)
+        color: Qt.rgba(_theme.mantle.r, _theme.mantle.g, _theme.mantle.b, 0.82)
+        border.color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.75)
+        border.width: 1
+        clip: true
+
+        Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutQuad } }
+        Behavior on anchors.bottomMargin { NumberAnimation { duration: 600; easing.type: Easing.OutExpo } }
+
+        ColumnLayout {
+            id: paletteContent
+            anchors.fill: parent
+            anchors.margins: window.s(11)
+            spacing: window.s(8)
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: window.s(10)
+
+                Text {
+                    text: "Matugen palette"
+                    color: _theme.text
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: window.s(12)
+                    font.bold: true
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.55)
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                Text {
+                    text: "Alleen kijken"
+                    color: Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.58)
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: window.s(10)
+                    font.bold: true
+                    Layout.alignment: Qt.AlignVCenter
+                }
+            }
+
+            GridLayout {
+                Layout.fillWidth: true
+                columns: Math.max(2, Math.min(6, Math.floor(matugenPalettePanel.width / window.s(180))))
+                rowSpacing: window.s(7)
+                columnSpacing: window.s(8)
+
+                Repeater {
+                    model: window.matugenPalette
+
+                    delegate: Rectangle {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: window.s(34)
+                        radius: window.s(7)
+                        color: Qt.rgba(_theme.surface0.r, _theme.surface0.g, _theme.surface0.b, 0.58)
+                        border.color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.55)
+                        border.width: 1
+                        clip: true
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: window.s(7)
+                            anchors.rightMargin: window.s(8)
+                            spacing: window.s(8)
+
+                            Rectangle {
+                                Layout.preferredWidth: window.s(22)
+                                Layout.preferredHeight: window.s(22)
+                                radius: window.s(6)
+                                color: modelData.hex
+                                border.color: Qt.rgba(1, 1, 1, 0.24)
+                                border.width: 1
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "•"
+                                    color: window.readableTextColor(modelData.hex)
+                                    font.family: "JetBrains Mono"
+                                    font.pixelSize: window.s(13)
+                                    font.bold: true
+                                }
+                            }
+
+                            Text {
+                                text: modelData.label
+                                color: _theme.text
+                                font.family: "JetBrains Mono"
+                                font.pixelSize: window.s(10)
+                                font.bold: true
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+
+                            Text {
+                                text: modelData.hex
+                                color: Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.68)
+                                font.family: "JetBrains Mono"
+                                font.pixelSize: window.s(10)
+                                horizontalAlignment: Text.AlignRight
+                                Layout.preferredWidth: window.s(66)
+                            }
                         }
                     }
                 }

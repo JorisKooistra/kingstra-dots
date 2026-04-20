@@ -53,6 +53,7 @@ phase_run() {
     validate_file "$HOME/.local/bin/kingstra-wallpaper"    "kingstra-wallpaper"
     validate_file "$HOME/.local/bin/kingstra-skwd-wallpaper-sync" "kingstra-skwd-wallpaper-sync"
     validate_file "${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/skwd-wall-overlay/shell.qml" "skwd-wall Kingstra overlay"
+    validate_file "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/skwd-daemon.service.d/10-kingstra-overlay.conf" "skwd-wall Kingstra service override"
     validate_dir  "$HOME/Pictures/Wallpapers"              "Pictures/Wallpapers"
     validate_file "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper" "last-wallpaper state"
     _phase09_validate_skwd_daemon
