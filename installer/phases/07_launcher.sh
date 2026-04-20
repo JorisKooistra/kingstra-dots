@@ -33,14 +33,14 @@ _phase07_install_launcher() {
         _phase07_warn_source_conflicts
     fi
 
-    if aur_install "$elephant_pkg" walker; then
+    if aur_install "$elephant_pkg" && aur_install walker; then
         return 0
     fi
 
     if [[ "$elephant_pkg" == "elephant-bin" ]]; then
         log_warn "Installatie van elephant-bin + walker faalde; fallback naar elephant + walker"
         log_warn "Dit is trager, maar voorkomt dat een clean install hard stopt op de bin-package."
-        aur_install elephant walker
+        aur_install elephant && aur_install walker
         return $?
     fi
 
