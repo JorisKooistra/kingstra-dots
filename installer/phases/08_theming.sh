@@ -350,6 +350,8 @@ _phase08_install_game_launcher() {
 _phase08_initial_apply() {
     local session_file="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
     local cache_file="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
+    local default_src="$REPO_ROOT/assets/wallpapers/wallhaven-mlwz78.png"
+    local default_dest="$HOME/Pictures/Wallpapers/wallhaven-mlwz78.png"
 
     if "${DRY_RUN:-false}"; then
         log_dry "Eerste kleurapplicatie zou worden uitgevoerd"
@@ -364,12 +366,51 @@ _phase08_initial_apply() {
     if [[ -z "$wallpaper" || ! -f "$wallpaper" ]] && [[ -f "$cache_file" ]]; then
         wallpaper="$(cat "$cache_file")"
     fi
+    if [[ -z "$wallpaper" || ! -f "$wallpaper" ]]; then
+        wallpaper="$(_phase08_seed_default_wallpaper "$default_src" "$default_dest")"
+    fi
 
     if [[ -n "$wallpaper" && -f "$wallpaper" ]]; then
         log_step "Eerste kleurapplicatie op: $wallpaper"
-        "$HOME/.local/bin/apply-shell-state" || \
+        "$HOME/.local/bin/apply-shell-state" --wallpaper "$wallpaper" || \
             log_warn "apply-shell-state mislukt — handmatig uitvoeren na sessiestart"
     else
         log_info "Nog geen wallpaper in staat — kleuren worden toegepast bij eerste wallpaperwissel (fase 9)"
     fi
+}
+
+_phase08_seed_default_wallpaper() {
+    local src="$1"
+    local dest="$2"
+    local state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+    local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+    local wallpaper="$dest"
+
+    if [[ ! -f "$wallpaper" && -f "$src" ]]; then
+        ensure_dir "$(dirname "$wallpaper")"
+        cp "$src" "$wallpaper"
+        log_ok "Standaard wallpaper geplaatst: $wallpaper" >&2
+    fi
+
+    if [[ ! -f "$wallpaper" ]]; then
+        wallpaper="$src"
+    fi
+    [[ -f "$wallpaper" ]] || return 0
+
+    ensure_dir "$state_dir"
+    ensure_dir "$cache_dir"
+    printf '%s\n' "$wallpaper" > "$cache_dir/last-wallpaper"
+    printf '%s\n' "static" > "$cache_dir/wallpaper-mode"
+
+    jq -n \
+        --arg name "$(basename "$wallpaper")" \
+        --arg path "$wallpaper" \
+        '{"name":$name,"path":$path}' \
+        > "$state_dir/wallpaper.json"
+
+    if [[ ! -f "$state_dir/theme.json" ]]; then
+        jq -n --arg name "botanical" '{"name":$name}' > "$state_dir/theme.json"
+    fi
+
+    echo "$wallpaper"
 }

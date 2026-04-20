@@ -238,9 +238,12 @@ _phase09_deploy_orchestrator() {
 
 _phase09_ensure_wallpaper_dir() {
     local wdir="$HOME/Pictures/Wallpapers"
+    local default_src="$REPO_ROOT/assets/wallpapers/wallhaven-mlwz78.png"
+    local default_dest="$wdir/wallhaven-mlwz78.png"
 
     if "${DRY_RUN:-false}"; then
         log_dry "Wallpaper-map zou worden aangemaakt: $wdir"
+        log_dry "Standaard wallpaper zou worden geplaatst: $default_dest"
         return 0
     fi
 
@@ -250,6 +253,17 @@ _phase09_ensure_wallpaper_dir() {
     else
         log_info "Wallpaper-map bestaat al: $wdir"
     fi
+
+    if [[ -f "$default_src" && ! -f "$default_dest" ]]; then
+        cp "$default_src" "$default_dest"
+        log_ok "Standaard wallpaper geplaatst: $default_dest"
+    elif [[ -f "$default_dest" ]]; then
+        log_info "Standaard wallpaper bestaat al: $default_dest"
+    else
+        log_warn "Standaard wallpaper asset ontbreekt: $default_src"
+    fi
+
+    _phase09_seed_default_wallpaper_state "$default_dest"
 
     # Genereer een fallbackwallpaper als de map leeg is
     local count
@@ -261,6 +275,37 @@ _phase09_ensure_wallpaper_dir() {
         _phase09_generate_fallback_wallpaper "$wdir"
     elif [[ ! -f "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper" ]]; then
         _phase09_set_initial_wallpaper_from_dir "$wdir"
+    fi
+}
+
+_phase09_seed_default_wallpaper_state() {
+    local wallpaper="$1"
+    [[ -f "$wallpaper" ]] || return 0
+
+    local state_dir="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+    local config_state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+    local last_wallpaper="$state_dir/last-wallpaper"
+
+    mkdir -p "$state_dir" "$config_state_dir"
+
+    local current_wallpaper=""
+    current_wallpaper="$(cat "$last_wallpaper" 2>/dev/null || true)"
+
+    if [[ -z "$current_wallpaper" || ! -f "$current_wallpaper" ]]; then
+        echo "$wallpaper" > "$last_wallpaper"
+        echo "static" > "$state_dir/wallpaper-mode"
+        echo "$wallpaper" > "$state_dir/last-image-wallpaper"
+
+        jq -n \
+            --arg name "$(basename "$wallpaper")" \
+            --arg path "$wallpaper" \
+            '{"name":$name,"path":$path}' \
+            > "$config_state_dir/wallpaper.json" || true
+
+        log_ok "Standaard wallpaper ingesteld in state: $wallpaper"
+        _phase09_apply_initial_wallpaper "$wallpaper"
+    else
+        log_info "Bestaande wallpaper-state behouden: $current_wallpaper"
     fi
 }
 

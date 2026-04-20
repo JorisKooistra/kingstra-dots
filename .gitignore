@@ -19,6 +19,7 @@ config/kitty/kitty-matugen-colors.conf
 config/quickshell/colors.json
 config/swaync/colors.css
 config/walker/colors.css
+config/qt6ct/colors/matugen.conf
 config/zsh/omp-colors.toml
 config/yazi/theme.toml
 
@@ -47,6 +48,8 @@ config/kingstra/state/mode.json
 config/kingstra/state/session.json
 config/kingstra/state/theme.json
 config/kingstra/state/wallpaper.json
+config/kingstra/state/wallhaven-tags.json
+config/kingstra/state/wallpaper-tags.json
 
 # Gegenereerde kleurentransformatie cache
 config/quickshell/colors-transformed.json
