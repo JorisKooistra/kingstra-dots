@@ -124,8 +124,13 @@ Variants {
                 id: mocha
             }
 
-            // User settings (date/time format)
-            property var _settingsData: ({})
+            // User settings (date/time format) — loaded synchronously so clock has correct format on first tick
+            property var _settingsData: {
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", "file://" + Quickshell.env("HOME") + "/.config/quickshell/settings/settings.json", false);
+                xhr.send(null);
+                try { return JSON.parse(xhr.responseText); } catch(e) { return {}; }
+            }
 
             // Load settings via Process instead of FileView
             Process {
