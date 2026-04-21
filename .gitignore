@@ -57,3 +57,4 @@ config/quickshell/colors-transformed.json
 aanleveringen/
 config/kingstra/state/fingerprint-enroll.pending
 config/matugen/templates/palette-inspector.json
+config/kingstra/state/matugen-palette.json
