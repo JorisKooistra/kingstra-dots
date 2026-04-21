@@ -164,6 +164,6 @@ Opgeslagen in `~/Pictures/Screenshots/`.
 | `Super + Ctrl + L` | Scherm vergrendelen (hyprlock + vingerafdruk indien beschikbaar) |
 | Laptop dichtklappen | Scherm vergrendelen |
 | `Super + Ctrl + R` | Hyprland herladen |
-| `Super + Ctrl + Q` | Sessie afsluiten |
+| `Super + Ctrl + Backspace` | Sessie afsluiten |
 | `Super + Ctrl + F12` | Tabletmodus handmatig wisselen (touchscreen/2-in-1) |
 | Tabletmodus-schakelaar | Intern scherm roteren + schermtoetsenbord openen (automatisch) |

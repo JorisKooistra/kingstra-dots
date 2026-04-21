@@ -17,8 +17,6 @@ phase_run() {
     else
         log_info "Geen laptop gedetecteerd — acpi CLI overgeslagen"
     fi
-    pacman_install nvtop            # GPU monitor (nvidia/amd/intel)
-    pacman_install htop             # lichtgewicht procesmontior
 
     log_step "lm_sensors initialiseren..."
     _phase13_sensors_detect

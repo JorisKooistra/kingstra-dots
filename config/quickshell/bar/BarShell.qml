@@ -143,6 +143,7 @@ Variants {
                 interval: 2000
                 running: true
                 repeat: true
+                triggeredOnStart: true
                 onTriggered: {
                     if (!loadTopBarSettingsProc.running) loadTopBarSettingsProc.running = true;
                 }
