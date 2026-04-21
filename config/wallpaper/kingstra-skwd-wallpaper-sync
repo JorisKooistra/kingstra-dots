@@ -74,6 +74,19 @@ _current_wallpaper() {
     printf '%s\n' ""
 }
 
+_focused_monitor() {
+    local monitor=""
+
+    if command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        monitor="$(hyprctl monitors -j 2>/dev/null | jq -r '
+            (.[] | select(.focused == true) | .name),
+            (.[] | .name)
+        ' | awk 'NF { print; exit }')"
+    fi
+
+    printf '%s\n' "$monitor"
+}
+
 _sync_skwd_config() {
     [[ -f "$SKWD_CONFIG" ]] || return 0
     if ! command -v jq >/dev/null 2>&1; then
@@ -81,15 +94,17 @@ _sync_skwd_config() {
         return 0
     fi
 
-    local scheme mode
+    local scheme mode monitor
     scheme="$(jq -r '.scheme_type // "scheme-tonal-spot"' "$THEME_JSON" 2>/dev/null || echo "scheme-tonal-spot")"
     mode="$(jq -r '.mode // "dark"' "$THEME_JSON" 2>/dev/null || echo "dark")"
+    monitor="$(_focused_monitor)"
 
     local tmp_file
     tmp_file="$(mktemp)"
-    if jq --arg scheme "$scheme" --arg mode "$mode" \
+    if jq --arg scheme "$scheme" --arg mode "$mode" --arg monitor "$monitor" \
         '.features.matugen = false
          | .features.wallhaven = true
+         | .monitor = $monitor
          | .matugen.schemeType = $scheme
          | .matugen.mode = $mode' \
         "$SKWD_CONFIG" > "$tmp_file" 2>/dev/null; then
