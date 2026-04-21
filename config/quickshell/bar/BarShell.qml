@@ -124,13 +124,9 @@ Variants {
                 id: mocha
             }
 
-            // User settings (date/time format) — loaded synchronously so clock has correct format on first tick
-            property var _settingsData: {
-                var xhr = new XMLHttpRequest();
-                xhr.open("GET", "file://" + Quickshell.env("HOME") + "/.config/quickshell/settings/settings.json", false);
-                xhr.send(null);
-                try { return JSON.parse(xhr.responseText); } catch(e) { return {}; }
-            }
+            // User settings (date/time format)
+            property var _settingsData: ({})
+            property bool _settingsReady: false
 
             // Load settings via Process instead of FileView
             Process {
@@ -138,17 +134,25 @@ Variants {
                 command: ["bash", "-c", "cat ~/.config/quickshell/settings/settings.json 2>/dev/null"]
                 stdout: StdioCollector {
                     onStreamFinished: {
-                        try { barWindow._settingsData = JSON.parse(this.text); } catch(e) {}
+                        try {
+                            barWindow._settingsData = JSON.parse(this.text);
+                        } catch(e) {
+                            barWindow._settingsData = { timeFormat: "HH:mm:ss", dateFormat: "dddd, MMMM dd" };
+                        }
+                        barWindow._settingsReady = true;
                     }
                 }
             }
 
-            // Watch for changes every 2 seconds
+            Component.onCompleted: {
+                loadTopBarSettingsProc.running = true;
+            }
+
+            // Reload settings every 2 seconds to pick up changes
             Timer {
                 interval: 2000
                 running: true
                 repeat: true
-                triggeredOnStart: true
                 onTriggered: {
                     if (!loadTopBarSettingsProc.running) loadTopBarSettingsProc.running = true;
                 }
@@ -501,9 +505,9 @@ Variants {
                 }
             }
 
-            // Native Qt Time Formatting
+            // Native Qt Time Formatting — only starts after settings are loaded
             Timer {
-                interval: 1000; running: true; repeat: true; triggeredOnStart: true
+                interval: 1000; running: barWindow._settingsReady; repeat: true; triggeredOnStart: true
                 onTriggered: {
                     let d = new Date();
                     let tf = barWindow._settingsData.timeFormat || "HH:mm:ss";
