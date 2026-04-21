@@ -261,10 +261,13 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
           if (isPixel && steps !== 0) {
             var velocityBoost = 1
             var absDelta = Math.abs(delta)
-            if (dt < 120) velocityBoost += 1
-            if (dt < 65) velocityBoost += 1
-            if (absDelta >= 90) velocityBoost += 1
-            steps = Math.max(-6, Math.min(6, steps * velocityBoost))
+            if (dt < 120 && absDelta >= 45) velocityBoost += 1
+            if (dt < 70 && absDelta >= 65) velocityBoost += 1
+            if (absDelta >= 110) velocityBoost += 1
+            if (velocityBoost === 1)
+              steps = steps > 0 ? 1 : -1
+            else
+              steps = Math.max(-6, Math.min(6, steps * velocityBoost))
             if (dt < 75)
               sliceListView._wheelAccum *= 0.45
             sliceListView._lastTouchpadStepTs = now
@@ -408,10 +411,13 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
           if (isPixel && steps !== 0) {
             var velocityBoost = 1
             var absDelta = Math.abs(delta)
-            if (dt < 120) velocityBoost += 1
-            if (dt < 65) velocityBoost += 1
-            if (absDelta >= 90) velocityBoost += 1
-            steps = Math.max(-6, Math.min(6, steps * velocityBoost))
+            if (dt < 120 && absDelta >= 45) velocityBoost += 1
+            if (dt < 70 && absDelta >= 65) velocityBoost += 1
+            if (absDelta >= 110) velocityBoost += 1
+            if (velocityBoost === 1)
+              steps = steps > 0 ? 1 : -1
+            else
+              steps = Math.max(-6, Math.min(6, steps * velocityBoost))
             if (dt < 75)
               hexListView._wheelAccum *= 0.45
             hexListView._lastTouchpadStepTs = now
