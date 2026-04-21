@@ -109,7 +109,7 @@ _phase14_write_hardware_conf() {
             echo "input {"
             echo "    touchpad {"
             echo "        natural_scroll = $natural"
-            echo "        scroll_factor = 0.8"
+            echo "        scroll_factor = 0.65"
             echo "        tap-to-click = true"
             echo "        tap-and-drag = true"
             echo "        disable_while_typing = true"

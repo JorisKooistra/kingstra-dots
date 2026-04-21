@@ -73,7 +73,7 @@ Item {
     // STATE
     // -------------------------------------------------------------------------
     property int currentTab: 0
-    property var tabNames: ["About", "Keybinds", "Weather & Time", "Theme"]
+    property var tabNames: ["About", "Keybinds", "Weather, Time & Input", "Theme"]
     property var tabIcons: ["", "󰌌", "󰖐", "󰏘"]
 
     property real introBase: 0.0
@@ -96,7 +96,12 @@ Item {
     ]
 
     // Settings file
-    property var settingsData: ({})
+    property var settingsData: ({
+        timeFormat: "HH:mm:ss",
+        dateFormat: "dddd, MMMM dd",
+        touchpadScrollFactor: 0.65,
+        mouseScrollFactor: 1.35
+    })
 
     // Load settings via Process in plaats van FileView
     Process {
@@ -104,7 +109,15 @@ Item {
         command: ["bash", "-c", "cat ~/.config/quickshell/settings/settings.json 2>/dev/null"]
         stdout: StdioCollector {
             onStreamFinished: {
-                try { root.settingsData = JSON.parse(this.text); } catch(e) {}
+                try {
+                    var parsed = JSON.parse(this.text);
+                    root.settingsData = {
+                        timeFormat: String(parsed.timeFormat || "HH:mm:ss"),
+                        dateFormat: String(parsed.dateFormat || "dddd, MMMM dd"),
+                        touchpadScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.touchpadScrollFactor, 0.65), 0.65),
+                        mouseScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.mouseScrollFactor, 1.35), 1.35)
+                    };
+                } catch(e) {}
             }
         }
     }
@@ -276,6 +289,26 @@ Item {
         let parsed = parseFloat(value);
         if (isNaN(parsed)) return String(fallback);
         return String(parsed);
+    }
+
+    function clamp(value, minValue, maxValue) {
+        return Math.max(minValue, Math.min(maxValue, value));
+    }
+
+    function shellSingleQuote(value) {
+        return String(value || "").replace(/'/g, "'\\''");
+    }
+
+    function scrollPercentFromSetting(value, fallback) {
+        let parsed = parseFloat(value);
+        if (isNaN(parsed)) parsed = fallback;
+        return Math.round(clamp(parsed, 0.20, 3.00) * 100);
+    }
+
+    function scrollFactorFromPercent(value, fallback) {
+        let parsed = parseInt(value);
+        if (isNaN(parsed)) parsed = Math.round(fallback * 100);
+        return Math.round(clamp(parsed / 100.0, 0.20, 3.00) * 100) / 100;
     }
 
     function normalizeOption(value, options, fallback) {
@@ -966,12 +999,43 @@ Item {
     // -------------------------------------------------------------------------
     // HELPER: save settings.json
     // -------------------------------------------------------------------------
-    function saveSettings(timeFormat, dateFormat) {
-        var path = Quickshell.env("HOME") + "/.config/quickshell/settings/settings.json";
-        var json = JSON.stringify({ timeFormat: timeFormat, dateFormat: dateFormat }, null, 4);
-        var cmd = "printf '%s' '" + json.replace(/'/g, "'\\''") + "' > " + path;
+    function saveSettings(timeFormat, dateFormat, touchpadScrollPercent, mouseScrollPercent) {
+        var configRoot = configHome();
+        var settingsDir = configRoot + "/quickshell/settings";
+        var path = settingsDir + "/settings.json";
+        var scrollPath = configRoot + "/hypr/conf.d/73-scroll-settings.conf";
+        var touchpadFactor = scrollFactorFromPercent(touchpadScrollPercent, 0.65);
+        var mouseFactor = scrollFactorFromPercent(mouseScrollPercent, 1.35);
+        var payload = {
+            timeFormat: timeFormat,
+            dateFormat: dateFormat,
+            touchpadScrollFactor: touchpadFactor,
+            mouseScrollFactor: mouseFactor
+        };
+        var json = JSON.stringify(payload, null, 4);
+        var scrollConf =
+            "# =============================================================================\n" +
+            "# 73-scroll-settings.conf — Scroll-tuning overrides\n" +
+            "# =============================================================================\n" +
+            "# Aangepast via de Settings-popup.\n" +
+            "# =============================================================================\n\n" +
+            "input {\n" +
+            "    scroll_factor = " + mouseFactor.toFixed(2) + "\n\n" +
+            "    touchpad {\n" +
+            "        scroll_factor = " + touchpadFactor.toFixed(2) + "\n" +
+            "    }\n" +
+            "}\n";
+        var cmd = [
+            "mkdir -p '" + shellSingleQuote(settingsDir) + "'",
+            "mkdir -p '" + shellSingleQuote(configRoot + "/hypr/conf.d") + "'",
+            "printf '%s' '" + shellSingleQuote(json) + "' > '" + shellSingleQuote(path) + "'",
+            "printf '%s' '" + shellSingleQuote(scrollConf) + "' > '" + shellSingleQuote(scrollPath) + "'",
+            "hyprctl keyword input:scroll_factor '" + mouseFactor.toFixed(2) + "' >/dev/null 2>&1 || true",
+            "hyprctl keyword input:touchpad:scroll_factor '" + touchpadFactor.toFixed(2) + "' >/dev/null 2>&1 || true"
+        ].join(" && ");
+        root.settingsData = payload;
         Quickshell.execDetached(["bash", "-c", cmd]);
-        notify("Settings", "Date & time format saved");
+        notify("Settings", "Time, date & scroll settings saved");
     }
 
     function saveWeatherConfig() {
@@ -1630,7 +1694,7 @@ Item {
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
 
-                    Text { text: "Weather & Time"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+                    Text { text: "Weather, Time & Input"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
 
                     // ---- DATE & TIME FORMAT ----
                     Rectangle {
@@ -1662,7 +1726,7 @@ Item {
                                         TextInput {
                                             id: timeFmtInput; anchors.fill: parent; anchors.margins: root.s(8)
                                             verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text
-                                            text: root.settingsData.timeFormat || "hh:mm:ss AP"; selectByMouse: true; clip: true
+                                            text: root.settingsData.timeFormat || "HH:mm:ss"; selectByMouse: true; clip: true
                                         }
                                     }
                                 }
@@ -1700,7 +1764,78 @@ Item {
                                     scale: dtSaveMa.pressed ? 0.95 : 1.0
                                     Behavior on scale { NumberAnimation { duration: 150 } }
                                     Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
-                                    MouseArea { id: dtSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveSettings(timeFmtInput.text, dateFmtInput.text) }
+                                    MouseArea { id: dtSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveSettings(timeFmtInput.text, dateFmtInput.text, touchpadScrollSpin.value, mouseScrollSpin.value) }
+                                }
+                            }
+                        }
+                    }
+
+                    // ---- SEPARATOR ----
+                    Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
+
+                    // ---- INPUT / SCROLL TUNING ----
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.preferredHeight: root.s(180); radius: root.s(12)
+                        color: Qt.alpha(root.surface0, 0.4); border.color: root.surface1; border.width: 1
+
+                        ColumnLayout {
+                            anchors.fill: parent; anchors.margins: root.s(15); spacing: root.s(12)
+
+                            RowLayout {
+                                spacing: root.s(8)
+                                Text { text: "󰍽"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.peach }
+                                Text { text: "Scroll Tuning"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
+                            }
+
+                            Text {
+                                text: "Touchpad scrolls iets rustiger by default, while the mouse gets a stronger wheel response. Values are percentages of Hyprland's default speed."
+                                font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0
+                                wrapMode: Text.WordWrap; Layout.fillWidth: true
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: root.s(15)
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: root.s(6)
+                                    Text { text: "Touchpad"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    ThemedSpinBox {
+                                        id: touchpadScrollSpin
+                                        from: 20; to: 300; stepSize: 5
+                                        value: root.scrollPercentFromSetting(root.settingsData.touchpadScrollFactor, 0.65)
+                                    }
+                                    Text {
+                                        text: touchpadScrollSpin.value + "%  (" + root.scrollFactorFromPercent(touchpadScrollSpin.value, 0.65).toFixed(2) + "x)"
+                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.peach
+                                    }
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: root.s(6)
+                                    Text { text: "Mouse"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    ThemedSpinBox {
+                                        id: mouseScrollSpin
+                                        from: 20; to: 300; stepSize: 5
+                                        value: root.scrollPercentFromSetting(root.settingsData.mouseScrollFactor, 1.35)
+                                    }
+                                    Text {
+                                        text: mouseScrollSpin.value + "%  (" + root.scrollFactorFromPercent(mouseScrollSpin.value, 1.35).toFixed(2) + "x)"
+                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.blue
+                                    }
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: root.s(10)
+                                Text { text: "Saved instantly and applied live in Hyprland."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                Item { Layout.fillWidth: true }
+                                Rectangle {
+                                    Layout.preferredWidth: root.s(80); Layout.preferredHeight: root.s(30); radius: root.s(6)
+                                    color: scrollSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
+                                    scale: scrollSaveMa.pressed ? 0.95 : 1.0
+                                    Behavior on scale { NumberAnimation { duration: 150 } }
+                                    Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
+                                    MouseArea { id: scrollSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveSettings(timeFmtInput.text, dateFmtInput.text, touchpadScrollSpin.value, mouseScrollSpin.value) }
                                 }
                             }
                         }

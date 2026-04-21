@@ -80,6 +80,32 @@ patch("qml/services/WallpaperApplyService.qml", [
     ),
 ])
 
+patch("qml/wallpaper/WallhavenBrowser.qml", [
+    (
+        "    interactive: false\n",
+        "    interactive: true\n",
+    ),
+    (
+        "      width: 4\n",
+        "      width: 10\n",
+    ),
+    (
+        "            opacity: thumbMouse.containsMouse ? 1 : 0\n",
+        "            opacity: (thumbMouse.containsMouse || resultsGrid.currentIndex === thumbDelegate.index) ? 1 : 0\n",
+    ),
+    (
+        "            onPressed: function(mouse) { mouse.accepted = false }\n",
+        """            onPressed: function(mouse) {\n              resultsGrid.currentIndex = thumbDelegate.index\n              mouse.accepted = false\n            }\n""",
+    ),
+])
+
+patch("qml/wallpaper/SliceDelegate.qml", [
+    (
+        "        onClicked: function(mouse) {\n            if (mouse.button === Qt.RightButton) {\n                if (delegateItem._listView) delegateItem._listView.currentIndex = index\n                delegateItem.flipped = !delegateItem.flipped\n            } else if (!delegateItem.flipped) {\n                if (delegateItem.isCurrent) {\n                    if (delegateItem.model.type === \"we\") {\n                        delegateItem.service.applyWE(delegateItem.model.weId)\n                    } else if (delegateItem.model.type === \"video\") {\n                        delegateItem.service.applyVideo(delegateItem.model.path)\n                    } else {\n                        delegateItem.service.applyStatic(delegateItem.model.path)\n                    }\n                } else {\n                    if (delegateItem._listView) delegateItem._listView.currentIndex = index\n                }\n            }\n        }\n",
+        """        onPressAndHold: {\n            if (delegateItem.flipped) return\n            if (delegateItem._listView) delegateItem._listView.currentIndex = index\n            delegateItem.flipped = true\n        }\n        onClicked: function(mouse) {\n            if (mouse.button === Qt.RightButton) {\n                if (delegateItem._listView) delegateItem._listView.currentIndex = index\n                delegateItem.flipped = !delegateItem.flipped\n            } else if (!delegateItem.flipped) {\n                if (delegateItem.isCurrent) {\n                    if (delegateItem.model.type === \"we\") {\n                        delegateItem.service.applyWE(delegateItem.model.weId)\n                    } else if (delegateItem.model.type === \"video\") {\n                        delegateItem.service.applyVideo(delegateItem.model.path)\n                    } else {\n                        delegateItem.service.applyStatic(delegateItem.model.path)\n                    }\n                } else {\n                    if (delegateItem._listView) delegateItem._listView.currentIndex = index\n                }\n            }\n        }\n""",
+    ),
+])
+
 patch("qml/wallpaper/WallpaperSelector.qml", [
     (
         "import Quickshell.Wayland\nimport QtQuick\n",
