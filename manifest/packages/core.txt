@@ -7,7 +7,6 @@
 hyprland
 hyprutils
 hyprcursor
-hyprpaper
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 xdg-utils

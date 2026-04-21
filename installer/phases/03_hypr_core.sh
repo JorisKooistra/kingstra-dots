@@ -36,7 +36,6 @@ _phase03_install_packages() {
     pacman_install \
         hyprlock \
         hypridle \
-        hyprpaper \
         polkit-gnome \
         xdg-desktop-portal-hyprland \
         xdg-desktop-portal-gtk \
@@ -168,7 +167,6 @@ _phase03_validate() {
     validate_cmd Hyprland
     validate_cmd hyprlock
     validate_cmd hypridle
-    validate_cmd hyprpaper
     validate_cmd grim
     validate_cmd slurp
     validate_file "$HOME/.config/hypr/hyprland.conf" "~/.config/hypr/hyprland.conf"

@@ -4,7 +4,6 @@
 # =============================================================================
 # Doel:
 #   - skwd-wall, awww en optioneel mpvpaper installeren
-#   - config/hyprpaper deployen
 #   - kingstra-wallpaper orchestrator deployen naar ~/.local/bin/
 #   - Wallpaper-map aanmaken als die nog niet bestaat
 #   - Voorbeeldwallpaper plaatsen als map leeg is (gegenereerde kleur-gradient)
@@ -31,9 +30,6 @@ phase_run() {
 
     log_step "Videowallpaper-pakket installeren (mpvpaper)..."
     _phase09_install_mpvpaper
-
-    log_step "Hyprpaper fallback-config deployen..."
-    deploy_config "hyprpaper"
 
     log_step "Wallpaper-orchestrator deployen..."
     _phase09_deploy_orchestrator
@@ -402,12 +398,15 @@ _phase09_apply_initial_wallpaper() {
     fi
 
     if command -v awww &>/dev/null; then
-        if ! pgrep -x awww-daemon >/dev/null 2>&1; then
+        if ! pgrep -x awww-daemon >/dev/null 2>&1 && command -v awww-daemon >/dev/null 2>&1; then
             awww-daemon >/dev/null 2>&1 &
         fi
         sleep 0.3
-        awww img "$wallpaper" >/dev/null 2>&1 && \
-            log_ok "Standaard wallpaper toegepast via awww: $wallpaper" || \
-            log_warn "Kon standaard wallpaper niet direct toepassen; Hyprland autostart herstelt hem later"
+        if awww img "$wallpaper" >/dev/null 2>&1; then
+            log_ok "Standaard wallpaper toegepast via awww: $wallpaper"
+            return 0
+        fi
     fi
+
+    log_warn "Kon standaard wallpaper niet direct toepassen; Hyprland autostart herstelt hem later"
 }

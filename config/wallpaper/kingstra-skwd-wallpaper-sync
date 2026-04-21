@@ -46,12 +46,6 @@ _current_wallpaper() {
         return 0
     fi
 
-    path="$(_query_wallpaper_from_daemon swww || true)"
-    if [[ -n "$path" && -f "$path" ]]; then
-        printf '%s\n' "$path"
-        return 0
-    fi
-
     local candidate
     for candidate in \
         "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/current_wallpaper" \

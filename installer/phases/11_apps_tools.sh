@@ -75,10 +75,10 @@ phase_run() {
 # ---------------------------------------------------------------------------
 
 _phase11_optional_apps() {
-    # Office-suite (gevraagd als "OpenOffice"; op Arch gebruiken we LibreOffice)
+    # Office-suite (ONLYOFFICE ipv LibreOffice)
     if [[ "${ENABLE_OPTIONAL_OFFICE:-false}" == "true" ]]; then
         log_info "Office-suite installeren (ENABLE_OPTIONAL_OFFICE=true)..."
-        pacman_install libreoffice-fresh
+        aur_install onlyoffice-bin
     else
         log_info "Office-suite overgeslagen (ENABLE_OPTIONAL_OFFICE=false)"
     fi

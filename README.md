@@ -81,7 +81,7 @@ colors update automatically on every wallpaper or theme change.
 
 ### Wallpaper
 
-Supports both static images (hyprpaper) and video backgrounds (mpvpaper). All picks flow through
+Supports both static images (`awww`) and video backgrounds (`mpvpaper`). All picks flow through
 the same `apply-shell-state` pipeline to keep colors in sync.
 
 ```bash
@@ -214,7 +214,7 @@ An AUR helper is no longer a manual prerequisite for the bootstrap flow: when mi
 | 06 | Notifications | SwayNC: control center, mpris, DND |
 | 07 | Launcher | Walker: app launcher, ssh, calculator |
 | 08 | Theming | Matugen: colors from wallpaper for all apps |
-| 09 | Wallpaper | hyprpaper + mpvpaper, orchestrator, fzf picker |
+| 09 | Wallpaper | awww + mpvpaper, orchestrator, fzf picker |
 | 10 | Session | hyprlock, hypridle, SDDM |
 | 11 | Apps | Nautilus, yazi, cliphist, playerctl, screenshots |
 | 12 | Network/resume | NetworkManager, Bluetooth, post-suspend fixes |

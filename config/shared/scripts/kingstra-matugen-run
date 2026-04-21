@@ -208,7 +208,7 @@ _resolve_wallpaper() {
         candidate=""
     fi
 
-    for daemon_cmd in awww swww; do
+    for daemon_cmd in awww; do
         candidate="$(_query_wallpaper_from_daemon "$daemon_cmd" || true)"
         if [[ -n "$candidate" && -f "$candidate" ]]; then
             echo "$candidate"

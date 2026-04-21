@@ -16,7 +16,6 @@ _BACKUP_KNOWN_PATHS=(
     "$HOME/.config/swaync"
     "$HOME/.config/walker"
     "$HOME/.config/yazi"
-    "$HOME/.config/hyprpaper"
     "$HOME/.config/hypridle"
     "$HOME/.config/hyprlock"
     "$HOME/.config/fastfetch"

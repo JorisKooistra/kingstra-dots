@@ -19,10 +19,22 @@ _notify() {
     notify-send --app-name="kingstra" --icon=dialog-password "$@" 2>/dev/null || true
 }
 
+_fprint_output_has_enrolled_finger() {
+    local output="$1"
+
+    [[ -n "$output" ]] || return 1
+
+    if printf '%s\n' "$output" | grep -qiE 'no fingers enrolled|found 0 (enrolled )?(fingers|prints)|no enrolled prints'; then
+        return 1
+    fi
+
+    printf '%s\n' "$output" | grep -Eq '^[[:space:]]*-[[:space:]]*[^[:space:]].*$|found [1-9][0-9]* (enrolled )?(fingers|prints)'
+}
+
 _has_enrolled_finger() {
     local output
     output="$(timeout 7 fprintd-list "$USER" 2>/dev/null || true)"
-    printf '%s\n' "$output" | grep -Eq '^[[:space:]]*-[[:space:]]*[A-Za-z0-9_-]+'
+    _fprint_output_has_enrolled_finger "$output"
 }
 
 _has_fprint_device() {

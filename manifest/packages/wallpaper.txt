@@ -2,8 +2,8 @@
 # manifest/packages/wallpaper.txt — Wallpaperlaag
 # =============================================================================
 
-# Hyprpaper (statische wallpapers)
-hyprpaper
+# Statische wallpaper-backend
+aur:awww
 
 # Beeldverwerking voor matugen + thumbnails
 imagemagick
@@ -16,7 +16,6 @@ chafa
 inotify-tools
 
 # Wallpaper selector / engine
-aur:awww
 aur:skwd-wall
 
 # --- Optioneel (video wallpapers) ---

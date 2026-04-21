@@ -55,7 +55,7 @@ if ! $RELOAD_ONLY; then
     mkdir -p "$(dirname "$STATE_FILE")"
     echo "$WALLPAPER" > "$STATE_FILE"
 
-    # awww
+    # awww static wallpaper backend
     if command -v awww &>/dev/null; then
         awww img "$WALLPAPER" --transition-type random 2>/dev/null || \
         awww img "$WALLPAPER" 2>/dev/null || true

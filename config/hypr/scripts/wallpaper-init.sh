@@ -11,25 +11,29 @@ set -euo pipefail
 STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
 WALLPAPER_DIR="${KINGSTRA_WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
 
-# Wacht even zodat hyprpaper volledig opgestart is
-sleep 0.8
+# Wacht even zodat wallpaper-daemons / IPC volledig opgestart zijn
+sleep 1.2
 
 # ---------------------------------------------------------------------------
 # Pad 1 — Gebruik de kingstra-wallpaper orchestrator als die beschikbaar is
 # ---------------------------------------------------------------------------
 if command -v kingstra-wallpaper &>/dev/null; then
-    kingstra-wallpaper reload
-    exit 0
+    if kingstra-wallpaper reload; then
+        exit 0
+    fi
 fi
 
 # ---------------------------------------------------------------------------
-# Pad 2 — Fallback: minimale hyprpaper aanroep zonder orchestrator
+# Pad 2 — Fallback: minimale awww-aanroep zonder orchestrator
 # ---------------------------------------------------------------------------
 _set_wallpaper() {
     local file="$1"
-    if command -v hyprctl &>/dev/null; then
-        hyprctl hyprpaper preload "$file" 2>/dev/null || true
-        hyprctl hyprpaper wallpaper ",$file"   2>/dev/null || true
+    if command -v awww &>/dev/null; then
+        if ! pgrep -x awww-daemon >/dev/null 2>&1 && command -v awww-daemon >/dev/null 2>&1; then
+            awww-daemon >/dev/null 2>&1 &
+            sleep 0.5
+        fi
+        awww img "$file" >/dev/null 2>&1 || true
     fi
 }
 

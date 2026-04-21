@@ -334,9 +334,24 @@ _phase14_schedule_fingerprint_first_run() {
     fi
 }
 
+_phase14_fprint_output_has_enrolled_fingerprint() {
+    local output="$1"
+
+    [[ -n "$output" ]] || return 1
+
+    if printf '%s\n' "$output" | grep -qiE 'no fingers enrolled|found 0 (enrolled )?(fingers|prints)|no enrolled prints'; then
+        return 1
+    fi
+
+    printf '%s\n' "$output" | grep -Eq '^[[:space:]]*-[[:space:]]*[^[:space:]].*$|found [1-9][0-9]* (enrolled )?(fingers|prints)'
+}
+
 _phase14_has_enrolled_fingerprint() {
+    local output
+
     command -v fprintd-list >/dev/null 2>&1 || return 1
-    timeout 7 fprintd-list "$USER" 2>/dev/null | grep -Eq '^[[:space:]]*-[[:space:]]*[A-Za-z0-9_-]+'
+    output="$(timeout 7 fprintd-list "$USER" 2>/dev/null || true)"
+    _phase14_fprint_output_has_enrolled_fingerprint "$output"
 }
 
 _phase14_pam_enable_sddm_fingerprint() {

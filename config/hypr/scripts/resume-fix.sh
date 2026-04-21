@@ -3,7 +3,7 @@
 # resume-fix.sh — Post-suspend fixes voor Hyprland
 # =============================================================================
 # Triggered door kingstra-resume.service na suspend/hibernate.
-# Herstelt: WiFi scan, Bluetooth scan, Quickshell, SwayNC, hyprpaper.
+# Herstelt: WiFi scan, Bluetooth scan, Quickshell, SwayNC, wallpaper-backend.
 # =============================================================================
 set -euo pipefail
 
@@ -76,11 +76,11 @@ if ! pgrep -x swaync &>/dev/null; then
 fi
 
 # ---------------------------------------------------------------------------
-# 6 — Hyprpaper herstellen (kan sterven na suspend)
+# 6 — Wallpaper-backend herstellen (kan sterven na suspend)
 # ---------------------------------------------------------------------------
-if ! pgrep -x hyprpaper &>/dev/null; then
-    _log "Hyprpaper niet actief — herstart..."
-    _spawn_detached hyprpaper
+if command -v awww-daemon &>/dev/null && ! pgrep -x awww-daemon &>/dev/null; then
+    _log "awww-daemon niet actief — herstart..."
+    _spawn_detached awww-daemon
     sleep 0.8
     if command -v kingstra-wallpaper &>/dev/null; then
         _run_timeout 6 kingstra-wallpaper reload

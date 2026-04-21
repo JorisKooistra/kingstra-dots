@@ -114,7 +114,6 @@ _phase15_validate_links() {
     validate_link "$HOME/.config/walker"     "$cfg/walker"     "~/.config/walker"
     validate_link "$HOME/.config/kitty"      "$cfg/kitty"      "~/.config/kitty"
     validate_link "$HOME/.config/yazi"       "$cfg/yazi"       "~/.config/yazi"
-    validate_link "$HOME/.config/hyprpaper"  "$cfg/hyprpaper"  "~/.config/hyprpaper"
     validate_link "$HOME/.config/hypridle"   "$cfg/hypridle"   "~/.config/hypridle"
     validate_link "$HOME/.local/bin/kingstra-theme-apply" \
                   "$cfg/shared/scripts/matugen-apply.sh"  "kingstra-theme-apply"

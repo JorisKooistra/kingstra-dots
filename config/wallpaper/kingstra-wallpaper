@@ -140,13 +140,23 @@ _set_static() {
 
     if ! command -v awww &>/dev/null; then
         _warn "awww niet gevonden — kan wallpaper niet instellen"
+        return 1
+    fi
+
+    if ! pgrep -x awww-daemon &>/dev/null && command -v awww-daemon &>/dev/null; then
+        awww-daemon >/dev/null 2>&1 &
+        disown || true
+        sleep 0.5
+    fi
+
+    if awww img "$file" --transition-type random >/dev/null 2>&1 || \
+       awww img "$file" >/dev/null 2>&1; then
+        _log "Statisch wallpaper ingesteld via awww: $(basename "$file")"
         return 0
     fi
 
-    awww img "$file" --transition-type random 2>/dev/null || \
-    awww img "$file" 2>/dev/null || true
-
-    _log "Statisch wallpaper ingesteld: $(basename "$file")"
+    _warn "awww kon wallpaper niet instellen: $file"
+    return 1
 }
 
 # ---------------------------------------------------------------------------
@@ -393,6 +403,7 @@ cmd_status() {
     else
         echo "awww:      gestopt"
     fi
+
 }
 
 # ---------------------------------------------------------------------------

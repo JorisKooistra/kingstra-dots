@@ -1159,7 +1159,7 @@ Item {
                                 summaryString += r.name + " ";
                             }
                             
-                            let postReloadCmd = "swww kill ; sleep 0.2 ; swww-daemon &";
+                            let postReloadCmd = "pkill -x awww-daemon ; sleep 0.2 ; awww-daemon &";
                             
                             Quickshell.execDetached(applyArgs);
                             Quickshell.execDetached(["sh", "-c", postReloadCmd]);

@@ -148,7 +148,7 @@ _prompt_optional_packages() {
         _print_banner
         printf "  ${BOLD}Aanvullende pakketten${RESET}\n"
         printf "  Kies met komma's, bijvoorbeeld ${BOLD}1,3${RESET}. Enter = geen.\n\n"
-        printf "    1) Office-suite (LibreOffice)\n"
+        printf "    1) Office-suite (ONLYOFFICE)\n"
         printf "    2) Heroic Games Launcher\n"
         printf "    3) VLC mediaspeler\n\n"
         printf "  Keuze: "
