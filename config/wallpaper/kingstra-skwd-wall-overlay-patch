@@ -226,7 +226,7 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
             var px = Number(wheel.pixelDelta.x || 0)
             var py = Number(wheel.pixelDelta.y || 0)
             delta = Math.abs(px) > Math.abs(py) ? px : py
-            threshold = 180
+            threshold = 150
           } else if (wheel.angleDelta !== undefined) {
             var ax = Number(wheel.angleDelta.x || 0)
             var ay = Number(wheel.angleDelta.y || 0)
@@ -344,7 +344,7 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
             var px = Number(wheel.pixelDelta.x || 0)
             var py = Number(wheel.pixelDelta.y || 0)
             delta = Math.abs(px) > Math.abs(py) ? px : py
-            threshold = 200
+            threshold = 170
           } else if (wheel.angleDelta !== undefined) {
             var ax = Number(wheel.angleDelta.x || 0)
             var ay = Number(wheel.angleDelta.y || 0)
