@@ -1035,7 +1035,7 @@ Item {
         ].join(" && ");
         root.settingsData = payload;
         Quickshell.execDetached(["bash", "-c", cmd]);
-        notify("Settings", "Time, date & scroll settings saved");
+        notify("Settings", "Time, date and scroll settings saved");
     }
 
     function saveWeatherConfig() {
@@ -1683,7 +1683,7 @@ Item {
             }
 
             // =================================================================
-            // TAB 2: WEATHER & TIME
+            // TAB 2: WEATHER, TIME & INPUT
             // =================================================================
             Item {
                 anchors.fill: parent
@@ -1788,7 +1788,7 @@ Item {
                             }
 
                             Text {
-                                text: "Touchpad scrolls iets rustiger by default, while the mouse gets a stronger wheel response. Values are percentages of Hyprland's default speed."
+                                text: "Touchpad scrolls a bit calmer by default, while the mouse gets a stronger wheel response. Values are percentages of Hyprland's default speed."
                                 font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0
                                 wrapMode: Text.WordWrap; Layout.fillWidth: true
                             }
