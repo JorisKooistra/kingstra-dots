@@ -1,6 +1,6 @@
 {
     "timeFormat": "HH:mm:ss",
     "dateFormat": "dddd, MMMM dd",
-    "touchpadScrollFactor": 0.65,
+    "touchpadScrollFactor": 0.45,
     "mouseScrollFactor": 1.35
 }

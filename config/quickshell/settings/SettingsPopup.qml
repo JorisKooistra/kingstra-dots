@@ -99,7 +99,7 @@ Item {
     property var settingsData: ({
         timeFormat: "HH:mm:ss",
         dateFormat: "dddd, MMMM dd",
-        touchpadScrollFactor: 0.65,
+        touchpadScrollFactor: 0.45,
         mouseScrollFactor: 1.35
     })
 
@@ -114,7 +114,7 @@ Item {
                     root.settingsData = {
                         timeFormat: String(parsed.timeFormat || "HH:mm:ss"),
                         dateFormat: String(parsed.dateFormat || "dddd, MMMM dd"),
-                        touchpadScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.touchpadScrollFactor, 0.65), 0.65),
+                        touchpadScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.touchpadScrollFactor, 0.45), 0.45),
                         mouseScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.mouseScrollFactor, 1.35), 1.35)
                     };
                 } catch(e) {}
@@ -1004,7 +1004,7 @@ Item {
         var settingsDir = configRoot + "/quickshell/settings";
         var path = settingsDir + "/settings.json";
         var scrollPath = configRoot + "/hypr/conf.d/73-scroll-settings.conf";
-        var touchpadFactor = scrollFactorFromPercent(touchpadScrollPercent, 0.65);
+        var touchpadFactor = scrollFactorFromPercent(touchpadScrollPercent, 0.45);
         var mouseFactor = scrollFactorFromPercent(mouseScrollPercent, 1.35);
         var payload = {
             timeFormat: timeFormat,
@@ -1906,10 +1906,10 @@ Item {
                                     ThemedSpinBox {
                                         id: touchpadScrollSpin
                                         from: 20; to: 300; stepSize: 5
-                                        value: root.scrollPercentFromSetting(root.settingsData.touchpadScrollFactor, 0.65)
+                                        value: root.scrollPercentFromSetting(root.settingsData.touchpadScrollFactor, 0.45)
                                     }
                                     Text {
-                                        text: touchpadScrollSpin.value + "%  (" + root.scrollFactorFromPercent(touchpadScrollSpin.value, 0.65).toFixed(2) + "x)"
+                                        text: touchpadScrollSpin.value + "%  (" + root.scrollFactorFromPercent(touchpadScrollSpin.value, 0.45).toFixed(2) + "x)"
                                         font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.peach
                                     }
                                 }
