@@ -91,11 +91,15 @@ patch("qml/wallpaper/WallhavenBrowser.qml", [
     ),
     (
         "            opacity: thumbMouse.containsMouse ? 1 : 0\n",
-        "            opacity: (thumbMouse.containsMouse || resultsGrid.currentIndex === thumbDelegate.index) ? 1 : 0\n",
+        "            visible: thumbMouse.containsMouse || resultsGrid.currentIndex === thumbDelegate.index\n            opacity: visible ? 1 : 0\n",
+    ),
+    (
+        "              onClicked: browser._previewWp = thumbDelegate.wp\n",
+        "              enabled: thumbMouse.containsMouse\n              onClicked: browser._previewWp = thumbDelegate.wp\n",
     ),
     (
         "            onPressed: function(mouse) { mouse.accepted = false }\n",
-        """            onPressed: function(mouse) {\n              resultsGrid.currentIndex = thumbDelegate.index\n              mouse.accepted = false\n            }\n""",
+        """            onPressed: function(mouse) {\n              resultsGrid.currentIndex = thumbDelegate.index\n              mouse.accepted = false\n            }\n            onClicked: function(mouse) {\n              var touchTap = mouse.source !== Qt.MouseEventNotSynthesized\n              if (touchTap) {\n                resultsGrid.currentIndex = thumbDelegate.index\n                mouse.accepted = true\n              }\n            }\n""",
     ),
 ])
 
