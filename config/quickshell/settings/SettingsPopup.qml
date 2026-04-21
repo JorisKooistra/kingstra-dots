@@ -73,8 +73,8 @@ Item {
     // STATE
     // -------------------------------------------------------------------------
     property int currentTab: 0
-    property var tabNames: ["About", "Keybinds", "Weather, Time & Input", "Theme"]
-    property var tabIcons: ["", "󰌌", "󰖐", "󰏘"]
+    property var tabNames: ["About", "Keybinds", "Weather & Time", "Input", "Theme"]
+    property var tabIcons: ["", "󰌌", "󰖐", "󰍽", "󰏘"]
 
     property real introBase: 0.0
     property real introSidebar: 0.0
@@ -1683,7 +1683,7 @@ Item {
             }
 
             // =================================================================
-            // TAB 2: WEATHER, TIME & INPUT
+            // TAB 2: WEATHER & TIME
             // =================================================================
             Item {
                 anchors.fill: parent
@@ -1694,7 +1694,7 @@ Item {
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
 
-                    Text { text: "Weather, Time & Input"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+                    Text { text: "Weather & Time"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
 
                     // ---- DATE & TIME FORMAT ----
                     Rectangle {
@@ -1765,77 +1765,6 @@ Item {
                                     Behavior on scale { NumberAnimation { duration: 150 } }
                                     Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
                                     MouseArea { id: dtSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveSettings(timeFmtInput.text, dateFmtInput.text, touchpadScrollSpin.value, mouseScrollSpin.value) }
-                                }
-                            }
-                        }
-                    }
-
-                    // ---- SEPARATOR ----
-                    Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
-
-                    // ---- INPUT / SCROLL TUNING ----
-                    Rectangle {
-                        Layout.fillWidth: true; Layout.preferredHeight: root.s(180); radius: root.s(12)
-                        color: Qt.alpha(root.surface0, 0.4); border.color: root.surface1; border.width: 1
-
-                        ColumnLayout {
-                            anchors.fill: parent; anchors.margins: root.s(15); spacing: root.s(12)
-
-                            RowLayout {
-                                spacing: root.s(8)
-                                Text { text: "󰍽"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.peach }
-                                Text { text: "Scroll Tuning"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
-                            }
-
-                            Text {
-                                text: "Touchpad scrolls a bit calmer by default, while the mouse gets a stronger wheel response. Values are percentages of Hyprland's default speed."
-                                font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0
-                                wrapMode: Text.WordWrap; Layout.fillWidth: true
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true; spacing: root.s(15)
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Touchpad"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
-                                    ThemedSpinBox {
-                                        id: touchpadScrollSpin
-                                        from: 20; to: 300; stepSize: 5
-                                        value: root.scrollPercentFromSetting(root.settingsData.touchpadScrollFactor, 0.65)
-                                    }
-                                    Text {
-                                        text: touchpadScrollSpin.value + "%  (" + root.scrollFactorFromPercent(touchpadScrollSpin.value, 0.65).toFixed(2) + "x)"
-                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.peach
-                                    }
-                                }
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Mouse"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
-                                    ThemedSpinBox {
-                                        id: mouseScrollSpin
-                                        from: 20; to: 300; stepSize: 5
-                                        value: root.scrollPercentFromSetting(root.settingsData.mouseScrollFactor, 1.35)
-                                    }
-                                    Text {
-                                        text: mouseScrollSpin.value + "%  (" + root.scrollFactorFromPercent(mouseScrollSpin.value, 1.35).toFixed(2) + "x)"
-                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.blue
-                                    }
-                                }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true; spacing: root.s(10)
-                                Text { text: "Saved instantly and applied live in Hyprland."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
-                                Item { Layout.fillWidth: true }
-                                Rectangle {
-                                    Layout.preferredWidth: root.s(80); Layout.preferredHeight: root.s(30); radius: root.s(6)
-                                    color: scrollSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
-                                    scale: scrollSaveMa.pressed ? 0.95 : 1.0
-                                    Behavior on scale { NumberAnimation { duration: 150 } }
-                                    Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
-                                    MouseArea { id: scrollSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveSettings(timeFmtInput.text, dateFmtInput.text, touchpadScrollSpin.value, mouseScrollSpin.value) }
                                 }
                             }
                         }
@@ -1936,12 +1865,97 @@ Item {
             }
 
             // =================================================================
-            // TAB 3: THEME (MATUGEN)
+            // TAB 3: INPUT
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 3
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ColumnLayout {
+                    anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
+
+                    Text { text: "Input"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.preferredHeight: root.s(200); radius: root.s(12)
+                        color: Qt.alpha(root.surface0, 0.4); border.color: root.surface1; border.width: 1
+
+                        ColumnLayout {
+                            anchors.fill: parent; anchors.margins: root.s(15); spacing: root.s(12)
+
+                            RowLayout {
+                                spacing: root.s(8)
+                                Text { text: "󰍽"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.peach }
+                                Text { text: "Scroll Tuning"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
+                            }
+
+                            Text {
+                                text: "Touchpad scrolls a bit calmer by default, while the mouse gets a stronger wheel response. Values are percentages of Hyprland's default speed."
+                                font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0
+                                wrapMode: Text.WordWrap; Layout.fillWidth: true
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: root.s(15)
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: root.s(6)
+                                    Text { text: "Touchpad"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    ThemedSpinBox {
+                                        id: touchpadScrollSpin
+                                        from: 20; to: 300; stepSize: 5
+                                        value: root.scrollPercentFromSetting(root.settingsData.touchpadScrollFactor, 0.65)
+                                    }
+                                    Text {
+                                        text: touchpadScrollSpin.value + "%  (" + root.scrollFactorFromPercent(touchpadScrollSpin.value, 0.65).toFixed(2) + "x)"
+                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.peach
+                                    }
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: root.s(6)
+                                    Text { text: "Mouse"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    ThemedSpinBox {
+                                        id: mouseScrollSpin
+                                        from: 20; to: 300; stepSize: 5
+                                        value: root.scrollPercentFromSetting(root.settingsData.mouseScrollFactor, 1.35)
+                                    }
+                                    Text {
+                                        text: mouseScrollSpin.value + "%  (" + root.scrollFactorFromPercent(mouseScrollSpin.value, 1.35).toFixed(2) + "x)"
+                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.blue
+                                    }
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: root.s(10)
+                                Text { text: "Saved instantly and applied live in Hyprland."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                Item { Layout.fillWidth: true }
+                                Rectangle {
+                                    Layout.preferredWidth: root.s(80); Layout.preferredHeight: root.s(30); radius: root.s(6)
+                                    color: scrollSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
+                                    scale: scrollSaveMa.pressed ? 0.95 : 1.0
+                                    Behavior on scale { NumberAnimation { duration: 150 } }
+                                    Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
+                                    MouseArea { id: scrollSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveSettings(timeFmtInput.text, dateFmtInput.text, touchpadScrollSpin.value, mouseScrollSpin.value) }
+                                }
+                            }
+                        }
+                    }
+
+                    Item { Layout.fillHeight: true }
+                }
+            }
+
+            // =================================================================
+            // TAB 4: THEME (MATUGEN)
             // =================================================================
             Item {
                 id: themeTab
                 anchors.fill: parent
-                visible: root.currentTab === 3
+                visible: root.currentTab === 4
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
