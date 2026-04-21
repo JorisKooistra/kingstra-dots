@@ -229,7 +229,7 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
             var py = Number(wheel.pixelDelta.y || 0)
             delta = Math.abs(px) > Math.abs(py) ? px : py
             isPixel = true
-            threshold = 150
+            threshold = 55
           } else if (wheel.angleDelta !== undefined) {
             var ax = Number(wheel.angleDelta.x || 0)
             var ay = Number(wheel.angleDelta.y || 0)
@@ -239,7 +239,7 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
 
           if (isPixel) {
             var now = Date.now()
-            if (now - sliceListView._lastTouchpadStepTs < 140) {
+            if (now - sliceListView._lastTouchpadStepTs < 85) {
               wheel.accepted = true
               return
             }
@@ -253,7 +253,7 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
           }
 
           if (isPixel && steps !== 0) {
-            steps = steps > 0 ? 1 : -1
+            steps = Math.max(-4, Math.min(4, steps * 2))
             sliceListView._wheelAccum = 0
             sliceListView._lastTouchpadStepTs = Date.now()
           }
@@ -364,7 +364,7 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
             var py = Number(wheel.pixelDelta.y || 0)
             delta = Math.abs(px) > Math.abs(py) ? px : py
             isPixel = true
-            threshold = 170
+            threshold = 65
           } else if (wheel.angleDelta !== undefined) {
             var ax = Number(wheel.angleDelta.x || 0)
             var ay = Number(wheel.angleDelta.y || 0)
@@ -374,7 +374,7 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
 
           if (isPixel) {
             var now = Date.now()
-            if (now - hexListView._lastTouchpadStepTs < 140) {
+            if (now - hexListView._lastTouchpadStepTs < 85) {
               wheel.accepted = true
               return
             }
@@ -388,7 +388,7 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
           }
 
           if (isPixel && steps !== 0) {
-            steps = steps > 0 ? 1 : -1
+            steps = Math.max(-4, Math.min(4, steps * 2))
             hexListView._wheelAccum = 0
             hexListView._lastTouchpadStepTs = Date.now()
           }
