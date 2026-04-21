@@ -213,6 +213,49 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
         "          sliceListView.stepWrapped(1)\n",
     ),
     (
+        "      MouseArea {\n        anchors.fill: parent\n        propagateComposedEvents: true\n        onWheel: function(wheel) {\n\n          var step = 1\n          if (wheel.angleDelta.y > 0 || wheel.angleDelta.x > 0) {\n            sliceListView.stepWrapped(-step)\n          } else if (wheel.angleDelta.y < 0 || wheel.angleDelta.x < 0) {\n            sliceListView.stepWrapped(step)\n          }\n        }\n        onPressed: function(mouse) { mouse.accepted = false }\n        onReleased: function(mouse) { mouse.accepted = false }\n        onClicked: function(mouse) { mouse.accepted = false }\n      }\n",
+        """      property real _wheelAccum: 0
+
+      MouseArea {
+        anchors.fill: parent
+        propagateComposedEvents: true
+        onWheel: function(wheel) {
+          var delta = 0
+          var threshold = 160
+          if (wheel.pixelDelta !== undefined && (Number(wheel.pixelDelta.x) !== 0 || Number(wheel.pixelDelta.y) !== 0)) {
+            var px = Number(wheel.pixelDelta.x || 0)
+            var py = Number(wheel.pixelDelta.y || 0)
+            delta = Math.abs(px) > Math.abs(py) ? px : py
+            threshold = 180
+          } else if (wheel.angleDelta !== undefined) {
+            var ax = Number(wheel.angleDelta.x || 0)
+            var ay = Number(wheel.angleDelta.y || 0)
+            delta = Math.abs(ax) > Math.abs(ay) ? ax : ay
+          }
+          if (!delta) return
+
+          sliceListView._wheelAccum += delta
+          var steps = 0
+          while (Math.abs(sliceListView._wheelAccum) >= threshold) {
+            steps += sliceListView._wheelAccum > 0 ? 1 : -1
+            sliceListView._wheelAccum += sliceListView._wheelAccum > 0 ? -threshold : threshold
+          }
+
+          for (var i = 0; i < Math.abs(steps); i++)
+            sliceListView.stepWrapped(steps > 0 ? -1 : 1)
+
+          if (steps !== 0) {
+            wheelDebounce.restart()
+            wheel.accepted = true
+          }
+        }
+        onPressed: function(mouse) { mouse.accepted = false }
+        onReleased: function(mouse) { mouse.accepted = false }
+        onClicked: function(mouse) { mouse.accepted = false }
+      }
+""",
+    ),
+    (
         "            hexListView.currentIndex = Math.max(0, hexListView.currentIndex - step)\n            hexListView._selectedCol = hexListView.currentIndex\n",
         "            hexListView.stepWrapped(-step)\n",
     ),
@@ -286,6 +329,48 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
     (
         "          if (currentIndex < count - 1) { currentIndex++; _selectedCol = currentIndex }\n",
         "          hexListView.stepWrapped(1)\n",
+    ),
+    (
+        "      MouseArea {\n        anchors.fill: parent\n        propagateComposedEvents: true\n        onWheel: function(wheel) {\n          var step = Config.hexScrollStep\n          if (wheel.angleDelta.y > 0 || wheel.angleDelta.x > 0) {\n            hexListView.stepWrapped(-step)\n          } else if (wheel.angleDelta.y < 0 || wheel.angleDelta.x < 0) {\n            hexListView.stepWrapped(step)\n          }\n        }\n        onPressed: function(mouse) { mouse.accepted = false }\n        onReleased: function(mouse) { mouse.accepted = false }\n        onClicked: function(mouse) { mouse.accepted = false }\n      }\n",
+        """      property real _wheelAccum: 0
+
+      MouseArea {
+        anchors.fill: parent
+        propagateComposedEvents: true
+        onWheel: function(wheel) {
+          var delta = 0
+          var threshold = 160
+          if (wheel.pixelDelta !== undefined && (Number(wheel.pixelDelta.x) !== 0 || Number(wheel.pixelDelta.y) !== 0)) {
+            var px = Number(wheel.pixelDelta.x || 0)
+            var py = Number(wheel.pixelDelta.y || 0)
+            delta = Math.abs(px) > Math.abs(py) ? px : py
+            threshold = 200
+          } else if (wheel.angleDelta !== undefined) {
+            var ax = Number(wheel.angleDelta.x || 0)
+            var ay = Number(wheel.angleDelta.y || 0)
+            delta = Math.abs(ax) > Math.abs(ay) ? ax : ay
+          }
+          if (!delta) return
+
+          hexListView._wheelAccum += delta
+          var steps = 0
+          while (Math.abs(hexListView._wheelAccum) >= threshold) {
+            steps += hexListView._wheelAccum > 0 ? 1 : -1
+            hexListView._wheelAccum += hexListView._wheelAccum > 0 ? -threshold : threshold
+          }
+
+          var step = Config.hexScrollStep
+          for (var i = 0; i < Math.abs(steps); i++)
+            hexListView.stepWrapped(steps > 0 ? -step : step)
+
+          if (steps !== 0)
+            wheel.accepted = true
+        }
+        onPressed: function(mouse) { mouse.accepted = false }
+        onReleased: function(mouse) { mouse.accepted = false }
+        onClicked: function(mouse) { mouse.accepted = false }
+      }
+""",
     ),
     (
         "        if (currentIndex > 0) {\n          currentIndex--\n          hoveredIdx = currentIndex\n          _ensureVisible(currentIndex)\n        }\n",
