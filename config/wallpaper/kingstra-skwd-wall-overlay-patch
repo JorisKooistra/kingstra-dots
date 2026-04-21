@@ -216,6 +216,8 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
         "      MouseArea {\n        anchors.fill: parent\n        propagateComposedEvents: true\n        onWheel: function(wheel) {\n\n          var step = 1\n          if (wheel.angleDelta.y > 0 || wheel.angleDelta.x > 0) {\n            sliceListView.stepWrapped(-step)\n          } else if (wheel.angleDelta.y < 0 || wheel.angleDelta.x < 0) {\n            sliceListView.stepWrapped(step)\n          }\n        }\n        onPressed: function(mouse) { mouse.accepted = false }\n        onReleased: function(mouse) { mouse.accepted = false }\n        onClicked: function(mouse) { mouse.accepted = false }\n      }\n",
         """      property real _wheelAccum: 0
       property double _lastTouchpadStepTs: 0
+      property double _lastTouchpadWheelTs: 0
+      property real _lastTouchpadWheelDir: 0
 
       MouseArea {
         anchors.fill: parent
@@ -237,12 +239,16 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
           }
           if (!delta) return
 
+          var now = Date.now()
+          var dt = isPixel && sliceListView._lastTouchpadWheelTs > 0 ? now - sliceListView._lastTouchpadWheelTs : 999
+          var direction = delta > 0 ? 1 : -1
+
+          if (isPixel && sliceListView._lastTouchpadWheelDir !== 0 && direction !== sliceListView._lastTouchpadWheelDir)
+            sliceListView._wheelAccum = 0
+
           if (isPixel) {
-            var now = Date.now()
-            if (now - sliceListView._lastTouchpadStepTs < 85) {
-              wheel.accepted = true
-              return
-            }
+            sliceListView._lastTouchpadWheelTs = now
+            sliceListView._lastTouchpadWheelDir = direction
           }
 
           sliceListView._wheelAccum += delta
@@ -253,9 +259,15 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
           }
 
           if (isPixel && steps !== 0) {
-            steps = Math.max(-4, Math.min(4, steps * 2))
-            sliceListView._wheelAccum = 0
-            sliceListView._lastTouchpadStepTs = Date.now()
+            var velocityBoost = 1
+            var absDelta = Math.abs(delta)
+            if (dt < 120) velocityBoost += 1
+            if (dt < 65) velocityBoost += 1
+            if (absDelta >= 90) velocityBoost += 1
+            steps = Math.max(-6, Math.min(6, steps * velocityBoost))
+            if (dt < 75)
+              sliceListView._wheelAccum *= 0.45
+            sliceListView._lastTouchpadStepTs = now
           }
 
           for (var i = 0; i < Math.abs(steps); i++)
@@ -351,6 +363,8 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
         "      MouseArea {\n        anchors.fill: parent\n        propagateComposedEvents: true\n        onWheel: function(wheel) {\n          var step = Config.hexScrollStep\n          if (wheel.angleDelta.y > 0 || wheel.angleDelta.x > 0) {\n            hexListView.stepWrapped(-step)\n          } else if (wheel.angleDelta.y < 0 || wheel.angleDelta.x < 0) {\n            hexListView.stepWrapped(step)\n          }\n        }\n        onPressed: function(mouse) { mouse.accepted = false }\n        onReleased: function(mouse) { mouse.accepted = false }\n        onClicked: function(mouse) { mouse.accepted = false }\n      }\n",
         """      property real _wheelAccum: 0
       property double _lastTouchpadStepTs: 0
+      property double _lastTouchpadWheelTs: 0
+      property real _lastTouchpadWheelDir: 0
 
       MouseArea {
         anchors.fill: parent
@@ -372,12 +386,16 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
           }
           if (!delta) return
 
+          var now = Date.now()
+          var dt = isPixel && hexListView._lastTouchpadWheelTs > 0 ? now - hexListView._lastTouchpadWheelTs : 999
+          var direction = delta > 0 ? 1 : -1
+
+          if (isPixel && hexListView._lastTouchpadWheelDir !== 0 && direction !== hexListView._lastTouchpadWheelDir)
+            hexListView._wheelAccum = 0
+
           if (isPixel) {
-            var now = Date.now()
-            if (now - hexListView._lastTouchpadStepTs < 85) {
-              wheel.accepted = true
-              return
-            }
+            hexListView._lastTouchpadWheelTs = now
+            hexListView._lastTouchpadWheelDir = direction
           }
 
           hexListView._wheelAccum += delta
@@ -388,9 +406,15 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
           }
 
           if (isPixel && steps !== 0) {
-            steps = Math.max(-4, Math.min(4, steps * 2))
-            hexListView._wheelAccum = 0
-            hexListView._lastTouchpadStepTs = Date.now()
+            var velocityBoost = 1
+            var absDelta = Math.abs(delta)
+            if (dt < 120) velocityBoost += 1
+            if (dt < 65) velocityBoost += 1
+            if (absDelta >= 90) velocityBoost += 1
+            steps = Math.max(-6, Math.min(6, steps * velocityBoost))
+            if (dt < 75)
+              hexListView._wheelAccum *= 0.45
+            hexListView._lastTouchpadStepTs = now
           }
 
           var step = Config.hexScrollStep
