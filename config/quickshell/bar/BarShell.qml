@@ -506,7 +506,7 @@ Variants {
                 interval: 1000; running: true; repeat: true; triggeredOnStart: true
                 onTriggered: {
                     let d = new Date();
-                    let tf = barWindow._settingsData.timeFormat || "hh:mm:ss AP";
+                    let tf = barWindow._settingsData.timeFormat || "HH:mm:ss";
                     let df = barWindow._settingsData.dateFormat || "dddd, MMMM dd";
                     barWindow.timeStr = Qt.formatDateTime(d, tf);
                     barWindow.fullDateStr = Qt.formatDateTime(d, df);
