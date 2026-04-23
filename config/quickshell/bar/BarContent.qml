@@ -146,16 +146,6 @@ Item {
 
         property int moduleHeight: root.cyberSideModuleHeight
 
-        // Staggered left slide-in
-        property bool showLayout: false
-        opacity: showLayout ? 1 : 0
-        transform: Translate {
-            x: leftLayout.showLayout ? 0 : shell.s(-30)
-            Behavior on x { NumberAnimation { duration: 800; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
-        }
-        Timer { running: shell.isStartupReady; interval: 10; onTriggered: leftLayout.showLayout = true }
-        Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
-
         // Altijd zichtbaar (geen moduleList-check)
         SearchButton        { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
 
@@ -184,16 +174,6 @@ Item {
         anchors.verticalCenterOffset: shell.edgeAttachedBar ? 0 : root.cyberSideYOffset
         spacing: shell.s(4)
 
-        // Staggered right slide-in
-        property bool showLayout: false
-        opacity: showLayout ? 1 : 0
-        transform: Translate {
-            x: rightLayout.showLayout ? 0 : shell.s(30)
-            Behavior on x { NumberAnimation { duration: 800; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
-        }
-        Timer { running: shell.isStartupReady && shell.isDataReady; interval: 250; onTriggered: rightLayout.showLayout = true }
-        Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
-
         Item { Layout.fillWidth: true }
 
         // Altijd zichtbaar wanneer er tray-iconen zijn (geen moduleList-check)
@@ -202,6 +182,6 @@ Item {
         // De grote statuspil rechts. Bevat meerdere sub-pills, elk met hun eigen
         // moduleList-check. Zie SystemElementsPill.qml voor welke string elke
         // sub-pill controleert.
-        SystemElementsPill { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root; layoutVisible: rightLayout.showLayout }
+        SystemElementsPill { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root; layoutVisible: true }
     }
 }

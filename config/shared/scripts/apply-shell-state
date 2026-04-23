@@ -267,45 +267,9 @@ if command -v hyprctl &>/dev/null; then
     _log "Hyprland herladen"
 fi
 
-if command -v quickshell &>/dev/null; then
-    QS_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
-    QS_TOPBAR_QML="$QS_CONFIG_DIR/TopBar.qml"
-    QS_MAIN_QML="$QS_CONFIG_DIR/Main.qml"
-    QS_SHELL_QML="$QS_CONFIG_DIR/shell.qml"
-
-    had_topbar=false
-    had_main=false
-    had_shell=false
-
-    if pgrep -f "quickshell.*[T]opBar.qml" &>/dev/null; then had_topbar=true; fi
-    if pgrep -f "quickshell.*[M]ain.qml" &>/dev/null; then had_main=true; fi
-    if pgrep -f "quickshell.*[s]hell.qml" &>/dev/null; then had_shell=true; fi
-
-    # Nieuwe setup: aparte TopBar + Main processen.
-    # Belangrijk: Main NIET herstarten tijdens theme-apply vanuit de ThemePicker,
-    # anders sterft de aanroepende QML-process mogelijk voordat TopBar terugkomt.
-    if $had_topbar || $had_main; then
-        pkill -f "quickshell.*[T]opBar.qml" 2>/dev/null || true
-        # Wacht tot het process echt gestopt is (max 1s in stappen van 100ms)
-        for _qs_i in $(seq 1 10); do
-            pgrep -f "quickshell.*[T]opBar.qml" &>/dev/null || break
-            sleep 0.1
-        done
-
-        if [[ -f "$QS_TOPBAR_QML" ]]; then
-            nohup quickshell -p "$QS_TOPBAR_QML" >/dev/null 2>&1 &
-        fi
-        _log "Quickshell herstart (TopBar)"
-    elif $had_shell; then
-        # Legacy setup: single shell.qml entrypoint.
-        pkill -f "quickshell.*[s]hell.qml" 2>/dev/null || true
-        sleep 0.4
-        if [[ -f "$QS_SHELL_QML" ]]; then
-            nohup quickshell -p "$QS_SHELL_QML" >/dev/null 2>&1 &
-            _log "Quickshell herstart (shell.qml)"
-        fi
-    fi
-fi
+# Quickshell hoeft niet herstart te worden: MatugenColors.qml en ThemeConfig.qml
+# pollen colors.json en theme.json elke seconde en passen kleuren/instellingen
+# automatisch aan zonder herstart.
 
 if pgrep -x swaync &>/dev/null; then
     if swaync-client -rs 2>/dev/null; then

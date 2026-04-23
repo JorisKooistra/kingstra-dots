@@ -66,27 +66,6 @@ Rectangle {
     Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
     Behavior on color { ColorAnimation  { duration: 250 } }
 
-    // ── Opstartanimatie (slide in van boven) ──────────────────────────────────
-    // showLayout begint op false. Na 150ms zet de Timer hem op true.
-    // Doordat opacity en de y-positie aan showLayout gebonden zijn,
-    // verandert de UI automatisch — inclusief animatie via Behavior.
-    property bool showLayout: false
-    opacity: showLayout ? 1 : 0
-    transform: Translate {
-        // y=0 is de eindpositie; y=-30 is de startpositie (boven de bar).
-        y: root.showLayout ? 0 : shell.s(-30)
-        Behavior on y { NumberAnimation { duration: 800; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
-    }
-
-    // Timer: voert eenmalig code uit na 'interval' milliseconden.
-    // 'running: shell.isStartupReady' start de timer pas als de bar klaar is.
-    Timer {
-        running: shell.isStartupReady
-        interval: 150
-        onTriggered: root.showLayout = true  // dit triggert de animatie hierboven
-    }
-    Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
-
     // Lichte vergrotingsanimatie bij hover (uitgeschakeld voor cyber-thema).
     scale: ctx.cyberCenterFeature ? 1.0 : (isHovered ? 1.03 : 1.0)
     Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutExpo } }

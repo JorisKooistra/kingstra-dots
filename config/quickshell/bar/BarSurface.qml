@@ -132,7 +132,7 @@ Item {
     }
     onConfiguredTextureOverlaySourceChanged: resetTextureOverlaySource()
     onActiveThemeChanged:                    resetTextureOverlaySource()
-    Component.onCompleted: { resetTextureOverlaySource(); introReveal.start(); }
+    Component.onCompleted: { resetTextureOverlaySource(); }
 
     // ── Gedeelde kleur- en radiuseigenschappen ────────────────────────────────
     // Worden via `surface: barSurfaceRoot` doorgegeven aan alle modules.
@@ -170,17 +170,13 @@ Item {
     // ─────────────────────────────────────────────────────────────────────────
     Item {
         anchors.fill: parent
-        opacity: ((!shell.barAutoHide || shell.autoHideVisible) ? 1.0 : 0.0) * barSurfaceRoot.introProgress
-        scale: barSurfaceRoot.introScale
+        opacity: (!shell.barAutoHide || shell.autoHideVisible) ? 1.0 : 0.0
         Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.InOutSine } }
-        transform: [
-            Translate {
-                x: shell.autoHideOffsetX; y: shell.autoHideOffsetY
-                Behavior on x { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.InOutSine } }
-                Behavior on y { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.InOutSine } }
-            },
-            Translate { x: barSurfaceRoot.introOffsetX; y: barSurfaceRoot.introOffsetY }
-        ]
+        transform: Translate {
+            x: shell.autoHideOffsetX; y: shell.autoHideOffsetY
+            Behavior on x { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.InOutSine } }
+            Behavior on y { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.InOutSine } }
+        }
 
         MouseArea {
             anchors.fill: parent; hoverEnabled: true; propagateComposedEvents: true

@@ -36,9 +36,9 @@
   },
 
   // Timeout (seconden) — transient/low meldingen zijn korte toasts
-  "timeout": 3,
+  "timeout": 2,
   "timeout-low": 1,
-  "timeout-critical": 8,
+  "timeout-critical": 5,
 
   // Gedrag
   "fit-to-screen": false,

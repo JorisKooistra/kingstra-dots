@@ -141,12 +141,14 @@
 
 /* Header (app-naam + tijd) */
 .notification-default-action {
-  padding: 12px 44px 12px 12px;
+  margin-right: 42px;
+  padding: 12px;
   border-radius: 10px;
 }
 
 .notification-row .notification-background .notification .notification-default-action {
-  padding: 12px 44px 12px 12px;
+  margin: 0 42px 0 0;
+  padding: 12px;
   border-radius: 10px;
 }
 
@@ -173,6 +175,11 @@
 .time {
   font-size: 11px;
   color: @subtext0;
+  margin-right: 6px;
+}
+
+.notification-row .notification-background .notification .notification-default-action .notification-content .text-box .time {
+  margin-right: 6px;
 }
 
 /* Titel */
@@ -261,9 +268,9 @@
   color: @subtext0;
   margin-top: 8px;
   margin-right: 8px;
-  min-width: 32px;
-  min-height: 32px;
-  padding: 0;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 0;
   box-shadow: none;
 }
 
@@ -274,9 +281,17 @@
   color: @subtext0;
   margin-top: 8px;
   margin-right: 8px;
-  min-width: 32px;
-  min-height: 32px;
-  padding: 0;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 0;
+}
+
+.notification-row .notification-background .notification .close-button {
+  margin-top: 8px;
+  margin-right: 8px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 0;
 }
 
 .close-button:hover {
