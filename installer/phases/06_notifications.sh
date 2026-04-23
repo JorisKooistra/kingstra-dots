@@ -16,7 +16,7 @@ phase_run() {
     log_step "Fase 06 valideren..."
     validate_cmd swaync
     validate_cmd swaync-client
-    validate_file "$HOME/.config/swaync/config.jsonc" "swaync/config.jsonc"
+    validate_file "$HOME/.config/swaync/config.json"  "swaync/config.json"
     validate_file "$HOME/.config/swaync/style.css"    "swaync/style.css"
     validate_report
 

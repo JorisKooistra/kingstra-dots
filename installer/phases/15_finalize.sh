@@ -94,7 +94,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/hypridle/hypridle.conf"               "hypridle.conf"
     validate_file "$HOME/.config/hyprlock/hyprlock.conf"               "hyprlock.conf"
     # SwayNC / Walker
-    validate_file "$HOME/.config/swaync/config.jsonc"                  "swaync/config.jsonc"
+    validate_file "$HOME/.config/swaync/config.json"                   "swaync/config.json"
     validate_file "$HOME/.config/walker/config.toml"                   "walker/config.toml"
     # Yazi
     validate_file "$HOME/.config/yazi/yazi.toml"                       "yazi.toml"
