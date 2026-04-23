@@ -36,6 +36,8 @@ Item {
     required property var shell
     required property var mocha
     property real fireflyBoost: 1.0   // >1.0 = grotere/fellere vuurvliegjes (Botanical)
+    property real trackY: 0
+    property real trackHeight: height
     property bool pointerActive: false
     property real pointerX: -9999
     property real pointerY: -9999
@@ -50,7 +52,6 @@ Item {
     }
     readonly property int  safeCount: Math.max(0, Math.min(50, Number(shell.particleCount || 0)))
     readonly property real safeSpeed: Math.max(0.1, Math.min(2.0, Number(shell.particleSpeed || 1.0)))
-    readonly property real fireflyVerticalOverflow: shell.s(18)
 
     // ── Deeltjes ──────────────────────────────────────────────────────────────
     // model = 0 als type "none" is → Repeater maakt dan niets aan.
@@ -87,7 +88,7 @@ Item {
                                     + (((index * 37) % 23) - 11) * Math.max(1, root.width) / Math.max(36, root.safeCount * 18))
                                  : 0
             property real baseY: isFireflies
-                                 ? (((index * 97) % Math.max(1, root.height + root.fireflyVerticalOverflow * 2)) - root.fireflyVerticalOverflow)
+                                 ? (root.trackY + ((index * 97) % Math.max(1, root.trackHeight)))
                                  : ((index * 97) % Math.max(1, root.height))
 
             // ── Animatiestatus ────────────────────────────────────────────────

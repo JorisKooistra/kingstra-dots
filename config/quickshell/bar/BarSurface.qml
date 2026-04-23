@@ -116,10 +116,13 @@ Item {
     readonly property bool isCyberContinuousBar: continuousBarMode && activeTheme === "cyber"
 
     readonly property bool cyberTopWithBulge:    isCyberContinuousBar && shell.isTopBar
+    readonly property int  particleOverflow:     shell.isHorizontalBar ? (shell.particleVisualOverflow || 0) : 0
+    readonly property int  visualContentY:       shell.isBottomBar ? particleOverflow : 0
+    readonly property int  visualContentHeight:  Math.max(1, barSurfaceRoot.height - particleOverflow)
     readonly property int  cyberRailHeight:      cyberTopWithBulge ? shell.barHeight : barSurfaceRoot.height
     readonly property int  continuousRailHeight: continuousBarMode
-                                                 ? (cyberTopWithBulge ? cyberRailHeight : barSurfaceRoot.height)
-                                                 : barSurfaceRoot.height
+                                                 ? (cyberTopWithBulge ? cyberRailHeight : visualContentHeight)
+                                                 : visualContentHeight
 
     // ── Textuuroverlay ────────────────────────────────────────────────────────
     readonly property bool   themeHasDefaultTexture: activeTheme === "botanical" || activeTheme === "rocky"
@@ -204,6 +207,7 @@ Item {
         // z=0.25 — doorgaande achtergrond-rail (alleen in continuous-mode)
         Rectangle {
             anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+            anchors.topMargin: barSurfaceRoot.visualContentY
             height: barSurfaceRoot.continuousRailHeight
             visible: barSurfaceRoot.continuousBarMode
             z: 0.25; radius: 0
@@ -214,7 +218,7 @@ Item {
         Rectangle {
             visible: ThemeConfig.railAccent === "edge-line"
             anchors.left: parent.left; anchors.right: parent.right
-            anchors.bottom: parent.bottom
+            y: barSurfaceRoot.visualContentY + barSurfaceRoot.visualContentHeight - height
             height: shell.s(2)
             z: 0.48
             color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, barSurfaceRoot.effectAlpha(0.38))
@@ -224,7 +228,7 @@ Item {
             model: ThemeConfig.railAccent === "segmented" ? Math.ceil(parent.width / shell.s(44)) : 0
             Rectangle {
                 x: index * shell.s(44)
-                anchors.bottom: parent.bottom
+                y: barSurfaceRoot.visualContentY + barSurfaceRoot.visualContentHeight - height
                 width: shell.s(18)
                 height: shell.s(2)
                 z: 0.48
@@ -235,7 +239,8 @@ Item {
         // z=0.35 — textuuroverlay (herhalende PNG)
         Image {
             anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
+            anchors.topMargin: barSurfaceRoot.visualContentY
+            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : barSurfaceRoot.visualContentHeight
             z: 0.35
             source: barSurfaceRoot.activeTextureOverlaySource
             fillMode: Image.Tile
@@ -258,10 +263,12 @@ Item {
         // z=0.00 — deeltjeslaag
         ParticleLayer {
             anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-            height: barSurfaceRoot.continuousBarMode ? barSurfaceRoot.continuousRailHeight : parent.height
+            height: barSurfaceRoot.visualContentHeight + barSurfaceRoot.particleOverflow
+            trackY: barSurfaceRoot.visualContentY
+            trackHeight: barSurfaceRoot.visualContentHeight
             shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha
             fireflyBoost: barSurfaceRoot.isBotanical ? 1.25 : 1.0
-            z: 0
+            z: 0.42
         }
 
         // z=0.10 — Botanical: warme geel-perzik-groen gloed
@@ -286,8 +293,8 @@ Item {
         Loader {
             id: contentLoader
             anchors.fill: parent
-            anchors.topMargin: shell.isBottomBar ? shell.particleVisualOverflow : 0
-            anchors.bottomMargin: shell.isTopBar ? shell.particleVisualOverflow : 0
+            anchors.topMargin: shell.isBottomBar ? barSurfaceRoot.particleOverflow : 0
+            anchors.bottomMargin: shell.isTopBar ? barSurfaceRoot.particleOverflow : 0
             z: 1
             sourceComponent: barSurfaceRoot.useSidebarTemplate ? sidebarContentComponent : horizontalContentComponent
         }

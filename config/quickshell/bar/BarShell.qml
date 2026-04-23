@@ -90,7 +90,7 @@ Variants {
             property string particleType: ThemeConfig.particleType
             property int particleCount: ThemeConfig.particleCount
             property real particleSpeed: ThemeConfig.particleSpeed
-            property int particleVisualOverflow: particleType === "fireflies" ? s(18) : 0
+            property int particleVisualOverflow: particleType === "fireflies" ? s(42) : 0
             property string textureOverlayAsset: ThemeConfig.textureOverlayAsset
 
             // THICKER BAR, MINIMAL MARGINS (Scaled)
