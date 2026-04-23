@@ -73,8 +73,8 @@ Item {
     // STATE
     // -------------------------------------------------------------------------
     property int currentTab: 0
-    property var tabNames: ["Theme", "Keybinds", "Weather & Time", "Input", "About"]
-    property var tabIcons: ["󰏘", "󰌌", "󰖐", "󰍽", ""]
+    property var tabNames: ["Theme", "Bar", "Widgets", "Keybinds", "Input", "Display", "Network", "Audio", "Weather & Time", "Session", "Updates", "Advanced", "About"]
+    property var tabIcons: ["󰏘", "󰓡", "󰀻", "󰌌", "󰍽", "󰍹", "󰤨", "󰕾", "󰖐", "󰒲", "󰚰", "󰒓", ""]
 
     property real introBase: 0.0
     property real introSidebar: 0.0
@@ -86,6 +86,14 @@ Item {
     property string keybindFilter: ""
     property string keybindWriteError: ""
     property string keybindWriteSuccessMessage: ""
+
+    // Operational tab state
+    property string displayStatusText: "Monitorstatus nog niet geladen"
+    property string networkStatusText: "Netwerkstatus nog niet geladen"
+    property string audioStatusText: "Audiostatus nog niet geladen"
+    property string sessionModeText: "office"
+    property string updateStatusText: "Nog niet gecontroleerd"
+    property string advancedStatusText: "Klaar"
 
     // Catalog van bekende acties zonder vaste keybinding — worden als "Niet ingesteld" getoond
     readonly property var keybindCatalog: [
@@ -571,6 +579,45 @@ Item {
         reloadTopbar();
     }
 
+    function refreshOperationalStatus() {
+        displayStatusProc.running = true;
+        networkStatusProc.running = true;
+        audioStatusProc.running = true;
+        sessionModeProc.running = true;
+        updatesStatusProc.running = true;
+    }
+
+    function openShellWidget(name, subtarget) {
+        let args = ["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", name];
+        if (subtarget && String(subtarget) !== "") args.push(String(subtarget));
+        Quickshell.execDetached(args);
+    }
+
+    function switchSessionMode(modeName) {
+        let safeMode = String(modeName || "office");
+        Quickshell.execDetached(["bash", "-lc", "if command -v kingstra-mode-switch >/dev/null 2>&1; then kingstra-mode-switch '" + shellSingleQuote(safeMode) + "'; else '$HOME/.config/shared/scripts/kingstra-mode-switch' '" + shellSingleQuote(safeMode) + "'; fi"]);
+        sessionModeText = safeMode;
+        notify("Session", "Mode ingesteld: " + safeMode);
+        sessionModeRefreshTimer.start();
+    }
+
+    function runPackageUpgrade() {
+        Quickshell.execDetached(["kitty", "--hold", "bash", Quickshell.env("HOME") + "/.config/quickshell/package_upgrade.sh"]);
+        notify("Updates", "Package update gestart in terminal");
+    }
+
+    function restartQuickshell() {
+        advancedStatusText = "Quickshell herstart aangevraagd";
+        Quickshell.execDetached(["bash", "-lc", "pkill -f 'quickshell.*TopBar.qml' >/dev/null 2>&1 || true; pkill -f 'quickshell.*Main.qml' >/dev/null 2>&1 || true; sleep 0.3; quickshell -p '$HOME/.config/quickshell/TopBar.qml' >/dev/null 2>&1 & quickshell -p '$HOME/.config/quickshell/Main.qml' >/dev/null 2>&1 &"]);
+        notify("Advanced", "Quickshell wordt herstart");
+    }
+
+    function rerenderTheme() {
+        advancedStatusText = "Theme render aangevraagd";
+        Quickshell.execDetached(["bash", "-lc", "if command -v kingstra-matugen-run >/dev/null 2>&1; then kingstra-matugen-run; elif [ -x '$HOME/.local/bin/kingstra-matugen-run' ]; then '$HOME/.local/bin/kingstra-matugen-run'; else '$HOME/.config/shared/scripts/kingstra-matugen-run'; fi"]);
+        notify("Advanced", "Matugen render gestart");
+    }
+
     function resetThemeEdits() {
         if (themeCarousel.selectedThemeId !== "" && themeCarousel.selectedThemeData) {
             themeLoadedSignature = "";
@@ -832,6 +879,97 @@ Item {
         }
     }
 
+    component SettingsActionButton : Rectangle {
+        id: actionButton
+        property string label: "Actie"
+        property string icon: "󰐊"
+        property color accent: root.blue
+        property bool primary: false
+        signal triggered()
+
+        implicitWidth: root.s(190)
+        implicitHeight: root.s(38)
+        Layout.preferredHeight: implicitHeight
+        Layout.preferredWidth: implicitWidth
+        radius: root.s(8)
+        color: primary
+               ? (buttonMa.containsMouse ? Qt.alpha(accent, 0.88) : accent)
+               : (buttonMa.containsMouse ? Qt.alpha(accent, 0.18) : Qt.alpha(root.surface0, 0.62))
+        border.width: primary ? 0 : 1
+        border.color: buttonMa.containsMouse ? accent : root.surface2
+        scale: buttonMa.pressed ? 0.97 : (buttonMa.containsMouse ? 1.01 : 1.0)
+
+        Behavior on color { ColorAnimation { duration: 150 } }
+        Behavior on border.color { ColorAnimation { duration: 150 } }
+        Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutQuart } }
+
+        RowLayout {
+            anchors.centerIn: parent
+            spacing: root.s(7)
+            Text {
+                text: actionButton.icon
+                font.family: "Iosevka Nerd Font"
+                font.pixelSize: root.s(15)
+                color: actionButton.primary ? root.base : actionButton.accent
+            }
+            Text {
+                text: actionButton.label
+                font.family: root.uiFontFamily
+                font.weight: Font.Bold
+                font.letterSpacing: root.themedLetterSpacing
+                font.pixelSize: root.s(11)
+                color: actionButton.primary ? root.base : root.text
+            }
+        }
+
+        MouseArea {
+            id: buttonMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: actionButton.triggered()
+        }
+    }
+
+    component SettingsInfoCard : Rectangle {
+        id: infoCard
+        property string title: ""
+        property string value: ""
+        property string icon: "󰋼"
+        property color accent: root.blue
+
+        Layout.fillWidth: true
+        implicitHeight: cardColumn.implicitHeight + root.s(24)
+        radius: root.s(10)
+        color: Qt.alpha(root.surface0, 0.46)
+        border.color: Qt.alpha(root.surface2, 0.82)
+        border.width: 1
+
+        ColumnLayout {
+            id: cardColumn
+            anchors.fill: parent
+            anchors.margins: root.s(12)
+            spacing: root.s(8)
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: root.s(8)
+                Text { text: infoCard.icon; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(17); color: infoCard.accent }
+                Text { text: infoCard.title; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text; Layout.fillWidth: true }
+            }
+
+            Text {
+                text: infoCard.value
+                font.family: root.uiFontFamily
+                font.letterSpacing: root.themedLetterSpacing
+                font.pixelSize: root.s(11)
+                color: root.subtext0
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
+        }
+    }
+
     Component.onCompleted: {
         // Laad settings via Process
         loadSettingsProc.running = true;
@@ -841,7 +979,58 @@ Item {
         loadEnvProc.running = true;
         // Load active theme info
         refreshActiveTheme();
+        refreshOperationalStatus();
         startupSequence.start();
+    }
+
+    Process {
+        id: displayStatusProc
+        command: ["bash", "-lc", "if command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then hyprctl monitors -j 2>/dev/null | jq -r 'if length == 0 then \"Geen monitoren gevonden\" else map(.name + \"  \" + ((.width // 0)|tostring) + \"x\" + ((.height // 0)|tostring) + \" @ \" + (((.refreshRate // 0)|round)|tostring) + \"Hz  scale \" + ((.scale // 1)|tostring)) | join(\"\\n\") end'; else echo 'hyprctl of jq niet beschikbaar'; fi"]
+        stdout: StdioCollector {
+            onStreamFinished: root.displayStatusText = this.text.trim() || "Monitorstatus niet beschikbaar"
+        }
+    }
+
+    Process {
+        id: networkStatusProc
+        command: ["bash", "-lc", "script=\"$HOME/.config/quickshell/network/wifi_panel_logic.sh\"; if [ -x \"$script\" ] && command -v jq >/dev/null 2>&1; then \"$script\" 2>/dev/null | jq -r 'if .power == \"off\" then \"Wifi uit\" elif .connected then \"Verbonden: \\(.connected.ssid)  \\(.connected.signal)%\" else \"Wifi aan, niet verbonden\" end' 2>/dev/null || echo 'Netwerkstatus niet leesbaar'; else echo 'NetworkManager helper niet beschikbaar'; fi"]
+        stdout: StdioCollector {
+            onStreamFinished: root.networkStatusText = this.text.trim() || "Netwerkstatus niet beschikbaar"
+        }
+    }
+
+    Process {
+        id: audioStatusProc
+        command: ["bash", "-lc", "script=\"$HOME/.config/quickshell/network/audio_panel_logic.sh\"; if [ -x \"$script\" ] && command -v jq >/dev/null 2>&1; then \"$script\" 2>/dev/null | jq -r 'if .connected then (.connected.name + \"  \" + .connected.volume + (if .connected.muted then \"  muted\" else \"\" end)) else \"Geen default audio device\" end' 2>/dev/null || echo 'Audiostatus niet leesbaar'; else echo 'Audio helper niet beschikbaar'; fi"]
+        stdout: StdioCollector {
+            onStreamFinished: root.audioStatusText = this.text.trim() || "Audiostatus niet beschikbaar"
+        }
+    }
+
+    Process {
+        id: sessionModeProc
+        command: ["bash", "-lc", "if command -v kingstra-mode-switch >/dev/null 2>&1; then kingstra-mode-switch --current; elif [ -x \"$HOME/.local/bin/kingstra-mode-switch\" ]; then \"$HOME/.local/bin/kingstra-mode-switch\" --current; else \"$HOME/.config/shared/scripts/kingstra-mode-switch\" --current; fi"]
+        stdout: StdioCollector {
+            onStreamFinished: root.sessionModeText = this.text.trim() || "office"
+        }
+    }
+
+    Process {
+        id: updatesStatusProc
+        command: ["bash", Quickshell.env("HOME") + "/.config/quickshell/package_updates.sh"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let count = this.text.trim();
+                root.updateStatusText = count === "" ? "Updatecheck niet beschikbaar" : (count + " package updates beschikbaar");
+            }
+        }
+    }
+
+    Timer {
+        id: sessionModeRefreshTimer
+        interval: 900
+        repeat: false
+        onTriggered: sessionModeProc.running = true
     }
 
     // Load weather .env on open
@@ -1270,11 +1459,11 @@ Item {
             transform: Translate { y: root.s(20) * (1.0 - introContent) }
 
             // =================================================================
-            // TAB 4: ABOUT
+            // TAB 12: ABOUT
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 4
+                visible: root.currentTab === 12
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -1432,12 +1621,12 @@ Item {
             }
 
             // =================================================================
-            // TAB 1: KEYBINDINGS
+            // TAB 3: KEYBINDINGS
             // =================================================================
             Item {
                 id: keybindTab
                 anchors.fill: parent
-                visible: root.currentTab === 1
+                visible: root.currentTab === 3
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -1683,11 +1872,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 2: WEATHER & TIME
+            // TAB 8: WEATHER & TIME
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 2
+                visible: root.currentTab === 8
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -1865,11 +2054,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 3: INPUT
+            // TAB 4: INPUT
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 3
+                visible: root.currentTab === 4
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -1943,6 +2132,394 @@ Item {
                                 }
                             }
                         }
+                    }
+
+                    Item { Layout.fillHeight: true }
+                }
+            }
+
+            // =================================================================
+            // TAB 1: BAR
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 1
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ScrollView {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    clip: true
+                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+
+                    ColumnLayout {
+                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        spacing: root.s(14)
+
+                        Text { text: "Bar"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                        Text { text: "Bar-instellingen worden opgeslagen in het geselecteerde theme en kunnen daarna live worden toegepast op de topbar."; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+
+                        SettingsInfoCard {
+                            title: "Huidige context"
+                            icon: "󰏘"
+                            accent: root.mauve
+                            value: "Actief: " + (root.activeThemeId || "onbekend") + "\nBewerken: " + (root.themeEditThemeId || "geen theme geladen")
+                        }
+
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: width >= root.s(820) ? 2 : 1
+                            rowSpacing: root.s(10)
+                            columnSpacing: root.s(10)
+
+                            SettingsInfoCard {
+                                title: "Positie en vorm"
+                                icon: "󰓡"
+                                accent: root.blue
+                                value: "Kies waar de bar staat. Links/rechts schakelt automatisch naar een sidebar-template."
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: barPositionEditor.implicitHeight + root.s(24)
+                                radius: root.s(10)
+                                color: Qt.alpha(root.surface0, 0.46)
+                                border.color: Qt.alpha(root.surface2, 0.82)
+                                border.width: 1
+
+                                ColumnLayout {
+                                    id: barPositionEditor
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(12)
+                                    spacing: root.s(9)
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Positie"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox { model: root.barPositionOptions; currentIndex: Math.max(0, model.indexOf(root.editBarPosition)); onActivated: root.setEditBarPosition(currentText) }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Hoogte"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedSpinBox { from: 30; to: 72; value: root.editBarHeight; onValueChanged: root.editBarHeight = value }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Breedte"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox { model: root.barWidthModeOptions; currentIndex: Math.max(0, model.indexOf(root.editBarWidthMode)); onActivated: root.editBarWidthMode = currentText }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Vorm"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox { model: root.barShapeOptions; currentIndex: Math.max(0, model.indexOf(root.editBarShape)); onActivated: root.editBarShape = currentText }
+                                    }
+                                }
+                            }
+
+                            SettingsInfoCard {
+                                title: "Details"
+                                icon: "󰥔"
+                                accent: root.peach
+                                value: "Clock style, randen en topbar-blokken bewegen mee met theme-switches."
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: barDetailEditor.implicitHeight + root.s(24)
+                                radius: root.s(10)
+                                color: Qt.alpha(root.surface0, 0.46)
+                                border.color: Qt.alpha(root.surface2, 0.82)
+                                border.width: 1
+
+                                ColumnLayout {
+                                    id: barDetailEditor
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(12)
+                                    spacing: root.s(9)
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Klok"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox { model: root.clockStyleOptions; currentIndex: Math.max(0, model.indexOf(root.editClockStyle)); onActivated: root.editClockStyle = currentText }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Bovenrand"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox { model: root.barEdgeStyleOptions; currentIndex: Math.max(0, model.indexOf(root.editBarTopEdgeStyle)); onActivated: root.editBarTopEdgeStyle = currentText }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Onderrand"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox { model: root.barEdgeStyleOptions; currentIndex: Math.max(0, model.indexOf(root.editBarBottomEdgeStyle)); onActivated: root.editBarBottomEdgeStyle = currentText }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Topbar stijl"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox {
+                                            model: ["losse blokken", "strakke lijn"]
+                                            currentIndex: root.editTopbarLooseBlocks ? 0 : 1
+                                            enabled: root.editBarPosition === "top"
+                                            onActivated: root.editTopbarLooseBlocks = (currentIndex === 0)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+                            SettingsActionButton { label: root.themeDirty ? "Opslaan" : "Geen wijzigingen"; icon: root.themeDirty ? "󰆓" : "󰄬"; accent: root.green; primary: root.themeDirty; onTriggered: root.saveThemeEdits() }
+                            SettingsActionButton { label: "Topbar toepassen"; icon: "󰑓"; accent: root.blue; onTriggered: root.applyTopbarEdits() }
+                            SettingsActionButton { label: "Open Theme-editor"; icon: "󰏘"; accent: root.mauve; onTriggered: { root.themeEditorTab = "bar"; root.currentTab = 0; } }
+                            Item { Layout.fillWidth: true }
+                        }
+
+                        SettingsInfoCard {
+                            title: "Status"
+                            icon: root.themeDirty ? "󰐖" : "󰋼"
+                            accent: root.themeDirty ? root.yellow : root.green
+                            value: root.themeDirty ? ("Onopgeslagen wijzigingen in " + root.themeEditThemeId + ".toml") : (root.themeStatusText || "Klaar")
+                        }
+                    }
+                }
+            }
+
+            // =================================================================
+            // TAB 2: WIDGETS
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 2
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    spacing: root.s(14)
+
+                    Text { text: "Widgets"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                    Text { text: "Voor nu is dit een werkende widget-hub: je opent bestaande popups vanuit dezelfde settings-shell. Module toggles volgen zodra de bar die config daadwerkelijk leest."; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: width >= root.s(760) ? 2 : 1
+                        rowSpacing: root.s(10)
+                        columnSpacing: root.s(10)
+
+                        SettingsInfoCard { title: "Systeemwidgets"; icon: "󰀻"; accent: root.blue; value: "Netwerk, volume, notificaties en monitoren openen via de bestaande qs_manager-routes." }
+                        SettingsInfoCard { title: "Mode-aware modules"; icon: "󰒲"; accent: root.mauve; value: "Office, gaming en media kiezen nu al andere modulelijsten in BarShell.qml." }
+                    }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: root.s(10)
+
+                        SettingsActionButton { label: "Netwerk"; icon: "󰤨"; accent: root.blue; onTriggered: root.openShellWidget("network", "wifi") }
+                        SettingsActionButton { label: "Bluetooth"; icon: "󰂯"; accent: root.sapphire; onTriggered: root.openShellWidget("network", "bt") }
+                        SettingsActionButton { label: "Volume"; icon: "󰕾"; accent: root.green; onTriggered: root.openShellWidget("volume", "") }
+                        SettingsActionButton { label: "Monitoren"; icon: "󰍹"; accent: root.peach; onTriggered: root.openShellWidget("monitors", "") }
+                        SettingsActionButton { label: "Notificaties"; icon: "󰂚"; accent: root.pink; onTriggered: root.openShellWidget("notifications", "") }
+                    }
+
+                    Item { Layout.fillHeight: true }
+                }
+            }
+
+            // =================================================================
+            // TAB 5: DISPLAY
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 5
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    spacing: root.s(14)
+
+                    Text { text: "Display"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                    SettingsInfoCard { title: "Monitorstatus"; icon: "󰍹"; accent: root.blue; value: root.displayStatusText }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: root.s(10)
+                        SettingsActionButton { label: "Monitor UI openen"; icon: "󰍹"; accent: root.blue; primary: true; onTriggered: root.openShellWidget("monitors", "") }
+                        SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.green; onTriggered: displayStatusProc.running = true }
+                        Item { Layout.fillWidth: true }
+                    }
+
+                    SettingsInfoCard { title: "Opslaan"; icon: "󰆓"; accent: root.peach; value: "De bestaande monitor UI gebruikt monitor-apply-save.sh en schrijft naar 10-monitors.conf met een eigen beheerd blok." }
+                    Item { Layout.fillHeight: true }
+                }
+            }
+
+            // =================================================================
+            // TAB 6: NETWORK
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 6
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    spacing: root.s(14)
+
+                    Text { text: "Network"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                    SettingsInfoCard { title: "Wifi"; icon: "󰤨"; accent: root.blue; value: root.networkStatusText }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: root.s(10)
+                        SettingsActionButton { label: "Wifi-paneel"; icon: "󰤨"; accent: root.blue; primary: true; onTriggered: root.openShellWidget("network", "wifi") }
+                        SettingsActionButton { label: "Bluetooth-paneel"; icon: "󰂯"; accent: root.sapphire; onTriggered: root.openShellWidget("network", "bt") }
+                        SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.green; onTriggered: networkStatusProc.running = true }
+                    }
+
+                    SettingsInfoCard { title: "Veiligheid"; icon: "󰌾"; accent: root.yellow; value: "Wifi-wachtwoorden blijven in de bestaande network popup; deze tab toont alleen status en opent de juiste workflow." }
+                    Item { Layout.fillHeight: true }
+                }
+            }
+
+            // =================================================================
+            // TAB 7: AUDIO
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 7
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    spacing: root.s(14)
+
+                    Text { text: "Audio"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                    SettingsInfoCard { title: "Default output"; icon: "󰕾"; accent: root.green; value: root.audioStatusText }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: root.s(10)
+                        SettingsActionButton { label: "Volume-paneel"; icon: "󰕾"; accent: root.green; primary: true; onTriggered: root.openShellWidget("volume", "") }
+                        SettingsActionButton { label: "Mute wisselen"; icon: "󰖁"; accent: root.peach; onTriggered: { Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/network/audio_panel_logic.sh", "--toggle-mute"]); audioStatusProc.running = true; } }
+                        SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.blue; onTriggered: audioStatusProc.running = true }
+                    }
+
+                    SettingsInfoCard { title: "Uitbreiding"; icon: "󰋋"; accent: root.mauve; value: "Device-keuze en per-app volume blijven in de bestaande VolumePopup; deze tab gebruikt die popup als volledige mixer." }
+                    Item { Layout.fillHeight: true }
+                }
+            }
+
+            // =================================================================
+            // TAB 9: SESSION
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 9
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    spacing: root.s(14)
+
+                    Text { text: "Session"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                    SettingsInfoCard { title: "Actieve mode"; icon: "󰒲"; accent: root.mauve; value: root.sessionModeText }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: root.s(10)
+                        SettingsActionButton { label: "Office"; icon: "󰈹"; accent: root.blue; primary: root.sessionModeText === "office"; onTriggered: root.switchSessionMode("office") }
+                        SettingsActionButton { label: "Gaming"; icon: "󰊴"; accent: root.green; primary: root.sessionModeText === "gaming"; onTriggered: root.switchSessionMode("gaming") }
+                        SettingsActionButton { label: "Media"; icon: "󰝚"; accent: root.peach; primary: root.sessionModeText === "media"; onTriggered: root.switchSessionMode("media") }
+                        SettingsActionButton { label: "Mode verversen"; icon: "󰑓"; accent: root.sapphire; onTriggered: sessionModeProc.running = true }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: root.s(10)
+                        SettingsActionButton { label: "Vergrendelen"; icon: "󰌾"; accent: root.yellow; onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/lock.sh"]) }
+                        SettingsActionButton { label: "Uitlogmenu"; icon: "󰍃"; accent: root.red; onTriggered: Quickshell.execDetached(["wlogout"]) }
+                        Item { Layout.fillWidth: true }
+                    }
+
+                    SettingsInfoCard { title: "Bewuste beperking"; icon: "󰅚"; accent: root.red; value: "Shutdown/reboot staan hier nog niet als directe knoppen. Die horen achter een bevestiging of in wlogout." }
+                    Item { Layout.fillHeight: true }
+                }
+            }
+
+            // =================================================================
+            // TAB 10: UPDATES
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 10
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    spacing: root.s(14)
+
+                    Text { text: "Updates"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                    SettingsInfoCard { title: "Packages"; icon: "󰚰"; accent: root.green; value: root.updateStatusText }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: root.s(10)
+                        SettingsActionButton { label: "Package update"; icon: "󰚰"; accent: root.green; primary: true; onTriggered: root.runPackageUpgrade() }
+                        SettingsActionButton { label: "Dotfiles update"; icon: "󰐕"; accent: root.blue; onTriggered: root.runUpdateBootstrap() }
+                        SettingsActionButton { label: "Check opnieuw"; icon: "󰑓"; accent: root.peach; onTriggered: updatesStatusProc.running = true }
+                    }
+
+                    SettingsInfoCard { title: "Uitvoering"; icon: "󰄛"; accent: root.yellow; value: "Updates draaien bewust in Kitty met hold, zodat output en fouten zichtbaar blijven." }
+                    Item { Layout.fillHeight: true }
+                }
+            }
+
+            // =================================================================
+            // TAB 11: ADVANCED
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 11
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    spacing: root.s(14)
+
+                    Text { text: "Advanced"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                    SettingsInfoCard { title: "Status"; icon: "󰋼"; accent: root.blue; value: root.advancedStatusText }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: root.s(10)
+                        SettingsActionButton { label: "Topbar herladen"; icon: "󰑓"; accent: root.blue; onTriggered: root.reloadTopbar() }
+                        SettingsActionButton { label: "Quickshell herstart"; icon: "󰜉"; accent: root.peach; onTriggered: root.restartQuickshell() }
+                        SettingsActionButton { label: "Matugen render"; icon: "󰏘"; accent: root.mauve; onTriggered: root.rerenderTheme() }
+                        SettingsActionButton { label: "Alle status verversen"; icon: "󰑓"; accent: root.green; onTriggered: root.refreshOperationalStatus() }
+                    }
+
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: width >= root.s(760) ? 2 : 1
+                        rowSpacing: root.s(10)
+                        columnSpacing: root.s(10)
+                        SettingsInfoCard { title: "Config home"; icon: "󰉋"; accent: root.sapphire; value: root.configHome() }
+                        SettingsInfoCard { title: "Actief theme"; icon: "󰏘"; accent: root.mauve; value: root.activeThemeId || "onbekend" }
                     }
 
                     Item { Layout.fillHeight: true }

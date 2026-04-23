@@ -2,7 +2,7 @@
 
 Doel: eerst zorgen dat elke tab betrouwbaar iets kan lezen, wijzigen en opslaan. Daarna trekken we layout, typografie, knoppen en statusmeldingen gelijk.
 
-## Voorgestelde tabvolgorde
+## Huidige tabvolgorde
 
 1. Theme
 2. Bar
@@ -17,6 +17,12 @@ Doel: eerst zorgen dat elke tab betrouwbaar iets kan lezen, wijzigen en opslaan.
 11. Updates
 12. Advanced
 13. About
+
+Status in de app:
+- Theme, Keybinds, Input, Weather & Time en About hebben bestaande functionele content.
+- Bar heeft nu een eigen tab die dezelfde theme-velden bedient als de Theme-editor en via de bestaande save/apply flow werkt.
+- Widgets, Display, Network, Audio, Session, Updates en Advanced hebben nu werkende basispanelen die bestaande popups/scripts openen of status lezen.
+- Module-toggles voor Widgets zijn bewust nog niet als echte schakelaars gebouwd, omdat `BarShell.qml` nog geen `widgets.json` leest. De tab fungeert nu als betrouwbare hub.
 
 ## Theme
 
