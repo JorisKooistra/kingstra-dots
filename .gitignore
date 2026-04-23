@@ -2,6 +2,8 @@ plan.txt
 todos.txt
 voorbeelden en bronnen/
 .claude/
+.codex
+.cache/
 .env
 *.bak
 *.orig
@@ -21,6 +23,7 @@ config/swaync/colors.css
 config/walker/colors.css
 config/qt6ct/colors/matugen.conf
 config/zsh/omp-colors.toml
+config/zsh/.zcompdump*
 config/yazi/theme.toml
 
 # Installer-gegenereerde hardware config
@@ -50,11 +53,11 @@ config/kingstra/state/theme.json
 config/kingstra/state/wallpaper.json
 config/kingstra/state/wallhaven-tags.json
 config/kingstra/state/wallpaper-tags.json
+config/kingstra/state/fingerprint-enroll.*
 
 # Gegenereerde kleurentransformatie cache
 config/quickshell/colors-transformed.json
 
 aanleveringen/
-config/kingstra/state/fingerprint-enroll.pending
 config/matugen/templates/palette-inspector.json
 config/kingstra/state/matugen-palette.json
