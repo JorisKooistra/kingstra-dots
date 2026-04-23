@@ -35,10 +35,10 @@
     }
   },
 
-  // Timeout (ms) — 0 = nooit vanzelf verdwijnen
-  "timeout": 5,
-  "timeout-low": 2,
-  "timeout-critical": 0,
+  // Timeout (seconden) — transient/low meldingen zijn korte toasts
+  "timeout": 3,
+  "timeout-low": 1,
+  "timeout-critical": 8,
 
   // Gedrag
   "fit-to-screen": false,

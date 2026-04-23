@@ -73,8 +73,8 @@ Item {
     // STATE
     // -------------------------------------------------------------------------
     property int currentTab: 0
-    property var tabNames: ["About", "Keybinds", "Weather & Time", "Input", "Theme"]
-    property var tabIcons: ["", "󰌌", "󰖐", "󰍽", "󰏘"]
+    property var tabNames: ["Theme", "Keybinds", "Weather & Time", "Input", "About"]
+    property var tabIcons: ["󰏘", "󰌌", "󰖐", "󰍽", ""]
 
     property real introBase: 0.0
     property real introSidebar: 0.0
@@ -1270,11 +1270,11 @@ Item {
             transform: Translate { y: root.s(20) * (1.0 - introContent) }
 
             // =================================================================
-            // TAB 0: ABOUT
+            // TAB 4: ABOUT
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 0
+                visible: root.currentTab === 4
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -1950,12 +1950,12 @@ Item {
             }
 
             // =================================================================
-            // TAB 4: THEME (MATUGEN)
+            // TAB 0: THEME (MATUGEN)
             // =================================================================
             Item {
                 id: themeTab
                 anchors.fill: parent
-                visible: root.currentTab === 4
+                visible: root.currentTab === 0
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
