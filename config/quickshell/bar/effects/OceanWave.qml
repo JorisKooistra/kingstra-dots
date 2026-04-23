@@ -8,6 +8,7 @@ import "../.."  // ThemeConfig — voor ThemeConfig.duration()
 // Snelheid via OceanBar.qml: waveCycleMs: 6000  (ms per halve cyclus)
 // ─────────────────────────────────────────────────────────────────────────────
 Item {
+    id: root
     required property var shell
     required property var mocha
     required property var surface
@@ -34,6 +35,30 @@ Item {
             running: surface.isOcean; loops: Animation.Infinite
             NumberAnimation { to: 0;             duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("waveCycleMs", 6000))); easing.type: Easing.InOutSine }
             NumberAnimation { to: -parent.width; duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("waveCycleMs", 6000))); easing.type: Easing.InOutSine }
+        }
+    }
+
+    Repeater {
+        model: Math.ceil(root.width / shell.s(46))
+        Rectangle {
+            width: shell.s(26)
+            height: shell.s(2)
+            radius: height / 2
+            x: index * shell.s(46) + shell.s(6)
+            y: root.height - shell.s(5 + (index % 3))
+            opacity: surface.effectAlpha(0.36)
+            color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.95)
+        }
+    }
+
+    Rectangle {
+        anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
+        height: shell.s(5)
+        opacity: surface.effectAlpha(0.22)
+        gradient: Gradient {
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0; color: "transparent" }
+            GradientStop { position: 1.0; color: Qt.rgba(mocha.sapphire.r, mocha.sapphire.g, mocha.sapphire.b, 1.0) }
         }
     }
 }

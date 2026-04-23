@@ -46,7 +46,7 @@ thematic_mix = 0.18
 [material]
 texture = "motion"
 overlay_opacity = 0.05
-glow_intensity = 0.24
+glow_intensity = 0.30
 
 [terminal]
 bg_opacity = 0.82
@@ -84,9 +84,9 @@ particles = "sparkles"
 particle_count = 14
 particle_speed = 0.9
 ambient_effect = "animated-rainbow"
-effect_intensity = 0.85
-effect_cycle_ms = 4200
-hover_reactivity = 0.90
+effect_intensity = 1.25
+effect_cycle_ms = 3200
+hover_reactivity = 1.0
 
 [bar_dynamics]
 drawer_style = "context-card"

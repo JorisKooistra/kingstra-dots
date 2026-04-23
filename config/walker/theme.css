@@ -1,38 +1,38 @@
 #window {
-  background: color-mix(in srgb, var(--mantle) 84%, transparent);
-  border: 1px solid color-mix(in srgb, var(--outline) 18%, transparent);
-  border-radius: 20px;
-  box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) 22%, transparent);
-  font-family: "Fira Sans", sans-serif;
+  background: color-mix(in srgb, var(--mantle) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline) 26%, transparent);
+  border-radius: 24px;
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) 32%, transparent);
+  font-family: "Space Grotesk", sans-serif;
 }
 
 #search {
   font-size: 13px;
-  padding: 15px 19px;
+  padding: 18px 22px;
 }
 
 row {
-  border-radius: 12px;
-  margin: 2px 2px;
-  padding: 6px 13px;
+  border-radius: 16px;
+  margin: 3px 2px;
+  padding: 8px 16px;
 }
 
 row:selected,
 row:hover {
-  background: color-mix(in srgb, var(--primary) 16%, var(--surface));
+  background: color-mix(in srgb, var(--primary) 24%, var(--surface));
 }
 
 #name {
-  font-family: "Fira Sans", sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-weight: 600;
 }
 
 #description,
 #label,
 #typeahead {
-  font-family: "Fira Sans", sans-serif;
+  font-family: "Space Grotesk", sans-serif;
 }
 
 #calc-result {
-  font-family: "Fira Code", monospace;
+  font-family: "JetBrainsMono Nerd Font", monospace;
 }

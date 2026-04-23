@@ -50,29 +50,40 @@ Item {
     }
 
     // ── 3. Verticale gridlijnen ───────────────────────────────────────────────
-    // model = 0 voor cyber (geen verticale lijnen in cyber-stijl); wél voor andere themes
     Repeater {
-        model: surface.activeTheme === "cyber" ? 0 : Math.ceil(root.width / shell.s(22))
+        model: Math.ceil(root.width / shell.s(18))
         Rectangle {
-            width: 1; height: parent.height; x: index * shell.s(22)
+            width: (index % 6) === 0 ? 2 : 1; height: parent.height; x: index * shell.s(18)
             color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b,
-                Math.max(0.0, Math.min(0.30,
+                Math.max(0.0, Math.min(0.42,
                     surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
                     * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
-                    * ((index % 4) === 0 ? 0.95 : 0.42))))  // elke 4e lijn helderder
+                    * ((index % 6) === 0 ? 0.90 : 0.30))))
         }
     }
 
     // ── 4. Horizontale gridlijnen ─────────────────────────────────────────────
     Repeater {
-        model: Math.ceil(parent.height / shell.s(20))
+        model: Math.ceil(parent.height / shell.s(10))
         Rectangle {
-            width: root.width; height: 1; y: index * shell.s(20)
+            width: root.width; height: 1; y: index * shell.s(10)
             color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b,
-                Math.max(0.0, Math.min(0.24,
+                Math.max(0.0, Math.min(0.34,
                     surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
                     * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
-                    * 0.62)))
+                    * ((index % 3) === 0 ? 0.62 : 0.24))))
+        }
+    }
+
+    Repeater {
+        model: Math.ceil(root.width / shell.s(64))
+        Rectangle {
+            x: index * shell.s(64) + shell.s(8)
+            y: root.height - shell.s(5)
+            width: shell.s(24)
+            height: shell.s(2)
+            color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b,
+                Math.max(0.0, Math.min(0.72, surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0)))))
         }
     }
 
@@ -102,8 +113,8 @@ Item {
     // Smal teal-verlooprechthoek dat de volle breedte van links naar rechts rijdt.
     Rectangle {
         id: cyberSweep
-        width: shell.s(72); height: parent.height; x: -width
-        opacity: Math.max(0.0, Math.min(0.24,
+        width: shell.s(120); height: parent.height; x: -width
+        opacity: Math.max(0.0, Math.min(0.34,
             surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
             * ((surface.activeTheme === "cyber") ? 1.8 : 1.0)
             * 0.55))

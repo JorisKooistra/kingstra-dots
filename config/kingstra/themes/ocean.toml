@@ -15,8 +15,8 @@ border_radius = 20
 border_width = 1
 gaps_in = 10
 gaps_out = 20
-bar_opacity = 0.62
-popup_opacity = 0.72
+bar_opacity = 0.54
+popup_opacity = 0.68
 blur_size = 28
 blur_passes = 5
 animation_speed = 0.85
@@ -46,7 +46,7 @@ thematic_mix = 0.22
 [material]
 texture = "flow"
 overlay_opacity = 0.04
-glow_intensity = 0.08
+glow_intensity = 0.14
 
 [terminal]
 bg_opacity = 0.76
@@ -75,17 +75,17 @@ surface_mode = "mist"
 motion = "smooth"
 panel_shadow = 0.26
 outline_strength = 0.16
-glass_strength = 0.12
-widget_radius = 18
-panel_padding = 16
+glass_strength = 0.20
+widget_radius = 24
+panel_padding = 18
 
 [effects]
 particles = "rain"
 particle_count = 16
 particle_speed = 0.34
 ambient_effect = "ocean-wave"
-effect_intensity = 0.72
-effect_cycle_ms = 5200
+effect_intensity = 1.15
+effect_cycle_ms = 4200
 hover_reactivity = 0.40
 
 [bar_dynamics]

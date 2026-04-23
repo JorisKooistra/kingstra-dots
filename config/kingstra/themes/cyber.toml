@@ -15,11 +15,11 @@ border_radius = 2
 border_width = 2
 gaps_in = 4
 gaps_out = 8
-bar_opacity = 0.95
-popup_opacity = 0.96
+bar_opacity = 0.98
+popup_opacity = 0.98
 blur_size = 2
 blur_passes = 1
-animation_speed = 1.5
+animation_speed = 1.75
 
 [fonts]
 ui_font = "Share Tech Mono"
@@ -74,19 +74,19 @@ density = "compact"
 surface_mode = "hard-surface"
 motion = "snappy"
 panel_shadow = 0.34
-outline_strength = 0.40
-glass_strength = 0.03
-widget_radius = 6
-panel_padding = 10
+outline_strength = 0.48
+glass_strength = 0.01
+widget_radius = 4
+panel_padding = 8
 
 [effects]
 particles = "none"
 particle_count = 0
 particle_speed = 0.0
 ambient_effect = "cyber-grid"
-effect_intensity = 0.95
-effect_cycle_ms = 5200
-hover_reactivity = 0.85
+effect_intensity = 1.35
+effect_cycle_ms = 3600
+hover_reactivity = 1.0
 
 [bar_dynamics]
 drawer_style = "rail-panel"

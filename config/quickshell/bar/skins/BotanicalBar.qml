@@ -9,5 +9,5 @@ QtObject {
     readonly property bool showCyberGrid: false
     readonly property real gridAlpha: 0.0
     readonly property bool showWarmGlow: true
-    readonly property real warmGlowAlpha: 0.04
+    readonly property real warmGlowAlpha: 0.07
 }

@@ -15,7 +15,7 @@ border_radius = 2
 border_width = 4
 gaps_in = 2
 gaps_out = 4
-bar_opacity = 0.99
+bar_opacity = 1.0
 popup_opacity = 0.99
 blur_size = 0
 blur_passes = 0
@@ -34,7 +34,7 @@ letter_spacing = 0
 icon_theme = "Breeze"
 
 [quickshell]
-bar_height = 44
+bar_height = 48
 bar_position = "bottom"
 
 [color_transform]
@@ -75,17 +75,17 @@ density = "compact"
 surface_mode = "solid"
 motion = "firm"
 panel_shadow = 0.12
-outline_strength = 0.34
-glass_strength = 0.02
+outline_strength = 0.50
+glass_strength = 0.0
 widget_radius = 4
-panel_padding = 9
+panel_padding = 7
 
 [effects]
 particles = "none"
 particle_count = 0
 particle_speed = 0
 ambient_effect = "rocky-bevel"
-effect_intensity = 0.85
+effect_intensity = 1.20
 effect_cycle_ms = 0
 hover_reactivity = 0.15
 

@@ -15,6 +15,7 @@ import "../.."  // ThemeConfig — voor ThemeConfig.duration()
 //                   Snelheid: auroraCycleMs (ms per sweep).
 // ─────────────────────────────────────────────────────────────────────────────
 Item {
+    id: root
     required property var shell
     required property var mocha
     required property var surface
@@ -78,6 +79,21 @@ Item {
     }
 
     // ── Sidebar pulse spine ──────────────────────────────────────────────────
+    Repeater {
+        model: surface.isAnimated && shell.isVerticalBar ? 10 : 0
+        Rectangle {
+            anchors.left: shell.isLeftBar ? parent.left : undefined
+            anchors.right: shell.isRightBar ? parent.right : undefined
+            y: index * root.height / 10
+            width: shell.s(4)
+            height: shell.s(18)
+            radius: width / 2
+            z: 0.19
+            opacity: surface.effectAlpha(0.34)
+            color: (index % 2) === 0 ? mocha.pink : mocha.teal
+        }
+    }
+
     Rectangle {
         id: pulseSpine
         visible: surface.isAnimated && shell.isVerticalBar && ThemeConfig.railAccent === "pulse-line"
