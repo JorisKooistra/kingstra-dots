@@ -35,7 +35,7 @@ icon_theme = "Papirus"
 
 [quickshell]
 bar_height = 40
-bar_position = "right"
+bar_position = "left"
 
 [color_transform]
 hue_shift = 12
@@ -68,10 +68,31 @@ clock_style = "digital"
 shape = "rounded"
 surface = "vivid-glass"
 
+[style_profile]
+family = "animated"
+density = "comfortable"
+surface_mode = "vivid-glass"
+motion = "playful"
+panel_shadow = 0.30
+outline_strength = 0.22
+glass_strength = 0.16
+widget_radius = 18
+panel_padding = 15
+
 [effects]
-particles = "none"
-particle_count = 0
-particle_speed = 0.0
+particles = "sparkles"
+particle_count = 14
+particle_speed = 0.9
+ambient_effect = "animated-rainbow"
+effect_intensity = 0.85
+effect_cycle_ms = 4200
+hover_reactivity = 0.90
+
+[bar_dynamics]
+drawer_style = "context-card"
+module_density = "balanced"
+workspace_preview = "hybrid"
+rail_accent = "pulse-line"
 
 [terminal_visual]
 overlay_asset = ""

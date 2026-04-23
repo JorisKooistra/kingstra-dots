@@ -13,8 +13,8 @@ Rectangle {
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
     height: surface.continuousBarMode ? surface.continuousRailHeight : parent.height
     z: 0.1
-    visible: surface.isBotanical && surface.skinBool("showWarmGlow", false)
-    opacity: surface.skinNumber("warmGlowAlpha", 0.04)
+    visible: surface.ambientEnabled("botanical-glow", "botanical") && surface.skinBool("showWarmGlow", false)
+    opacity: surface.effectAlpha(surface.skinNumber("warmGlowAlpha", 0.04))
 
     gradient: Gradient {
         GradientStop { position: 0.0; color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 1.0) }

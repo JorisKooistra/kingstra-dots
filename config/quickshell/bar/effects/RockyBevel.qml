@@ -15,19 +15,19 @@ Item {
 
     anchors.fill: parent
     z: 0.6
-    visible: surface.isRocky && surface.skinBool("showBevelHighlight", false)
+    visible: surface.ambientEnabled("rocky-bevel", "rocky") && surface.skinBool("showBevelHighlight", false)
 
     // Lichte bovenrand
     Rectangle {
         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
         height: 2
-        color: Qt.rgba(1, 1, 1, surface.skinNumber("bevelLightAlpha", 0.12))
+        color: Qt.rgba(1, 1, 1, surface.effectAlpha(surface.skinNumber("bevelLightAlpha", 0.12)))
     }
 
     // Donkere onderrand
     Rectangle {
         anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
         height: 2
-        color: Qt.rgba(0, 0, 0, surface.skinNumber("bevelDarkAlpha", 0.18))
+        color: Qt.rgba(0, 0, 0, surface.effectAlpha(surface.skinNumber("bevelDarkAlpha", 0.18)))
     }
 }

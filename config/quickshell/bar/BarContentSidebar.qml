@@ -17,7 +17,8 @@ Item {
     property var currentDate: new Date()
     readonly property bool compactAnimatedSidebar: ThemeConfig.effectiveBarTemplate === "compact-sidebar"
                                                   || String(shell.activeThemeName || "").toLowerCase() === "animated"
-    readonly property bool drawerOpen: compactAnimatedSidebar && shell.sidebarDrawerOpen
+    readonly property bool drawerAllowed: ThemeConfig.drawerStyle !== "none"
+    readonly property bool drawerOpen: compactAnimatedSidebar && drawerAllowed && shell.sidebarDrawerOpen
     readonly property bool compactRailOnly: compactAnimatedSidebar
     readonly property int railWidth: compactAnimatedSidebar && shell.isVerticalBar ? shell.baseBarThickness : width
     property string drawerKind: "summary"
@@ -39,9 +40,10 @@ Item {
     readonly property int pillTopRightRadius: edgeSidebarChrome && shell.isRightBar ? 0 : surface.innerPillRadius
     readonly property int pillBottomLeftRadius: edgeSidebarChrome && shell.isLeftBar ? 0 : surface.innerPillRadius
     readonly property int pillBottomRightRadius: edgeSidebarChrome && shell.isRightBar ? 0 : surface.innerPillRadius
-    readonly property int sectionSpacing: shell.s(compactRailOnly ? 5 : 6)
-    readonly property int moduleHeight: shell.s(compactRailOnly ? 28 : 32)
-    readonly property int iconButtonSize: shell.s(compactRailOnly ? 28 : 32)
+    readonly property int densityOffset: ThemeConfig.moduleDensity === "minimal" ? -2 : (ThemeConfig.moduleDensity === "rich" ? 2 : 0)
+    readonly property int sectionSpacing: shell.s(Math.max(3, (compactRailOnly ? 5 : 6) + densityOffset))
+    readonly property int moduleHeight: shell.s(Math.max(24, (compactRailOnly ? 28 : 32) + densityOffset))
+    readonly property int iconButtonSize: shell.s(Math.max(24, (compactRailOnly ? 28 : 32) + densityOffset))
     readonly property int moduleInnerMargin: shell.s(compactRailOnly ? 0 : 8)
     readonly property int moduleSpacing: shell.s(compactRailOnly ? 0 : 8)
     readonly property bool statusDockVisible: shell.moduleList.includes("updates")
@@ -155,7 +157,7 @@ Item {
     }
 
     function setDrawerOpen(open, kind, item, detail) {
-        if (!compactAnimatedSidebar)
+        if (!compactAnimatedSidebar || !drawerAllowed)
             return;
         if (open) {
             drawerCloseTimer.stop();
@@ -470,7 +472,9 @@ Item {
                         required property int index
                         property int wsId: index + 1
                         property bool hovered: wsMouse.containsMouse
-                        readonly property var appIcons: hovered ? root.workspaceAppIcons(wsId) : []
+                        readonly property bool previewApps: ThemeConfig.workspacePreview === "app-icons"
+                                                           || ThemeConfig.workspacePreview === "hybrid"
+                        readonly property var appIcons: hovered && previewApps ? root.workspaceAppIcons(wsId) : []
                         readonly property var visibleAppIcons: root.visibleAppIcons(appIcons)
                         readonly property bool showAppIcons: appIcons.length > 0
                         readonly property bool useIconGrid: visibleAppIcons.length >= 3
@@ -1106,13 +1110,17 @@ Item {
 
     Rectangle {
         id: contextDrawer
-        visible: root.compactAnimatedSidebar
+        visible: root.compactAnimatedSidebar && root.drawerAllowed
         width: shell.sidebarDrawerWidth
         height: drawerContent.implicitHeight + shell.s(18)
         radius: surface.panelRadius
         border.width: 1
-        border.color: Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, drawerOpen ? 0.52 : 0.0)
-        color: Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, 0.90)
+        border.color: ThemeConfig.drawerStyle === "rail-panel"
+                      ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, drawerOpen ? 0.46 : 0.0)
+                      : Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, drawerOpen ? 0.52 : 0.0)
+        color: ThemeConfig.drawerStyle === "rail-panel"
+               ? Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.94)
+               : Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, 0.90)
         opacity: drawerOpen ? 1.0 : 0.0
         scale: drawerOpen ? 1.0 : 0.985
         x: shell.isLeftBar ? root.railWidth + shell.s(8) : root.width - root.railWidth - width - shell.s(8)

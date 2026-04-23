@@ -68,10 +68,31 @@ clock_style = "digital"
 shape = "segmented"
 surface = "hard-tech"
 
+[style_profile]
+family = "cyber"
+density = "compact"
+surface_mode = "hard-surface"
+motion = "snappy"
+panel_shadow = 0.34
+outline_strength = 0.40
+glass_strength = 0.03
+widget_radius = 6
+panel_padding = 10
+
 [effects]
 particles = "none"
 particle_count = 0
 particle_speed = 0.0
+ambient_effect = "cyber-grid"
+effect_intensity = 0.95
+effect_cycle_ms = 5200
+hover_reactivity = 0.85
+
+[bar_dynamics]
+drawer_style = "rail-panel"
+module_density = "minimal"
+workspace_preview = "numbers"
+rail_accent = "segmented"
 
 [terminal_visual]
 overlay_asset = ""

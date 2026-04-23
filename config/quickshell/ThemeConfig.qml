@@ -45,6 +45,10 @@ Item {
     property string particleType: "none"
     property int particleCount: 0
     property real particleSpeed: 0.0
+    property string ambientEffect: "theme-default"
+    property real effectIntensity: 1.0
+    property int effectCycleMs: 0
+    property real hoverReactivity: 0.4
     property string textureOverlayAsset: ""
     property string terminalOverlayAsset: ""
     property real terminalOverlayOpacity: 0.0
@@ -62,6 +66,11 @@ Item {
     property real styleGlassStrength: 0.10
     property int styleWidgetRadius: 16
     property int stylePanelPadding: 14
+
+    property string drawerStyle: "context-card"
+    property string moduleDensity: "balanced"
+    property string workspacePreview: "hybrid"
+    property string railAccent: "none"
 
     property string terminalCursorStyle: "block"
     property real terminalBgOpacity: 0.90
@@ -192,6 +201,10 @@ Item {
                     if (data.particle_type !== undefined) root.particleType = String(data.particle_type);
                     if (data.particle_count !== undefined) root.particleCount = parseInt(root.clamp(Number(data.particle_count), 0, 50));
                     if (data.particle_speed !== undefined) root.particleSpeed = root.clamp(Number(data.particle_speed), 0.0, 2.0);
+                    if (data.ambient_effect !== undefined) root.ambientEffect = String(data.ambient_effect);
+                    if (data.effect_intensity !== undefined) root.effectIntensity = root.clamp(Number(data.effect_intensity), 0.0, 2.0);
+                    if (data.effect_cycle_ms !== undefined) root.effectCycleMs = parseInt(root.clamp(Number(data.effect_cycle_ms), 0, 30000));
+                    if (data.hover_reactivity !== undefined) root.hoverReactivity = root.clamp(Number(data.hover_reactivity), 0.0, 1.0);
                     if (data.texture_overlay_asset !== undefined) root.textureOverlayAsset = String(data.texture_overlay_asset);
                     if (data.terminal_overlay_asset !== undefined) root.terminalOverlayAsset = String(data.terminal_overlay_asset);
                     if (data.terminal_overlay_opacity !== undefined) root.terminalOverlayOpacity = root.clamp(Number(data.terminal_overlay_opacity), 0.0, 1.0);
@@ -211,6 +224,12 @@ Item {
                     if (style.glass_strength !== undefined) root.styleGlassStrength = root.clamp(Number(style.glass_strength), 0.0, 0.5);
                     if (style.widget_radius !== undefined) root.styleWidgetRadius = parseInt(style.widget_radius) || root.styleWidgetRadius;
                     if (style.panel_padding !== undefined) root.stylePanelPadding = parseInt(style.panel_padding) || root.stylePanelPadding;
+
+                    let barDynamics = data.bar_dynamics || {};
+                    if (barDynamics.drawer_style !== undefined) root.drawerStyle = String(barDynamics.drawer_style);
+                    if (barDynamics.module_density !== undefined) root.moduleDensity = String(barDynamics.module_density);
+                    if (barDynamics.workspace_preview !== undefined) root.workspacePreview = String(barDynamics.workspace_preview);
+                    if (barDynamics.rail_accent !== undefined) root.railAccent = String(barDynamics.rail_accent);
 
                     if (terminal.cursor_style !== undefined) root.terminalCursorStyle = String(terminal.cursor_style);
                     if (terminal.bg_opacity !== undefined) root.terminalBgOpacity = root.clamp(Number(terminal.bg_opacity), 0.15, 1.0);

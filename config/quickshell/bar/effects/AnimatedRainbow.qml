@@ -24,10 +24,10 @@ Item {
     // ── Rainbow shift (z=0.10) ────────────────────────────────────────────────
     Rectangle {
         id: rainbowLayer
-        visible: surface.isAnimated && surface.skinBool("showRainbowShift", false)
+        visible: surface.ambientEnabled("animated-rainbow", "animated") && surface.skinBool("showRainbowShift", false)
         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
         height: surface.continuousBarMode ? surface.continuousRailHeight : parent.height
-        z: 0.1; opacity: surface.skinNumber("rainbowAlpha", 0.07)
+        z: 0.1; opacity: surface.effectAlpha(surface.skinNumber("rainbowAlpha", 0.07))
 
         // c1/c2 zijn de linker- en rechterkleur van het verloop.
         // De animatie hieronder wisselt ze cyclisch van kleur.
@@ -39,17 +39,17 @@ Item {
             GradientStop { position: 1.0; color: rainbowLayer.c2 }
         }
         SequentialAnimation {
-            running: surface.isAnimated; loops: Animation.Infinite
-            ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.pink;  duration: ThemeConfig.duration(surface.skinNumber("rainbowCycleMs", 8000) / 4) }
-            ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.peach; duration: ThemeConfig.duration(surface.skinNumber("rainbowCycleMs", 8000) / 4) }
-            ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.teal;  duration: ThemeConfig.duration(surface.skinNumber("rainbowCycleMs", 8000) / 4) }
-            ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.green; duration: ThemeConfig.duration(surface.skinNumber("rainbowCycleMs", 8000) / 4) }
+            running: rainbowLayer.visible; loops: Animation.Infinite
+            ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.pink;  duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("rainbowCycleMs", 8000)) / 4) }
+            ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.peach; duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("rainbowCycleMs", 8000)) / 4) }
+            ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.teal;  duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("rainbowCycleMs", 8000)) / 4) }
+            ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.green; duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("rainbowCycleMs", 8000)) / 4) }
         }
     }
 
     // ── Aurora sweep (z=0.12) ─────────────────────────────────────────────────
     Item {
-        visible: surface.isAnimated && surface.skinBool("showAuroraSweep", false)
+        visible: surface.ambientEnabled("animated-rainbow", "animated") && surface.skinBool("showAuroraSweep", false)
         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
         height: surface.continuousBarMode ? surface.continuousRailHeight : parent.height
         z: 0.12; clip: true
@@ -60,7 +60,7 @@ Item {
             width: parent.width * 0.55; height: parent.height * 1.4
             y: -parent.height * 0.2   // iets boven de rand voor een zachte overloop
             x: -width                  // startpositie links buiten beeld
-            opacity: surface.skinNumber("auroraAlpha", 0.13)
+            opacity: surface.effectAlpha(surface.skinNumber("auroraAlpha", 0.13))
             rotation: -8               // lichte diagonaal voor een natuurlijker effect
             gradient: Gradient {
                 orientation: Gradient.Horizontal
@@ -70,8 +70,8 @@ Item {
                 GradientStop { position: 1.0;  color: "transparent" }
             }
             SequentialAnimation on x {
-                running: surface.isAnimated; loops: Animation.Infinite
-                NumberAnimation { to: parent.width + auroraSweep.width * 0.2; duration: ThemeConfig.duration(surface.skinNumber("auroraCycleMs", 4200)); easing.type: Easing.InOutSine }
+                running: parent.visible; loops: Animation.Infinite
+                NumberAnimation { to: parent.width + auroraSweep.width * 0.2; duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("auroraCycleMs", 4200))); easing.type: Easing.InOutSine }
                 NumberAnimation { to: -auroraSweep.width; duration: 0 }  // reset zonder animatie
             }
         }
@@ -80,14 +80,14 @@ Item {
     // ── Sidebar pulse spine ──────────────────────────────────────────────────
     Rectangle {
         id: pulseSpine
-        visible: surface.isAnimated && shell.isVerticalBar
+        visible: surface.isAnimated && shell.isVerticalBar && ThemeConfig.railAccent === "pulse-line"
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.left: shell.isLeftBar ? parent.left : undefined
         anchors.right: shell.isRightBar ? parent.right : undefined
         width: shell.s(2)
         z: 0.18
-        opacity: 0.82
+        opacity: surface.effectAlpha(0.82)
         property color spineA: mocha.pink
         property color spineB: mocha.teal
         gradient: Gradient {

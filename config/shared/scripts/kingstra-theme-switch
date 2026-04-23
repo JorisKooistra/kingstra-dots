@@ -372,7 +372,7 @@ MATUGEN_MODE_JSON=$(pick_enum "${MATUGEN_MODE:-dark}" "dark" "matugen.mode" \
     dark light)
 
 BAR_SHAPE_JSON=$(pick_enum "${BAR_SHAPE:-rounded}" "rounded" "bar.shape" \
-    rounded organic-grown capsule block segmented-capsule beveled)
+    rounded organic-grown capsule block segmented-capsule beveled kinetic-dock)
 BAR_POSITION_JSON=$(pick_enum "${QUICKSHELL_BAR_POSITION:-top}" "top" "quickshell.bar_position" \
     top bottom left right)
 BAR_TEMPLATE_JSON=$(pick_enum "${BAR_TEMPLATE:-auto}" "auto" "bar.template" \
@@ -400,9 +400,23 @@ WIDGET_SHAPE_JSON="${WIDGETS_SHAPE:-rounded}"
 WIDGET_SURFACE_JSON="${WIDGETS_SURFACE:-standard}"
 
 PARTICLE_TYPE_JSON=$(pick_enum "${EFFECTS_PARTICLES:-none}" "none" "effects.particles" \
-    none fireflies space-specks)
+    none fireflies space-specks space-specks-layered sparkles rain snow dust)
 PARTICLE_COUNT_JSON=$(sanitize_int "${EFFECTS_PARTICLE_COUNT:-0}" "0" "0" "50" "effects.particle_count")
 PARTICLE_SPEED_JSON=$(sanitize_float "${EFFECTS_PARTICLE_SPEED:-0.0}" "0.0" "0.0" "2.0" "effects.particle_speed")
+AMBIENT_EFFECT_JSON=$(pick_enum "${EFFECTS_AMBIENT_EFFECT:-theme-default}" "theme-default" "effects.ambient_effect" \
+    theme-default none botanical-glow cyber-grid animated-rainbow ocean-wave space-nebula rocky-bevel)
+EFFECT_INTENSITY_JSON=$(sanitize_float "${EFFECTS_EFFECT_INTENSITY:-1.0}" "1.0" "0.0" "2.0" "effects.effect_intensity")
+EFFECT_CYCLE_MS_JSON=$(sanitize_int "${EFFECTS_EFFECT_CYCLE_MS:-0}" "0" "0" "30000" "effects.effect_cycle_ms")
+EFFECT_HOVER_REACTIVITY_JSON=$(sanitize_float "${EFFECTS_HOVER_REACTIVITY:-0.4}" "0.4" "0.0" "1.0" "effects.hover_reactivity")
+
+DRAWER_STYLE_JSON=$(pick_enum "${BAR_DYNAMICS_DRAWER_STYLE:-context-card}" "context-card" "bar_dynamics.drawer_style" \
+    none context-card rail-panel)
+MODULE_DENSITY_JSON=$(pick_enum "${BAR_DYNAMICS_MODULE_DENSITY:-balanced}" "balanced" "bar_dynamics.module_density" \
+    minimal balanced rich)
+WORKSPACE_PREVIEW_JSON=$(pick_enum "${BAR_DYNAMICS_WORKSPACE_PREVIEW:-hybrid}" "hybrid" "bar_dynamics.workspace_preview" \
+    numbers app-icons hybrid)
+RAIL_ACCENT_JSON=$(pick_enum "${BAR_DYNAMICS_RAIL_ACCENT:-none}" "none" "bar_dynamics.rail_accent" \
+    none edge-line pulse-line segmented)
 
 TERMINAL_OVERLAY_ASSET_JSON=$(resolve_asset_path "${TERMINAL_VISUAL_OVERLAY_ASSET:-}" "terminal_visual.overlay_asset")
 TERMINAL_OVERLAY_OPACITY_JSON=$(sanitize_float "${TERMINAL_VISUAL_OVERLAY_OPACITY:-0.0}" "0.0" "0.0" "1.0" "terminal_visual.overlay_opacity")
@@ -588,6 +602,10 @@ ${TOPBAR_LOOSE_BLOCKS_LINE}
     "particle_type": "${PARTICLE_TYPE_JSON}",
     "particle_count": ${PARTICLE_COUNT_JSON},
     "particle_speed": ${PARTICLE_SPEED_JSON},
+    "ambient_effect": "${AMBIENT_EFFECT_JSON}",
+    "effect_intensity": ${EFFECT_INTENSITY_JSON},
+    "effect_cycle_ms": ${EFFECT_CYCLE_MS_JSON},
+    "hover_reactivity": ${EFFECT_HOVER_REACTIVITY_JSON},
     "texture_overlay_asset": "${TEXTURE_OVERLAY_ASSET_JSON}",
     "terminal_overlay_asset": "${TERMINAL_OVERLAY_ASSET_JSON}",
     "terminal_overlay_opacity": ${TERMINAL_OVERLAY_OPACITY_JSON},
@@ -620,6 +638,12 @@ ${TOPBAR_LOOSE_BLOCKS_LINE}
         "glass_strength": ${STYLE_GLASS_STRENGTH},
         "widget_radius": ${STYLE_WIDGET_RADIUS},
         "panel_padding": ${STYLE_PANEL_PADDING}
+    },
+    "bar_dynamics": {
+        "drawer_style": "${DRAWER_STYLE_JSON}",
+        "module_density": "${MODULE_DENSITY_JSON}",
+        "workspace_preview": "${WORKSPACE_PREVIEW_JSON}",
+        "rail_accent": "${RAIL_ACCENT_JSON}"
     },
     "terminal": {
         "bg_opacity": ${TERMINAL_BG_OPACITY:-0.90},

@@ -68,10 +68,31 @@ clock_style = "hybrid"
 shape = "dark-capsule"
 surface = "deep-glass"
 
+[style_profile]
+family = "space"
+density = "airy"
+surface_mode = "cinematic-glass"
+motion = "float"
+panel_shadow = 0.32
+outline_strength = 0.18
+glass_strength = 0.14
+widget_radius = 16
+panel_padding = 16
+
 [effects]
-particles = "space-specks"
-particle_count = 16
-particle_speed = 0.04
+particles = "space-specks-layered"
+particle_count = 28
+particle_speed = 0.06
+ambient_effect = "space-nebula"
+effect_intensity = 0.95
+effect_cycle_ms = 11000
+hover_reactivity = 0.18
+
+[bar_dynamics]
+drawer_style = "context-card"
+module_density = "rich"
+workspace_preview = "app-icons"
+rail_accent = "segmented"
 
 [terminal_visual]
 overlay_asset = ""

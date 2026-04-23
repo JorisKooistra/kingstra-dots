@@ -238,6 +238,25 @@ Item {
     property string editParticleType: "none"
     property int editParticleCount: 0
     property string editParticleSpeed: "0.18"
+    property string editAmbientEffect: "theme-default"
+    property string editEffectIntensity: "1.0"
+    property int editEffectCycleMs: 0
+    property string editHoverReactivity: "0.4"
+
+    // Karakter
+    property string editStyleFamily: "botanical"
+    property string editStyleDensity: "comfortable"
+    property string editSurfaceMode: "soft-glass"
+    property string editStyleMotion: "gentle"
+    property string editPanelShadow: "0.22"
+    property string editOutlineStrength: "0.18"
+    property string editGlassStrength: "0.10"
+    property int editWidgetRadius: 16
+    property int editPanelPadding: 14
+    property string editDrawerStyle: "context-card"
+    property string editModuleDensity: "balanced"
+    property string editWorkspacePreview: "hybrid"
+    property string editRailAccent: "none"
 
     property var schemeOptions: [
         "scheme-tonal-spot",
@@ -271,16 +290,26 @@ Item {
     property var barPositionOptions: ["top", "bottom", "left", "right"]
     property var barTemplateOptions: ["auto", "horizontal", "sidebar", "compact-sidebar"]
     property var barWidthModeOptions: ["full", "floating"]
-    property var barShapeOptions: ["rounded", "organic-grown", "capsule", "block", "segmented-capsule", "beveled"]
+    property var barShapeOptions: ["rounded", "organic-grown", "capsule", "block", "segmented-capsule", "beveled", "kinetic-dock"]
     property var barEdgeStyleOptions: ["flush", "soft", "hard", "beveled", "ornate-rounded"]
     property var clockStyleOptions: ["digital", "analog", "hybrid"]
     property var fontWeightOptions: ["light", "regular", "medium", "bold"]
-    property var particleTypeOptions: ["none", "fireflies", "sparkles", "rain", "snow", "dust"]
+    property var particleTypeOptions: ["none", "fireflies", "space-specks", "space-specks-layered", "sparkles", "rain", "snow", "dust"]
+    property var styleFamilyOptions: ["botanical", "cyber", "rocky", "ocean", "space", "animated"]
+    property var styleDensityOptions: ["compact", "comfortable", "airy"]
+    property var surfaceModeOptions: ["soft-glass", "vivid-glass", "hard-surface", "mist", "solid", "cinematic-glass"]
+    property var styleMotionOptions: ["gentle", "snappy", "smooth", "firm", "float", "playful"]
+    property var ambientEffectOptions: ["theme-default", "none", "botanical-glow", "cyber-grid", "animated-rainbow", "ocean-wave", "space-nebula", "rocky-bevel"]
+    property var drawerStyleOptions: ["none", "context-card", "rail-panel"]
+    property var moduleDensityOptions: ["minimal", "balanced", "rich"]
+    property var workspacePreviewOptions: ["numbers", "app-icons", "hybrid"]
+    property var railAccentOptions: ["none", "edge-line", "pulse-line", "segmented"]
     property var themeEditorTabs: [
         { id: "appearance", label: "Uiterlijk", icon: "󰉼" },
         { id: "fonts", label: "Fonts", icon: "󰛖" },
         { id: "colors", label: "Kleuren", icon: "󰏘" },
         { id: "bar", label: "Bar", icon: "󰓡" },
+        { id: "character", label: "Karakter", icon: "󱥰" },
         { id: "effects", label: "Effecten", icon: "󰟤" }
     ]
 
@@ -405,7 +434,11 @@ Item {
             editBarHeight, editBarPosition, derivedBarTemplate(editBarPosition, editBarTemplate), editBarWidthMode, editBarShape,
             editBarTopEdgeStyle, editBarBottomEdgeStyle, editClockStyle, editTopbarLooseBlocks,
             editBarOpacity, editPopupOpacity, editAnimationSpeed, editOverlayOpacity, editGlowIntensity,
-            editParticleType, editParticleCount, editParticleSpeed
+            editParticleType, editParticleCount, editParticleSpeed, editAmbientEffect, editEffectIntensity,
+            editEffectCycleMs, editHoverReactivity,
+            editStyleFamily, editStyleDensity, editSurfaceMode, editStyleMotion, editPanelShadow,
+            editOutlineStrength, editGlassStrength, editWidgetRadius, editPanelPadding,
+            editDrawerStyle, editModuleDensity, editWorkspacePreview, editRailAccent
         ]);
     }
 
@@ -492,6 +525,29 @@ Item {
         );
         editParticleCount = Math.max(0, toIntValue(themeValue(themeData, "effects", "particle_count", 0), 0));
         editParticleSpeed = toFloatString(themeValue(themeData, "effects", "particle_speed", 0.18), 0.18);
+        editAmbientEffect = normalizeOption(
+            themeValue(themeData, "effects", "ambient_effect", "theme-default"),
+            ambientEffectOptions,
+            "theme-default"
+        );
+        editEffectIntensity = toFloatString(themeValue(themeData, "effects", "effect_intensity", 1.0), 1.0);
+        editEffectCycleMs = Math.max(0, toIntValue(themeValue(themeData, "effects", "effect_cycle_ms", 0), 0));
+        editHoverReactivity = toFloatString(themeValue(themeData, "effects", "hover_reactivity", 0.4), 0.4);
+
+        editStyleFamily = normalizeOption(themeValue(themeData, "style_profile", "family", safeThemeId), styleFamilyOptions, "botanical");
+        editStyleDensity = normalizeOption(themeValue(themeData, "style_profile", "density", "comfortable"), styleDensityOptions, "comfortable");
+        editSurfaceMode = normalizeOption(themeValue(themeData, "style_profile", "surface_mode", "soft-glass"), surfaceModeOptions, "soft-glass");
+        editStyleMotion = normalizeOption(themeValue(themeData, "style_profile", "motion", "gentle"), styleMotionOptions, "gentle");
+        editPanelShadow = toFloatString(themeValue(themeData, "style_profile", "panel_shadow", 0.22), 0.22);
+        editOutlineStrength = toFloatString(themeValue(themeData, "style_profile", "outline_strength", 0.18), 0.18);
+        editGlassStrength = toFloatString(themeValue(themeData, "style_profile", "glass_strength", 0.10), 0.10);
+        editWidgetRadius = Math.max(4, toIntValue(themeValue(themeData, "style_profile", "widget_radius", 16), 16));
+        editPanelPadding = Math.max(6, toIntValue(themeValue(themeData, "style_profile", "panel_padding", 14), 14));
+
+        editDrawerStyle = normalizeOption(themeValue(themeData, "bar_dynamics", "drawer_style", "context-card"), drawerStyleOptions, "context-card");
+        editModuleDensity = normalizeOption(themeValue(themeData, "bar_dynamics", "module_density", "balanced"), moduleDensityOptions, "balanced");
+        editWorkspacePreview = normalizeOption(themeValue(themeData, "bar_dynamics", "workspace_preview", "hybrid"), workspacePreviewOptions, "hybrid");
+        editRailAccent = normalizeOption(themeValue(themeData, "bar_dynamics", "rail_accent", "none"), railAccentOptions, "none");
         themeLoadedSignature = currentThemeSignature();
         setThemeStatus("Geladen uit " + safeThemeId + ".toml", "info");
     }
@@ -546,7 +602,24 @@ Item {
             "material.glow_intensity", toFloatString(editGlowIntensity, 0.04),
             "effects.particles", String(editParticleType || "none"),
             "effects.particle_count", String(Math.max(0, editParticleCount)),
-            "effects.particle_speed", toFloatString(editParticleSpeed, 0.18)
+            "effects.particle_speed", toFloatString(editParticleSpeed, 0.18),
+            "effects.ambient_effect", normalizeOption(editAmbientEffect, ambientEffectOptions, "theme-default"),
+            "effects.effect_intensity", toFloatString(editEffectIntensity, 1.0),
+            "effects.effect_cycle_ms", String(Math.max(0, editEffectCycleMs)),
+            "effects.hover_reactivity", toFloatString(editHoverReactivity, 0.4),
+            "style_profile.family", normalizeOption(editStyleFamily, styleFamilyOptions, "botanical"),
+            "style_profile.density", normalizeOption(editStyleDensity, styleDensityOptions, "comfortable"),
+            "style_profile.surface_mode", normalizeOption(editSurfaceMode, surfaceModeOptions, "soft-glass"),
+            "style_profile.motion", normalizeOption(editStyleMotion, styleMotionOptions, "gentle"),
+            "style_profile.panel_shadow", toFloatString(editPanelShadow, 0.22),
+            "style_profile.outline_strength", toFloatString(editOutlineStrength, 0.18),
+            "style_profile.glass_strength", toFloatString(editGlassStrength, 0.10),
+            "style_profile.widget_radius", String(Math.max(4, editWidgetRadius)),
+            "style_profile.panel_padding", String(Math.max(6, editPanelPadding)),
+            "bar_dynamics.drawer_style", normalizeOption(editDrawerStyle, drawerStyleOptions, "context-card"),
+            "bar_dynamics.module_density", normalizeOption(editModuleDensity, moduleDensityOptions, "balanced"),
+            "bar_dynamics.workspace_preview", normalizeOption(editWorkspacePreview, workspacePreviewOptions, "hybrid"),
+            "bar_dynamics.rail_accent", normalizeOption(editRailAccent, railAccentOptions, "none")
         ];
 
         themeWriteProc.themeId = themeEditThemeId;
@@ -3247,7 +3320,7 @@ Item {
                             }
 
                             Rectangle {
-                                visible: root.themeEditorTab === "bar" || root.themeEditorTab === "effects"
+                                visible: root.themeEditorTab === "bar" || root.themeEditorTab === "effects" || root.themeEditorTab === "character"
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: root.s(470)
                                 Layout.maximumWidth: root.s(560)
@@ -3264,11 +3337,13 @@ Item {
                                     anchors.margins: root.s(12)
                                     spacing: root.s(8)
 
-                                    Text { text: root.themeEditorTab === "effects" ? "Effecten" : "Bar"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                                    Text { text: root.themeEditorTab === "effects" ? "Effecten" : (root.themeEditorTab === "character" ? "Karakter" : "Bar"); font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
                                     Text {
                                         text: root.themeEditorTab === "effects"
                                               ? "Regel transparantie, materiaalgevoel, animaties en deeltjes."
-                                              : "Positie kiest de schermrand en bepaalt automatisch of de bar horizontaal of verticaal loopt."
+                                              : (root.themeEditorTab === "character"
+                                                 ? "Visuele eigenschappen per thema. Modes blijven bepalen welke modules zichtbaar zijn."
+                                                 : "Positie kiest de schermrand en bepaalt automatisch of de bar horizontaal of verticaal loopt.")
                                         font.family: "JetBrains Mono"
                                         font.pixelSize: root.s(10)
                                         color: root.subtext0
@@ -3508,6 +3583,154 @@ Item {
                                             onValueChanged: root.editParticleSpeed = (value / 100.0).toFixed(2)
                                             Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
                                         }
+                                        Item { Layout.fillWidth: true }
+                                    }
+
+                                    // ── Karakter: style profile ──────────────────────────────────────
+                                    Text { visible: root.themeEditorTab === "character"; text: "Style profile"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Family"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox { model: root.styleFamilyOptions; currentIndex: Math.max(0, model.indexOf(root.editStyleFamily)); onActivated: root.editStyleFamily = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Density"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox { model: root.styleDensityOptions; currentIndex: Math.max(0, model.indexOf(root.editStyleDensity)); onActivated: root.editStyleDensity = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Surface"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox { model: root.surfaceModeOptions; currentIndex: Math.max(0, model.indexOf(root.editSurfaceMode)); onActivated: root.editSurfaceMode = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Motion"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox { model: root.styleMotionOptions; currentIndex: Math.max(0, model.indexOf(root.editStyleMotion)); onActivated: root.editStyleMotion = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Shadow"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editPanelShadow) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 22 : Math.round(n * 100); }; onValueChanged: root.editPanelShadow = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Outline"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editOutlineStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 18 : Math.round(n * 100); }; onValueChanged: root.editOutlineStrength = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Glass"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editGlassStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 10 : Math.round(n * 100); }; onValueChanged: root.editGlassStrength = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Radius"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox { from: 4; to: 48; value: root.editWidgetRadius; onValueChanged: root.editWidgetRadius = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Padding"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox { from: 6; to: 28; value: root.editPanelPadding; onValueChanged: root.editPanelPadding = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+
+                                    // ── Karakter: effectgedrag ───────────────────────────────────────
+                                    Text { visible: root.themeEditorTab === "character"; text: "Effectgedrag"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Ambient"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox { model: root.ambientEffectOptions; currentIndex: Math.max(0, model.indexOf(root.editAmbientEffect)); onActivated: root.editAmbientEffect = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Intensity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox { from: 0; to: 200; stepSize: 5; value: Math.round(parseFloat(root.editEffectIntensity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 100 : Math.round(n * 100); }; onValueChanged: root.editEffectIntensity = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Cycle ms"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox { from: 0; to: 30000; stepSize: 100; value: root.editEffectCycleMs; onValueChanged: root.editEffectCycleMs = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Hover"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedSpinBox { from: 0; to: 100; stepSize: 5; value: Math.round(parseFloat(root.editHoverReactivity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 40 : Math.round(n * 100); }; onValueChanged: root.editHoverReactivity = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+
+                                    // ── Karakter: bar dynamics ───────────────────────────────────────
+                                    Text { visible: root.themeEditorTab === "character"; text: "Bar dynamics"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Drawer"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox { model: root.drawerStyleOptions; currentIndex: Math.max(0, model.indexOf(root.editDrawerStyle)); onActivated: root.editDrawerStyle = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Modules"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox { model: root.moduleDensityOptions; currentIndex: Math.max(0, model.indexOf(root.editModuleDensity)); onActivated: root.editModuleDensity = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Workspace"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox { model: root.workspacePreviewOptions; currentIndex: Math.max(0, model.indexOf(root.editWorkspacePreview)); onActivated: root.editWorkspacePreview = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    RowLayout {
+                                        visible: root.themeEditorTab === "character"
+                                        Layout.fillWidth: true
+                                        spacing: root.s(10)
+                                        Text { text: "Rail accent"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        ThemedComboBox { model: root.railAccentOptions; currentIndex: Math.max(0, model.indexOf(root.editRailAccent)); onActivated: root.editRailAccent = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
 

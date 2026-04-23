@@ -35,7 +35,7 @@ icon_theme = "Papirus-Dark"
 
 [quickshell]
 bar_height = 38
-bar_position = "top"
+bar_position = "bottom"
 
 [color_transform]
 hue_shift = -15
@@ -68,10 +68,31 @@ clock_style = "hybrid"
 shape = "capsule-soft"
 surface = "liquid-glass"
 
+[style_profile]
+family = "ocean"
+density = "airy"
+surface_mode = "mist"
+motion = "smooth"
+panel_shadow = 0.26
+outline_strength = 0.16
+glass_strength = 0.12
+widget_radius = 18
+panel_padding = 16
+
 [effects]
-particles = "none"
-particle_count = 0
-particle_speed = 0.0
+particles = "rain"
+particle_count = 16
+particle_speed = 0.34
+ambient_effect = "ocean-wave"
+effect_intensity = 0.72
+effect_cycle_ms = 5200
+hover_reactivity = 0.40
+
+[bar_dynamics]
+drawer_style = "context-card"
+module_density = "balanced"
+workspace_preview = "hybrid"
+rail_accent = "edge-line"
 
 [terminal_visual]
 overlay_asset = ""

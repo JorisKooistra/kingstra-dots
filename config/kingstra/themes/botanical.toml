@@ -69,10 +69,31 @@ topbar_loose_blocks = true
 shape = "soft-organic"
 surface = "wood-matte"
 
+[style_profile]
+family = "botanical"
+density = "comfortable"
+surface_mode = "soft-glass"
+motion = "gentle"
+panel_shadow = 0.22
+outline_strength = 0.18
+glass_strength = 0.10
+widget_radius = 20
+panel_padding = 15
+
 [effects]
 particles = "fireflies"
 particle_count = 8
 particle_speed = 0.18
+ambient_effect = "botanical-glow"
+effect_intensity = 0.75
+effect_cycle_ms = 7000
+hover_reactivity = 0.55
+
+[bar_dynamics]
+drawer_style = "context-card"
+module_density = "rich"
+workspace_preview = "hybrid"
+rail_accent = "none"
 
 [terminal_visual]
 overlay_asset = ""

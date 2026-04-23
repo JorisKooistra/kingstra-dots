@@ -24,14 +24,14 @@ Item {
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
     height: surface.continuousBarMode ? surface.continuousRailHeight : parent.height
     z: 0.5
-    visible: surface.skinBool("showCyberGrid", false)
+    visible: surface.ambientEnabled("cyber-grid", "cyber") && surface.skinBool("showCyberGrid", false)
     clip: true
 
     // ── 1. Achtergrondgloed ───────────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent
         opacity: Math.max(0.0, Math.min(0.26,
-            surface.skinNumber("gridAlpha", 0.0)
+            surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
             * ((surface.activeTheme === "cyber") ? 0.9 : 0.35)))
         gradient: Gradient {
             orientation: Gradient.Vertical
@@ -45,7 +45,7 @@ Item {
         anchors.fill: parent
         color: Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b,
             Math.max(0.0, Math.min(0.34,
-                surface.skinNumber("gridAlpha", 0.0)
+                surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
                 * ((surface.activeTheme === "cyber") ? 0.52 : 0.18))))
     }
 
@@ -57,7 +57,7 @@ Item {
             width: 1; height: parent.height; x: index * shell.s(22)
             color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b,
                 Math.max(0.0, Math.min(0.30,
-                    surface.skinNumber("gridAlpha", 0.0)
+                    surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
                     * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
                     * ((index % 4) === 0 ? 0.95 : 0.42))))  // elke 4e lijn helderder
         }
@@ -70,7 +70,7 @@ Item {
             width: root.width; height: 1; y: index * shell.s(20)
             color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b,
                 Math.max(0.0, Math.min(0.24,
-                    surface.skinNumber("gridAlpha", 0.0)
+                    surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
                     * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
                     * 0.62)))
         }
@@ -82,7 +82,7 @@ Item {
         height: 1
         color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b,
             Math.max(0.0, Math.min(0.28,
-                surface.skinNumber("gridAlpha", 0.0)
+                surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
                 * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
                 * 0.85)))
     }
@@ -93,7 +93,7 @@ Item {
         height: shell.s(2)
         color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b,
             Math.max(0.0, Math.min(0.42,
-                surface.skinNumber("gridAlpha", 0.0)
+                surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
                 * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
                 * 1.05)))
     }
@@ -104,7 +104,7 @@ Item {
         id: cyberSweep
         width: shell.s(72); height: parent.height; x: -width
         opacity: Math.max(0.0, Math.min(0.24,
-            surface.skinNumber("gridAlpha", 0.0)
+            surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
             * ((surface.activeTheme === "cyber") ? 1.8 : 1.0)
             * 0.55))
         gradient: Gradient {
@@ -115,7 +115,7 @@ Item {
         }
         SequentialAnimation on x {
             running: surface.skinBool("showCyberGrid", false); loops: Animation.Infinite
-            NumberAnimation { to: parent.width; duration: ThemeConfig.duration(5200); easing.type: Easing.Linear }
+            NumberAnimation { to: parent.width; duration: ThemeConfig.duration(surface.effectCycleMs(5200)); easing.type: Easing.Linear }
             NumberAnimation { to: -cyberSweep.width; duration: 0 }  // reset zonder animatie
         }
     }

@@ -35,7 +35,7 @@ icon_theme = "Breeze"
 
 [quickshell]
 bar_height = 44
-bar_position = "top"
+bar_position = "bottom"
 
 [color_transform]
 hue_shift = 0
@@ -56,7 +56,7 @@ cursor_style = "block"
 
 [bar]
 shape = "block"
-template = "sidebar"
+template = "horizontal"
 width_mode = "full"
 floating = false
 attach_to_screen_edge = true
@@ -69,10 +69,31 @@ topbar_loose_blocks = false
 shape = "hard-rect"
 surface = "stone-matte"
 
+[style_profile]
+family = "rocky"
+density = "compact"
+surface_mode = "solid"
+motion = "firm"
+panel_shadow = 0.12
+outline_strength = 0.34
+glass_strength = 0.02
+widget_radius = 4
+panel_padding = 9
+
 [effects]
 particles = "none"
 particle_count = 0
 particle_speed = 0
+ambient_effect = "rocky-bevel"
+effect_intensity = 0.85
+effect_cycle_ms = 0
+hover_reactivity = 0.15
+
+[bar_dynamics]
+drawer_style = "none"
+module_density = "minimal"
+workspace_preview = "numbers"
+rail_accent = "segmented"
 
 [terminal_visual]
 overlay_asset = ""

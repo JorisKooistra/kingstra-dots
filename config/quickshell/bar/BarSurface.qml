@@ -77,6 +77,18 @@ Item {
         if (!skin || skin[name] === undefined) return fallbackValue;
         return !!skin[name];
     }
+    function effectAlpha(baseValue) {
+        return Math.max(0.0, Math.min(1.0, Number(baseValue) * ThemeConfig.effectIntensity));
+    }
+    function effectCycleMs(fallbackValue) {
+        return ThemeConfig.effectCycleMs > 0 ? ThemeConfig.effectCycleMs : fallbackValue;
+    }
+    function ambientEnabled(effectName, themeName) {
+        let configured = String(ThemeConfig.ambientEffect || "theme-default").toLowerCase();
+        if (configured === "none") return false;
+        if (configured === "theme-default") return activeTheme === themeName;
+        return configured === effectName;
+    }
 
     // ── Opstartanimatie (slide + fade in) ─────────────────────────────────────
     property real introProgress: 0.0
@@ -199,6 +211,27 @@ Item {
             border.width: 1; border.color: barSurfaceRoot.basePanelBorderColor
         }
 
+        Rectangle {
+            visible: ThemeConfig.railAccent === "edge-line"
+            anchors.left: parent.left; anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: shell.s(2)
+            z: 0.48
+            color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, barSurfaceRoot.effectAlpha(0.38))
+        }
+
+        Repeater {
+            model: ThemeConfig.railAccent === "segmented" ? Math.ceil(parent.width / shell.s(44)) : 0
+            Rectangle {
+                x: index * shell.s(44)
+                anchors.bottom: parent.bottom
+                width: shell.s(18)
+                height: shell.s(2)
+                z: 0.48
+                color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, barSurfaceRoot.effectAlpha(0.38))
+            }
+        }
+
         // z=0.35 — textuuroverlay (herhalende PNG)
         Image {
             anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
@@ -252,7 +285,10 @@ Item {
         // z=1.00 — bar-inhoud (modules, knoppen, klok)
         Loader {
             id: contentLoader
-            anchors.fill: parent; z: 1
+            anchors.fill: parent
+            anchors.topMargin: shell.isBottomBar ? shell.particleVisualOverflow : 0
+            anchors.bottomMargin: shell.isTopBar ? shell.particleVisualOverflow : 0
+            z: 1
             sourceComponent: barSurfaceRoot.useSidebarTemplate ? sidebarContentComponent : horizontalContentComponent
         }
         Component {

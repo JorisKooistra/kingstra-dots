@@ -15,14 +15,14 @@ Item {
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
     height: surface.continuousBarMode ? surface.continuousRailHeight : parent.height
     z: 0.1
-    visible: surface.isOcean && surface.skinBool("showWaveShimmer", false)
+    visible: surface.ambientEnabled("ocean-wave", "ocean") && surface.skinBool("showWaveShimmer", false)
     clip: true  // verberg de golf buiten de barrand
 
     Rectangle {
         id: oceanWave
         // Dubbele breedte zodat de golf naadloos van rechts naar links kan schuiven
         width: parent.width * 2; height: parent.height; x: -parent.width
-        opacity: surface.skinNumber("waveShimmerAlpha", 0.055)
+        opacity: surface.effectAlpha(surface.skinNumber("waveShimmerAlpha", 0.055))
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop { position: 0.0; color: "transparent" }
@@ -32,8 +32,8 @@ Item {
         }
         SequentialAnimation on x {
             running: surface.isOcean; loops: Animation.Infinite
-            NumberAnimation { to: 0;             duration: ThemeConfig.duration(surface.skinNumber("waveCycleMs", 6000)); easing.type: Easing.InOutSine }
-            NumberAnimation { to: -parent.width; duration: ThemeConfig.duration(surface.skinNumber("waveCycleMs", 6000)); easing.type: Easing.InOutSine }
+            NumberAnimation { to: 0;             duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("waveCycleMs", 6000))); easing.type: Easing.InOutSine }
+            NumberAnimation { to: -parent.width; duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("waveCycleMs", 6000))); easing.type: Easing.InOutSine }
         }
     }
 }
