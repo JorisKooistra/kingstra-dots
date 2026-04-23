@@ -37,6 +37,12 @@ Item {
     required property var surface
     required property var mocha
 
+    // Brief delay so the Wayland surface can resize before content renders.
+    // Without this, switching from the animated sidebar (narrow) to a horizontal
+    // bar causes items to lay out in the old ~62px width and appear missing.
+    property bool _layoutReady: false
+    Timer { interval: 80; running: true; onTriggered: root._layoutReady = true }
+
     // ── Theme chrome helpers ───────────────────────────────────────────────
     readonly property int edgeInset: shell.edgeAttachedBar ? shell.s(10) : 0
     readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
@@ -145,6 +151,8 @@ Item {
         spacing: shell.s(4)
 
         property int moduleHeight: root.cyberSideModuleHeight
+        opacity: root._layoutReady ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
         // Altijd zichtbaar (geen moduleList-check)
         SearchButton        { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
@@ -174,6 +182,9 @@ Item {
         anchors.verticalCenterOffset: shell.edgeAttachedBar ? 0 : root.cyberSideYOffset
         spacing: shell.s(4)
 
+        opacity: root._layoutReady ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+
         Item { Layout.fillWidth: true }
 
         // Altijd zichtbaar wanneer er tray-iconen zijn (geen moduleList-check)
@@ -182,6 +193,6 @@ Item {
         // De grote statuspil rechts. Bevat meerdere sub-pills, elk met hun eigen
         // moduleList-check. Zie SystemElementsPill.qml voor welke string elke
         // sub-pill controleert.
-        SystemElementsPill { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root; layoutVisible: true }
+        SystemElementsPill { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root; layoutVisible: root._layoutReady }
     }
 }
