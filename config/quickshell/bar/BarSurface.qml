@@ -57,6 +57,19 @@ Item {
     readonly property bool useSidebarTemplate: activeBarTemplate === "sidebar"
                                              || activeBarTemplate === "compact-sidebar"
 
+    // Delayed version used by the Loader. When switching from sidebar → horizontal
+    // the Wayland compositor resizes the surface asynchronously. Switching the
+    // Loader immediately would create BarContent in the old narrow (~62px) surface,
+    // causing items to lay out with no space. A 350ms delay lets the compositor
+    // finish the resize before BarContent is instantiated.
+    property bool _loaderUseSidebar: useSidebarTemplate
+    onUseSidebarTemplateChanged: _sidebarSwitchTimer.restart()
+    Timer {
+        id: _sidebarSwitchTimer
+        interval: 350
+        onTriggered: barSurfaceRoot._loaderUseSidebar = barSurfaceRoot.useSidebarTemplate
+    }
+
     readonly property string skinSource: {
         if (activeTheme === "rocky")    return "skins/RockyBar.qml";
         if (activeTheme === "ocean")    return "skins/OceanBar.qml";
@@ -277,7 +290,7 @@ Item {
             anchors.topMargin: shell.isBottomBar ? barSurfaceRoot.particleOverflow : 0
             anchors.bottomMargin: shell.isTopBar ? barSurfaceRoot.particleOverflow : 0
             z: 1
-            sourceComponent: barSurfaceRoot.useSidebarTemplate ? sidebarContentComponent : horizontalContentComponent
+            sourceComponent: barSurfaceRoot._loaderUseSidebar ? sidebarContentComponent : horizontalContentComponent
         }
         Component {
             id: horizontalContentComponent

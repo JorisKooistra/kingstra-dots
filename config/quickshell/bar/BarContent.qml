@@ -37,14 +37,7 @@ Item {
     required property var surface
     required property var mocha
 
-    // Wait for the Wayland surface to have a proper horizontal width before
-    // showing content. When switching from the animated sidebar (~62px wide)
-    // to a horizontal bar, the surface takes a moment to resize to full width.
-    // A width-based check is self-correcting: as soon as the compositor delivers
-    // the new surface size, this flips to true and content fades in.
-    readonly property bool _layoutReady: shell.isHorizontalBar
-                                         ? (parent && parent.width > shell.s(300))
-                                         : (parent && parent.height > shell.s(200))
+
 
     // ── Theme chrome helpers ───────────────────────────────────────────────
     readonly property int edgeInset: shell.edgeAttachedBar ? shell.s(10) : 0
@@ -154,8 +147,6 @@ Item {
         spacing: shell.s(4)
 
         property int moduleHeight: root.cyberSideModuleHeight
-        opacity: root._layoutReady ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
         // Altijd zichtbaar (geen moduleList-check)
         SearchButton        { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
@@ -185,9 +176,6 @@ Item {
         anchors.verticalCenterOffset: shell.edgeAttachedBar ? 0 : root.cyberSideYOffset
         spacing: shell.s(4)
 
-        opacity: root._layoutReady ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-
         Item { Layout.fillWidth: true }
 
         // Altijd zichtbaar wanneer er tray-iconen zijn (geen moduleList-check)
@@ -196,6 +184,6 @@ Item {
         // De grote statuspil rechts. Bevat meerdere sub-pills, elk met hun eigen
         // moduleList-check. Zie SystemElementsPill.qml voor welke string elke
         // sub-pill controleert.
-        SystemElementsPill { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root; layoutVisible: root._layoutReady }
+        SystemElementsPill { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root; layoutVisible: true }
     }
 }
