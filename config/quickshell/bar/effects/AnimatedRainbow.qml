@@ -76,4 +76,33 @@ Item {
             }
         }
     }
+
+    // ── Sidebar pulse spine ──────────────────────────────────────────────────
+    Rectangle {
+        id: pulseSpine
+        visible: surface.isAnimated && shell.isVerticalBar
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: shell.isLeftBar ? parent.left : undefined
+        anchors.right: shell.isRightBar ? parent.right : undefined
+        width: shell.s(2)
+        z: 0.18
+        opacity: 0.82
+        property color spineA: mocha.pink
+        property color spineB: mocha.teal
+        gradient: Gradient {
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0; color: Qt.rgba(pulseSpine.spineA.r, pulseSpine.spineA.g, pulseSpine.spineA.b, 0.12) }
+            GradientStop { position: 0.5; color: Qt.rgba(pulseSpine.spineB.r, pulseSpine.spineB.g, pulseSpine.spineB.b, 0.96) }
+            GradientStop { position: 1.0; color: Qt.rgba(pulseSpine.spineA.r, pulseSpine.spineA.g, pulseSpine.spineA.b, 0.12) }
+        }
+        SequentialAnimation {
+            running: pulseSpine.visible
+            loops: Animation.Infinite
+            ColorAnimation { target: pulseSpine; property: "spineA"; to: mocha.yellow; duration: ThemeConfig.duration(1100); easing.type: Easing.InOutSine }
+            ColorAnimation { target: pulseSpine; property: "spineB"; to: mocha.mauve;  duration: ThemeConfig.duration(1100); easing.type: Easing.InOutSine }
+            ColorAnimation { target: pulseSpine; property: "spineA"; to: mocha.pink;   duration: ThemeConfig.duration(1100); easing.type: Easing.InOutSine }
+            ColorAnimation { target: pulseSpine; property: "spineB"; to: mocha.teal;   duration: ThemeConfig.duration(1100); easing.type: Easing.InOutSine }
+        }
+    }
 }

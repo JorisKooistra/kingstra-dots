@@ -11,11 +11,11 @@ contrast = 0.15
 mode = "dark"
 
 [appearance]
-border_radius = 22
+border_radius = 18
 border_width = 1
 gaps_in = 10
 gaps_out = 20
-bar_opacity = 0.75
+bar_opacity = 0.68
 popup_opacity = 0.86
 blur_size = 18
 blur_passes = 3
@@ -27,15 +27,15 @@ ui_font_size = 13
 mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
 display_font = "Nunito"
-font_weight = "bold"
-letter_spacing = 0.4
+font_weight = "regular"
+letter_spacing = 0.2
 
 [icons]
 icon_theme = "Papirus"
 
 [quickshell]
-bar_height = 42
-bar_position = "left"
+bar_height = 40
+bar_position = "right"
 
 [color_transform]
 hue_shift = 12
@@ -46,7 +46,7 @@ thematic_mix = 0.18
 [material]
 texture = "motion"
 overlay_opacity = 0.05
-glow_intensity = 0.18
+glow_intensity = 0.24
 
 [terminal]
 bg_opacity = 0.82
@@ -55,7 +55,7 @@ padding = 14
 cursor_style = "beam"
 
 [bar]
-shape = "rounded"
+shape = "kinetic-dock"
 template = "compact-sidebar"
 width_mode = "floating"
 floating = true

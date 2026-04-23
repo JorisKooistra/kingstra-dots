@@ -61,12 +61,17 @@ Variants {
             property string activeBarTemplate: ThemeConfig.effectiveBarTemplate
             property bool compactSidebarTemplate: activeBarTemplate === "compact-sidebar"
             property bool animatedVerticalBar: isVerticalBar && (activeThemeNormalized === "animated" || compactSidebarTemplate)
+            property bool sidebarDrawerOpen: false
+            property int sidebarDrawerWidth: animatedVerticalBar ? s(touchOptimized ? 178 : 160) : 0
             property int minBarHeight: s(touchOptimized ? 44 : 40)
             property int themedBarHeight: s(ThemeConfig.barHeight > 0 ? ThemeConfig.barHeight : 48)
             property int barHeight: Math.max(minBarHeight, themedBarHeight)
-            property int minBarThickness: animatedVerticalBar ? s(touchOptimized ? 66 : 52) : s(touchOptimized ? 78 : 62)
+            property int baseBarThickness: Math.max(
+                animatedVerticalBar ? s(touchOptimized ? 66 : 52) : s(touchOptimized ? 78 : 62),
+                barHeight + (animatedVerticalBar ? s(6) : s(18))
+            )
+            property int barThickness: baseBarThickness + (animatedVerticalBar && sidebarDrawerOpen ? sidebarDrawerWidth + s(8) : 0)
             property int verticalBarPadding: animatedVerticalBar ? s(6) : s(18)
-            property int barThickness: Math.max(minBarThickness, barHeight + verticalBarPadding)
             property bool edgeAttachedBar: ThemeConfig.barAttachToScreenEdge
                                           && ThemeConfig.barWidthMode === "full"
                                           && !ThemeConfig.barFloating
@@ -111,7 +116,7 @@ Variants {
             exclusiveZone: {
                 if (barWindow.barAutoHide) return 0;
                 if (barWindow.isVerticalBar) {
-                    return barWindow.barThickness + (barWindow.isRightBar ? margins.right : margins.left);
+                    return barWindow.baseBarThickness + (barWindow.isRightBar ? margins.right : margins.left);
                 }
                 return barWindow.barHeight
                        + (barWindow.isTopBar ? barWindow.cyberUnderhang : 0)

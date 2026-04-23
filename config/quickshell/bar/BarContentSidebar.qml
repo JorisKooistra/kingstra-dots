@@ -17,6 +17,14 @@ Item {
     property var currentDate: new Date()
     readonly property bool compactAnimatedSidebar: ThemeConfig.effectiveBarTemplate === "compact-sidebar"
                                                   || String(shell.activeThemeName || "").toLowerCase() === "animated"
+    readonly property bool drawerOpen: compactAnimatedSidebar && shell.sidebarDrawerOpen
+    readonly property bool compactRailOnly: compactAnimatedSidebar
+    readonly property int railWidth: compactAnimatedSidebar && shell.isVerticalBar ? shell.baseBarThickness : width
+    property string drawerKind: "summary"
+    property real drawerAnchorY: height * 0.5
+    property int drawerWorkspaceId: 1
+    property int drawerWorkspaceAnchorId: 0
+    property bool pointerInWorkspaces: false
     readonly property int outerMargin: compactAnimatedSidebar ? shell.s(4) : (shell.edgeAttachedBar ? shell.s(8) : shell.s(10))
     readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
                                                      && String(shell.activeThemeName || "").toLowerCase() === "botanical"
@@ -31,24 +39,24 @@ Item {
     readonly property int pillTopRightRadius: edgeSidebarChrome && shell.isRightBar ? 0 : surface.innerPillRadius
     readonly property int pillBottomLeftRadius: edgeSidebarChrome && shell.isLeftBar ? 0 : surface.innerPillRadius
     readonly property int pillBottomRightRadius: edgeSidebarChrome && shell.isRightBar ? 0 : surface.innerPillRadius
-    readonly property int sectionSpacing: shell.s(compactAnimatedSidebar ? 5 : 6)
-    readonly property int moduleHeight: shell.s(compactAnimatedSidebar ? 28 : 32)
-    readonly property int iconButtonSize: shell.s(compactAnimatedSidebar ? 28 : 32)
-    readonly property int moduleInnerMargin: shell.s(compactAnimatedSidebar ? 0 : 8)
-    readonly property int moduleSpacing: shell.s(compactAnimatedSidebar ? 0 : 8)
+    readonly property int sectionSpacing: shell.s(compactRailOnly ? 5 : 6)
+    readonly property int moduleHeight: shell.s(compactRailOnly ? 28 : 32)
+    readonly property int iconButtonSize: shell.s(compactRailOnly ? 28 : 32)
+    readonly property int moduleInnerMargin: shell.s(compactRailOnly ? 0 : 8)
+    readonly property int moduleSpacing: shell.s(compactRailOnly ? 0 : 8)
     readonly property bool statusDockVisible: shell.moduleList.includes("updates")
                                              || shell.moduleList.includes("network")
                                              || shell.moduleList.includes("bluetooth")
                                              || shell.moduleList.includes("volume")
                                              || shell.moduleList.includes("battery")
     readonly property string compactTimeText: {
-        if (compactAnimatedSidebar) return Qt.formatDateTime(currentDate, "hh:mm");
+        if (compactRailOnly) return Qt.formatDateTime(currentDate, "hh:mm");
         let parts = String(shell.timeStr || "--:--").split(":");
         if (parts.length >= 2) return parts[0] + ":" + parts[1];
         return String(shell.timeStr || "--:--");
     }
     readonly property string compactSecondsText: {
-        if (compactAnimatedSidebar) return "";
+        if (compactRailOnly) return "";
         let parts = String(shell.timeStr || "").split(":");
         if (parts.length < 3) return "";
         let seconds = parts[2].replace(/[^0-9].*$/, "");
@@ -146,6 +154,108 @@ Item {
         return visibleIcons;
     }
 
+    function setDrawerOpen(open, kind, item, detail) {
+        if (!compactAnimatedSidebar)
+            return;
+        if (open) {
+            drawerCloseTimer.stop();
+            var nextKind = kind || "summary";
+            var kindChanged = drawerKind !== nextKind;
+            drawerKind = nextKind;
+            if (drawerKind === "workspaces" && detail !== undefined)
+                drawerWorkspaceId = Number(detail);
+            var workspaceAnchorChanged = drawerKind === "workspaces" && drawerWorkspaceAnchorId !== drawerWorkspaceId;
+            if (workspaceAnchorChanged)
+                drawerWorkspaceAnchorId = drawerWorkspaceId;
+            if (item !== undefined && item !== null && (kindChanged || drawerKind !== "workspaces" || workspaceAnchorChanged)) {
+                var point = root.mapFromItem(item, item.width / 2, item.height / 2);
+                drawerAnchorY = Math.max(shell.s(88), Math.min(root.height - shell.s(88), point.y));
+            }
+            shell.sidebarDrawerOpen = true;
+            return;
+        }
+        drawerCloseTimer.restart();
+    }
+
+    function drawerTitle() {
+        if (drawerKind === "calendar") return root.compactDateText;
+        if (drawerKind === "launcher") return "Launcher";
+        if (drawerKind === "notifications") return "Notifications";
+        if (drawerKind === "workspaces") return "Workspaces";
+        if (drawerKind === "media") return "Media";
+        if (drawerKind === "tray") return "Tray";
+        if (drawerKind === "keyboard") return "Keyboard";
+        if (drawerKind === "updates") return "Updates";
+        if (drawerKind === "network") return "Network";
+        if (drawerKind === "bluetooth") return "Bluetooth";
+        if (drawerKind === "volume") return "Volume";
+        if (drawerKind === "battery") return "Battery";
+        return ThemeConfig.name;
+    }
+
+    function drawerPrimary() {
+        if (drawerKind === "calendar") return root.compactTimeText + (root.compactWeatherText !== "" ? "  " + root.compactWeatherText : "");
+        if (drawerKind === "launcher") return "Open Walker";
+        if (drawerKind === "notifications") return "Left: panel  Right: clear";
+        if (drawerKind === "workspaces") return workspaceSummary(drawerWorkspaceId);
+        if (drawerKind === "media") return shell.musicData.title || "No active track";
+        if (drawerKind === "tray") return visibleTrayCount() + " visible tray item" + (visibleTrayCount() === 1 ? "" : "s");
+        if (drawerKind === "keyboard") return shell.kbLayout;
+        if (drawerKind === "updates") return (parseInt(shell.updateCount) || 0) + " package updates";
+        if (drawerKind === "network") return shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "Wi-Fi on") : "Wi-Fi off";
+        if (drawerKind === "bluetooth") return shell.isBtOn ? shell.btDevice : "Bluetooth off";
+        if (drawerKind === "volume") return shell.isSoundActive ? shell.volPercent : "Muted";
+        if (drawerKind === "battery") return shell.batPercent + (shell.isCharging ? " charging" : "");
+        return shell.activeMode;
+    }
+
+    function drawerSecondary() {
+        if (drawerKind === "calendar") return shell.weatherIcon + " " + String(shell.weatherTemp || "--");
+        if (drawerKind === "launcher") return "Click to search apps and commands";
+        if (drawerKind === "notifications") return shell.moduleList.includes("notifications") ? "Notification center is enabled" : "Hidden in this mode";
+        if (drawerKind === "workspaces") return workspaceWindowSummary(drawerWorkspaceId);
+        if (drawerKind === "media") return shell.musicData.artist || shell.musicData.status || "Click controls playback";
+        if (drawerKind === "tray") return "Right-click an icon for its menu";
+        if (drawerKind === "keyboard") return shell.kbLayoutCount + " layouts available";
+        if (drawerKind === "updates") return "Click to open update terminal";
+        if (drawerKind === "network") return shell.isWifiOn ? "Click for Wi-Fi controls" : "Click to open network controls";
+        if (drawerKind === "bluetooth") return shell.isBtOn ? "Click for device controls" : "Click to open Bluetooth controls";
+        if (drawerKind === "volume") return "Scroll to adjust volume";
+        if (drawerKind === "battery") return shell.batIcon;
+        return "Mode-aware compact sidebar";
+    }
+
+    function workspaceSummary(wsId) {
+        var ws = workspaceForId(wsId);
+        if (!ws)
+            return "Workspace " + wsId;
+        return "Workspace " + ws.id;
+    }
+
+    function workspaceWindowSummary(wsId) {
+        var ws = workspaceForId(wsId);
+        if (!ws)
+            return "Empty";
+        var count = ws.toplevels.values.length;
+        return count + " window" + (count === 1 ? "" : "s") + " open";
+    }
+
+    function visibleTrayCount() {
+        return trayRepeater ? trayRepeater.count : 0;
+    }
+
+    Timer {
+        id: drawerCloseTimer
+        interval: 260
+        repeat: false
+        onTriggered: shell.sidebarDrawerOpen = false
+    }
+
+    Component.onDestruction: {
+        if (compactAnimatedSidebar)
+            shell.sidebarDrawerOpen = false;
+    }
+
     Timer {
         interval: 1000
         running: true
@@ -155,7 +265,11 @@ Item {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: root.railWidth
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: shell.isLeftBar ? parent.left : undefined
+        anchors.right: shell.isRightBar ? parent.right : undefined
         anchors.topMargin: shell.isTopBar ? root.screenEdgeMargin : root.outerMargin
         anchors.bottomMargin: shell.isBottomBar ? root.screenEdgeMargin : root.outerMargin
         anchors.leftMargin: shell.isLeftBar ? root.screenEdgeMargin : root.outerMargin
@@ -165,7 +279,7 @@ Item {
         Rectangle {
             id: infoCard
             Layout.fillWidth: true
-            Layout.preferredHeight: shell.s(compactAnimatedSidebar ? 76 : 88)
+            Layout.preferredHeight: shell.s(root.compactRailOnly ? 76 : 88)
             radius: surface.panelRadius
             topLeftRadius: root.panelTopLeftRadius
             topRightRadius: root.panelTopRightRadius
@@ -178,38 +292,40 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
+                onEntered: root.setDrawerOpen(true, "calendar", infoCard)
+                onExited: root.setDrawerOpen(false)
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle calendar"])
             }
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: shell.s(compactAnimatedSidebar ? 6 : 8)
-                spacing: shell.s(compactAnimatedSidebar ? 2 : 3)
+                anchors.margins: shell.s(root.compactRailOnly ? 6 : 8)
+                spacing: shell.s(root.compactRailOnly ? 2 : 3)
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: shell.s(root.compactAnimatedSidebar ? 0 : 3)
+                    spacing: shell.s(root.compactRailOnly ? 0 : 3)
 
                     Text {
                         text: root.compactTimeText
                         Layout.fillWidth: true
                         font.family: shell.displayFontFamily
-                        font.pixelSize: shell.s(root.compactAnimatedSidebar ? 12 : 15)
+                        font.pixelSize: shell.s(root.compactRailOnly ? 12 : 15)
                         minimumPixelSize: shell.s(9)
                         fontSizeMode: Text.Fit
                         font.weight: Font.Black
                         font.letterSpacing: 0
                         color: mocha.yellow
-                        horizontalAlignment: root.compactAnimatedSidebar ? Text.AlignHCenter : Text.AlignRight
+                        horizontalAlignment: root.compactRailOnly ? Text.AlignHCenter : Text.AlignRight
                         renderType: Text.NativeRendering
                     }
 
                     Text {
                         visible: root.compactSecondsText !== ""
                         text: root.compactSecondsText
-                        Layout.preferredWidth: shell.s(root.compactAnimatedSidebar ? 11 : 15)
+                        Layout.preferredWidth: shell.s(root.compactRailOnly ? 11 : 15)
                         font.family: shell.monoFontFamily
-                        font.pixelSize: shell.s(root.compactAnimatedSidebar ? 7 : 9)
+                        font.pixelSize: shell.s(root.compactRailOnly ? 7 : 9)
                         minimumPixelSize: shell.s(6)
                         fontSizeMode: Text.Fit
                         font.weight: Font.Bold
@@ -224,7 +340,7 @@ Item {
                     text: root.compactDateText
                     Layout.fillWidth: true
                     font.family: shell.uiFontFamily
-                    font.pixelSize: shell.s(root.compactAnimatedSidebar ? 8 : 10)
+                    font.pixelSize: shell.s(root.compactRailOnly ? 8 : 10)
                     minimumPixelSize: shell.s(7)
                     fontSizeMode: Text.Fit
                     font.weight: Font.DemiBold
@@ -241,14 +357,14 @@ Item {
                     Text {
                         text: shell.weatherIcon
                         font.family: "Iosevka Nerd Font"
-                        font.pixelSize: shell.s(root.compactAnimatedSidebar ? 13 : 15)
+                        font.pixelSize: shell.s(root.compactRailOnly ? 13 : 15)
                         color: Qt.tint(shell.weatherHex, Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.4))
                     }
                     Text {
                         text: root.compactWeatherText
                         Layout.fillWidth: true
                         font.family: shell.monoFontFamily
-                        font.pixelSize: shell.s(root.compactAnimatedSidebar ? 8 : 10)
+                        font.pixelSize: shell.s(root.compactRailOnly ? 8 : 10)
                         minimumPixelSize: shell.s(7)
                         fontSizeMode: Text.Fit
                         font.weight: shell.themeFontWeight
@@ -280,13 +396,15 @@ Item {
                     anchors.centerIn: parent
                     text: "󰍉"
                     font.family: "Iosevka Nerd Font"
-                    font.pixelSize: shell.s(root.compactAnimatedSidebar ? 15 : 18)
+                    font.pixelSize: shell.s(root.compactRailOnly ? 15 : 18)
                     color: searchMouse.containsMouse ? mocha.blue : mocha.text
                 }
                 MouseArea {
                     id: searchMouse
                     anchors.fill: parent
                     hoverEnabled: true
+                    onEntered: root.setDrawerOpen(true, "launcher", parent)
+                    onExited: root.setDrawerOpen(false)
                     onClicked: Quickshell.execDetached(["bash", "-c", "walker"])
                 }
             }
@@ -307,13 +425,15 @@ Item {
                     anchors.centerIn: parent
                     text: ""
                     font.family: "Iosevka Nerd Font"
-                    font.pixelSize: shell.s(root.compactAnimatedSidebar ? 14 : 16)
+                    font.pixelSize: shell.s(root.compactRailOnly ? 14 : 16)
                     color: notifMouse.containsMouse ? mocha.yellow : mocha.text
                 }
                 MouseArea {
                     id: notifMouse
                     anchors.fill: parent
                     hoverEnabled: true
+                    onEntered: root.setDrawerOpen(true, "notifications", parent)
+                    onExited: root.setDrawerOpen(false)
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     onClicked: (mouse) => {
                         if (mouse.button === Qt.LeftButton) Quickshell.execDetached(["swaync-client", "-t", "-sw"]);
@@ -338,15 +458,6 @@ Item {
             color: surface.panelColor
             clip: true
 
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.NoButton
-                onWheel: (wheel) => {
-                    shell.handleWorkspaceWheel(wheel.angleDelta.y, 8);
-                    wheel.accepted = true;
-                }
-            }
-
             Column {
                 id: wsColumn
                 anchors.fill: parent
@@ -363,7 +474,7 @@ Item {
                         readonly property var visibleAppIcons: root.visibleAppIcons(appIcons)
                         readonly property bool showAppIcons: appIcons.length > 0
                         readonly property bool useIconGrid: visibleAppIcons.length >= 3
-                        readonly property int iconSize: shell.s(useIconGrid ? 10 : (root.compactAnimatedSidebar ? 13 : 15))
+                        readonly property int iconSize: shell.s(useIconGrid ? 10 : (root.compactRailOnly ? 13 : 15))
                         readonly property int iconColumns: useIconGrid ? Math.ceil(visibleAppIcons.length / 2) : visibleAppIcons.length
 
                         property string stateLabel: {
@@ -450,6 +561,14 @@ Item {
                             id: wsMouse
                             anchors.fill: parent
                             hoverEnabled: true
+                            onEntered: {
+                                root.pointerInWorkspaces = true;
+                                root.setDrawerOpen(true, "workspaces", parent, wsId);
+                            }
+                            onExited: {
+                                root.pointerInWorkspaces = false;
+                                root.setDrawerOpen(false);
+                            }
                             onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + wsId])
                             onWheel: (wheel) => {
                                 shell.handleWorkspaceWheel(wheel.angleDelta.y, 8);
@@ -503,6 +622,9 @@ Item {
                         color: mocha.overlay2
                         MouseArea {
                             anchors.fill: parent
+                            hoverEnabled: true
+                            onEntered: root.setDrawerOpen(true, "media", parent)
+                            onExited: root.setDrawerOpen(false)
                             onClicked: { if (mediaCard.player && mediaCard.player.canGoPrevious) mediaCard.player.previous(); }
                         }
                     }
@@ -513,6 +635,9 @@ Item {
                         color: mocha.green
                         MouseArea {
                             anchors.fill: parent
+                            hoverEnabled: true
+                            onEntered: root.setDrawerOpen(true, "media", parent)
+                            onExited: root.setDrawerOpen(false)
                             onClicked: { if (mediaCard.player && mediaCard.player.canTogglePlaying) mediaCard.player.togglePlaying(); }
                         }
                     }
@@ -523,6 +648,9 @@ Item {
                         color: mocha.overlay2
                         MouseArea {
                             anchors.fill: parent
+                            hoverEnabled: true
+                            onEntered: root.setDrawerOpen(true, "media", parent)
+                            onExited: root.setDrawerOpen(false)
                             onClicked: { if (mediaCard.player && mediaCard.player.canGoNext) mediaCard.player.next(); }
                         }
                     }
@@ -609,6 +737,8 @@ Item {
                             id: trayMouse
                             anchors.fill: parent
                             hoverEnabled: true
+                            onEntered: root.setDrawerOpen(true, "tray", parent)
+                            onExited: root.setDrawerOpen(false)
                             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                             onClicked: mouse => {
                                 if (mouse.button === Qt.LeftButton) {
@@ -653,6 +783,8 @@ Item {
                 id: kbMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                onEntered: root.setDrawerOpen(true, "keyboard", parent)
+                onExited: root.setDrawerOpen(false)
                 cursorShape: Qt.PointingHandCursor
                 onClicked: shell.switchKeyboardLayout()
             }
@@ -695,7 +827,7 @@ Item {
             border.width: root.edgeSidebarChrome ? 0 : 1
             border.color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.4)
             RowLayout {
-                visible: !root.compactAnimatedSidebar
+                visible: !root.compactRailOnly
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(8)
@@ -717,7 +849,7 @@ Item {
                 }
             }
             Row {
-                visible: root.compactAnimatedSidebar
+                visible: root.compactRailOnly
                 anchors.centerIn: parent
                 spacing: shell.s(4)
                 Text {
@@ -741,6 +873,8 @@ Item {
                 id: updatesMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                onEntered: root.setDrawerOpen(true, "updates", parent)
+                onExited: root.setDrawerOpen(false)
                 onClicked: shell.openUpdatesTerminal()
             }
         }
@@ -761,7 +895,7 @@ Item {
                 spacing: root.moduleSpacing
                 Text {
                     text: shell.wifiIcon
-                    Layout.fillWidth: root.compactAnimatedSidebar
+                    Layout.fillWidth: root.compactRailOnly
                     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                     font.family: "Iosevka Nerd Font"
                     font.pixelSize: shell.s(15)
@@ -770,7 +904,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                 }
                 Text {
-                    visible: !root.compactAnimatedSidebar
+                    visible: !root.compactRailOnly
                     text: shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off"
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
@@ -785,6 +919,8 @@ Item {
                 id: wifiMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                onEntered: root.setDrawerOpen(true, "network", parent)
+                onExited: root.setDrawerOpen(false)
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network wifi"])
             }
         }
@@ -805,7 +941,7 @@ Item {
                 spacing: root.moduleSpacing
                 Text {
                     text: shell.btIcon
-                    Layout.fillWidth: root.compactAnimatedSidebar
+                    Layout.fillWidth: root.compactRailOnly
                     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                     font.family: "Iosevka Nerd Font"
                     font.pixelSize: shell.s(15)
@@ -814,7 +950,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                 }
                 Text {
-                    visible: !root.compactAnimatedSidebar
+                    visible: !root.compactRailOnly
                     text: shell.btDevice
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
@@ -829,6 +965,8 @@ Item {
                 id: btMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                onEntered: root.setDrawerOpen(true, "bluetooth", parent)
+                onExited: root.setDrawerOpen(false)
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network bt"])
             }
         }
@@ -844,7 +982,7 @@ Item {
             bottomRightRadius: root.pillBottomRightRadius
             color: volMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
-                visible: !root.compactAnimatedSidebar
+                visible: !root.compactRailOnly
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(8)
@@ -866,7 +1004,7 @@ Item {
                 }
             }
             Row {
-                visible: root.compactAnimatedSidebar
+                visible: root.compactRailOnly
                 anchors.centerIn: parent
                 spacing: shell.s(4)
                 Text {
@@ -890,6 +1028,8 @@ Item {
                 id: volMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                onEntered: root.setDrawerOpen(true, "volume", parent)
+                onExited: root.setDrawerOpen(false)
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"])
                 onWheel: (wheel) => {
                     shell.handleVolumeWheel(wheel.angleDelta.y);
@@ -909,7 +1049,7 @@ Item {
             bottomRightRadius: root.pillBottomRightRadius
             color: batMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
-                visible: !root.compactAnimatedSidebar
+                visible: !root.compactRailOnly
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(8)
@@ -931,7 +1071,7 @@ Item {
                 }
             }
             Row {
-                visible: root.compactAnimatedSidebar
+                visible: root.compactRailOnly
                 anchors.centerIn: parent
                 spacing: shell.s(4)
                 Text {
@@ -955,9 +1095,90 @@ Item {
                 id: batMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                onEntered: root.setDrawerOpen(true, "battery", parent)
+                onExited: root.setDrawerOpen(false)
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"])
             }
         }
+            }
+        }
+    }
+
+    Rectangle {
+        id: contextDrawer
+        visible: root.compactAnimatedSidebar
+        width: shell.sidebarDrawerWidth
+        height: drawerContent.implicitHeight + shell.s(18)
+        radius: surface.panelRadius
+        border.width: 1
+        border.color: Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, drawerOpen ? 0.52 : 0.0)
+        color: Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, 0.90)
+        opacity: drawerOpen ? 1.0 : 0.0
+        scale: drawerOpen ? 1.0 : 0.985
+        x: shell.isLeftBar ? root.railWidth + shell.s(8) : root.width - root.railWidth - width - shell.s(8)
+        y: Math.max(shell.s(8), Math.min(root.height - height - shell.s(8), root.drawerAnchorY - height / 2))
+        z: 20
+        clip: true
+
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.InOutSine } }
+        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.OutCubic } }
+        Behavior on y { NumberAnimation { duration: ThemeConfig.duration(120); easing.type: Easing.OutCubic } }
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: root.drawerOpen
+            hoverEnabled: true
+            onEntered: root.setDrawerOpen(true, root.drawerKind, contextDrawer)
+            onExited: root.setDrawerOpen(false)
+        }
+
+        ColumnLayout {
+            id: drawerContent
+            anchors.fill: parent
+            anchors.margins: shell.s(9)
+            spacing: shell.s(5)
+
+            Text {
+                text: root.drawerTitle()
+                Layout.fillWidth: true
+                font.family: shell.uiFontFamily
+                font.pixelSize: shell.s(11)
+                font.weight: Font.DemiBold
+                font.letterSpacing: 0
+                color: mocha.subtext0
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: root.drawerPrimary()
+                Layout.fillWidth: true
+                font.family: shell.displayFontFamily
+                font.pixelSize: shell.s(15)
+                minimumPixelSize: shell.s(10)
+                fontSizeMode: Text.Fit
+                font.weight: Font.Black
+                font.letterSpacing: 0
+                color: mocha.text
+                elide: Text.ElideRight
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                color: Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.32)
+            }
+
+            Text {
+                text: root.drawerSecondary()
+                Layout.fillWidth: true
+                font.family: shell.monoFontFamily
+                font.pixelSize: shell.s(10)
+                font.weight: shell.themeFontWeight
+                font.letterSpacing: 0
+                color: mocha.overlay2
+                wrapMode: Text.WordWrap
+                maximumLineCount: 2
+                elide: Text.ElideRight
             }
         }
     }
