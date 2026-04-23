@@ -15,6 +15,7 @@
 
   // Afmetingen
   "control-center-width": 420,
+  "notification-window-width": 386,
   "control-center-height": 0,           // 0 = automatisch
   "control-center-margin-top": 64,      // Onder de topbar, uitgelijnd met de QS widgets
   "control-center-margin-bottom": 8,
@@ -22,11 +23,17 @@
   "control-center-margin-left": 56,
 
   // Notificaties
-  "notification-icon-size": 40,
+  "notification-icon-size": 36,
   "notification-body-image-height": 160,
   "notification-body-image-width": 200,
   "notification-inline-replies": false,
-  "notification-visibility": {},
+  "notification-visibility": {
+    "wallpaper-change-toast": {
+      "state": "transient",
+      "summary": "^(Wallpaper ingesteld|[Ww]allpaper changed|[Ww]allapper changed|Videowallpaper)$",
+      "override-urgency": "low"
+    }
+  },
 
   // Timeout (ms) — 0 = nooit vanzelf verdwijnen
   "timeout": 5,

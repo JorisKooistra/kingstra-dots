@@ -67,10 +67,11 @@ _resolve_wallpaper_dir() {
 
 _notify() {
     notify-send --icon=preferences-desktop-wallpaper \
-                --app-name="kingstra" \
+                --app-name="kingstra-wallpaper" \
                 "$1" "${2:-}" \
                 --urgency=low \
                 --expire-time=2000 \
+                --transient \
                 2>/dev/null || true
 }
 
