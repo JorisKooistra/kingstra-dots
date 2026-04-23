@@ -37,11 +37,14 @@ Item {
     required property var surface
     required property var mocha
 
-    // Brief delay so the Wayland surface can resize before content renders.
-    // Without this, switching from the animated sidebar (narrow) to a horizontal
-    // bar causes items to lay out in the old ~62px width and appear missing.
-    property bool _layoutReady: false
-    Timer { interval: 80; running: true; onTriggered: root._layoutReady = true }
+    // Wait for the Wayland surface to have a proper horizontal width before
+    // showing content. When switching from the animated sidebar (~62px wide)
+    // to a horizontal bar, the surface takes a moment to resize to full width.
+    // A width-based check is self-correcting: as soon as the compositor delivers
+    // the new surface size, this flips to true and content fades in.
+    readonly property bool _layoutReady: shell.isHorizontalBar
+                                         ? (parent && parent.width > shell.s(300))
+                                         : (parent && parent.height > shell.s(200))
 
     // ── Theme chrome helpers ───────────────────────────────────────────────
     readonly property int edgeInset: shell.edgeAttachedBar ? shell.s(10) : 0
