@@ -15,6 +15,7 @@ Rectangle {
     readonly property int wsCount: 8
 
     Layout.preferredHeight: ctx.cyberSideModuleHeight
+    Layout.alignment: Qt.AlignVCenter
     property real targetWidth: wsLayout.implicitWidth + shell.s(20)
     Layout.preferredWidth: targetWidth
     width: targetWidth
@@ -165,7 +166,7 @@ Rectangle {
                 width: targetWidth
                 Behavior on targetWidth { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
 
-                height: shell.s(32)
+                height: shell.s(34)
                 radius: surface.innerPillRadius
 
                 color: stateLabel === "active"

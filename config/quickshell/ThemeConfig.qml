@@ -179,7 +179,7 @@ Item {
                     if (data.bar_height !== undefined) {
                         let parsedBarHeight = Number(data.bar_height);
                         if (!isNaN(parsedBarHeight)) {
-                            root.barHeight = parseInt(root.clamp(parsedBarHeight, 40, 96));
+                            root.barHeight = parseInt(root.clamp(parsedBarHeight, 36, 96));
                         }
                     }
                     if (data.bar_position !== undefined) root.barPosition = root.normalizeBarPosition(data.bar_position);

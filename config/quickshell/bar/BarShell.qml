@@ -63,7 +63,7 @@ Variants {
             property bool animatedVerticalBar: isVerticalBar && (activeThemeNormalized === "animated" || compactSidebarTemplate)
             property bool sidebarDrawerOpen: false
             property int sidebarDrawerWidth: animatedVerticalBar ? s(touchOptimized ? 178 : 160) : 0
-            property int minBarHeight: s(touchOptimized ? 44 : 40)
+            property int minBarHeight: s(touchOptimized ? 44 : 36)
             property int themedBarHeight: s(ThemeConfig.barHeight > 0 ? ThemeConfig.barHeight : 48)
             property int barHeight: Math.max(minBarHeight, themedBarHeight)
             property int baseBarThickness: Math.max(

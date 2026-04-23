@@ -90,21 +90,6 @@ Item {
         return configured === effectName;
     }
 
-    // ── Opstartanimatie (slide + fade in) ─────────────────────────────────────
-    property real introProgress: 0.0
-    readonly property int  introSlideDistance: shell.s(activeTheme === "rocky" ? 4 : 10)
-    readonly property real introOffsetX: (1.0 - introProgress)
-                                         * (shell.isLeftBar ? -introSlideDistance : (shell.isRightBar ? introSlideDistance : 0))
-    readonly property real introOffsetY: (1.0 - introProgress)
-                                         * (shell.isTopBar ? -introSlideDistance : (shell.isBottomBar ? introSlideDistance : 0))
-    readonly property real introScale: 0.985 + (introProgress * 0.015)
-
-    NumberAnimation {
-        id: introReveal
-        target: barSurfaceRoot; property: "introProgress"
-        from: 0.0; to: 1.0
-        duration: ThemeConfig.duration(520); easing.type: Easing.OutCubic
-    }
 
     // ── Bar-modus: losse blokken vs. doorgaande rail ──────────────────────────
     readonly property bool skinContinuousBarMode: barSurfaceRoot.skinBool("continuousBar", false)

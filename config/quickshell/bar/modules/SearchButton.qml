@@ -14,6 +14,7 @@ Rectangle {
 
     Layout.preferredHeight: ctx.cyberSideModuleHeight
     Layout.preferredWidth: shell.barHeight
+    Layout.alignment: Qt.AlignVCenter
 
     color: ctx.cyberChrome
            ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)

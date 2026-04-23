@@ -34,6 +34,7 @@ Rectangle {
     }
 
     Layout.preferredHeight: ctx.cyberSideModuleHeight
+    Layout.alignment: Qt.AlignVCenter
     clip: true
 
     property bool isMediaMode: shell.activeMode === "media"
