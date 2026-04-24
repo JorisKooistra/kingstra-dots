@@ -124,6 +124,14 @@ Variants {
                        + (barWindow.isBottomBar ? margins.bottom : margins.top);
             }
             color: "transparent"
+            mask: Region {
+                x: 0
+                y: barWindow.isHorizontalBar && barWindow.isBottomBar ? barWindow.particleVisualOverflow : 0
+                width: barWindow.width
+                height: barWindow.isHorizontalBar
+                        ? Math.max(1, barWindow.height - barWindow.particleVisualOverflow)
+                        : barWindow.height
+            }
 
             // Dynamic Matugen Palette
             MatugenColors {
