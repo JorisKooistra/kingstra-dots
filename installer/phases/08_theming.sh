@@ -50,6 +50,7 @@ phase_run() {
     log_step "Fase 08 valideren..."
     validate_cmd matugen
     validate_dir  "$HOME/.config/matugen/templates"               "matugen/templates/"
+    validate_file "$HOME/.config/matugen/templates/btop-colors.toml" "matugen/templates/btop-colors.toml"
     validate_file "$HOME/.config/matugen/templates/palette-inspector.json" "matugen/templates/palette-inspector.json"
     validate_file "$HOME/.local/bin/kingstra-theme-apply"         "kingstra-theme-apply"
     validate_file "$HOME/.local/bin/kingstra-theme-switch"        "kingstra-theme-switch"
@@ -223,6 +224,10 @@ output_path = "~/.config/quickshell/colors.json"
 input_path = "~/.config/matugen/templates/kitty-colors.conf"
 output_path = "~/.config/kitty/kitty-matugen-colors.conf"
 
+[templates.btop]
+input_path = "~/.config/matugen/templates/btop-colors.toml"
+output_path = "~/.config/btop/themes/kingstra.theme"
+
 [templates.swaync]
 input_path = "~/.config/matugen/templates/swaync-colors.css"
 output_path = "~/.config/swaync/colors.css"
@@ -254,6 +259,7 @@ EOF
         log_ok "Matugen baseline config aangemaakt: $matugen_conf"
     fi
 
+    _phase08_ensure_btop_template "$matugen_conf"
     _phase08_ensure_palette_inspector_template "$matugen_conf"
 
     # 2) Quickshell colors fallback (valid JSON)
@@ -325,6 +331,23 @@ $shadow_color    = rgba(11111bcc)
 EOF
         log_ok "Hypr fallback colors aangemaakt: $hypr_colors"
     fi
+}
+
+_phase08_ensure_btop_template() {
+    local matugen_conf="$1"
+    [[ -f "$matugen_conf" ]] || return 0
+
+    if grep -Eq '^[[:space:]]*\[templates\.btop\][[:space:]]*$' "$matugen_conf"; then
+        return 0
+    fi
+
+    cat >> "$matugen_conf" <<'EOF'
+
+[templates.btop]
+input_path = "~/.config/matugen/templates/btop-colors.toml"
+output_path = "~/.config/btop/themes/kingstra.theme"
+EOF
+    log_ok "Matugen btop-template toegevoegd: $matugen_conf"
 }
 
 _phase08_ensure_palette_inspector_template() {

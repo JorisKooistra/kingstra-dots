@@ -20,10 +20,10 @@ Item {
         let mm = String(d.getMonth() + 1).padStart(2, "0");
         return dd + "-" + mm;
     }
-    readonly property color cyberSegmentOnColor: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.98)
-    readonly property color cyberSegmentOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.24)
-    readonly property color cyberDateOnColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.96)
-    readonly property color cyberDateOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.16)
+    readonly property color cyberSegmentOnColor: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.98)
+    readonly property color cyberSegmentOffColor: Qt.rgba(mocha.primaryContainer.r, mocha.primaryContainer.g, mocha.primaryContainer.b, 0.20)
+    readonly property color cyberDateOnColor: Qt.rgba(mocha.onSurfaceVariant.r, mocha.onSurfaceVariant.g, mocha.onSurfaceVariant.b, 0.94)
+    readonly property color cyberDateOffColor: Qt.rgba(mocha.surfaceContainerHighest.r, mocha.surfaceContainerHighest.g, mocha.surfaceContainerHighest.b, 0.16)
     readonly property real effectiveCyberScale: Math.max(1.0, Number(cyberScale) || 1.0)
     readonly property int cyberGlyphWidth: Math.round(shell.s(15) * effectiveCyberScale)
     readonly property int cyberGlyphHeight: Math.round(shell.s(25) * effectiveCyberScale)
@@ -54,7 +54,7 @@ Item {
                 font.pixelSize: shell.s(16)
                 font.weight: shell.themeFontWeight
                 font.letterSpacing: shell.themeLetterSpacing
-                color: mocha.blue
+                color: mocha.primary
                 renderType: Text.NativeRendering
             }
 
@@ -65,7 +65,7 @@ Item {
                 font.pixelSize: shell.s(11)
                 font.weight: Font.DemiBold
                 font.letterSpacing: shell.themeLetterSpacing
-                color: mocha.subtext0
+                color: mocha.onSurfaceVariant
                 renderType: Text.NativeRendering
             }
         }

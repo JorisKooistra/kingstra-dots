@@ -20,6 +20,7 @@ _BACKUP_KNOWN_PATHS=(
     "$HOME/.config/hyprlock"
     "$HOME/.config/fastfetch"
     "$HOME/.config/cava"
+    "$HOME/.config/btop"
     "$HOME/.config/wallpaper"
     "$HOME/.zshenv"
     "$HOME/.local/bin/kingstra-theme-apply"

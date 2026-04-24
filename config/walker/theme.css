@@ -1,38 +1,38 @@
 #window {
-  background: color-mix(in srgb, var(--mantle) 84%, transparent);
-  border: 1px solid color-mix(in srgb, var(--outline) 18%, transparent);
-  border-radius: 20px;
-  box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) 22%, transparent);
-  font-family: "Fira Sans", sans-serif;
+  background: color-mix(in srgb, var(--mantle) 98%, transparent);
+  border: 2px solid color-mix(in srgb, var(--outline) 48%, transparent);
+  border-radius: 4px;
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) 34%, transparent);
+  font-family: "Share Tech Mono", sans-serif;
 }
 
 #search {
-  font-size: 13px;
-  padding: 15px 19px;
+  font-size: 12px;
+  padding: 8px 12px;
 }
 
 row {
-  border-radius: 12px;
-  margin: 2px 2px;
-  padding: 6px 13px;
+  border-radius: 4px;
+  margin: 1px 2px;
+  padding: 5px 6px;
 }
 
 row:selected,
 row:hover {
-  background: color-mix(in srgb, var(--primary) 16%, var(--surface));
+  background: color-mix(in srgb, var(--primary) 11%, var(--surface));
 }
 
 #name {
-  font-family: "Fira Sans", sans-serif;
+  font-family: "Share Tech Mono", sans-serif;
   font-weight: 600;
 }
 
 #description,
 #label,
 #typeahead {
-  font-family: "Fira Sans", sans-serif;
+  font-family: "Share Tech Mono", sans-serif;
 }
 
 #calc-result {
-  font-family: "Fira Code", monospace;
+  font-family: "JetBrainsMono Nerd Font", monospace;
 }

@@ -29,6 +29,23 @@ Item {
     property color maroon: "#eba0ac"
     property color teal: "#94e2d5"
 
+    // Material/Matugen semantic names. The legacy Catppuccin-style names above
+    // are populated from Matugen in colors.json; these aliases make new code read
+    // like the palette it actually uses.
+    readonly property color primary: blue
+    readonly property color primaryContainer: sapphire
+    readonly property color secondary: green
+    readonly property color secondaryContainer: yellow
+    readonly property color tertiary: peach
+    readonly property color tertiaryContainer: pink
+    readonly property color errorContainer: maroon
+    readonly property color surface: crust
+    readonly property color onSurface: text
+    readonly property color onSurfaceVariant: subtext0
+    readonly property color surfaceContainer: surface0
+    readonly property color surfaceContainerHigh: surface1
+    readonly property color surfaceContainerHighest: surface2
+
     property string rawJson: ""
 
     Process {

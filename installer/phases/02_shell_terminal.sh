@@ -10,7 +10,7 @@
 #   - kitty installeren en configureren
 #   - fastfetch installeren en configureren
 #   - cava installeren en configureren
-#   - btop installeren
+#   - btop installeren en configureren
 # =============================================================================
 
 phase_run() {
@@ -101,6 +101,8 @@ _phase02_deploy_configs() {
     deploy_config "kitty"
     deploy_config "fastfetch"
     deploy_config "cava"
+    deploy_config "btop"
+    deploy_defaults "$REPO_ROOT/config/btop"
 }
 
 _phase02_init_kitty_runtime_files() {
@@ -142,5 +144,6 @@ _phase02_validate() {
     validate_file "$HOME/.config/kitty/kitty.conf" "~/.config/kitty/kitty.conf"
     validate_file "$HOME/.config/fastfetch/config.jsonc" "~/.config/fastfetch/config.jsonc"
     validate_file "$HOME/.config/cava/config" "~/.config/cava/config"
+    validate_file "$HOME/.config/btop/btop.conf" "~/.config/btop/btop.conf"
     validate_report
 }

@@ -23,6 +23,9 @@ config/fastfetch|~/.config/fastfetch
 # config/cava → ~/.config/cava
 config/cava|~/.config/cava
 
+# config/btop → ~/.config/btop
+config/btop|~/.config/btop
+
 # config/matugen → ~/.config/matugen
 config/matugen|~/.config/matugen
 

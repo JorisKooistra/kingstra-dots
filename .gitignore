@@ -42,6 +42,8 @@ config/quickshell/themes/previews/
 # User-state bestanden (beschermd via .default templates)
 config/quickshell/settings/settings.json
 config/hypr/conf.d/99-custom.conf
+config/btop/btop.conf
+config/btop/themes/kingstra.theme
 config/quickshell/theme.json
 config/kingstra/active-theme
 config/matugen/config.toml

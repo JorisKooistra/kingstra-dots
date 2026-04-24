@@ -135,7 +135,7 @@ Rectangle {
                         font.pixelSize: shell.s(14)
                         font.weight: shell.themeFontWeight
                         font.letterSpacing: shell.themeLetterSpacing
-                        color: mocha.blue
+                        color: mocha.primary
                     }
                 }
             }

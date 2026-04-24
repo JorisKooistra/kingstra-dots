@@ -74,10 +74,10 @@ Item {
     )
 
     // Cyber center colors
-    readonly property color cyberCenterColor:            Qt.rgba(mocha.crust.r,   mocha.crust.g,   mocha.crust.b,   0.44)
-    readonly property color cyberCenterHoverColor:       Qt.rgba(mocha.base.r,    mocha.base.g,    mocha.base.b,    0.56)
-    readonly property color cyberCenterBorderColor:      Qt.rgba(mocha.blue.r,    mocha.blue.g,    mocha.blue.b,    0.88)
-    readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.94)
+    readonly property color cyberCenterColor:            Qt.rgba(mocha.crust.r,   mocha.crust.g,   mocha.crust.b,   0.18)
+    readonly property color cyberCenterHoverColor:       Qt.rgba(mocha.base.r,    mocha.base.g,    mocha.base.b,    0.30)
+    readonly property color cyberCenterBorderColor:      Qt.rgba(mocha.blue.r,    mocha.blue.g,    mocha.blue.b,    0.50)
+    readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.72)
     readonly property color cyberCenterInnerLineColor:   Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.30)
     readonly property color cyberCenterAccentColor:      Qt.rgba(mocha.blue.r,    mocha.blue.g,    mocha.blue.b,    0.82)
     readonly property color cyberCenterDividerColor:     Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.62)
@@ -87,11 +87,11 @@ Item {
     readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.14)
 
     // Cyber module (pill) colors — used by every status pill
-    readonly property color cyberModuleColor:            Qt.rgba(mocha.crust.r,   mocha.crust.g,   mocha.crust.b,   0.42)
-    readonly property color cyberModuleHoverColor:       Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
-    readonly property color cyberModuleBorderColor:      Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.92)
-    readonly property color cyberModuleBorderHoverColor: Qt.rgba(mocha.blue.r,    mocha.blue.g,    mocha.blue.b,    1.0)
-    readonly property color cyberModuleTickColor:        Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    1.0)
+    readonly property color cyberModuleColor:            Qt.rgba(mocha.crust.r,   mocha.crust.g,   mocha.crust.b,   0.12)
+    readonly property color cyberModuleHoverColor:       Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.26)
+    readonly property color cyberModuleBorderColor:      Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.34)
+    readonly property color cyberModuleBorderHoverColor: Qt.rgba(mocha.blue.r,    mocha.blue.g,    mocha.blue.b,    0.62)
+    readonly property color cyberModuleTickColor:        Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.58)
 
     // Cyber text colors
     readonly property color cyberTextColor:      Qt.rgba(mocha.text.r,   mocha.text.g,   mocha.text.b,   0.98)
@@ -100,7 +100,7 @@ Item {
 
     // Cyber workspace colors
     readonly property color cyberWorkspaceActiveColor:   Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.88)
-    readonly property color cyberWorkspaceOccupiedColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.18)
+    readonly property color cyberWorkspaceOccupiedColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.10)
 
     // Cyber center geometry
     readonly property real cyberCenterScale:        cyberCenterFeature ? 1.6 : 1.0

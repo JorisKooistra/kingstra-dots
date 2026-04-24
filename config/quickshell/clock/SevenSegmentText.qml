@@ -11,6 +11,14 @@ Item {
     property color segmentOnColor: "white"
     property color segmentOffColor: Qt.rgba(1, 1, 1, 0.2)
 
+    function canvasColor(colorValue) {
+        return "rgba("
+            + Math.round(colorValue.r * 255) + ", "
+            + Math.round(colorValue.g * 255) + ", "
+            + Math.round(colorValue.b * 255) + ", "
+            + colorValue.a + ")";
+    }
+
     implicitWidth: row.implicitWidth
     implicitHeight: row.implicitHeight
 
@@ -48,7 +56,7 @@ Item {
                         ctx.clearRect(0, 0, w, h);
 
                         function drawRect(x, y, rw, rh, active) {
-                            ctx.fillStyle = active ? root.segmentOnColor : root.segmentOffColor;
+                            ctx.fillStyle = root.canvasColor(active ? root.segmentOnColor : root.segmentOffColor);
                             ctx.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(rw)), Math.max(1, Math.round(rh)));
                         }
 

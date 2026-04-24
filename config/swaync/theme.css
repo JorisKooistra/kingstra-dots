@@ -1,14 +1,14 @@
 * {
-  font-family: "Fira Sans", "Fira Code", sans-serif;
-  font-size: 13px;
+  font-family: "Share Tech Mono", "JetBrainsMono Nerd Font", sans-serif;
+  font-size: 12px;
 }
 
 .control-center {
-  background: alpha(@mantle, 0.8200000000000001);
-  border: 1px solid alpha(@outline, 0.18);
-  border-radius: 24px;
-  box-shadow: 0 18px 52px alpha(@crust, 0.22);
-  padding: 15px;
+  background: alpha(@mantle, 0.982);
+  border: 2px solid alpha(@outline, 0.48);
+  border-radius: 8px;
+  box-shadow: 0 18px 52px alpha(@crust, 0.34);
+  padding: 8px;
 }
 
 .widget-title > button,
@@ -16,26 +16,26 @@
 .notification,
 .widget-mpris-player,
 .notification-action {
-  border-radius: 20px;
+  border-radius: 4px;
 }
 
 .widget-title > button,
 .widget-dnd,
 .widget-mpris-player,
 .notification {
-  background: alpha(@surface0, 0.8150000000000001);
+  background: alpha(@surface0, 0.98);
 }
 
 .notification {
-  border: 1px solid alpha(@outline-variant, 0.18);
+  border: 2px solid alpha(@outline-variant, 0.48);
 }
 
 .app-name,
 .summary {
-  font-family: "Fira Sans", sans-serif;
+  font-family: "Share Tech Mono", sans-serif;
 }
 
 .body,
 .time {
-  font-family: "Fira Sans", sans-serif;
+  font-family: "Share Tech Mono", sans-serif;
 }
