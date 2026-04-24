@@ -61,6 +61,10 @@ Item {
     property int draggingTargetWorkspace: -1
     property real draggingTargetWorkspaceX: 0
     property real draggingTargetWorkspaceY: 0
+    property string draggingAddress: ""
+    property string draggingTargetWindowAddress: ""
+    property real draggingOriginalX: 0
+    property real draggingOriginalY: 0
     property string draggingTargetSpecialWorkspace: ""
     property int previewRecaptureToken: 0
     property var allWorkspaces: HyprlandData.allWorkspaces
@@ -192,6 +196,49 @@ Item {
         root.draggingTargetSpecialWorkspace = "";
         root.draggingTargetWorkspaceX = root.clamp(Number(localX) || 0, 0, root.workspaceImplicitWidth);
         root.draggingTargetWorkspaceY = root.clamp(Number(localY) || 0, 0, root.workspaceImplicitHeight);
+        root.draggingTargetWindowAddress = root.windowAtWorkspacePoint(workspaceId, root.draggingTargetWorkspaceX, root.draggingTargetWorkspaceY);
+    }
+
+    function windowRectInWorkspace(win) {
+        const reserved = root.monitorData?.reserved ?? [0, 0, 0, 0];
+        const baseX = (root.monitorData?.x ?? 0) + (reserved[0] ?? 0);
+        const baseY = (root.monitorData?.y ?? 0) + (reserved[1] ?? 0);
+        const scale = Math.max(0.001, root.scale);
+        return {
+            x: Math.max(((win?.at?.[0] ?? baseX) - baseX) * scale, 0),
+            y: Math.max(((win?.at?.[1] ?? baseY) - baseY) * scale, 0),
+            w: Math.max(1, (win?.size?.[0] ?? 1) * scale),
+            h: Math.max(1, (win?.size?.[1] ?? 1) * scale)
+        };
+    }
+
+    function windowAtWorkspacePoint(workspaceId, localX, localY) {
+        let bestAddress = "";
+        let bestArea = Number.POSITIVE_INFINITY;
+
+        for (const addr in windowByAddress) {
+            const win = windowByAddress[addr];
+            if (!win || root.isSpecialWorkspace(win))
+                continue;
+            if (`${win.address ?? addr}` === root.draggingAddress)
+                continue;
+            if ((win?.workspace?.id ?? -1) !== workspaceId)
+                continue;
+
+            const rect = root.windowRectInWorkspace(win);
+            const inside = localX >= rect.x && localX <= rect.x + rect.w
+                && localY >= rect.y && localY <= rect.y + rect.h;
+            if (!inside)
+                continue;
+
+            const area = rect.w * rect.h;
+            if (area < bestArea) {
+                bestArea = area;
+                bestAddress = `${win.address ?? addr}`;
+            }
+        }
+
+        return bestAddress;
     }
 
     function moveWindowToWorkspaceDrop(windowItem, targetWorkspace) {
@@ -225,7 +272,8 @@ Item {
             `${cursorY}`,
             `${windowX}`,
             `${windowY}`,
-            floating
+            floating,
+            `${root.draggingTargetWindowAddress}`
         ]);
     }
 
@@ -1047,6 +1095,8 @@ Item {
                     property int workspaceRowIndex: root.getWorkspaceRow(windowData?.workspace.id)
                     xOffset: (root.workspaceImplicitWidth + workspaceSpacing) * workspaceColIndex
                     yOffset: (root.workspaceImplicitHeight + workspaceSpacing) * workspaceRowIndex
+                    visualOffsetX: root.draggingFromWorkspace === windowData?.workspace.id && root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalX - initX : 0
+                    visualOffsetY: root.draggingFromWorkspace === windowData?.workspace.id && root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalY - initY : 0
 
                     Timer {
                         id: updateWindowPosition
@@ -1073,6 +1123,10 @@ Item {
                         onPressed: (mouse) => {
                             root.draggingFromWorkspace = windowData?.workspace.id
                             root.draggingTargetSpecialWorkspace = ""
+                            root.draggingAddress = `${windowData?.address ?? ""}`
+                            root.draggingTargetWindowAddress = ""
+                            root.draggingOriginalX = window.initX
+                            root.draggingOriginalY = window.initY
                             window.pressed = true
                             window.Drag.active = true
                             window.Drag.source = window
@@ -1104,6 +1158,8 @@ Item {
                                 window.x = window.initX
                                 window.y = window.initY
                             }
+                            root.draggingAddress = ""
+                            root.draggingTargetWindowAddress = ""
                         }
                         onClicked: (event) => {
                             if (!windowData) return;

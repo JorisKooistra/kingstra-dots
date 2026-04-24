@@ -8,6 +8,7 @@ cursor_y="${4:-}"
 window_x="${5:-}"
 window_y="${6:-}"
 is_floating="${7:-false}"
+target_address="${8:-}"
 
 is_int() {
     [[ "${1:-}" =~ ^-?[0-9]+$ ]]
@@ -29,6 +30,11 @@ old_y="${old_y//[[:space:]]/}"
 batch="keyword cursor:no_warps true"
 batch+=" ; dispatch movecursor $cursor_x $cursor_y"
 batch+=" ; dispatch movetoworkspacesilent $target_workspace,address:$address"
+batch+=" ; dispatch focuswindow address:$address"
+
+if [[ -n "$target_address" && "$target_address" != "$address" ]]; then
+    batch+=" ; dispatch swapwindow address:$target_address"
+fi
 
 if [[ "$is_floating" == "true" ]] && is_int "$window_x" && is_int "$window_y"; then
     batch+=" ; dispatch movewindowpixel exact $window_x $window_y,address:$address"

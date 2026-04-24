@@ -43,6 +43,8 @@ Item { // Window
     property real initY: Math.max(((windowData?.at[1] ?? 0) - positionBaseY) * root.scale * geometryScaleY, 0) + yOffset
     property real xOffset: 0
     property real yOffset: 0
+    property real visualOffsetX: 0
+    property real visualOffsetY: 0
     property int widgetMonitorId: 0
     property real geometryScaleX: widthRatio
     property real geometryScaleY: heightRatio
@@ -92,8 +94,8 @@ Item { // Window
     property bool suspendPositionAnimation: false
     property bool animateSize: true
     
-    x: initX
-    y: initY
+    x: initX + visualOffsetX
+    y: initY + visualOffsetY
     width: Math.min(targetWindowWidth, availableWorkspaceWidth)
     height: Math.min(targetWindowHeight, availableWorkspaceHeight)
     opacity: (windowData?.monitor ?? -1) == widgetMonitorId ? 1 : Config.options.windowPreview.inactiveMonitorOpacity
