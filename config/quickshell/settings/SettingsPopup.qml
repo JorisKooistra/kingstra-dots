@@ -2082,7 +2082,27 @@ Item {
                     Behavior on color { ColorAnimation { duration: 150 } }
                     Behavior on border.color { ColorAnimation { duration: 150 } }
 
-                    Text { anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(16); color: closeHover.containsMouse ? root.red : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                    RowLayout {
+                        anchors.centerIn: parent
+                        spacing: root.s(8)
+
+                        Text {
+                            text: "󰅖"
+                            font.family: "Iosevka Nerd Font"
+                            font.pixelSize: root.s(16)
+                            color: closeHover.containsMouse ? root.red : root.subtext0
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                        Text {
+                            text: "Sluiten"
+                            font.family: root.uiFontFamily
+                            font.weight: Font.Medium
+                            font.letterSpacing: root.themedLetterSpacing
+                            font.pixelSize: root.s(12)
+                            color: closeHover.containsMouse ? root.red : root.subtext0
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                    }
                     MouseArea { id: closeHover; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: closeSequence.start() }
                 }
             }
