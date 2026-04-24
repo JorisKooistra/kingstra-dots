@@ -241,6 +241,113 @@ Item {
         return bestAddress;
     }
 
+    function sortedWindowsForWorkspace(workspaceId) {
+        const out = [];
+        for (const addr in windowByAddress) {
+            const win = windowByAddress[addr];
+            if (!win || root.isSpecialWorkspace(win))
+                continue;
+            if (`${win.address ?? addr}` === root.draggingAddress)
+                continue;
+            if ((win?.workspace?.id ?? -1) !== workspaceId)
+                continue;
+            out.push(win);
+        }
+        out.sort((a, b) => {
+            const ra = root.windowRectInWorkspace(a);
+            const rb = root.windowRectInWorkspace(b);
+            const ay = Math.round(ra.y / 8);
+            const by = Math.round(rb.y / 8);
+            if (ay !== by)
+                return ay - by;
+            if (ra.x !== rb.x)
+                return ra.x - rb.x;
+            return `${a.address ?? ""}`.localeCompare(`${b.address ?? ""}`);
+        });
+        return out;
+    }
+
+    function previewSlots(totalCount) {
+        const count = Math.max(1, totalCount);
+        const slots = [];
+
+        if (count === 1) {
+            return [{ x: 0, y: 0, w: root.workspaceImplicitWidth, h: root.workspaceImplicitHeight }];
+        }
+
+        if (count === 2) {
+            return [
+                { x: 0, y: 0, w: root.workspaceImplicitWidth, h: root.workspaceImplicitHeight / 2 },
+                { x: 0, y: root.workspaceImplicitHeight / 2, w: root.workspaceImplicitWidth, h: root.workspaceImplicitHeight / 2 }
+            ];
+        }
+
+        const rows = Math.ceil(Math.sqrt(count));
+        const columns = Math.ceil(count / rows);
+        const slotW = root.workspaceImplicitWidth / columns;
+        const slotH = root.workspaceImplicitHeight / rows;
+        for (let i = 0; i < count; i++) {
+            const row = Math.floor(i / columns);
+            const column = i % columns;
+            slots.push({ x: column * slotW, y: row * slotH, w: slotW, h: slotH });
+        }
+        return slots;
+    }
+
+    function nearestPreviewSlotIndex(slots, localX, localY) {
+        let bestIndex = 0;
+        let bestDistance = Number.POSITIVE_INFINITY;
+        for (let i = 0; i < slots.length; i++) {
+            const slot = slots[i];
+            const cx = slot.x + slot.w / 2;
+            const cy = slot.y + slot.h / 2;
+            const dx = cx - localX;
+            const dy = cy - localY;
+            const distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestIndex = i;
+            }
+        }
+        return bestIndex;
+    }
+
+    function draggingInsertionIndex(workspaceId, windows, slots) {
+        if (root.draggingTargetWindowAddress) {
+            for (let i = 0; i < windows.length; i++) {
+                if (`${windows[i].address ?? ""}` === root.draggingTargetWindowAddress)
+                    return i;
+            }
+        }
+        return root.nearestPreviewSlotIndex(slots, root.draggingTargetWorkspaceX, root.draggingTargetWorkspaceY);
+    }
+
+    function previewOffsetForWindow(win, currentInitX, currentInitY, currentXOffset, currentYOffset) {
+        if (!root.draggingAddress || root.draggingTargetWorkspace === -1)
+            return { x: 0, y: 0 };
+        if ((win?.workspace?.id ?? -1) !== root.draggingTargetWorkspace)
+            return { x: 0, y: 0 };
+        if (`${win?.address ?? ""}` === root.draggingAddress)
+            return { x: 0, y: 0 };
+
+        const windows = root.sortedWindowsForWorkspace(root.draggingTargetWorkspace);
+        const slots = root.previewSlots(windows.length + 1);
+        const insertAt = root.clamp(root.draggingInsertionIndex(root.draggingTargetWorkspace, windows, slots), 0, slots.length - 1);
+
+        for (let i = 0; i < windows.length; i++) {
+            if (`${windows[i].address ?? ""}` !== `${win?.address ?? ""}`)
+                continue;
+            const desiredIndex = i >= insertAt ? i + 1 : i;
+            const slot = slots[root.clamp(desiredIndex, 0, slots.length - 1)];
+            return {
+                x: currentXOffset + slot.x - currentInitX,
+                y: currentYOffset + slot.y - currentInitY
+            };
+        }
+
+        return { x: 0, y: 0 };
+    }
+
     function moveWindowToWorkspaceDrop(windowItem, targetWorkspace) {
         if (!windowItem?.windowData?.address || targetWorkspace === -1)
             return;
@@ -272,8 +379,7 @@ Item {
             `${cursorY}`,
             `${windowX}`,
             `${windowY}`,
-            floating,
-            `${root.draggingTargetWindowAddress}`
+            floating
         ]);
     }
 
@@ -1104,8 +1210,9 @@ Item {
                     property int workspaceRowIndex: root.getWorkspaceRow(windowData?.workspace.id)
                     xOffset: (root.workspaceImplicitWidth + workspaceSpacing) * workspaceColIndex
                     yOffset: (root.workspaceImplicitHeight + workspaceSpacing) * workspaceRowIndex
-                    visualOffsetX: root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalX - initX : 0
-                    visualOffsetY: root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalY - initY : 0
+                    property var previewOffset: root.previewOffsetForWindow(windowData, initX, initY, xOffset, yOffset)
+                    visualOffsetX: previewOffset.x
+                    visualOffsetY: previewOffset.y
 
                     Timer {
                         id: updateWindowPosition
