@@ -3342,12 +3342,14 @@ Item {
 
                         Rectangle {
                             Layout.fillWidth: true
+                            implicitHeight: sessionIdleEditor.implicitHeight + root.s(28)
                             radius: root.s(12)
                             color: Qt.alpha(root.surface0, 0.46)
                             border.color: Qt.alpha(root.surface2, 0.82)
                             border.width: 1
 
                             ColumnLayout {
+                                id: sessionIdleEditor
                                 anchors.fill: parent
                                 anchors.margins: root.s(14)
                                 spacing: root.s(12)
@@ -3380,12 +3382,14 @@ Item {
 
                                     Rectangle {
                                         Layout.fillWidth: true
+                                        implicitHeight: perfIdleEditor.implicitHeight + root.s(24)
                                         radius: root.s(10)
                                         color: Qt.alpha(root.surface0, 0.50)
                                         border.color: Qt.alpha(root.red, 0.35)
                                         border.width: 1
 
                                         ColumnLayout {
+                                            id: perfIdleEditor
                                             anchors.fill: parent
                                             anchors.margins: root.s(12)
                                             spacing: root.s(8)
@@ -3418,12 +3422,14 @@ Item {
 
                                     Rectangle {
                                         Layout.fillWidth: true
+                                        implicitHeight: balancedIdleEditor.implicitHeight + root.s(24)
                                         radius: root.s(10)
                                         color: Qt.alpha(root.surface0, 0.50)
                                         border.color: Qt.alpha(root.blue, 0.35)
                                         border.width: 1
 
                                         ColumnLayout {
+                                            id: balancedIdleEditor
                                             anchors.fill: parent
                                             anchors.margins: root.s(12)
                                             spacing: root.s(8)
@@ -3456,12 +3462,14 @@ Item {
 
                                     Rectangle {
                                         Layout.fillWidth: true
+                                        implicitHeight: saverIdleEditor.implicitHeight + root.s(24)
                                         radius: root.s(10)
                                         color: Qt.alpha(root.surface0, 0.50)
                                         border.color: Qt.alpha(root.green, 0.35)
                                         border.width: 1
 
                                         ColumnLayout {
+                                            id: saverIdleEditor
                                             anchors.fill: parent
                                             anchors.margins: root.s(12)
                                             spacing: root.s(8)
