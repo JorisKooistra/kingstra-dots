@@ -110,6 +110,12 @@ _install_log_cleanup() {
     _ui_restore_scroll_region
 }
 
+install_ui_finish_screen() {
+    [[ "${INSTALL_UI_MODE:-false}" == "true" ]] || return 0
+    _ui_restore_scroll_region
+    _ui_clear
+}
+
 suppress_kernel_console_messages() {
     [[ "${INSTALL_UI_MODE:-false}" == "true" ]] || return 0
     [[ "${INSTALL_SUPPRESS_KERNEL_MESSAGES:-true}" == "true" ]] || return 0

@@ -25,6 +25,7 @@ phase_run() {
     validate_report
 
     log_ok "Fase 15 voltooid — Kingstra-dots is volledig geïnstalleerd."
+    install_ui_finish_screen
     _phase15_print_next_steps
     _phase15_prompt_reboot
 }
