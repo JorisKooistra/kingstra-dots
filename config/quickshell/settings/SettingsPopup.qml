@@ -3334,7 +3334,7 @@ Item {
 
                                 Text { text: "Automatische idle-acties"; font.family: root.uiFontFamily; font.weight: Font.Bold; font.pixelSize: root.s(14); color: root.text }
                                 Text {
-                                    text: "Kies per batterijmodus na hoeveel inactiviteit je sessie automatisch lockt, het scherm uitgaat en eventueel suspend ingaat. Je bewerkt nu: " + root.powerProfileLabel(root.currentPowerProfileText) + "."
+                                    text: "Stel idle-gedrag per batterijmodus in. Alles hieronder wordt samen opgeslagen; het actieve power profile gebruikt daarna automatisch zijn eigen lock-, scherm-uit- en suspend-waardes."
                                     font.family: root.uiFontFamily
                                     font.pixelSize: root.s(11)
                                     color: root.subtext0
@@ -3358,66 +3358,117 @@ Item {
                                     rowSpacing: root.s(10)
                                     columnSpacing: root.s(10)
 
-                                    ColumnLayout {
+                                    Rectangle {
                                         Layout.fillWidth: true
-                                        spacing: root.s(6)
-                                        Text { text: "Automatisch locken"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
-                                        ThemedComboBox {
-                                            id: sessionIdleLockCombo
-                                            model: root.idleTimeoutOptions
-                                            currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings(root.currentPowerProfileText).idleLockSeconds)
-                                        }
-                                        Text {
-                                            text: sessionIdleLockCombo.currentIndex === 0
-                                                ? "Schakelt automatische lock uit."
-                                                : "Vergrendelt na " + root.idleTimeoutOptions[sessionIdleLockCombo.currentIndex].toLowerCase() + "."
-                                            font.family: root.uiFontFamily
-                                            font.pixelSize: root.s(11)
-                                            color: root.yellow
-                                            wrapMode: Text.WordWrap
-                                            Layout.fillWidth: true
+                                        radius: root.s(10)
+                                        color: Qt.alpha(root.surface0, 0.50)
+                                        border.color: Qt.alpha(root.red, 0.35)
+                                        border.width: 1
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: root.s(12)
+                                            spacing: root.s(8)
+
+                                            Text { text: "Performance"; font.family: root.uiFontFamily; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.red }
+                                            Text { text: "Ruimere timeouts, bedoeld voor aan de lader of lange actieve sessies."; font.family: root.uiFontFamily; font.pixelSize: root.s(10); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+
+                                            Text { text: "Automatisch locken"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                            ThemedComboBox {
+                                                id: perfIdleLockCombo
+                                                model: root.idleTimeoutOptions
+                                                currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings("performance").idleLockSeconds)
+                                            }
+
+                                            Text { text: "Scherm uit (DPMS)"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                            ThemedComboBox {
+                                                id: perfIdleScreenOffCombo
+                                                model: root.idleTimeoutOptions
+                                                currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings("performance").idleScreenOffSeconds)
+                                            }
+
+                                            Text { text: "Suspend / slaapstand"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                            ThemedComboBox {
+                                                id: perfIdleSuspendCombo
+                                                model: root.idleTimeoutOptions
+                                                currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings("performance").idleSuspendSeconds)
+                                            }
                                         }
                                     }
 
-                                    ColumnLayout {
+                                    Rectangle {
                                         Layout.fillWidth: true
-                                        spacing: root.s(6)
-                                        Text { text: "Scherm uit (DPMS)"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
-                                        ThemedComboBox {
-                                            id: sessionIdleScreenOffCombo
-                                            model: root.idleTimeoutOptions
-                                            currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings(root.currentPowerProfileText).idleScreenOffSeconds)
-                                        }
-                                        Text {
-                                            text: sessionIdleScreenOffCombo.currentIndex === 0
-                                                ? "Laat het scherm aan zolang de sessie actief blijft."
-                                                : "Zet het scherm uit na " + root.idleTimeoutOptions[sessionIdleScreenOffCombo.currentIndex].toLowerCase() + "."
-                                            font.family: root.uiFontFamily
-                                            font.pixelSize: root.s(11)
-                                            color: root.blue
-                                            wrapMode: Text.WordWrap
-                                            Layout.fillWidth: true
+                                        radius: root.s(10)
+                                        color: Qt.alpha(root.surface0, 0.50)
+                                        border.color: Qt.alpha(root.blue, 0.35)
+                                        border.width: 1
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: root.s(12)
+                                            spacing: root.s(8)
+
+                                            Text { text: "Balanced"; font.family: root.uiFontFamily; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.blue }
+                                            Text { text: "Dagelijks profiel met een normale balans tussen comfort en batterijduur."; font.family: root.uiFontFamily; font.pixelSize: root.s(10); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+
+                                            Text { text: "Automatisch locken"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                            ThemedComboBox {
+                                                id: balancedIdleLockCombo
+                                                model: root.idleTimeoutOptions
+                                                currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings("balanced").idleLockSeconds)
+                                            }
+
+                                            Text { text: "Scherm uit (DPMS)"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                            ThemedComboBox {
+                                                id: balancedIdleScreenOffCombo
+                                                model: root.idleTimeoutOptions
+                                                currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings("balanced").idleScreenOffSeconds)
+                                            }
+
+                                            Text { text: "Suspend / slaapstand"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                            ThemedComboBox {
+                                                id: balancedIdleSuspendCombo
+                                                model: root.idleTimeoutOptions
+                                                currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings("balanced").idleSuspendSeconds)
+                                            }
                                         }
                                     }
 
-                                    ColumnLayout {
+                                    Rectangle {
                                         Layout.fillWidth: true
-                                        spacing: root.s(6)
-                                        Text { text: "Suspend / slaapstand"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
-                                        ThemedComboBox {
-                                            id: sessionIdleSuspendCombo
-                                            model: root.idleTimeoutOptions
-                                            currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings(root.currentPowerProfileText).idleSuspendSeconds)
-                                        }
-                                        Text {
-                                            text: sessionIdleSuspendCombo.currentIndex === 0
-                                                ? "Laat suspend uit; alleen lock en scherm-uit blijven actief."
-                                                : "Stuurt het systeem in suspend na " + root.idleTimeoutOptions[sessionIdleSuspendCombo.currentIndex].toLowerCase() + "."
-                                            font.family: root.uiFontFamily
-                                            font.pixelSize: root.s(11)
-                                            color: root.green
-                                            wrapMode: Text.WordWrap
-                                            Layout.fillWidth: true
+                                        radius: root.s(10)
+                                        color: Qt.alpha(root.surface0, 0.50)
+                                        border.color: Qt.alpha(root.green, 0.35)
+                                        border.width: 1
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: root.s(12)
+                                            spacing: root.s(8)
+
+                                            Text { text: "Saver"; font.family: root.uiFontFamily; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.green }
+                                            Text { text: "Strakkere timeouts voor onderweg of batterij sparen."; font.family: root.uiFontFamily; font.pixelSize: root.s(10); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+
+                                            Text { text: "Automatisch locken"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                            ThemedComboBox {
+                                                id: saverIdleLockCombo
+                                                model: root.idleTimeoutOptions
+                                                currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings("power-saver").idleLockSeconds)
+                                            }
+
+                                            Text { text: "Scherm uit (DPMS)"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                            ThemedComboBox {
+                                                id: saverIdleScreenOffCombo
+                                                model: root.idleTimeoutOptions
+                                                currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings("power-saver").idleScreenOffSeconds)
+                                            }
+
+                                            Text { text: "Suspend / slaapstand"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                            ThemedComboBox {
+                                                id: saverIdleSuspendCombo
+                                                model: root.idleTimeoutOptions
+                                                currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings("power-saver").idleSuspendSeconds)
+                                            }
                                         }
                                     }
                                 }
@@ -3463,25 +3514,25 @@ Item {
                                                 root.scrollPercentFromSetting(root.settingsData.mouseScrollFactor, 1.35),
                                                 root.settingsData.touchpadRightClickButtonArea,
                                                 root.settingsData.keyboardLayout,
-                                                root.idleTimeoutSeconds(sessionIdleLockCombo.currentIndex),
-                                                root.idleTimeoutSeconds(sessionIdleScreenOffCombo.currentIndex),
-                                                root.idleTimeoutSeconds(sessionIdleSuspendCombo.currentIndex),
+                                                root.idleTimeoutSeconds(balancedIdleLockCombo.currentIndex),
+                                                root.idleTimeoutSeconds(balancedIdleScreenOffCombo.currentIndex),
+                                                root.idleTimeoutSeconds(balancedIdleSuspendCombo.currentIndex),
                                                 ({
-                                                    "performance": root.currentPowerProfileText === "performance" ? {
-                                                        idleLockSeconds: root.idleTimeoutSeconds(sessionIdleLockCombo.currentIndex),
-                                                        idleScreenOffSeconds: root.idleTimeoutSeconds(sessionIdleScreenOffCombo.currentIndex),
-                                                        idleSuspendSeconds: root.idleTimeoutSeconds(sessionIdleSuspendCombo.currentIndex)
-                                                    } : root.idleProfileSettings("performance"),
-                                                    "balanced": root.currentPowerProfileText === "balanced" ? {
-                                                        idleLockSeconds: root.idleTimeoutSeconds(sessionIdleLockCombo.currentIndex),
-                                                        idleScreenOffSeconds: root.idleTimeoutSeconds(sessionIdleScreenOffCombo.currentIndex),
-                                                        idleSuspendSeconds: root.idleTimeoutSeconds(sessionIdleSuspendCombo.currentIndex)
-                                                    } : root.idleProfileSettings("balanced"),
-                                                    "power-saver": root.currentPowerProfileText === "power-saver" ? {
-                                                        idleLockSeconds: root.idleTimeoutSeconds(sessionIdleLockCombo.currentIndex),
-                                                        idleScreenOffSeconds: root.idleTimeoutSeconds(sessionIdleScreenOffCombo.currentIndex),
-                                                        idleSuspendSeconds: root.idleTimeoutSeconds(sessionIdleSuspendCombo.currentIndex)
-                                                    } : root.idleProfileSettings("power-saver")
+                                                    "performance": {
+                                                        idleLockSeconds: root.idleTimeoutSeconds(perfIdleLockCombo.currentIndex),
+                                                        idleScreenOffSeconds: root.idleTimeoutSeconds(perfIdleScreenOffCombo.currentIndex),
+                                                        idleSuspendSeconds: root.idleTimeoutSeconds(perfIdleSuspendCombo.currentIndex)
+                                                    },
+                                                    "balanced": {
+                                                        idleLockSeconds: root.idleTimeoutSeconds(balancedIdleLockCombo.currentIndex),
+                                                        idleScreenOffSeconds: root.idleTimeoutSeconds(balancedIdleScreenOffCombo.currentIndex),
+                                                        idleSuspendSeconds: root.idleTimeoutSeconds(balancedIdleSuspendCombo.currentIndex)
+                                                    },
+                                                    "power-saver": {
+                                                        idleLockSeconds: root.idleTimeoutSeconds(saverIdleLockCombo.currentIndex),
+                                                        idleScreenOffSeconds: root.idleTimeoutSeconds(saverIdleScreenOffCombo.currentIndex),
+                                                        idleSuspendSeconds: root.idleTimeoutSeconds(saverIdleSuspendCombo.currentIndex)
+                                                    }
                                                 })
                                             )
                                         }
