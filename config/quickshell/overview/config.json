@@ -55,7 +55,7 @@
     "previewMode": "live",
     "includeInactiveMonitorPreviews": true,
     "previewRecaptureDelayMs": 60,
-    "showSpecialWorkspaces": true,
+    "showSpecialWorkspaces": false,
     "specialWorkspaces": [],
     "specialWorkspaceColumns": 5,
     "emptyWorkspaceWallpaper": "",
