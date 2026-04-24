@@ -63,3 +63,4 @@ config/quickshell/colors-transformed.json
 aanleveringen/
 config/matugen/templates/palette-inspector.json
 config/kingstra/state/matugen-palette.json
+config/qt6ct/qt6ct.conf
