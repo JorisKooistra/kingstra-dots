@@ -5,8 +5,14 @@
 
 [[ -o interactive ]] || return
 
+_kingstra_clear_terminal_for_fetch() {
+    [[ -t 1 ]] || return 0
+    # Clear viewport and scrollback so installer/update output cannot sit behind fastfetch.
+    printf '\033[H\033[2J\033[3J'
+}
+
 # fastfetch tonen bij nieuwe terminalsessie
-# Alleen als we niet al in een kitty-sessie zitten die al fetch heeft gedraaid
 if command -v fastfetch &>/dev/null; then
+    _kingstra_clear_terminal_for_fetch
     fastfetch
 fi
