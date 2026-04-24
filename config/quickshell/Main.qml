@@ -327,6 +327,15 @@ FloatingWindow {
         onTriggered: { if (!ipcPoller.running) ipcPoller.running = true; }
     }
 
+    Timer {
+        interval: 500
+        running: masterWindow.isVisible
+        repeat: true
+        onTriggered: {
+            Quickshell.execDetached(["hyprctl", "dispatch", "alterzorder", "top,title:^(qs-master)$"]);
+        }
+    }
+
     Process {
         id: ipcPoller
         command: ["bash", "-c", "if [ -f /tmp/qs_widget_state ]; then cat /tmp/qs_widget_state; rm /tmp/qs_widget_state; fi"]

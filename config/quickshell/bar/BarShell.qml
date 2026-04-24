@@ -234,7 +234,7 @@ Variants {
                 if (!volPoller.running) volPoller.running = true;
             }
 
-            function handleWorkspaceWheel(deltaY, workspaceCount) {
+            function handleWorkspaceWheel(deltaY, workspaceCount, monitorName) {
                 if (!deltaY || deltaY === 0) return;
                 barWindow.workspaceWheelAccumulator += deltaY;
                 let steps = 0;
@@ -243,14 +243,19 @@ Variants {
                 if (steps === 0) return;
 
                 let count = Math.max(1, workspaceCount || 8);
-                let current = Hyprland.focusedWorkspace !== null ? Hyprland.focusedWorkspace.id : 1;
-                let target = current + steps;
-                while (target < 1) target += count;
-                while (target > count) target -= count;
-
-                if (target !== current) {
-                    Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + target]);
-                }
+                let monitor = monitorName || (barWindow.screen ? barWindow.screen.name : "");
+                let direction = steps > 0 ? "next" : "prev";
+                let repeats = Math.abs(steps);
+                Quickshell.execDetached([
+                    "bash",
+                    "-c",
+                    "i=0; while [ \"$i\" -lt \"$4\" ]; do i=$((i + 1)); ~/.config/hypr/scripts/workspace-scroll-monitor.sh \"$1\" \"$2\" \"$3\"; done",
+                    "_",
+                    monitor,
+                    direction,
+                    String(count),
+                    String(repeats)
+                ]);
             }
 
             Process {

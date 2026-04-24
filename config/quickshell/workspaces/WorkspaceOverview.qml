@@ -184,10 +184,12 @@ Item {
         addresses[ti] = tmp;
         setWorkspaceOrder(wsId, addresses);
 
-        // Swap in Hyprland's tiling layout: focus dragged window first, then swap with target
-        Quickshell.execDetached(["bash", "-c",
-            "hyprctl dispatch focuswindow address:" + draggedAddress +
-            " && hyprctl dispatch swapwindow address:" + targetAddress
+        Quickshell.execDetached(["hyprctl", "--batch",
+            "keyword cursor:no_warps true" +
+            " ; dispatch focuswindow address:" + draggedAddress +
+            " ; dispatch swapwindow address:" + targetAddress +
+            " ; dispatch alterzorder top,title:^(qs-master)$" +
+            " ; keyword cursor:no_warps false"
         ]);
         refreshTimer.restart();
     }
@@ -267,7 +269,10 @@ Item {
         }
 
         setPendingWindowMove(address, wsId);
-        Quickshell.execDetached(["hyprctl", "dispatch", "movetoworkspacesilent", wsId + ",address:" + address]);
+        Quickshell.execDetached(["hyprctl", "--batch",
+            "dispatch movetoworkspacesilent " + wsId + ",address:" + address +
+            " ; dispatch alterzorder top,title:^(qs-master)$"
+        ]);
         postDropRefreshTimer.restart();
         secondPostDropRefreshTimer.restart();
         refreshTimer.restart();
@@ -378,7 +383,10 @@ Item {
         interval: 650
         repeat: true
         running: true
-        onTriggered: root.refresh()
+        onTriggered: {
+            if (root.draggedWindowAddress !== "") return;
+            root.refresh();
+        }
     }
 
     Timer {
@@ -404,7 +412,7 @@ Item {
 
     Timer {
         id: suppressWorkspaceClickTimer
-        interval: 260
+        interval: 400
         repeat: false
         onTriggered: root.suppressWorkspaceClick = false
     }
@@ -759,7 +767,16 @@ Item {
                                                         windowPreview.y = 0;
                                                     }
                                                 }
-                                                onCanceled: root.blockWorkspaceClick()
+                                                onCanceled: {
+                                                    root.blockWorkspaceClick();
+                                                    root.draggedWindowAddress = "";
+                                                    root.dragSourceWorkspaceId = -1;
+                                                    root.dropTargetWorkspaceId = -1;
+                                                    root.dropTargetWindowWorkspaceId = -1;
+                                                    root.dropTargetWindowAddress = "";
+                                                    windowPreview.x = 0;
+                                                    windowPreview.y = 0;
+                                                }
                                                 onClicked: {
                                                     root.blockWorkspaceClick();
                                                     if (windowSlot.modelData.address)
