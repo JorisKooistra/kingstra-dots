@@ -36,6 +36,9 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
     let sidebarTopY = s(12, scale);
     let sidebarBottomMargin = s(16, scale);
 
+    let settingsWidth = Math.min(s(1200, scale), Math.max(360, mw - s(40, scale)));
+    let settingsHeight = Math.min(s(750, scale), Math.max(420, mh - s(40, scale)));
+
     let base = {
         // Right-aligned: pinned 20px from the right edge dynamically
         // Note on rx: The 500 represents the 480 base width + 20 margin. 
@@ -58,7 +61,7 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
         "workspaces": { w: s(1120, scale), h: s(560, scale), rx: Math.floor((mw/2)-(s(1120, scale)/2)), ry: Math.floor((mh/2)-(s(560, scale)/2)), comp: "workspaces/WorkspaceOverview.qml" },
         
         // Settings Popup (Centered)
-        "settings": { w: s(1200, scale), h: s(750, scale), rx: Math.floor((mw/2)-(s(1200, scale)/2)), ry: Math.floor((mh/2)-(s(750, scale)/2)), comp: "settings/SettingsPopup.qml" },
+        "settings": { w: settingsWidth, h: settingsHeight, rx: Math.floor((mw - settingsWidth) / 2), ry: Math.floor((mh - settingsHeight) / 2), comp: "settings/SettingsPopup.qml" },
 
         // Full width, centered vertically
         "theme":     { w: mw, h: s(650, scale), rx: 0, ry: Math.floor((mh/2)-(s(650, scale)/2)), comp: "themes/ThemePicker.qml" },

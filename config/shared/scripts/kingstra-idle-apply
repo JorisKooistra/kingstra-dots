@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-idle-apply — Pas hypridle toe op basis van het actieve power profile
+# =============================================================================
+set -euo pipefail
+
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+SETTINGS_FILE="$CONFIG_HOME/quickshell/settings/settings.json"
+HYPRIDLE_DIR="$CONFIG_HOME/hypridle"
+HYPRIDLE_FILE="$HYPRIDLE_DIR/hypridle.conf"
+LOG_PREFIX="[kingstra-idle-apply]"
+
+log() { printf '%s %s\n' "$LOG_PREFIX" "$*" >&2; }
+
+current_profile() {
+    if command -v powerprofilesctl >/dev/null 2>&1; then
+        powerprofilesctl get 2>/dev/null || true
+    fi
+}
+
+sanitize_timeout() {
+    local value="${1:-0}"
+    case "$value" in
+        ''|*[!0-9]*) echo "0" ;;
+        *) echo "$value" ;;
+    esac
+}
+
+derive_dim_timeout() {
+    local lock="${1:-0}"
+    local screen_off="${2:-0}"
+    local suspend="${3:-0}"
+    local earliest=0
+
+    for candidate in "$lock" "$screen_off" "$suspend"; do
+        if [[ "$candidate" =~ ^[0-9]+$ ]] && (( candidate > 0 )); then
+            if (( earliest == 0 || candidate < earliest )); then
+                earliest=$candidate
+            fi
+        fi
+    done
+
+    if (( earliest == 0 || earliest <= 45 )); then
+        echo "0"
+    elif (( earliest - 60 < 30 )); then
+        echo "30"
+    else
+        echo "$((earliest - 60))"
+    fi
+}
+
+read_settings() {
+    local profile="${1:-balanced}"
+    if [[ ! -f "$SETTINGS_FILE" ]] || ! command -v jq >/dev/null 2>&1; then
+        printf '300\n480\n1800\n'
+        return
+    fi
+
+    jq -r --arg profile "$profile" '
+        def timeout($v; $fallback):
+            if ($v | type) == "number" then ($v | floor)
+            elif ($v | type) == "string" and ($v | test("^[0-9]+$")) then ($v | tonumber)
+            else $fallback
+            end;
+
+        . as $root
+        | ($root.idleProfiles[$profile] // {}) as $profileCfg
+        | [
+            timeout(($profileCfg.idleLockSeconds // $root.idleLockSeconds); 300),
+            timeout(($profileCfg.idleScreenOffSeconds // $root.idleScreenOffSeconds); 480),
+            timeout(($profileCfg.idleSuspendSeconds // $root.idleSuspendSeconds); 1800)
+          ][]
+    ' "$SETTINGS_FILE" 2>/dev/null || printf '300\n480\n1800\n'
+}
+
+write_config() {
+    local lock="$1"
+    local screen_off="$2"
+    local suspend="$3"
+    local dim="$4"
+
+    mkdir -p "$HYPRIDLE_DIR"
+
+    {
+        printf '%s\n' '# ============================================================================='
+        printf '%s\n' '# hypridle.conf — Idle daemon configuratie'
+        printf '%s\n' '# ============================================================================='
+        printf '%s\n' '# Beheerd via kingstra-idle-apply en de Settings-popup.'
+        printf '%s\n' '# Tijden zijn in seconden.'
+        printf '%s\n' '# ============================================================================='
+        printf '\n'
+        printf '%s\n' 'general {'
+        printf '%s\n' '    lock_cmd         = bash ~/.config/hypr/scripts/lock.sh'
+        printf '%s\n' '    before_sleep_cmd = loginctl lock-session'
+        printf '%s\n' '    after_sleep_cmd  = hyprctl dispatch dpms on'
+        printf '%s\n' '}'
+        printf '\n'
+
+        if (( dim > 0 )); then
+            printf '%s\n' '# Automatisch dimmen voor de eerstvolgende idle-actie'
+            printf '%s\n' 'listener {'
+            printf '    timeout   = %s\n' "$dim"
+            printf '%s\n' '    on-timeout = brightnessctl -s s 10%'
+            printf '%s\n' '    on-resume  = brightnessctl -r'
+            printf '%s\n' '}'
+            printf '\n'
+        fi
+
+        if (( lock > 0 )); then
+            printf '%s\n' '# Automatisch vergrendelen'
+            printf '%s\n' 'listener {'
+            printf '    timeout   = %s\n' "$lock"
+            printf '%s\n' '    on-timeout = loginctl lock-session'
+            printf '%s\n' '    on-resume  = hyprctl dispatch dpms on'
+            printf '%s\n' '}'
+            printf '\n'
+        fi
+
+        if (( screen_off > 0 )); then
+            printf '%s\n' '# Scherm uitschakelen via DPMS'
+            printf '%s\n' 'listener {'
+            printf '    timeout   = %s\n' "$screen_off"
+            printf '%s\n' '    on-timeout = hyprctl dispatch dpms off'
+            printf '%s\n' '    on-resume  = hyprctl dispatch dpms on'
+            printf '%s\n' '}'
+            printf '\n'
+        fi
+
+        if (( suspend > 0 )); then
+            printf '%s\n' '# Suspend / slaapstand'
+            printf '%s\n' 'listener {'
+            printf '    timeout   = %s\n' "$suspend"
+            printf '%s\n' '    on-timeout = systemctl suspend'
+            printf '%s\n' '}'
+            printf '\n'
+        fi
+    } > "$HYPRIDLE_FILE"
+}
+
+main() {
+    local profile="${1:-$(current_profile)}"
+    case "$profile" in
+        performance|balanced|power-saver) ;;
+        *) profile="balanced" ;;
+    esac
+
+    mapfile -t values < <(read_settings "$profile")
+    local lock screen_off suspend dim
+    lock="$(sanitize_timeout "${values[0]:-300}")"
+    screen_off="$(sanitize_timeout "${values[1]:-480}")"
+    suspend="$(sanitize_timeout "${values[2]:-1800}")"
+    dim="$(derive_dim_timeout "$lock" "$screen_off" "$suspend")"
+
+    write_config "$lock" "$screen_off" "$suspend" "$dim"
+
+    pkill -x hypridle >/dev/null 2>&1 || true
+    if command -v hypridle >/dev/null 2>&1; then
+        nohup hypridle >/dev/null 2>&1 &
+    else
+        log "hypridle niet gevonden; config wel geschreven"
+    fi
+}
+
+main "$@"

@@ -2,5 +2,27 @@
     "timeFormat": "HH:mm:ss",
     "dateFormat": "dddd, MMMM dd",
     "touchpadScrollFactor": 0.45,
-    "mouseScrollFactor": 1.35
+    "mouseScrollFactor": 1.35,
+    "touchpadRightClickButtonArea": true,
+    "keyboardLayout": "us",
+    "idleLockSeconds": 300,
+    "idleScreenOffSeconds": 480,
+    "idleSuspendSeconds": 1800,
+    "idleProfiles": {
+        "performance": {
+            "idleLockSeconds": 900,
+            "idleScreenOffSeconds": 1800,
+            "idleSuspendSeconds": 0
+        },
+        "balanced": {
+            "idleLockSeconds": 300,
+            "idleScreenOffSeconds": 480,
+            "idleSuspendSeconds": 1800
+        },
+        "power-saver": {
+            "idleLockSeconds": 180,
+            "idleScreenOffSeconds": 300,
+            "idleSuspendSeconds": 900
+        }
+    }
 }

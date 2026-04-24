@@ -1116,6 +1116,7 @@ Item {
                                         if (name === "performance") PowerProfiles.profile = PowerProfile.Performance;
                                         else if (name === "power-saver") PowerProfiles.profile = PowerProfile.PowerSaver;
                                         else PowerProfiles.profile = PowerProfile.Balanced;
+                                        Quickshell.execDetached(["bash", "-lc", "sleep 0.4; \"$HOME/.config/shared/scripts/kingstra-idle-apply\" '" + name + "' >/dev/null 2>&1 || true"]);
                                     }
                                 }
                             }

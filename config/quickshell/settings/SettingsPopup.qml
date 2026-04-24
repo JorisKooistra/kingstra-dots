@@ -75,6 +75,7 @@ Item {
     property int currentTab: 0
     property var tabNames: ["Theme", "Bar", "Widgets", "Keybinds", "Input", "Display", "Network", "Audio", "Weather & Time", "Session", "Updates", "Advanced", "About"]
     property var tabIcons: ["󰏘", "󰓡", "󰀻", "󰌌", "󰍽", "󰍹", "󰤨", "󰕾", "󰖐", "󰒲", "󰚰", "󰒓", ""]
+    onCurrentTabChanged: if (currentTab === 7) refreshAudioState()
 
     property real introBase: 0.0
     property real introSidebar: 0.0
@@ -89,11 +90,23 @@ Item {
 
     // Operational tab state
     property string displayStatusText: "Monitorstatus nog niet geladen"
+    property string displayLayoutText: "Display-layout nog niet geladen"
+    property string displayTouchText: "Touch-profiel nog niet geladen"
+    property string displayBrightnessText: "Helderheid nog niet geladen"
     property string networkStatusText: "Netwerkstatus nog niet geladen"
     property string audioStatusText: "Audiostatus nog niet geladen"
+    property bool audioStateBusy: false
+    property var audioOutputs: []
+    property var audioInputs: []
+    property var audioApps: []
     property string sessionModeText: "office"
+    property string currentPowerProfileText: "balanced"
     property string updateStatusText: "Nog niet gecontroleerd"
     property string advancedStatusText: "Klaar"
+    readonly property string monitorRestoreScript: Quickshell.env("HOME") + "/.config/hypr/scripts/monitor-hotplug-restore.sh"
+    readonly property string tabletModeScript: Quickshell.env("HOME") + "/.config/hypr/scripts/tablet-mode.sh"
+    readonly property string displayStatusScript: Quickshell.env("HOME") + "/.config/quickshell/settings/display_status.sh"
+    readonly property string idleApplyScript: Quickshell.env("HOME") + "/.config/shared/scripts/kingstra-idle-apply"
 
     // Catalog van bekende acties zonder vaste keybinding — worden als "Niet ingesteld" getoond
     readonly property var keybindCatalog: [
@@ -108,8 +121,43 @@ Item {
         timeFormat: "HH:mm:ss",
         dateFormat: "dddd, MMMM dd",
         touchpadScrollFactor: 0.45,
-        mouseScrollFactor: 1.35
+        mouseScrollFactor: 1.35,
+        touchpadRightClickButtonArea: true,
+        keyboardLayout: "us",
+        idleLockSeconds: 300,
+        idleScreenOffSeconds: 480,
+        idleSuspendSeconds: 1800,
+        idleProfiles: ({
+            "performance": { idleLockSeconds: 900, idleScreenOffSeconds: 1800, idleSuspendSeconds: 0 },
+            "balanced": { idleLockSeconds: 300, idleScreenOffSeconds: 480, idleSuspendSeconds: 1800 },
+            "power-saver": { idleLockSeconds: 180, idleScreenOffSeconds: 300, idleSuspendSeconds: 900 }
+        })
     })
+    property var keyboardLayoutCodes: ["us", "us,intl", "nl", "be", "gb", "de", "fr"]
+    property var keyboardLayoutLabels: [
+        "English (US)",
+        "English (US International)",
+        "Nederlands",
+        "Belgisch",
+        "English (UK)",
+        "Deutsch",
+        "Français"
+    ]
+    property var idleTimeoutOptions: [
+        "Off",
+        "30 sec",
+        "1 min",
+        "2 min",
+        "3 min",
+        "5 min",
+        "8 min",
+        "10 min",
+        "15 min",
+        "20 min",
+        "30 min",
+        "45 min",
+        "60 min"
+    ]
 
     // Load settings via Process in plaats van FileView
     Process {
@@ -123,7 +171,13 @@ Item {
                         timeFormat: String(parsed.timeFormat || "HH:mm:ss"),
                         dateFormat: String(parsed.dateFormat || "dddd, MMMM dd"),
                         touchpadScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.touchpadScrollFactor, 0.45), 0.45),
-                        mouseScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.mouseScrollFactor, 1.35), 1.35)
+                        mouseScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.mouseScrollFactor, 1.35), 1.35),
+                        touchpadRightClickButtonArea: parsed.touchpadRightClickButtonArea !== false,
+                        keyboardLayout: root.normalizeOption(parsed.keyboardLayout, root.keyboardLayoutCodes, "us"),
+                        idleLockSeconds: root.normalizeIdleSeconds(parsed.idleLockSeconds, 300),
+                        idleScreenOffSeconds: root.normalizeIdleSeconds(parsed.idleScreenOffSeconds, 480),
+                        idleSuspendSeconds: root.normalizeIdleSeconds(parsed.idleSuspendSeconds, 1800),
+                        idleProfiles: root.normalizeIdleProfiles(parsed)
                     };
                 } catch(e) {}
             }
@@ -346,6 +400,176 @@ Item {
         let parsed = parseInt(value);
         if (isNaN(parsed)) parsed = Math.round(fallback * 100);
         return Math.round(clamp(parsed / 100.0, 0.20, 3.00) * 100) / 100;
+    }
+
+    function keyboardLayoutIndex(value) {
+        let normalized = normalizeOption(value, keyboardLayoutCodes, "us");
+        let index = keyboardLayoutCodes.indexOf(normalized);
+        return index >= 0 ? index : 0;
+    }
+
+    function normalizeIdleSeconds(value, fallback) {
+        let parsed = parseInt(value);
+        if (isNaN(parsed)) parsed = fallback;
+        parsed = Math.max(0, parsed);
+        let index = idleTimeoutOptionIndex(parsed);
+        return idleTimeoutSeconds(index);
+    }
+
+    function idleTimeoutSeconds(index) {
+        let values = [0, 30, 60, 120, 180, 300, 480, 600, 900, 1200, 1800, 2700, 3600];
+        let safeIndex = Math.max(0, Math.min(values.length - 1, parseInt(index)));
+        return values[safeIndex];
+    }
+
+    function idleTimeoutOptionIndex(seconds) {
+        let safeSeconds = Math.max(0, parseInt(seconds) || 0);
+        let values = [0, 30, 60, 120, 180, 300, 480, 600, 900, 1200, 1800, 2700, 3600];
+        let index = values.indexOf(safeSeconds);
+        return index >= 0 ? index : 0;
+    }
+
+    function powerProfileLabel(profileName) {
+        let safe = String(profileName || "balanced");
+        if (safe === "performance") return "Performance";
+        if (safe === "power-saver") return "Saver";
+        return "Balanced";
+    }
+
+    function normalizeIdleProfiles(parsed) {
+        let source = (parsed && parsed.idleProfiles) ? parsed.idleProfiles : {};
+
+        function readProfile(profileName, fallbackLock, fallbackScreenOff, fallbackSuspend) {
+            let profile = source[profileName] || {};
+            return {
+                idleLockSeconds: normalizeIdleSeconds(profile.idleLockSeconds, fallbackLock),
+                idleScreenOffSeconds: normalizeIdleSeconds(profile.idleScreenOffSeconds, fallbackScreenOff),
+                idleSuspendSeconds: normalizeIdleSeconds(profile.idleSuspendSeconds, fallbackSuspend)
+            };
+        }
+
+        return {
+            "performance": readProfile("performance", 900, 1800, 0),
+            "balanced": readProfile("balanced", normalizeIdleSeconds(parsed.idleLockSeconds, 300), normalizeIdleSeconds(parsed.idleScreenOffSeconds, 480), normalizeIdleSeconds(parsed.idleSuspendSeconds, 1800)),
+            "power-saver": readProfile("power-saver", 180, 300, 900)
+        };
+    }
+
+    function idleProfileSettings(profileName) {
+        let safe = String(profileName || "balanced");
+        let profiles = settingsData.idleProfiles || {};
+        let selected = profiles[safe];
+        if (selected) return selected;
+        return {
+            idleLockSeconds: normalizeIdleSeconds(settingsData.idleLockSeconds, 300),
+            idleScreenOffSeconds: normalizeIdleSeconds(settingsData.idleScreenOffSeconds, 480),
+            idleSuspendSeconds: normalizeIdleSeconds(settingsData.idleSuspendSeconds, 1800)
+        };
+    }
+
+    function idleProfileSummary(profileName) {
+        let selected = idleProfileSettings(profileName);
+        return powerProfileLabel(profileName) + ": " +
+            formatIdleDuration(selected.idleLockSeconds, "lock uit") + " lock, " +
+            formatIdleDuration(selected.idleScreenOffSeconds, "scherm aan") + " scherm, " +
+            formatIdleDuration(selected.idleSuspendSeconds, "geen suspend");
+    }
+
+    function formatIdleDuration(seconds, offLabel) {
+        let safeSeconds = Math.max(0, parseInt(seconds) || 0);
+        if (safeSeconds <= 0) return offLabel || "Uit";
+        if (safeSeconds < 60) return safeSeconds + " sec";
+        if (safeSeconds % 3600 === 0) return (safeSeconds / 3600) + " uur";
+        if (safeSeconds % 60 === 0) return (safeSeconds / 60) + " min";
+        return safeSeconds + " sec";
+    }
+
+    function deriveDimTimeout(lockSeconds, screenOffSeconds, suspendSeconds) {
+        let targets = [parseInt(lockSeconds) || 0, parseInt(screenOffSeconds) || 0, parseInt(suspendSeconds) || 0]
+            .filter(function(value) { return value > 0; });
+        if (targets.length === 0) return 0;
+        let earliest = Math.min.apply(Math, targets);
+        if (earliest <= 45) return 0;
+        return Math.max(30, earliest - 60);
+    }
+
+    function buildHypridleConfig(lockSeconds, screenOffSeconds, suspendSeconds) {
+        let safeLock = normalizeIdleSeconds(lockSeconds, 300);
+        let safeScreenOff = normalizeIdleSeconds(screenOffSeconds, 480);
+        let safeSuspend = normalizeIdleSeconds(suspendSeconds, 1800);
+        let dimSeconds = deriveDimTimeout(safeLock, safeScreenOff, safeSuspend);
+        let blocks = [
+            "# =============================================================================",
+            "# hypridle.conf — Idle daemon configuratie",
+            "# =============================================================================",
+            "# Beheerd vanuit de Settings-popup.",
+            "# Tijden zijn in seconden.",
+            "# =============================================================================",
+            "",
+            "general {",
+            "    lock_cmd         = bash ~/.config/hypr/scripts/lock.sh",
+            "    before_sleep_cmd = loginctl lock-session",
+            "    after_sleep_cmd  = hyprctl dispatch dpms on",
+            "}",
+            ""
+        ];
+
+        if (dimSeconds > 0) {
+            blocks.push(
+                "# Automatisch dimmen voor de eerstvolgende idle-actie",
+                "listener {",
+                "    timeout   = " + dimSeconds,
+                "    on-timeout = brightnessctl -s s 10%",
+                "    on-resume  = brightnessctl -r",
+                "}",
+                ""
+            );
+        }
+
+        if (safeLock > 0) {
+            blocks.push(
+                "# Automatisch vergrendelen",
+                "listener {",
+                "    timeout   = " + safeLock,
+                "    on-timeout = loginctl lock-session",
+                "    on-resume  = hyprctl dispatch dpms on",
+                "}",
+                ""
+            );
+        }
+
+        if (safeScreenOff > 0) {
+            blocks.push(
+                "# Scherm uitschakelen via DPMS",
+                "listener {",
+                "    timeout   = " + safeScreenOff,
+                "    on-timeout = hyprctl dispatch dpms off",
+                "    on-resume  = hyprctl dispatch dpms on",
+                "}",
+                ""
+            );
+        }
+
+        if (safeSuspend > 0) {
+            blocks.push(
+                "# Suspend / slaapstand",
+                "listener {",
+                "    timeout   = " + safeSuspend,
+                "    on-timeout = systemctl suspend",
+                "}",
+                ""
+            );
+        }
+
+        return blocks.join("\n");
+    }
+
+    function sessionIdleSummary() {
+        let selected = idleProfileSettings(currentPowerProfileText);
+        return "Actief profiel: " + powerProfileLabel(currentPowerProfileText) +
+            "\nLock: " + formatIdleDuration(selected.idleLockSeconds, "uit") +
+            "\nScherm uit: " + formatIdleDuration(selected.idleScreenOffSeconds, "uit") +
+            "\nSuspend: " + formatIdleDuration(selected.idleSuspendSeconds, "uit");
     }
 
     function normalizeOption(value, options, fallback) {
@@ -653,11 +877,19 @@ Item {
     }
 
     function refreshOperationalStatus() {
-        displayStatusProc.running = true;
+        refreshDisplayStatus();
         networkStatusProc.running = true;
-        audioStatusProc.running = true;
+        refreshAudioState();
         sessionModeProc.running = true;
+        powerProfileProc.running = true;
         updatesStatusProc.running = true;
+    }
+
+    function refreshDisplayStatus() {
+        displayStatusProc.running = true;
+        displayLayoutProc.running = true;
+        displayTouchProc.running = true;
+        displayBrightnessProc.running = true;
     }
 
     function openShellWidget(name, subtarget) {
@@ -666,12 +898,80 @@ Item {
         Quickshell.execDetached(args);
     }
 
+    function refreshAudioState() {
+        audioStateProc.running = true;
+        audioStatusProc.running = true;
+    }
+
+    function audioPrimaryNode(list) {
+        let nodes = list || [];
+        for (let i = 0; i < nodes.length; i++) {
+            if (nodes[i] && nodes[i].is_default) return nodes[i];
+        }
+        return nodes.length > 0 ? nodes[0] : null;
+    }
+
+    function audioIconFor(kind, node) {
+        let text = String(((node && node.description) || "") + " " + ((node && node.name) || "")).toLowerCase();
+        if (kind === "inputs") return "󰍬";
+        if (kind === "apps") return "󰎆";
+        if (text.indexOf("headset") >= 0 || text.indexOf("headphone") >= 0 || text.indexOf("earbud") >= 0) return "󰋋";
+        if (text.indexOf("speaker") >= 0 || text.indexOf("monitor") >= 0) return "󰓃";
+        return "󰕾";
+    }
+
+    function audioSummaryText(kind, node) {
+        if (!node) return kind === "inputs" ? "Geen input gevonden" : "Geen output gevonden";
+        let line = String(node.description || node.name || "Onbekend apparaat");
+        let meta = [];
+        meta.push(String(Math.max(0, Number(node.volume) || 0)) + "%");
+        if (node.mute) meta.push("muted");
+        if (!node.is_default) meta.push("niet standaard");
+        if (node.name && node.name !== node.description) meta.push(String(node.name));
+        return line + "\n" + meta.join("  ");
+    }
+
+    function setAudioVolume(type, id, value) {
+        let safePct = Math.max(0, Math.min(150, Math.round(Number(value) || 0)));
+        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/volume/audio_control.sh", "set-volume", type, String(id), String(safePct)]);
+        audioRefreshDelay.restart();
+    }
+
+    function toggleAudioMute(type, id) {
+        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/volume/audio_control.sh", "toggle-mute", type, String(id)]);
+        audioRefreshDelay.restart();
+    }
+
+    function setDefaultAudioDevice(type, name) {
+        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/volume/audio_control.sh", "set-default", type, String(name)]);
+        audioRefreshDelay.restart();
+    }
+
     function switchSessionMode(modeName) {
         let safeMode = String(modeName || "office");
         Quickshell.execDetached(["bash", "-lc", "if command -v kingstra-mode-switch >/dev/null 2>&1; then kingstra-mode-switch '" + shellSingleQuote(safeMode) + "'; else '$HOME/.config/shared/scripts/kingstra-mode-switch' '" + shellSingleQuote(safeMode) + "'; fi"]);
         sessionModeText = safeMode;
         notify("Session", "Mode ingesteld: " + safeMode);
         sessionModeRefreshTimer.start();
+    }
+
+    function restoreDisplayLayout() {
+        Quickshell.execDetached(["bash", "-lc", "'" + monitorRestoreScript + "' --once"]);
+        notify("Display", "Opgeslagen layout wordt opnieuw toegepast");
+        displayRefreshTimer.start();
+    }
+
+    function toggleTabletMode() {
+        Quickshell.execDetached(["bash", "-lc", "'" + tabletModeScript + "' toggle"]);
+        notify("Display", "Tabletmodus wordt gewisseld");
+        displayRefreshTimer.start();
+    }
+
+    function adjustBrightness(delta) {
+        let step = Math.max(1, Math.abs(delta || 5));
+        let direction = (delta || 0) >= 0 ? "+" : "";
+        Quickshell.execDetached(["bash", "-lc", "if command -v brightnessctl >/dev/null 2>&1; then brightnessctl set '" + direction + step + "%' >/dev/null 2>&1; fi"]);
+        displayRefreshTimer.start();
     }
 
     function runPackageUpgrade() {
@@ -1043,6 +1343,149 @@ Item {
         }
     }
 
+    component AudioVolumeCard : Rectangle {
+        id: volumeCard
+        property string title: ""
+        property string subtitle: ""
+        property string icon: "󰕾"
+        property color accent: root.blue
+        property int volume: 0
+        property bool muted: false
+        property string audioType: "sink"
+        property string audioId: ""
+        property bool allowSetDefault: false
+        property bool isDefault: false
+        signal setDefaultRequested()
+
+        Layout.fillWidth: true
+        implicitHeight: audioCardLayout.implicitHeight + root.s(24)
+        radius: root.s(10)
+        color: Qt.alpha(root.surface0, 0.46)
+        border.color: isDefault ? accent : Qt.alpha(root.surface2, 0.82)
+        border.width: isDefault ? 2 : 1
+
+        ColumnLayout {
+            id: audioCardLayout
+            anchors.fill: parent
+            anchors.margins: root.s(12)
+            spacing: root.s(10)
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: root.s(8)
+
+                Text { text: volumeCard.icon; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: volumeCard.accent }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: root.s(2)
+
+                    Text {
+                        text: volumeCard.title
+                        font.family: root.displayFontFamily
+                        font.weight: root.themedFontWeight
+                        font.letterSpacing: root.themedLetterSpacing
+                        font.pixelSize: root.s(14)
+                        color: root.text
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        text: volumeCard.subtitle
+                        font.family: root.uiFontFamily
+                        font.pixelSize: root.s(11)
+                        font.letterSpacing: root.themedLetterSpacing
+                        color: root.subtext0
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                    }
+                }
+
+                Text {
+                    text: volumeCard.muted ? "Muted" : (Math.max(0, Number(volumeCard.volume) || 0) + "%")
+                    font.family: root.monoFontFamily
+                    font.pixelSize: root.s(11)
+                    color: volumeCard.muted ? root.peach : volumeCard.accent
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: root.s(10)
+
+                Slider {
+                    id: volumeSlider
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 150
+                    value: Math.max(0, Math.min(150, Number(volumeCard.volume) || 0))
+                    enabled: volumeCard.audioId !== ""
+
+                    background: Rectangle {
+                        x: volumeSlider.leftPadding
+                        y: volumeSlider.topPadding + (volumeSlider.availableHeight - height) / 2
+                        width: volumeSlider.availableWidth
+                        height: root.s(8)
+                        radius: root.s(4)
+                        color: Qt.alpha(root.surface1, 0.85)
+                        border.width: 1
+                        border.color: Qt.alpha(root.surface2, 0.82)
+
+                        Rectangle {
+                            width: volumeSlider.visualPosition * parent.width
+                            height: parent.height
+                            radius: parent.radius
+                            color: volumeCard.muted ? Qt.alpha(root.surface2, 0.75) : volumeCard.accent
+                        }
+                    }
+
+                    handle: Rectangle {
+                        x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
+                        y: volumeSlider.topPadding + (volumeSlider.availableHeight - height) / 2
+                        width: root.s(16)
+                        height: root.s(16)
+                        radius: root.s(8)
+                        color: volumeCard.muted ? root.surface2 : Qt.lighter(volumeCard.accent, 1.15)
+                        border.width: 1
+                        border.color: volumeCard.accent
+                    }
+
+                    onMoved: root.setAudioVolume(volumeCard.audioType, volumeCard.audioId, value)
+                }
+
+                SettingsActionButton {
+                    label: volumeCard.muted ? "Unmute" : "Mute"
+                    icon: volumeCard.muted ? "󰖁" : "󰕾"
+                    accent: root.peach
+                    onTriggered: root.toggleAudioMute(volumeCard.audioType, volumeCard.audioId)
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: root.s(10)
+                visible: volumeCard.allowSetDefault
+
+                Text {
+                    text: volumeCard.isDefault ? "Actieve standaard" : "Klik om standaard te maken"
+                    font.family: root.uiFontFamily
+                    font.pixelSize: root.s(11)
+                    color: volumeCard.isDefault ? root.green : root.subtext0
+                    Layout.fillWidth: true
+                }
+
+                SettingsActionButton {
+                    visible: !volumeCard.isDefault
+                    label: "Maak standaard"
+                    icon: "󰄬"
+                    accent: volumeCard.accent
+                    onTriggered: volumeCard.setDefaultRequested()
+                }
+            }
+        }
+    }
+
     Component.onCompleted: {
         // Laad settings via Process
         loadSettingsProc.running = true;
@@ -1058,9 +1501,33 @@ Item {
 
     Process {
         id: displayStatusProc
-        command: ["bash", "-lc", "if command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then hyprctl monitors -j 2>/dev/null | jq -r 'if length == 0 then \"Geen monitoren gevonden\" else map(.name + \"  \" + ((.width // 0)|tostring) + \"x\" + ((.height // 0)|tostring) + \" @ \" + (((.refreshRate // 0)|round)|tostring) + \"Hz  scale \" + ((.scale // 1)|tostring)) | join(\"\\n\") end'; else echo 'hyprctl of jq niet beschikbaar'; fi"]
+        command: ["bash", "-lc", "'" + displayStatusScript + "' summary"]
         stdout: StdioCollector {
             onStreamFinished: root.displayStatusText = this.text.trim() || "Monitorstatus niet beschikbaar"
+        }
+    }
+
+    Process {
+        id: displayLayoutProc
+        command: ["bash", "-lc", "'" + displayStatusScript + "' layout"]
+        stdout: StdioCollector {
+            onStreamFinished: root.displayLayoutText = this.text.trim() || "Display-layout niet beschikbaar"
+        }
+    }
+
+    Process {
+        id: displayTouchProc
+        command: ["bash", "-lc", "'" + displayStatusScript + "' touch"]
+        stdout: StdioCollector {
+            onStreamFinished: root.displayTouchText = this.text.trim() || "Touch-profiel niet beschikbaar"
+        }
+    }
+
+    Process {
+        id: displayBrightnessProc
+        command: ["bash", "-lc", "'" + displayStatusScript + "' brightness"]
+        stdout: StdioCollector {
+            onStreamFinished: root.displayBrightnessText = this.text.trim() || "Helderheid niet beschikbaar"
         }
     }
 
@@ -1081,10 +1548,64 @@ Item {
     }
 
     Process {
+        id: audioStateProc
+        command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/volume/get_audio_state.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let data = JSON.parse(this.text.trim());
+                    root.audioOutputs = Array.isArray(data.outputs) ? data.outputs : [];
+                    root.audioInputs = Array.isArray(data.inputs) ? data.inputs : [];
+                    root.audioApps = Array.isArray(data.apps) ? data.apps : [];
+                } catch (e) {
+                    root.audioOutputs = [];
+                    root.audioInputs = [];
+                    root.audioApps = [];
+                }
+            }
+        }
+        onRunningChanged: root.audioStateBusy = running
+    }
+
+    Timer {
+        id: displayRefreshTimer
+        interval: 900
+        repeat: false
+        onTriggered: root.refreshDisplayStatus()
+    }
+
+    Timer {
+        id: audioRefreshDelay
+        interval: 180
+        repeat: false
+        onTriggered: root.refreshAudioState()
+    }
+
+    Timer {
+        id: audioAutoRefreshTimer
+        interval: 3000
+        repeat: true
+        running: root.currentTab === 7
+        onTriggered: root.refreshAudioState()
+    }
+
+    Process {
         id: sessionModeProc
         command: ["bash", "-lc", "if command -v kingstra-mode-switch >/dev/null 2>&1; then kingstra-mode-switch --current; elif [ -x \"$HOME/.local/bin/kingstra-mode-switch\" ]; then \"$HOME/.local/bin/kingstra-mode-switch\" --current; else \"$HOME/.config/shared/scripts/kingstra-mode-switch\" --current; fi"]
         stdout: StdioCollector {
             onStreamFinished: root.sessionModeText = this.text.trim() || "office"
+        }
+    }
+
+    Process {
+        id: powerProfileProc
+        command: ["bash", "-lc", "if command -v powerprofilesctl >/dev/null 2>&1; then powerprofilesctl get 2>/dev/null; else echo balanced; fi"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let profile = this.text.trim();
+                if (profile !== "performance" && profile !== "power-saver") profile = "balanced";
+                root.currentPowerProfileText = profile;
+            }
         }
     }
 
@@ -1261,18 +1782,31 @@ Item {
     // -------------------------------------------------------------------------
     // HELPER: save settings.json
     // -------------------------------------------------------------------------
-    function saveSettings(timeFormat, dateFormat, touchpadScrollPercent, mouseScrollPercent) {
+    function saveSettings(timeFormat, dateFormat, touchpadScrollPercent, mouseScrollPercent, touchpadRightClickButtonArea, keyboardLayout, idleLockSeconds, idleScreenOffSeconds, idleSuspendSeconds, idleProfiles) {
         var configRoot = configHome();
         var settingsDir = configRoot + "/quickshell/settings";
         var path = settingsDir + "/settings.json";
         var scrollPath = configRoot + "/hypr/conf.d/73-scroll-settings.conf";
+        var inputPath = configRoot + "/hypr/conf.d/74-input-settings.conf";
         var touchpadFactor = scrollFactorFromPercent(touchpadScrollPercent, 0.45);
         var mouseFactor = scrollFactorFromPercent(mouseScrollPercent, 1.35);
+        var safeKeyboardLayout = normalizeOption(keyboardLayout, keyboardLayoutCodes, "us");
+        var useButtonArea = touchpadRightClickButtonArea === true;
+        var safeIdleLockSeconds = normalizeIdleSeconds(idleLockSeconds, settingsData.idleLockSeconds || 300);
+        var safeIdleScreenOffSeconds = normalizeIdleSeconds(idleScreenOffSeconds, settingsData.idleScreenOffSeconds || 480);
+        var safeIdleSuspendSeconds = normalizeIdleSeconds(idleSuspendSeconds, settingsData.idleSuspendSeconds || 1800);
+        var safeIdleProfiles = idleProfiles || settingsData.idleProfiles || normalizeIdleProfiles({});
         var payload = {
             timeFormat: timeFormat,
             dateFormat: dateFormat,
             touchpadScrollFactor: touchpadFactor,
-            mouseScrollFactor: mouseFactor
+            mouseScrollFactor: mouseFactor,
+            touchpadRightClickButtonArea: useButtonArea,
+            keyboardLayout: safeKeyboardLayout,
+            idleLockSeconds: safeIdleLockSeconds,
+            idleScreenOffSeconds: safeIdleScreenOffSeconds,
+            idleSuspendSeconds: safeIdleSuspendSeconds,
+            idleProfiles: safeIdleProfiles
         };
         var json = JSON.stringify(payload, null, 4);
         var scrollConf =
@@ -1287,17 +1821,36 @@ Item {
             "        scroll_factor = " + touchpadFactor.toFixed(2) + "\n" +
             "    }\n" +
             "}\n";
+        var inputConf =
+            "# =============================================================================\n" +
+            "# 74-input-settings.conf — Input overrides\n" +
+            "# =============================================================================\n" +
+            "# Aangepast via de Settings-popup.\n" +
+            "# =============================================================================\n\n" +
+            "input {\n" +
+            "    kb_layout = " + safeKeyboardLayout + "\n" +
+            "    kb_options =\n\n" +
+            "    touchpad {\n" +
+            "        # false = button areas (Windows-achtig), true = clickfinger gedrag\n" +
+            "        clickfinger_behavior = " + (useButtonArea ? "false" : "true") + "\n" +
+            "    }\n" +
+            "}\n";
         var cmd = [
             "mkdir -p '" + shellSingleQuote(settingsDir) + "'",
             "mkdir -p '" + shellSingleQuote(configRoot + "/hypr/conf.d") + "'",
             "printf '%s' '" + shellSingleQuote(json) + "' > '" + shellSingleQuote(path) + "'",
             "printf '%s' '" + shellSingleQuote(scrollConf) + "' > '" + shellSingleQuote(scrollPath) + "'",
+            "printf '%s' '" + shellSingleQuote(inputConf) + "' > '" + shellSingleQuote(inputPath) + "'",
             "hyprctl keyword input:scroll_factor '" + mouseFactor.toFixed(2) + "' >/dev/null 2>&1 || true",
-            "hyprctl keyword input:touchpad:scroll_factor '" + touchpadFactor.toFixed(2) + "' >/dev/null 2>&1 || true"
+            "hyprctl keyword input:touchpad:scroll_factor '" + touchpadFactor.toFixed(2) + "' >/dev/null 2>&1 || true",
+            "hyprctl keyword input:touchpad:clickfinger_behavior '" + (useButtonArea ? "false" : "true") + "' >/dev/null 2>&1 || true",
+            "hyprctl keyword input:kb_layout '" + shellSingleQuote(safeKeyboardLayout) + "' >/dev/null 2>&1 || true",
+            "hyprctl keyword input:kb_options '' >/dev/null 2>&1 || true",
+            "'" + shellSingleQuote(idleApplyScript) + "' >/dev/null 2>&1 || true"
         ].join(" && ");
         root.settingsData = payload;
         Quickshell.execDetached(["bash", "-c", cmd]);
-        notify("Settings", "Time, date and scroll settings saved");
+        notify("Settings", "Input, time, date en idle settings opgeslagen");
     }
 
     function saveWeatherConfig() {
@@ -1476,36 +2029,48 @@ Item {
 
                 Rectangle { Layout.fillWidth: true; height: 1; color: Qt.alpha(root.surface1, 0.5); Layout.bottomMargin: root.s(10) }
 
-                // Tab buttons
-                Repeater {
-                    model: root.tabNames.length
-                    Rectangle {
-                        Layout.fillWidth: true; Layout.preferredHeight: root.s(44); radius: root.s(8)
-                        property bool isActive: root.currentTab === index
-                        color: isActive ? root.popupPanelHoverFill : (tabMa.containsMouse ? root.popupPanelFill : "transparent")
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                ScrollView {
+                    id: sidebarTabsView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    contentWidth: availableWidth
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-                        RowLayout {
-                            anchors.fill: parent; anchors.leftMargin: root.s(15); spacing: root.s(12)
-                            Item {
-                                Layout.preferredWidth: root.s(24); Layout.alignment: Qt.AlignVCenter
-                                Text { anchors.centerIn: parent; text: root.tabIcons[index]; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: parent.parent.parent.isActive ? root.ambientPurple : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                    ColumnLayout {
+                        width: sidebarTabsView.availableWidth
+                        spacing: root.s(8)
+
+                        // Tab buttons
+                        Repeater {
+                            model: root.tabNames.length
+                            Rectangle {
+                                Layout.fillWidth: true; Layout.preferredHeight: root.s(44); radius: root.s(8)
+                                property bool isActive: root.currentTab === index
+                                color: isActive ? root.popupPanelHoverFill : (tabMa.containsMouse ? root.popupPanelFill : "transparent")
+                                Behavior on color { ColorAnimation { duration: 150 } }
+
+                                RowLayout {
+                                    anchors.fill: parent; anchors.leftMargin: root.s(15); spacing: root.s(12)
+                                    Item {
+                                        Layout.preferredWidth: root.s(24); Layout.alignment: Qt.AlignVCenter
+                                        Text { anchors.centerIn: parent; text: root.tabIcons[index]; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: parent.parent.parent.isActive ? root.ambientPurple : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                                    }
+                                    Text { text: root.tabNames[index]; font.family: root.uiFontFamily; font.weight: parent.parent.isActive ? root.themedFontWeight : Font.Medium; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(13); color: parent.parent.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: 150 } } }
+                                }
+
+                                Rectangle {
+                                    anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                                    width: root.s(3); height: parent.isActive ? root.s(20) : 0; radius: root.s(2)
+                                    color: root.ambientPurple
+                                    Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+                                }
+
+                                MouseArea { id: tabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.currentTab = index }
                             }
-                            Text { text: root.tabNames[index]; font.family: root.uiFontFamily; font.weight: parent.parent.isActive ? root.themedFontWeight : Font.Medium; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(13); color: parent.parent.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: 150 } } }
                         }
-
-                        Rectangle {
-                            anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
-                            width: root.s(3); height: parent.isActive ? root.s(20) : 0; radius: root.s(2)
-                            color: root.ambientPurple
-                            Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
-                        }
-
-                        MouseArea { id: tabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.currentTab = index }
                     }
                 }
-
-                Item { Layout.fillHeight: true }
 
                 // Close button
                 Rectangle {
@@ -2026,7 +2591,20 @@ Item {
                                     scale: dtSaveMa.pressed ? 0.95 : 1.0
                                     Behavior on scale { NumberAnimation { duration: 150 } }
                                     Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
-                                    MouseArea { id: dtSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveSettings(timeFmtInput.text, dateFmtInput.text, touchpadScrollSpin.value, mouseScrollSpin.value) }
+                                    MouseArea {
+                                        id: dtSaveMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.saveSettings(
+                                            timeFmtInput.text,
+                                            dateFmtInput.text,
+                                            touchpadScrollSpin.value,
+                                            mouseScrollSpin.value,
+                                            touchpadRightClickCombo.currentIndex === 0,
+                                            root.keyboardLayoutCodes[keyboardLayoutCombo.currentIndex]
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2141,7 +2719,7 @@ Item {
                     Text { text: "Input"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
 
                     Rectangle {
-                        Layout.fillWidth: true; Layout.preferredHeight: root.s(200); radius: root.s(12)
+                        Layout.fillWidth: true; Layout.preferredHeight: root.s(340); radius: root.s(12)
                         color: Qt.alpha(root.surface0, 0.4); border.color: root.surface1; border.width: 1
 
                         ColumnLayout {
@@ -2191,9 +2769,51 @@ Item {
                                 }
                             }
 
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: root.s(1)
+                                color: Qt.alpha(root.surface2, 0.65)
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: root.s(15)
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: root.s(6)
+                                    Text { text: "Keyboard layout"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    ThemedComboBox {
+                                        id: keyboardLayoutCombo
+                                        model: root.keyboardLayoutLabels
+                                        currentIndex: root.keyboardLayoutIndex(root.settingsData.keyboardLayout)
+                                    }
+                                    Text {
+                                        text: "Chooses the active Hyprland keyboard language/layout."
+                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.blue
+                                        wrapMode: Text.WordWrap; Layout.fillWidth: true
+                                    }
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: root.s(6)
+                                    Text { text: "Touchpad right click"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    ThemedComboBox {
+                                        id: touchpadRightClickCombo
+                                        model: ["On", "Off"]
+                                        currentIndex: root.settingsData.touchpadRightClickButtonArea ? 0 : 1
+                                    }
+                                    Text {
+                                        text: touchpadRightClickCombo.currentIndex === 0
+                                            ? "On uses a Windows-style right button area on the touchpad."
+                                            : "Off switches to clickfinger behavior instead of a dedicated right-click zone."
+                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.peach
+                                        wrapMode: Text.WordWrap; Layout.fillWidth: true
+                                    }
+                                }
+                            }
+
                             RowLayout {
                                 Layout.fillWidth: true; spacing: root.s(10)
-                                Text { text: "Saved instantly and applied live in Hyprland."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                Text { text: "Saved instantly and applied live in Hyprland."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
                                 Item { Layout.fillWidth: true }
                                 Rectangle {
                                     Layout.preferredWidth: root.s(80); Layout.preferredHeight: root.s(30); radius: root.s(6)
@@ -2201,7 +2821,20 @@ Item {
                                     scale: scrollSaveMa.pressed ? 0.95 : 1.0
                                     Behavior on scale { NumberAnimation { duration: 150 } }
                                     Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
-                                    MouseArea { id: scrollSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveSettings(timeFmtInput.text, dateFmtInput.text, touchpadScrollSpin.value, mouseScrollSpin.value) }
+                                    MouseArea {
+                                        id: scrollSaveMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.saveSettings(
+                                            timeFmtInput.text,
+                                            dateFmtInput.text,
+                                            touchpadScrollSpin.value,
+                                            mouseScrollSpin.value,
+                                            touchpadRightClickCombo.currentIndex === 0,
+                                            root.keyboardLayoutCodes[keyboardLayoutCombo.currentIndex]
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2417,16 +3050,22 @@ Item {
 
                     Text { text: "Display"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
                     SettingsInfoCard { title: "Monitorstatus"; icon: "󰍹"; accent: root.blue; value: root.displayStatusText }
+                    SettingsInfoCard { title: "Actieve layout"; icon: "󰹑"; accent: root.mauve; value: root.displayLayoutText }
+                    SettingsInfoCard { title: "Touch & tablet"; icon: "󰗧"; accent: root.sapphire; value: root.displayTouchText }
+                    SettingsInfoCard { title: "Helderheid"; icon: "󰃠"; accent: root.yellow; value: root.displayBrightnessText }
 
-                    RowLayout {
+                    Flow {
                         Layout.fillWidth: true
                         spacing: root.s(10)
                         SettingsActionButton { label: "Monitor UI openen"; icon: "󰍹"; accent: root.blue; primary: true; onTriggered: root.openShellWidget("monitors", "") }
-                        SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.green; onTriggered: displayStatusProc.running = true }
-                        Item { Layout.fillWidth: true }
+                        SettingsActionButton { label: "Layout herstellen"; icon: "󰁯"; accent: root.green; onTriggered: root.restoreDisplayLayout() }
+                        SettingsActionButton { label: "Tabletmodus"; icon: "󰓶"; accent: root.peach; onTriggered: root.toggleTabletMode() }
+                        SettingsActionButton { label: "Helderheid -"; icon: "󰃞"; accent: root.yellow; onTriggered: root.adjustBrightness(-5) }
+                        SettingsActionButton { label: "Helderheid +"; icon: "󰃠"; accent: root.yellow; onTriggered: root.adjustBrightness(5) }
+                        SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.green; onTriggered: root.refreshDisplayStatus() }
                     }
 
-                    SettingsInfoCard { title: "Opslaan"; icon: "󰆓"; accent: root.peach; value: "De bestaande monitor UI gebruikt monitor-apply-save.sh en schrijft naar 10-monitors.conf met een eigen beheerd blok." }
+                    SettingsInfoCard { title: "Opslaan"; icon: "󰆓"; accent: root.peach; value: "De monitor UI bewaart layouts in 10-monitors.conf; 'Layout herstellen' hergebruikt hetzelfde hotplug-herstelpad als de sessie zelf." }
                     Item { Layout.fillHeight: true }
                 }
             }
@@ -2470,24 +3109,166 @@ Item {
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
-                ColumnLayout {
+                ScrollView {
                     anchors.fill: parent
                     anchors.margins: root.s(20)
-                    spacing: root.s(14)
+                    clip: true
+                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
-                    Text { text: "Audio"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
-                    SettingsInfoCard { title: "Default output"; icon: "󰕾"; accent: root.green; value: root.audioStatusText }
+                    ColumnLayout {
+                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        spacing: root.s(14)
 
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: root.s(10)
-                        SettingsActionButton { label: "Volume-paneel"; icon: "󰕾"; accent: root.green; primary: true; onTriggered: root.openShellWidget("volume", "") }
-                        SettingsActionButton { label: "Mute wisselen"; icon: "󰖁"; accent: root.peach; onTriggered: { Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/network/audio_panel_logic.sh", "--toggle-mute"]); audioStatusProc.running = true; } }
-                        SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.blue; onTriggered: audioStatusProc.running = true }
+                        Text { text: "Audio"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                        Text {
+                            text: "Snelle mixer voor output, input en actieve streams. De losse VolumePopup blijft beschikbaar voor de volledige audioweergave."
+                            font.family: root.uiFontFamily
+                            font.pixelSize: root.s(11)
+                            color: root.subtext0
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                        }
+                        SettingsInfoCard { title: "Audiostatus"; icon: "󰕾"; accent: root.green; value: root.audioStatusText }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+                            SettingsActionButton { label: "Volume-paneel"; icon: "󰕾"; accent: root.green; primary: true; onTriggered: root.openShellWidget("volume", "") }
+                            SettingsActionButton {
+                                label: "Mute output"
+                                icon: "󰖁"
+                                accent: root.peach
+                                onTriggered: {
+                                    let output = root.audioPrimaryNode(root.audioOutputs);
+                                    if (output) root.toggleAudioMute("sink", output.id);
+                                }
+                            }
+                            SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.blue; onTriggered: root.refreshAudioState() }
+                        }
+
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: width >= root.s(820) ? 2 : 1
+                            rowSpacing: root.s(10)
+                            columnSpacing: root.s(10)
+
+                            AudioVolumeCard {
+                                Layout.fillWidth: true
+                                property var activeOutput: root.audioPrimaryNode(root.audioOutputs)
+                                title: activeOutput ? (activeOutput.description || activeOutput.name || "Default output") : "Default output"
+                                subtitle: root.audioSummaryText("outputs", activeOutput)
+                                icon: root.audioIconFor("outputs", activeOutput)
+                                accent: root.green
+                                volume: activeOutput ? activeOutput.volume : 0
+                                muted: activeOutput ? !!activeOutput.mute : false
+                                audioType: "sink"
+                                audioId: activeOutput ? activeOutput.id : ""
+                                allowSetDefault: false
+                                isDefault: true
+                            }
+
+                            AudioVolumeCard {
+                                Layout.fillWidth: true
+                                property var activeInput: root.audioPrimaryNode(root.audioInputs)
+                                title: activeInput ? (activeInput.description || activeInput.name || "Default input") : "Default input"
+                                subtitle: root.audioSummaryText("inputs", activeInput)
+                                icon: root.audioIconFor("inputs", activeInput)
+                                accent: root.sapphire
+                                volume: activeInput ? activeInput.volume : 0
+                                muted: activeInput ? !!activeInput.mute : false
+                                audioType: "source"
+                                audioId: activeInput ? activeInput.id : ""
+                                allowSetDefault: false
+                                isDefault: true
+                            }
+                        }
+
+                        SettingsInfoCard {
+                            visible: !root.audioStateBusy && root.audioOutputs.length === 0 && root.audioInputs.length === 0
+                            title: "Geen audio stack"
+                            icon: "󰖁"
+                            accent: root.peach
+                            value: "Er zijn geen audio devices gevonden. Controleer PipeWire, WirePlumber of PulseAudio."
+                        }
+
+                        Text { text: "Outputs"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(18); color: root.text }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+
+                            Repeater {
+                                model: root.audioOutputs
+                                delegate: AudioVolumeCard {
+                                    required property var modelData
+                                    title: String(modelData.description || modelData.name || "Output")
+                                    subtitle: String(modelData.name || "")
+                                    icon: root.audioIconFor("outputs", modelData)
+                                    accent: root.green
+                                    volume: Number(modelData.volume) || 0
+                                    muted: !!modelData.mute
+                                    audioType: "sink"
+                                    audioId: String(modelData.id || "")
+                                    allowSetDefault: true
+                                    isDefault: !!modelData.is_default
+                                    onSetDefaultRequested: root.setDefaultAudioDevice("sink", modelData.name)
+                                }
+                            }
+                        }
+
+                        Text { text: "Inputs"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(18); color: root.text }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+
+                            Repeater {
+                                model: root.audioInputs
+                                delegate: AudioVolumeCard {
+                                    required property var modelData
+                                    title: String(modelData.description || modelData.name || "Input")
+                                    subtitle: String(modelData.name || "")
+                                    icon: root.audioIconFor("inputs", modelData)
+                                    accent: root.sapphire
+                                    volume: Number(modelData.volume) || 0
+                                    muted: !!modelData.mute
+                                    audioType: "source"
+                                    audioId: String(modelData.id || "")
+                                    allowSetDefault: true
+                                    isDefault: !!modelData.is_default
+                                    onSetDefaultRequested: root.setDefaultAudioDevice("source", modelData.name)
+                                }
+                            }
+                        }
+
+                        Text { text: "App-streams"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(18); color: root.text }
+                        SettingsInfoCard {
+                            visible: root.audioApps.length === 0
+                            title: "Geen actieve streams"
+                            icon: "󰎆"
+                            accent: root.mauve
+                            value: "Start media of een app met geluid om hier per-app volume te regelen."
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+
+                            Repeater {
+                                model: root.audioApps
+                                delegate: AudioVolumeCard {
+                                    required property var modelData
+                                    title: String(modelData.description || modelData.name || "App-stream")
+                                    subtitle: String(modelData.name || "")
+                                    icon: root.audioIconFor("apps", modelData)
+                                    accent: root.mauve
+                                    volume: Number(modelData.volume) || 0
+                                    muted: !!modelData.mute
+                                    audioType: "sink-input"
+                                    audioId: String(modelData.id || "")
+                                    allowSetDefault: false
+                                    isDefault: false
+                                }
+                            }
+                        }
                     }
-
-                    SettingsInfoCard { title: "Uitbreiding"; icon: "󰋋"; accent: root.mauve; value: "Device-keuze en per-app volume blijven in de bestaande VolumePopup; deze tab gebruikt die popup als volledige mixer." }
-                    Item { Layout.fillHeight: true }
                 }
             }
 
@@ -2500,33 +3281,218 @@ Item {
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
-                ColumnLayout {
+                ScrollView {
                     anchors.fill: parent
                     anchors.margins: root.s(20)
-                    spacing: root.s(14)
+                    clip: true
+                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
-                    Text { text: "Session"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
-                    SettingsInfoCard { title: "Actieve mode"; icon: "󰒲"; accent: root.mauve; value: root.sessionModeText }
+                    ColumnLayout {
+                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        spacing: root.s(14)
 
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: root.s(10)
-                        SettingsActionButton { label: "Office"; icon: "󰈹"; accent: root.blue; primary: root.sessionModeText === "office"; onTriggered: root.switchSessionMode("office") }
-                        SettingsActionButton { label: "Gaming"; icon: "󰊴"; accent: root.green; primary: root.sessionModeText === "gaming"; onTriggered: root.switchSessionMode("gaming") }
-                        SettingsActionButton { label: "Media"; icon: "󰝚"; accent: root.peach; primary: root.sessionModeText === "media"; onTriggered: root.switchSessionMode("media") }
-                        SettingsActionButton { label: "Mode verversen"; icon: "󰑓"; accent: root.sapphire; onTriggered: sessionModeProc.running = true }
+                        Text { text: "Session"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: width >= root.s(820) ? 2 : 1
+                            rowSpacing: root.s(10)
+                            columnSpacing: root.s(10)
+
+                            SettingsInfoCard { title: "Actieve mode"; icon: "󰒲"; accent: root.mauve; value: root.sessionModeText }
+                            SettingsInfoCard { title: "Idle gedrag"; icon: "󰒳"; accent: root.blue; value: root.sessionIdleSummary() }
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+                            SettingsActionButton { label: "Office"; icon: "󰈹"; accent: root.blue; primary: root.sessionModeText === "office"; onTriggered: root.switchSessionMode("office") }
+                            SettingsActionButton { label: "Gaming"; icon: "󰊴"; accent: root.green; primary: root.sessionModeText === "gaming"; onTriggered: root.switchSessionMode("gaming") }
+                            SettingsActionButton { label: "Media"; icon: "󰝚"; accent: root.peach; primary: root.sessionModeText === "media"; onTriggered: root.switchSessionMode("media") }
+                            SettingsActionButton { label: "Mode verversen"; icon: "󰑓"; accent: root.sapphire; onTriggered: sessionModeProc.running = true }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+                            SettingsActionButton { label: "Vergrendelen"; icon: "󰌾"; accent: root.yellow; onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/lock.sh"]) }
+                            SettingsActionButton { label: "Uitlogmenu"; icon: "󰍃"; accent: root.red; onTriggered: Quickshell.execDetached(["wlogout"]) }
+                            Item { Layout.fillWidth: true }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            radius: root.s(12)
+                            color: Qt.alpha(root.surface0, 0.46)
+                            border.color: Qt.alpha(root.surface2, 0.82)
+                            border.width: 1
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: root.s(14)
+                                spacing: root.s(12)
+
+                                Text { text: "Automatische idle-acties"; font.family: root.uiFontFamily; font.weight: Font.Bold; font.pixelSize: root.s(14); color: root.text }
+                                Text {
+                                    text: "Kies per batterijmodus na hoeveel inactiviteit je sessie automatisch lockt, het scherm uitgaat en eventueel suspend ingaat. Je bewerkt nu: " + root.powerProfileLabel(root.currentPowerProfileText) + "."
+                                    font.family: root.uiFontFamily
+                                    font.pixelSize: root.s(11)
+                                    color: root.subtext0
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
+
+                                SettingsInfoCard {
+                                    title: "Power profile"
+                                    icon: "󰌪"
+                                    accent: root.green
+                                    value: "Actief: " + root.powerProfileLabel(root.currentPowerProfileText) +
+                                        "\n" + root.idleProfileSummary("performance") +
+                                        "\n" + root.idleProfileSummary("balanced") +
+                                        "\n" + root.idleProfileSummary("power-saver")
+                                }
+
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    columns: width >= root.s(720) ? 3 : 1
+                                    rowSpacing: root.s(10)
+                                    columnSpacing: root.s(10)
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(6)
+                                        Text { text: "Automatisch locken"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                        ThemedComboBox {
+                                            id: sessionIdleLockCombo
+                                            model: root.idleTimeoutOptions
+                                            currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings(root.currentPowerProfileText).idleLockSeconds)
+                                        }
+                                        Text {
+                                            text: sessionIdleLockCombo.currentIndex === 0
+                                                ? "Schakelt automatische lock uit."
+                                                : "Vergrendelt na " + root.idleTimeoutOptions[sessionIdleLockCombo.currentIndex].toLowerCase() + "."
+                                            font.family: root.uiFontFamily
+                                            font.pixelSize: root.s(11)
+                                            color: root.yellow
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(6)
+                                        Text { text: "Scherm uit (DPMS)"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                        ThemedComboBox {
+                                            id: sessionIdleScreenOffCombo
+                                            model: root.idleTimeoutOptions
+                                            currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings(root.currentPowerProfileText).idleScreenOffSeconds)
+                                        }
+                                        Text {
+                                            text: sessionIdleScreenOffCombo.currentIndex === 0
+                                                ? "Laat het scherm aan zolang de sessie actief blijft."
+                                                : "Zet het scherm uit na " + root.idleTimeoutOptions[sessionIdleScreenOffCombo.currentIndex].toLowerCase() + "."
+                                            font.family: root.uiFontFamily
+                                            font.pixelSize: root.s(11)
+                                            color: root.blue
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(6)
+                                        Text { text: "Suspend / slaapstand"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                        ThemedComboBox {
+                                            id: sessionIdleSuspendCombo
+                                            model: root.idleTimeoutOptions
+                                            currentIndex: root.idleTimeoutOptionIndex(root.idleProfileSettings(root.currentPowerProfileText).idleSuspendSeconds)
+                                        }
+                                        Text {
+                                            text: sessionIdleSuspendCombo.currentIndex === 0
+                                                ? "Laat suspend uit; alleen lock en scherm-uit blijven actief."
+                                                : "Stuurt het systeem in suspend na " + root.idleTimeoutOptions[sessionIdleSuspendCombo.currentIndex].toLowerCase() + "."
+                                            font.family: root.uiFontFamily
+                                            font.pixelSize: root.s(11)
+                                            color: root.green
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(10)
+                                    Text {
+                                        text: "Opslaan herschrijft ~/.config/hypridle/hypridle.conf en start hypridle opnieuw."
+                                        font.family: root.uiFontFamily
+                                        font.pixelSize: root.s(11)
+                                        color: root.subtext0
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                    Rectangle {
+                                        Layout.preferredWidth: root.s(94)
+                                        Layout.preferredHeight: root.s(32)
+                                        radius: root.s(8)
+                                        color: sessionSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
+                                        scale: sessionSaveMa.pressed ? 0.95 : 1.0
+                                        Behavior on scale { NumberAnimation { duration: 150 } }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "Opslaan"
+                                            font.family: root.uiFontFamily
+                                            font.weight: Font.Bold
+                                            font.pixelSize: root.s(12)
+                                            color: root.base
+                                        }
+
+                                        MouseArea {
+                                            id: sessionSaveMa
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: root.saveSettings(
+                                                root.settingsData.timeFormat,
+                                                root.settingsData.dateFormat,
+                                                root.scrollPercentFromSetting(root.settingsData.touchpadScrollFactor, 0.45),
+                                                root.scrollPercentFromSetting(root.settingsData.mouseScrollFactor, 1.35),
+                                                root.settingsData.touchpadRightClickButtonArea,
+                                                root.settingsData.keyboardLayout,
+                                                root.idleTimeoutSeconds(sessionIdleLockCombo.currentIndex),
+                                                root.idleTimeoutSeconds(sessionIdleScreenOffCombo.currentIndex),
+                                                root.idleTimeoutSeconds(sessionIdleSuspendCombo.currentIndex),
+                                                ({
+                                                    "performance": root.currentPowerProfileText === "performance" ? {
+                                                        idleLockSeconds: root.idleTimeoutSeconds(sessionIdleLockCombo.currentIndex),
+                                                        idleScreenOffSeconds: root.idleTimeoutSeconds(sessionIdleScreenOffCombo.currentIndex),
+                                                        idleSuspendSeconds: root.idleTimeoutSeconds(sessionIdleSuspendCombo.currentIndex)
+                                                    } : root.idleProfileSettings("performance"),
+                                                    "balanced": root.currentPowerProfileText === "balanced" ? {
+                                                        idleLockSeconds: root.idleTimeoutSeconds(sessionIdleLockCombo.currentIndex),
+                                                        idleScreenOffSeconds: root.idleTimeoutSeconds(sessionIdleScreenOffCombo.currentIndex),
+                                                        idleSuspendSeconds: root.idleTimeoutSeconds(sessionIdleSuspendCombo.currentIndex)
+                                                    } : root.idleProfileSettings("balanced"),
+                                                    "power-saver": root.currentPowerProfileText === "power-saver" ? {
+                                                        idleLockSeconds: root.idleTimeoutSeconds(sessionIdleLockCombo.currentIndex),
+                                                        idleScreenOffSeconds: root.idleTimeoutSeconds(sessionIdleScreenOffCombo.currentIndex),
+                                                        idleSuspendSeconds: root.idleTimeoutSeconds(sessionIdleSuspendCombo.currentIndex)
+                                                    } : root.idleProfileSettings("power-saver")
+                                                })
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsInfoCard { title: "Bewuste beperking"; icon: "󰅚"; accent: root.red; value: "Shutdown/reboot staan hier nog niet als directe knoppen. Die horen achter een bevestiging of in wlogout." }
+                        Item { Layout.fillHeight: true }
                     }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: root.s(10)
-                        SettingsActionButton { label: "Vergrendelen"; icon: "󰌾"; accent: root.yellow; onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/lock.sh"]) }
-                        SettingsActionButton { label: "Uitlogmenu"; icon: "󰍃"; accent: root.red; onTriggered: Quickshell.execDetached(["wlogout"]) }
-                        Item { Layout.fillWidth: true }
-                    }
-
-                    SettingsInfoCard { title: "Bewuste beperking"; icon: "󰅚"; accent: root.red; value: "Shutdown/reboot staan hier nog niet als directe knoppen. Die horen achter een bevestiging of in wlogout." }
-                    Item { Layout.fillHeight: true }
                 }
             }
 

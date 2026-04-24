@@ -1052,7 +1052,11 @@ Item {
                                 MouseArea {
                                     id: profileMa
                                     anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: { Quickshell.execDetached(["powerprofilesctl", "set", name]); sysPoller.running = true; }
+                                    onClicked: {
+                                        Quickshell.execDetached(["powerprofilesctl", "set", name]);
+                                        Quickshell.execDetached(["bash", "-lc", "sleep 0.4; \"$HOME/.config/shared/scripts/kingstra-idle-apply\" '" + name + "' >/dev/null 2>&1 || true"]);
+                                        sysPoller.running = true;
+                                    }
                                 }
                             }
                         }
