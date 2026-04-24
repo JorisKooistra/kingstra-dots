@@ -4,15 +4,20 @@ set -euo pipefail
 monitor="${1:-}"
 direction="${2:-}"
 workspace_count="${3:-8}"
+repeat_count="${4:-1}"
 conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/10-monitors.conf"
 
 if [[ -z "$direction" || "$direction" != "next" && "$direction" != "prev" ]]; then
-    printf 'Usage: %s <monitor> <next|prev> [workspace-count]\n' "$0" >&2
+    printf 'Usage: %s <monitor> <next|prev> [workspace-count] [repeat-count]\n' "$0" >&2
     exit 1
 fi
 
 if ! [[ "$workspace_count" =~ ^[0-9]+$ ]] || (( workspace_count < 1 )); then
     workspace_count=8
+fi
+
+if ! [[ "$repeat_count" =~ ^[0-9]+$ ]] || (( repeat_count < 1 )); then
+    repeat_count=1
 fi
 
 monitors_json="$(hyprctl monitors -j 2>/dev/null || printf '[]')"
@@ -93,14 +98,23 @@ step=1
 [[ "$direction" == "prev" ]] && step=-1
 
 target_ws="$current_ws"
-for (( i = 0; i < workspace_count; i++ )); do
-    target_ws=$((target_ws + step))
-    while (( target_ws < 1 )); do target_ws=$((target_ws + workspace_count)); done
-    while (( target_ws > workspace_count )); do target_ws=$((target_ws - workspace_count)); done
+for (( repeat = 0; repeat < repeat_count; repeat++ )); do
+    next_ws="$target_ws"
+    found_next=0
 
-    if ! is_blocked_workspace "$target_ws"; then
-        break
-    fi
+    for (( i = 0; i < workspace_count; i++ )); do
+        next_ws=$((next_ws + step))
+        while (( next_ws < 1 )); do next_ws=$((next_ws + workspace_count)); done
+        while (( next_ws > workspace_count )); do next_ws=$((next_ws - workspace_count)); done
+
+        if ! is_blocked_workspace "$next_ws"; then
+            found_next=1
+            break
+        fi
+    done
+
+    (( found_next == 1 )) || break
+    target_ws="$next_ws"
 done
 
 [[ "$target_ws" != "$current_ws" ]] || exit 0

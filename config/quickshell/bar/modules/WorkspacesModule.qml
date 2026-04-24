@@ -12,7 +12,7 @@ Rectangle {
     required property var mocha
     required property var ctx           // BarContent root — supplies theme chrome colors/flags
 
-    readonly property int wsCount: 8
+    readonly property int wsCount: 10
 
     Layout.preferredHeight: ctx.cyberSideModuleHeight
     Layout.alignment: Qt.AlignVCenter

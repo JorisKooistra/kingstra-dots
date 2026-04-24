@@ -248,9 +248,7 @@ Variants {
                 let repeats = Math.abs(steps);
                 Quickshell.execDetached([
                     "bash",
-                    "-c",
-                    "i=0; while [ \"$i\" -lt \"$4\" ]; do i=$((i + 1)); ~/.config/hypr/scripts/workspace-scroll-monitor.sh \"$1\" \"$2\" \"$3\"; done",
-                    "_",
+                    Quickshell.env("HOME") + "/.config/hypr/scripts/workspace-scroll-monitor.sh",
                     monitor,
                     direction,
                     String(count),

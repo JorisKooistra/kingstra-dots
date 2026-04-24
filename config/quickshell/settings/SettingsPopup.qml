@@ -3236,9 +3236,11 @@ Item {
                                         model: workspaceMonitorModel
 
                                         delegate: RowLayout {
+                                            id: workspaceMonitorRow
                                             required property int index
                                             required property int ws
                                             required property string monitor
+                                            readonly property int rowIndex: index
 
                                             Layout.fillWidth: true
                                             spacing: root.s(8)
@@ -3256,7 +3258,21 @@ Item {
                                                 Layout.fillWidth: true
                                                 model: root.workspaceMonitorOptions
                                                 currentIndex: Math.max(0, root.workspaceMonitorOptions.indexOf(monitor === "" ? "Vrij" : monitor))
-                                                onActivated: root.setWorkspaceMonitorAssignment(index, currentText === "Vrij" ? "" : currentText)
+                                                onActivated: root.setWorkspaceMonitorAssignment(workspaceMonitorRow.rowIndex, currentText === "Vrij" ? "" : currentText)
+
+                                                background: Rectangle {
+                                                    radius: root.s(8)
+                                                    color: Qt.alpha(root.surface0, 0.78)
+                                                    border.width: 1
+                                                    border.color: parent.visualFocus
+                                                        ? root.blue
+                                                        : parent.hovered
+                                                            ? Qt.alpha(root.surface2, 0.95)
+                                                            : workspaceMonitorRow.monitor !== ""
+                                                                ? Qt.alpha(root.sapphire, 0.55)
+                                                                : Qt.alpha(root.surface2, 0.78)
+                                                    Behavior on border.color { ColorAnimation { duration: 120 } }
+                                                }
                                             }
                                         }
                                     }
