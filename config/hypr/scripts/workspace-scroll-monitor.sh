@@ -4,6 +4,7 @@ set -euo pipefail
 monitor="${1:-}"
 direction="${2:-}"
 workspace_count="${3:-8}"
+conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/10-monitors.conf"
 
 if [[ -z "$direction" || "$direction" != "next" && "$direction" != "prev" ]]; then
     printf 'Usage: %s <monitor> <next|prev> [workspace-count]\n' "$0" >&2
@@ -50,12 +51,41 @@ mapfile -t blocked_workspaces < <(
     ' <<< "$monitors_json"
 )
 
+assigned_monitor_for_workspace() {
+    local ws="$1"
+    [[ -f "$conf_file" ]] || return 1
+
+    awk -v target_ws="$ws" '
+        /^[[:space:]]*#/ { next }
+        /^[[:space:]]*workspace[[:space:]]*=/ {
+            line = $0
+            sub(/^[^=]*=[[:space:]]*/, "", line)
+            split(line, parts, ",")
+            ws = parts[1]
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", ws)
+            mon = ""
+            for (i = 2; i <= length(parts); i++) {
+                field = parts[i]
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", field)
+                if (field ~ /^monitor:/) {
+                    sub(/^monitor:[[:space:]]*/, "", field)
+                    mon = field
+                }
+            }
+            if (ws == target_ws && mon != "") found = mon
+        }
+        END { if (found != "") print found }
+    ' "$conf_file"
+}
+
 is_blocked_workspace() {
     local ws="$1"
-    local blocked
+    local blocked assigned_monitor
     for blocked in "${blocked_workspaces[@]}"; do
         [[ "$blocked" == "$ws" ]] && return 0
     done
+    assigned_monitor="$(assigned_monitor_for_workspace "$ws" || true)"
+    [[ -n "$assigned_monitor" && "$assigned_monitor" != "$monitor_name" ]] && return 0
     return 1
 }
 
