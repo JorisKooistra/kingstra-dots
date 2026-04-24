@@ -623,13 +623,22 @@ Item {
 
                             DropArea {
                                 anchors.fill: parent
+                                function updateTarget(drag) {
+                                    const source = drag?.source;
+                                    if (source) {
+                                        const hotspot = source.mapToItem(workspace, source.Drag.hotSpot.x, source.Drag.hotSpot.y);
+                                        root.rememberWorkspaceDropPosition(workspaceValue, hotspot.x, hotspot.y);
+                                    } else {
+                                        root.rememberWorkspaceDropPosition(workspaceValue, drag.x, drag.y);
+                                    }
+                                }
                                 onEntered: (drag) => {
-                                    root.rememberWorkspaceDropPosition(workspaceValue, drag.x, drag.y)
+                                    updateTarget(drag)
                                     if (root.draggingFromWorkspace == root.draggingTargetWorkspace) return;
                                     hoveredWhileDragging = true
                                 }
                                 onPositionChanged: (drag) => {
-                                    root.rememberWorkspaceDropPosition(workspaceValue, drag.x, drag.y)
+                                    updateTarget(drag)
                                 }
                                 onExited: {
                                     hoveredWhileDragging = false
@@ -1095,8 +1104,8 @@ Item {
                     property int workspaceRowIndex: root.getWorkspaceRow(windowData?.workspace.id)
                     xOffset: (root.workspaceImplicitWidth + workspaceSpacing) * workspaceColIndex
                     yOffset: (root.workspaceImplicitHeight + workspaceSpacing) * workspaceRowIndex
-                    visualOffsetX: root.draggingFromWorkspace === windowData?.workspace.id && root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalX - initX : 0
-                    visualOffsetY: root.draggingFromWorkspace === windowData?.workspace.id && root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalY - initY : 0
+                    visualOffsetX: root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalX - initX : 0
+                    visualOffsetY: root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalY - initY : 0
 
                     Timer {
                         id: updateWindowPosition
