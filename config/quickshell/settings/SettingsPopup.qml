@@ -75,7 +75,10 @@ Item {
     property int currentTab: 0
     property var tabNames: ["Theme", "Bar", "Widgets", "Keybinds", "Input", "Display", "Network", "Audio", "Weather & Time", "Session", "Updates", "Advanced", "About"]
     property var tabIcons: ["󰏘", "󰓡", "󰀻", "󰌌", "󰍽", "󰍹", "󰤨", "󰕾", "󰖐", "󰒲", "󰚰", "󰒓", ""]
-    onCurrentTabChanged: if (currentTab === 7) refreshAudioState()
+    onCurrentTabChanged: {
+        if (currentTab === 5) refreshDisplayStatus();
+        if (currentTab === 7) refreshAudioState();
+    }
 
     property real introBase: 0.0
     property real introSidebar: 0.0
@@ -83,6 +86,7 @@ Item {
 
     // Keybinds state
     ListModel { id: keybindsModel }
+    ListModel { id: workspaceMonitorModel }
     property int editingIndex: -1
     property string keybindFilter: ""
     property string keybindWriteError: ""
@@ -93,6 +97,10 @@ Item {
     property string displayLayoutText: "Display-layout nog niet geladen"
     property string displayTouchText: "Touch-profiel nog niet geladen"
     property string displayBrightnessText: "Helderheid nog niet geladen"
+    property string workspaceMonitorText: "Workspace-toewijzingen nog niet geladen"
+    property var workspaceMonitorOptions: ["Vrij"]
+    property bool workspaceMonitorDirty: false
+    property bool workspaceMonitorSaveBusy: false
     property string networkStatusText: "Netwerkstatus nog niet geladen"
     property string audioStatusText: "Audiostatus nog niet geladen"
     property bool audioStateBusy: false
@@ -104,6 +112,7 @@ Item {
     property string updateStatusText: "Nog niet gecontroleerd"
     property string advancedStatusText: "Klaar"
     readonly property string monitorRestoreScript: Quickshell.env("HOME") + "/.config/hypr/scripts/monitor-hotplug-restore.sh"
+    readonly property string workspaceMonitorScript: Quickshell.env("HOME") + "/.config/hypr/scripts/workspace-monitor-assignments.sh"
     readonly property string tabletModeScript: Quickshell.env("HOME") + "/.config/hypr/scripts/tablet-mode.sh"
     readonly property string displayStatusScript: Quickshell.env("HOME") + "/.config/quickshell/settings/display_status.sh"
     readonly property string idleApplyScript: Quickshell.env("HOME") + "/.config/shared/scripts/kingstra-idle-apply"
@@ -890,6 +899,7 @@ Item {
         displayLayoutProc.running = true;
         displayTouchProc.running = true;
         displayBrightnessProc.running = true;
+        workspaceMonitorLoadProc.running = true;
     }
 
     function openShellWidget(name, subtarget) {
@@ -959,6 +969,69 @@ Item {
         Quickshell.execDetached(["bash", "-lc", "'" + monitorRestoreScript + "' --once"]);
         notify("Display", "Opgeslagen layout wordt opnieuw toegepast");
         displayRefreshTimer.start();
+    }
+
+    function updateWorkspaceMonitorSummary() {
+        let assigned = [];
+        for (let i = 0; i < workspaceMonitorModel.count; i++) {
+            let row = workspaceMonitorModel.get(i);
+            if (row.monitor && String(row.monitor) !== "") {
+                assigned.push(String(row.ws) + " -> " + String(row.monitor));
+            }
+        }
+        workspaceMonitorText = assigned.length > 0
+            ? assigned.join("  •  ")
+            : "Geen vaste toewijzingen. Alle workspaces zijn vrij.";
+    }
+
+    function setWorkspaceMonitorRows(data, keepDirty) {
+        let monitors = (data && Array.isArray(data.monitors)) ? data.monitors : [];
+        let options = ["Vrij"];
+        for (let i = 0; i < monitors.length; i++) {
+            let name = String(monitors[i] || "");
+            if (name !== "" && options.indexOf(name) < 0) options.push(name);
+        }
+
+        let rows = (data && Array.isArray(data.workspaces)) ? data.workspaces : [];
+        for (let r = 0; r < rows.length; r++) {
+            let monitor = String(rows[r].monitor || "");
+            if (monitor !== "" && options.indexOf(monitor) < 0) options.push(monitor);
+        }
+
+        workspaceMonitorOptions = options;
+        workspaceMonitorModel.clear();
+        for (let ws = 1; ws <= 10; ws++) {
+            let assigned = "";
+            for (let j = 0; j < rows.length; j++) {
+                if (Number(rows[j].id) === ws) {
+                    assigned = String(rows[j].monitor || "");
+                    break;
+                }
+            }
+            workspaceMonitorModel.append({ ws: ws, monitor: assigned });
+        }
+        workspaceMonitorDirty = keepDirty === true ? workspaceMonitorDirty : false;
+        updateWorkspaceMonitorSummary();
+    }
+
+    function setWorkspaceMonitorAssignment(index, monitorName) {
+        if (index < 0 || index >= workspaceMonitorModel.count) return;
+        let next = String(monitorName || "");
+        let current = String(workspaceMonitorModel.get(index).monitor || "");
+        if (current === next) return;
+        workspaceMonitorModel.setProperty(index, "monitor", next);
+        workspaceMonitorDirty = true;
+        updateWorkspaceMonitorSummary();
+    }
+
+    function saveWorkspaceMonitorAssignments() {
+        let args = ["bash", workspaceMonitorScript, "save"];
+        for (let i = 0; i < workspaceMonitorModel.count; i++) {
+            let row = workspaceMonitorModel.get(i);
+            args.push(String(row.ws) + "=" + String(row.monitor || ""));
+        }
+        workspaceMonitorSaveProc.command = args;
+        workspaceMonitorSaveProc.running = true;
     }
 
     function toggleTabletMode() {
@@ -1528,6 +1601,37 @@ Item {
         command: ["bash", "-lc", "'" + displayStatusScript + "' brightness"]
         stdout: StdioCollector {
             onStreamFinished: root.displayBrightnessText = this.text.trim() || "Helderheid niet beschikbaar"
+        }
+    }
+
+    Process {
+        id: workspaceMonitorLoadProc
+        command: ["bash", workspaceMonitorScript, "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.setWorkspaceMonitorRows(JSON.parse(this.text || "{}"), false);
+                } catch (e) {
+                    root.workspaceMonitorText = "Workspace-toewijzingen niet beschikbaar";
+                    workspaceMonitorModel.clear();
+                    root.workspaceMonitorOptions = ["Vrij"];
+                }
+            }
+        }
+    }
+
+    Process {
+        id: workspaceMonitorSaveProc
+        stdout: StdioCollector {
+            onStreamFinished: {}
+        }
+        onRunningChanged: {
+            root.workspaceMonitorSaveBusy = running;
+            if (!running) {
+                root.workspaceMonitorDirty = false;
+                root.notify("Display", "Workspace-toewijzingen opgeslagen");
+                root.refreshDisplayStatus();
+            }
         }
     }
 
@@ -3063,30 +3167,119 @@ Item {
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
-                ColumnLayout {
+                ScrollView {
                     anchors.fill: parent
                     anchors.margins: root.s(20)
-                    spacing: root.s(14)
+                    clip: true
+                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
-                    Text { text: "Display"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
-                    SettingsInfoCard { title: "Monitorstatus"; icon: "󰍹"; accent: root.blue; value: root.displayStatusText }
-                    SettingsInfoCard { title: "Actieve layout"; icon: "󰹑"; accent: root.mauve; value: root.displayLayoutText }
-                    SettingsInfoCard { title: "Touch & tablet"; icon: "󰗧"; accent: root.sapphire; value: root.displayTouchText }
-                    SettingsInfoCard { title: "Helderheid"; icon: "󰃠"; accent: root.yellow; value: root.displayBrightnessText }
+                    ColumnLayout {
+                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        spacing: root.s(14)
 
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: root.s(10)
-                        SettingsActionButton { label: "Monitor UI openen"; icon: "󰍹"; accent: root.blue; primary: true; onTriggered: root.openShellWidget("monitors", "") }
-                        SettingsActionButton { label: "Layout herstellen"; icon: "󰁯"; accent: root.green; onTriggered: root.restoreDisplayLayout() }
-                        SettingsActionButton { label: "Tabletmodus"; icon: "󰓶"; accent: root.peach; onTriggered: root.toggleTabletMode() }
-                        SettingsActionButton { label: "Helderheid -"; icon: "󰃞"; accent: root.yellow; onTriggered: root.adjustBrightness(-5) }
-                        SettingsActionButton { label: "Helderheid +"; icon: "󰃠"; accent: root.yellow; onTriggered: root.adjustBrightness(5) }
-                        SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.green; onTriggered: root.refreshDisplayStatus() }
+                        Text { text: "Display"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                        SettingsInfoCard { title: "Monitorstatus"; icon: "󰍹"; accent: root.blue; value: root.displayStatusText }
+                        SettingsInfoCard { title: "Actieve layout"; icon: "󰹑"; accent: root.mauve; value: root.displayLayoutText }
+                        SettingsInfoCard { title: "Touch & tablet"; icon: "󰗧"; accent: root.sapphire; value: root.displayTouchText }
+                        SettingsInfoCard { title: "Helderheid"; icon: "󰃠"; accent: root.yellow; value: root.displayBrightnessText }
+                        SettingsInfoCard { title: "Workspace monitors"; icon: "󰧨"; accent: root.sapphire; value: root.workspaceMonitorText }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+                            SettingsActionButton { label: "Monitor UI openen"; icon: "󰍹"; accent: root.blue; primary: true; onTriggered: root.openShellWidget("monitors", "") }
+                            SettingsActionButton { label: "Layout herstellen"; icon: "󰁯"; accent: root.green; onTriggered: root.restoreDisplayLayout() }
+                            SettingsActionButton { label: "Tabletmodus"; icon: "󰓶"; accent: root.peach; onTriggered: root.toggleTabletMode() }
+                            SettingsActionButton { label: "Helderheid -"; icon: "󰃞"; accent: root.yellow; onTriggered: root.adjustBrightness(-5) }
+                            SettingsActionButton { label: "Helderheid +"; icon: "󰃠"; accent: root.yellow; onTriggered: root.adjustBrightness(5) }
+                            SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.green; onTriggered: root.refreshDisplayStatus() }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: workspaceMonitorColumn.implicitHeight + root.s(24)
+                            radius: root.s(10)
+                            color: Qt.alpha(root.surface0, 0.46)
+                            border.color: root.workspaceMonitorDirty ? root.sapphire : Qt.alpha(root.surface2, 0.82)
+                            border.width: root.workspaceMonitorDirty ? 2 : 1
+
+                            ColumnLayout {
+                                id: workspaceMonitorColumn
+                                anchors.fill: parent
+                                anchors.margins: root.s(12)
+                                spacing: root.s(10)
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(8)
+                                    Text { text: "󰧨"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(17); color: root.sapphire }
+                                    Text { text: "Workspaces vastzetten"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text; Layout.fillWidth: true }
+                                    Text { text: root.workspaceMonitorDirty ? "gewijzigd" : "opgeslagen"; font.family: root.monoFontFamily; font.pixelSize: root.s(10); color: root.workspaceMonitorDirty ? root.sapphire : root.subtext0 }
+                                }
+
+                                Text {
+                                    text: "Kies per workspace een monitor, of laat hem Vrij. Toegewezen workspaces verschijnen alleen op die monitor."
+                                    font.family: root.uiFontFamily
+                                    font.pixelSize: root.s(11)
+                                    color: root.subtext0
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                }
+
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    columns: width >= root.s(640) ? 2 : 1
+                                    rowSpacing: root.s(8)
+                                    columnSpacing: root.s(10)
+
+                                    Repeater {
+                                        model: workspaceMonitorModel
+
+                                        delegate: RowLayout {
+                                            required property int index
+                                            required property int ws
+                                            required property string monitor
+
+                                            Layout.fillWidth: true
+                                            spacing: root.s(8)
+
+                                            Text {
+                                                text: "Workspace " + ws
+                                                font.family: root.uiFontFamily
+                                                font.weight: Font.Bold
+                                                font.pixelSize: root.s(11)
+                                                color: root.text
+                                                Layout.preferredWidth: root.s(105)
+                                            }
+
+                                            ThemedComboBox {
+                                                Layout.fillWidth: true
+                                                model: root.workspaceMonitorOptions
+                                                currentIndex: Math.max(0, root.workspaceMonitorOptions.indexOf(monitor === "" ? "Vrij" : monitor))
+                                                onActivated: root.setWorkspaceMonitorAssignment(index, currentText === "Vrij" ? "" : currentText)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Flow {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(10)
+                                    SettingsActionButton {
+                                        label: root.workspaceMonitorSaveBusy ? "Opslaan..." : (root.workspaceMonitorDirty ? "Toewijzingen opslaan" : "Opgeslagen")
+                                        icon: root.workspaceMonitorDirty ? "󰆓" : "󰄬"
+                                        accent: root.sapphire
+                                        primary: root.workspaceMonitorDirty
+                                        onTriggered: if (root.workspaceMonitorDirty && !root.workspaceMonitorSaveBusy) root.saveWorkspaceMonitorAssignments()
+                                    }
+                                    SettingsActionButton { label: "Herlaad toewijzingen"; icon: "󰑓"; accent: root.green; onTriggered: workspaceMonitorLoadProc.running = true }
+                                }
+                            }
+                        }
+
+                        SettingsInfoCard { title: "Opslaan"; icon: "󰆓"; accent: root.peach; value: "De monitor UI bewaart layouts in 10-monitors.conf. Workspace-toewijzingen krijgen daar een eigen blok, zodat vrije workspaces gewoon overal gebruikt blijven worden." }
+                        Item { Layout.preferredHeight: root.s(8) }
                     }
-
-                    SettingsInfoCard { title: "Opslaan"; icon: "󰆓"; accent: root.peach; value: "De monitor UI bewaart layouts in 10-monitors.conf; 'Layout herstellen' hergebruikt hetzelfde hotplug-herstelpad als de sessie zelf." }
-                    Item { Layout.fillHeight: true }
                 }
             }
 

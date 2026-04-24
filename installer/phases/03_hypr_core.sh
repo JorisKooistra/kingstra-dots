@@ -72,6 +72,7 @@ _phase03_prepare_hypr_scripts() {
         "$REPO_ROOT/config/hypr/scripts/lid-lock.sh"
         "$REPO_ROOT/config/hypr/scripts/monitor-hotplug-restore.sh"
         "$REPO_ROOT/config/hypr/scripts/monitor-apply-save.sh"
+        "$REPO_ROOT/config/hypr/scripts/workspace-monitor-assignments.sh"
         "$REPO_ROOT/config/hypr/scripts/workspace-scroll-monitor.sh"
         "$REPO_ROOT/config/hypr/scripts/tablet-mode.sh"
     )
