@@ -180,7 +180,7 @@ save_and_focus_widget() {
     (
         sleep 0.05
         # FOOLPROOF FIX: Pull the widget back from the hidden workspace to the active one silently, THEN focus it.
-        hyprctl --batch "keyword cursor:no_warps true ; dispatch movetoworkspacesilent $active_ws,title:^qs-master$ ; dispatch setfloating title:^qs-master$ ; dispatch focuswindow title:^qs-master$ ; keyword cursor:no_warps false" >/dev/null 2>&1
+        hyprctl --batch "keyword cursor:no_warps true ; dispatch movetoworkspacesilent $active_ws,title:^qs-master$ ; dispatch setfloating title:^qs-master$ ; dispatch alterzorder top,title:^qs-master$ ; dispatch focuswindow title:^qs-master$ ; keyword cursor:no_warps false" >/dev/null 2>&1
     ) &
 }
 
