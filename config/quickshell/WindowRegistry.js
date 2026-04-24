@@ -58,8 +58,6 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
         "stewart":   { w: s(800, scale), h: s(600, scale), rx: Math.floor((mw/2)-(s(800, scale)/2)), ry: Math.floor((mh/2)-(s(600, scale)/2)), comp: "stewart/stewart.qml" },
         "monitors":  { w: s(850, scale), h: s(580, scale), rx: Math.floor((mw/2)-(s(850, scale)/2)), ry: Math.floor((mh/2)-(s(580, scale)/2)), comp: "monitors/MonitorPopup.qml" },
         "focustime": { w: s(900, scale), h: s(720, scale), rx: Math.floor((mw/2)-(s(900, scale)/2)), ry: Math.floor((mh/2)-(s(720, scale)/2)), comp: "focustime/FocusTimePopup.qml" },
-        "workspaces": { w: s(1120, scale), h: s(560, scale), rx: Math.floor((mw/2)-(s(1120, scale)/2)), ry: Math.floor((mh/2)-(s(560, scale)/2)), comp: "workspaces/WorkspaceOverview.qml" },
-        
         // Settings Popup (Centered)
         "settings": { w: settingsWidth, h: settingsHeight, rx: Math.floor((mw - settingsWidth) / 2), ry: Math.floor((mh - settingsHeight) / 2), comp: "settings/SettingsPopup.qml" },
 
