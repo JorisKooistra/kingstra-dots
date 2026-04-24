@@ -44,7 +44,7 @@ hide_widget_async() {
     (
         sleep 0.15
         if [[ -n "$qs_addr" ]]; then
-            hyprctl dispatch movetoworkspacesilent "special:qs-hidden,address:$qs_addr" >/dev/null 2>&1
+            hyprctl --batch "dispatch movetoworkspacesilent special:qs-hidden,address:$qs_addr ; dispatch setfloating address:$qs_addr" >/dev/null 2>&1
         fi
         
         # Re-assert focus after the window tree changes to prevent focus drops
@@ -79,6 +79,8 @@ qs_master_visible() {
     [[ -n "$ws_name" && "$ws_name" != "null" && "$ws_name" != special:* ]]
 }
 
+non_quickshell_client_filter='.title != "qs-master" and .class != "org.quickshell" and .initialClass != "org.quickshell"'
+
 # -----------------------------------------------------------------------------
 # FAST PATH: WORKSPACE SWITCHING
 # -----------------------------------------------------------------------------
@@ -98,13 +100,13 @@ if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
     # stealing focus on the newly activated workspace.
     QS_ADDR=$(hyprctl clients -j | jq -r '.[] | select(.title == "qs-master") | .address' | head -n 1)
     if [[ -n "$QS_ADDR" ]]; then
-        hyprctl dispatch movetoworkspacesilent "special:qs-hidden,address:$QS_ADDR" >/dev/null 2>&1
+        hyprctl --batch "dispatch movetoworkspacesilent special:qs-hidden,address:$QS_ADDR ; dispatch setfloating address:$QS_ADDR" >/dev/null 2>&1
     fi
     
     CMD="workspace $TARGET_WS"
     [[ "$MOVE_OPT" == "move" ]] && CMD="movetoworkspace $TARGET_WS"
 
-    TARGET_ADDR=$(hyprctl clients -j | jq -r ".[] | select(.workspace.id == $TARGET_WS and .class != \"qs-master\") | .address" | head -n 1)
+    TARGET_ADDR=$(hyprctl clients -j | jq -r ".[] | select(.workspace.id == $TARGET_WS and $non_quickshell_client_filter) | .address" | head -n 1)
 
     if [[ -n "$TARGET_ADDR" && "$TARGET_ADDR" != "null" ]]; then
         hyprctl --batch "dispatch $CMD ; keyword cursor:no_warps true ; dispatch focuswindow address:$TARGET_ADDR ; keyword cursor:no_warps false" >/dev/null 2>&1
@@ -163,12 +165,14 @@ save_and_focus_widget() {
     # Only save if the currently focused window is NOT the widget container
     local current_window=$(hyprctl activewindow -j 2>/dev/null)
     local current_title=$(echo "$current_window" | jq -r '.title // empty')
+    local current_class=$(echo "$current_window" | jq -r '.class // empty')
+    local current_initial_class=$(echo "$current_window" | jq -r '.initialClass // empty')
     local current_addr=$(echo "$current_window" | jq -r '.address // empty')
     
     # Grab the active workspace so we can pull the widget to us
     local active_ws=$(hyprctl activeworkspace -j | jq -r '.id')
 
-    if [[ "$current_title" != "qs-master" && -n "$current_addr" && "$current_addr" != "null" ]]; then
+    if [[ "$current_title" != "qs-master" && "$current_class" != "org.quickshell" && "$current_initial_class" != "org.quickshell" && -n "$current_addr" && "$current_addr" != "null" ]]; then
         echo "$current_addr" > "$PREV_FOCUS_FILE"
     fi
 
@@ -176,7 +180,7 @@ save_and_focus_widget() {
     (
         sleep 0.05
         # FOOLPROOF FIX: Pull the widget back from the hidden workspace to the active one silently, THEN focus it.
-        hyprctl --batch "keyword cursor:no_warps true ; dispatch movetoworkspacesilent $active_ws,title:^qs-master$ ; dispatch focuswindow title:^qs-master$ ; keyword cursor:no_warps false" >/dev/null 2>&1
+        hyprctl --batch "keyword cursor:no_warps true ; dispatch movetoworkspacesilent $active_ws,title:^qs-master$ ; dispatch setfloating title:^qs-master$ ; dispatch focuswindow title:^qs-master$ ; keyword cursor:no_warps false" >/dev/null 2>&1
     ) &
 }
 

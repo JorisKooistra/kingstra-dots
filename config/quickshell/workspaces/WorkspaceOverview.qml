@@ -31,6 +31,7 @@ Item {
     property var windows: []
     property var monitors: []
     property var gridOrder: ({})
+    property var pendingWindowMoves: ({})
     readonly property string gridStateScript: Quickshell.env("HOME") + "/.config/quickshell/workspaces/workspace-grid-state.sh"
 
     function s(value) {
@@ -41,10 +42,49 @@ Item {
         return groupBase + index + 1;
     }
 
+    function isShellWindow(win) {
+        var title = String(win.title || "");
+        var klass = String(win.class || "");
+        var initialClass = String(win.initialClass || "");
+        return title === "qs-master" || klass === "org.quickshell" || initialClass === "org.quickshell";
+    }
+
     function windowsForWorkspace(wsId) {
         return windows.filter(function(win) {
-            return win.workspace && win.workspace.id === wsId && win.title !== "qs-master";
+            return effectiveWorkspaceId(win) === wsId && !isShellWindow(win);
         });
+    }
+
+    function effectiveWorkspaceId(win) {
+        var address = String(win.address || "");
+        if (address !== "" && pendingWindowMoves[address] !== undefined)
+            return Number(pendingWindowMoves[address]);
+
+        return win.workspace ? Number(win.workspace.id || -1) : -1;
+    }
+
+    function setPendingWindowMove(address, wsId) {
+        var next = Object.assign({}, pendingWindowMoves);
+        next[String(address)] = wsId;
+        pendingWindowMoves = next;
+        pendingMoveCleanupTimer.restart();
+    }
+
+    function reconcilePendingWindowMoves(clientList) {
+        var next = Object.assign({}, pendingWindowMoves);
+        var changed = false;
+
+        for (var i = 0; i < clientList.length; i++) {
+            var client = clientList[i];
+            var address = String(client.address || "");
+            if (address !== "" && next[address] !== undefined && client.workspace && Number(client.workspace.id || -1) === Number(next[address])) {
+                delete next[address];
+                changed = true;
+            }
+        }
+
+        if (changed)
+            pendingWindowMoves = next;
     }
 
     function orderedWindowsForWorkspace(wsId) {
@@ -202,7 +242,9 @@ Item {
             appendAddressToOrder(wsId, address);
         }
 
+        setPendingWindowMove(address, wsId);
         Hyprland.dispatch("movetoworkspacesilent " + wsId + ", address:" + address);
+        postDropRefreshTimer.restart();
         refreshTimer.restart();
     }
 
@@ -314,13 +356,29 @@ Item {
         onTriggered: root.refresh()
     }
 
+    Timer {
+        id: postDropRefreshTimer
+        interval: 120
+        repeat: false
+        onTriggered: root.refresh()
+    }
+
+    Timer {
+        id: pendingMoveCleanupTimer
+        interval: 1800
+        repeat: false
+        onTriggered: root.pendingWindowMoves = ({})
+    }
+
     Process {
         id: clientsProcess
         command: ["hyprctl", "clients", "-j"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    root.windows = JSON.parse(this.text || "[]");
+                    var clientList = JSON.parse(this.text || "[]");
+                    root.windows = clientList;
+                    root.reconcilePendingWindowMoves(clientList);
                 } catch (e) {
                     root.windows = [];
                 }
@@ -637,18 +695,22 @@ Item {
                                                     root.dropTargetWindowAddress = "";
                                                 }
                                                 onReleased: {
+                                                    var movedBetweenWorkspaces = false;
                                                     if (root.dropTargetWindowAddress !== "" && root.dropTargetWindowWorkspaceId === workspaceCard.wsId) {
                                                         root.reorderWindowInWorkspace(workspaceCard.wsId, root.draggedWindowAddress, root.dropTargetWindowAddress);
                                                     } else if (root.dropTargetWorkspaceId !== -1 && root.dropTargetWorkspaceId !== workspaceCard.wsId) {
                                                         root.moveWindowToWorkspace(root.draggedWindowAddress, root.dropTargetWorkspaceId, workspaceCard.wsId);
+                                                        movedBetweenWorkspaces = true;
                                                     }
 
                                                     root.draggedWindowAddress = "";
                                                     root.dropTargetWorkspaceId = -1;
                                                     root.dropTargetWindowWorkspaceId = -1;
                                                     root.dropTargetWindowAddress = "";
-                                                    windowPreview.x = 0;
-                                                    windowPreview.y = 0;
+                                                    if (!movedBetweenWorkspaces) {
+                                                        windowPreview.x = 0;
+                                                        windowPreview.y = 0;
+                                                    }
                                                 }
                                                 onClicked: {
                                                     if (windowSlot.modelData.address)

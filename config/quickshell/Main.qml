@@ -30,7 +30,7 @@ FloatingWindow {
         Quickshell.execDetached([
             "bash",
             "-c",
-            `hyprctl --batch "dispatch movetoworkspacesilent ${masterWindow.hiddenWorkspaceName},title:^(qs-master)$ ; dispatch resizewindowpixel exact 1 1,title:^(qs-master)$"`
+            `hyprctl --batch "dispatch movetoworkspacesilent ${masterWindow.hiddenWorkspaceName},title:^(qs-master)$ ; dispatch setfloating title:^(qs-master)$ ; dispatch resizewindowpixel exact 1 1,title:^(qs-master)$"`
         ]);
     }
 
@@ -39,7 +39,7 @@ FloatingWindow {
         Quickshell.execDetached([
             "bash",
             "-c",
-            `ws="$(hyprctl activeworkspace -j | jq -r '.name // "1"')"; hyprctl --batch "dispatch movetoworkspacesilent $ws,title:^(qs-master)$ ; dispatch resizewindowpixel exact ${w} ${h},title:^(qs-master)$ ; dispatch movewindowpixel exact ${x} ${y},title:^(qs-master)$${focusDispatch}"`
+            `ws="$(hyprctl activeworkspace -j | jq -r '.name // "1"')"; hyprctl --batch "dispatch movetoworkspacesilent $ws,title:^(qs-master)$ ; dispatch setfloating title:^(qs-master)$ ; dispatch resizewindowpixel exact ${w} ${h},title:^(qs-master)$ ; dispatch movewindowpixel exact ${x} ${y},title:^(qs-master)$${focusDispatch}"`
         ]);
     }
 
