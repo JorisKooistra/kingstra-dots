@@ -127,4 +127,10 @@ if [[ -n "$qs_addr" && "$qs_addr" != "null" ]]; then
     hide_qs_cmd="dispatch movetoworkspacesilent special:qs-hidden,address:$qs_addr ; dispatch setfloating address:$qs_addr ; "
 fi
 
-hyprctl --batch "${hide_qs_cmd}keyword cursor:no_warps true ; dispatch focusmonitor $monitor_name ; dispatch workspace $target_ws ; keyword cursor:no_warps false" >/dev/null 2>&1
+cursor_pos="$(hyprctl cursorpos 2>/dev/null || true)"
+restore_cursor_cmd=""
+if [[ "$cursor_pos" =~ ^[[:space:]]*(-?[0-9]+)[[:space:]]*,[[:space:]]*(-?[0-9]+)[[:space:]]*$ ]]; then
+    restore_cursor_cmd=" ; dispatch movecursor ${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
+fi
+
+hyprctl --batch "${hide_qs_cmd}keyword cursor:no_warps true ; dispatch focusmonitor $monitor_name ; dispatch workspace $target_ws${restore_cursor_cmd} ; keyword cursor:no_warps false" >/dev/null 2>&1

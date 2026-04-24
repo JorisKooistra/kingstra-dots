@@ -5,9 +5,7 @@
 import QtQuick
 import Quickshell
 
-// Keep the local overview directory as a user config overlay only. The actual
-// module remains package-managed by quickshell-overview-git under /etc/xdg.
-import "file:/etc/xdg/quickshell/overview/modules/overview"
+import "./modules/overview"
 
 ShellRoot {
     Overview {}

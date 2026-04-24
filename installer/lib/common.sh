@@ -168,6 +168,32 @@ start_quickshell_config_live() {
     fi
 }
 
+start_quickshell_path_live() {
+    local path="$1"
+    local label="${2:-Quickshell $path}"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "$label zou live worden gestart: qs --no-duplicate --daemonize -p $path"
+        return 0
+    fi
+
+    if ! has_cmd qs; then
+        log_info "$label niet live gestart: qs is niet beschikbaar."
+        return 0
+    fi
+
+    if ! hyprland_live; then
+        log_info "$label niet live gestart: geen live Hyprland-sessie bereikbaar."
+        return 0
+    fi
+
+    if qs --no-duplicate --daemonize -p "$path" >/dev/null 2>&1; then
+        log_ok "$label live gestart"
+    else
+        log_warn "$label kon niet live worden gestart."
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Veilig een bestand aanraken (dry-run bewust)
 # ---------------------------------------------------------------------------

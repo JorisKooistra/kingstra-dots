@@ -67,7 +67,7 @@ exec-once = ~/.config/hypr/scripts/wallpaper-init.sh
 # ---------------------------------------------------------------------------
 exec-once = quickshell --no-duplicate -p ~/.config/quickshell/TopBar.qml
 exec-once = quickshell --no-duplicate -p ~/.config/quickshell/Main.qml
-exec-once = qs --no-duplicate -c overview
+exec-once = qs --no-duplicate -p ~/.config/quickshell/overview/shell.qml
 
 # ---------------------------------------------------------------------------
 # FocusTime tracker
@@ -113,7 +113,7 @@ _phase05_activate_widget_binds() {
 
 _phase05_apply_live() {
     reload_hyprland_live "Quickshell autostart en widget-binds"
-    start_quickshell_config_live "overview" "Quickshell overview"
+    start_quickshell_path_live "$HOME/.config/quickshell/overview/shell.qml" "Quickshell overview"
 }
 
 _phase05_validate() {
