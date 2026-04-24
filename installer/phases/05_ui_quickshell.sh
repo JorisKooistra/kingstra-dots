@@ -25,18 +25,13 @@ phase_run() {
     log_step "Widget-binds activeren..."
     _phase05_activate_widget_binds
 
+    log_step "Live sessie bijwerken..."
+    _phase05_apply_live
+
     log_step "Fase 05 valideren..."
     _phase05_validate
 
     log_ok "Fase 05 voltooid — Quickshell UI-laag staat."
-    log_info "Herstart je Hyprland-sessie om de UI-laag te activeren."
-    log_info "Of start handmatig:"
-    log_info "  awww-daemon &"
-    log_info "  systemctl --user start skwd-daemon.service"
-    log_info "  quickshell --no-duplicate -p ~/.config/quickshell/TopBar.qml &"
-    log_info "  quickshell --no-duplicate -p ~/.config/quickshell/Main.qml &"
-    log_info "  python3 ~/.config/quickshell/focustime/focus_daemon.py &"
-    log_info "  walker --gapplication-service &"
 }
 
 # ---------------------------------------------------------------------------
@@ -114,6 +109,11 @@ _phase05_activate_widget_binds() {
     # Activeer theme picker bind
     sed -i 's/^# bind = \$mainMod CTRL, T/bind = $mainMod CTRL, T/' "$binds_file"
     log_ok "Quickshell widget-binds geactiveerd in 82-binds-widgets.conf"
+}
+
+_phase05_apply_live() {
+    reload_hyprland_live "Quickshell autostart en widget-binds"
+    start_quickshell_config_live "overview" "Quickshell overview"
 }
 
 _phase05_validate() {

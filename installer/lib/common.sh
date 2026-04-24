@@ -110,6 +110,65 @@ has_cmd() {
 }
 
 # ---------------------------------------------------------------------------
+# Live sessie bijwerken (dry-run bewust)
+# ---------------------------------------------------------------------------
+hyprland_live() {
+    has_cmd hyprctl || return 1
+    hyprctl monitors -j >/dev/null 2>&1
+}
+
+reload_hyprland_live() {
+    local reason="${1:-configwijzigingen}"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Hyprland zou worden herladen voor: $reason"
+        return 0
+    fi
+
+    if ! has_cmd hyprctl; then
+        log_info "Hyprland reload overgeslagen: hyprctl is niet beschikbaar."
+        return 0
+    fi
+
+    if ! hyprland_live; then
+        log_info "Hyprland reload overgeslagen: geen live Hyprland-sessie bereikbaar."
+        return 0
+    fi
+
+    if hyprctl reload >/dev/null 2>&1; then
+        log_ok "Hyprland herladen: $reason"
+    else
+        log_warn "Hyprland reload niet gelukt; herlaad handmatig als deze wijziging nog niet actief is."
+    fi
+}
+
+start_quickshell_config_live() {
+    local config="$1"
+    local label="${2:-Quickshell $config}"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "$label zou live worden gestart: qs --no-duplicate --daemonize -c $config"
+        return 0
+    fi
+
+    if ! has_cmd qs; then
+        log_info "$label niet live gestart: qs is niet beschikbaar."
+        return 0
+    fi
+
+    if ! hyprland_live; then
+        log_info "$label niet live gestart: geen live Hyprland-sessie bereikbaar."
+        return 0
+    fi
+
+    if qs --no-duplicate --daemonize -c "$config" >/dev/null 2>&1; then
+        log_ok "$label live gestart"
+    else
+        log_warn "$label kon niet live worden gestart."
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Veilig een bestand aanraken (dry-run bewust)
 # ---------------------------------------------------------------------------
 safe_touch() {

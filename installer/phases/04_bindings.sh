@@ -18,8 +18,9 @@ phase_run() {
     log_step "Keybindings valideren..."
     _phase04_validate
 
+    reload_hyprland_live "keybindings"
+
     log_ok "Fase 04 voltooid — bindingsarchitectuur staat."
-    log_info "Herlaad Hyprland met Super+Ctrl+R om de binds te activeren."
 }
 
 # ---------------------------------------------------------------------------
