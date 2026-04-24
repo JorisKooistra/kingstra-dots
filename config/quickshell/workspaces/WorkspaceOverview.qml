@@ -184,13 +184,33 @@ Item {
         addresses[ti] = tmp;
         setWorkspaceOrder(wsId, addresses);
 
+        // Determine swap direction based on target position relative to dragged window.
+        // Hyprland's swapwindow only accepts directions (l/r/u/d), not addresses.
+        var draggedWin = null, targetWin = null;
+        for (var i = 0; i < windows.length; i++) {
+            var addr = String(windows[i].address || "");
+            if (addr === draggedAddress) draggedWin = windows[i];
+            if (addr === targetAddress)  targetWin  = windows[i];
+        }
+        var swapDir = "r";
+        if (draggedWin && targetWin && draggedWin.at && targetWin.at) {
+            var dx = Number(targetWin.at[0]) - Number(draggedWin.at[0]);
+            var dy = Number(targetWin.at[1]) - Number(draggedWin.at[1]);
+            if (Math.abs(dx) >= Math.abs(dy))
+                swapDir = dx >= 0 ? "r" : "l";
+            else
+                swapDir = dy >= 0 ? "d" : "u";
+        }
+
         Quickshell.execDetached(["hyprctl", "--batch",
             "keyword cursor:no_warps true" +
             " ; dispatch focuswindow address:" + draggedAddress +
-            " ; dispatch swapwindow address:" + targetAddress +
+            " ; dispatch swapwindow " + swapDir +
             " ; dispatch alterzorder top,title:^(qs-master)$" +
             " ; keyword cursor:no_warps false"
         ]);
+        postDropRefreshTimer.restart();
+        secondPostDropRefreshTimer.restart();
         refreshTimer.restart();
     }
 
