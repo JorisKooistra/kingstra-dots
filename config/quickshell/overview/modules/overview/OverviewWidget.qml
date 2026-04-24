@@ -65,6 +65,8 @@ Item {
     property string draggingTargetWindowAddress: ""
     property real draggingOriginalX: 0
     property real draggingOriginalY: 0
+    property real draggingOriginalWidth: 0
+    property real draggingOriginalHeight: 0
     property string draggingTargetSpecialWorkspace: ""
     property int previewRecaptureToken: 0
     property var allWorkspaces: HyprlandData.allWorkspaces
@@ -647,8 +649,12 @@ Item {
                                     const source = drag?.source;
                                     if (source) {
                                         const hotspot = source.mapToItem(workspace, source.Drag.hotSpot.x, source.Drag.hotSpot.y);
+                                        if (hotspot.x < 0 || hotspot.y < 0 || hotspot.x > workspace.width || hotspot.y > workspace.height)
+                                            return;
                                         root.rememberWorkspaceDropPosition(workspaceValue, hotspot.x, hotspot.y);
                                     } else {
+                                        if (drag.x < 0 || drag.y < 0 || drag.x > workspace.width || drag.y > workspace.height)
+                                            return;
                                         root.rememberWorkspaceDropPosition(workspaceValue, drag.x, drag.y);
                                     }
                                 }
@@ -1127,6 +1133,8 @@ Item {
                     property var previewOffset: root.previewOffsetForWindow(windowData, initX, initY, xOffset, yOffset)
                     visualOffsetX: previewOffset.x
                     visualOffsetY: previewOffset.y
+                    visualWidth: root.draggingFromWorkspace === windowData?.workspace.id && root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalWidth : 0
+                    visualHeight: root.draggingFromWorkspace === windowData?.workspace.id && root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalHeight : 0
 
                     Timer {
                         id: updateWindowPosition
@@ -1157,6 +1165,8 @@ Item {
                             root.draggingTargetWindowAddress = ""
                             root.draggingOriginalX = window.initX
                             root.draggingOriginalY = window.initY
+                            root.draggingOriginalWidth = window.width
+                            root.draggingOriginalHeight = window.height
                             window.pressed = true
                             window.Drag.active = true
                             window.Drag.source = window

@@ -45,6 +45,8 @@ Item { // Window
     property real yOffset: 0
     property real visualOffsetX: 0
     property real visualOffsetY: 0
+    property real visualWidth: 0
+    property real visualHeight: 0
     property int widgetMonitorId: 0
     property real geometryScaleX: widthRatio
     property real geometryScaleY: heightRatio
@@ -96,8 +98,8 @@ Item { // Window
     
     x: initX + visualOffsetX
     y: initY + visualOffsetY
-    width: Math.min(targetWindowWidth, availableWorkspaceWidth)
-    height: Math.min(targetWindowHeight, availableWorkspaceHeight)
+    width: visualWidth > 0 ? visualWidth : Math.min(targetWindowWidth, availableWorkspaceWidth)
+    height: visualHeight > 0 ? visualHeight : Math.min(targetWindowHeight, availableWorkspaceHeight)
     opacity: (windowData?.monitor ?? -1) == widgetMonitorId ? 1 : Config.options.windowPreview.inactiveMonitorOpacity
 
     clip: true
