@@ -243,23 +243,21 @@ Item {
         return bestAddress;
     }
 
-    function previewOffsetForWindow(win, currentInitX, currentInitY, currentXOffset, currentYOffset) {
-        if (!root.draggingAddress || root.draggingTargetWorkspace === -1)
-            return { x: 0, y: 0 };
-        if ((win?.workspace?.id ?? -1) !== root.draggingTargetWorkspace)
-            return { x: 0, y: 0 };
-        if ((win?.workspace?.id ?? -1) !== root.draggingFromWorkspace)
-            return { x: 0, y: 0 };
-        if (`${win?.address ?? ""}` === root.draggingAddress)
-            return { x: 0, y: 0 };
-        if (`${win?.address ?? ""}` === root.draggingTargetWindowAddress) {
-            return {
-                x: root.draggingOriginalX - currentInitX,
-                y: root.draggingOriginalY - currentInitY
-            };
-        }
+    function dropSideForWindow(win) {
+        if (!win)
+            return "";
 
-        return { x: 0, y: 0 };
+        const rect = root.windowRectInWorkspace(win);
+        const localX = root.clamp(root.draggingTargetWorkspaceX - rect.x, 0, rect.w);
+        const localY = root.clamp(root.draggingTargetWorkspaceY - rect.y, 0, rect.h);
+        const nx = rect.w > 0 ? localX / rect.w : 0.5;
+        const ny = rect.h > 0 ? localY / rect.h : 0.5;
+
+        if (ny < 0.33)
+            return "top";
+        if (ny > 0.67)
+            return "bottom";
+        return nx < 0.5 ? "left" : "right";
     }
 
     function moveWindowToWorkspaceDrop(windowItem, targetWorkspace) {
@@ -283,6 +281,8 @@ Item {
         const windowX = Math.round(baseX + topLeftX / scale);
         const windowY = Math.round(baseY + topLeftY / scale);
         const floating = windowItem.windowData?.floating ? "true" : "false";
+        const targetWin = root.draggingTargetWindowAddress ? windowByAddress[root.draggingTargetWindowAddress] : null;
+        const dropSide = root.dropSideForWindow(targetWin);
 
         Quickshell.execDetached([
             "bash",
@@ -295,7 +295,8 @@ Item {
             `${windowY}`,
             floating,
             `${windowItem.windowData?.workspace?.id ?? -1}`,
-            `${root.draggingTargetWindowAddress}`
+            `${root.draggingTargetWindowAddress}`,
+            `${dropSide}`
         ]);
     }
 
@@ -1130,11 +1131,6 @@ Item {
                     property int workspaceRowIndex: root.getWorkspaceRow(windowData?.workspace.id)
                     xOffset: (root.workspaceImplicitWidth + workspaceSpacing) * workspaceColIndex
                     yOffset: (root.workspaceImplicitHeight + workspaceSpacing) * workspaceRowIndex
-                    property var previewOffset: root.previewOffsetForWindow(windowData, initX, initY, xOffset, yOffset)
-                    visualOffsetX: previewOffset.x
-                    visualOffsetY: previewOffset.y
-                    visualWidth: root.draggingFromWorkspace === windowData?.workspace.id && root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalWidth : 0
-                    visualHeight: root.draggingFromWorkspace === windowData?.workspace.id && root.draggingTargetWindowAddress === windowData?.address ? root.draggingOriginalHeight : 0
 
                     Timer {
                         id: updateWindowPosition

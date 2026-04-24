@@ -10,6 +10,7 @@ window_y="${6:-}"
 is_floating="${7:-false}"
 source_workspace="${8:-}"
 target_address="${9:-}"
+drop_side="${10:-}"
 
 is_int() {
     [[ "${1:-}" =~ ^-?[0-9]+$ ]]
@@ -30,14 +31,27 @@ old_y="${old_y//[[:space:]]/}"
 
 batch="keyword cursor:no_warps true"
 batch+=" ; dispatch movecursor $cursor_x $cursor_y"
+batch+=" ; dispatch movetoworkspacesilent special:overview-drop,address:$address"
+batch+=" ; dispatch workspace $target_workspace"
+batch+=" ; dispatch movecursor $cursor_x $cursor_y"
 
-if [[ -n "$target_address" && "$target_address" != "$address" && "$source_workspace" == "$target_workspace" ]]; then
-    batch+=" ; dispatch focuswindow address:$address"
-    batch+=" ; dispatch swapwindow address:$target_address"
-else
-    batch+=" ; dispatch movetoworkspace $target_workspace,address:$address"
-    batch+=" ; dispatch focuswindow address:$address"
-fi
+case "$drop_side" in
+    left|right|top|bottom)
+        if [[ -n "$target_address" && "$target_address" != "$address" ]]; then
+            case "$drop_side" in
+                left) preselect_dir="l" ;;
+                right) preselect_dir="r" ;;
+                top) preselect_dir="u" ;;
+                bottom) preselect_dir="d" ;;
+            esac
+            batch+=" ; dispatch focuswindow address:$target_address"
+            batch+=" ; dispatch layoutmsg preselect $preselect_dir"
+        fi
+        ;;
+esac
+
+batch+=" ; dispatch movetoworkspace $target_workspace,address:$address"
+batch+=" ; dispatch focuswindow address:$address"
 
 if [[ "$is_floating" == "true" ]] && is_int "$window_x" && is_int "$window_y"; then
     batch+=" ; dispatch movewindowpixel exact $window_x $window_y,address:$address"
