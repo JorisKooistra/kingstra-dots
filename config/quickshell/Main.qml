@@ -39,7 +39,7 @@ FloatingWindow {
         Quickshell.execDetached([
             "bash",
             "-c",
-            `ws="$(hyprctl activeworkspace -j | jq -r '.name // "1"')"; hyprctl --batch "dispatch movetoworkspacesilent $ws,title:^(qs-master)$ ; dispatch setfloating title:^(qs-master)$ ; dispatch resizewindowpixel exact ${w} ${h},title:^(qs-master)$ ; dispatch movewindowpixel exact ${x} ${y},title:^(qs-master)$${focusDispatch}"`
+            `ws="$(hyprctl activeworkspace -j | jq -r '.name // "1"')"; hyprctl --batch "dispatch movetoworkspacesilent $ws,title:^(qs-master)$ ; dispatch setfloating title:^(qs-master)$ ; dispatch resizewindowpixel exact ${w} ${h},title:^(qs-master)$ ; dispatch movewindowpixel exact ${x} ${y},title:^(qs-master)$ ; dispatch alterzorder top,title:^(qs-master)$${focusDispatch}"`
         ]);
     }
 
@@ -71,7 +71,7 @@ FloatingWindow {
             masterWindow.width = t.w;
             masterWindow.height = t.h;
             // It's already on the active workspace, so just resize it
-            Quickshell.execDetached(["bash", "-c", `hyprctl dispatch resizewindowpixel "exact ${t.w} ${t.h},title:^(qs-master)$"`]);
+            Quickshell.execDetached(["bash", "-c", `hyprctl --batch "dispatch resizewindowpixel exact ${t.w} ${t.h},title:^(qs-master)$ ; dispatch alterzorder top,title:^(qs-master)$"`]);
         }
         
         // 2. Fetch absolute truth from Hyprland to fix X/Y offsets asynchronously
@@ -94,7 +94,7 @@ FloatingWindow {
                     if (t) {
                         masterWindow.currentX = t.x;
                         masterWindow.currentY = t.y;
-                        Quickshell.execDetached(["bash", "-c", `hyprctl dispatch movewindowpixel "exact ${t.x} ${t.y},title:^(qs-master)$"`]);
+                        Quickshell.execDetached(["bash", "-c", `hyprctl --batch "dispatch movewindowpixel exact ${t.x} ${t.y},title:^(qs-master)$ ; dispatch alterzorder top,title:^(qs-master)$"`]);
                     }
                 }
             }
