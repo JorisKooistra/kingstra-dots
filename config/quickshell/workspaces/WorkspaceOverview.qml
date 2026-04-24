@@ -26,6 +26,8 @@ Item {
     property int hoveredWorkspaceId: -1
     property int dropTargetWorkspaceId: -1
     property int dropTargetWindowWorkspaceId: -1
+    property int dragSourceWorkspaceId: -1
+    property bool suppressWorkspaceClick: false
     property string draggedWindowAddress: ""
     property string dropTargetWindowAddress: ""
     property var windows: []
@@ -40,6 +42,11 @@ Item {
 
     function workspaceIdAt(index) {
         return groupBase + index + 1;
+    }
+
+    function blockWorkspaceClick() {
+        suppressWorkspaceClick = true;
+        suppressWorkspaceClickTimer.restart();
     }
 
     function isShellWindow(win) {
@@ -127,11 +134,28 @@ Item {
         Quickshell.execDetached(["bash", gridStateScript, "save", JSON.stringify(gridOrder)]);
     }
 
-    function removeAddressFromOrder(wsId, address) {
-        var addresses = addressOrderForWorkspace(wsId).filter(function(item) {
-            return item !== address;
-        });
-        setWorkspaceOrder(wsId, addresses);
+    function removeAddressFromAllOrders(address) {
+        var next = Object.assign({}, gridOrder);
+        var changed = false;
+
+        for (var key in next) {
+            if (!Array.isArray(next[key]))
+                continue;
+
+            var filtered = next[key].filter(function(item) {
+                return item !== address;
+            });
+
+            if (filtered.length !== next[key].length) {
+                next[key] = filtered;
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            gridOrder = next;
+            saveGridOrder();
+        }
     }
 
     function appendAddressToOrder(wsId, address) {
@@ -230,7 +254,7 @@ Item {
     }
 
     function switchWorkspace(wsId) {
-        Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh close && hyprctl dispatch workspace " + wsId]);
+        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "workspace", String(wsId)]);
     }
 
     function moveWindowToWorkspace(address, wsId, sourceWsId) {
@@ -238,13 +262,14 @@ Item {
             return;
 
         if (sourceWsId && sourceWsId !== wsId) {
-            removeAddressFromOrder(sourceWsId, address);
+            removeAddressFromAllOrders(address);
             appendAddressToOrder(wsId, address);
         }
 
         setPendingWindowMove(address, wsId);
-        Hyprland.dispatch("movetoworkspacesilent " + wsId + ", address:" + address);
+        Quickshell.execDetached(["hyprctl", "dispatch", "movetoworkspacesilent", wsId + ",address:" + address]);
         postDropRefreshTimer.restart();
+        secondPostDropRefreshTimer.restart();
         refreshTimer.restart();
     }
 
@@ -364,10 +389,24 @@ Item {
     }
 
     Timer {
+        id: secondPostDropRefreshTimer
+        interval: 420
+        repeat: false
+        onTriggered: root.refresh()
+    }
+
+    Timer {
         id: pendingMoveCleanupTimer
         interval: 1800
         repeat: false
         onTriggered: root.pendingWindowMoves = ({})
+    }
+
+    Timer {
+        id: suppressWorkspaceClickTimer
+        interval: 260
+        repeat: false
+        onTriggered: root.suppressWorkspaceClick = false
     }
 
     Process {
@@ -536,7 +575,10 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             acceptedButtons: Qt.LeftButton
-                            onClicked: root.switchWorkspace(workspaceCard.wsId)
+                            onClicked: {
+                                if (!root.suppressWorkspaceClick)
+                                    root.switchWorkspace(workspaceCard.wsId);
+                            }
                         }
 
                         ColumnLayout {
@@ -689,21 +731,26 @@ Item {
                                                 drag.target: windowPreview
                                                 drag.threshold: root.s(8)
                                                 onPressed: {
+                                                    root.blockWorkspaceClick();
                                                     root.draggedWindowAddress = windowSlot.windowAddress;
+                                                    root.dragSourceWorkspaceId = workspaceCard.wsId;
                                                     root.dropTargetWorkspaceId = workspaceCard.wsId;
                                                     root.dropTargetWindowWorkspaceId = -1;
                                                     root.dropTargetWindowAddress = "";
                                                 }
                                                 onReleased: {
+                                                    root.blockWorkspaceClick();
                                                     var movedBetweenWorkspaces = false;
-                                                    if (root.dropTargetWindowAddress !== "" && root.dropTargetWindowWorkspaceId === workspaceCard.wsId) {
-                                                        root.reorderWindowInWorkspace(workspaceCard.wsId, root.draggedWindowAddress, root.dropTargetWindowAddress);
-                                                    } else if (root.dropTargetWorkspaceId !== -1 && root.dropTargetWorkspaceId !== workspaceCard.wsId) {
-                                                        root.moveWindowToWorkspace(root.draggedWindowAddress, root.dropTargetWorkspaceId, workspaceCard.wsId);
+                                                    var sourceWsId = root.dragSourceWorkspaceId > 0 ? root.dragSourceWorkspaceId : workspaceCard.wsId;
+                                                    if (root.dropTargetWindowAddress !== "" && root.dropTargetWindowWorkspaceId === sourceWsId) {
+                                                        root.reorderWindowInWorkspace(sourceWsId, root.draggedWindowAddress, root.dropTargetWindowAddress);
+                                                    } else if (root.dropTargetWorkspaceId !== -1 && root.dropTargetWorkspaceId !== sourceWsId) {
+                                                        root.moveWindowToWorkspace(root.draggedWindowAddress, root.dropTargetWorkspaceId, sourceWsId);
                                                         movedBetweenWorkspaces = true;
                                                     }
 
                                                     root.draggedWindowAddress = "";
+                                                    root.dragSourceWorkspaceId = -1;
                                                     root.dropTargetWorkspaceId = -1;
                                                     root.dropTargetWindowWorkspaceId = -1;
                                                     root.dropTargetWindowAddress = "";
@@ -712,7 +759,9 @@ Item {
                                                         windowPreview.y = 0;
                                                     }
                                                 }
+                                                onCanceled: root.blockWorkspaceClick()
                                                 onClicked: {
+                                                    root.blockWorkspaceClick();
                                                     if (windowSlot.modelData.address)
                                                         Hyprland.dispatch("focuswindow address:" + windowSlot.modelData.address);
                                                 }

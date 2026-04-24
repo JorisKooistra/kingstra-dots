@@ -81,9 +81,78 @@ qs_master_visible() {
 
 non_quickshell_client_filter='.title != "qs-master" and .class != "org.quickshell" and .initialClass != "org.quickshell"'
 
+workspace_cursor_dispatches() {
+    local target_ws="$1"
+    local monitor_line monitor_name monitor_x monitor_y monitor_w monitor_h cursor_x cursor_y
+
+    monitor_line="$(
+        hyprctl monitors -j 2>/dev/null \
+            | jq -r --argjson ws "$target_ws" '
+                .[]
+                | select(.activeWorkspace.id == $ws)
+                | [.name, .x, .y, .width, .height]
+                | @tsv
+            ' \
+            | head -n 1 || true
+    )"
+
+    [[ -n "$monitor_line" ]] || return 0
+
+    IFS=$'\t' read -r monitor_name monitor_x monitor_y monitor_w monitor_h <<< "$monitor_line"
+    [[ -n "$monitor_name" ]] || return 0
+    [[ "$monitor_x" =~ ^-?[0-9]+$ && "$monitor_y" =~ ^-?[0-9]+$ ]] || return 0
+    [[ "$monitor_w" =~ ^[0-9]+$ && "$monitor_h" =~ ^[0-9]+$ ]] || return 0
+
+    cursor_x=$((monitor_x + monitor_w / 2))
+    cursor_y=$((monitor_y + monitor_h / 2))
+
+    printf 'dispatch focusmonitor %s ; dispatch movecursor %s %s' "$monitor_name" "$cursor_x" "$cursor_y"
+}
+
+dispatch_workspace_target() {
+    local target_ws="$1"
+    local move_opt="${2:-}"
+    local cmd target_addr cursor_dispatches batch_cmd
+
+    cmd="workspace $target_ws"
+    [[ "$move_opt" == "move" ]] && cmd="movetoworkspace $target_ws"
+
+    target_addr=$(hyprctl clients -j | jq -r ".[] | select(.workspace.id == $target_ws and $non_quickshell_client_filter) | .address" | head -n 1)
+    cursor_dispatches="$(workspace_cursor_dispatches "$target_ws")"
+
+    if [[ -n "$target_addr" && "$target_addr" != "null" ]]; then
+        batch_cmd="dispatch $cmd ; keyword cursor:no_warps true ; dispatch focuswindow address:$target_addr ; keyword cursor:no_warps false"
+    else
+        batch_cmd="dispatch $cmd"
+    fi
+
+    if [[ -n "$cursor_dispatches" ]]; then
+        batch_cmd="$batch_cmd ; $cursor_dispatches"
+    fi
+
+    hyprctl --batch "$batch_cmd" >/dev/null 2>&1
+}
+
 # -----------------------------------------------------------------------------
 # FAST PATH: WORKSPACE SWITCHING
 # -----------------------------------------------------------------------------
+if [[ "$ACTION" == "workspace" && "$TARGET" =~ ^[0-9]+$ ]]; then
+    TARGET_WS="$TARGET"
+    MOVE_OPT="$SUBTARGET"
+
+    echo "close" > "$IPC_FILE"
+
+    QS_ADDR=$(hyprctl clients -j | jq -r '.[] | select(.title == "qs-master") | .address' | head -n 1)
+    if [[ -n "$QS_ADDR" ]]; then
+        hyprctl --batch "dispatch movetoworkspacesilent special:qs-hidden,address:$QS_ADDR ; dispatch setfloating address:$QS_ADDR" >/dev/null 2>&1
+    fi
+
+    dispatch_workspace_target "$TARGET_WS" "$MOVE_OPT"
+
+    rm -f "$PREV_FOCUS_FILE"
+    exit 0
+fi
+
 if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
     WORKSPACE_NUM="$ACTION"
     MOVE_OPT="$2"
@@ -103,16 +172,7 @@ if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
         hyprctl --batch "dispatch movetoworkspacesilent special:qs-hidden,address:$QS_ADDR ; dispatch setfloating address:$QS_ADDR" >/dev/null 2>&1
     fi
     
-    CMD="workspace $TARGET_WS"
-    [[ "$MOVE_OPT" == "move" ]] && CMD="movetoworkspace $TARGET_WS"
-
-    TARGET_ADDR=$(hyprctl clients -j | jq -r ".[] | select(.workspace.id == $TARGET_WS and $non_quickshell_client_filter) | .address" | head -n 1)
-
-    if [[ -n "$TARGET_ADDR" && "$TARGET_ADDR" != "null" ]]; then
-        hyprctl --batch "dispatch $CMD ; keyword cursor:no_warps true ; dispatch focuswindow address:$TARGET_ADDR ; keyword cursor:no_warps false" >/dev/null 2>&1
-    else
-        hyprctl --batch "dispatch $CMD" >/dev/null 2>&1
-    fi
+    dispatch_workspace_target "$TARGET_WS" "$MOVE_OPT"
     
     rm -f "$PREV_FOCUS_FILE"
     exit 0
