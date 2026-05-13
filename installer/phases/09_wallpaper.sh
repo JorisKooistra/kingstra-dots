@@ -333,6 +333,7 @@ _phase09_seed_default_wallpaper_state() {
         echo "$wallpaper" > "$last_wallpaper"
         echo "static" > "$state_dir/wallpaper-mode"
         echo "$wallpaper" > "$state_dir/last-image-wallpaper"
+        _phase09_sync_skwd_cache "$wallpaper" "static"
 
         jq -n \
             --arg name "$(basename "$wallpaper")" \
@@ -376,6 +377,7 @@ _phase09_generate_fallback_wallpaper() {
         mkdir -p "$state_dir"
         echo "$out" > "$state_dir/last-wallpaper"
         echo "static"  > "$state_dir/wallpaper-mode"
+        _phase09_sync_skwd_cache "$out" "static"
         _phase09_apply_initial_wallpaper "$out"
     } || log_warn "Kon geen fallbackwallpaper genereren"
 }
@@ -396,8 +398,29 @@ _phase09_set_initial_wallpaper_from_dir() {
     mkdir -p "$state_dir"
     echo "$first_wallpaper" > "$state_dir/last-wallpaper"
     echo "static" > "$state_dir/wallpaper-mode"
+    _phase09_sync_skwd_cache "$first_wallpaper" "static"
     log_ok "Eerste wallpaper ingesteld in state: $first_wallpaper"
     _phase09_apply_initial_wallpaper "$first_wallpaper"
+}
+
+_phase09_sync_skwd_cache() {
+    local wallpaper="$1"
+    local mode="${2:-static}"
+    [[ -n "$wallpaper" && -f "$wallpaper" ]] || return 0
+
+    local skwd_cache="${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall"
+    mkdir -p "$skwd_cache"
+
+    printf '%s\n' "$wallpaper" > "$skwd_cache/current_wallpaper"
+    printf '%s\n' "$wallpaper" > "$skwd_cache/current-wallpaper"
+    printf '%s\n' "$wallpaper" > "$skwd_cache/last_wallpaper"
+    printf '%s\n' "$wallpaper" > "$skwd_cache/last-wallpaper"
+
+    if command -v jq &>/dev/null; then
+        jq -n --arg path "$wallpaper" --arg type "$mode" \
+            '{"path":$path,"type":$type}' \
+            > "$skwd_cache/last-wallpaper.json" 2>/dev/null || true
+    fi
 }
 
 _phase09_apply_initial_wallpaper() {

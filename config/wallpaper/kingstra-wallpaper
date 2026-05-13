@@ -137,6 +137,69 @@ _monitors() {
         2>/dev/null || echo ""
 }
 
+_query_awww_wallpaper() {
+    command -v awww >/dev/null 2>&1 || return 1
+
+    local line candidate
+    line="$(awww query 2>/dev/null | grep -m1 'image:' || true)"
+    [[ -n "$line" ]] || return 1
+
+    candidate="${line#*image: }"
+    candidate="${candidate%% (}"
+    candidate="$(_expand_user_path "$candidate")"
+    [[ -n "$candidate" && -f "$candidate" ]] || return 1
+
+    printf '%s\n' "$candidate"
+    return 0
+}
+
+_read_skwd_cached_wallpaper() {
+    local candidate path=""
+
+    for candidate in \
+        "$SKWD_CACHE/current_wallpaper" \
+        "$SKWD_CACHE/current-wallpaper" \
+        "$SKWD_CACHE/last_wallpaper" \
+        "$SKWD_CACHE/last-wallpaper" \
+        "$SKWD_CACHE/last-wallpaper.json" \
+        "${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/state.json"; do
+        [[ -f "$candidate" ]] || continue
+
+        if [[ "$candidate" == *.json ]]; then
+            command -v jq >/dev/null 2>&1 || continue
+            path="$(jq -r '.path // .wallpaper // .currentWallpaper // .lastWallpaper // ""' "$candidate" 2>/dev/null || echo "")"
+        else
+            path="$(cat "$candidate" 2>/dev/null || true)"
+        fi
+
+        path="$(_expand_user_path "$path")"
+        if [[ -n "$path" && -f "$path" ]]; then
+            printf '%s\n' "$path"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+_current_static_wallpaper() {
+    local candidate=""
+
+    candidate="$(_query_awww_wallpaper || true)"
+    if [[ -n "$candidate" && -f "$candidate" ]]; then
+        printf '%s\n' "$candidate"
+        return 0
+    fi
+
+    candidate="$(_read_skwd_cached_wallpaper || true)"
+    if [[ -n "$candidate" && -f "$candidate" ]]; then
+        printf '%s\n' "$candidate"
+        return 0
+    fi
+
+    return 1
+}
+
 WALLPAPER_DIR="$(_resolve_wallpaper_dir)"
 VIDEO_WALLPAPER_DIR="$(_resolve_video_wallpaper_dir)"
 
@@ -245,6 +308,11 @@ _sync_skwd_current_wallpaper() {
     [[ -n "$file" && -f "$file" ]] || return 0
 
     mkdir -p "$SKWD_CACHE"
+    printf '%s\n' "$file" > "$SKWD_CACHE/current_wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/current-wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/last_wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/last-wallpaper"
+
     if command -v jq &>/dev/null; then
         jq -n --arg path "$file" --arg type "$mode" \
             '{"path":$path,"type":$type}' \
@@ -328,6 +396,7 @@ cmd_set() {
     _set_static "$file"
     _save_state "$file" "static"
     _update_wallpaper_json "$file"
+    _sync_skwd_current_wallpaper "$file" "static"
     _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
 
     # Kleuren genereren + apps herladen
@@ -349,6 +418,7 @@ cmd_video() {
     _set_video "$file"
     _save_state "$file" "video"
     _update_wallpaper_json "$file"
+    _sync_skwd_current_wallpaper "$file" "video"
     _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
 
     local last_image
@@ -396,9 +466,25 @@ cmd_random() {
 }
 
 cmd_reload() {
-    local file mode
-    file="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+    local file mode state_file active_file
+    state_file="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+    file="$state_file"
     mode="$(cat "$MODE_FILE" 2>/dev/null || echo "static")"
+
+    if [[ "$mode" != "video" ]]; then
+        active_file="$(_current_static_wallpaper || true)"
+        if [[ -n "$active_file" && -f "$active_file" ]]; then
+            file="$active_file"
+
+            if [[ "$active_file" != "$state_file" ]]; then
+                _save_state "$active_file" "static"
+                _update_wallpaper_json "$active_file"
+                _sync_skwd_current_wallpaper "$active_file" "static"
+                _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
+                _log "Actieve wallpaper overgenomen uit runtime-state: $(basename "$active_file")"
+            fi
+        fi
+    fi
 
     if [[ -z "$file" ]]; then
         _warn "Geen opgeslagen wallpaper — kies willekeurig"
@@ -477,6 +563,7 @@ cmd_stop_video() {
         _set_static "$file"
         echo "static" > "$MODE_FILE"
         _save_state "$file" "static"
+        _sync_skwd_current_wallpaper "$file" "static"
         local APPLY="${HOME}/.local/bin/apply-shell-state"
         [[ -f "$APPLY" ]] && _run_helper "$APPLY" --wallpaper "$file" 2>/dev/null || true
         _log "Statisch wallpaper hersteld: $(basename "$file")"

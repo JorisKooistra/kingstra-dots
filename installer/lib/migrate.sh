@@ -77,8 +77,13 @@ migration_prepare_existing_setup() {
 
     _migration_disable_user_unit_if_present "waybar.service"
     _migration_disable_user_unit_if_present "waypaper.service"
+    _migration_disable_user_unit_if_present "hyprpaper.service"
+    _migration_disable_user_unit_if_present "swww-daemon.service"
 
     _migration_stop_process_if_running "waybar"
+    _migration_stop_process_if_running "waypaper"
+    _migration_stop_process_if_running "hyprpaper"
+    _migration_stop_process_if_running "swww-daemon"
     _migration_stop_process_if_running "qs"
     _migration_stop_process_if_running "quickshell"
     _migration_stop_process_if_running "walker"

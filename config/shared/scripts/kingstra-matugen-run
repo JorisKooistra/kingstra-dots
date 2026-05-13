@@ -248,6 +248,20 @@ _resolve_wallpaper() {
         fi
     done
 
+    for skwd_json in \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/last-wallpaper.json" \
+        "${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/state.json"; do
+        [[ -f "$skwd_json" ]] || continue
+        if command -v jq >/dev/null 2>&1; then
+            candidate="$(jq -r '.path // .wallpaper // .currentWallpaper // .lastWallpaper // ""' "$skwd_json" 2>/dev/null || echo "")"
+            candidate="$(_expand_user_path "$candidate")"
+            if [[ -n "$candidate" && -f "$candidate" ]]; then
+                echo "$candidate"
+                return 0
+            fi
+        fi
+    done
+
     if [[ -f "$CACHE_WALLPAPER" ]]; then
         candidate="$(cat "$CACHE_WALLPAPER" 2>/dev/null || echo "")"
         candidate="$(_expand_user_path "$candidate")"

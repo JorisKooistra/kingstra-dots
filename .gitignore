@@ -64,3 +64,5 @@ aanleveringen/
 config/matugen/templates/palette-inspector.json
 config/kingstra/state/matugen-palette.json
 config/qt6ct/qt6ct.conf
+config/hypr/monitors.conf
+config/hypr/workspaces.conf

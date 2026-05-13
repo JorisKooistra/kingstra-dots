@@ -52,10 +52,11 @@ _current_wallpaper() {
         "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/current-wallpaper" \
         "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/last_wallpaper" \
         "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/last-wallpaper" \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall/last-wallpaper.json" \
         "${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/state.json"; do
         [[ -f "$candidate" ]] || continue
         if [[ "$candidate" == *.json ]] && command -v jq >/dev/null 2>&1; then
-            path="$(jq -r '.wallpaper // .currentWallpaper // .lastWallpaper // ""' "$candidate" 2>/dev/null || echo "")"
+            path="$(jq -r '.path // .wallpaper // .currentWallpaper // .lastWallpaper // ""' "$candidate" 2>/dev/null || echo "")"
         else
             path="$(cat "$candidate" 2>/dev/null || true)"
         fi
@@ -154,6 +155,11 @@ _sync_skwd_current_wallpaper() {
         mp4|MP4|mkv|MKV|mov|MOV|webm|WEBM) type="video" ;;
     esac
 
+    printf '%s\n' "$wallpaper" > "$skwd_cache/current_wallpaper"
+    printf '%s\n' "$wallpaper" > "$skwd_cache/current-wallpaper"
+    printf '%s\n' "$wallpaper" > "$skwd_cache/last_wallpaper"
+    printf '%s\n' "$wallpaper" > "$skwd_cache/last-wallpaper"
+
     if command -v jq >/dev/null 2>&1; then
         jq -n --arg path "$wallpaper" --arg type "$type" \
             '{"path":$path,"type":$type}' \
@@ -207,6 +213,7 @@ _watch_and_apply() {
         if [[ -n "$current" && "$current" != "$before" && -f "$current" ]]; then
             mkdir -p "$CACHE_DIR"
             printf '%s\n' "$current" > "$CACHE_DIR/last-wallpaper"
+            _sync_skwd_current_wallpaper "$current"
 
             if [[ -x "$APPLY_SCRIPT" ]]; then
                 "$APPLY_SCRIPT" --wallpaper "$current" >/dev/null 2>&1 || true
