@@ -3313,7 +3313,7 @@ Item {
                             }
                         }
 
-                        SettingsInfoCard { title: "Opslaan"; icon: "󰆓"; accent: root.peach; value: "De monitor UI bewaart layouts in 10-monitors.conf. Workspace-toewijzingen krijgen daar een eigen blok, zodat vrije workspaces gewoon overal gebruikt blijven worden." }
+                        SettingsInfoCard { title: "Opslaan"; icon: "󰆓"; accent: root.peach; value: "De monitor UI bewaart layouts in lokale bestanden: monitors.conf en workspaces.conf. Die blijven buiten Git, terwijl vrije workspaces gewoon overal gebruikt blijven worden." }
                         Item { Layout.preferredHeight: root.s(8) }
                     }
                 }

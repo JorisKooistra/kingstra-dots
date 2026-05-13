@@ -5,7 +5,7 @@ monitor="${1:-}"
 direction="${2:-}"
 workspace_count="${3:-8}"
 repeat_count="${4:-1}"
-conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/10-monitors.conf"
+conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/workspaces.conf"
 
 if [[ -z "$direction" || "$direction" != "next" && "$direction" != "prev" ]]; then
     printf 'Usage: %s <monitor> <next|prev> [workspace-count] [repeat-count]\n' "$0" >&2

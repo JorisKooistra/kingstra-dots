@@ -1,0 +1,7 @@
+# =============================================================================
+# workspaces.conf - Lokale workspace-monitor toewijzingen
+# =============================================================================
+# Dit bestand is user-state en staat in .gitignore.
+# Het wordt geladen door conf.d/10-monitors.conf.
+# Lege workspaces blijven vrij.
+# =============================================================================

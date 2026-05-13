@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 set -u
 
-conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/10-monitors.conf"
+conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.conf"
 tablet_state_file="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/kingstra/tablet-mode"
-begin_marker="# BEGIN KINGSTRA MONITOR UI"
-end_marker="# END KINGSTRA MONITOR UI"
 log_prefix="[kingstra-monitor-hotplug]"
 
 log() {
@@ -23,10 +21,8 @@ trim() {
 saved_rules() {
     [[ -f "$conf_file" ]] || return 0
 
-    awk -v begin="$begin_marker" -v end="$end_marker" '
-        $0 == begin { in_block = 1; next }
-        $0 == end { in_block = 0; next }
-        in_block && /^[[:space:]]*monitor[[:space:]]*=/ {
+    awk '
+        /^[[:space:]]*monitor[[:space:]]*=/ {
             sub(/^[^=]*=[[:space:]]*/, "")
             sub(/[[:space:]]*#.*/, "")
             gsub(/^[[:space:]]+|[[:space:]]+$/, "")

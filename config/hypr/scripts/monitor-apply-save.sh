@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/10-monitors.conf"
-begin_marker="# BEGIN KINGSTRA MONITOR UI"
-end_marker="# END KINGSTRA MONITOR UI"
+conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.conf"
 
 notify() {
     if command -v notify-send >/dev/null 2>&1; then
@@ -49,41 +47,21 @@ if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 
     done
 fi
 
-if [[ ! -f "$conf_file" ]]; then
-    cat > "$conf_file" <<'EOF'
-# =============================================================================
-# 10-monitors.conf - Monitor-configuratie
-# =============================================================================
-# Standaard: gebruik de voorkeursmodus van elke monitor.
-# =============================================================================
-
-monitor = , preferred, auto, 1.0
-EOF
-fi
-
 tmp_file="$(mktemp "${conf_file}.tmp.XXXXXX")"
 trap 'rm -f "$tmp_file"' EXIT
 
-awk -v begin="$begin_marker" -v end="$end_marker" '
-    $0 == begin { skipping = 1; next }
-    $0 == end { skipping = 0; next }
-    !skipping { print }
-' "$conf_file" > "$tmp_file"
-
-while [[ -s "$tmp_file" && "$(tail -n 1 "$tmp_file")" == "" ]]; do
-    sed -i '$d' "$tmp_file"
-done
-
 {
-    printf '\n\n%s\n' "$begin_marker"
-    printf '# Gegenereerd door Super+O Monitor UI. Bewerk dit blok alleen als je de UI wilt overschrijven.\n'
+    printf '# =============================================================================\n'
+    printf '# monitors.conf - Lokale monitor-layout\n'
+    printf '# =============================================================================\n'
+    printf '# Gegenereerd door Super+O Monitor UI. Dit bestand is user-state en staat in .gitignore.\n'
+    printf '# =============================================================================\n\n'
     for rule in "${rules[@]}"; do
         printf 'monitor = %s\n' "$rule"
     done
-    printf '%s\n' "$end_marker"
 } >> "$tmp_file"
 
 mv "$tmp_file" "$conf_file"
 trap - EXIT
 
-notify "Display Update" "Opgeslagen in 10-monitors.conf"
+notify "Display Update" "Opgeslagen in monitors.conf"
