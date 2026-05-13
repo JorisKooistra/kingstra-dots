@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-session-start — Kingstra-owned Hyprland session entrypoint
+# =============================================================================
+set -uo pipefail
+
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra"
+LOG_FILE="$LOG_DIR/session.log"
+
+mkdir -p "$LOG_DIR" 2>/dev/null || LOG_FILE="/tmp/kingstra-session-${UID:-$(id -u)}.log"
+
+log() {
+    printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE" 2>/dev/null || true
+}
+
+has_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+run_bg_once() {
+    local pattern="$1"
+    local label="$2"
+    shift 2
+
+    if pgrep -f "$pattern" >/dev/null 2>&1; then
+        log "already running: $label"
+        return 0
+    fi
+
+    log "starting: $label"
+    "$@" >> "$LOG_FILE" 2>&1 &
+}
+
+run_once() {
+    local pattern="$1"
+    local label="$2"
+    shift 2
+
+    if pgrep -f "$pattern" >/dev/null 2>&1; then
+        log "already running: $label"
+        return 0
+    fi
+
+    log "running: $label"
+    "$@" >> "$LOG_FILE" 2>&1 || log "failed: $label"
+}
+
+systemctl_user() {
+    has_cmd systemctl || return 0
+    systemctl --user "$@" >> "$LOG_FILE" 2>&1 || log "systemctl --user failed: $*"
+}
+
+start_core() {
+    log "start core"
+
+    has_cmd dbus-update-activation-environment && \
+        dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP >> "$LOG_FILE" 2>&1 || true
+    systemctl_user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+
+    run_bg_once "xdg-desktop-portal-hyprland" "xdg-desktop-portal-hyprland" /usr/lib/xdg-desktop-portal-hyprland
+    run_bg_once "xdg-desktop-portal$" "xdg-desktop-portal" /usr/lib/xdg-desktop-portal
+    systemctl_user start pipewire pipewire-pulse wireplumber
+
+    run_bg_once "polkit-gnome-authentication-agent-1" "polkit agent" /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+    run_bg_once "wl-paste --type text --watch cliphist store" "cliphist text watcher" wl-paste --type text --watch cliphist store
+    run_bg_once "wl-paste --type image --watch cliphist store" "cliphist image watcher" wl-paste --type image --watch cliphist store
+    run_bg_once "nm-applet --indicator" "NetworkManager applet" nm-applet --indicator
+    run_bg_once "swaync$" "SwayNC" swaync
+    run_bg_once "hypridle$" "hypridle" hypridle
+    run_bg_once "playerctld daemon" "playerctld" playerctld daemon
+
+    run_once "fingerprint-first-run.sh" "fingerprint first-run" "$CONFIG_HOME/hypr/scripts/fingerprint-first-run.sh"
+    run_once "hardware-switches.sh" "hardware switches" "$CONFIG_HOME/hypr/scripts/hardware-switches.sh"
+    run_bg_once "monitor-hotplug-restore.sh" "monitor hotplug restore" "$CONFIG_HOME/hypr/scripts/monitor-hotplug-restore.sh"
+    run_bg_once "lid-lock.sh" "lid lock watcher" "$CONFIG_HOME/hypr/scripts/lid-lock.sh"
+    run_once "gtk.sh" "GTK settings" "$CONFIG_HOME/hypr/scripts/gtk.sh"
+
+    has_cmd xdg-user-dirs-update && xdg-user-dirs-update >> "$LOG_FILE" 2>&1 || true
+}
+
+start_ui() {
+    log "start ui"
+
+    run_bg_once "awww-daemon" "awww daemon" awww-daemon
+    systemctl_user start skwd-daemon.service
+    run_once "wallpaper-init.sh" "wallpaper init" "$CONFIG_HOME/hypr/scripts/wallpaper-init.sh"
+
+    run_bg_once "quickshell.*TopBar.qml" "Quickshell topbar" quickshell --no-duplicate -p "$CONFIG_HOME/quickshell/TopBar.qml"
+    run_bg_once "quickshell.*Main.qml" "Quickshell popups" quickshell --no-duplicate -p "$CONFIG_HOME/quickshell/Main.qml"
+    run_bg_once "qs.*overview/shell.qml" "Quickshell overview" qs --no-duplicate -p "$CONFIG_HOME/quickshell/overview/shell.qml"
+    run_bg_once "focus_daemon.py" "FocusTime daemon" python3 "$CONFIG_HOME/quickshell/focustime/focus_daemon.py"
+
+    run_bg_once "elephant$" "Elephant launcher backend" elephant
+    run_bg_once "walker --gapplication-service" "Walker service" walker --gapplication-service
+    run_bg_once "swayosd-server$" "SwayOSD" swayosd-server
+}
+
+stop_pattern() {
+    local pattern="$1"
+    local label="$2"
+
+    if pgrep -f "$pattern" >/dev/null 2>&1; then
+        pkill -f "$pattern" >/dev/null 2>&1 || true
+        log "stopped: $label"
+    fi
+}
+
+stop_session() {
+    log "stop"
+
+    stop_pattern "quickshell.*$CONFIG_HOME/quickshell/TopBar.qml" "Quickshell topbar"
+    stop_pattern "quickshell.*$CONFIG_HOME/quickshell/Main.qml" "Quickshell popups"
+    stop_pattern "qs.*$CONFIG_HOME/quickshell/overview/shell.qml" "Quickshell overview"
+    stop_pattern "focus_daemon.py" "FocusTime daemon"
+    stop_pattern "walker --gapplication-service" "Walker service"
+    stop_pattern "elephant$" "Elephant"
+    stop_pattern "swayosd-server$" "SwayOSD"
+    stop_pattern "swaync$" "SwayNC"
+    stop_pattern "hypridle$" "hypridle"
+    stop_pattern "awww-daemon" "awww daemon"
+    stop_pattern "wl-paste --type text --watch cliphist store" "cliphist text watcher"
+    stop_pattern "wl-paste --type image --watch cliphist store" "cliphist image watcher"
+    stop_pattern "monitor-hotplug-restore.sh" "monitor hotplug restore"
+    stop_pattern "lid-lock.sh" "lid lock watcher"
+    systemctl_user stop skwd-daemon.service
+}
+
+status_session() {
+    local patterns=(
+        "quickshell.*TopBar.qml"
+        "quickshell.*Main.qml"
+        "qs.*overview/shell.qml"
+        "focus_daemon.py"
+        "walker --gapplication-service"
+        "swaync$"
+        "hypridle$"
+        "awww-daemon"
+    )
+
+    local pattern
+    for pattern in "${patterns[@]}"; do
+        if pgrep -f "$pattern" >/dev/null 2>&1; then
+            printf 'running: %s\n' "$pattern"
+        else
+            printf 'stopped: %s\n' "$pattern"
+        fi
+    done
+}
+
+case "${1:-start}" in
+    start)
+        start_core
+        start_ui
+        ;;
+    start-core)
+        start_core
+        ;;
+    start-ui)
+        start_ui
+        ;;
+    stop)
+        stop_session
+        ;;
+    restart)
+        stop_session
+        start_core
+        start_ui
+        ;;
+    status)
+        status_session
+        ;;
+    *)
+        printf 'Gebruik: %s [start|start-core|start-ui|stop|restart|status]\n' "$0" >&2
+        exit 2
+        ;;
+esac

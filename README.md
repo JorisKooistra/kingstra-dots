@@ -191,6 +191,27 @@ echo "ENABLE_FINGERPRINT=false" > my-overrides.conf
 bash install.sh --override my-overrides.conf
 ```
 
+### Uninstall
+
+Kingstra-owned autostart runs through one entrypoint:
+
+```bash
+~/.local/bin/kingstra-session-start
+```
+
+To remove Kingstra-owned symlinks, stop its session processes, and optionally restore the newest
+installer backup:
+
+```bash
+./uninstall.sh
+./uninstall.sh --dry-run
+./uninstall.sh --restore latest
+```
+
+The uninstaller does not remove packages. It only disables Kingstra user services, removes paths
+listed in `manifest/owned-paths.txt` when they are clearly owned by this repo, and can restore from
+`~/.local/share/kingstra/backups/`.
+
 ### Requirements
 
 - Arch Linux (pacman)
@@ -234,6 +255,7 @@ An AUR helper is no longer a manual prerequisite for the bootstrap flow: when mi
 | `~/.config/matugen/` | Matugen templates |
 | `~/.config/kingstra-dots/` | This repo |
 | `~/.local/bin/kingstra-*` | Installer scripts |
+| `~/.local/bin/kingstra-session-start` | Kingstra session autostart entrypoint |
 | `~/.local/share/kingstra/` | Logs, backups, markers |
 | `~/Pictures/Wallpapers/` | Wallpapers |
 

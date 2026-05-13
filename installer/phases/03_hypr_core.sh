@@ -59,6 +59,7 @@ _phase03_deploy_configs() {
     # Git bewaart executable bits, maar expliciet zetten voorkomt stille regressies
     # na handmatige kopieën of filesystems die modebits verliezen.
     _phase03_prepare_hypr_scripts
+    _phase03_deploy_session_entrypoint
 
     # GTK-instellingen schrijven (niet via symlink, direct in home)
     _phase03_apply_gtk_settings
@@ -93,6 +94,21 @@ _phase03_prepare_hypr_scripts() {
     done
 }
 
+_phase03_deploy_session_entrypoint() {
+    local script_src="$REPO_ROOT/config/shared/scripts/kingstra-session-start"
+    local script_dest="$HOME/.local/bin/kingstra-session-start"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Sessie-entrypoint zou worden gedeployed: $script_dest"
+        return 0
+    fi
+
+    ensure_dir "$HOME/.local/bin"
+    deploy_link "$script_src" "$script_dest"
+    chmod +x "$script_src"
+    log_ok "Sessie-entrypoint beschikbaar als: kingstra-session-start"
+}
+
 _phase03_apply_gtk_settings() {
     if "${DRY_RUN:-false}"; then
         log_dry "GTK-instellingen zouden worden toegepast"
@@ -102,6 +118,10 @@ _phase03_apply_gtk_settings() {
     local gtk3_dir="$HOME/.config/gtk-3.0"
     local gtk4_dir="$HOME/.config/gtk-4.0"
     local gtkrc="$HOME/.gtkrc-2.0"
+
+    backup_path "$gtk3_dir/settings.ini"
+    backup_path "$gtk4_dir/settings.ini"
+    backup_path "$gtkrc"
 
     ensure_dir "$gtk3_dir"
     ensure_dir "$gtk4_dir"
@@ -153,6 +173,7 @@ _phase03_configure_portals() {
         return 0
     fi
 
+    backup_path "$portal_conf"
     ensure_dir "$(dirname "$portal_conf")"
     cat > "$portal_conf" <<'EOF'
 [preferred]
@@ -180,5 +201,6 @@ _phase03_validate() {
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"       "lid-lock.sh"
     validate_file "$HOME/.config/hypr/scripts/monitor-hotplug-restore.sh" "monitor-hotplug-restore.sh"
     validate_file "$HOME/.config/hypr/scripts/tablet-mode.sh"    "tablet-mode.sh"
+    validate_file "$HOME/.local/bin/kingstra-session-start" "kingstra-session-start"
     validate_report
 }

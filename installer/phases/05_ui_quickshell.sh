@@ -46,7 +46,7 @@ _phase05_write_autostart_ui() {
     local autostart_ui="$REPO_ROOT/config/hypr/conf.d/71-autostart-ui.conf"
 
     if "${DRY_RUN:-false}"; then
-        log_dry "71-autostart-ui.conf zou worden aangemaakt"
+        log_dry "71-autostart-ui.conf zou worden bijgewerkt"
         return 0
     fi
 
@@ -54,39 +54,12 @@ _phase05_write_autostart_ui() {
 # =============================================================================
 # 71-autostart-ui.conf — UI-laag autostart (aangemaakt door fase 5)
 # =============================================================================
-
-# ---------------------------------------------------------------------------
-# Wallpaper daemons
-# ---------------------------------------------------------------------------
-exec-once = awww-daemon
-exec-once = systemctl --user start skwd-daemon.service
-exec-once = ~/.config/hypr/scripts/wallpaper-init.sh
-
-# ---------------------------------------------------------------------------
-# Quickshell — topbar (één per scherm) en popup master window
-# ---------------------------------------------------------------------------
-exec-once = quickshell --no-duplicate -p ~/.config/quickshell/TopBar.qml
-exec-once = quickshell --no-duplicate -p ~/.config/quickshell/Main.qml
-exec-once = qs --no-duplicate -p ~/.config/quickshell/overview/shell.qml
-
-# ---------------------------------------------------------------------------
-# FocusTime tracker
-# ---------------------------------------------------------------------------
-exec-once = python3 ~/.config/quickshell/focustime/focus_daemon.py
-
-# ---------------------------------------------------------------------------
-# Launcher daemon (elephant + walker)
-# elephant moet vóór walker starten (datasource backend)
-# ---------------------------------------------------------------------------
-exec-once = elephant
-exec-once = walker --gapplication-service
-
-# ---------------------------------------------------------------------------
-# OSD daemon (volume/brightness overlay via SwayOSD)
-# ---------------------------------------------------------------------------
-exec-once = swayosd-server
+# UI-processen worden gestart door:
+#   ~/.local/bin/kingstra-session-start start-ui
+#
+# Dit bestand blijft bestaan als compatibele include voor hyprland.conf.
 EOF
-    log_ok "71-autostart-ui.conf aangemaakt"
+    log_ok "71-autostart-ui.conf bijgewerkt"
 
     # Zorg dat hyprland.conf het bestand ook inlaadt
     local hyprconf="$REPO_ROOT/config/hypr/hyprland.conf"
@@ -113,7 +86,18 @@ _phase05_activate_widget_binds() {
 
 _phase05_apply_live() {
     reload_hyprland_live "Quickshell autostart en widget-binds"
-    start_quickshell_path_live "$HOME/.config/quickshell/overview/shell.qml" "Quickshell overview"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Kingstra UI-entrypoint zou live starten"
+        return 0
+    fi
+
+    if command -v kingstra-session-start >/dev/null 2>&1; then
+        kingstra-session-start start-ui >/dev/null 2>&1 || \
+            log_warn "Kingstra UI-entrypoint kon niet live starten"
+    else
+        start_quickshell_path_live "$HOME/.config/quickshell/overview/shell.qml" "Quickshell overview"
+    fi
 }
 
 _phase05_validate() {

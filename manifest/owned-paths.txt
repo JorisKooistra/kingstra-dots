@@ -1,0 +1,53 @@
+# =============================================================================
+# manifest/owned-paths.txt — Paden die uninstall.sh mag beheren
+# =============================================================================
+# Formaat: pad|modus
+#
+# Modus:
+#   symlink      Alleen verwijderen als het pad een symlink is naar deze repo
+#   file         Bestand/symlink verwijderen als het Kingstra-owned is
+#   dir          Directory/symlink verwijderen als het Kingstra-owned is
+#
+# Expansie:
+#   ~ wordt vervangen door $HOME
+# =============================================================================
+
+~/.config/hypr|symlink
+~/.config/quickshell|symlink
+~/.config/kitty|symlink
+~/.config/zsh|symlink
+~/.config/matugen|symlink
+~/.config/swaync|symlink
+~/.config/walker|symlink
+~/.config/yazi|symlink
+~/.config/hypridle|symlink
+~/.config/fastfetch|symlink
+~/.config/cava|symlink
+~/.config/btop|symlink
+~/.config/qt6ct|symlink
+~/.config/kingstra|symlink
+~/.config/wallpaper|symlink
+
+~/.local/bin/kingstra-theme-apply|symlink
+~/.local/bin/kingstra-theme-switch|symlink
+~/.local/bin/kingstra-theme-read|symlink
+~/.local/bin/kingstra-theme-update|symlink
+~/.local/bin/kingstra-state-read|symlink
+~/.local/bin/kingstra-state-write|symlink
+~/.local/bin/kingstra-session-start|symlink
+~/.local/bin/kingstra-session-update|symlink
+~/.local/bin/kingstra-mode-switch|symlink
+~/.local/bin/kingstra-mode-read|symlink
+~/.local/bin/kingstra-color-transform|symlink
+~/.local/bin/kingstra-matugen-run|symlink
+~/.local/bin/kingstra-touch-detect|symlink
+~/.local/bin/kingstra-wallhaven-tags|symlink
+~/.local/bin/kingstra-wallpaper|symlink
+~/.local/bin/kingstra-skwd-wallpaper-sync|symlink
+~/.local/bin/apply-shell-state|symlink
+
+~/.config/systemd/user/kingstra-resume.service|symlink
+~/.config/systemd/user/kingstra-lid-lock.service|symlink
+~/.config/systemd/user/skwd-daemon.service.d/10-kingstra-overlay.conf|file
+~/.local/share/kingstra/skwd-wall-overlay|dir
+~/.local/share/kingstra/install-complete|file

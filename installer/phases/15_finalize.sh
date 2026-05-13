@@ -87,6 +87,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/matugen/config.toml"                  "matugen/config.toml"
     validate_file "$HOME/.local/bin/kingstra-theme-apply"              "kingstra-theme-apply"
     validate_file "$HOME/.local/bin/kingstra-matugen-run"              "kingstra-matugen-run"
+    validate_file "$HOME/.local/bin/kingstra-session-start"            "kingstra-session-start"
     validate_file "$HOME/.local/bin/kingstra-theme-update"             "kingstra-theme-update"
     validate_file "$HOME/.local/bin/kingstra-touch-detect"             "kingstra-touch-detect"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"                "kingstra-wallpaper"
@@ -122,6 +123,8 @@ _phase15_validate_links() {
                   "$cfg/shared/scripts/kingstra-theme-update.py"  "kingstra-theme-update"
     validate_link "$HOME/.local/bin/kingstra-matugen-run" \
                   "$cfg/shared/scripts/kingstra-matugen-run"  "kingstra-matugen-run"
+    validate_link "$HOME/.local/bin/kingstra-session-start" \
+                  "$cfg/shared/scripts/kingstra-session-start"  "kingstra-session-start"
     validate_link "$HOME/.local/bin/kingstra-touch-detect" \
                   "$cfg/shared/scripts/kingstra-touch-detect"  "kingstra-touch-detect"
     validate_link "$HOME/.local/bin/kingstra-wallpaper" \
@@ -149,6 +152,7 @@ _phase15_write_marker() {
         echo "Tablet mode: ${ENABLE_TABLET_MODE:-false}"
         echo "Fingerprint: ${DETECT_HAS_FINGERPRINT:-false}"
         echo "Repo:        $REPO_ROOT"
+        echo "Backup:      ${BACKUP_DIR:-}"
     } > "$marker_file"
 
     log_ok "Installatie-marker geschreven: $marker_file"
@@ -177,9 +181,11 @@ _phase15_print_next_steps() {
     printf '  kingstra-wallpaper set <bestand>   Wallpaper + Matugen-kleuren\n'
     printf '  kingstra-wallpaper random          Willekeurig wallpaper\n'
     printf '  kingstra-wallpaper pick            Interactieve kiezer (fzf)\n'
+    printf '  kingstra-session-start status      Sessieprocessen controleren\n'
     printf '  kingstra-theme-apply --reload      Kleuren hertoepassen\n'
     printf '  qs ipc call stats toggle           Systeem-popup\n'
     printf '  qs ipc call power toggle           Power-menu\n'
+    printf '  ./uninstall.sh --restore latest    Kingstra verwijderen + backup herstellen\n'
     printf '\n'
     printf '\033[1mLog:\033[0m    ~/.local/share/kingstra/install.log\n'
     printf '\033[1mBackups:\033[0m ~/.local/share/kingstra/backups/\n'

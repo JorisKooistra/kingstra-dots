@@ -131,6 +131,7 @@ _phase08_deploy_state_scripts() {
     local -A state_scripts=(
         ["kingstra-state-read"]="kingstra-state-read"
         ["kingstra-state-write"]="kingstra-state-write"
+        ["kingstra-session-start"]="kingstra-session-start"
         ["kingstra-session-update"]="kingstra-session-update"
         ["apply-shell-state"]="apply-shell-state"
         ["kingstra-color-transform"]="kingstra-color-transform"
@@ -147,7 +148,7 @@ _phase08_deploy_state_scripts() {
         chmod +x "$src"
     done
 
-    log_ok "State-scripts beschikbaar: kingstra-state-read/write, kingstra-session-update, apply-shell-state, kingstra-color-transform, kingstra-matugen-run, kingstra-touch-detect, kingstra-wallhaven-tags"
+    log_ok "State-scripts beschikbaar: kingstra-state-read/write, kingstra-session-start/update, apply-shell-state, kingstra-color-transform, kingstra-matugen-run, kingstra-touch-detect, kingstra-wallhaven-tags"
 }
 
 _phase08_deploy_mode_scripts() {

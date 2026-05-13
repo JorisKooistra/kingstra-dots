@@ -75,6 +75,7 @@ _phase09_write_skwd_wall_config() {
 
     if [[ -f "$config_dest" ]]; then
         log_info "skwd-wall config.json bestaat al — matugen integratie uitschakelen voor centrale Kingstra pipeline"
+        backup_path "$config_dest"
         _phase09_disable_skwd_matugen "$config_dest"
         return 0
     fi
