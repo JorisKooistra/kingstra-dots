@@ -18,6 +18,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 DEFAULT_WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
+SKWD_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 STATE_FILE="$CACHE_DIR/last-wallpaper"
 IMAGE_STATE_FILE="$CACHE_DIR/last-image-wallpaper"
@@ -58,6 +59,22 @@ _resolve_wallpaper_dir() {
 
     if [[ -z "$cfg_dir" ]]; then
         cfg_dir="$DEFAULT_WALLPAPER_DIR"
+    fi
+
+    cfg_dir="$(_expand_user_path "$cfg_dir")"
+    [[ "$cfg_dir" = /* ]] || cfg_dir="$HOME/$cfg_dir"
+    echo "$(realpath -m "$cfg_dir")"
+}
+
+_resolve_video_wallpaper_dir() {
+    local cfg_dir=""
+
+    if [[ -f "$SKWD_CONFIG" ]] && command -v jq &>/dev/null; then
+        cfg_dir="$(jq -r '.paths.videoWallpaper // ""' "$SKWD_CONFIG" 2>/dev/null || echo "")"
+    fi
+
+    if [[ -z "$cfg_dir" ]]; then
+        cfg_dir="$WALLPAPER_DIR/video"
     fi
 
     cfg_dir="$(_expand_user_path "$cfg_dir")"
@@ -121,6 +138,7 @@ _monitors() {
 }
 
 WALLPAPER_DIR="$(_resolve_wallpaper_dir)"
+VIDEO_WALLPAPER_DIR="$(_resolve_video_wallpaper_dir)"
 
 # ---------------------------------------------------------------------------
 # Backend: statisch (awww)
@@ -222,6 +240,83 @@ _update_wallpaper_json() {
     _log "wallpaper.json bijgewerkt: $(basename "$file")"
 }
 
+_sync_skwd_current_wallpaper() {
+    local file="$1" mode="${2:-static}"
+    [[ -n "$file" && -f "$file" ]] || return 0
+
+    mkdir -p "$SKWD_CACHE"
+    if command -v jq &>/dev/null; then
+        jq -n --arg path "$file" --arg type "$mode" \
+            '{"path":$path,"type":$type}' \
+            > "$SKWD_CACHE/last-wallpaper.json" 2>/dev/null || true
+    fi
+}
+
+_apply_skwd_wallpaper() {
+    local name="$1" file="$2" mode="$3"
+    local payload
+
+    command -v skwd >/dev/null 2>&1 || return 1
+    command -v jq >/dev/null 2>&1 || return 1
+
+    payload="$(jq -cn --arg name "$name" --arg path "$file" --arg type "$mode" \
+        '{name:$name,path:$path,type:$type}')"
+    skwd wall apply "$payload" >/dev/null 2>&1 || return 1
+
+    _save_state "$file" "$mode"
+    _update_wallpaper_json "$file"
+    _sync_skwd_current_wallpaper "$file" "$mode"
+    _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
+
+    local APPLY="${HOME}/.local/bin/apply-shell-state"
+    if [[ -f "$APPLY" ]]; then
+        _run_helper "$APPLY" --wallpaper "$file"
+    else
+        _notify "Wallpaper ingesteld" "$(basename "$file")"
+    fi
+    _cache_wallhaven_tags "$file"
+}
+
+_cmd_random_via_skwd() {
+    local mode="$1" want_type entry name file
+
+    command -v skwd >/dev/null 2>&1 || return 1
+    command -v jq >/dev/null 2>&1 || return 1
+
+    if [[ "$mode" == "video" ]]; then
+        want_type="video"
+    else
+        want_type="static"
+    fi
+
+    entry="$(
+        skwd wall list 2>/dev/null \
+            | jq -r --arg type "$want_type" \
+                    --arg wallpaper_dir "$WALLPAPER_DIR" \
+                    --arg video_dir "$VIDEO_WALLPAPER_DIR" '
+                .wallpapers[]?
+                | select(.type == $type)
+                | select((.name // "") != "")
+                | [
+                    .name,
+                    (if .type == "video" then
+                        ((.video_file // "") as $vf | if $vf != "" then $vf else ($video_dir + "/" + .name) end)
+                      else
+                        ($wallpaper_dir + "/" + .name)
+                      end)
+                  ]
+                | @tsv
+            ' \
+            | shuf -n 1
+    )" || return 1
+
+    [[ -n "$entry" ]] || return 1
+    IFS=$'\t' read -r name file <<< "$entry"
+    [[ -n "$name" && -f "$file" ]] || return 1
+
+    _apply_skwd_wallpaper "$name" "$file" "$mode"
+}
+
 # ---------------------------------------------------------------------------
 # Commando's
 # ---------------------------------------------------------------------------
@@ -272,6 +367,12 @@ cmd_video() {
 cmd_random() {
     local video_mode=false
     [[ "${1:-}" == "--video" ]] && video_mode=true
+
+    if $video_mode; then
+        _cmd_random_via_skwd "video" && return 0
+    else
+        _cmd_random_via_skwd "static" && return 0
+    fi
 
     # Bouw zoekpatroon
     local find_args=(-maxdepth 3 -type f)

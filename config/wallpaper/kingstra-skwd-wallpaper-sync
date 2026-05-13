@@ -106,7 +106,18 @@ _sync_skwd_config() {
          | .features.wallhaven = true
          | .monitor = $monitor
          | .matugen.schemeType = $scheme
-         | .matugen.mode = $mode' \
+         | .matugen.mode = $mode
+         | .postProcessing = (
+             (.postProcessing // [])
+             | map(select(
+                 if type == "string" then
+                     contains("apply-shell-state --wallpaper %path%") | not
+                 else
+                     ((.command // "") | contains("apply-shell-state --wallpaper %path%") | not)
+                 end
+             ))
+             + [{"command":"~/.local/bin/apply-shell-state --wallpaper %path%","type":"static"}]
+         )' \
         "$SKWD_CONFIG" > "$tmp_file" 2>/dev/null; then
         mv "$tmp_file" "$SKWD_CONFIG"
     else

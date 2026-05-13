@@ -128,6 +128,9 @@ _phase09_write_skwd_wall_config() {
         }
     },
     "wallpaperMute": true,
+    "postProcessing": [
+        { "command": "~/.local/bin/apply-shell-state --wallpaper %path%", "type": "static" }
+    ],
     "performance": {
         "imageOptimizePreset": "balanced",
         "imageOptimizeResolution": "2k"
@@ -218,6 +221,17 @@ _phase09_disable_skwd_matugen() {
         .features.matugen = false
         | .features.wallhaven = true
         | .matugen.schemeType = "scheme-tonal-spot"
+        | .postProcessing = (
+            (.postProcessing // [])
+            | map(select(
+                if type == "string" then
+                    contains("apply-shell-state --wallpaper %path%") | not
+                else
+                    ((.command // "") | contains("apply-shell-state --wallpaper %path%") | not)
+                end
+            ))
+            + [{"command":"~/.local/bin/apply-shell-state --wallpaper %path%","type":"static"}]
+        )
     ' "$config_file" > "$tmp_file" 2>/dev/null; then
         mv "$tmp_file" "$config_file"
         log_ok "skwd-wall matugen integratie uitgeschakeld: $config_file"
