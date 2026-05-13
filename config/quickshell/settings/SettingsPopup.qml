@@ -111,6 +111,7 @@ Item {
     property string currentPowerProfileText: "balanced"
     property string updateStatusText: "Nog niet gecontroleerd"
     property string advancedStatusText: "Klaar"
+    property bool showUninstallConfirm: false
     readonly property string monitorRestoreScript: Quickshell.env("HOME") + "/.config/hypr/scripts/monitor-hotplug-restore.sh"
     readonly property string workspaceMonitorScript: Quickshell.env("HOME") + "/.config/hypr/scripts/workspace-monitor-assignments.sh"
     readonly property string tabletModeScript: Quickshell.env("HOME") + "/.config/hypr/scripts/tablet-mode.sh"
@@ -2060,6 +2061,25 @@ Item {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
     }
 
+    function runUninstallFlow(noRestore) {
+        var uninstallArg = noRestore ? "--no-restore" : "";
+        var command =
+            "marker=\"${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/install-complete\"; " +
+            "repo=\"\"; " +
+            "if [ -f \"$marker\" ]; then repo=\"$(sed -n 's/^Repo:[[:space:]]*//p' \"$marker\" | head -n 1)\"; fi; " +
+            "if [ -z \"$repo\" ]; then repo=\"$HOME/kingstra-dots\"; fi; " +
+            "if [ ! -x \"$repo/uninstall.sh\" ]; then echo \"uninstall.sh niet gevonden in: $repo\"; exit 1; fi; " +
+            "cd \"$repo\" && ./uninstall.sh " + uninstallArg;
+        advancedStatusText = noRestore ? "Uninstall zonder restore gestart" : "Uninstall met restore gestart";
+        showUninstallConfirm = false;
+        Quickshell.execDetached(["kitty", "--hold", "bash", "-lc", command]);
+        notify("Advanced", noRestore ? "Uninstall zonder restore gestart" : "Uninstall met restore gestart");
+        introContent = 0.0;
+        introSidebar = 0.0;
+        introBase = 0.0;
+        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
+    }
+
     // -------------------------------------------------------------------------
     // BACKGROUND
     // -------------------------------------------------------------------------
@@ -3838,6 +3858,30 @@ Item {
                         SettingsActionButton { label: "Quickshell herstart"; icon: "󰜉"; accent: root.peach; onTriggered: root.restartQuickshell() }
                         SettingsActionButton { label: "Matugen render"; icon: "󰏘"; accent: root.mauve; onTriggered: root.rerenderTheme() }
                         SettingsActionButton { label: "Alle status verversen"; icon: "󰑓"; accent: root.green; onTriggered: root.refreshOperationalStatus() }
+                        SettingsActionButton {
+                            label: root.showUninstallConfirm ? "Uninstall gekozen" : "Kingstra uninstall"
+                            icon: "󰆴"
+                            accent: root.red
+                            primary: root.showUninstallConfirm
+                            onTriggered: root.showUninstallConfirm = !root.showUninstallConfirm
+                        }
+                    }
+
+                    SettingsInfoCard {
+                        visible: root.showUninstallConfirm
+                        title: "Uninstall bevestigen"
+                        icon: "󰅚"
+                        accent: root.red
+                        value: "Dit opent uninstall.sh in Kitty. Met restore zet het de gekoppelde install-backup terug; zonder restore verwijdert het alleen Kingstra-beheerde bestanden."
+                    }
+
+                    Flow {
+                        visible: root.showUninstallConfirm
+                        Layout.fillWidth: true
+                        spacing: root.s(10)
+                        SettingsActionButton { label: "Met restore"; icon: "󰁯"; accent: root.green; primary: true; onTriggered: root.runUninstallFlow(false) }
+                        SettingsActionButton { label: "Zonder restore"; icon: "󰆴"; accent: root.peach; onTriggered: root.runUninstallFlow(true) }
+                        SettingsActionButton { label: "Annuleren"; icon: "󰜺"; accent: root.blue; onTriggered: root.showUninstallConfirm = false }
                     }
 
                     GridLayout {
