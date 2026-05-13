@@ -206,11 +206,17 @@ installer backup:
 ./uninstall.sh
 ./uninstall.sh --dry-run
 ./uninstall.sh --restore latest
+./uninstall.sh --no-restore
 ```
 
-The uninstaller does not remove packages. It only disables Kingstra user services, removes paths
-listed in `manifest/owned-paths.txt` when they are clearly owned by this repo, and can restore from
-`~/.local/share/kingstra/backups/`.
+By default, the uninstaller tries to restore the backup that belongs to the active installation
+(read from `~/.local/share/kingstra/install-complete`, otherwise it falls back to the newest backup).
+It restores backed-up user files, restores backed-up `/etc` files such as PAM/SDDM config when
+available, disables Kingstra user services, and removes Kingstra-owned paths listed in
+`manifest/owned-paths.txt`.
+
+The uninstaller still does not remove packages. Use `--no-restore` if you only want to remove
+Kingstra-managed files without restoring the captured backup.
 
 ### Requirements
 

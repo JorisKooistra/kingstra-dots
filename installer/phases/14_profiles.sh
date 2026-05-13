@@ -205,9 +205,15 @@ _phase14_laptop_features() {
     if [[ "${ENABLE_BRIGHTNESS_CONTROL:-false}" == "true" ]]; then
         pacman_install brightnessctl
         if ! "${DRY_RUN:-false}"; then
-            # Geef gebruiker schrijftoegang zonder sudo
-            sudo usermod -aG video "$USER" 2>/dev/null && \
-                log_ok "Gebruiker toegevoegd aan groep 'video' (brightnessctl)" || true
+            if id -nG "$USER" 2>/dev/null | grep -qw video; then
+                backup_metadata_set "USER_WAS_IN_VIDEO_GROUP" "true"
+                log_info "Gebruiker zit al in groep 'video'"
+            else
+                backup_metadata_set "USER_WAS_IN_VIDEO_GROUP" "false"
+                # Geef gebruiker schrijftoegang zonder sudo
+                sudo usermod -aG video "$USER" 2>/dev/null && \
+                    log_ok "Gebruiker toegevoegd aan groep 'video' (brightnessctl)" || true
+            fi
         fi
     fi
 
@@ -364,6 +370,8 @@ _phase14_pam_enable_sddm_fingerprint() {
         return 0
     fi
 
+    backup_system_path "$pam_file"
+
     # SDDM uses a single serialized PAM conversation. Put password first so a
     # typed password can complete without waiting for fprintd; empty-password
     # login attempts fall through to fingerprint.
@@ -390,6 +398,8 @@ _phase14_pam_enable_fprintd() {
         log_warn "PAM-bestand ontbreekt: $pam_file ($label)"
         return 0
     fi
+
+    backup_system_path "$pam_file"
 
     # Ensure exactly one pam_fprintd auth line, then place it at the top.
     if sudo sed -i -E '/^[[:space:]]*auth[[:space:]]+.*pam_fprintd\.so([[:space:]].*)?$/d' "$pam_file" 2>/dev/null && \

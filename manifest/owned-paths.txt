@@ -49,5 +49,12 @@
 ~/.config/systemd/user/kingstra-resume.service|symlink
 ~/.config/systemd/user/kingstra-lid-lock.service|symlink
 ~/.config/systemd/user/skwd-daemon.service.d/10-kingstra-overlay.conf|file
+~/.config/skwd-wall/config.json|file
+~/.config/hyprlock/hyprlock.conf|file
+~/.config/xdg-desktop-portal/portals.conf|file
+~/.config/gtk-3.0/settings.ini|file
+~/.config/gtk-4.0/settings.ini|file
+~/.gtkrc-2.0|file
 ~/.local/share/kingstra/skwd-wall-overlay|dir
 ~/.local/share/kingstra/install-complete|file
+~/.cache/kingstra|dir

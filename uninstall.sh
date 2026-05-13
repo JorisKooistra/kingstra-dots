@@ -7,9 +7,17 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST="$REPO_ROOT/manifest/owned-paths.txt"
 BACKUP_BASE="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/backups"
+INSTALL_MARKER="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/install-complete"
+BACKUP_SYSTEM_SUBDIR="system"
+BACKUP_METADATA_NAME="metadata.env"
+
 DRY_RUN=false
 YES=false
+NO_RESTORE=false
 RESTORE_BACKUP=""
+SELECTED_BACKUP=""
+METADATA_PREVIOUS_SHELL=""
+METADATA_USER_WAS_IN_VIDEO_GROUP=""
 
 usage() {
     cat <<EOF
@@ -20,12 +28,19 @@ Opties:
   --yes, -y                 Bevestigingsvragen overslaan
   --restore latest          Herstel de nieuwste installer-backup na verwijderen
   --restore PAD             Herstel een specifieke backup-map
+  --no-restore              Alleen Kingstra-bestanden verwijderen, geen backups terugzetten
   --help, -h                Dit helpbericht tonen
+
+Standaardgedrag:
+  Zonder --no-restore probeert de uninstaller automatisch de backup van de
+  huidige installatie terug te zetten (gelezen uit install-complete of anders
+  de nieuwste backup-map).
 
 Voorbeelden:
   ./uninstall.sh
   ./uninstall.sh --dry-run
   ./uninstall.sh --restore latest
+  ./uninstall.sh --no-restore
 EOF
 }
 
@@ -75,6 +90,10 @@ parse_args() {
                 [[ -n "$RESTORE_BACKUP" ]] || { warn "--restore vereist een waarde"; exit 2; }
                 shift 2
                 ;;
+            --no-restore)
+                NO_RESTORE=true
+                shift
+                ;;
             --help|-h)
                 usage
                 exit 0
@@ -102,6 +121,16 @@ path_points_into_repo() {
     [[ -n "$target" && "$target" == "$REPO_ROOT"* ]]
 }
 
+file_has_all() {
+    local path="$1"
+    shift
+
+    local needle
+    for needle in "$@"; do
+        grep -Fq "$needle" "$path" 2>/dev/null || return 1
+    done
+}
+
 is_kingstra_file() {
     local path="$1"
     local base
@@ -110,6 +139,53 @@ is_kingstra_file() {
     [[ "$base" == kingstra-* ]] && return 0
     [[ "$path" == "$HOME/.config/systemd/user/skwd-daemon.service.d/10-kingstra-overlay.conf" ]] && return 0
     [[ "$path" == "$HOME/.local/share/kingstra/install-complete" ]] && return 0
+
+    case "$path" in
+        "$HOME/.config/xdg-desktop-portal/portals.conf")
+            file_has_all "$path" \
+                "default=hyprland;gtk" \
+                "org.freedesktop.impl.portal.Screenshot=hyprland" \
+                "org.freedesktop.impl.portal.ScreenCast=hyprland"
+            return $?
+            ;;
+        "$HOME/.config/skwd-wall/config.json")
+            file_has_all "$path" \
+                '"wallpaper": "~/Pictures/Wallpapers"' \
+                '"matugen": false' \
+                '"compositor": "hyprland"'
+            return $?
+            ;;
+        "$HOME/.config/hyprlock/hyprlock.conf")
+            grep -Fq "hyprlock.conf — Gegenereerd door matugen. Pas dit bestand NIET aan." "$path" 2>/dev/null && return 0
+            grep -Fq "hyprlock.conf — Catppuccin Mocha fallback" "$path" 2>/dev/null && return 0
+            return 1
+            ;;
+        "$HOME/.config/gtk-3.0/settings.ini")
+            file_has_all "$path" \
+                "gtk-theme-name=adw-gtk3-dark" \
+                "gtk-icon-theme-name=Papirus-Dark" \
+                "gtk-font-name=Fira Sans 11" \
+                "gtk-cursor-theme-name=Bibata-Modern-Classic"
+            return $?
+            ;;
+        "$HOME/.config/gtk-4.0/settings.ini")
+            file_has_all "$path" \
+                "gtk-theme-name=adw-gtk3-dark" \
+                "gtk-icon-theme-name=Papirus-Dark" \
+                "gtk-font-name=Fira Sans 11" \
+                "gtk-cursor-theme-name=Bibata-Modern-Classic"
+            return $?
+            ;;
+        "$HOME/.gtkrc-2.0")
+            file_has_all "$path" \
+                'gtk-theme-name="adw-gtk3-dark"' \
+                'gtk-icon-theme-name="Papirus-Dark"' \
+                'gtk-font-name="Fira Sans 11"' \
+                'gtk-cursor-theme-name="Bibata-Modern-Classic"'
+            return $?
+            ;;
+    esac
+
     return 1
 }
 
@@ -117,6 +193,7 @@ is_kingstra_dir() {
     local path="$1"
 
     [[ "$path" == "$HOME/.local/share/kingstra/skwd-wall-overlay" ]] && return 0
+    [[ "$path" == "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra" ]] && return 0
     path_points_into_repo "$path"
 }
 
@@ -148,6 +225,7 @@ disable_user_services() {
     command -v systemctl >/dev/null 2>&1 || return 0
 
     log "Kingstra user-services uitschakelen"
+    local unit
     for unit in kingstra-resume.service kingstra-lid-lock.service skwd-daemon.service; do
         if "$DRY_RUN"; then
             run systemctl --user disable --now "$unit"
@@ -204,13 +282,20 @@ remove_owned_paths() {
                 ;;
         esac
     done < "$MANIFEST"
-
-    return 0
 }
 
 latest_backup() {
     [[ -d "$BACKUP_BASE" ]] || return 1
     find "$BACKUP_BASE" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1
+}
+
+install_backup_from_marker() {
+    [[ -f "$INSTALL_MARKER" ]] || return 1
+
+    local backup_dir
+    backup_dir="$(sed -n 's/^Backup:[[:space:]]*//p' "$INSTALL_MARKER" | head -n 1)"
+    [[ -n "$backup_dir" ]] || return 1
+    printf '%s\n' "$backup_dir"
 }
 
 resolve_backup() {
@@ -223,32 +308,215 @@ resolve_backup() {
     fi
 }
 
-restore_backup() {
-    local requested="$1"
-    local backup_dir
-    backup_dir="$(resolve_backup "$requested" || true)"
+select_restore_backup() {
+    local requested=""
 
-    [[ -n "$backup_dir" && -d "$backup_dir" ]] || {
-        warn "Backup niet gevonden: $requested"
-        "$DRY_RUN" && return 0
-        return 1
-    }
+    if "$NO_RESTORE"; then
+        log "Backup-herstel overgeslagen (--no-restore)"
+        return 0
+    fi
 
-    log "Backup herstellen: $backup_dir"
-    run cp -a "$backup_dir/." "$HOME/"
+    if [[ -n "$RESTORE_BACKUP" ]]; then
+        requested="$RESTORE_BACKUP"
+    else
+        requested="$(install_backup_from_marker || true)"
+        if [[ -z "$requested" ]]; then
+            requested="latest"
+        fi
+    fi
+
+    SELECTED_BACKUP="$(resolve_backup "$requested" || true)"
+    if [[ -z "$SELECTED_BACKUP" || ! -d "$SELECTED_BACKUP" ]]; then
+        if [[ -n "$RESTORE_BACKUP" ]]; then
+            warn "Opgevraagde backup niet gevonden: $RESTORE_BACKUP"
+            "$DRY_RUN" && return 0
+            exit 1
+        fi
+        warn "Geen restore-backup gevonden; uninstall gaat door zonder herstel"
+        SELECTED_BACKUP=""
+        return 0
+    fi
+
+    log "Restore-backup geselecteerd: $SELECTED_BACKUP"
 }
 
-maybe_prompt_restore() {
-    [[ -z "$RESTORE_BACKUP" ]] || return 0
-    "$YES" && return 0
+load_backup_metadata() {
+    local backup_dir="$1"
+    local metadata_file="$backup_dir/$BACKUP_METADATA_NAME"
 
-    local latest
-    latest="$(latest_backup || true)"
-    [[ -n "$latest" ]] || return 0
+    [[ -f "$metadata_file" ]] || return 0
 
-    if confirm "Nieuwste backup herstellen na uninstall? ($latest)"; then
-        RESTORE_BACKUP="$latest"
+    local PREVIOUS_SHELL=""
+    local USER_WAS_IN_VIDEO_GROUP=""
+    # shellcheck disable=SC1090
+    source "$metadata_file"
+
+    METADATA_PREVIOUS_SHELL="${PREVIOUS_SHELL:-}"
+    METADATA_USER_WAS_IN_VIDEO_GROUP="${USER_WAS_IN_VIDEO_GROUP:-}"
+}
+
+backup_has_relpath() {
+    local backup_dir="$1"
+    local rel_path="$2"
+    [[ -n "$backup_dir" ]] || return 1
+    [[ -e "$backup_dir/$rel_path" || -L "$backup_dir/$rel_path" ]]
+}
+
+restore_tree() {
+    local src_root="$1"
+    local dest_root="$2"
+    shift 2
+    local -a skip_names=("$@")
+
+    [[ -d "$src_root" ]] || return 0
+
+    local entry rel dest
+    shopt -s nullglob dotglob
+    for entry in "$src_root"/*; do
+        rel="$(basename "$entry")"
+        local skip_name
+        for skip_name in "${skip_names[@]}"; do
+            [[ -n "$skip_name" && "$rel" == "$skip_name" ]] && continue 2
+        done
+        dest="$dest_root/$rel"
+
+        if [[ -d "$entry" && ! -L "$entry" ]]; then
+            run mkdir -p "$dest"
+            run cp -a "$entry/." "$dest/"
+        else
+            run mkdir -p "$(dirname "$dest")"
+            run cp -a "$entry" "$dest"
+        fi
+    done
+    shopt -u nullglob dotglob
+}
+
+restore_home_backup() {
+    local backup_dir="$1"
+    log "Gebruikersbestanden herstellen vanuit: $backup_dir"
+    restore_tree "$backup_dir" "$HOME" "$BACKUP_SYSTEM_SUBDIR" "$BACKUP_METADATA_NAME"
+}
+
+restore_system_backup() {
+    local backup_dir="$1"
+    local system_dir="$backup_dir/$BACKUP_SYSTEM_SUBDIR"
+
+    [[ -d "$system_dir" ]] || return 0
+
+    log "Systeembestanden herstellen vanuit: $system_dir"
+
+    local entry rel dest
+    shopt -s nullglob dotglob
+    for entry in "$system_dir"/*; do
+        rel="$(basename "$entry")"
+        dest="/$rel"
+
+        if [[ -d "$entry" && ! -L "$entry" ]]; then
+            run sudo mkdir -p "$dest"
+            run sudo cp -a "$entry/." "$dest/"
+        else
+            run sudo mkdir -p "$(dirname "$dest")"
+            run sudo cp -a "$entry" "$dest"
+        fi
+    done
+    shopt -u nullglob dotglob
+}
+
+remove_system_paths() {
+    log "Kingstra systeempaden verwijderen"
+
+    local path
+    for path in \
+        "/etc/sddm.conf.d/kingstra.conf" \
+        "/usr/share/sddm/themes/kingstra"; do
+        if [[ -e "$path" || -L "$path" ]]; then
+            run sudo rm -rf "$path"
+            log "verwijderd: $path"
+        fi
+    done
+}
+
+cleanup_zshenv() {
+    local zshenv="$HOME/.zshenv"
+    local zdotdir_line='export ZDOTDIR="$HOME/.config/zsh"'
+
+    [[ -f "$zshenv" ]] || return 0
+
+    if [[ -n "$SELECTED_BACKUP" ]]; then
+        if backup_has_relpath "$SELECTED_BACKUP" ".zshenv"; then
+            return 0
+        fi
     fi
+
+    grep -Fq "$zdotdir_line" "$zshenv" 2>/dev/null || return 0
+
+    local tmp_file
+    tmp_file="$(mktemp)"
+    grep -vxF "$zdotdir_line" "$zshenv" > "$tmp_file" || true
+
+    if [[ ! -s "$tmp_file" ]]; then
+        run rm -f "$zshenv"
+        log "verwijderd: ~/.zshenv"
+    else
+        run cp "$tmp_file" "$zshenv"
+        log "ZDOTDIR-regel verwijderd uit ~/.zshenv"
+    fi
+
+    rm -f "$tmp_file"
+}
+
+cleanup_default_wallpaper() {
+    local default_src="$REPO_ROOT/assets/wallpapers/wallhaven-mlwz78.png"
+    local default_dest="$HOME/Pictures/Wallpapers/wallhaven-mlwz78.png"
+
+    [[ -f "$default_src" && -f "$default_dest" ]] || return 0
+
+    if [[ -n "$SELECTED_BACKUP" ]]; then
+        if backup_has_relpath "$SELECTED_BACKUP" "Pictures/Wallpapers/wallhaven-mlwz78.png"; then
+            return 0
+        fi
+    fi
+
+    if cmp -s "$default_src" "$default_dest"; then
+        run rm -f "$default_dest"
+        log "verwijderd: ~/Pictures/Wallpapers/wallhaven-mlwz78.png"
+    fi
+}
+
+remove_dir_if_empty() {
+    local path="$1"
+    [[ -d "$path" ]] || return 0
+    if "$DRY_RUN"; then
+        run rmdir "$path"
+        log "lege map zou worden verwijderd: ${path/#$HOME/\~}"
+        return 0
+    fi
+    rmdir "$path" 2>/dev/null && log "lege map verwijderd: ${path/#$HOME/\~}" || true
+}
+
+restore_account_state() {
+    if [[ -n "$METADATA_PREVIOUS_SHELL" ]] && command -v getent >/dev/null 2>&1; then
+        local current_shell
+        current_shell="$(getent passwd "$USER" | cut -d: -f7)"
+        if [[ -n "$current_shell" && "$current_shell" != "$METADATA_PREVIOUS_SHELL" ]]; then
+            run chsh -s "$METADATA_PREVIOUS_SHELL"
+            log "Login-shell hersteld naar: $METADATA_PREVIOUS_SHELL"
+        fi
+    fi
+
+    if [[ "$METADATA_USER_WAS_IN_VIDEO_GROUP" == "false" ]]; then
+        if id -nG "$USER" 2>/dev/null | grep -qw video; then
+            run sudo gpasswd -d "$USER" video
+            log "Gebruiker verwijderd uit groep 'video'"
+        fi
+    fi
+}
+
+cleanup_generated_paths() {
+    cleanup_zshenv
+    cleanup_default_wallpaper
+    remove_dir_if_empty "$HOME/.config/hyprlock"
+    remove_dir_if_empty "$HOME/.config/skwd-wall"
 }
 
 main() {
@@ -262,16 +530,23 @@ main() {
         exit 0
     fi
 
-    maybe_prompt_restore
+    select_restore_backup
+    [[ -n "$SELECTED_BACKUP" ]] && load_backup_metadata "$SELECTED_BACKUP"
+
     stop_session
     disable_user_services
     remove_owned_paths
+    remove_system_paths
 
-    if [[ -n "$RESTORE_BACKUP" ]]; then
-        restore_backup "$RESTORE_BACKUP"
+    if [[ -n "$SELECTED_BACKUP" ]]; then
+        restore_system_backup "$SELECTED_BACKUP"
+        restore_home_backup "$SELECTED_BACKUP"
     fi
 
-    log "Deinstallatie voltooid. Herstart of log opnieuw in om sessie-autostart volledig te verversen."
+    restore_account_state
+    cleanup_generated_paths
+
+    log "Deinstallatie voltooid. Herstart of log opnieuw in om shell, PAM en sessie volledig te verversen."
 }
 
 main "$@"

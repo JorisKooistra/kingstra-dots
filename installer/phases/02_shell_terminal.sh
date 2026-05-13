@@ -69,9 +69,11 @@ _phase02_set_default_shell() {
     # Voeg zsh toe aan /etc/shells als het er nog niet in staat
     if ! grep -qx "$zsh_path" /etc/shells; then
         log_step "zsh toevoegen aan /etc/shells..."
+        backup_system_path "/etc/shells"
         run_cmd sudo tee -a /etc/shells <<< "$zsh_path"
     fi
 
+    backup_metadata_set "PREVIOUS_SHELL" "${SHELL:-}"
     log_step "chsh -s $zsh_path"
     run_cmd chsh -s "$zsh_path"
     log_ok "Standaard shell ingesteld op: $zsh_path"

@@ -5,6 +5,8 @@
 
 BACKUP_BASE="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/backups"
 BACKUP_DIR=""
+BACKUP_SYSTEM_SUBDIR="system"
+BACKUP_METADATA_FILE=""
 
 # Alle bekende installatiedestinaties — worden pre-flight geback-upt
 _BACKUP_KNOWN_PATHS=(
@@ -28,6 +30,7 @@ _BACKUP_KNOWN_PATHS=(
     "$HOME/.config/kingstra"
     "$HOME/.config/skwd-wall"
     "$HOME/.config/xdg-desktop-portal"
+    "$HOME/.config/hyprlock"
     "$HOME/.config/gtk-3.0"
     "$HOME/.config/gtk-4.0"
     "$HOME/.config/systemd/user"
@@ -47,6 +50,8 @@ _BACKUP_KNOWN_PATHS=(
 
 backup_init() {
     BACKUP_DIR="$BACKUP_BASE/$(date '+%Y%m%d_%H%M%S')"
+    BACKUP_METADATA_FILE="$BACKUP_DIR/metadata.env"
+    export BACKUP_METADATA_FILE
     export BACKUP_DIR
     if ! "${DRY_RUN:-false}"; then
         mkdir -p "$BACKUP_DIR"
@@ -124,4 +129,65 @@ backup_paths() {
     for path in "$@"; do
         backup_path "$path"
     done
+}
+
+# Back-up van een absoluut systeempad maken in BACKUP_DIR/system/
+backup_system_path() {
+    local src="$1"
+
+    [[ "$src" == /* ]] || {
+        log_warn "Systeemback-up verwacht absoluut pad: $src"
+        return 0
+    }
+
+    if [[ ! -e "$src" && ! -L "$src" ]]; then
+        return 0
+    fi
+
+    if [[ -z "$BACKUP_DIR" ]]; then
+        backup_init
+    fi
+
+    local rel_path="${src#/}"
+    local dest="$BACKUP_DIR/$BACKUP_SYSTEM_SUBDIR/$rel_path"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Systeemback-up: $src → $dest"
+        return 0
+    fi
+
+    mkdir -p "$(dirname "$dest")"
+
+    if [[ -L "$src" ]]; then
+        cp -P "$src" "$dest"
+        log_step "Systeemback-up symlink: $src"
+    elif [[ -d "$src" ]]; then
+        cp -r "$src" "$dest"
+        log_step "Systeemback-up map: $src"
+    else
+        cp "$src" "$dest"
+        log_step "Systeemback-up bestand: $src"
+    fi
+}
+
+backup_metadata_set() {
+    local key="$1"
+    local value="${2:-}"
+
+    [[ "$key" =~ ^[A-Z0-9_]+$ ]] || {
+        log_warn "Ongeldige backup metadata sleutel: $key"
+        return 0
+    }
+
+    if [[ -z "$BACKUP_DIR" ]]; then
+        backup_init
+    fi
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Backup metadata: $key=$value"
+        return 0
+    fi
+
+    mkdir -p "$(dirname "$BACKUP_METADATA_FILE")"
+    printf '%s=%q\n' "$key" "$value" >> "$BACKUP_METADATA_FILE"
 }

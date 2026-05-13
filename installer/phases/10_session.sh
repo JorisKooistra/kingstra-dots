@@ -64,6 +64,7 @@ _phase10_install_sddm_theme() {
         return 0
     fi
 
+    backup_system_path "$theme_dest"
     sudo mkdir -p "$theme_dest"
     sudo cp -r "$theme_src/." "$theme_dest/"
     log_ok "SDDM-theme geïnstalleerd: $theme_dest"
@@ -261,6 +262,7 @@ _phase10_deploy_sddm_config() {
         return 0
     fi
 
+    backup_system_path "$sddm_conf_dest"
     sudo mkdir -p /etc/sddm.conf.d
     sudo cp "$sddm_conf_src" "$sddm_conf_dest"
     log_ok "SDDM-config geplaatst: $sddm_conf_dest"
