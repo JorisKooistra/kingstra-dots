@@ -219,6 +219,7 @@ ShellRoot {
 
                 property string staticWallpaperPath: "file:///tmp/lock_bg.png"
 
+                property bool hasBattery: false
                 property string batPct: "100"
                 property string batStatus: "AC"
                 property string currentUser: "User"
@@ -291,13 +292,14 @@ ShellRoot {
 
                 Process {
                     id: batPoller
-                    command: ["bash", "-c", "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1 || echo '100'; cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1 || echo 'AC'"]
+                    command: ["bash", "-c", "compgen -G '/sys/class/power_supply/BAT*' > /dev/null 2>&1 && echo true || echo false; cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1 || echo '100'; cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1 || echo 'AC'"]
                     stdout: StdioCollector {
                         onStreamFinished: {
                             let lines = this.text.trim().split("\n");
-                            if (lines.length >= 2) {
-                                screenRoot.batPct = lines[0] || "100";
-                                screenRoot.batStatus = lines[1] || "Unknown";
+                            if (lines.length >= 1) screenRoot.hasBattery = lines[0] === "true";
+                            if (lines.length >= 3) {
+                                screenRoot.batPct = lines[1] || "100";
+                                screenRoot.batStatus = lines[2] || "Unknown";
                             }
                         }
                     }
@@ -834,6 +836,7 @@ ShellRoot {
 
                     // Battery Pill
                     Rectangle {
+                        visible: screenRoot.hasBattery
                         property bool isHovered: batMouse.containsMouse
                         Layout.preferredHeight: 48 * screenRoot.sc
                         Layout.preferredWidth: batLayoutRow.implicitWidth + (36 * screenRoot.sc)

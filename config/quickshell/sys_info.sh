@@ -1,6 +1,32 @@
 #!/usr/bin/env bash
 
 ## NETWORK
+get_has_wifi() {
+    ls /sys/class/ieee80211/ 2>/dev/null | grep -q . && echo "true" || echo "false"
+}
+get_eth_interface() {
+    for iface_path in /sys/class/net/*; do
+        local name; name=$(basename "$iface_path")
+        [[ "$name" == "lo" ]] && continue
+        [[ -d "$iface_path/wireless" ]] && continue
+        [[ "$name" =~ ^(virbr|docker|br-|veth|tun|tap|dummy|bond|team|wg) ]] && continue
+        [[ "$(cat "$iface_path/operstate" 2>/dev/null)" == "up" ]] || continue
+        echo "$name"; return
+    done
+    echo ""
+}
+get_eth_speed() {
+    local iface="${1:-$(get_eth_interface)}"
+    [[ -z "$iface" ]] && echo "" && return
+    local speed; speed=$(cat "/sys/class/net/$iface/speed" 2>/dev/null)
+    if [[ -n "$speed" && "$speed" =~ ^[0-9]+$ && "$speed" -gt 0 && "$speed" -lt 65535 ]]; then
+        [[ "$speed" -ge 1000 ]] && echo "$((speed/1000))G" || echo "${speed}M"
+    else echo ""; fi
+}
+get_eth_icon() {
+    local iface; iface=$(get_eth_interface)
+    [[ -n "$iface" ]] && echo "󰈀" || echo "󰈂"
+}
 get_wifi_status() { timeout 1 nmcli -t -f WIFI g 2>/dev/null || echo "disabled"; }
 get_wifi_ssid() { 
     # Ask the kernel directly (instant) to avoid NetworkManager scan delays
@@ -253,10 +279,15 @@ case $1 in
         kb_layouts="$(get_kb_layout_config)"
         kb_count="$(get_kb_layout_count "$kb_layouts")"
         # If no arguments are passed, output the full state as JSON
+        local _eth_iface; _eth_iface=$(get_eth_interface)
         jq -n -c \
           --arg wifi_status "$(get_wifi_status)" \
           --arg wifi_ssid "$(get_wifi_ssid)" \
           --arg wifi_icon "$(get_wifi_icon)" \
+          --arg wifi_has_hw "$(get_has_wifi)" \
+          --arg eth_connected "$([[ -n "$_eth_iface" ]] && echo "true" || echo "false")" \
+          --arg eth_speed "$(get_eth_speed "$_eth_iface")" \
+          --arg eth_icon "$(get_eth_icon)" \
           --arg bt_status "$(get_bt_status)" \
           --arg bt_icon "$(get_bt_icon)" \
           --arg bt_connected "$(get_bt_connected_device)" \
@@ -270,7 +301,8 @@ case $1 in
           --arg kb_layouts "$kb_layouts" \
           --argjson kb_count "${kb_count:-1}" \
           '{
-             wifi: { status: $wifi_status, ssid: $wifi_ssid, icon: $wifi_icon },
+             wifi: { status: $wifi_status, ssid: $wifi_ssid, icon: $wifi_icon, has_hardware: $wifi_has_hw },
+             ethernet: { connected: $eth_connected, speed: $eth_speed, icon: $eth_icon },
              bt: { status: $bt_status, icon: $bt_icon, connected: $bt_connected },
              audio: { volume: $volume, icon: $volume_icon, is_muted: $is_muted },
              battery: { percent: $bat_percent, status: $bat_status, icon: $bat_icon },

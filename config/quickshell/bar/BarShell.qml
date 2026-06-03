@@ -227,9 +227,9 @@ Variants {
                 while (barWindow.volumeWheelAccumulator <= -120) { steps -= 1; barWindow.volumeWheelAccumulator += 120; }
                 if (steps === 0) return;
                 if (steps > 0) {
-                    Quickshell.execDetached(["bash", "-c", "pactl set-sink-volume @DEFAULT_SINK@ +" + steps + "%"]);
+                    Quickshell.execDetached(["bash", "-c", "wpctl set-volume @DEFAULT_AUDIO_SINK@ " + steps + "%+"]);
                 } else {
-                    Quickshell.execDetached(["bash", "-c", "pactl set-sink-volume @DEFAULT_SINK@ " + steps + "%"]);
+                    Quickshell.execDetached(["bash", "-c", "wpctl set-volume @DEFAULT_AUDIO_SINK@ " + Math.abs(steps) + "%-"]);
                 }
                 if (!volPoller.running) volPoller.running = true;
             }
@@ -311,13 +311,18 @@ Variants {
             property string kbLayout: "US"
             property int kbLayoutCount: 1
             
-            // WiFi — via sys_info.sh. Niet elke Quickshell build levert
-            // Quickshell.Networking mee; nmcli/procfs houdt de bar portable.
+            // WiFi + Ethernet — via sys_info.sh
+            property bool hasWifi: false
             property bool isWifiOn: false
             property string wifiSsid: ""
             property string wifiIcon: "󰤮"
 
+            property bool isEthConnected: false
+            property string ethSpeed: ""
+            property string ethIcon: "󰈀"
+
             // Bluetooth — Quickshell.Bluetooth (event-driven)
+            readonly property bool hasBluetooth: Bluetooth.defaultAdapter !== null
             readonly property bool isBtOn: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
             readonly property string btIcon: isBtOn ? "󰂱" : "󰂲"
             readonly property string btDevice: {
@@ -330,19 +335,20 @@ Variants {
             }
             readonly property string btStatus: isBtOn ? "On" : "Off"
 
-            // Volume — pactl (meest betrouwbaar, zelfde waarde als VolumePopup)
+            // Volume — wpctl (PipeWire native; pactl werkt niet op dit systeem)
             property int _volRaw: 0
             property bool isMuted: false
 
             Process {
                 id: volPoller
-                command: ["bash", "-c", "pactl get-sink-volume @DEFAULT_SINK@ | grep -oP '\\d+(?=%)' | head -1; pactl get-sink-mute @DEFAULT_SINK@ | grep -oP '(?<=Mute: )\\S+'"]
+                command: ["bash", "-c", "wpctl get-volume @DEFAULT_AUDIO_SINK@"]
                 running: true
                 stdout: StdioCollector {
                     onStreamFinished: {
-                        let lines = this.text.trim().split("\n");
-                        if (lines.length >= 1) barWindow._volRaw = parseInt(lines[0]) || 0;
-                        if (lines.length >= 2) barWindow.isMuted = lines[1].trim() === "yes";
+                        let line = this.text.trim();
+                        let match = line.match(/Volume:\s+([\d.]+)/);
+                        if (match) barWindow._volRaw = Math.round(parseFloat(match[1]) * 100);
+                        barWindow.isMuted = line.includes("[MUTED]");
                     }
                 }
             }
@@ -360,6 +366,16 @@ Variants {
             }
 
             // Battery — Quickshell.Services.UPower (event-driven)
+            property bool hasBattery: false
+            Process {
+                id: batteryDetect
+                command: ["bash", "-c", "compgen -G '/sys/class/power_supply/BAT*' > /dev/null 2>&1 && echo true || echo false"]
+                running: true
+                stdout: StdioCollector {
+                    onStreamFinished: barWindow.hasBattery = this.text.trim() === "true"
+                }
+            }
+
             readonly property int batCap: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage * 100) : 0
             readonly property bool isCharging: UPower.displayDevice
                 ? (UPower.displayDevice.state === UPowerDeviceState.Charging
@@ -464,9 +480,15 @@ Variants {
                                     barWindow.kbLayoutCount = isNaN(nextCount) ? 1 : nextCount;
                                 }
                                 if (data.wifi) {
+                                    barWindow.hasWifi = data.wifi.has_hardware === "true";
                                     barWindow.isWifiOn = data.wifi.status === "enabled" && String(data.wifi.ssid || "") !== "";
                                     barWindow.wifiSsid = data.wifi.ssid || "";
                                     barWindow.wifiIcon = data.wifi.icon || "󰤮";
+                                }
+                                if (data.ethernet) {
+                                    barWindow.isEthConnected = data.ethernet.connected === "true";
+                                    barWindow.ethSpeed = data.ethernet.speed || "";
+                                    barWindow.ethIcon = data.ethernet.icon || "󰈀";
                                 }
                                 barWindow.sysPollerLoaded = true;
                                 barWindow.fastPollerLoaded = true;

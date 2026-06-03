@@ -2,6 +2,11 @@
 //@ pragma Env QSG_RENDER_LOOP=threaded
 
 import QtQuick
+import Quickshell
 import "bar"
+import "volume"
 
-BarShell {}
+ShellRoot {
+    BarShell {}
+    VolumeBarPopup {}
+}

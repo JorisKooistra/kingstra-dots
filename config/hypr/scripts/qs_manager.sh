@@ -36,22 +36,18 @@ fi
 # function to explicitly re-assert focus AFTER the window is moved.
 hide_widget_async() {
     local prev_addr="$1"
+    # Writing "close" to the IPC file triggers Main.qml to set currentActive="hidden",
+    # which unmaps the WlrLayer.Overlay PanelWindow. No hyprctl dispatch needed.
     echo "close" > "$IPC_FILE"
-    
-    # HYPRLAND 0.54+ FIX: Grab exact hex address to prevent regex matching failures
-    local qs_addr=$(hyprctl clients -j | jq -r '.[] | select(.title == "qs-master") | .address' | head -n 1)
 
-    (
-        sleep 0.15
-        if [[ -n "$qs_addr" ]]; then
-            hyprctl --batch "dispatch movetoworkspacesilent special:qs-hidden,address:$qs_addr ; dispatch setfloating address:$qs_addr" >/dev/null 2>&1
-        fi
-        
-        # Re-assert focus after the window tree changes to prevent focus drops
-        if [[ -n "$prev_addr" && "$prev_addr" != "null" ]]; then
+    # Restore focus to the previously active window (layer-shell exclusive focus
+    # may hold it until the surface unmaps; give it a short head-start).
+    if [[ -n "$prev_addr" && "$prev_addr" != "null" ]]; then
+        (
+            sleep 0.15
             hyprctl --batch "keyword cursor:no_warps true ; dispatch focuswindow address:$prev_addr ; keyword cursor:no_warps false" >/dev/null 2>&1
-        fi
-    ) &
+        ) &
+    fi
 }
 
 restore_focus() {
@@ -141,14 +137,7 @@ if [[ "$ACTION" == "workspace" && "$TARGET" =~ ^[0-9]+$ ]]; then
     MOVE_OPT="$SUBTARGET"
 
     echo "close" > "$IPC_FILE"
-
-    QS_ADDR=$(hyprctl clients -j | jq -r '.[] | select(.title == "qs-master") | .address' | head -n 1)
-    if [[ -n "$QS_ADDR" ]]; then
-        hyprctl --batch "dispatch movetoworkspacesilent special:qs-hidden,address:$QS_ADDR ; dispatch setfloating address:$QS_ADDR" >/dev/null 2>&1
-    fi
-
     dispatch_workspace_target "$TARGET_WS" "$MOVE_OPT"
-
     rm -f "$PREV_FOCUS_FILE"
     exit 0
 fi
@@ -161,19 +150,8 @@ if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
         CURRENT_WS=1
     fi
     TARGET_WS=$(( ((CURRENT_WS - 1) / 10) * 10 + WORKSPACE_NUM ))
-    
     echo "close" > "$IPC_FILE"
-
-    # HYPRLAND 0.54+ FIX: For workspace switching, we skip the 0.15s animation sleep 
-    # and banish the widget instantly. This prevents the delayed window move from 
-    # stealing focus on the newly activated workspace.
-    QS_ADDR=$(hyprctl clients -j | jq -r '.[] | select(.title == "qs-master") | .address' | head -n 1)
-    if [[ -n "$QS_ADDR" ]]; then
-        hyprctl --batch "dispatch movetoworkspacesilent special:qs-hidden,address:$QS_ADDR ; dispatch setfloating address:$QS_ADDR" >/dev/null 2>&1
-    fi
-    
     dispatch_workspace_target "$TARGET_WS" "$MOVE_OPT"
-    
     rm -f "$PREV_FOCUS_FILE"
     exit 0
 fi
@@ -192,25 +170,14 @@ MAIN_QML_PATH="$HOME/.config/quickshell/Main.qml"
 BAR_QML_PATH="$HOME/.config/quickshell/TopBar.qml"
 
 QS_PID=$(pgrep -f "quickshell.*Main\.qml")
-WIN_EXISTS=$(hyprctl clients -j | grep "qs-master")
 BAR_PID=$(pgrep -f "quickshell.*TopBar\.qml")
 
-if [[ -z "$QS_PID" ]] || [[ -z "$WIN_EXISTS" ]]; then
-    if [[ -n "$QS_PID" ]]; then
-        kill -9 $QS_PID 2>/dev/null
-    fi
-    
-    # Bypass NixOS symlink resolution by using the direct ~/.config path
+# Main.qml now uses a WlrLayer.Overlay PanelWindow which does NOT appear in
+# hyprctl clients — only check process existence.
+if [[ -z "$QS_PID" ]]; then
     quickshell -p "$MAIN_QML_PATH" >/dev/null 2>&1 &
     disown
-    
-    for _ in {1..20}; do
-        if hyprctl clients -j | grep -q "qs-master"; then
-            sleep 0.1
-            break
-        fi
-        sleep 0.05
-    done
+    sleep 0.3
 fi
 
 if [[ -z "$BAR_PID" ]]; then
@@ -222,26 +189,18 @@ fi
 # FOCUS MANAGEMENT
 # -----------------------------------------------------------------------------
 save_and_focus_widget() {
-    # Only save if the currently focused window is NOT the widget container
+    # Save the currently focused window address so restore_focus can return to it.
+    # The WlrLayer.Overlay PanelWindow is handled entirely by the layer-shell
+    # protocol — no hyprctl dispatch needed to show or focus it.
     local current_window=$(hyprctl activewindow -j 2>/dev/null)
     local current_title=$(echo "$current_window" | jq -r '.title // empty')
     local current_class=$(echo "$current_window" | jq -r '.class // empty')
     local current_initial_class=$(echo "$current_window" | jq -r '.initialClass // empty')
     local current_addr=$(echo "$current_window" | jq -r '.address // empty')
-    
-    # Grab the active workspace so we can pull the widget to us
-    local active_ws=$(hyprctl activeworkspace -j | jq -r '.id')
 
     if [[ "$current_title" != "qs-master" && "$current_class" != "org.quickshell" && "$current_initial_class" != "org.quickshell" && -n "$current_addr" && "$current_addr" != "null" ]]; then
         echo "$current_addr" > "$PREV_FOCUS_FILE"
     fi
-
-    # Dispatch focus without warping the cursor (run async with a tiny delay to allow QML to move the window first)
-    (
-        sleep 0.05
-        # FOOLPROOF FIX: Pull the widget back from the hidden workspace to the active one silently, THEN focus it.
-        hyprctl --batch "keyword cursor:no_warps true ; dispatch movetoworkspacesilent $active_ws,title:^qs-master$ ; dispatch setfloating title:^qs-master$ ; dispatch alterzorder top,title:^qs-master$ ; dispatch focuswindow title:^qs-master$ ; keyword cursor:no_warps false" >/dev/null 2>&1
-    ) &
 }
 
 # -----------------------------------------------------------------------------

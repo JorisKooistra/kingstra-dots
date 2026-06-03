@@ -187,7 +187,7 @@ Rectangle {
         // ── WiFi ───────────────────────────────────────────────────────────
         Rectangle {
             id: wifiPill
-            visible: shell.moduleList.includes("network")
+            visible: shell.moduleList.includes("network") && shell.hasWifi
             property bool isHovered: wifiMouse.containsMouse
             radius: surface.innerPillRadius; height: sysLayout.pillHeight
             color: ctx.cyberChrome
@@ -235,10 +235,60 @@ Rectangle {
             MouseArea { id: wifiMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network wifi"]) }
         }
 
+        // ── Ethernet ──────────────────────────────────────────────────────
+        Rectangle {
+            id: ethPill
+            visible: shell.moduleList.includes("network") && shell.isEthConnected
+            property bool isHovered: ethMouse.containsMouse
+            radius: surface.innerPillRadius; height: sysLayout.pillHeight
+            color: ctx.cyberChrome
+                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+                   : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
+            clip: true
+
+            Rectangle {
+                anchors.fill: parent; radius: surface.innerPillRadius
+                opacity: ctx.cyberChrome ? 0.0 : 1.0
+                Behavior on opacity { NumberAnimation { duration: 300 } }
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: mocha.green }
+                    GradientStop { position: 1.0; color: Qt.lighter(mocha.green, 1.3) }
+                }
+            }
+
+            property real targetWidth: ethLayoutRow.width + shell.s(24)
+            width: targetWidth
+            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+
+            scale: isHovered ? 1.05 : 1.0
+            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: 200 } }
+
+            property bool initAnimTrigger: false
+            Timer { running: root.layoutVisible && !ethPill.initAnimTrigger; interval: 50; onTriggered: ethPill.initAnimTrigger = true }
+            opacity: initAnimTrigger ? 1 : 0
+            transform: Translate { y: ethPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+            Row {
+                id: ethLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.ethIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.cyberChrome ? ctx.cyberTextColor : mocha.base }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: shell.sysPollerLoaded ? (shell.ethSpeed !== "" ? shell.ethSpeed : "LAN") : ""
+                    visible: text !== ""
+                    font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing
+                    color: ctx.cyberChrome ? ctx.cyberTextColor : mocha.base
+                }
+            }
+            MouseArea { id: ethMouse; hoverEnabled: true; anchors.fill: parent }
+        }
+
         // ── Bluetooth ──────────────────────────────────────────────────────
         Rectangle {
             id: btPill
-            visible: shell.moduleList.includes("bluetooth")
+            visible: shell.moduleList.includes("bluetooth") && shell.hasBluetooth
             property bool isHovered: btMouse.containsMouse
             radius: surface.innerPillRadius; height: sysLayout.pillHeight
             color: ctx.cyberChrome
@@ -329,7 +379,7 @@ Rectangle {
             }
             MouseArea {
                 id: volMouse; hoverEnabled: true; anchors.fill: parent
-                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"])
+                onClicked: Quickshell.execDetached(["qs", "ipc", "-p", Quickshell.env("HOME") + "/.config/quickshell/TopBar.qml", "call", "volume", "toggle"])
                 onWheel: (wheel) => { shell.handleVolumeWheel(wheel.angleDelta.y); wheel.accepted = true; }
             }
         }
@@ -355,7 +405,7 @@ Rectangle {
         // ── Battery ────────────────────────────────────────────────────────
         Rectangle {
             id: batPill
-            visible: shell.moduleList.includes("battery")
+            visible: shell.moduleList.includes("battery") && shell.hasBattery
             property bool isHovered: batMouse.containsMouse
             color: ctx.cyberChrome
                    ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
