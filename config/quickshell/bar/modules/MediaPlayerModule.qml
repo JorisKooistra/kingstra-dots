@@ -39,9 +39,9 @@ Rectangle {
 
     property bool isMediaMode: shell.activeMode === "media"
     property real targetWidth: _isActive ? mediaLayoutContainer.width + shell.s(24) : 0
-    Layout.maximumWidth: isMediaMode ? shell.s(220) : targetWidth
+    Layout.maximumWidth: isMediaMode ? shell.s(220) : shell.s(500)
     Layout.preferredWidth: targetWidth
-    visible: (targetWidth > 0 || opacity > 0) && shell.moduleList.includes("media_controls")
+    visible: _isActive || opacity > 0
     opacity: _isActive ? 1.0 : 0.0
 
     color: ctx.cyberChrome ? ctx.cyberModuleColor : surface.panelColor
