@@ -142,35 +142,22 @@ Variants {
             property var _settingsData: ({})
             property bool _settingsReady: false
 
-            // Load settings via Process instead of FileView
-            Process {
-                id: loadTopBarSettingsProc
-                command: ["bash", "-c", "cat ~/.config/quickshell/settings/settings.json 2>/dev/null"]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        try {
-                            barWindow._settingsData = JSON.parse(this.text);
-                        } catch(e) {
-                            barWindow._settingsData = { timeFormat: "HH:mm:ss", dateFormat: "dddd, MMMM dd" };
-                        }
-                        barWindow._settingsReady = true;
+            FileView {
+                path: Quickshell.env("HOME") + "/.config/quickshell/settings/settings.json"
+                watchChanges: true
+                preload: true
+                onInternalTextChanged: {
+                    if (!__text) return;
+                    try {
+                        barWindow._settingsData = JSON.parse(__text);
+                    } catch(e) {
+                        barWindow._settingsData = { timeFormat: "HH:mm:ss", dateFormat: "dddd, MMMM dd" };
                     }
+                    barWindow._settingsReady = true;
                 }
             }
-
-            Component.onCompleted: {
-                loadTopBarSettingsProc.running = true;
-            }
-
-            // Reload settings every 2 seconds to pick up changes
-            Timer {
-                interval: 2000
-                running: true
-                repeat: true
-                onTriggered: {
-                    if (!loadTopBarSettingsProc.running) loadTopBarSettingsProc.running = true;
-                }
-            }
+            // Failsafe: zet _settingsReady na 1s als het bestand niet bestaat
+            Timer { interval: 1000; running: !barWindow._settingsReady; onTriggered: barWindow._settingsReady = true }
 
             // --- Mode State ---
             property string activeMode: "office"
@@ -261,27 +248,21 @@ Variants {
                 ]);
             }
 
-            Process {
-                id: loadModeProc
-                command: ["bash", "-c", "cat ~/.config/kingstra/state/mode.json 2>/dev/null"]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        try {
-                            let m = JSON.parse(this.text);
-                            if (m.name) barWindow.activeMode = m.name;
-                            let resolvedModules = (m.modules && m.modules.length > 0)
-                                ? m.modules
-                                : barWindow._defaultModules(m.name || "office");
-                            barWindow.moduleList = barWindow._normalizeModules(m.name || "office", resolvedModules);
-                            barWindow.barAutoHide = m.bar_autohide === true;
-                        } catch(e) {}
-                    }
-                }
-            }
-            Timer {
-                interval: 2000; running: true; repeat: true
-                onTriggered: {
-                    if (!loadModeProc.running) loadModeProc.running = true;
+            FileView {
+                path: Quickshell.env("HOME") + "/.config/kingstra/state/mode.json"
+                watchChanges: true
+                preload: true
+                onInternalTextChanged: {
+                    if (!__text) return;
+                    try {
+                        let m = JSON.parse(__text);
+                        if (m.name) barWindow.activeMode = m.name;
+                        let resolvedModules = (m.modules && m.modules.length > 0)
+                            ? m.modules
+                            : barWindow._defaultModules(m.name || "office");
+                        barWindow.moduleList = barWindow._normalizeModules(m.name || "office", resolvedModules);
+                        barWindow.barAutoHide = m.bar_autohide === true;
+                    } catch(e) {}
                 }
             }
 
@@ -402,29 +383,14 @@ Variants {
                 return mocha.red;
             }
 
-            // Media — playerctl polling voor betrouwbare bar-data
-            property string mediaTitle:  ""
-            property string mediaStatus: "Stopped"
-
-            Process {
-                id: mediaInfoPoller
-                command: ["bash", "-c", "playerctl status 2>/dev/null; echo ''; playerctl metadata xesam:title 2>/dev/null"]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        var nl = this.text.indexOf("\n");
-                        if (nl === -1) {
-                            barWindow.mediaStatus = this.text.trim() || "Stopped";
-                            barWindow.mediaTitle  = "";
-                        } else {
-                            barWindow.mediaStatus = this.text.substring(0, nl).trim() || "Stopped";
-                            barWindow.mediaTitle  = this.text.substring(nl + 1).trim();
-                        }
-                    }
-                }
-            }
-            Timer {
-                interval: 2000; running: true; repeat: true; triggeredOnStart: true
-                onTriggered: if (!mediaInfoPoller.running) mediaInfoPoller.running = true
+            // Media — MPRIS event-driven (vervangt playerctl polling)
+            readonly property string mediaTitle: _activePlayer ? (_activePlayer.trackTitle || "") : ""
+            readonly property string mediaStatus: {
+                if (!_activePlayer) return "Stopped";
+                var state = _activePlayer.playbackState;
+                if (state === MprisPlaybackState.Playing) return "Playing";
+                if (state === MprisPlaybackState.Paused)  return "Paused";
+                return "Stopped";
             }
 
             // Media — Quickshell.Services.Mpris (event-driven)

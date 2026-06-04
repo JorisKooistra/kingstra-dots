@@ -3,6 +3,7 @@
 // =============================================================================
 pragma Singleton
 import QtQuick
+import Quickshell
 import Quickshell.Io
 
 Item {
@@ -10,33 +11,14 @@ Item {
 
     property var _data: ({})
 
-    // Laad colors.json via bash Process in plaats van FileView
-    property var _colorsContent: ""
-
-    Component.onCompleted: {
-        loadColors.running = true
-    }
-
-    Process {
-        id: loadColors
-        command: ["bash", "-c", "cat ~/.config/quickshell/colors.json 2>/dev/null"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let content = this.text.trim()
-                if (content) {
-                    try { root._data = JSON.parse(content) } catch (e) {}
-                }
-                // Reload elke 5 seconden voor live updates
-                reloadTimer.running = true
-            }
+    FileView {
+        path: Quickshell.env("HOME") + "/.config/quickshell/colors.json"
+        watchChanges: true
+        preload: true
+        onInternalTextChanged: {
+            let content = __text.trim()
+            if (content) try { root._data = JSON.parse(content) } catch (e) {}
         }
-    }
-
-    Timer {
-        id: reloadTimer
-        interval: 5000
-        repeat: true
-        onTriggered: loadColors.running = true
     }
 
     // ---------------------------------------------------------------------------
