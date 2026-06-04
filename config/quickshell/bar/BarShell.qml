@@ -174,7 +174,7 @@ Variants {
 
             // --- Mode State ---
             property string activeMode: "office"
-            property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications"]
+            property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications", "media_controls"]
             property bool barAutoHide: false
             property bool barVisible: true
             property int updateCount: 0
@@ -182,9 +182,9 @@ Variants {
             property int workspaceWheelAccumulator: 0
 
             function _defaultModules(mode) {
-                if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "fps", "battery", "volume", "game_launcher", "clock"];
+                if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "fps", "battery", "volume", "game_launcher", "clock", "media_controls"];
                 if (mode === "media")  return ["volume", "brightness", "media_controls", "battery", "clock"];
-                return ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications"];
+                return ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications", "media_controls"];
             }
 
             function _normalizeModules(mode, modules) {
@@ -198,6 +198,9 @@ Variants {
                 if ((mode === "office" || mode === "gaming" || mode === "media")
                         && normalized.indexOf("battery") === -1) {
                     normalized.push("battery");
+                }
+                if (normalized.indexOf("media_controls") === -1) {
+                    normalized.push("media_controls");
                 }
                 return normalized;
             }
