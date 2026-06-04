@@ -157,7 +157,7 @@ Item {
         // Zichtbaar als "workspaces" in de lijst staat → office + gaming
         WorkspacesModule    { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
 
-        // Zichtbaar als "media_controls" in de lijst staat én er muziek speelt → media
+        // Zichtbaar zodra een mediaspeler via MPRIS actief is (alle modi, alle schermen)
         MediaPlayerModule   { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
 
         Item { Layout.fillWidth: true }

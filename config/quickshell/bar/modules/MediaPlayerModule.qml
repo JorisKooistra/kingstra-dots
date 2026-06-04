@@ -21,7 +21,7 @@ Rectangle {
         return players.length > 0 ? players[0] : null;
     }
     readonly property bool _isPlaying: _player ? _player.playbackState === MprisPlaybackState.Playing : false
-    readonly property bool _isActive:  _player !== null && _player.trackTitle !== ""
+    readonly property bool _isActive:  _player !== null
     readonly property string _timeStr: {
         if (!_player || !_player.positionSupported) return "";
         var pos = Math.floor(_player.position / 1000000);

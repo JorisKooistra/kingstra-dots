@@ -585,7 +585,7 @@ Item {
         }
 
         Rectangle {
-            visible: shell.moduleList.includes("media_controls") && shell.isMediaActive
+            visible: shell._activePlayer !== null
             Layout.fillWidth: true
             Layout.preferredHeight: shell.s(74)
             radius: surface.panelRadius
