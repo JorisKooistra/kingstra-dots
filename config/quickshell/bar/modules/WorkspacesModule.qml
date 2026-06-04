@@ -14,6 +14,32 @@ Rectangle {
 
     readonly property int wsCount: 10
 
+    // ── Special workspace indicator ──────────────────────────────────────────
+    readonly property var thisMonitor: Hyprland.monitorFor(shell.screen)
+    property string activeSpecialWorkspace: ""
+
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            const name = `${event?.name ?? ""}`;
+            if (name !== "activespecial")
+                return;
+            const data = `${event?.data ?? ""}`;
+            const parts = data.split(",");
+            const wsName = (parts[0] ?? "").trim();
+            const monitorName = (parts[1] ?? "").trim();
+            if (monitorName === (root.thisMonitor?.name ?? ""))
+                root.activeSpecialWorkspace = wsName;
+        }
+    }
+
+    function specialWorkspaceIcon(name) {
+        if (name === "spotify")  return "󰓇";
+        if (name === "discord")  return "󰙯";
+        if (name === "magic")    return "󰄴";
+        return "󱂬";
+    }
+
     Layout.preferredHeight: ctx.cyberSideModuleHeight
     Layout.alignment: Qt.AlignVCenter
     property real targetWidth: wsLayout.implicitWidth + shell.s(20)
@@ -277,6 +303,54 @@ Rectangle {
                         wheel.accepted = true;
                     }
                 }
+            }
+        }
+
+        // ── Actieve special workspace badge ─────────────────────────────────
+        Rectangle {
+            id: specialBadge
+            visible: opacity > 0
+            opacity: root.activeSpecialWorkspace !== "" ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+            height: shell.s(34)
+            width: specialBadgeRow.implicitWidth + shell.s(14)
+            Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+            radius: surface.innerPillRadius
+            color: ctx.cyberChrome
+                ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.22)
+                : Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.18)
+            border.width: 1
+            border.color: Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.40)
+
+            Row {
+                id: specialBadgeRow
+                anchors.centerIn: parent
+                spacing: shell.s(4)
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.specialWorkspaceIcon(root.activeSpecialWorkspace)
+                    font.family: shell.monoFontFamily
+                    font.pixelSize: shell.s(14)
+                    color: mocha.green
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.activeSpecialWorkspace
+                    font.family: shell.monoFontFamily
+                    font.pixelSize: shell.s(12)
+                    font.weight: Font.Medium
+                    font.letterSpacing: shell.themeLetterSpacing
+                    color: mocha.green
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: Hyprland.dispatch("togglespecialworkspace " + root.activeSpecialWorkspace)
             }
         }
     }
