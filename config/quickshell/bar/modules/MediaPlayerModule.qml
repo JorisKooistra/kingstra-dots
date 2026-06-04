@@ -65,7 +65,7 @@ Rectangle {
             }
             MouseArea {
                 id: prevMouse; anchors.fill: parent; hoverEnabled: true
-                onClicked: Quickshell.execDetached(["playerctl", "previous"])
+                onClicked: Quickshell.execDetached(["bash", "-c", "playerctl previous"])
             }
         }
 
@@ -82,19 +82,27 @@ Rectangle {
             }
             MouseArea {
                 id: playMouse; anchors.fill: parent; hoverEnabled: true
-                onClicked: Quickshell.execDetached(["playerctl", "play-pause"])
+                onClicked: Quickshell.execDetached(["bash", "-c", "playerctl play-pause"])
             }
         }
 
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: shell.mediaTitle
-            font.family: shell.monoFontFamily
-            font.pixelSize: shell.s(11)
-            font.weight: Font.Bold
-            color: mocha.text
-            width: shell.s(90)
-            elide: Text.ElideRight
+        Item {
+            width: shell.s(90); height: parent.height
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: shell.mediaTitle
+                font.family: shell.monoFontFamily
+                font.pixelSize: shell.s(11)
+                font.weight: Font.Bold
+                color: titleMouse.containsMouse ? mocha.subtext1 : mocha.text
+                Behavior on color { ColorAnimation { duration: 150 } }
+                width: parent.width
+                elide: Text.ElideRight
+            }
+            MouseArea {
+                id: titleMouse; anchors.fill: parent; hoverEnabled: true
+                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle music"])
+            }
         }
 
         Item {
@@ -109,7 +117,7 @@ Rectangle {
             }
             MouseArea {
                 id: nextMouse; anchors.fill: parent; hoverEnabled: true
-                onClicked: Quickshell.execDetached(["playerctl", "next"])
+                onClicked: Quickshell.execDetached(["bash", "-c", "playerctl next"])
             }
         }
     }
