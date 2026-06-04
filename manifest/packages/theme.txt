@@ -7,6 +7,7 @@ aur:matugen-bin
 
 # Nerd Fonts (iconen in topbar, terminal)
 aur:ttf-jetbrains-mono-nerd
+ttf-iosevka-nerd
 ttf-fira-code
 aur:ttf-fira-sans
 aur:ttf-digital-7

@@ -182,7 +182,7 @@ Variants {
             property int workspaceWheelAccumulator: 0
 
             function _defaultModules(mode) {
-                if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "battery", "volume", "game_launcher", "clock"];
+                if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "fps", "battery", "volume", "game_launcher", "clock"];
                 if (mode === "media")  return ["volume", "brightness", "media_controls", "battery", "clock"];
                 return ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications"];
             }
@@ -399,7 +399,7 @@ Variants {
 
             // Media — Quickshell.Services.Mpris (event-driven)
             readonly property var _activePlayer: {
-                var players = Mpris.players;
+                var players = Mpris.players.values;
                 for (var i = 0; i < players.length; i++) {
                     if (players[i].playbackState !== MprisPlaybackState.Stopped) return players[i];
                 }

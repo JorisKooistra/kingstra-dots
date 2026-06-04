@@ -184,6 +184,15 @@ Rectangle {
             radius: surface.innerPillRadius
         }
 
+        // ── FPS (gaming mode) — external component ─────────────────────────
+        FpsMonitor {
+            id: fpsPill
+            visible: shell.moduleList.includes("fps")
+            mocha: root.mocha
+            pillHeight: sysLayout.pillHeight
+            radius: surface.innerPillRadius
+        }
+
         // ── WiFi ───────────────────────────────────────────────────────────
         Rectangle {
             id: wifiPill

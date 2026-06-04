@@ -7,6 +7,9 @@
 # JetBrains Mono Nerd — terminal, code, Quickshell monospace
 # Pakket: ttf-jetbrains-mono-nerd
 
+# Iosevka Nerd — Quickshell iconen (topbar weather, media, systeemtray)
+# Pakket: ttf-iosevka-nerd
+
 # Fira Code — fallback code font
 # Pakket: ttf-fira-code
 

@@ -14,11 +14,11 @@ Rectangle {
 
     // Pick the first non-stopped player, fall back to any player
     readonly property var _player: {
-        var players = Mpris.players;
+        var players = Mpris.players.values;
         for (var i = 0; i < players.length; i++) {
             if (players[i].playbackState !== MprisPlaybackState.Stopped) return players[i];
         }
-        return null;
+        return players.length > 0 ? players[0] : null;
     }
     readonly property bool _isPlaying: _player ? _player.playbackState === MprisPlaybackState.Playing : false
     readonly property bool _isActive:  _player !== null && _player.trackTitle !== ""

@@ -126,8 +126,10 @@ Rectangle {
         spacing: 6
 
         Text {
-            text: "󰍛"
-            font.family: "Iosevka Nerd Font"; font.pixelSize: 16
+            text: root.showTemperature ? "CPU" : "󰍛"
+            font.family: root.showTemperature ? "JetBrains Mono" : "Iosevka Nerd Font"
+            font.pixelSize: root.showTemperature ? 11 : 16
+            font.weight: root.showTemperature ? Font.Black : Font.Normal
             color: root.displayColor
             anchors.verticalCenter: parent.verticalCenter
             Behavior on color { ColorAnimation { duration: 300 } }
