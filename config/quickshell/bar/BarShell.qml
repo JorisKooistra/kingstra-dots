@@ -398,6 +398,31 @@ Variants {
                 return mocha.red;
             }
 
+            // Media — playerctl polling voor betrouwbare bar-data
+            property string mediaTitle:  ""
+            property string mediaStatus: "Stopped"
+
+            Process {
+                id: mediaInfoPoller
+                command: ["bash", "-c", "playerctl status 2>/dev/null; echo ''; playerctl metadata xesam:title 2>/dev/null"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        var nl = this.text.indexOf("\n");
+                        if (nl === -1) {
+                            barWindow.mediaStatus = this.text.trim() || "Stopped";
+                            barWindow.mediaTitle  = "";
+                        } else {
+                            barWindow.mediaStatus = this.text.substring(0, nl).trim() || "Stopped";
+                            barWindow.mediaTitle  = this.text.substring(nl + 1).trim();
+                        }
+                    }
+                }
+            }
+            Timer {
+                interval: 2000; running: true; repeat: true; triggeredOnStart: true
+                onTriggered: if (!mediaInfoPoller.running) mediaInfoPoller.running = true
+            }
+
             // Media — Quickshell.Services.Mpris (event-driven)
             readonly property var _activePlayer: {
                 var players = Mpris.players.values;
