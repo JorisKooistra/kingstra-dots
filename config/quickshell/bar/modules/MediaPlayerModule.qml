@@ -65,7 +65,7 @@ Rectangle {
             }
             MouseArea {
                 id: prevMouse; anchors.fill: parent; hoverEnabled: true
-                onClicked: Quickshell.execDetached(["bash", "-c", "playerctl previous"])
+                onClicked: shell.mediaPrevious()
             }
         }
 
@@ -82,7 +82,7 @@ Rectangle {
             }
             MouseArea {
                 id: playMouse; anchors.fill: parent; hoverEnabled: true
-                onClicked: Quickshell.execDetached(["bash", "-c", "playerctl play-pause"])
+                onClicked: shell.mediaPlayPause()
             }
         }
 
@@ -101,7 +101,7 @@ Rectangle {
             }
             MouseArea {
                 id: titleMouse; anchors.fill: parent; hoverEnabled: true
-                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle music"])
+                onClicked: Quickshell.execDetached(["bash", "-c", "$HOME/.config/hypr/scripts/qs_manager.sh toggle music"])
             }
         }
 
@@ -117,7 +117,7 @@ Rectangle {
             }
             MouseArea {
                 id: nextMouse; anchors.fill: parent; hoverEnabled: true
-                onClicked: Quickshell.execDetached(["bash", "-c", "playerctl next"])
+                onClicked: shell.mediaNext()
             }
         }
     }

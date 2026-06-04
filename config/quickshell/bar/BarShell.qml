@@ -220,6 +220,10 @@ Variants {
                 keyboardRefreshTimer.restart();
             }
 
+            function mediaPrevious()  { if (_activePlayer && _activePlayer.canGoPrevious)    _activePlayer.previous(); }
+            function mediaPlayPause() { if (_activePlayer && _activePlayer.canTogglePlaying) _activePlayer.togglePlaying(); }
+            function mediaNext()      { if (_activePlayer && _activePlayer.canGoNext)        _activePlayer.next(); }
+
             function handleVolumeWheel(deltaY) {
                 if (!deltaY || deltaY === 0) return;
                 barWindow.volumeWheelAccumulator += deltaY;
