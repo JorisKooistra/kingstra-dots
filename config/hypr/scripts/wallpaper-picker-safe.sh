@@ -3,6 +3,10 @@ set -u
 
 if command -v skwd >/dev/null 2>&1; then
     systemctl --user start skwd-daemon.service >/dev/null 2>&1 || true
+    if command -v kingstra-skwd-wallpaper-sync >/dev/null 2>&1 && \
+       kingstra-skwd-wallpaper-sync >/dev/null 2>&1; then
+        exit 0
+    fi
     if skwd wall toggle >/dev/null 2>&1; then
         exit 0
     fi

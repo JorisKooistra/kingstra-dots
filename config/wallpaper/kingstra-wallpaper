@@ -320,31 +320,6 @@ _sync_skwd_current_wallpaper() {
     fi
 }
 
-_apply_skwd_wallpaper() {
-    local name="$1" file="$2" mode="$3"
-    local payload
-
-    command -v skwd >/dev/null 2>&1 || return 1
-    command -v jq >/dev/null 2>&1 || return 1
-
-    payload="$(jq -cn --arg name "$name" --arg path "$file" --arg type "$mode" \
-        '{name:$name,path:$path,type:$type}')"
-    skwd wall apply "$payload" >/dev/null 2>&1 || return 1
-
-    _save_state "$file" "$mode"
-    _update_wallpaper_json "$file"
-    _sync_skwd_current_wallpaper "$file" "$mode"
-    _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
-
-    local APPLY="${HOME}/.local/bin/apply-shell-state"
-    if [[ -f "$APPLY" ]]; then
-        _run_helper "$APPLY" --wallpaper "$file"
-    else
-        _notify "Wallpaper ingesteld" "$(basename "$file")"
-    fi
-    _cache_wallhaven_tags "$file"
-}
-
 _cmd_random_via_skwd() {
     local mode="$1" want_type entry name file
 
@@ -382,7 +357,11 @@ _cmd_random_via_skwd() {
     IFS=$'\t' read -r name file <<< "$entry"
     [[ -n "$name" && -f "$file" ]] || return 1
 
-    _apply_skwd_wallpaper "$name" "$file" "$mode"
+    if [[ "$mode" == "video" ]]; then
+        cmd_video "$file"
+    else
+        cmd_set "$file"
+    fi
 }
 
 # ---------------------------------------------------------------------------

@@ -64,7 +64,7 @@ patch("qml/wallpaper/WallpaperSelectorService.qml", [
     ),
     (
         "  function applyStatic(path, outputs) {\n    var neighbors = _collectNeighbors(path)\n    var screens = Quickshell.screens.map(function(s) { return s.name })\n    DaemonClient.applyStatic(path, outputs, neighbors, screens)\n    service.wallpaperApplied()\n  }\n",
-        """  function applyStatic(path, outputs) {\n    var neighbors = _collectNeighbors(path)\n    var screens = Quickshell.screens.map(function(s) { return s.name })\n    DaemonClient.applyStatic(path, outputs, neighbors, screens)\n    service.wallpaperApplied()\n    Quickshell.execDetached([service.homeDir + \"/.local/bin/apply-shell-state\", \"--wallpaper\", path])\n  }\n""",
+        """  function applyStatic(path, outputs) {\n    Quickshell.execDetached([service.homeDir + \"/.local/bin/kingstra-wallpaper\", \"set\", path])\n    service.wallpaperApplied()\n  }\n""",
     ),
 ])
 

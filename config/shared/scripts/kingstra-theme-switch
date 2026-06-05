@@ -62,6 +62,27 @@ resolve_apply_cmd() {
     return 1
 }
 
+reload_topbar_runtime() {
+    local quickshell_cmd=""
+    local topbar_qml="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/TopBar.qml"
+
+    quickshell_cmd="$(command -v quickshell 2>/dev/null || true)"
+    if [[ -z "$quickshell_cmd" ]]; then
+        _warn "quickshell niet gevonden — topbar reload overgeslagen"
+        return 0
+    fi
+
+    if [[ ! -f "$topbar_qml" ]]; then
+        _warn "TopBar.qml niet gevonden — topbar reload overgeslagen"
+        return 0
+    fi
+
+    pkill -f 'quickshell.*[T]opBar.qml' >/dev/null 2>&1 || true
+    sleep 0.2
+    nohup "$quickshell_cmd" -p "$topbar_qml" >/dev/null 2>&1 &
+    _log "TopBar herstart"
+}
+
 resolve_reader_cmd() {
     if [[ -x "${HOME}/.local/bin/kingstra-theme-read" ]]; then
         printf '%s\n' "${HOME}/.local/bin/kingstra-theme-read"
@@ -835,6 +856,7 @@ if ! run_helper "$APPLY"; then
     exit 1
 fi
 _log "Kleuren hergegenereerd en apps herladen"
+reload_topbar_runtime
 
 # ---------------------------------------------------------------------------
 # Step 7 — Save active theme
