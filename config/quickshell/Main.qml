@@ -56,28 +56,27 @@ PanelWindow {
 
     // Refresh layout when the screen changes (e.g. resolution change).
     onScreenChanged: {
-        if (currentActive !== "hidden") updatePhysicalBounds.running = true;
+        if (currentActive !== "hidden") refreshMonitorBounds();
     }
 
-    Process {
-        id: updatePhysicalBounds
-        command: ["bash", "-c", "hyprctl monitors -j | jq -r '.[] | select(.focused==true) | \"\\(.x):\\(.y):\\((.width / (.scale // 1)) | round):\\((.height / (.scale // 1)) | round)\"'"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let parts = this.text.trim().split(":");
-                if (parts.length === 4 && masterWindow.currentActive !== "hidden") {
-                    masterWindow.activeMx = parseInt(parts[0]) || 0;
-                    masterWindow.activeMy = parseInt(parts[1]) || 0;
-                    masterWindow.activeMw = parseInt(parts[2]) || 1920;
-                    masterWindow.activeMh = parseInt(parts[3]) || 1080;
-                    let t = getLayout(masterWindow.currentActive);
-                    if (t) {
-                        masterWindow.currentX = t.x;
-                        masterWindow.currentY = t.y;
-                    }
-                }
-            }
-        }
+    function refreshMonitorBounds() {
+        var mon = Hyprland.focusedMonitor;
+        if (!mon || currentActive === "hidden") return;
+        activeMx = mon.x;
+        activeMy = mon.y;
+        activeMw = Math.round(mon.width / (mon.scale || 1));
+        activeMh = Math.round(mon.height / (mon.scale || 1));
+        var t = getLayout(currentActive);
+        if (t) { currentX = t.x; currentY = t.y; }
+    }
+
+    function syncFocusedMonitorBounds() {
+        var mon = Hyprland.focusedMonitor;
+        if (!mon) return;
+        activeMx = mon.x;
+        activeMy = mon.y;
+        activeMw = Math.round(mon.width / (mon.scale || 1));
+        activeMh = Math.round(mon.height / (mon.scale || 1));
     }
 
     // ── Widget state ───────────────────────────────────────────────────────
@@ -257,43 +256,64 @@ PanelWindow {
         }
     }
 
-    // ── IPC poller (reads /tmp/qs_widget_state every 50 ms) ───────────────
-    Timer {
-        interval: 50; running: true; repeat: true
-        onTriggered: { if (!ipcPoller.running) ipcPoller.running = true; }
+    property string lastStateCommand: ""
+
+    function handleStateCommand(rawCmd) {
+        rawCmd = (rawCmd || "").trim();
+        if (!rawCmd || rawCmd === masterWindow.lastStateCommand) return;
+        masterWindow.lastStateCommand = rawCmd;
+
+        let parts = rawCmd.split(":");
+        let cmd   = parts[0];
+        let arg   = parts.length > 1 ? parts[1] : "";
+
+        if (parts.length >= 6) {
+            masterWindow.activeMx = parseInt(parts[2]) || 0;
+            masterWindow.activeMy = parseInt(parts[3]) || 0;
+            masterWindow.activeMw = parseInt(parts[4]) || 1920;
+            masterWindow.activeMh = parseInt(parts[5]) || 1080;
+        } else {
+            masterWindow.syncFocusedMonitorBounds();
+        }
+
+        if (cmd === "close") {
+            switchWidget("hidden", "");
+        } else if (getLayout(cmd)) {
+            delayedClear.stop();
+            if (masterWindow.isVisible && masterWindow.currentActive === cmd) {
+                switchWidget("hidden", "");
+            } else {
+                switchWidget(cmd, arg);
+            }
+        }
+    }
+
+    // ── Widget state file watcher (QS 0.3.0: IPC met parameters werkt niet) ─
+    FileView {
+        path: "/tmp/qs_widget_state"
+        watchChanges: true
+        preload: true
+        onInternalTextChanged: {
+            masterWindow.handleStateCommand(__text || "");
+        }
     }
 
     Process {
-        id: ipcPoller
-        command: ["bash", "-c", "if [ -f /tmp/qs_widget_state ]; then cat /tmp/qs_widget_state; rm /tmp/qs_widget_state; fi"]
+        id: statePoller
+        command: ["bash", "-lc", "cat /tmp/qs_widget_state 2>/dev/null || true"]
+        running: true
         stdout: StdioCollector {
             onStreamFinished: {
-                let rawCmd = this.text.trim();
-                if (rawCmd === "") return;
-
-                let parts = rawCmd.split(":");
-                let cmd   = parts[0];
-                let arg   = parts.length > 1 ? parts[1] : "";
-
-                if (parts.length >= 6) {
-                    masterWindow.activeMx = parseInt(parts[2]) || 0;
-                    masterWindow.activeMy = parseInt(parts[3]) || 0;
-                    masterWindow.activeMw = parseInt(parts[4]) || 1920;
-                    masterWindow.activeMh = parseInt(parts[5]) || 1080;
-                }
-
-                if (cmd === "close") {
-                    switchWidget("hidden", "");
-                } else if (getLayout(cmd)) {
-                    delayedClear.stop();
-                    if (masterWindow.isVisible && masterWindow.currentActive === cmd) {
-                        switchWidget("hidden", "");
-                    } else {
-                        switchWidget(cmd, arg);
-                    }
-                }
+                masterWindow.handleStateCommand(this.text || "");
             }
         }
+    }
+
+    Timer {
+        interval: 180
+        running: true
+        repeat: true
+        onTriggered: if (!statePoller.running) statePoller.running = true
     }
 
     Timer {

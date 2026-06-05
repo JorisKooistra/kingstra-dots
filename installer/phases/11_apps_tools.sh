@@ -156,12 +156,19 @@ _phase11_setup_spicetify() {
         return 0
     fi
 
+    deploy_config "spicetify"
+
+    mkdir -p "$HOME/.config/spicetify/Themes/Matugen"
+
     # Geef Spicetify schrijftoegang tot de Spotify-map
     if [[ -d /opt/spotify ]]; then
         sudo chmod a+wr /opt/spotify
         sudo chmod a+wr /opt/spotify/Apps -R
         log_ok "Spotify schrijfrechten ingesteld voor Spicetify"
     fi
+
+    spicetify config current_theme Matugen color_scheme Matugen inject_css 1 replace_colors 1 >/dev/null 2>&1 || \
+        log_warn "Spicetify config kon niet op Matugen gezet worden"
 
     spicetify backup apply 2>/dev/null || \
         log_warn "Spicetify backup/apply mislukt — start Spotify eerst om te initialiseren"

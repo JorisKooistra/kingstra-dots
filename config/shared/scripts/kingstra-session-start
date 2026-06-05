@@ -87,6 +87,10 @@ start_ui() {
     run_once "wallpaper-init.sh" "wallpaper init" "$CONFIG_HOME/hypr/scripts/wallpaper-init.sh"
 
     run_bg_once "quickshell.*TopBar.qml" "Quickshell topbar" quickshell --no-duplicate -p "$CONFIG_HOME/quickshell/TopBar.qml"
+    # Maak het IPC-state-bestand aan vóór Main.qml start. Qt's QFileSystemWatcher
+    # (gebruikt door FileView) kan geen niet-bestaand bestand bewaken; het bestand
+    # moet aanwezig zijn op het moment dat de FileView in Main.qml wordt aangemaakt.
+    touch /tmp/qs_widget_state 2>/dev/null || true
     run_bg_once "quickshell.*Main.qml" "Quickshell popups" quickshell --no-duplicate -p "$CONFIG_HOME/quickshell/Main.qml"
     run_bg_once "qs.*overview/shell.qml" "Quickshell overview" qs --no-duplicate -p "$CONFIG_HOME/quickshell/overview/shell.qml"
     run_bg_once "focus_daemon.py" "FocusTime daemon" python3 "$CONFIG_HOME/quickshell/focustime/focus_daemon.py"

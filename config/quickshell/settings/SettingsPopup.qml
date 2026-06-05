@@ -169,28 +169,27 @@ Item {
         "60 min"
     ]
 
-    // Load settings via Process in plaats van FileView
-    Process {
-        id: loadSettingsProc
-        command: ["bash", "-c", "cat ~/.config/quickshell/settings/settings.json 2>/dev/null"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var parsed = JSON.parse(this.text);
-                    root.settingsData = {
-                        timeFormat: String(parsed.timeFormat || "HH:mm:ss"),
-                        dateFormat: String(parsed.dateFormat || "dddd, MMMM dd"),
-                        touchpadScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.touchpadScrollFactor, 0.45), 0.45),
-                        mouseScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.mouseScrollFactor, 1.35), 1.35),
-                        touchpadRightClickButtonArea: parsed.touchpadRightClickButtonArea !== false,
-                        keyboardLayout: root.normalizeOption(parsed.keyboardLayout, root.keyboardLayoutCodes, "us"),
-                        idleLockSeconds: root.normalizeIdleSeconds(parsed.idleLockSeconds, 300),
-                        idleScreenOffSeconds: root.normalizeIdleSeconds(parsed.idleScreenOffSeconds, 480),
-                        idleSuspendSeconds: root.normalizeIdleSeconds(parsed.idleSuspendSeconds, 1800),
-                        idleProfiles: root.normalizeIdleProfiles(parsed)
-                    };
-                } catch(e) {}
-            }
+    FileView {
+        path: Quickshell.env("HOME") + "/.config/quickshell/settings/settings.json"
+        watchChanges: true
+        preload: true
+        onInternalTextChanged: {
+            if (!__text) return;
+            try {
+                var parsed = JSON.parse(__text);
+                root.settingsData = {
+                    timeFormat: String(parsed.timeFormat || "HH:mm:ss"),
+                    dateFormat: String(parsed.dateFormat || "dddd, MMMM dd"),
+                    touchpadScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.touchpadScrollFactor, 0.45), 0.45),
+                    mouseScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.mouseScrollFactor, 1.35), 1.35),
+                    touchpadRightClickButtonArea: parsed.touchpadRightClickButtonArea !== false,
+                    keyboardLayout: root.normalizeOption(parsed.keyboardLayout, root.keyboardLayoutCodes, "us"),
+                    idleLockSeconds: root.normalizeIdleSeconds(parsed.idleLockSeconds, 300),
+                    idleScreenOffSeconds: root.normalizeIdleSeconds(parsed.idleScreenOffSeconds, 480),
+                    idleSuspendSeconds: root.normalizeIdleSeconds(parsed.idleSuspendSeconds, 1800),
+                    idleProfiles: root.normalizeIdleProfiles(parsed)
+                };
+            } catch(e) {}
         }
     }
 
@@ -1561,8 +1560,6 @@ Item {
     }
 
     Component.onCompleted: {
-        // Laad settings via Process
-        loadSettingsProc.running = true;
         // Laad keybinds via Process
         loadKeybindsProc.running = true;
         // Load weather .env values

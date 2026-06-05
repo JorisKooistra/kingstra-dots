@@ -44,5 +44,8 @@ config/qt6ct|~/.config/qt6ct
 # config/yazi → ~/.config/yazi
 config/yazi|~/.config/yazi
 
+# config/spicetify → ~/.config/spicetify
+config/spicetify|~/.config/spicetify
+
 # config/kingstra → ~/.config/kingstra (thema-definities)
 config/kingstra|~/.config/kingstra

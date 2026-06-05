@@ -288,4 +288,112 @@ if pgrep -x kitty &>/dev/null; then
     _log "Kitty herladen"
 fi
 
+# GTK4 — libadwaita pikt colors.css wijzigingen op via gtk.css @import
+# Forceer reload door een lege gsettings trigger (touch van het bestand is niet genoeg)
+if command -v gsettings &>/dev/null; then
+    GTK4_COLORS="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-4.0/colors.css"
+    if [[ -f "$GTK4_COLORS" ]]; then
+        touch "$GTK4_COLORS" 2>/dev/null || true
+        _log "GTK4 colors.css bijgewerkt"
+    fi
+fi
+
+# Cava — stuur SIGUSR2 voor config-reload (cava 0.9+); bij mislukken: herstart
+if pgrep -x cava &>/dev/null; then
+    if ! pkill -USR2 cava 2>/dev/null; then
+        pkill -x cava 2>/dev/null || true
+    fi
+    _log "Cava herladen"
+fi
+
+# MatugenFox — native host bewaakt firefox-colors.css via polling; geen expliciete trigger nodig.
+# Touch het bestand zodat mtime wijzigt en de host een update stuurt.
+FIREFOX_COLORS="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/generated/firefox_websites.css"
+if [[ -f "$FIREFOX_COLORS" ]]; then
+    touch "$FIREFOX_COLORS" 2>/dev/null || true
+fi
+
+# Pywalfox — Firefox UI theming (tabs, toolbar, borders).
+# Converteer matugen-palette naar pywal colors.json, roep dan pywalfox update aan.
+PALETTE_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/matugen-palette.json"
+PYWAL_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/wal"
+if [[ -f "$PALETTE_JSON" ]] && command -v jq &>/dev/null; then
+    mkdir -p "$PYWAL_DIR"
+    jq -n \
+        --slurpfile p "$PALETTE_JSON" \
+        --arg wall "${WALLPAPER:-}" \
+        '($p[0].colors | map({(.key): .hex}) | add) as $c |
+        {
+            wallpaper: $wall,
+            alpha: "100",
+            special: {
+                background: $c.background,
+                foreground: $c.on_background,
+                cursor:     $c.primary
+            },
+            colors: {
+                color0:  $c.background,
+                color1:  $c.error,
+                color2:  $c.tertiary,
+                color3:  $c.secondary,
+                color4:  $c.primary,
+                color5:  $c.on_secondary_container,
+                color6:  $c.tertiary_container,
+                color7:  $c.on_surface,
+                color8:  $c.outline,
+                color9:  $c.on_error_container,
+                color10: $c.primary,
+                color11: $c.on_surface_variant,
+                color12: $c.primary_container,
+                color13: $c.secondary,
+                color14: $c.inverse_primary,
+                color15: $c.on_background
+            }
+        }' > "$PYWAL_DIR/colors.json" 2>/dev/null && _log "Pywal colors.json gegenereerd"
+
+    if python3 -m pywalfox update 2>/dev/null; then
+        _log "Pywalfox bijgewerkt"
+    fi
+fi
+
+# Spicetify — herlaad Matugen theme zonder Spotify te herstarten.
+SPICETIFY_COLOR_INI="${XDG_CONFIG_HOME:-$HOME/.config}/spicetify/Themes/Matugen/color.ini"
+if command -v spicetify &>/dev/null && [[ -f "$SPICETIFY_COLOR_INI" ]]; then
+    spicetify config current_theme Matugen color_scheme Matugen inject_css 1 replace_colors 1 >/dev/null 2>&1 || true
+    if spicetify apply -n >/dev/null 2>&1; then
+        _log "Spicetify theme herladen"
+
+        # Live UI refresh: stuur Ctrl+Shift+R naar Spotify als het venster actief kan worden gemaakt.
+        if pgrep -x spotify &>/dev/null && command -v hyprctl &>/dev/null && command -v jq &>/dev/null && command -v wtype &>/dev/null; then
+            _active_addr="$(hyprctl activewindow -j 2>/dev/null | jq -r '.address // empty')"
+            _spotify_addr="$(hyprctl clients -j 2>/dev/null | jq -r 'first(.[] | select((.class // "" | ascii_downcase) == "spotify") | .address) // empty')"
+
+            if [[ -n "$_spotify_addr" ]]; then
+                hyprctl dispatch focuswindow "address:$_spotify_addr" >/dev/null 2>&1 || true
+                wtype -M ctrl -M shift r -m shift -m ctrl >/dev/null 2>&1 || true
+                if [[ -n "$_active_addr" ]]; then
+                    hyprctl dispatch focuswindow "address:$_active_addr" >/dev/null 2>&1 || true
+                fi
+                _log "Spotify UI live herladen (Ctrl+Shift+R)"
+            fi
+        fi
+    else
+        _warn "Spicetify reload mislukt"
+    fi
+fi
+
+# VSCode — merge workbench.colorCustomizations in settings.json
+VSCODE_MATUGEN="${XDG_CONFIG_HOME:-$HOME/.config}/Code/User/matugen-colors.json"
+VSCODE_SETTINGS="${XDG_CONFIG_HOME:-$HOME/.config}/Code/User/settings.json"
+if [[ -f "$VSCODE_MATUGEN" && -f "$VSCODE_SETTINGS" ]] && command -v jq &>/dev/null; then
+    _tmp=$(mktemp)
+    if jq -s '.[0] * .[1]' "$VSCODE_SETTINGS" "$VSCODE_MATUGEN" > "$_tmp" 2>/dev/null; then
+        mv "$_tmp" "$VSCODE_SETTINGS"
+        _log "VSCode kleuren bijgewerkt"
+    else
+        rm -f "$_tmp"
+        _warn "VSCode settings merge mislukt"
+    fi
+fi
+
 _log "Klaar"

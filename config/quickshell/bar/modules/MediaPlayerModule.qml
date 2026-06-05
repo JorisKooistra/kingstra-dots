@@ -12,7 +12,9 @@ Rectangle {
     required property var ctx
 
     readonly property bool _isPlaying: shell.mediaStatus === "Playing"
-    readonly property bool _isActive:  shell.mediaStatus === "Playing" || shell.mediaStatus === "Paused"
+    // Show controls only when playback is active and a track is known.
+    readonly property bool _isActive: (shell.mediaStatus === "Playing" || shell.mediaStatus === "Paused")
+        && String(shell.mediaTitle || "").trim() !== ""
 
     // ── Layout ────────────────────────────────────────────────────────────────
     Layout.preferredHeight: ctx.cyberSideModuleHeight
@@ -101,7 +103,7 @@ Rectangle {
             }
             MouseArea {
                 id: titleMouse; anchors.fill: parent; hoverEnabled: true
-                onClicked: Quickshell.execDetached(["bash", "-c", "$HOME/.config/hypr/scripts/qs_manager.sh toggle music"])
+                onClicked: shell.toggleMusicPopup()
             }
         }
 

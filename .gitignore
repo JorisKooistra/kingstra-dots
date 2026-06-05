@@ -25,6 +25,8 @@ config/qt6ct/colors/matugen.conf
 config/zsh/omp-colors.toml
 config/zsh/.zcompdump*
 config/yazi/theme.toml
+config/spicetify/Themes/Matugen/color.ini
+config/spicetify/Themes/Matugen/user.css
 
 # Installer-gegenereerde hardware config
 config/hypr/conf.d/72-hardware.conf
@@ -68,3 +70,5 @@ config/hypr/monitors.conf
 config/hypr/workspaces.conf
 config/hypr/monitors.lua
 config/hypr/workspaces.lua
+config/matugen/generated/*
+!config/matugen/generated/.gitkeep

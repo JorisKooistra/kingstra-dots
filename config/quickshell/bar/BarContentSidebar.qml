@@ -296,7 +296,7 @@ Item {
                 hoverEnabled: true
                 onEntered: root.setDrawerOpen(true, "calendar", infoCard)
                 onExited: root.setDrawerOpen(false)
-                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle calendar"])
+                onClicked: shell.toggleWeatherPopup()
             }
 
             ColumnLayout {
@@ -585,7 +585,8 @@ Item {
         }
 
         Rectangle {
-            visible: shell.isMediaActive
+            visible: (shell.mediaStatus === "Playing" || shell.mediaStatus === "Paused")
+                && String(shell.mediaTitle || "").trim() !== ""
             Layout.fillWidth: true
             Layout.preferredHeight: shell.s(74)
             radius: surface.panelRadius
@@ -613,6 +614,14 @@ Item {
                     font.weight: Font.Bold
                     color: mocha.text
                     elide: Text.ElideRight
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: root.setDrawerOpen(true, "media", parent)
+                        onExited: root.setDrawerOpen(false)
+                        onClicked: shell.toggleMusicPopup()
+                    }
                 }
 
                 RowLayout {
@@ -1034,7 +1043,7 @@ Item {
                 hoverEnabled: true
                 onEntered: root.setDrawerOpen(true, "volume", parent)
                 onExited: root.setDrawerOpen(false)
-                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"])
+                onClicked: shell.toggleAudioControlsPopup()
                 onWheel: (wheel) => {
                     shell.handleVolumeWheel(wheel.angleDelta.y);
                     wheel.accepted = true;

@@ -408,7 +408,7 @@ Item {
                     onClicked: { 
                         exitAnim.start(); 
                         Quickshell.execDetached(["sh", "-c", "loginctl terminate-user $USER"]); 
-                        Quickshell.execDetached(["sh", "-c", "echo 'close' > /tmp/qs_widget_state"]); 
+                        Quickshell.execDetached(["bash", "-c", "echo close > /tmp/qs_widget_state"]); 
                     }
                 }
             }
@@ -978,7 +978,7 @@ Item {
 
                             Timer {
                                 id: exitTimer; interval: 500 
-                                onTriggered: { Quickshell.execDetached(["sh", "-c", actionCapsule.pendingCmd]); Quickshell.execDetached(["sh", "-c", "echo 'close' > /tmp/qs_widget_state"]); }
+                                onTriggered: { Quickshell.execDetached(["sh", "-c", actionCapsule.pendingCmd]); Quickshell.execDetached(["bash", "-c", "echo close > /tmp/qs_widget_state"]); }
                             }
                         }
                     }

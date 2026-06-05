@@ -81,7 +81,7 @@ Rectangle {
         anchors.top: parent.top
         height: parent.height
         hoverEnabled: true
-        onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle calendar"])
+        onClicked: shell.toggleWeatherPopup()
     }
 
     // ── Inhoud: klok + weer naast elkaar ─────────────────────────────────────

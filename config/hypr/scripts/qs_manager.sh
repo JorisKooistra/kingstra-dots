@@ -8,9 +8,15 @@ BT_PID_FILE="$HOME/.cache/bt_scan_pid"
 BT_SCAN_LOG="$HOME/.cache/bt_scan.log"
 FOCUSTIME_DAEMON="$HOME/.config/quickshell/focustime/focus_daemon.py"
 
-IPC_FILE="/tmp/qs_widget_state"
 NETWORK_MODE_FILE="/tmp/qs_network_mode"
 PREV_FOCUS_FILE="/tmp/qs_prev_focus"
+
+qs_ipc_send() {
+    # Voeg $RANDOM toe als nonce zodat onInternalTextChanged altijd vuurt,
+    # ook bij herhaald dezelfde widget openen. De parser in Main.qml negeert
+    # het extra veld (parts[6+]).
+    printf '%s:%s\n' "$1" "$RANDOM" > /tmp/qs_widget_state
+}
 
 ACTION="$1"
 TARGET="$2"
@@ -36,9 +42,9 @@ fi
 # function to explicitly re-assert focus AFTER the window is moved.
 hide_widget_async() {
     local prev_addr="$1"
-    # Writing "close" to the IPC file triggers Main.qml to set currentActive="hidden",
+    # Writing "close" to the state file triggers Main.qml FileView watcher,
     # which unmaps the WlrLayer.Overlay PanelWindow. No hyprctl dispatch needed.
-    echo "close" > "$IPC_FILE"
+    qs_ipc_send "close"
 
     # Restore focus to the previously active window (layer-shell exclusive focus
     # may hold it until the surface unmaps; give it a short head-start).
@@ -63,16 +69,11 @@ restore_focus() {
     echo "$prev_addr"
 }
 
-qs_master_workspace() {
-    hyprctl clients -j 2>/dev/null \
-        | jq -r '.[] | select(.title == "qs-master") | .workspace.name' \
-        | head -n 1
-}
-
 qs_master_visible() {
-    local ws_name
-    ws_name="$(qs_master_workspace)"
-    [[ -n "$ws_name" && "$ws_name" != "null" && "$ws_name" != special:* ]]
+    local qs_pid active_widget
+    qs_pid="$(pgrep -f "quickshell.*Main\\.qml" | head -n 1 || true)"
+    active_widget="$(cat /tmp/qs_active_widget 2>/dev/null)"
+    [[ -n "$qs_pid" && -n "$active_widget" && "$active_widget" != "hidden" ]]
 }
 
 non_quickshell_client_filter='.title != "qs-master" and .class != "org.quickshell" and .initialClass != "org.quickshell"'
@@ -136,7 +137,7 @@ if [[ "$ACTION" == "workspace" && "$TARGET" =~ ^[0-9]+$ ]]; then
     TARGET_WS="$TARGET"
     MOVE_OPT="$SUBTARGET"
 
-    echo "close" > "$IPC_FILE"
+    qs_ipc_send "close"
     dispatch_workspace_target "$TARGET_WS" "$MOVE_OPT"
     rm -f "$PREV_FOCUS_FILE"
     exit 0
@@ -150,7 +151,7 @@ if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
         CURRENT_WS=1
     fi
     TARGET_WS=$(( ((CURRENT_WS - 1) / 10) * 10 + WORKSPACE_NUM ))
-    echo "close" > "$IPC_FILE"
+    qs_ipc_send "close"
     dispatch_workspace_target "$TARGET_WS" "$MOVE_OPT"
     rm -f "$PREV_FOCUS_FILE"
     exit 0
@@ -166,7 +167,6 @@ handle_network_prep() {
 # -----------------------------------------------------------------------------
 # ENSURE MASTER WINDOW & TOP BAR ARE ALIVE (ZOMBIE WATCHDOG)
 # -----------------------------------------------------------------------------
-MAIN_QML_PATH="$HOME/.config/quickshell/Main.qml"
 BAR_QML_PATH="$HOME/.config/quickshell/TopBar.qml"
 
 QS_PID=$(pgrep -f "quickshell.*Main\.qml")
@@ -175,7 +175,10 @@ BAR_PID=$(pgrep -f "quickshell.*TopBar\.qml")
 # Main.qml now uses a WlrLayer.Overlay PanelWindow which does NOT appear in
 # hyprctl clients — only check process existence.
 if [[ -z "$QS_PID" ]]; then
-    quickshell -p "$MAIN_QML_PATH" >/dev/null 2>&1 &
+    # Maak het state-bestand aan vóór Main.qml start, zodat FileView het
+    # direct kan bekijken (Qt's inotify vereist dat het bestand bestaat).
+    touch /tmp/qs_widget_state 2>/dev/null || true
+    quickshell -p "$HOME/.config/quickshell/Main.qml" >/dev/null 2>&1 &
     disown
     sleep 0.3
 fi
@@ -235,14 +238,15 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
         ACTIVE_WIDGET="hidden"
     fi
 
-    # Dynamically fetch focused monitor geometry and adjust for Wayland layout scale
-    ACTIVE_MON=$(hyprctl monitors -j | jq -r '.[] | select(.focused==true)')
-    MX=$(echo "$ACTIVE_MON" | jq -r '.x // 0')
-    MY=$(echo "$ACTIVE_MON" | jq -r '.y // 0')
-    MW=$(echo "$ACTIVE_MON" | jq -r '(.width / (.scale // 1)) | round // 1920')
-    MH=$(echo "$ACTIVE_MON" | jq -r '(.height / (.scale // 1)) | round // 1080')
-
-    MON_DATA="${MX}:${MY}:${MW}:${MH}"
+    # Monitor payload is optional; Main.qml can fall back to Hyprland.focusedMonitor.
+    MON_DATA=""
+    MON_LINE="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused==true) | [(.x // 0), (.y // 0), ((.width / (.scale // 1)) | round), ((.height / (.scale // 1)) | round)] | @tsv' | head -n 1 || true)"
+    if [[ -n "$MON_LINE" ]]; then
+        IFS=$'\t' read -r MX MY MW MH <<< "$MON_LINE"
+        if [[ "$MX" =~ ^-?[0-9]+$ && "$MY" =~ ^-?[0-9]+$ && "$MW" =~ ^[0-9]+$ && "$MH" =~ ^[0-9]+$ ]]; then
+            MON_DATA="${MX}:${MY}:${MW}:${MH}"
+        fi
+    fi
 
     if [[ "$TARGET" == "network" ]]; then
         if [[ "$ACTION" == "toggle" && "$ACTIVE_WIDGET" == "network" ]]; then
@@ -263,7 +267,11 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
             if [[ -n "$SUBTARGET" ]]; then
                 echo "$SUBTARGET" > "$NETWORK_MODE_FILE"
             fi
-            echo "$TARGET::$MON_DATA" > "$IPC_FILE"
+            if [[ -n "$MON_DATA" ]]; then
+                qs_ipc_send "$TARGET::$MON_DATA"
+            else
+                qs_ipc_send "$TARGET"
+            fi
             save_and_focus_widget
         fi
         exit 0
@@ -279,10 +287,12 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     if [[ "$TARGET" == "wallpaper" ]]; then
         "$QS_DIR/wallpaper-picker-safe.sh" >/dev/null 2>&1 &
         exit 0
-    elif [[ "$TARGET" == "theme" ]]; then
-        echo "$TARGET::$MON_DATA" > "$IPC_FILE"
+    fi
+
+    if [[ -n "$MON_DATA" ]]; then
+        qs_ipc_send "$TARGET::$MON_DATA"
     else
-        echo "$TARGET::$MON_DATA" > "$IPC_FILE"
+        qs_ipc_send "$TARGET"
     fi
     
     save_and_focus_widget

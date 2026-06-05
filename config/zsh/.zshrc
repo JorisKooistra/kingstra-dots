@@ -14,3 +14,5 @@ if [[ -d "$KINGSTRA_ZSH_DIR/conf.d" ]]; then
     done
     unset _conf
 fi
+
+export PATH=$PATH:/home/joris/.spicetify

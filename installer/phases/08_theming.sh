@@ -23,6 +23,9 @@ phase_run() {
     log_step "Qt6ct config deployen..."
     deploy_config "qt6ct"
 
+    log_step "Spicetify config deployen..."
+    deploy_config "spicetify"
+
     log_step "Apply-script deployen..."
     _phase08_deploy_apply_script
 
@@ -67,6 +70,7 @@ phase_run() {
     validate_file "$HOME/.local/bin/kingstra-wallhaven-tags"      "kingstra-wallhaven-tags"
     validate_dir  "$HOME/.config/kingstra/themes"                 "kingstra/themes/"
     validate_dir  "$HOME/.config/kingstra/modes"                  "kingstra/modes/"
+    validate_dir  "$HOME/.config/spicetify/Themes/Matugen"        "spicetify/Themes/Matugen"
     validate_cmd  quickshell-game
     validate_file "$HOME/.config/quickshell/game-launcher/config.toml" "game-launcher/config.toml"
     validate_report

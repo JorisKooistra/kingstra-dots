@@ -7,6 +7,7 @@ import Quickshell.Services.UPower
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
 import Quickshell.Hyprland
+import Quickshell.Networking
 import ".."
 
 Variants {
@@ -204,12 +205,47 @@ Variants {
 
             function switchKeyboardLayout() {
                 Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"]);
-                keyboardRefreshTimer.restart();
+                // Geen timer nodig — update komt via Hyprland rawEvent
             }
 
             function mediaPrevious()  { if (_activePlayer && _activePlayer.canGoPrevious)    _activePlayer.previous(); }
-            function mediaPlayPause() { if (_activePlayer && _activePlayer.canTogglePlaying) _activePlayer.togglePlaying(); }
+            function mediaPlayPause() {
+                if (_activePlayer && _activePlayer.canTogglePlaying) {
+                    _activePlayer.togglePlaying();
+                    return;
+                }
+
+                // Fallback: some players expose metadata/state differently.
+                var players = Mpris.players.values;
+                for (var i = 0; i < players.length; i++) {
+                    var p = players[i];
+                    if (p.canTogglePlaying
+                            && (p.playbackState === MprisPlaybackState.Playing
+                                || p.playbackState === MprisPlaybackState.Paused)) {
+                        p.togglePlaying();
+                        return;
+                    }
+                }
+                for (var j = 0; j < players.length; j++) {
+                    if (players[j].canTogglePlaying) {
+                        players[j].togglePlaying();
+                        return;
+                    }
+                }
+            }
             function mediaNext()      { if (_activePlayer && _activePlayer.canGoNext)        _activePlayer.next(); }
+
+            function togglePopup(target) {
+                Quickshell.execDetached([
+                    "bash",
+                    "-lc",
+                    "~/.config/hypr/scripts/qs_manager.sh toggle " + target
+                ]);
+            }
+
+            function toggleWeatherPopup() { togglePopup("calendar"); }
+            function toggleMusicPopup() { togglePopup("music"); }
+            function toggleAudioControlsPopup() { togglePopup("volume"); }
 
             function handleVolumeWheel(deltaY) {
                 if (!deltaY || deltaY === 0) return;
@@ -276,15 +312,10 @@ Variants {
             property bool startupCascadeFinished: false
             Timer { interval: 1000; running: true; onTriggered: barWindow.startupCascadeFinished = true }
             
-            // Data gating to prevent startup layout jumping
-            property bool sysPollerLoaded: false
-            property bool fastPollerLoaded: false
-            
-            // FIXED: Only wait for the instant data to load the UI. 
-            // The slow network scripts will populate smoothly when they finish.
-            property bool isDataReady: fastPollerLoaded
-            // Failsafe: Force the layout to show after 600ms even if fast poller hangs
+            // Data is direct beschikbaar via event-driven bronnen (Networking, Hyprland)
+            property bool isDataReady: true
             Timer { interval: 600; running: true; onTriggered: barWindow.isDataReady = true }
+            readonly property bool sysPollerLoaded: true
             
             property string timeStr: ""
             property string fullDateStr: ""
@@ -297,15 +328,71 @@ Variants {
             property string kbLayout: "US"
             property int kbLayoutCount: 1
             
-            // WiFi + Ethernet — via sys_info.sh
-            property bool hasWifi: false
-            property bool isWifiOn: false
-            property string wifiSsid: ""
-            property string wifiIcon: "󰤮"
-
-            property bool isEthConnected: false
-            property string ethSpeed: ""
-            property string ethIcon: "󰈀"
+            // WiFi + Ethernet — Quickshell.Networking (event-driven)
+            readonly property bool hasWifi: {
+                var devs = Networking.devices.values;
+                for (var i = 0; i < devs.length; i++) {
+                    if (devs[i].type === DeviceType.Wifi) return true;
+                }
+                return false;
+            }
+            readonly property bool isWifiOn: {
+                if (!Networking.wifiEnabled) return false;
+                var devs = Networking.devices.values;
+                for (var i = 0; i < devs.length; i++) {
+                    if (devs[i].type === DeviceType.Wifi && devs[i].connected) return true;
+                }
+                return false;
+            }
+            readonly property string wifiSsid: {
+                var devs = Networking.devices.values;
+                for (var i = 0; i < devs.length; i++) {
+                    var dev = devs[i];
+                    if (dev.type !== DeviceType.Wifi || !dev.connected) continue;
+                    var nets = dev.networks.values;
+                    for (var j = 0; j < nets.length; j++) {
+                        if (nets[j].connected) return nets[j].name;
+                    }
+                }
+                return "";
+            }
+            readonly property string wifiIcon: {
+                if (!isWifiOn || !wifiSsid) return isWifiOn ? "󰤯" : "󰤮";
+                var devs = Networking.devices.values;
+                for (var i = 0; i < devs.length; i++) {
+                    var dev = devs[i];
+                    if (dev.type !== DeviceType.Wifi || !dev.connected) continue;
+                    var nets = dev.networks.values;
+                    for (var j = 0; j < nets.length; j++) {
+                        if (!nets[j].connected) continue;
+                        var sig = nets[j].signalStrength;
+                        if (sig >= 75) return "󰤨";
+                        if (sig >= 50) return "󰤥";
+                        if (sig >= 25) return "󰤢";
+                        return "󰤟";
+                    }
+                }
+                return "󰤮";
+            }
+            readonly property bool isEthConnected: {
+                var devs = Networking.devices.values;
+                for (var i = 0; i < devs.length; i++) {
+                    if (devs[i].type === DeviceType.Wired && devs[i].connected) return true;
+                }
+                return false;
+            }
+            readonly property string ethSpeed: {
+                var devs = Networking.devices.values;
+                for (var i = 0; i < devs.length; i++) {
+                    var dev = devs[i];
+                    if (dev.type !== DeviceType.Wired || !dev.connected) continue;
+                    var spd = dev.linkSpeed;
+                    if (!spd || spd <= 0 || spd >= 65535) return "";
+                    return spd >= 1000 ? (Math.floor(spd / 1000) + "G") : (spd + "M");
+                }
+                return "";
+            }
+            readonly property string ethIcon: isEthConnected ? "󰈀" : "󰈂"
 
             // Bluetooth — Quickshell.Bluetooth (event-driven)
             readonly property bool hasBluetooth: Bluetooth.defaultAdapter !== null
@@ -321,7 +408,7 @@ Variants {
             }
             readonly property string btStatus: isBtOn ? "On" : "Off"
 
-            // Volume — wpctl (PipeWire native; pactl werkt niet op dit systeem)
+            // Volume — wpctl (Pipewire QML werkt niet op dit systeem)
             property int _volRaw: 0
             property bool isMuted: false
 
@@ -351,16 +438,9 @@ Variants {
                 return "󰕿";
             }
 
-            // Battery — Quickshell.Services.UPower (event-driven)
-            property bool hasBattery: false
-            Process {
-                id: batteryDetect
-                command: ["bash", "-c", "compgen -G '/sys/class/power_supply/BAT*' > /dev/null 2>&1 && echo true || echo false"]
-                running: true
-                stdout: StdioCollector {
-                    onStreamFinished: barWindow.hasBattery = this.text.trim() === "true"
-                }
-            }
+            // Battery — UPower event-driven (vervangt bash compgen check)
+            readonly property bool hasBattery: UPower.displayDevice !== null
+                && UPower.displayDevice.isLaptopBattery
 
             readonly property int batCap: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage * 100) : 0
             readonly property bool isCharging: UPower.displayDevice
@@ -396,14 +476,43 @@ Variants {
             // Media — Quickshell.Services.Mpris (event-driven)
             readonly property var _activePlayer: {
                 var players = Mpris.players.values;
+                var playingWithTitle = null;
+                var playingAny = null;
+                var pausedWithTitle = null;
+                var pausedAny = null;
+
                 for (var i = 0; i < players.length; i++) {
-                    if (players[i].playbackState !== MprisPlaybackState.Stopped) return players[i];
+                    var player = players[i];
+                    var title = String(player.trackTitle || "").trim();
+                    var hasTitle = title !== "";
+
+                    if (player.playbackState === MprisPlaybackState.Playing) {
+                        if (playingAny === null) playingAny = player;
+                        if (hasTitle && playingWithTitle === null) playingWithTitle = player;
+                        continue;
+                    }
+
+                    if (player.playbackState === MprisPlaybackState.Paused) {
+                        if (pausedAny === null) pausedAny = player;
+                        if (hasTitle && pausedWithTitle === null) pausedWithTitle = player;
+                    }
                 }
+
+                if (playingWithTitle !== null) return playingWithTitle;
+                if (playingAny !== null) return playingAny;
+                if (pausedWithTitle !== null) return pausedWithTitle;
+                if (pausedAny !== null) return pausedAny;
+
+                for (var j = 0; j < players.length; j++) {
+                    if (String(players[j].trackTitle || "").trim() !== "") return players[j];
+                }
+
                 return players.length > 0 ? players[0] : null;
             }
+            readonly property bool isMediaPlaying: _activePlayer !== null
+                && _activePlayer.playbackState === MprisPlaybackState.Playing
             readonly property bool isMediaActive: _activePlayer !== null
                 && _activePlayer.playbackState !== MprisPlaybackState.Stopped
-                && _activePlayer.trackTitle !== ""
             readonly property var musicData: {
                 if (!_activePlayer || !isMediaActive)
                     return { "status": "Stopped", "title": "", "artUrl": "", "timeStr": "" };
@@ -455,59 +564,35 @@ Variants {
             property bool isSoundActive: !barWindow.isMuted && barWindow._volRaw > 0
 
             // ==========================================
-            // DATA FETCHING 
+            // DATA FETCHING
             // ==========================================
 
-            // Unified System Info ------------------------
+            // Toetsenbordindeling — eenmalig via hyprctl, updates via Hyprland rawEvent
+            // kbLayoutCount = aantal geconfigureerde layouts in input:kb_layout (niet apparaten)
             Process {
-                id: sysPoller
+                id: kbInitPoller
                 running: true
-                command: ["bash", "-c", "~/.config/quickshell/sys_info.sh"]
+                command: ["bash", "-c",
+                    "count=$(hyprctl getoption input:kb_layout -j 2>/dev/null | jq -r '.str // \"us\"' | awk -F, '{n=0; for(i=1;i<=NF;i++) if($i!=\"\") n++; print n}'); " +
+                    "active=$(hyprctl devices -j 2>/dev/null | jq -r '.keyboards[] | select(.main==true) | .active_keymap // \"US\"' | head -n1); " +
+                    "echo \"$count $active\""
+                ]
                 stdout: StdioCollector {
                     onStreamFinished: {
-                        let txt = this.text.trim();
-                        if (txt !== "") {
-                            try {
-                                let data = JSON.parse(txt);
-                                if (data.keyboard) {
-                                    let nextLayout = data.keyboard.layout || "US";
-                                    let nextCount = parseInt(data.keyboard.count || 1);
-                                    barWindow.kbLayout = nextLayout;
-                                    barWindow.kbLayoutCount = isNaN(nextCount) ? 1 : nextCount;
-                                }
-                                if (data.wifi) {
-                                    barWindow.hasWifi = data.wifi.has_hardware === "true";
-                                    barWindow.isWifiOn = data.wifi.status === "enabled" && String(data.wifi.ssid || "") !== "";
-                                    barWindow.wifiSsid = data.wifi.ssid || "";
-                                    barWindow.wifiIcon = data.wifi.icon || "󰤮";
-                                }
-                                if (data.ethernet) {
-                                    barWindow.isEthConnected = data.ethernet.connected === "true";
-                                    barWindow.ethSpeed = data.ethernet.speed || "";
-                                    barWindow.ethIcon = data.ethernet.icon || "󰈀";
-                                }
-                                barWindow.sysPollerLoaded = true;
-                                barWindow.fastPollerLoaded = true;
-                            } catch(e) {}
-                        }
-                        if (!sysWaiter.running) sysWaiter.running = true;
+                        let parts = this.text.trim().split(" ");
+                        barWindow.kbLayoutCount = parseInt(parts[0]) || 1;
+                        barWindow.kbLayout = (parts.slice(1).join(" ") || "US").substring(0, 2).toUpperCase();
                     }
                 }
             }
-            
-            Process {
-                id: sysWaiter
-                command: ["bash", "-c", "~/.config/quickshell/sys_waiter.sh"]
-                // Strictly use onExited. Quickshell will no longer hook into stdout, preventing pipe deadlocks.
-                onExited: sysPoller.running = true 
-            }
 
-            Timer {
-                id: keyboardRefreshTimer
-                interval: 180
-                repeat: false
-                onTriggered: {
-                    if (!sysPoller.running) sysPoller.running = true;
+            Connections {
+                target: Hyprland
+                function onRawEvent(event) {
+                    if (event.name !== "activelayout") return;
+                    let comma = event.data.indexOf(",");
+                    if (comma >= 0)
+                        barWindow.kbLayout = event.data.substring(comma + 1).trim().substring(0, 2).toUpperCase();
                 }
             }
 

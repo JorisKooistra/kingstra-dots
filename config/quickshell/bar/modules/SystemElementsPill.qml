@@ -388,7 +388,7 @@ Rectangle {
             }
             MouseArea {
                 id: volMouse; hoverEnabled: true; anchors.fill: parent
-                onClicked: Quickshell.execDetached(["qs", "ipc", "-p", Quickshell.env("HOME") + "/.config/quickshell/TopBar.qml", "call", "volume", "toggle"])
+                onClicked: shell.toggleAudioControlsPopup()
                 onWheel: (wheel) => { shell.handleVolumeWheel(wheel.angleDelta.y); wheel.accepted = true; }
             }
         }
