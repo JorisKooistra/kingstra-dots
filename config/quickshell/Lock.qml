@@ -309,7 +309,7 @@ ShellRoot {
                 Process {
                     id: weatherPoller
                     property string scriptPath: Qt.resolvedUrl("calendar/weather.sh").toString().replace(/^file:\/\//, "")
-                    command: ["bash", "-c", '"' + scriptPath + '" --current-icon; "' + scriptPath + '" --current-temp']
+                    command: ["bash", scriptPath, "--current-summary"]
                     stdout: StdioCollector {
                         onStreamFinished: {
                             let lines = this.text.trim().split("\n");

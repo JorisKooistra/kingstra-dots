@@ -100,6 +100,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.config/walker/config.toml"                   "walker/config.toml"
     # Yazi
     validate_file "$HOME/.config/yazi/yazi.toml"                       "yazi.toml"
+    validate_file "$HOME/.config/firefox/user.js"                      "firefox/user.js"
     # Netwerk
     validate_file "$HOME/.config/systemd/user/kingstra-resume.service" "kingstra-resume.service"
     validate_file "$HOME/.config/systemd/user/kingstra-lid-lock.service" "kingstra-lid-lock.service"
@@ -116,6 +117,7 @@ _phase15_validate_links() {
     validate_link "$HOME/.config/walker"     "$cfg/walker"     "~/.config/walker"
     validate_link "$HOME/.config/kitty"      "$cfg/kitty"      "~/.config/kitty"
     validate_link "$HOME/.config/yazi"       "$cfg/yazi"       "~/.config/yazi"
+    validate_link "$HOME/.config/firefox"    "$cfg/firefox"    "~/.config/firefox"
     validate_link "$HOME/.config/hypridle"   "$cfg/hypridle"   "~/.config/hypridle"
     validate_link "$HOME/.local/bin/kingstra-theme-apply" \
                   "$cfg/shared/scripts/matugen-apply.sh"  "kingstra-theme-apply"
@@ -127,6 +129,8 @@ _phase15_validate_links() {
                   "$cfg/shared/scripts/kingstra-session-start"  "kingstra-session-start"
     validate_link "$HOME/.local/bin/kingstra-touch-detect" \
                   "$cfg/shared/scripts/kingstra-touch-detect"  "kingstra-touch-detect"
+    validate_link "$HOME/.local/bin/kingstra-firefox-optimize" \
+                  "$cfg/shared/scripts/kingstra-firefox-optimize"  "kingstra-firefox-optimize"
     validate_link "$HOME/.local/bin/kingstra-wallpaper" \
                   "$REPO_ROOT/config/wallpaper/kingstra-wallpaper" "kingstra-wallpaper"
     validate_link "$HOME/.local/bin/kingstra-skwd-wallpaper-sync" \

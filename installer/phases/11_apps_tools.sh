@@ -47,6 +47,9 @@ phase_run() {
     deploy_config "yazi"
     _phase11_init_yazi_theme_file
 
+    log_step "Firefox-profiel optimalisaties deployen..."
+    _phase11_setup_firefox
+
     log_step "Optionele apps installeren..."
     _phase11_optional_apps
 
@@ -64,6 +67,8 @@ phase_run() {
     validate_file "$HOME/.config/yazi/yazi.toml"    "yazi.toml"
     validate_file "$HOME/.config/yazi/keymap.toml"  "yazi keymap.toml"
     validate_file "$HOME/.config/yazi/theme.toml"   "yazi theme.toml"
+    validate_file "$HOME/.config/firefox/user.js"   "firefox/user.js"
+    validate_file "$HOME/.local/bin/kingstra-firefox-optimize" "kingstra-firefox-optimize"
     validate_report
 
     log_ok "Fase 11 voltooid — Apps en dagelijkse tools beschikbaar."
@@ -143,6 +148,28 @@ _phase11_init_yazi_theme_file() {
 # This file is generated/updated by Matugen integration.
 EOF
     log_ok "Yazi theme placeholder aangemaakt: $yazi_theme"
+}
+
+_phase11_setup_firefox() {
+    local firefox_script_src="$REPO_ROOT/config/shared/scripts/kingstra-firefox-optimize"
+    local firefox_script_dest="$HOME/.local/bin/kingstra-firefox-optimize"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Firefox profiel-optimalisaties zouden worden gedeployed"
+        return 0
+    fi
+
+    deploy_config "firefox"
+    ensure_dir "$HOME/.local/bin"
+    deploy_link "$firefox_script_src" "$firefox_script_dest"
+    chmod +x "$firefox_script_src"
+
+    if [[ -f "$HOME/.mozilla/firefox/profiles.ini" ]] || command -v firefox >/dev/null 2>&1; then
+        "$firefox_script_dest" >/dev/null 2>&1 || \
+            log_warn "Firefox-profieloptimalisatie kon niet volledig worden toegepast"
+    else
+        log_info "Firefox-profielen nog niet gevonden — profieloptimalisatie staat klaar via kingstra-firefox-optimize"
+    fi
 }
 
 _phase11_setup_spicetify() {

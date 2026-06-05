@@ -20,6 +20,7 @@
 ~/.config/swaync|symlink
 ~/.config/walker|symlink
 ~/.config/yazi|symlink
+~/.config/firefox|symlink
 ~/.config/hypridle|symlink
 ~/.config/fastfetch|symlink
 ~/.config/cava|symlink
@@ -42,6 +43,7 @@
 ~/.local/bin/kingstra-matugen-run|symlink
 ~/.local/bin/kingstra-touch-detect|symlink
 ~/.local/bin/kingstra-wallhaven-tags|symlink
+~/.local/bin/kingstra-firefox-optimize|symlink
 ~/.local/bin/kingstra-wallpaper|symlink
 ~/.local/bin/kingstra-skwd-wallpaper-sync|symlink
 ~/.local/bin/apply-shell-state|symlink

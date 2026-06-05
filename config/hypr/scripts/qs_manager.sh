@@ -178,13 +178,13 @@ if [[ -z "$QS_PID" ]]; then
     # Maak het state-bestand aan vóór Main.qml start, zodat FileView het
     # direct kan bekijken (Qt's inotify vereist dat het bestand bestaat).
     touch /tmp/qs_widget_state 2>/dev/null || true
-    quickshell -p "$HOME/.config/quickshell/Main.qml" >/dev/null 2>&1 &
+    quickshell --no-duplicate -p "$HOME/.config/quickshell/Main.qml" >/dev/null 2>&1 &
     disown
     sleep 0.3
 fi
 
 if [[ -z "$BAR_PID" ]]; then
-    quickshell -p "$BAR_QML_PATH" >/dev/null 2>&1 &
+    quickshell --no-duplicate -p "$BAR_QML_PATH" >/dev/null 2>&1 &
     disown
 fi
 

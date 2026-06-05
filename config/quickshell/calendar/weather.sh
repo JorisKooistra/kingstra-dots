@@ -6,11 +6,15 @@ json_file="${cache_dir}/weather.json"
 view_file="${cache_dir}/view_id"
 daily_cache_file="${cache_dir}/daily_weather_cache.json"
 next_day_cache_file="${cache_dir}/next_day_precache.json"
+lock_file="${cache_dir}/weather.lock"
 
 # API Settings
 # Load environment variables silently
-if [ -f "$(dirname "$0")/.env" ]; then
-    export $(grep -v '^#' "$(dirname "$0")/.env" | xargs)
+if [[ -f "$(dirname "$0")/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$(dirname "$0")/.env"
+    set +a
 fi
 
 # API Settings from .env
@@ -23,14 +27,18 @@ mkdir -p "${cache_dir}"
 
 get_icon() {
     case $1 in
-        "50d"|"50n") icon=""; quote="Mist" ;;
-        "01d") icon=""; quote="Sunny" ;;
-        "01n") icon=""; quote="Clear" ;;
-        "02d"|"02n"|"03d"|"03n"|"04d"|"04n") icon=""; quote="Cloudy" ;;
-        "09d"|"09n"|"10d"|"10n") icon=""; quote="Rainy" ;;
-        "11d"|"11n") icon=""; quote="Storm" ;;
-        "13d"|"13n") icon=""; quote="Snow" ;;
-        *) icon=""; quote="Unknown" ;;
+        "50d"|"50n") icon=""; quote="Mist" ;;
+        "01d") icon=""; quote="Sunny" ;;
+        "01n") icon=""; quote="Clear" ;;
+        "02d") icon=""; quote="Partly Cloudy" ;;
+        "02n") icon=""; quote="Cloudy Night" ;;
+        "03d"|"03n"|"04d"|"04n") icon=""; quote="Cloudy" ;;
+        "09d"|"09n") icon=""; quote="Showers" ;;
+        "10d") icon=""; quote="Rainy" ;;
+        "10n") icon=""; quote="Rainy Night" ;;
+        "11d"|"11n") icon=""; quote="Storm" ;;
+        "13d"|"13n") icon=""; quote="Snow" ;;
+        *) icon=""; quote="Unknown" ;;
     esac
     echo "$icon|$quote"
 }
@@ -46,6 +54,62 @@ get_hex() {
         "13d"|"13n") echo "#cdd6f4" ;;
         *) echo "#cdd6f4" ;;
     esac
+}
+
+unit_suffix() {
+    case "$UNIT" in
+        imperial) echo "°F" ;;
+        standard) echo "K" ;;
+        *) echo "°C" ;;
+    esac
+}
+
+with_lock() {
+    local mode="blocking"
+    if [[ "${1:-}" == "-n" ]]; then
+        mode="nonblocking"
+        shift
+    fi
+
+    exec 9>"$lock_file"
+    if [[ "$mode" == "nonblocking" ]]; then
+        flock -n 9 || return 1
+    else
+        flock 9
+    fi
+
+    "$@"
+}
+
+refresh_async() {
+    (
+        with_lock -n get_data
+    ) &
+}
+
+ensure_json_cache() {
+    local cache_limit="${1:-900}"
+    local file_time current_time diff
+
+    if [[ ! -f "$json_file" ]]; then
+        with_lock get_data
+        return 0
+    fi
+
+    file_time=$(stat -c %Y "$json_file" 2>/dev/null || echo 0)
+    current_time=$(date +%s)
+    diff=$((current_time - file_time))
+
+    if (( diff > cache_limit )); then
+        refresh_async
+    fi
+}
+
+current_hourly_field() {
+    local field="$1"
+    jq -r --arg ct "$(date +%H:%M)" --arg field "$field" '
+        ((.forecast[0].hourly | map(select(.time <= $ct)) | last) // .forecast[0].hourly[0])[$field] // empty
+    ' "$json_file" 2>/dev/null
 }
 
 get_data() {
@@ -71,10 +135,10 @@ get_data() {
                 \"wind\": \"0\",
                 \"humidity\": \"0\",
                 \"pop\": \"0\",
-                \"icon\": \"\",
+                \"icon\": \"\",
                 \"hex\": \"#cdd6f4\",
                 \"desc\": \"No API Key\",
-                \"hourly\": [{\"time\": \"00:00\", \"temp\": \"0.0\", \"icon\": \"\", \"hex\": \"#cdd6f4\"}]
+                \"hourly\": [{\"time\": \"00:00\", \"temp\": \"0.0\", \"icon\": \"\", \"hex\": \"#cdd6f4\"}]
             },"
         done
         final_json="${final_json%,}]"
@@ -85,8 +149,8 @@ get_data() {
     # ---------------------------------------------------------
     # STANDARD API FETCH LOGIC
     # ---------------------------------------------------------
-    forecast_url="http://api.openweathermap.org/data/2.5/forecast?appid=${KEY}&lat=${LAT}&lon=${LON}&units=${UNIT}"
-    raw_api=$(curl -sf "$forecast_url")
+    forecast_url="https://api.openweathermap.org/data/2.5/forecast?appid=${KEY}&lat=${LAT}&lon=${LON}&units=${UNIT}"
+    raw_api=$(curl -fsS --connect-timeout 3 --max-time 8 --retry 1 "$forecast_url")
     
     # If API fails, stop
     if [ -z "$raw_api" ]; then return; fi
@@ -210,19 +274,8 @@ if [[ "$1" == "--getdata" ]]; then
 
 elif [[ "$1" == "--json" ]]; then
     CACHE_LIMIT=900
-    if [ -f "$json_file" ]; then
-        file_time=$(stat -c %Y "$json_file")
-        current_time=$(date +%s)
-        diff=$((current_time - file_time))
-        
-        if [ $diff -gt $CACHE_LIMIT ]; then
-            get_data &
-        fi
-        cat "$json_file"
-    else
-        get_data
-        cat "$json_file"
-    fi
+    ensure_json_cache "$CACHE_LIMIT"
+    cat "$json_file"
 
 elif [[ "$1" == "--view-listener" ]]; then
     if [ ! -f "$view_file" ]; then echo "0" > "$view_file"; fi
@@ -246,26 +299,38 @@ elif [[ "$1" == "--nav" ]]; then
     fi
 
 elif [[ "$1" == "--icon" ]]; then
-    cat "$json_file" | jq -r '.forecast[0].icon'
+    ensure_json_cache
+    jq -r '.forecast[0].icon // ""' "$json_file" 2>/dev/null
 
 elif [[ "$1" == "--temp" ]]; then 
-    t=$(cat "$json_file" | jq -r '.forecast[0].max')
-    echo "${t}°C"
+    ensure_json_cache
+    t=$(jq -r '.forecast[0].max // "0.0"' "$json_file" 2>/dev/null)
+    echo "${t}$(unit_suffix)"
 
 elif [[ "$1" == "--hex" ]]; then 
-    cat "$json_file" | jq -r '.forecast[0].hex'
+    ensure_json_cache
+    jq -r '.forecast[0].hex // "#cdd6f4"' "$json_file" 2>/dev/null
 
 # --- NEW HOURLY MODES FOR TOPBAR ---
+elif [[ "$1" == "--current-summary" ]]; then
+    ensure_json_cache
+    curr_icon="$(current_hourly_field icon)"
+    curr_temp="$(current_hourly_field temp)"
+    curr_hex="$(current_hourly_field hex)"
+    printf '%s\n' "${curr_icon:-}"
+    printf '%s\n' "${curr_temp:-0.0}$(unit_suffix)"
+    printf '%s\n' "${curr_hex:-#cdd6f4}"
+
 elif [[ "$1" == "--current-icon" ]]; then
-    curr_time=$(date +%H:%M)
-    cat "$json_file" | jq -r --arg ct "$curr_time" '(.forecast[0].hourly | map(select(.time <= $ct)) | last) // .forecast[0].hourly[0] | .icon'
+    ensure_json_cache
+    current_hourly_field icon
 
 elif [[ "$1" == "--current-temp" ]]; then 
-    curr_time=$(date +%H:%M)
-    t=$(cat "$json_file" | jq -r --arg ct "$curr_time" '(.forecast[0].hourly | map(select(.time <= $ct)) | last) // .forecast[0].hourly[0] | .temp')
-    echo "${t}°C"
+    ensure_json_cache
+    t="$(current_hourly_field temp)"
+    echo "${t:-0.0}$(unit_suffix)"
 
 elif [[ "$1" == "--current-hex" ]]; then
-    curr_time=$(date +%H:%M)
-    cat "$json_file" | jq -r --arg ct "$curr_time" '(.forecast[0].hourly | map(select(.time <= $ct)) | last) // .forecast[0].hourly[0] | .hex'
+    ensure_json_cache
+    current_hourly_field hex
 fi

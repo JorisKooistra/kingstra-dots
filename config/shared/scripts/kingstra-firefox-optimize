@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-firefox-optimize — Apply managed Firefox performance prefs to profiles
+# =============================================================================
+set -euo pipefail
+
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+PROFILE_ROOT="${HOME}/.mozilla/firefox"
+PROFILES_INI="${PROFILE_ROOT}/profiles.ini"
+TEMPLATE_FILE="${CONFIG_HOME}/firefox/user.js"
+START_MARKER='// >>> kingstra performance profile >>>'
+END_MARKER='// <<< kingstra performance profile <<<'
+
+log() {
+    printf '[kingstra-firefox-optimize] %s\n' "$*"
+}
+
+resolve_profile_path() {
+    local is_relative="$1"
+    local raw_path="$2"
+
+    if [[ "$is_relative" == "1" ]]; then
+        printf '%s\n' "${PROFILE_ROOT}/${raw_path}"
+    else
+        printf '%s\n' "$raw_path"
+    fi
+}
+
+apply_template_to_profile() {
+    local profile_dir="$1"
+    local user_js="${profile_dir}/user.js"
+    local tmp_file
+
+    mkdir -p "$profile_dir"
+
+    if [[ ! -f "$user_js" ]]; then
+        cp "$TEMPLATE_FILE" "$user_js"
+        log "nieuw user.js geplaatst in $(basename "$profile_dir")"
+        return 0
+    fi
+
+    tmp_file="$(mktemp)"
+    awk -v start="$START_MARKER" -v end="$END_MARKER" '
+        BEGIN { skip = 0 }
+        $0 == start { skip = 1; next }
+        $0 == end { skip = 0; next }
+        !skip { print }
+    ' "$user_js" > "$tmp_file"
+
+    {
+        cat "$tmp_file"
+        [[ -s "$tmp_file" ]] && printf '\n'
+        cat "$TEMPLATE_FILE"
+    } > "${tmp_file}.merged"
+
+    mv "${tmp_file}.merged" "$user_js"
+    rm -f "$tmp_file"
+    log "managed prefs bijgewerkt in $(basename "$profile_dir")"
+}
+
+main() {
+    local current_path=""
+    local current_relative="1"
+    local applied=0
+
+    [[ -f "$TEMPLATE_FILE" ]] || {
+        log "template ontbreekt: $TEMPLATE_FILE"
+        exit 1
+    }
+
+    [[ -f "$PROFILES_INI" ]] || {
+        log "geen Firefox-profielen gevonden"
+        exit 0
+    }
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        case "$line" in
+            \[*\])
+                if [[ -n "$current_path" ]]; then
+                    apply_template_to_profile "$(resolve_profile_path "$current_relative" "$current_path")"
+                    applied=$((applied + 1))
+                fi
+                current_path=""
+                current_relative="1"
+                ;;
+            Path=*)
+                current_path="${line#Path=}"
+                ;;
+            IsRelative=*)
+                current_relative="${line#IsRelative=}"
+                ;;
+        esac
+    done < "$PROFILES_INI"
+
+    if [[ -n "$current_path" ]]; then
+        apply_template_to_profile "$(resolve_profile_path "$current_relative" "$current_path")"
+        applied=$((applied + 1))
+    fi
+
+    log "klaar (${applied} profielen)"
+}
+
+main "$@"

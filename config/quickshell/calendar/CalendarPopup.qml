@@ -672,8 +672,9 @@ Item {
                                     
                                     Text { 
                                         Layout.alignment: Qt.AlignHCenter
-                                        text: modelData.icon || (window.weatherData && window.weatherData.forecast[window.weatherView] ? window.weatherData.forecast[window.weatherView].icon : "")
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18)
+                                        text: modelData.icon || (window.weatherData && window.weatherData.forecast[window.weatherView] ? window.weatherData.forecast[window.weatherView].icon : "")
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: window.s(18)
                                         color: isHighlighted ? window.base : (modelData.hex || window.text)
                                         
                                         transform: Translate { y: hrMa.containsMouse ? window.s(-3) : 0 }

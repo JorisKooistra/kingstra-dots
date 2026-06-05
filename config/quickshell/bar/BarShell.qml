@@ -322,7 +322,7 @@ Variants {
             property int typeInIndex: 0
             property string dateStr: fullDateStr.substring(0, typeInIndex)
 
-            property string weatherIcon: ""
+            property string weatherIcon: ""
             property string weatherTemp: "--°"
             property string weatherHex: mocha.yellow
             property string kbLayout: "US"
@@ -599,11 +599,7 @@ Variants {
             // Weather remains a slow poll since it fetches from web
             Process {
                 id: weatherPoller
-                command: ["bash", "-c", `
-                    echo "$(~/.config/quickshell/calendar/weather.sh --current-icon)"
-                    echo "$(~/.config/quickshell/calendar/weather.sh --current-temp)"
-                    echo "$(~/.config/quickshell/calendar/weather.sh --current-hex)"
-                `]
+                command: ["bash", Quickshell.env("HOME") + "/.config/quickshell/calendar/weather.sh", "--current-summary"]
                 stdout: StdioCollector {
                     onStreamFinished: {
                         let lines = this.text.trim().split("\n");
