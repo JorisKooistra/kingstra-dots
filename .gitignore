@@ -72,3 +72,4 @@ config/hypr/monitors.lua
 config/hypr/workspaces.lua
 config/matugen/generated/*
 !config/matugen/generated/.gitkeep
+config/cava/config
