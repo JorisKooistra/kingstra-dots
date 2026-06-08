@@ -52,7 +52,19 @@ Item {
                         let w = width;
                         let h = height;
                         let glyphVal = parent.glyph;
-                        ctx.reset();
+
+                        function resetContext() {
+                            if (ctx.reset) {
+                                ctx.reset();
+                                return;
+                            }
+                            if (ctx.resetTransform) ctx.resetTransform();
+                            else if (ctx.setTransform) ctx.setTransform(1, 0, 0, 1, 0, 0);
+                            ctx.globalAlpha = 1.0;
+                            if (ctx.setLineDash) ctx.setLineDash([]);
+                        }
+
+                        resetContext();
                         ctx.clearRect(0, 0, w, h);
 
                         function drawRect(x, y, rw, rh, active) {

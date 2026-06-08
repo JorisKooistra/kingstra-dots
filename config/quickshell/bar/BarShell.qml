@@ -79,6 +79,7 @@ Variants {
             property string uiFontFamily: ThemeConfig.uiFont
             property string monoFontFamily: ThemeConfig.monoFont
             property string displayFontFamily: ThemeConfig.displayFont
+            property string clockStyle: ThemeConfig.clockStyle
             property real themeLetterSpacing: ThemeConfig.letterSpacing
             property int themeFontWeight: ThemeConfig.fontWeight
             property int cyberUnderhang: (isHorizontalBar && isTopBar && activeThemeNormalized === "cyber") ? 0 : 0
@@ -426,7 +427,7 @@ Variants {
                 }
             }
             Timer {
-                interval: 1000; running: true; repeat: true
+                interval: 2500; running: true; repeat: true
                 onTriggered: if (!volPoller.running) volPoller.running = true
             }
 

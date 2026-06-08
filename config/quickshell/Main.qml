@@ -309,8 +309,10 @@ PanelWindow {
         }
     }
 
+    // Some setups miss QFileSystemWatcher updates for this tmpfs-backed IPC file.
+    // Keep FileView as the fast path, and use a low-frequency poll as fallback.
     Timer {
-        interval: 180
+        interval: 400
         running: true
         repeat: true
         onTriggered: if (!statePoller.running) statePoller.running = true

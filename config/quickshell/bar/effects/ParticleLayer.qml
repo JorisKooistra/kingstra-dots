@@ -13,13 +13,15 @@ import QtQuick
 // het Botanical-theme zodat de vuurvliegjes daar iets groter en helderder zijn.
 //
 // ── Hoe de animaties werken ───────────────────────────────────────────────────
-// Elk deeltje is een `Item` in een Repeater. De Repeater maakt `safeCount`
-// exemplaren aan. Per deeltje draaien maximaal vier animaties tegelijk:
+// Elk deeltje is een `Item` in een Repeater. Voor de zwaardere ambience-types
+// zoals fireflies en sparkles gebruiken we bewust geen aparte oneindige
+// animatie-objecten per deeltje meer. In plaats daarvan loopt er één gedeelde
+// lage-fps klok op root-niveau, en iedere particle berekent daar zijn fase,
+// glow en positie uit. Dat houdt dezelfde sfeer, maar met veel minder
+// animatie-overhead in Quickshell/QML.
 //
-//   glowPulse    — float 0.0–1.0, stuurt de gloedhalo-grootte (alleen fireflies)
-//   pathPhase    — float 0–2π, stuurt de x/y-positie via cos/sin (Lissajous-pad)
-//   opacity      — fade in/out met willekeurige timing per deeltje
-//   y            — lichte zweef-beweging omhoog/omlaag (alleen space-specks)
+// Andere deeltjestypes die zeldzamer gebruikt worden mogen hun eigen simpele
+// animaties houden, omdat die minder objecten tegelijk op het scherm zetten.
 //
 // De `index * 137` / `index % N` trucs zorgen dat elk deeltje op een andere
 // startpositie en met een andere timing begint — zonder dat er een Random-aanroep
@@ -52,6 +54,18 @@ Item {
     }
     readonly property int  safeCount: Math.max(0, Math.min(50, Number(shell.particleCount || 0)))
     readonly property real safeSpeed: Math.max(0.1, Math.min(2.0, Number(shell.particleSpeed || 1.0)))
+    readonly property bool useSharedAmbientClock: normalizedType === "fireflies" || normalizedType === "sparkles"
+    property real ambientClockSeconds: 0.0
+
+    onNormalizedTypeChanged: ambientClockSeconds = 0.0
+
+    Timer {
+        id: ambientClock
+        interval: root.normalizedType === "sparkles" ? 66 : 80
+        running: root.useSharedAmbientClock && root.width > 0 && root.height > 0
+        repeat: true
+        onTriggered: root.ambientClockSeconds += interval / 1000
+    }
 
     // ── Deeltjes ──────────────────────────────────────────────────────────────
     // model = 0 als type "none" is → Repeater maakt dan niets aan.
@@ -92,11 +106,24 @@ Item {
                                  : ((index * 97) % Math.max(1, root.height))
 
             // ── Animatiestatus ────────────────────────────────────────────────
-            property real glowPulse: 0.0   // 0.0 = gedoofd, 1.0 = volop gloeiend
-            property real pathPhase: 0.0   // huidige hoek in de vliegbaan (0–2π)
+            property real pathPhase: 0.0   // gebruikt nog door snow voor lichte sway
 
             readonly property real pathOffset: index * 1.37   // unieke fase per deeltje
             readonly property real fallDistance: root.height + shell.s(24 + (index % 5) * 8)
+            readonly property real sharedMotionPhase: root.ambientClockSeconds
+                                                      * root.safeSpeed
+                                                      * (0.62 + (index % 6) * 0.05)
+                                                      + pathOffset
+            readonly property real sharedGlowPhase: root.ambientClockSeconds
+                                                    * root.safeSpeed
+                                                    * (1.45 + (index % 5) * 0.10)
+                                                    + pathOffset * 0.9
+            readonly property real glowPulse: {
+                if (!isFireflies && !isSparkles) return 0.0;
+                let wave = (Math.sin(sharedGlowPhase) + 1.0) * 0.5;
+                return 0.28 + wave * 0.72;
+            }
+            readonly property real motionPhase: isFireflies ? sharedMotionPhase : pathPhase
 
             // Vliegbereik (hoe ver een vuurvliegje van zijn startpunt afdwaalt)
             readonly property real fireflyDriftX: shell.s(root.fireflyBoost > 1.0 ? 18 : 13)
@@ -105,12 +132,12 @@ Item {
             // ── Berekende positie ─────────────────────────────────────────────
             // Lissajous-achtig pad: cos + kleine secundaire golf voor onregelmatigheid.
             readonly property real naturalX: isFireflies
-               ? baseX + Math.cos(pathPhase + pathOffset) * fireflyDriftX
-                       + Math.cos(pathPhase * 2 + pathOffset * 0.7) * fireflyDriftX * 0.28
+               ? baseX + Math.cos(motionPhase) * fireflyDriftX
+                       + Math.cos(motionPhase * 2 + pathOffset * 0.7) * fireflyDriftX * 0.28
                : (isSnow ? baseX + Math.sin(pathPhase + pathOffset) * shell.s(5) : baseX)
             readonly property real naturalY: isFireflies
-               ? baseY + Math.sin(pathPhase + pathOffset) * fireflyDriftY
-                       + Math.sin(pathPhase * 2 + pathOffset * 0.7) * fireflyDriftY * 0.24
+               ? baseY + Math.sin(motionPhase) * fireflyDriftY
+                       + Math.sin(motionPhase * 2 + pathOffset * 0.7) * fireflyDriftY * 0.24
                : baseY
 
             // ── Muisvlucht (alleen fireflies) ─────────────────────────────────
@@ -137,9 +164,18 @@ Item {
             x: isFireflies ? naturalX + (pointerDx / scareNorm) * scarePush : naturalX
             y: isFireflies ? naturalY + (pointerDy / scareNorm) * scarePush : naturalY
 
+            property real animatedOpacity: isRain ? 0.30 : (isSnow ? 0.38 : (isDust ? 0.18 : (largeLayeredSpeck ? 0.22 : 0.16)))
+            readonly property real fireflyOpacity: Math.min(
+                1.0,
+                (root.fireflyBoost > 1.0 ? 0.28 : 0.20)
+                + glowPulse * (root.fireflyBoost > 1.0 ? 0.62 : 0.54)
+                + scareStrength * 0.12
+            )
+            readonly property real sparkleOpacity: Math.min(0.82, 0.18 + glowPulse * 0.60)
+
             opacity: isFireflies
-                ? (root.fireflyBoost > 1.0 ? 0.35 : 0.25) + scareStrength * 0.20
-                : (isSparkles ? 0.46 : (isRain ? 0.30 : (isSnow ? 0.38 : (isDust ? 0.18 : (largeLayeredSpeck ? 0.22 : 0.16)))))
+                ? fireflyOpacity
+                : (isSparkles ? sparkleOpacity : animatedOpacity)
 
             // ── Visuele lagen (fireflies: drie gloedhalo's + kern) ────────────
 
@@ -199,31 +235,25 @@ Item {
 
             // ── Animaties ─────────────────────────────────────────────────────
 
-            // Gloed pulseert in/uit (alleen fireflies)
-            SequentialAnimation on glowPulse {
-                running: particle.isFireflies || particle.isSparkles; loops: Animation.Infinite
-                NumberAnimation { to: 1.0;  duration: (1500 + (index % 5) * 180) / root.safeSpeed; easing.type: Easing.InOutSine }
-                NumberAnimation { to: 0.28; duration: (1800 + (index % 5) * 220) / root.safeSpeed; easing.type: Easing.InOutSine }
-            }
-
-            // Vliegbaan: pathPhase loopt van 0 naar 2π in een lus → cos/sin-positie hierboven
+            // Snow gebruikt nog een lokale fase voor de zijwaartse sway.
             NumberAnimation on pathPhase {
-                running: particle.isFireflies || particle.isSnow
+                running: particle.isSnow
                 from: 0; to: Math.PI * 2
                 duration: (9000 + (index % 6) * 650) / root.safeSpeed
                 loops: Animation.Infinite; easing.type: Easing.Linear
             }
 
             // Fade in/uit — elke deeltje heeft een unieke timing via index % N
-            SequentialAnimation on opacity {
-                running: root.normalizedType !== "none"; loops: Animation.Infinite
+            SequentialAnimation on animatedOpacity {
+                running: root.normalizedType !== "none" && !particle.isFireflies && !particle.isSparkles
+                loops: Animation.Infinite
                 NumberAnimation {
-                    to: isFireflies ? (root.fireflyBoost > 1.0 ? 1.0 : 0.95) : (isSparkles ? 0.78 : (isRain ? 0.38 : (isSnow ? 0.52 : (isDust ? 0.24 : (largeLayeredSpeck ? 0.52 : 0.38)))))
+                    to: isRain ? 0.38 : (isSnow ? 0.52 : (isDust ? 0.24 : (largeLayeredSpeck ? 0.52 : 0.38)))
                     duration: (2200 + (index % 7) * 240) / (root.safeSpeed * (largeLayeredSpeck ? 1.2 : 1.0))
                     easing.type: Easing.InOutSine
                 }
                 NumberAnimation {
-                    to: isFireflies ? (root.fireflyBoost > 1.0 ? 0.35 : 0.25) : (isSparkles ? 0.18 : (isRain ? 0.16 : (isSnow ? 0.22 : (isDust ? 0.08 : (largeLayeredSpeck ? 0.18 : 0.12)))))
+                    to: isRain ? 0.16 : (isSnow ? 0.22 : (isDust ? 0.08 : (largeLayeredSpeck ? 0.18 : 0.12)))
                     duration: (2200 + (index % 7) * 260) / (root.safeSpeed * (largeLayeredSpeck ? 1.1 : 0.9))
                     easing.type: Easing.InOutSine
                 }

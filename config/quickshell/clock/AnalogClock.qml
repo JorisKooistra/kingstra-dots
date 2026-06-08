@@ -36,7 +36,7 @@ Item {
     readonly property color capColor: botanicalStyle ? mocha.yellow : mocha.text
 
     Timer {
-        interval: 1000
+        interval: root.showSecondHand ? 1000 : 15000
         running: true
         repeat: true
         triggeredOnStart: true
@@ -70,6 +70,18 @@ Item {
             let cy = h / 2;
             let radius = Math.min(w, h) / 2;
 
+            function resetContext() {
+                if (ctx.reset) {
+                    ctx.reset();
+                    return;
+                }
+                if (ctx.resetTransform) ctx.resetTransform();
+                else if (ctx.setTransform) ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.globalAlpha = 1.0;
+                ctx.lineWidth = 1;
+                if (ctx.setLineDash) ctx.setLineDash([]);
+            }
+
             function rgba(c) {
                 return Qt.rgba(c.r, c.g, c.b, c.a !== undefined ? c.a : 1);
             }
@@ -100,22 +112,19 @@ Item {
                 }
             }
 
-            ctx.reset();
+            resetContext();
             ctx.clearRect(0, 0, w, h);
 
-            // Outer ring
             ctx.beginPath();
             ctx.arc(cx, cy, radius - 0.9, 0, Math.PI * 2);
             ctx.fillStyle = rgba(root.outerRingColor);
             ctx.fill();
 
-            // Inner dial
             ctx.beginPath();
             ctx.arc(cx, cy, radius - 2.6, 0, Math.PI * 2);
             ctx.fillStyle = rgba(root.innerDialColor);
             ctx.fill();
 
-            // Minute and hour ticks
             for (let i = 0; i < 60; i += 1) {
                 let angle = (i * 6 - 90) * Math.PI / 180.0;
                 let isHour = (i % 5) === 0;
@@ -138,7 +147,6 @@ Item {
                 ctx.fill();
             }
 
-            // Botanical accent petals at cardinal points
             if (root.botanicalStyle) {
                 for (let p = 0; p < 4; p += 1) {
                     let a = (p * 90 - 90) * Math.PI / 180.0;
@@ -158,7 +166,6 @@ Item {
                 drawHand(root.secondAngle, 0.78, 0.14, Math.max(0.6, radius * 0.017), rgba(root.secondHandColor), false);
             }
 
-            // Center cap
             ctx.beginPath();
             ctx.arc(cx, cy, Math.max(1.8, radius * 0.105), 0, Math.PI * 2);
             ctx.fillStyle = rgba(root.capColor);

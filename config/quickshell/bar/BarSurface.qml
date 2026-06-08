@@ -137,6 +137,15 @@ Item {
     readonly property real textureOverlayOpacity: activeTextureOverlaySource !== ""
                                                  ? Math.max(minTextureOpacity, ThemeConfig.materialOverlayOpacity)
                                                  : 0.0
+    readonly property bool particlesEnabled: String(shell.particleType || "none").toLowerCase() !== "none"
+                                             && Number(shell.particleCount || 0) > 0
+    readonly property bool botanicalGlowEnabled: ambientEnabled("botanical-glow", "botanical") && skinBool("showWarmGlow", false)
+    readonly property bool oceanWaveEnabled: ambientEnabled("ocean-wave", "ocean") && skinBool("showWaveShimmer", false)
+    readonly property bool spaceNebulaEnabled: ambientEnabled("space-nebula", "space") && skinBool("showNebulaGlow", false)
+    readonly property bool animatedRainbowEnabled: ambientEnabled("animated-rainbow", "animated")
+                                                  && (skinBool("showRainbowShift", false) || skinBool("showAuroraSweep", false))
+    readonly property bool cyberGridEnabled: ambientEnabled("cyber-grid", "cyber") && skinBool("showCyberGrid", false)
+    readonly property bool rockyBevelEnabled: ambientEnabled("rocky-bevel", "rocky") && skinBool("showBevelHighlight", false)
 
     function resetTextureOverlaySource() {
         if (configuredTextureOverlaySource !== "") { activeTextureOverlaySource = configuredTextureOverlaySource; return; }
@@ -240,7 +249,7 @@ Item {
             fillMode: Image.Tile
             opacity: barSurfaceRoot.textureOverlayOpacity
             visible: barSurfaceRoot.textureOverlayOpacity > 0.0 && source !== "" && status !== Image.Error
-            smooth: true; asynchronous: true
+            smooth: false; asynchronous: true
             sourceSize.width: Math.max(64, shell.s(240)); sourceSize.height: Math.max(32, shell.s(100))
             onStatusChanged: {
                 if (status !== Image.Error) return;
@@ -255,33 +264,31 @@ Item {
         }
 
         // z=0.00 — deeltjeslaag
-        ParticleLayer {
+        Loader {
+            active: barSurfaceRoot.particlesEnabled
             anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
             height: barSurfaceRoot.visualContentHeight + barSurfaceRoot.particleOverflow
-            trackY: barSurfaceRoot.visualContentY
-            trackHeight: barSurfaceRoot.visualContentHeight
-            shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha
-            fireflyBoost: barSurfaceRoot.isBotanical ? 1.25 : 1.0
             z: 0.42
+            sourceComponent: particleLayerComponent
         }
 
         // z=0.10 — Botanical: warme geel-perzik-groen gloed
-        BotanicalGlow   { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        Loader { active: barSurfaceRoot.botanicalGlowEnabled; anchors.fill: parent; sourceComponent: botanicalGlowComponent }
 
         // z=0.10 — Ocean: teal-blauw golf
-        OceanWave       { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        Loader { active: barSurfaceRoot.oceanWaveEnabled; anchors.fill: parent; sourceComponent: oceanWaveComponent }
 
         // z=0.10 — Space: mauve-blauw-roze nevelgloed
-        SpaceNebula     { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        Loader { active: barSurfaceRoot.spaceNebulaEnabled; anchors.fill: parent; sourceComponent: spaceNebulaComponent }
 
         // z=0.10/0.12 — Animated: regenboogverschuiving + aurora-sweep
-        AnimatedRainbow { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        Loader { active: barSurfaceRoot.animatedRainbowEnabled; anchors.fill: parent; sourceComponent: animatedRainbowComponent }
 
         // z=0.50 — Cyber: rasteroverlay met sweep-licht
-        CyberGrid       { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        Loader { active: barSurfaceRoot.cyberGridEnabled; anchors.fill: parent; sourceComponent: cyberGridComponent }
 
         // z=0.60 — Rocky: gebeitelde randlijnen
-        RockyBevel      { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        Loader { active: barSurfaceRoot.rockyBevelEnabled; anchors.fill: parent; sourceComponent: rockyBevelComponent }
 
         // z=1.00 — bar-inhoud (modules, knoppen, klok)
         Loader {
@@ -295,6 +302,41 @@ Item {
         Component {
             id: horizontalContentComponent
             BarContent { shell: barSurfaceRoot.shell; surface: barSurfaceRoot; mocha: barSurfaceRoot.mocha }
+        }
+        Component {
+            id: particleLayerComponent
+            ParticleLayer {
+                trackY: barSurfaceRoot.visualContentY
+                trackHeight: barSurfaceRoot.visualContentHeight
+                height: barSurfaceRoot.visualContentHeight + barSurfaceRoot.particleOverflow
+                shell: barSurfaceRoot.shell
+                mocha: barSurfaceRoot.mocha
+                fireflyBoost: barSurfaceRoot.isBotanical ? 1.25 : 1.0
+            }
+        }
+        Component {
+            id: botanicalGlowComponent
+            BotanicalGlow { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        }
+        Component {
+            id: oceanWaveComponent
+            OceanWave { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        }
+        Component {
+            id: spaceNebulaComponent
+            SpaceNebula { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        }
+        Component {
+            id: animatedRainbowComponent
+            AnimatedRainbow { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        }
+        Component {
+            id: cyberGridComponent
+            CyberGrid { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        }
+        Component {
+            id: rockyBevelComponent
+            RockyBevel { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
         }
         Component {
             id: sidebarContentComponent
