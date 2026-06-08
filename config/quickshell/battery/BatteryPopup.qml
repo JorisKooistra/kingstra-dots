@@ -62,13 +62,15 @@ Item {
     // -------------------------------------------------------------------------
 
     // Battery — UPower (event-driven)
-    readonly property int batCapacity: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage * 100) : 0
-    readonly property bool isCharging: (UPower.displayDevice && UPower.displayDevice.ready)
+    readonly property bool hasBattery: UPower.displayDevice !== null && UPower.displayDevice.ready
+        && UPower.displayDevice.state !== UPowerDeviceState.Unknown
+    readonly property int batCapacity: hasBattery ? Math.round(UPower.displayDevice.percentage * 100) : 0
+    readonly property bool isCharging: hasBattery
         ? (UPower.displayDevice.state === UPowerDeviceState.Charging
            || UPower.displayDevice.state === UPowerDeviceState.FullyCharged
            || UPower.displayDevice.state === UPowerDeviceState.PendingCharge)
         : false
-    readonly property string batStatus: (UPower.displayDevice && UPower.displayDevice.ready)
+    readonly property string batStatus: hasBattery
         ? (isCharging ? "Charging" : UPowerDeviceState.toString(UPower.displayDevice.state))
         : "…"
 
@@ -97,9 +99,10 @@ Item {
 
     // Unified hue for Battery
     readonly property color batColorStart: {
-        if (isCharging) return window.green;
-        if (batCapacity >= 70) return window.blue;
-        if (batCapacity >= 30) return window.yellow;
+        if (!hasBattery)          return window.blue;
+        if (isCharging)           return window.green;
+        if (batCapacity >= 70)    return window.blue;
+        if (batCapacity >= 30)    return window.yellow;
         return window.red;
     }
     readonly property color batColorEnd: Qt.lighter(batColorStart, 1.15)
@@ -112,13 +115,14 @@ Item {
     }
     readonly property color profileEnd: Qt.lighter(profileStart, 1.15)
 
-    // Ambient Blobs - Based strictly on aesthetic pairs derived from battery state
-    readonly property color ambientPrimary: window.batColorStart
+    // Ambient Blobs — zonder batterij neutrale thema-kleuren, anders op batterijstatus
+    readonly property color ambientPrimary: !hasBattery ? window.mauve : window.batColorStart
     readonly property color ambientSecondary: {
+        if (!hasBattery) return window.sapphire;
         if (isCharging) return window.sapphire;
         if (batCapacity >= 70) return window.mauve;
         if (batCapacity >= 30) return window.peach;
-        return window.maroon; 
+        return window.maroon;
     }
 
     property real animCapacity: 0
@@ -413,12 +417,13 @@ Item {
             }
 
             // ==========================================
-            // CENTRAL CORE & BATTERY RING 
+            // CENTRAL CORE & BATTERY RING
             // ==========================================
             Item {
                 anchors.fill: parent
                 z: 1
-                
+                visible: window.hasBattery
+
                 opacity: introCore
                 transform: Translate { y: window.s(25) * (1 - introCore) }
                 scale: 0.9 + (0.1 * introCore)

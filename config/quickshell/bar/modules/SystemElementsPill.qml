@@ -454,6 +454,38 @@ Rectangle {
             }
             MouseArea { id: batMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) }
         }
+
+        // ── Power settings (geen batterij aanwezig) ────────────────────────
+        Rectangle {
+            id: powerPill
+            visible: shell.moduleList.includes("battery") && !shell.hasBattery
+            property bool isHovered: powerMouse.containsMouse
+            color: ctx.cyberChrome
+                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+                   : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
+            radius: surface.innerPillRadius; height: sysLayout.pillHeight
+            width: sysLayout.pillHeight
+            clip: true
+
+            scale: isHovered ? 1.05 : 1.0
+            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: 200 } }
+
+            property bool initAnimTrigger: false
+            Timer { running: root.layoutVisible && powerPill.visible && !powerPill.initAnimTrigger; interval: 200; onTriggered: powerPill.initAnimTrigger = true }
+            opacity: initAnimTrigger ? 1 : 0
+            transform: Translate { y: powerPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+            Text {
+                anchors.centerIn: parent
+                text: ""
+                font.family: "Iosevka Nerd Font"
+                font.pixelSize: shell.s(16)
+                color: ctx.cyberChrome ? ctx.cyberTextColor : mocha.subtext0
+            }
+            MouseArea { id: powerMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) }
+        }
     }
 
     // Gaming stats popup — floats above this pill when hovering cpu/gpu/ram

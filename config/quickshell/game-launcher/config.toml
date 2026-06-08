@@ -23,6 +23,14 @@ favorites_first = true
 show_new_badge  = true
 show_recent_badge = true
 
+
+# Active source tab on startup: 0=All, 1=first tab, 2=second, etc.
+default_source_index = 0
+
+
+# Remember the last active tab between sessions (overrides default_source_index)
+remember_source = false
+
 [localization]
 language       = "en"       # Indien ondersteund door de launcher
 
@@ -40,6 +48,22 @@ scan_amazon    = true
 [steamgriddb]
 enabled        = false
 # api_key      = ""                        # SteamGridDB API key voor artwork
+
+
+# Fall back to Steam CDN images when no SGDB cover is found
+fallback_to_steam = true
+
+
+# Include NSFW content
+nsfw = false
+
+
+# Include humor / meme content
+humor = false
+
+
+# Include epilepsy-triggering content
+epilepsy = false
 
 [filter]
 hide_non_steam = false
