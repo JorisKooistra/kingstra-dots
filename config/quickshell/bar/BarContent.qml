@@ -140,10 +140,8 @@ Item {
         anchors.leftMargin: root.edgeInset
         anchors.right: centerBox.left
         anchors.rightMargin: shell.s(12)
-        anchors.top: shell.edgeAttachedBar ? parent.top : undefined
-        anchors.bottom: shell.edgeAttachedBar ? parent.bottom : undefined
-        anchors.verticalCenter: shell.edgeAttachedBar ? undefined : parent.verticalCenter
-        anchors.verticalCenterOffset: shell.edgeAttachedBar ? 0 : root.cyberSideYOffset
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
         spacing: shell.s(4)
 
         property int moduleHeight: root.cyberSideModuleHeight
@@ -170,10 +168,8 @@ Item {
         anchors.rightMargin: root.edgeInset
         anchors.left: centerBox.right
         anchors.leftMargin: shell.s(12)
-        anchors.top: shell.edgeAttachedBar ? parent.top : undefined
-        anchors.bottom: shell.edgeAttachedBar ? parent.bottom : undefined
-        anchors.verticalCenter: shell.edgeAttachedBar ? undefined : parent.verticalCenter
-        anchors.verticalCenterOffset: shell.edgeAttachedBar ? 0 : root.cyberSideYOffset
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
         spacing: shell.s(4)
 
         Item { Layout.fillWidth: true }

@@ -312,6 +312,7 @@ Item {
                 shell: barSurfaceRoot.shell
                 mocha: barSurfaceRoot.mocha
                 fireflyBoost: barSurfaceRoot.isBotanical ? 1.25 : 1.0
+                xMinFraction: barSurfaceRoot.isBotanical ? 0.75 : 0.0
             }
         }
         Component {

@@ -43,6 +43,7 @@ Item {
     property bool pointerActive: false
     property real pointerX: -9999
     property real pointerY: -9999
+    property real xMinFraction: 0.0
 
     // ── Ingelezen waarden uit theme.json ─────────────────────────────────────
     // normalizedType: alleen bekende types worden doorgegeven; onbekend → "none"
@@ -61,7 +62,7 @@ Item {
 
     Timer {
         id: ambientClock
-        interval: root.normalizedType === "sparkles" ? 66 : 80
+        interval: root.normalizedType === "sparkles" ? 100 : 150
         running: root.useSharedAmbientClock && root.width > 0 && root.height > 0
         repeat: true
         onTriggered: root.ambientClockSeconds += interval / 1000
@@ -98,8 +99,9 @@ Item {
             // Deterministisch verspreid over de breedte/hoogte via priemgetallen
             // (137, 97). Geen Random nodig — zelfde resultaat bij elke herstart.
             property real baseX: root.safeCount > 0
-                                 ? (((index + 0.5) / root.safeCount) * Math.max(1, root.width)
-                                    + (((index * 37) % 23) - 11) * Math.max(1, root.width) / Math.max(36, root.safeCount * 18))
+                                 ? (root.xMinFraction * root.width
+                                    + ((index + 0.5) / root.safeCount) * Math.max(1, root.width * (1.0 - root.xMinFraction))
+                                    + (((index * 37) % 23) - 11) * Math.max(1, root.width * (1.0 - root.xMinFraction)) / Math.max(36, root.safeCount * 18))
                                  : 0
             property real baseY: isFireflies
                                  ? (root.trackY + ((index * 97) % Math.max(1, root.trackHeight)))

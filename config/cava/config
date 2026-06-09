@@ -29,16 +29,16 @@ alsa_hint = default
 [color]
 gradient = 1
 gradient_count = 8
-gradient_color_1 = '#bbcca4'
-gradient_color_2 = '#ffffff'
-gradient_color_3 = '#d0c6ae'
-gradient_color_4 = '#eadfc7'
-gradient_color_5 = '#6b5e36'
-gradient_color_6 = '#d7c595'
-gradient_color_7 = '#ffffff'
+gradient_color_1 = '#8ed4c1'
+gradient_color_2 = '#000000'
+gradient_color_3 = '#becbae'
+gradient_color_4 = '#e0ecce'
+gradient_color_5 = '#7c9961'
+gradient_color_6 = '#b1d093'
+gradient_color_7 = '#000000'
 gradient_color_8 = '#ffb4ab'
 
-background = '#151310'
+background = '#121410'
 
 [smoothing]
 monstercat = 0

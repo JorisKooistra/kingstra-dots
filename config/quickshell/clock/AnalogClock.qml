@@ -36,7 +36,7 @@ Item {
     readonly property color capColor: botanicalStyle ? mocha.yellow : mocha.text
 
     Timer {
-        interval: root.showSecondHand ? 1000 : 15000
+        interval: root.showSecondHand ? 1000 : 60000
         running: true
         repeat: true
         triggeredOnStart: true
