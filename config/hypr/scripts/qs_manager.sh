@@ -195,11 +195,18 @@ save_and_focus_widget() {
     # Save the currently focused window address so restore_focus can return to it.
     # The WlrLayer.Overlay PanelWindow is handled entirely by the layer-shell
     # protocol — no hyprctl dispatch needed to show or focus it.
-    local current_window=$(hyprctl activewindow -j 2>/dev/null)
-    local current_title=$(echo "$current_window" | jq -r '.title // empty')
-    local current_class=$(echo "$current_window" | jq -r '.class // empty')
-    local current_initial_class=$(echo "$current_window" | jq -r '.initialClass // empty')
-    local current_addr=$(echo "$current_window" | jq -r '.address // empty')
+    # Eén jq-aanroep i.p.v. vier losse: elk veld op een eigen regel. mapfile
+    # bewaart ook lege velden (een tab-gescheiden read zou opeenvolgende lege
+    # velden samenvouwen omdat tab een whitespace-IFS is).
+    local fields
+    mapfile -t fields < <(
+        hyprctl activewindow -j 2>/dev/null \
+            | jq -r '.title // "", .class // "", .initialClass // "", .address // ""'
+    )
+    local current_title="${fields[0]:-}"
+    local current_class="${fields[1]:-}"
+    local current_initial_class="${fields[2]:-}"
+    local current_addr="${fields[3]:-}"
 
     if [[ "$current_title" != "qs-master" && "$current_class" != "org.quickshell" && "$current_initial_class" != "org.quickshell" && -n "$current_addr" && "$current_addr" != "null" ]]; then
         echo "$current_addr" > "$PREV_FOCUS_FILE"

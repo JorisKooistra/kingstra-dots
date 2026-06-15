@@ -22,6 +22,7 @@ phase_run() {
 
     log_step "Qt6ct config deployen..."
     deploy_config "qt6ct"
+    deploy_defaults "$REPO_ROOT/config/qt6ct"
 
     log_step "Spicetify config deployen..."
     deploy_config "spicetify"

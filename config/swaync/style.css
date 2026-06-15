@@ -12,7 +12,12 @@
   all: unset;
   font-family: "JetBrains Mono", "Fira Sans", sans-serif;
   font-size: 13px;
-  transition: all 150ms ease;
+  /* Alleen visuele eigenschappen animeren — "transition: all" liet ook
+     layout/grootte meeanimeren (jank bij het verschijnen van notificaties). */
+  transition: background 150ms ease,
+              border-color 150ms ease,
+              color 150ms ease,
+              box-shadow 150ms ease;
 }
 
 /* ---------------------------------------------------------------------------
