@@ -106,12 +106,17 @@ _restore_kernel_console_loglevel() {
 }
 
 _install_log_cleanup() {
+    local rc=$?
     _restore_kernel_console_loglevel
+    if [[ "${INSTALL_UI_MODE:-false}" == "true" && $rc -ne 0 ]]; then
+        printf "\n${_RED}${_BOLD}Installatie mislukt (code %s).${_RESET}\n" "$rc" >&2
+        printf "${_BOLD}Log: %s${_RESET}\n\n" "$LOG_FILE" >&2
+        [[ -t 0 ]] && read -r -p "Druk Enter om te sluiten..." _
+    fi
 }
 
 install_ui_finish_screen() {
     [[ "${INSTALL_UI_MODE:-false}" == "true" ]] || return 0
-    _ui_restore_scroll_region
     _ui_clear
 }
 
@@ -216,14 +221,15 @@ log_phase() {
     local total="${3:-$INSTALL_TOTAL_PHASES}"
 
     if [[ "$INSTALL_UI_MODE" == "true" ]]; then
-        echo ""
-        printf "${_MAGENTA}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
+        _ui_clear
+        print_banner
         if (( total > 0 )); then
-            printf "${_MAGENTA}${_BOLD}  FASE: %s (%d/%d)  %s${_RESET}\n" "$name" "$current" "$total" "$(_render_progress_bar "$total" "$current")"
+            printf "  ${_BOLD}Fase:${_RESET} %s (%d/%d)\n" "$name" "$current" "$total"
+            printf "  ${_BOLD}Voortgang:${_RESET} %s\n\n" "$(_render_progress_bar "$total" "$current")"
         else
-            printf "${_MAGENTA}${_BOLD}  FASE: %s${_RESET}\n" "$name"
+            printf "  ${_BOLD}Fase:${_RESET} %s\n\n" "$name"
         fi
-        printf "${_MAGENTA}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
+        printf "  ${_BOLD}Detectie:${_RESET} %s\n\n" "$(_render_detect_summary)"
     else
         echo ""
         printf "${_MAGENTA}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
