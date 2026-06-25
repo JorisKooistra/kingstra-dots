@@ -12,7 +12,3 @@
 
 # oh-my-posh: handmatige self-install schaduwt oh-my-posh-bin (AUR/pacman)
 ~/.local/bin/oh-my-posh|Schaduwt oh-my-posh-bin (AUR) — beheerd door pacman
-
-# ML4W-restanten: kapotte symlinks die mkdir blokkeren
-~/.config/gtk-3.0|ML4W-symlink naar verwijderde dotfiles
-~/.config/gtk-4.0|ML4W-symlink naar verwijderde dotfiles
