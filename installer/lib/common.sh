@@ -97,6 +97,10 @@ run_cmd() {
 # ---------------------------------------------------------------------------
 ensure_dir() {
     local dir="$1"
+    if [[ -L "$dir" || ( -e "$dir" && ! -d "$dir" ) ]]; then
+        backup_path "$dir"
+        rm -f "$dir"
+    fi
     if [[ ! -d "$dir" ]]; then
         run_cmd mkdir -p "$dir"
     fi
