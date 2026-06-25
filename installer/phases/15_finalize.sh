@@ -10,6 +10,9 @@
 # =============================================================================
 
 phase_run() {
+    log_step "Conflicterende bestanden opruimen..."
+    cleanup_legacy_paths
+
     log_step "Kritieke commando's valideren..."
     _phase15_validate_commands
 

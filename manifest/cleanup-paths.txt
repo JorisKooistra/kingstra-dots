@@ -1,0 +1,14 @@
+# =============================================================================
+# manifest/cleanup-paths.txt — Paden die NIET mogen bestaan na installatie
+# =============================================================================
+# Formaat: pad|reden
+#
+# ~ wordt vervangen door $HOME
+# Regels die beginnen met # worden overgeslagen
+#
+# Voeg hier paden toe die handmatig geïnstalleerd waren maar nu door
+# een pacman/AUR-pakket beheerd worden, of die anderszins conflicteren.
+# =============================================================================
+
+# oh-my-posh: handmatige self-install schaduwt oh-my-posh-bin (AUR/pacman)
+~/.local/bin/oh-my-posh|Schaduwt oh-my-posh-bin (AUR) — beheerd door pacman

@@ -8,6 +8,15 @@ export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 
+# XDG-naleving: voorkom rommel in $HOME
+export CARGO_HOME="$XDG_DATA_HOME/cargo"
+export DOCKER_CONFIG="$XDG_CONFIG_HOME/docker"
+export DOTNET_CLI_HOME="$XDG_DATA_HOME/dotnet"
+export NUGET_PACKAGES="$XDG_DATA_HOME/nuget"
+export ELECTRON_GYP_USERHOME="$XDG_CACHE_HOME/electron-gyp"
+export NPM_CONFIG_CACHE="$XDG_CACHE_HOME/npm"
+export NPM_CONFIG_PREFIX="$XDG_DATA_HOME/npm"
+
 # Standaard editor
 export EDITOR="nvim"
 export VISUAL="$EDITOR"
@@ -15,8 +24,8 @@ export VISUAL="$EDITOR"
 # PATH aanvullen
 path=(
     "$HOME/.local/bin"
-    "$HOME/.cargo/bin"
-    "$HOME/.go/bin"
+    "$CARGO_HOME/bin"
+    "$NPM_CONFIG_PREFIX/bin"
     /usr/local/bin
     $path
 )
