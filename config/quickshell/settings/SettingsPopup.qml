@@ -2049,7 +2049,7 @@ Item {
     function runUpdateBootstrap() {
         var bootstrapUrl = "https://raw.githubusercontent.com/JorisKooistra/kingstra-dots/main/bootstrap.sh";
         var command = "bash <(curl -fsSL " + bootstrapUrl + ")";
-        Quickshell.execDetached(["kitty", "--hold", "bash", "-lc", command]);
+        Quickshell.execDetached(["kitty", "--hold", "bash", "-c", command]);
         notify("Settings", "Update gestart in terminal");
         // Sluit meteen zonder close-animatie.
         introContent = 0.0;
@@ -2069,7 +2069,7 @@ Item {
             "cd \"$repo\" && ./uninstall.sh " + uninstallArg;
         advancedStatusText = noRestore ? "Uninstall zonder restore gestart" : "Uninstall met restore gestart";
         showUninstallConfirm = false;
-        Quickshell.execDetached(["kitty", "--hold", "bash", "-lc", command]);
+        Quickshell.execDetached(["kitty", "--hold", "bash", "-c", command]);
         notify("Advanced", noRestore ? "Uninstall zonder restore gestart" : "Uninstall met restore gestart");
         introContent = 0.0;
         introSidebar = 0.0;

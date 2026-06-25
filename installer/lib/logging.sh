@@ -77,7 +77,7 @@ set_phase_progress() {
 
 _ui_clear() {
     if [[ "$INSTALL_UI_MODE" == "true" ]]; then
-        printf '\033c'
+        printf '\033[H\033[2J\033[3J'
     fi
 }
 

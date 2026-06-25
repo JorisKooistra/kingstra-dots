@@ -198,7 +198,7 @@ Variants {
 
             function openUpdatesTerminal() {
                 let cmd = "~/.config/quickshell/package_upgrade.sh";
-                Quickshell.execDetached(["kitty", "--hold", "bash", "-lc", cmd]);
+                Quickshell.execDetached(["kitty", "--hold", "bash", cmd]);
                 Quickshell.execDetached(["bash", "-c", "rm -f ~/.cache/quickshell/package_updates_count"]);
                 updatesPoller.running = true;
                 Quickshell.execDetached(["notify-send", "Updates", "Update gestart in terminal"]);
