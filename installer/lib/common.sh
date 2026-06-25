@@ -97,7 +97,12 @@ run_cmd() {
 # ---------------------------------------------------------------------------
 ensure_dir() {
     local dir="$1"
-    if [[ -L "$dir" || ( -e "$dir" && ! -d "$dir" ) ]]; then
+    if [[ -L "$dir" && ! -e "$dir" ]]; then
+        # Kapotte symlink blokkeert mkdir — verwijder hem
+        backup_path "$dir"
+        rm -f "$dir"
+    elif [[ ! -L "$dir" && -e "$dir" && ! -d "$dir" ]]; then
+        # Gewoon bestand op de plek van een map — verwijder hem
         backup_path "$dir"
         rm -f "$dir"
     fi
