@@ -36,7 +36,17 @@ _is_tty() {
 
 _clear_screen() {
     if _is_tty; then
-        printf '\033c'
+        printf '\033[H\033[2J\033[3J'
+    fi
+}
+
+_bootstrap_exit_trap() {
+    local rc=$?
+    [[ $rc -eq 0 ]] && return
+    printf "\n${RED}[kingstra] Afgebroken met foutcode %s.${RESET}\n" "$rc" >&2
+    printf "${YELLOW}Log: %s${RESET}\n\n" "${LOG_FILE:-~/.local/share/kingstra/install.log}" >&2
+    if _is_tty; then
+        read -r -p "Druk Enter om te sluiten..." _
     fi
 }
 
@@ -333,6 +343,8 @@ EOF
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+trap '_bootstrap_exit_trap' EXIT
+
 _parse_bootstrap_flags "$@"
 
 _log "Vereisten controleren..."

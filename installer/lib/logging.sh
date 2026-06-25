@@ -107,7 +107,6 @@ _restore_kernel_console_loglevel() {
 
 _install_log_cleanup() {
     _restore_kernel_console_loglevel
-    _ui_restore_scroll_region
 }
 
 install_ui_finish_screen() {
@@ -217,17 +216,14 @@ log_phase() {
     local total="${3:-$INSTALL_TOTAL_PHASES}"
 
     if [[ "$INSTALL_UI_MODE" == "true" ]]; then
-        _ui_restore_scroll_region
-        _ui_clear
-        print_banner
-        _ui_enable_scroll_region
+        echo ""
+        printf "${_MAGENTA}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
         if (( total > 0 )); then
-            printf "  ${_BOLD}Fase:${_RESET} %s (%d/%d)\n" "$name" "$current" "$total"
-            printf "  ${_BOLD}Voortgang:${_RESET} %s\n\n" "$(_render_progress_bar "$total" "$current")"
+            printf "${_MAGENTA}${_BOLD}  FASE: %s (%d/%d)  %s${_RESET}\n" "$name" "$current" "$total" "$(_render_progress_bar "$total" "$current")"
         else
-            printf "  ${_BOLD}Fase:${_RESET} %s\n\n" "$name"
+            printf "${_MAGENTA}${_BOLD}  FASE: %s${_RESET}\n" "$name"
         fi
-        printf "  ${_BOLD}Detectie:${_RESET} %s\n\n" "$(_render_detect_summary)"
+        printf "${_MAGENTA}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
     else
         echo ""
         printf "${_MAGENTA}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
