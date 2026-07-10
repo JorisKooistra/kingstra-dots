@@ -132,6 +132,19 @@ lm_sensors provides hardware sensor data.
 
 Clipboard history with `Super + V`. Stores text and images.
 
+### Passthrough — Citrix, VMs & remote desktops
+
+`Super + Escape` toggles a passthrough submap in which Hyprland consumes no Super
+shortcuts — every key goes straight to the focused window. For Citrix windows
+(`wfica`) this happens automatically via `citrix-guard.sh`: focus in → passthrough,
+focus out → all binds restored. This prevents the known wfica crash on the Super key.
+
+### WiFi & Bluetooth stability
+
+Phase 12 deploys system-level fixes for flaky laptop wireless: WiFi power saving off
+(NetworkManager + `iwlwifi`/`rtw88` module options), Bluetooth USB autosuspend off,
+and a systemd sleep hook that reloads `btusb` and unblocks radios after resume.
+
 ### Touchscreen support
 
 Auto-detects touchscreen hardware and applies a touch profile: larger UI scale, bigger bar hit

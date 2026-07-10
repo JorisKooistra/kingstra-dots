@@ -1,7 +1,7 @@
 # Keybindings — kingstra-dots
 
 > **Super** = Windows/Meta key  
-> Binds zijn verdeeld over `config/hypr/conf.d/80–84-binds-*.conf`
+> Binds zijn verdeeld over `config/hypr/conf.d/80–86-binds-*.conf`
 
 ---
 
@@ -154,6 +154,19 @@ Opgeslagen in `~/Pictures/Screenshots/`.
 | `Super + Alt + P` | Afspelen/pauzeren (zonder mediatoets) |
 | `Super + Alt + .` | Volgend nummer |
 | `Super + Alt + ,` | Vorig nummer |
+
+---
+
+## Passthrough (Citrix, VM's, remote desktops)
+
+| Toetsen | Actie |
+|---|---|
+| `Super + Escape` | Passthrough aan/uit — alle Super-binds gaan naar het venster zelf |
+
+Bij Citrix-vensters (wfica) gebeurt dit automatisch via `citrix-guard.sh`:
+zodra het venster focus krijgt, worden alle Super-shortcuts doorgegeven aan
+de remote sessie (voorkomt crashes op de Super-toets); bij focusverlies komen
+de binds automatisch terug.
 
 ---
 
