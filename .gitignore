@@ -27,6 +27,7 @@ config/zsh/.zcompdump*
 config/yazi/theme.toml
 config/spicetify/Themes/Matugen/color.ini
 config/spicetify/Themes/Matugen/user.css
+config/spicetify/config-xpui.ini
 
 # Installer-gegenereerde hardware config
 config/hypr/conf.d/72-hardware.conf
