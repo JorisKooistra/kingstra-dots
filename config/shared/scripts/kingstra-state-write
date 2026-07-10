@@ -41,5 +41,14 @@ fi
 # ---------------------------------------------------------------------------
 # Schrijf veld
 # ---------------------------------------------------------------------------
-TMP="$(mktemp)"
-jq --arg k "$KEY" --arg v "$VALUE" '.[$k] = $v' "$FILE" > "$TMP" && mv "$TMP" "$FILE"
+# Temp-bestand in dezelfde directory: mv is dan een atomaire rename (geen
+# cross-device copy vanuit /tmp). mktemp maakt 600; zet 644 zodat de
+# state-bestanden voor alle lezers toegankelijk blijven.
+TMP="$(mktemp "$FILE.XXXXXX")"
+if jq --arg k "$KEY" --arg v "$VALUE" '.[$k] = $v' "$FILE" > "$TMP"; then
+    chmod 644 "$TMP"
+    mv "$TMP" "$FILE"
+else
+    rm -f "$TMP"
+    _die "jq-bewerking mislukt voor $FILE"
+fi

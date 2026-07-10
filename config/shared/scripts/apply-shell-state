@@ -161,15 +161,12 @@ fi
 
 _sync_skwd_config "$SCHEME" "$MODE"
 
-# Fallback: onbekende mode → office
+# Fallback: onbekende mode → office (modes-dir TOML's zijn de bron van waarheid)
 SESSION_MODE=$(jq -r '.mode // "office"' "$SESSION_FILE" 2>/dev/null || echo "office")
-case "$SESSION_MODE" in
-    office|gaming|media) ;;
-    *)
-        _warn "Onbekende mode '${SESSION_MODE}' — fallback naar office"
-        SESSION_MODE="office"
-        ;;
-esac
+if [[ ! "$SESSION_MODE" =~ ^[a-z0-9_-]+$ || ! -f "$MODES_DIR/${SESSION_MODE}.toml" ]]; then
+    _warn "Onbekende mode '${SESSION_MODE}' — fallback naar office"
+    SESSION_MODE="office"
+fi
 
 # Houd wallpaper state/cache gelijk met de centrale apply-run.
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
@@ -378,7 +375,15 @@ if command -v spicetify &>/dev/null && [[ -f "$SPICETIFY_COLOR_INI" ]]; then
             fi
         fi
     else
-        _warn "Spicetify reload mislukt"
+        # Na een Spotify-update staat de client in "stock state" en weigert
+        # apply tot de backup opnieuw is gemaakt. Herstel automatisch, maar
+        # alleen als Spotify niet draait (patchen van een live client geeft
+        # een halve toestand).
+        if ! pgrep -x spotify &>/dev/null && spicetify backup apply >/dev/null 2>&1; then
+            _log "Spicetify hersteld na Spotify-update (backup apply)"
+        else
+            _warn "Spicetify reload mislukt"
+        fi
     fi
 fi
 

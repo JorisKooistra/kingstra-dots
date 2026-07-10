@@ -33,23 +33,32 @@ if [[ "${1:-}" == "--current" ]]; then
     exit 0
 fi
 
+# Beschikbare modes komen uit de TOML's in MODES_DIR (bron van waarheid);
+# fallback op de standaard drie als de directory ontbreekt.
+_available_modes() {
+    local found=false f
+    for f in "$MODES_DIR"/*.toml; do
+        [[ -f "$f" ]] || continue
+        basename "$f" .toml
+        found=true
+    done
+    if ! $found; then
+        printf '%s\n' office gaming media
+    fi
+}
+
 if [[ "${1:-}" == "--list" ]]; then
-    echo "office"
-    echo "gaming"
-    echo "media"
+    _available_modes
     exit 0
 fi
 
 MODE_NAME="${1:?Gebruik: kingstra-mode-switch <mode_naam>}"
 
 # Valideer mode naam
-case "$MODE_NAME" in
-    office|gaming|media) ;;
-    *)
-        _warn "Onbekende mode: $MODE_NAME (geldig: office, gaming, media)"
-        exit 1
-        ;;
-esac
+if ! _available_modes | grep -qx "$MODE_NAME"; then
+    _warn "Onbekende mode: $MODE_NAME (geldig: $(_available_modes | paste -sd ', '))"
+    exit 1
+fi
 
 _log "Overschakelen naar mode: $MODE_NAME"
 
