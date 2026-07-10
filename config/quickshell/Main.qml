@@ -17,6 +17,12 @@ import "WindowRegistry.js" as Registry
 PanelWindow {
     id: masterWindow
 
+    // QSettings (QML Settings-type) vereist een organisatienaam; zonder deze
+    // faalt de init en persisteert o.a. de audio-cache in VolumePopup niet.
+    Component.onCompleted: {
+        Qt.application.organization = "kingstra";
+    }
+
     // Dynamically select the screen that hosts the active monitor.
     // activeMx/activeMy are updated from the IPC message before currentActive
     // changes, so the correct screen is always selected before the window maps.

@@ -399,6 +399,15 @@ Item {
         return Math.max(minValue, Math.min(maxValue, value));
     }
 
+    // Terugschrijven vanuit een spinbox (schaal 100) naar een edit-property.
+    // Alleen schrijven bij echte wijziging: een onvoorwaardelijke write vanuit
+    // onValueChanged invalideert de value-binding tijdens diens eigen evaluatie
+    // en geeft "Binding loop detected"-warnings.
+    function setEditFloat(prop, value100) {
+        const s = (value100 / 100.0).toFixed(2);
+        if (root[prop] !== s) root[prop] = s;
+    }
+
     function shellSingleQuote(value) {
         return String(value || "").replace(/'/g, "'\\''");
     }
@@ -4510,7 +4519,7 @@ Item {
                                                 if (isNaN(n)) return 0;
                                                 return Math.round(n * 100);
                                             }
-                                            onValueChanged: root.editLetterSpacing = (value / 100.0).toFixed(2)
+                                            onValueModified: root.setEditFloat("editLetterSpacing", value)
                                             Layout.fillWidth: false
                                             Layout.preferredWidth: themeEditorsGrid.spinWidth
                                         }
@@ -4600,7 +4609,7 @@ Item {
                                                 if (isNaN(n)) return 0;
                                                 return Math.round(n * 100);
                                             }
-                                            onValueChanged: root.editContrast = (value / 100.0).toFixed(2)
+                                            onValueModified: root.setEditFloat("editContrast", value)
                                             Layout.fillWidth: false
                                             Layout.preferredWidth: themeEditorsGrid.spinWidth
                                         }
@@ -4770,7 +4779,7 @@ Item {
                                             value: Math.round(parseFloat(root.editBarOpacity) * 100)
                                             textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
                                             valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 72 : Math.round(n * 100); }
-                                            onValueChanged: root.editBarOpacity = (value / 100.0).toFixed(2)
+                                            onValueModified: root.setEditFloat("editBarOpacity", value)
                                             Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
                                         }
                                         Item { Layout.fillWidth: true }
@@ -4785,7 +4794,7 @@ Item {
                                             value: Math.round(parseFloat(root.editPopupOpacity) * 100)
                                             textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
                                             valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 80 : Math.round(n * 100); }
-                                            onValueChanged: root.editPopupOpacity = (value / 100.0).toFixed(2)
+                                            onValueModified: root.setEditFloat("editPopupOpacity", value)
                                             Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
                                         }
                                         Item { Layout.fillWidth: true }
@@ -4800,7 +4809,7 @@ Item {
                                             value: Math.round(parseFloat(root.editAnimationSpeed) * 100)
                                             textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
                                             valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 75 : Math.round(n * 100); }
-                                            onValueChanged: root.editAnimationSpeed = (value / 100.0).toFixed(2)
+                                            onValueModified: root.setEditFloat("editAnimationSpeed", value)
                                             Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
                                         }
                                         Item { Layout.fillWidth: true }
@@ -4819,7 +4828,7 @@ Item {
                                             value: Math.round(parseFloat(root.editOverlayOpacity) * 100)
                                             textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
                                             valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 6 : Math.round(n * 100); }
-                                            onValueChanged: root.editOverlayOpacity = (value / 100.0).toFixed(2)
+                                            onValueModified: root.setEditFloat("editOverlayOpacity", value)
                                             Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
                                         }
                                         Item { Layout.fillWidth: true }
@@ -4834,7 +4843,7 @@ Item {
                                             value: Math.round(parseFloat(root.editGlowIntensity) * 100)
                                             textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
                                             valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 4 : Math.round(n * 100); }
-                                            onValueChanged: root.editGlowIntensity = (value / 100.0).toFixed(2)
+                                            onValueModified: root.setEditFloat("editGlowIntensity", value)
                                             Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
                                         }
                                         Item { Layout.fillWidth: true }
@@ -4879,7 +4888,7 @@ Item {
                                             value: Math.round(parseFloat(root.editParticleSpeed) * 100)
                                             textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
                                             valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 18 : Math.round(n * 100); }
-                                            onValueChanged: root.editParticleSpeed = (value / 100.0).toFixed(2)
+                                            onValueModified: root.setEditFloat("editParticleSpeed", value)
                                             Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
                                         }
                                         Item { Layout.fillWidth: true }
@@ -4925,7 +4934,7 @@ Item {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Shadow"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                        ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editPanelShadow) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 22 : Math.round(n * 100); }; onValueChanged: root.editPanelShadow = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editPanelShadow) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 22 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editPanelShadow", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
@@ -4933,7 +4942,7 @@ Item {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Outline"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                        ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editOutlineStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 18 : Math.round(n * 100); }; onValueChanged: root.editOutlineStrength = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editOutlineStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 18 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editOutlineStrength", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
@@ -4941,7 +4950,7 @@ Item {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Glass"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                        ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editGlassStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 10 : Math.round(n * 100); }; onValueChanged: root.editGlassStrength = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editGlassStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 10 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editGlassStrength", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
@@ -4977,7 +4986,7 @@ Item {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Intensity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                        ThemedSpinBox { from: 0; to: 200; stepSize: 5; value: Math.round(parseFloat(root.editEffectIntensity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 100 : Math.round(n * 100); }; onValueChanged: root.editEffectIntensity = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        ThemedSpinBox { from: 0; to: 200; stepSize: 5; value: Math.round(parseFloat(root.editEffectIntensity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 100 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editEffectIntensity", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
@@ -4993,7 +5002,7 @@ Item {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
                                         Text { text: "Hover"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                        ThemedSpinBox { from: 0; to: 100; stepSize: 5; value: Math.round(parseFloat(root.editHoverReactivity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 40 : Math.round(n * 100); }; onValueChanged: root.editHoverReactivity = (value / 100.0).toFixed(2); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
+                                        ThemedSpinBox { from: 0; to: 100; stepSize: 5; value: Math.round(parseFloat(root.editHoverReactivity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 40 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editHoverReactivity", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
 
