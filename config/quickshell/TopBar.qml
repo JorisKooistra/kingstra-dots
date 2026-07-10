@@ -10,7 +10,7 @@ ShellRoot {
     // QSettings (QML Settings-type) vereist een organisatienaam; zonder deze
     // faalt de init en persisteert o.a. de audio-cache in VolumePopup niet.
     Component.onCompleted: {
-        Qt.application.organization = "kingstra";
+        Qt.application.organization = "kingstra-shell";
     }
 
     BarShell {}

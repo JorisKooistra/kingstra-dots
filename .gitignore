@@ -52,6 +52,7 @@ config/kingstra/active-theme
 config/matugen/config.toml
 
 # Kingstra runtime state (gegenereerd bij theme/mode/wallpaper switch)
+config/kingstra/quickshell.conf
 config/kingstra/state/mode.json
 config/kingstra/state/session.json
 config/kingstra/state/theme.json
