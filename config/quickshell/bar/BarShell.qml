@@ -145,6 +145,7 @@ Variants {
             property bool _settingsReady: false
 
             FileView {
+                id: settingsFileView
                 path: Quickshell.env("HOME") + "/.config/quickshell/settings/settings.json"
                 watchChanges: true
                 preload: true
@@ -160,6 +161,11 @@ Variants {
             }
             // Failsafe: zet _settingsReady na 1s als het bestand niet bestaat
             Timer { interval: 1000; running: !barWindow._settingsReady; onTriggered: barWindow._settingsReady = true }
+
+            // QS 0.3.0: watchChanges mist updates zodra het bestand via mv/rename
+            // wordt vervangen (inode-wissel). Poll als vangnet; onInternalTextChanged
+            // vuurt alleen bij daadwerkelijk gewijzigde inhoud.
+            Timer { interval: 1000; running: true; repeat: true; onTriggered: settingsFileView.reload() }
 
             // --- Mode State ---
             property string activeMode: "office"
@@ -286,6 +292,7 @@ Variants {
             }
 
             FileView {
+                id: modeFileView
                 path: Quickshell.env("HOME") + "/.config/kingstra/state/mode.json"
                 watchChanges: true
                 preload: true
@@ -302,6 +309,9 @@ Variants {
                     } catch(e) {}
                 }
             }
+
+            // QS 0.3.0: watchChanges mist inode-vervanging (mode-switch schrijft via mv)
+            Timer { interval: 1000; running: true; repeat: true; onTriggered: modeFileView.reload() }
 
             // --- State Variables ---
 

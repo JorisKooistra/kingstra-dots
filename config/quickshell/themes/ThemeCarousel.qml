@@ -326,7 +326,9 @@ Item {
             readonly property string themeIcon: icon !== undefined ? String(icon) : "󰏘"
             readonly property string themeDesc: description !== undefined ? String(description) : ""
             readonly property string previewImg: preview_image !== undefined ? String(preview_image) : ""
-            readonly property string previewPath: preview_path !== undefined ? String(preview_path) : ""
+            // Via `model.` benaderen: de theme-lijst heeft geen preview_path-rol,
+            // en een bare referentie gooit dan een ReferenceError (previews kapot).
+            readonly property string previewPath: (model.preview_path || "") !== "" ? String(model.preview_path) : ""
             readonly property string previewSource: previewPath !== "" ? previewPath :
                 (previewImg !== "" ? "file://" + Quickshell.env("HOME") + "/.config/kingstra/themes/previews/" + previewImg : "")
             readonly property string schemeType: matugenData.scheme_type !== undefined ? String(matugenData.scheme_type) : (scheme_type !== undefined ? String(scheme_type) : "")

@@ -170,6 +170,7 @@ Item {
     ]
 
     FileView {
+        id: settingsFileView
         path: Quickshell.env("HOME") + "/.config/quickshell/settings/settings.json"
         watchChanges: true
         preload: true
@@ -192,6 +193,9 @@ Item {
             } catch(e) {}
         }
     }
+
+    // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
+    Timer { interval: 1000; running: true; repeat: true; onTriggered: settingsFileView.reload() }
 
     // Keybinds laden via Process → StdioCollector (geen temp-bestand race-conditie)
     Process {

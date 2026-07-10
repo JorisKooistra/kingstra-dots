@@ -12,6 +12,7 @@ Item {
     property var _data: ({})
 
     FileView {
+        id: colorsFileView
         path: Quickshell.env("HOME") + "/.config/quickshell/colors.json"
         watchChanges: true
         preload: true
@@ -20,6 +21,9 @@ Item {
             if (content) try { root._data = JSON.parse(content) } catch (e) {}
         }
     }
+
+    // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
+    Timer { interval: 1000; running: true; repeat: true; onTriggered: colorsFileView.reload() }
 
     // ---------------------------------------------------------------------------
     // Material-kleuren — reactief op _data, fallback = Catppuccin Mocha

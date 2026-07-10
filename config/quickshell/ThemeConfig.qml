@@ -140,6 +140,7 @@ Item {
     }
 
     FileView {
+        id: themeFileView
         path: Quickshell.env("HOME") + "/.config/quickshell/theme.json"
         watchChanges: true
         preload: true
@@ -238,4 +239,7 @@ Item {
             } catch (e) {}
         }
     }
+
+    // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
+    Timer { interval: 1000; running: true; repeat: true; onTriggered: themeFileView.reload() }
 }

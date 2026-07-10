@@ -28,6 +28,8 @@ Item {
     property color yellow: "#f9e2af"
     property color maroon: "#eba0ac"
     property color teal: "#94e2d5"
+    property color lavender: "#b4befe"
+    property color sky: "#89dceb"
 
     // Material/Matugen semantic names. The legacy Catppuccin-style names above
     // are populated from Matugen in colors.json; these aliases make new code read
@@ -49,6 +51,7 @@ Item {
     property string rawJson: ""
 
     FileView {
+        id: colorsFileView
         path: Quickshell.env("HOME") + "/.config/quickshell/colors.json"
         watchChanges: true
         preload: true
@@ -81,7 +84,12 @@ Item {
                 if (c.yellow) root.yellow = c.yellow;
                 if (c.maroon) root.maroon = c.maroon;
                 if (c.teal) root.teal = c.teal;
+                if (c.lavender) root.lavender = c.lavender;
+                if (c.sky) root.sky = c.sky;
             } catch (e) {}
         }
     }
+
+    // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
+    Timer { interval: 1000; running: true; repeat: true; onTriggered: colorsFileView.reload() }
 }
