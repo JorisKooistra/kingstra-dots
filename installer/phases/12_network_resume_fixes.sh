@@ -22,6 +22,9 @@ phase_run() {
     pacman_install bluez-utils              # bluetoothctl CLI
     pacman_install blueman                  # GUI bluetooth-beheerder
 
+    log_step "WiFi/Bluetooth-stabiliteitstweaks deployen..."
+    _phase12_deploy_wireless_tweaks
+
     log_step "Resume-fix script deployen..."
     _phase12_deploy_resume_script
 
@@ -54,6 +57,50 @@ phase_run() {
 }
 
 # ---------------------------------------------------------------------------
+
+_phase12_deploy_wireless_tweaks() {
+    local nm_src="$REPO_ROOT/config/system/networkmanager-wifi.conf"
+    local nm_dest="/etc/NetworkManager/conf.d/99-kingstra-wifi.conf"
+    local modprobe_src="$REPO_ROOT/config/system/modprobe-wireless.conf"
+    local modprobe_dest="/etc/modprobe.d/99-kingstra-wireless.conf"
+    local sleep_src="$REPO_ROOT/config/system/system-sleep-wireless.sh"
+    local sleep_dest="/usr/lib/systemd/system-sleep/kingstra-wireless"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "WiFi/BT-tweaks zouden worden geplaatst: $nm_dest, $modprobe_dest, $sleep_dest (vereist sudo)"
+        return 0
+    fi
+
+    if [[ -f "$nm_src" ]]; then
+        backup_system_path "$nm_dest"
+        sudo mkdir -p /etc/NetworkManager/conf.d
+        sudo cp "$nm_src" "$nm_dest"
+        log_ok "NetworkManager WiFi-powersave uit: $nm_dest"
+    else
+        log_warn "Bron niet gevonden: $nm_src"
+    fi
+
+    if [[ -f "$modprobe_src" ]]; then
+        backup_system_path "$modprobe_dest"
+        sudo mkdir -p /etc/modprobe.d
+        sudo cp "$modprobe_src" "$modprobe_dest"
+        log_ok "Kernelmodule-opties geplaatst: $modprobe_dest (actief na reboot)"
+    else
+        log_warn "Bron niet gevonden: $modprobe_src"
+    fi
+
+    if [[ -f "$sleep_src" ]]; then
+        backup_system_path "$sleep_dest"
+        sudo mkdir -p /usr/lib/systemd/system-sleep
+        sudo install -m 0755 "$sleep_src" "$sleep_dest"
+        log_ok "System-sleep hook geplaatst: $sleep_dest"
+    else
+        log_warn "Bron niet gevonden: $sleep_src"
+    fi
+
+    # Direct toepassen op de draaiende sessie (reboot niet nodig voor NM)
+    sudo systemctl reload NetworkManager 2>/dev/null || true
+}
 
 _phase12_deploy_resume_script() {
     local script_src="$REPO_ROOT/config/hypr/scripts/resume-fix.sh"

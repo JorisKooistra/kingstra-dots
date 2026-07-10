@@ -26,11 +26,14 @@ _spawn_detached() {
 sleep 2
 
 # ---------------------------------------------------------------------------
-# 1 — WiFi rescan
+# 1 — WiFi herstellen (radio aan + rescan)
 # ---------------------------------------------------------------------------
+# De system-sleep hook (kingstra-wireless) heeft als root al rfkill unblock
+# en een eventuele btusb-herlaad gedaan; hier alleen sessie-niveau herstel.
 if command -v nmcli &>/dev/null; then
+    _run_timeout 4 nmcli radio wifi on
     _run_timeout 6 nmcli dev wifi rescan
-    _log "WiFi rescan gestart"
+    _log "WiFi radio aan + rescan gestart"
 fi
 
 # ---------------------------------------------------------------------------
