@@ -380,12 +380,69 @@ _set_toml_value "$MATUGEN_CONF" "scheme_type" "\"$SCHEME_TYPE\""
 _set_toml_value "$MATUGEN_CONF" "mode" "\"$MODE\""
 _set_toml_value "$MATUGEN_CONF" "color_index" "$COLOR_INDEX"
 
-MATUGEN_ARGS=(
-    image "$WALLPAPER"
-    --type "$SCHEME_TYPE"
-    --mode "$MODE"
-    --source-color-index "$COLOR_INDEX"
-)
+# Matugen 2.4.x kent --source-color-index niet (dat was een fork-flag).
+# color_index > 0 emuleren we door zelf de N-de dominante kleur uit de
+# wallpaper te halen (imagemagick) en die als seed aan `matugen color hex`
+# te geven. Kleuren met te weinig verzadiging worden overgeslagen zodat we
+# geen grijs/zwart als accent kiezen; bij te weinig kandidaten vallen we
+# terug op de ongefilterde lijst, en uiteindelijk op index 0 (image-modus).
+_dominant_hex_color() {
+    local image="$1"
+    local index="$2"
+    local magick_bin=""
+
+    if command -v magick &>/dev/null; then
+        magick_bin="magick"
+    elif command -v convert &>/dev/null; then
+        magick_bin="convert"
+    else
+        return 1
+    fi
+
+    "$magick_bin" "$image" -resize '128x128!' -colors 10 -depth 8 \
+        -format '%c' histogram:info:- 2>/dev/null \
+        | sort -t: -k1 -rn \
+        | grep -oE '#[0-9A-Fa-f]{6}' \
+        | awk -v idx="$index" '
+            {
+                hex = substr($0, 2)
+                r = strtonum("0x" substr(hex, 1, 2))
+                g = strtonum("0x" substr(hex, 3, 2))
+                b = strtonum("0x" substr(hex, 5, 2))
+                max = r; if (g > max) max = g; if (b > max) max = b
+                min = r; if (g < min) min = g; if (b < min) min = b
+                all[n_all++] = $0
+                if (max - min >= 24 && max >= 40) sat[n_sat++] = $0
+            }
+            END {
+                if (idx < n_sat)      { print sat[idx];  exit 0 }
+                if (idx < n_all)      { print all[idx];  exit 0 }
+                exit 1
+            }'
+}
+
+SOURCE_HEX=""
+if (( COLOR_INDEX > 0 )); then
+    SOURCE_HEX="$(_dominant_hex_color "$WALLPAPER" "$COLOR_INDEX" || true)"
+    if [[ ! "$SOURCE_HEX" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
+        _warn "Kon dominante kleur #$COLOR_INDEX niet bepalen — fallback naar image-modus"
+        SOURCE_HEX=""
+    fi
+fi
+
+if [[ -n "$SOURCE_HEX" ]]; then
+    MATUGEN_ARGS=(
+        color hex "$SOURCE_HEX"
+        --type "$SCHEME_TYPE"
+        --mode "$MODE"
+    )
+else
+    MATUGEN_ARGS=(
+        image "$WALLPAPER"
+        --type "$SCHEME_TYPE"
+        --mode "$MODE"
+    )
+fi
 
 if [[ -f "$MATUGEN_CONF" ]]; then
     MATUGEN_ARGS+=(--config "$MATUGEN_CONF")
