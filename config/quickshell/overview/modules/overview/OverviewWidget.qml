@@ -144,7 +144,7 @@ Item {
     readonly property real specialWorkspaceAspectCap: {
         let maxAspect = Math.max(1, root.workspaceImplicitWidth / Math.max(1, root.workspaceImplicitHeight));
         for (const name of visibleSpecialWorkspaces) {
-            const geometry = root.specialWorkspaceGeometry(name, root.monitor?.id);
+            const geometry = root.specialWorkspaceGeometry(name);
             const width = geometry?.width;
             const height = geometry?.height;
             if (!Number.isFinite(width) || !Number.isFinite(height) || height <= 0)
@@ -392,9 +392,8 @@ Item {
         return pinned + floating + focus;
     }
 
-    function specialWorkspaceGeometry(name, monitorId) {
+    function specialWorkspaceGeometry(name) {
         const trimmedName = `${name ?? ""}`.trim();
-        const currentMonitorId = monitorId ?? -1;
         let minX = null;
         let minY = null;
         let maxX = null;
@@ -402,8 +401,6 @@ Item {
 
         for (const addr in windowByAddress) {
             const win = windowByAddress[addr];
-            if ((win?.monitor ?? -1) !== currentMonitorId)
-                continue;
             if (root.specialWorkspaceName(win) !== trimmedName)
                 continue;
 
@@ -739,7 +736,7 @@ Item {
                                 id: specialWorkspaceTile
                                 required property string modelData
                                 property string specialName: modelData
-                                property var specialGeometry: root.specialWorkspaceGeometry(specialName, root.monitor?.id)
+                                property var specialGeometry: root.specialWorkspaceGeometry(specialName)
                                 property color baseColor: ColorUtils.mix(Appearance.colors.colLayer1, Appearance.colors.colLayer0, 0.52)
                                 property bool hasRenderableGeometry: Number.isFinite(specialGeometry?.width)
                                     && Number.isFinite(specialGeometry?.height)
@@ -828,8 +825,6 @@ Item {
                                                 return ToplevelManager.toplevels.values.filter((toplevel) => {
                                                     const address = `0x${toplevel.HyprlandToplevel.address}`;
                                                     const win = windowByAddress[address];
-                                                    if ((win?.monitor ?? -1) !== (root.monitor?.id ?? -1))
-                                                        return false;
                                                     return root.specialWorkspaceName(win) === specialWorkspaceTile.specialName;
                                                 }).sort((a, b) => {
                                                     const addrA = `0x${a.HyprlandToplevel.address}`;
