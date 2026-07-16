@@ -63,19 +63,35 @@ fi
 _log "Overschakelen naar mode: $MODE_NAME"
 
 # ---------------------------------------------------------------------------
-# Stap 1 — Schrijf mode.json
+# Stap 1 — Schrijf mode.json (incl. bar_autohide/modules, meteen — niet pas
+# na afloop van apply-shell-state's trage matugen/theming-pipeline. Die
+# vertraging zorgde ervoor dat bv. media-mode's autohide pas na tientallen
+# seconden inging in plaats van meteen bij het wisselen.)
 # ---------------------------------------------------------------------------
-STATE_WRITE="${HOME}/.local/bin/kingstra-state-write"
-if [[ -x "$STATE_WRITE" ]]; then
-    "$STATE_WRITE" mode.json name "$MODE_NAME"
-    _log "state/mode.json bijgewerkt: $MODE_NAME"
-else
-    # Directe fallback
-    STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
-    mkdir -p "$STATE_DIR"
-    echo "{\"name\":\"$MODE_NAME\"}" > "$STATE_DIR/mode.json"
-    _log "state/mode.json bijgewerkt (direct): $MODE_NAME"
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+mkdir -p "$STATE_DIR"
+MODE_JSON="$STATE_DIR/mode.json"
+MODE_TOML="$MODES_DIR/${MODE_NAME}.toml"
+MODE_READ="${HOME}/.local/bin/kingstra-mode-read"
+
+MODULES="[]"
+AUTOHIDE="false"
+if [[ -x "$MODE_READ" && -f "$MODE_TOML" ]]; then
+    MODE_DATA=$("$MODE_READ" --json "$MODE_TOML" 2>/dev/null || echo "{}")
+    MODULES=$(echo "$MODE_DATA" | jq -c '.modules.list // []' 2>/dev/null || echo "[]")
+    AUTOHIDE=$(echo "$MODE_DATA" | jq -r '.bar.autohide // false' 2>/dev/null || echo "false")
 fi
+
+TMP="$(mktemp "$MODE_JSON.XXXXXX")"
+jq -n \
+    --arg name "$MODE_NAME" \
+    --argjson modules "$MODULES" \
+    --argjson bar_autohide "$AUTOHIDE" \
+    '{"name":$name,"modules":$modules,"bar_autohide":$bar_autohide}' \
+    > "$TMP"
+chmod 644 "$TMP"
+mv "$TMP" "$MODE_JSON"
+_log "state/mode.json bijgewerkt: $MODE_NAME (autohide=$AUTOHIDE)"
 
 # ---------------------------------------------------------------------------
 # Stap 2 — session.json synchroniseren
