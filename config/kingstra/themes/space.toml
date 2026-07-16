@@ -13,13 +13,13 @@ mode = "dark"
 [appearance]
 border_radius = 14
 border_width = 1
-gaps_in = 16
-gaps_out = 32
-bar_opacity = 0.46
-popup_opacity = 0.58
-blur_size = 36
-blur_passes = 6
-animation_speed = 1.0
+gaps_in = 12
+gaps_out = 24
+bar_opacity = 0.70
+popup_opacity = 0.80
+blur_size = 24
+blur_passes = 4
+animation_speed = 0.95
 
 [fonts]
 ui_font = "Space Grotesk"
@@ -28,7 +28,7 @@ mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
 display_font = "Space Grotesk"
 font_weight = "medium"
-letter_spacing = 1.0
+letter_spacing = 0.15
 
 [icons]
 icon_theme = "Papirus-Dark"
@@ -41,15 +41,15 @@ bar_position = "top"
 hue_shift = 20
 saturation_adjust = 0.10
 lightness_adjust = -0.08
-thematic_mix = 0.30
+thematic_mix = 0.22
 
 [material]
 texture = "star-specks"
 overlay_opacity = 0.06
-glow_intensity = 0.28
+glow_intensity = 0.18
 
 [terminal]
-bg_opacity = 0.72
+bg_opacity = 0.82
 blur = true
 padding = 14
 cursor_style = "beam"
@@ -74,23 +74,23 @@ density = "airy"
 surface_mode = "cinematic-glass"
 motion = "float"
 panel_shadow = 0.32
-outline_strength = 0.26
-glass_strength = 0.24
-widget_radius = 24
-panel_padding = 18
+outline_strength = 0.20
+glass_strength = 0.16
+widget_radius = 20
+panel_padding = 16
 
 [effects]
 particles = "space-specks-layered"
-particle_count = 28
+particle_count = 14
 particle_speed = 0.06
 ambient_effect = "space-nebula"
-effect_intensity = 1.35
-effect_cycle_ms = 11000
-hover_reactivity = 0.18
+effect_intensity = 0.90
+effect_cycle_ms = 14000
+hover_reactivity = 0.15
 
 [bar_dynamics]
 drawer_style = "context-card"
-module_density = "rich"
+module_density = "balanced"
 workspace_preview = "app-icons"
 rail_accent = "segmented"
 

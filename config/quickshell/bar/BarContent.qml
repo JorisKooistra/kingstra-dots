@@ -58,20 +58,24 @@ Item {
     readonly property bool botanicalChrome: String(shell.activeThemeName || "").toLowerCase() === "botanical"
     readonly property bool rockyChrome:     String(shell.activeThemeName || "").toLowerCase() === "rocky"
     readonly property bool animatedChrome:  String(shell.activeThemeName || "").toLowerCase() === "animated"
+    readonly property int moduleSpacing: botanicalChrome ? 0 : shell.s(4)
+    readonly property int centerGap: botanicalChrome ? 0 : shell.s(12)
 
     readonly property color themeAccentBorderColor:
         oceanChrome     ? Qt.rgba(mocha.teal.r,  mocha.teal.g,  mocha.teal.b,  0.28) :
         spaceChrome     ? Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.28) :
-        botanicalChrome ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.24) :
+        botanicalChrome ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.0) :
         rockyChrome     ? Qt.rgba(mocha.text.r,  mocha.text.g,  mocha.text.b,  0.30) :
         animatedChrome  ? Qt.rgba(mocha.pink.r,  mocha.pink.g,  mocha.pink.b,  0.28) :
                           surface.panelBorderColor
-    readonly property color themeAccentBorderHoverColor: Qt.rgba(
-        themeAccentBorderColor.r,
-        themeAccentBorderColor.g,
-        themeAccentBorderColor.b,
-        Math.min(0.9, themeAccentBorderColor.a + 0.18)
-    )
+    readonly property color themeAccentBorderHoverColor: botanicalChrome
+        ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.0)
+        : Qt.rgba(
+            themeAccentBorderColor.r,
+            themeAccentBorderColor.g,
+            themeAccentBorderColor.b,
+            Math.min(0.9, themeAccentBorderColor.a + 0.18)
+        )
 
     // Cyber center colors
     readonly property color cyberCenterColor:            Qt.rgba(mocha.crust.r,   mocha.crust.g,   mocha.crust.b,   0.18)
@@ -119,7 +123,9 @@ Item {
     readonly property color rightGroupBorderColor: surface.continuousBarMode
                                                   ? (cyberContinuousLine
                                                         ? cyberModuleBorderColor
-                                                        : Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.70))
+                                                        : (botanicalChrome
+                                                            ? Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.0)
+                                                            : Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.70)))
                                                   : themeAccentBorderColor
 
     // ── Center pill ────────────────────────────────────────────────────────
@@ -139,10 +145,10 @@ Item {
         anchors.left: parent.left
         anchors.leftMargin: root.edgeInset
         anchors.right: centerBox.left
-        anchors.rightMargin: shell.s(12)
+        anchors.rightMargin: root.centerGap
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        spacing: shell.s(4)
+        spacing: root.moduleSpacing
 
         property int moduleHeight: root.cyberSideModuleHeight
 
@@ -167,10 +173,10 @@ Item {
         anchors.right: parent.right
         anchors.rightMargin: root.edgeInset
         anchors.left: centerBox.right
-        anchors.leftMargin: shell.s(12)
+        anchors.leftMargin: root.centerGap
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        spacing: shell.s(4)
+        spacing: root.moduleSpacing
 
         Item { Layout.fillWidth: true }
 

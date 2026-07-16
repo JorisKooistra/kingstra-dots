@@ -4,25 +4,59 @@ Doel: eerst zorgen dat elke tab betrouwbaar iets kan lezen, wijzigen en opslaan.
 
 ## Huidige tabvolgorde
 
-1. Theme
-2. Bar
-3. Widgets
-4. Keybinds
-5. Input
-6. Display
-7. Network
-8. Audio
-9. Weather & Time
-10. Session
-11. Updates
-12. Advanced
-13. About
+1. Quick
+2. Theme
+3. Bar
+4. Widgets
+5. Keybinds
+6. Input
+7. Display
+8. Network
+9. Audio
+10. Weather & Time
+11. Session
+12. Updates
+13. Advanced
+14. About
 
 Status in de app:
+- Quick is toegevoegd als eerste end_4-geinspireerde landingspagina voor dagelijkse acties: theme/kleur, barpositie, widget-openers, sessiemodus en lock.
 - Theme, Keybinds, Input, Weather & Time en About hebben bestaande functionele content.
 - Bar heeft nu een eigen tab die dezelfde theme-velden bedient als de Theme-editor en via de bestaande save/apply flow werkt.
 - Widgets, Display, Network, Audio, Session, Updates en Advanced hebben nu werkende basispanelen die bestaande popups/scripts openen of status lezen.
 - Module-toggles voor Widgets zijn bewust nog niet als echte schakelaars gebouwd, omdat `BarShell.qml` nog geen `widgets.json` leest. De tab fungeert nu als betrouwbare hub.
+
+## End_4 Integratiekeuzes
+
+Wel overnemen:
+- Een snelle eerste pagina met de meest gebruikte instellingen.
+- Navigatie met duidelijke iconen, statuskaarten en actieknoppen.
+- Theme/wallpaper/kleur als primaire workflow.
+- Barpositie, barvorm en topbar-herlaadacties dicht bij elkaar.
+- Sessie-, widget- en statusacties als snelle control-center knoppen.
+
+Niet overnemen:
+- Anime/weeb-gerelateerde policies, wallpapers of random bronnen.
+- AI/Gemini/translation settings.
+- Google Lens, circle search, crosshair en floating-image overlays.
+- Het end_4 config-schema als dependency. Kingstra blijft de eigen TOML/JSON/scripts gebruiken.
+
+## Quick
+
+Status: eerste versie toegevoegd.
+
+Uitwerking:
+- Actief thema, Matugen schema/modus, barstatus, sessiestatus en dirty-state tonen.
+- Kleurschema, dark/light mode, barpositie en barvorm direct bewerkbaar maken.
+- Opslaan gebruikt dezelfde `theme-update-safe.sh` flow als de Theme-tab.
+- Bar toepassen gebruikt dezelfde topbar-reload flow als de Bar-tab.
+- Snelle acties openen bestaande widgets of scripts: netwerk, volume, monitoren, keybinds, session mode en lock.
+
+Werkt als:
+- De Quick-tab geen eigen parallel config-schema introduceert.
+- Onopgeslagen theme-wijzigingen zichtbaar blijven.
+- Acties geen destructieve shutdown/reboot uitvoeren.
+- Uitgesloten end_4-features niet in UI of defaults verschijnen.
 
 ## Theme
 

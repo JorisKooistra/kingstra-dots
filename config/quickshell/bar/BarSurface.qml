@@ -143,7 +143,7 @@ Item {
     readonly property bool oceanWaveEnabled: ambientEnabled("ocean-wave", "ocean") && skinBool("showWaveShimmer", false)
     readonly property bool spaceNebulaEnabled: ambientEnabled("space-nebula", "space") && skinBool("showNebulaGlow", false)
     readonly property bool animatedRainbowEnabled: ambientEnabled("animated-rainbow", "animated")
-                                                  && (skinBool("showRainbowShift", false) || skinBool("showAuroraSweep", false))
+                                                  && skinBool("showRainbowShift", false)
     readonly property bool cyberGridEnabled: ambientEnabled("cyber-grid", "cyber") && skinBool("showCyberGrid", false)
     readonly property bool rockyBevelEnabled: ambientEnabled("rocky-bevel", "rocky") && skinBool("showBevelHighlight", false)
 
@@ -248,7 +248,10 @@ Item {
             source: barSurfaceRoot.activeTextureOverlaySource
             fillMode: Image.Tile
             opacity: barSurfaceRoot.textureOverlayOpacity
-            visible: barSurfaceRoot.textureOverlayOpacity > 0.0 && source !== "" && status !== Image.Error
+            visible: barSurfaceRoot.continuousBarMode
+                     && barSurfaceRoot.textureOverlayOpacity > 0.0
+                     && source !== ""
+                     && status !== Image.Error
             smooth: false; asynchronous: true
             sourceSize.width: Math.max(64, shell.s(240)); sourceSize.height: Math.max(32, shell.s(100))
             onStatusChanged: {

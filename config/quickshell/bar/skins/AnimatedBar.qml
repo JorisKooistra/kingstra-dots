@@ -11,7 +11,4 @@ QtObject {
     readonly property bool showRainbowShift: true
     readonly property real rainbowCycleMs: 3800
     readonly property real rainbowAlpha: 0.22
-    readonly property bool showAuroraSweep: true
-    readonly property real auroraAlpha: 0.18
-    readonly property real auroraCycleMs: 3200
 }

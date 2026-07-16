@@ -300,22 +300,33 @@ Item {
         Column {
             anchors.centerIn: parent
             spacing: window.s(12)
+            width: Math.max(spinnerBox.width, applyStatusText.implicitWidth)
 
-            Text {
-                text: "󰑓"
-                font.pixelSize: window.s(32)
-                font.family: "JetBrainsMono Nerd Font"
-                color: _theme.blue
+            Item {
+                id: spinnerBox
+                width: window.s(44)
+                height: window.s(44)
                 anchors.horizontalCenter: parent.horizontalCenter
+                transformOrigin: Item.Center
 
                 RotationAnimation on rotation {
                     loops: Animation.Infinite
                     from: 0; to: 360
                     duration: 1200
+                    running: window.isApplying
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "󰑓"
+                    font.pixelSize: window.s(32)
+                    font.family: "JetBrainsMono Nerd Font"
+                    color: _theme.blue
                 }
             }
 
             Text {
+                id: applyStatusText
                 text: "Thema wordt toegepast…"
                 font.pixelSize: window.s(14)
                 color: _theme.text

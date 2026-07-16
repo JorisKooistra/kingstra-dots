@@ -17,15 +17,11 @@ Item {
     property var currentDate: new Date()
     readonly property bool compactAnimatedSidebar: ThemeConfig.effectiveBarTemplate === "compact-sidebar"
                                                   || String(shell.activeThemeName || "").toLowerCase() === "animated"
-    readonly property bool drawerAllowed: ThemeConfig.drawerStyle !== "none"
-    readonly property bool drawerOpen: compactAnimatedSidebar && drawerAllowed && shell.sidebarDrawerOpen
+    readonly property bool expandAllowed: ThemeConfig.drawerStyle !== "none"
     readonly property bool compactRailOnly: compactAnimatedSidebar
     readonly property int railWidth: compactAnimatedSidebar && shell.isVerticalBar ? shell.baseBarThickness : width
-    property string drawerKind: "summary"
-    property real drawerAnchorY: height * 0.5
-    property int drawerWorkspaceId: 1
-    property int drawerWorkspaceAnchorId: 0
-    property bool pointerInWorkspaces: false
+    readonly property int hoverExpandedWidth: root.railWidth + shell.sidebarDrawerWidth - shell.s(8)
+    property int hoverDepth: 0
     readonly property int outerMargin: compactAnimatedSidebar ? shell.s(4) : (shell.edgeAttachedBar ? shell.s(8) : shell.s(10))
     readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
                                                      && String(shell.activeThemeName || "").toLowerCase() === "botanical"
@@ -156,82 +152,19 @@ Item {
         return visibleIcons;
     }
 
-    function setDrawerOpen(open, kind, item, detail) {
-        if (!compactAnimatedSidebar || !drawerAllowed)
+    function railHoverEnter() {
+        if (!compactAnimatedSidebar || !expandAllowed)
             return;
-        if (open) {
-            drawerCloseTimer.stop();
-            var nextKind = kind || "summary";
-            var kindChanged = drawerKind !== nextKind;
-            drawerKind = nextKind;
-            if (drawerKind === "workspaces" && detail !== undefined)
-                drawerWorkspaceId = Number(detail);
-            var workspaceAnchorChanged = drawerKind === "workspaces" && drawerWorkspaceAnchorId !== drawerWorkspaceId;
-            if (workspaceAnchorChanged)
-                drawerWorkspaceAnchorId = drawerWorkspaceId;
-            if (item !== undefined && item !== null && (kindChanged || drawerKind !== "workspaces" || workspaceAnchorChanged)) {
-                var point = root.mapFromItem(item, item.width / 2, item.height / 2);
-                drawerAnchorY = Math.max(shell.s(88), Math.min(root.height - shell.s(88), point.y));
-            }
-            shell.sidebarDrawerOpen = true;
+        hoverCloseTimer.stop();
+        root.hoverDepth++;
+        shell.sidebarDrawerOpen = true;
+    }
+
+    function railHoverExit() {
+        if (!compactAnimatedSidebar || !expandAllowed)
             return;
-        }
-        drawerCloseTimer.restart();
-    }
-
-    function drawerTitle() {
-        if (drawerKind === "calendar") return root.compactDateText;
-        if (drawerKind === "launcher") return "Launcher";
-        if (drawerKind === "notifications") return "Notifications";
-        if (drawerKind === "workspaces") return "Workspaces";
-        if (drawerKind === "media") return "Media";
-        if (drawerKind === "tray") return "Tray";
-        if (drawerKind === "keyboard") return "Keyboard";
-        if (drawerKind === "updates") return "Updates";
-        if (drawerKind === "network") return "Network";
-        if (drawerKind === "bluetooth") return "Bluetooth";
-        if (drawerKind === "volume") return "Volume";
-        if (drawerKind === "battery") return "Battery";
-        return ThemeConfig.name;
-    }
-
-    function drawerPrimary() {
-        if (drawerKind === "calendar") return root.compactTimeText + (root.compactWeatherText !== "" ? "  " + root.compactWeatherText : "");
-        if (drawerKind === "launcher") return "Open Walker";
-        if (drawerKind === "notifications") return "Left: panel  Right: clear";
-        if (drawerKind === "workspaces") return workspaceSummary(drawerWorkspaceId);
-        if (drawerKind === "media") return shell.musicData.title || "No active track";
-        if (drawerKind === "tray") return visibleTrayCount() + " visible tray item" + (visibleTrayCount() === 1 ? "" : "s");
-        if (drawerKind === "keyboard") return shell.kbLayout;
-        if (drawerKind === "updates") return (parseInt(shell.updateCount) || 0) + " package updates";
-        if (drawerKind === "network") return shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "Wi-Fi on") : "Wi-Fi off";
-        if (drawerKind === "bluetooth") return shell.isBtOn ? shell.btDevice : "Bluetooth off";
-        if (drawerKind === "volume") return shell.isSoundActive ? shell.volPercent : "Muted";
-        if (drawerKind === "battery") return shell.batPercent + (shell.isCharging ? " charging" : "");
-        return shell.activeMode;
-    }
-
-    function drawerSecondary() {
-        if (drawerKind === "calendar") return shell.weatherIcon + " " + String(shell.weatherTemp || "--");
-        if (drawerKind === "launcher") return "Click to search apps and commands";
-        if (drawerKind === "notifications") return shell.moduleList.includes("notifications") ? "Notification center is enabled" : "Hidden in this mode";
-        if (drawerKind === "workspaces") return workspaceWindowSummary(drawerWorkspaceId);
-        if (drawerKind === "media") return shell.musicData.artist || shell.musicData.status || "Click controls playback";
-        if (drawerKind === "tray") return "Right-click an icon for its menu";
-        if (drawerKind === "keyboard") return shell.kbLayoutCount + " layouts available";
-        if (drawerKind === "updates") return "Click to open update terminal";
-        if (drawerKind === "network") return shell.isWifiOn ? "Click for Wi-Fi controls" : "Click to open network controls";
-        if (drawerKind === "bluetooth") return shell.isBtOn ? "Click for device controls" : "Click to open Bluetooth controls";
-        if (drawerKind === "volume") return "Scroll to adjust volume";
-        if (drawerKind === "battery") return shell.batIcon;
-        return "Mode-aware compact sidebar";
-    }
-
-    function workspaceSummary(wsId) {
-        var ws = workspaceForId(wsId);
-        if (!ws)
-            return "Workspace " + wsId;
-        return "Workspace " + ws.id;
+        root.hoverDepth = Math.max(0, root.hoverDepth - 1);
+        hoverCloseTimer.restart();
     }
 
     function workspaceWindowSummary(wsId) {
@@ -247,10 +180,13 @@ Item {
     }
 
     Timer {
-        id: drawerCloseTimer
-        interval: 260
+        id: hoverCloseTimer
+        interval: 150
         repeat: false
-        onTriggered: shell.sidebarDrawerOpen = false
+        onTriggered: {
+            if (root.hoverDepth === 0)
+                shell.sidebarDrawerOpen = false;
+        }
     }
 
     Component.onDestruction: {
@@ -294,8 +230,6 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
-                onEntered: root.setDrawerOpen(true, "calendar", infoCard)
-                onExited: root.setDrawerOpen(false)
                 onClicked: shell.toggleWeatherPopup()
             }
 
@@ -383,63 +317,125 @@ Item {
             Layout.fillWidth: true
             spacing: shell.s(5)
 
-            Rectangle {
-                Layout.fillWidth: true
+            Item {
+                id: searchSlot
+                Layout.fillWidth: false
+                Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
+                Layout.preferredWidth: root.railWidth
                 Layout.preferredHeight: root.iconButtonSize
-                radius: surface.innerPillRadius
-                topLeftRadius: root.pillTopLeftRadius
-                topRightRadius: root.pillTopRightRadius
-                bottomLeftRadius: root.pillBottomLeftRadius
-                bottomRightRadius: root.pillBottomRightRadius
-                color: searchMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
-                border.width: root.edgeSidebarChrome ? 0 : 1
-                border.color: searchMouse.containsMouse ? surface.panelBorderHoverColor : "transparent"
-                Text {
-                    anchors.centerIn: parent
-                    text: "󰍉"
-                    font.family: "Iosevka Nerd Font"
-                    font.pixelSize: shell.s(root.compactRailOnly ? 15 : 18)
-                    color: searchMouse.containsMouse ? mocha.blue : mocha.text
-                }
-                MouseArea {
-                    id: searchMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onEntered: root.setDrawerOpen(true, "launcher", parent)
-                    onExited: root.setDrawerOpen(false)
-                    onClicked: Quickshell.execDetached(["bash", "-c", "walker"])
+
+                Rectangle {
+                    id: searchPill
+                    property bool hovered: searchMouse.containsMouse
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: hovered ? root.hoverExpandedWidth : root.railWidth
+                    Behavior on width { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+                    clip: true
+                    radius: surface.innerPillRadius
+                    topLeftRadius: root.pillTopLeftRadius
+                    topRightRadius: root.pillTopRightRadius
+                    bottomLeftRadius: root.pillBottomLeftRadius
+                    bottomRightRadius: root.pillBottomRightRadius
+                    color: hovered ? surface.innerPillHoverColor : surface.innerPillColor
+                    border.width: root.edgeSidebarChrome ? 0 : 1
+                    border.color: hovered ? surface.panelBorderHoverColor : "transparent"
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: shell.s(8)
+                        spacing: shell.s(8)
+                        Text {
+                            text: "󰍉"
+                            font.family: "Iosevka Nerd Font"
+                            font.pixelSize: shell.s(15)
+                            color: searchPill.hovered ? mocha.blue : mocha.text
+                        }
+                        Text {
+                            text: "Search"
+                            visible: searchPill.hovered
+                            opacity: searchPill.hovered ? 1 : 0
+                            Layout.fillWidth: true
+                            font.family: shell.monoFontFamily
+                            font.pixelSize: shell.s(11)
+                            font.weight: shell.themeFontWeight
+                            color: mocha.text
+                            elide: Text.ElideRight
+                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
+                        }
+                    }
+                    MouseArea {
+                        id: searchMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: root.railHoverEnter()
+                        onExited: root.railHoverExit()
+                        onClicked: Quickshell.execDetached(["bash", "-c", "walker"])
+                    }
                 }
             }
 
-            Rectangle {
+            Item {
+                id: notifSlot
                 visible: shell.moduleList.includes("notifications")
-                Layout.fillWidth: true
+                Layout.fillWidth: false
+                Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
+                Layout.preferredWidth: root.railWidth
                 Layout.preferredHeight: root.iconButtonSize
-                radius: surface.innerPillRadius
-                topLeftRadius: root.pillTopLeftRadius
-                topRightRadius: root.pillTopRightRadius
-                bottomLeftRadius: root.pillBottomLeftRadius
-                bottomRightRadius: root.pillBottomRightRadius
-                color: notifMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
-                border.width: root.edgeSidebarChrome ? 0 : 1
-                border.color: notifMouse.containsMouse ? surface.panelBorderHoverColor : "transparent"
-                Text {
-                    anchors.centerIn: parent
-                    text: ""
-                    font.family: "Iosevka Nerd Font"
-                    font.pixelSize: shell.s(root.compactRailOnly ? 14 : 16)
-                    color: notifMouse.containsMouse ? mocha.yellow : mocha.text
-                }
-                MouseArea {
-                    id: notifMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onEntered: root.setDrawerOpen(true, "notifications", parent)
-                    onExited: root.setDrawerOpen(false)
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    onClicked: (mouse) => {
-                        if (mouse.button === Qt.LeftButton) Quickshell.execDetached(["swaync-client", "-t", "-sw"]);
-                        if (mouse.button === Qt.RightButton) Quickshell.execDetached(["swaync-client", "-d"]);
+
+                Rectangle {
+                    id: notifPill
+                    property bool hovered: notifMouse.containsMouse
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: hovered ? root.hoverExpandedWidth : root.railWidth
+                    Behavior on width { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+                    clip: true
+                    radius: surface.innerPillRadius
+                    topLeftRadius: root.pillTopLeftRadius
+                    topRightRadius: root.pillTopRightRadius
+                    bottomLeftRadius: root.pillBottomLeftRadius
+                    bottomRightRadius: root.pillBottomRightRadius
+                    color: hovered ? surface.innerPillHoverColor : surface.innerPillColor
+                    border.width: root.edgeSidebarChrome ? 0 : 1
+                    border.color: hovered ? surface.panelBorderHoverColor : "transparent"
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: shell.s(8)
+                        spacing: shell.s(8)
+                        Text {
+                            text: "\uf0f3"
+                            font.family: "Iosevka Nerd Font"
+                            font.pixelSize: shell.s(14)
+                            color: notifPill.hovered ? mocha.yellow : mocha.text
+                        }
+                        Text {
+                            text: "Notifications"
+                            visible: notifPill.hovered
+                            opacity: notifPill.hovered ? 1 : 0
+                            Layout.fillWidth: true
+                            font.family: shell.monoFontFamily
+                            font.pixelSize: shell.s(11)
+                            font.weight: shell.themeFontWeight
+                            color: mocha.text
+                            elide: Text.ElideRight
+                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
+                        }
+                    }
+                    MouseArea {
+                        id: notifMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: root.railHoverEnter()
+                        onExited: root.railHoverExit()
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onClicked: (mouse) => {
+                            if (mouse.button === Qt.LeftButton) Quickshell.execDetached(["swaync-client", "-t", "-sw"]);
+                            if (mouse.button === Qt.RightButton) Quickshell.execDetached(["swaync-client", "-d"]);
+                        }
                     }
                 }
             }
@@ -458,7 +454,6 @@ Item {
             border.width: root.panelBorderWidth
             border.color: surface.panelBorderColor
             color: surface.panelColor
-            clip: true
 
             Column {
                 id: wsColumn
@@ -469,6 +464,7 @@ Item {
                 Repeater {
                     model: 8
                     delegate: Rectangle {
+                        id: wsPill
                         required property int index
                         property int wsId: index + 1
                         property bool hovered: wsMouse.containsMouse
@@ -478,8 +474,9 @@ Item {
                         readonly property var visibleAppIcons: root.visibleAppIcons(appIcons)
                         readonly property bool showAppIcons: appIcons.length > 0
                         readonly property bool useIconGrid: visibleAppIcons.length >= 3
-                        readonly property int iconSize: shell.s(useIconGrid ? 10 : (root.compactRailOnly ? 13 : 15))
+                        readonly property int iconSize: shell.s(useIconGrid ? 10 : 13)
                         readonly property int iconColumns: useIconGrid ? Math.ceil(visibleAppIcons.length / 2) : visibleAppIcons.length
+                        property real targetWidth: hovered ? root.hoverExpandedWidth : wsColumn.width
 
                         property string stateLabel: {
                             if (Hyprland.focusedWorkspace !== null && Hyprland.focusedWorkspace.id === wsId)
@@ -490,8 +487,10 @@ Item {
                             return "empty";
                         }
 
-                        width: wsColumn.width
+                        width: targetWidth
                         height: shell.s(30)
+                        clip: true
+                        Behavior on targetWidth { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
                         radius: surface.innerPillRadius
                         topLeftRadius: root.pillTopLeftRadius
                         topRightRadius: root.pillTopRightRadius
@@ -507,73 +506,92 @@ Item {
                         border.width: stateLabel === "empty" ? 1 : 0
                         border.color: Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.5)
 
-                        Text {
-                            anchors.centerIn: parent
-                            opacity: showAppIcons ? 0 : 1
-                            text: wsId.toString()
-                            font.family: shell.monoFontFamily
-                            font.pixelSize: shell.s(13)
-                            font.weight: stateLabel === "active" ? Font.Black : Font.Bold
-                            font.letterSpacing: shell.themeLetterSpacing
-                            color: stateLabel === "active" ? mocha.crust : mocha.text
-                            Behavior on opacity { NumberAnimation { duration: 120 } }
-                        }
+                        Item {
+                            id: indicatorZone
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: wsColumn.width
 
-                        Grid {
-                            anchors.centerIn: parent
-                            columns: Math.max(1, iconColumns)
-                            rowSpacing: shell.s(2)
-                            columnSpacing: shell.s(useIconGrid ? 3 : 4)
-                            opacity: showAppIcons ? 1 : 0
-                            visible: opacity > 0
-                            Behavior on opacity { NumberAnimation { duration: 140 } }
+                            Text {
+                                anchors.centerIn: parent
+                                opacity: wsPill.showAppIcons ? 0 : 1
+                                text: wsPill.wsId.toString()
+                                font.family: shell.monoFontFamily
+                                font.pixelSize: shell.s(13)
+                                font.weight: wsPill.stateLabel === "active" ? Font.Black : Font.Bold
+                                font.letterSpacing: shell.themeLetterSpacing
+                                color: wsPill.stateLabel === "active" ? mocha.crust : mocha.text
+                                Behavior on opacity { NumberAnimation { duration: 120 } }
+                            }
 
-                            Repeater {
-                                model: visibleAppIcons
+                            Grid {
+                                anchors.centerIn: parent
+                                columns: Math.max(1, wsPill.iconColumns)
+                                rowSpacing: shell.s(2)
+                                columnSpacing: shell.s(wsPill.useIconGrid ? 3 : 4)
+                                opacity: wsPill.showAppIcons ? 1 : 0
+                                visible: opacity > 0
+                                Behavior on opacity { NumberAnimation { duration: 140 } }
 
-                                delegate: Item {
-                                    id: appIconSlot
-                                    required property string modelData
-                                    width: iconSize
-                                    height: iconSize
-                                    readonly property bool overflowLabel: modelData.charAt(0) === "+"
+                                Repeater {
+                                    model: wsPill.visibleAppIcons
 
-                                    Image {
-                                        anchors.fill: parent
-                                        visible: !appIconSlot.overflowLabel
-                                        sourceSize.width: width
-                                        sourceSize.height: height
-                                        fillMode: Image.PreserveAspectFit
-                                        smooth: true
-                                        source: appIconSlot.modelData.startsWith("/") ? "file://" + appIconSlot.modelData : "image://icon/" + appIconSlot.modelData
-                                    }
+                                    delegate: Item {
+                                        id: appIconSlot
+                                        required property string modelData
+                                        width: wsPill.iconSize
+                                        height: wsPill.iconSize
+                                        readonly property bool overflowLabel: modelData.charAt(0) === "+"
 
-                                    Text {
-                                        anchors.centerIn: parent
-                                        visible: appIconSlot.overflowLabel
-                                        text: appIconSlot.modelData
-                                        font.family: shell.monoFontFamily
-                                        font.pixelSize: shell.s(9)
-                                        font.weight: Font.Bold
-                                        color: stateLabel === "active" ? mocha.crust : mocha.text
+                                        Image {
+                                            anchors.fill: parent
+                                            visible: !appIconSlot.overflowLabel
+                                            sourceSize.width: width
+                                            sourceSize.height: height
+                                            fillMode: Image.PreserveAspectFit
+                                            smooth: true
+                                            source: appIconSlot.modelData.startsWith("/") ? "file://" + appIconSlot.modelData : "image://icon/" + appIconSlot.modelData
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            visible: appIconSlot.overflowLabel
+                                            text: appIconSlot.modelData
+                                            font.family: shell.monoFontFamily
+                                            font.pixelSize: shell.s(9)
+                                            font.weight: Font.Bold
+                                            color: wsPill.stateLabel === "active" ? mocha.crust : mocha.text
+                                        }
                                     }
                                 }
                             }
+                        }
+
+                        Text {
+                            anchors.left: indicatorZone.right
+                            anchors.right: parent.right
+                            anchors.leftMargin: shell.s(4)
+                            anchors.rightMargin: shell.s(10)
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: wsPill.hovered
+                            opacity: wsPill.hovered ? 1 : 0
+                            text: root.workspaceWindowSummary(wsPill.wsId)
+                            font.family: shell.monoFontFamily
+                            font.pixelSize: shell.s(10)
+                            font.weight: shell.themeFontWeight
+                            color: wsPill.stateLabel === "active" ? mocha.crust : mocha.subtext0
+                            elide: Text.ElideRight
+                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                         }
 
                         MouseArea {
                             id: wsMouse
                             anchors.fill: parent
                             hoverEnabled: true
-                            onEntered: {
-                                root.pointerInWorkspaces = true;
-                                root.setDrawerOpen(true, "workspaces", parent, wsId);
-                            }
-                            onExited: {
-                                root.pointerInWorkspaces = false;
-                                root.setDrawerOpen(false);
-                            }
-                            onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + wsId])
+                            onEntered: root.railHoverEnter()
+                            onExited: root.railHoverExit()
+                            onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh " + wsPill.wsId])
                             onWheel: (wheel) => {
                                 shell.handleWorkspaceWheel(wheel.angleDelta.y, 8);
                                 wheel.accepted = true;
@@ -618,8 +636,6 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
-                        onEntered: root.setDrawerOpen(true, "media", parent)
-                        onExited: root.setDrawerOpen(false)
                         onClicked: shell.toggleMusicPopup()
                     }
                 }
@@ -636,8 +652,6 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             hoverEnabled: true
-                            onEntered: root.setDrawerOpen(true, "media", parent)
-                            onExited: root.setDrawerOpen(false)
                             onClicked: { if (mediaCard.player && mediaCard.player.canGoPrevious) mediaCard.player.previous(); }
                         }
                     }
@@ -649,8 +663,6 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             hoverEnabled: true
-                            onEntered: root.setDrawerOpen(true, "media", parent)
-                            onExited: root.setDrawerOpen(false)
                             onClicked: { if (mediaCard.player && mediaCard.player.canTogglePlaying) mediaCard.player.togglePlaying(); }
                         }
                     }
@@ -662,8 +674,6 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             hoverEnabled: true
-                            onEntered: root.setDrawerOpen(true, "media", parent)
-                            onExited: root.setDrawerOpen(false)
                             onClicked: { if (mediaCard.player && mediaCard.player.canGoNext) mediaCard.player.next(); }
                         }
                     }
@@ -721,48 +731,72 @@ Item {
                     id: trayRepeater
                     model: SystemTray.items
                     delegate: Rectangle {
+                        id: trayItemPill
                         required property var modelData
                         property bool hiddenTrayItem: trayPanel.isHiddenTrayItem(modelData)
+                        property bool hovered: trayMouse.containsMouse
+                        property string itemLabel: {
+                            var title = trayPanel.trayField(modelData, "title");
+                            return title !== "" ? title : trayPanel.trayField(modelData, "tooltipTitle");
+                        }
                         visible: !hiddenTrayItem
-                        width: trayColumn.width
+                        width: hovered ? root.hoverExpandedWidth : trayColumn.width
                         height: visible ? shell.s(28) : 0
+                        clip: true
+                        Behavior on width { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
                         radius: surface.innerPillRadius
                         topLeftRadius: root.pillTopLeftRadius
                         topRightRadius: root.pillTopRightRadius
                         bottomLeftRadius: root.pillBottomLeftRadius
                         bottomRightRadius: root.pillBottomRightRadius
-                        color: trayMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
-                        Image {
-                            anchors.centerIn: parent
-                            source: modelData.icon || ""
-                            fillMode: Image.PreserveAspectFit
-                            sourceSize: Qt.size(shell.s(16), shell.s(16))
-                            width: shell.s(16)
-                            height: shell.s(16)
+                        color: hovered ? surface.innerPillHoverColor : surface.innerPillColor
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: shell.s(6)
+                            spacing: shell.s(8)
+                            Image {
+                                Layout.preferredWidth: shell.s(16)
+                                Layout.preferredHeight: shell.s(16)
+                                source: trayItemPill.modelData.icon || ""
+                                fillMode: Image.PreserveAspectFit
+                                sourceSize: Qt.size(shell.s(16), shell.s(16))
+                            }
+                            Text {
+                                text: trayItemPill.itemLabel
+                                visible: trayItemPill.hovered && text !== ""
+                                opacity: trayItemPill.hovered ? 1 : 0
+                                Layout.fillWidth: true
+                                font.family: shell.monoFontFamily
+                                font.pixelSize: shell.s(10)
+                                font.weight: shell.themeFontWeight
+                                color: mocha.text
+                                elide: Text.ElideRight
+                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
+                            }
                         }
                         QsMenuAnchor {
                             id: menuAnchor
                             anchor.window: shell
                             anchor.item: parent
-                            menu: modelData.menu
+                            menu: trayItemPill.modelData.menu
                         }
                         MouseArea {
                             id: trayMouse
                             anchors.fill: parent
                             hoverEnabled: true
-                            onEntered: root.setDrawerOpen(true, "tray", parent)
-                            onExited: root.setDrawerOpen(false)
+                            onEntered: root.railHoverEnter()
+                            onExited: root.railHoverExit()
                             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                             onClicked: mouse => {
                                 if (mouse.button === Qt.LeftButton) {
-                                    modelData.activate();
+                                    trayItemPill.modelData.activate();
                                 } else if (mouse.button === Qt.MiddleButton) {
-                                    modelData.secondaryActivate();
+                                    trayItemPill.modelData.secondaryActivate();
                                 } else if (mouse.button === Qt.RightButton) {
-                                    if (modelData.menu) {
+                                    if (trayItemPill.modelData.menu) {
                                         menuAnchor.open();
-                                    } else if (typeof modelData.contextMenu === "function") {
-                                        modelData.contextMenu(mouse.x, mouse.y);
+                                    } else if (typeof trayItemPill.modelData.contextMenu === "function") {
+                                        trayItemPill.modelData.contextMenu(mouse.x, mouse.y);
                                     }
                                 }
                             }
@@ -772,34 +806,62 @@ Item {
             }
         }
 
-        Rectangle {
+        Item {
+            id: kbSlot
             visible: shell.kbLayoutCount > 1
-            Layout.alignment: Qt.AlignHCenter
+            Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
             Layout.preferredWidth: root.iconButtonSize
             Layout.preferredHeight: root.moduleHeight
-            radius: surface.innerPillRadius
-            topLeftRadius: root.pillTopLeftRadius
-            topRightRadius: root.pillTopRightRadius
-            bottomLeftRadius: root.pillBottomLeftRadius
-            bottomRightRadius: root.pillBottomRightRadius
-            color: kbMouse.containsMouse ? surface.innerPillHoverColor : surface.innerPillColor
-            Text {
-                anchors.centerIn: parent
-                text: shell.kbLayout
-                font.family: shell.monoFontFamily
-                font.pixelSize: shell.s(12)
-                font.weight: Font.Black
-                font.letterSpacing: shell.themeLetterSpacing
-                color: kbMouse.containsMouse ? mocha.text : mocha.overlay2
-            }
-            MouseArea {
-                id: kbMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                onEntered: root.setDrawerOpen(true, "keyboard", parent)
-                onExited: root.setDrawerOpen(false)
-                cursorShape: Qt.PointingHandCursor
-                onClicked: shell.switchKeyboardLayout()
+
+            Rectangle {
+                id: kbPill
+                property bool hovered: kbMouse.containsMouse
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: hovered ? root.hoverExpandedWidth : root.iconButtonSize
+                Behavior on width { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+                clip: true
+                radius: surface.innerPillRadius
+                topLeftRadius: root.pillTopLeftRadius
+                topRightRadius: root.pillTopRightRadius
+                bottomLeftRadius: root.pillBottomLeftRadius
+                bottomRightRadius: root.pillBottomRightRadius
+                color: hovered ? surface.innerPillHoverColor : surface.innerPillColor
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: shell.s(8)
+                    spacing: shell.s(8)
+                    Text {
+                        text: shell.kbLayout
+                        font.family: shell.monoFontFamily
+                        font.pixelSize: shell.s(12)
+                        font.weight: Font.Black
+                        font.letterSpacing: shell.themeLetterSpacing
+                        color: kbPill.hovered ? mocha.text : mocha.overlay2
+                    }
+                    Text {
+                        text: shell.kbLayoutCount + " layouts"
+                        visible: kbPill.hovered
+                        opacity: kbPill.hovered ? 1 : 0
+                        Layout.fillWidth: true
+                        font.family: shell.monoFontFamily
+                        font.pixelSize: shell.s(10)
+                        font.weight: shell.themeFontWeight
+                        color: mocha.overlay2
+                        elide: Text.ElideRight
+                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
+                    }
+                }
+                MouseArea {
+                    id: kbMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onEntered: root.railHoverEnter()
+                    onExited: root.railHoverExit()
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: shell.switchKeyboardLayout()
+                }
             }
         }
 
@@ -816,7 +878,6 @@ Item {
             color: Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, root.edgeSidebarChrome ? 0.24 : 0.14)
             border.width: root.edgeSidebarChrome ? 0 : 1
             border.color: surface.panelBorderColor
-            clip: true
 
             ColumnLayout {
                 id: statusDockColumn
@@ -828,46 +889,57 @@ Item {
                 spacing: shell.s(5)
 
         Rectangle {
+            id: updatesPill
             visible: shell.moduleList.includes("updates")
-            Layout.fillWidth: true
+            property bool hovered: updatesMouse.containsMouse
+            property real targetWidth: hovered ? root.hoverExpandedWidth : root.railWidth
+            Layout.fillWidth: false
+            Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
+            Layout.preferredWidth: targetWidth
             Layout.preferredHeight: root.moduleHeight
+            Behavior on targetWidth { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+            clip: true
             radius: surface.innerPillRadius
             topLeftRadius: root.pillTopLeftRadius
             topRightRadius: root.pillTopRightRadius
             bottomLeftRadius: root.pillBottomLeftRadius
             bottomRightRadius: root.pillBottomRightRadius
-            color: updatesMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.62)
+            color: hovered ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.62)
             border.width: root.edgeSidebarChrome ? 0 : 1
             border.color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.4)
             RowLayout {
-                visible: !root.compactRailOnly
+                visible: updatesPill.hovered
+                opacity: updatesPill.hovered ? 1 : 0
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(8)
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                 Text {
-                    text: "󰚰"
+                    text: "\uf701"
                     font.family: "Iosevka Nerd Font"
                     font.pixelSize: shell.s(15)
                     color: shell.updateCount > 0 ? mocha.yellow : mocha.subtext0
                 }
                 Text {
-                    text: (parseInt(shell.updateCount) || 0).toString()
+                    text: (parseInt(shell.updateCount) || 0) + " updates"
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
                     font.pixelSize: shell.s(12)
                     font.weight: shell.themeFontWeight
                     font.letterSpacing: shell.themeLetterSpacing
                     color: shell.updateCount > 0 ? mocha.text : mocha.subtext0
-                    horizontalAlignment: Text.AlignRight
+                    elide: Text.ElideRight
                 }
             }
             Row {
-                visible: root.compactRailOnly
+                visible: !updatesPill.hovered
+                opacity: updatesPill.hovered ? 0 : 1
                 anchors.centerIn: parent
                 spacing: shell.s(4)
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(120) } }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "󰚰"
+                    text: "\uf701"
                     font.family: "Iosevka Nerd Font"
                     font.pixelSize: shell.s(13)
                     color: shell.updateCount > 0 ? mocha.yellow : mocha.subtext0
@@ -886,29 +958,36 @@ Item {
                 id: updatesMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                onEntered: root.setDrawerOpen(true, "updates", parent)
-                onExited: root.setDrawerOpen(false)
+                onEntered: root.railHoverEnter()
+                onExited: root.railHoverExit()
                 onClicked: shell.openUpdatesTerminal()
             }
         }
 
         Rectangle {
+            id: networkPill
             visible: shell.moduleList.includes("network")
-            Layout.fillWidth: true
+            property bool hovered: wifiMouse.containsMouse
+            property real targetWidth: hovered ? root.hoverExpandedWidth : root.railWidth
+            Layout.fillWidth: false
+            Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
+            Layout.preferredWidth: targetWidth
             Layout.preferredHeight: root.moduleHeight
+            Behavior on targetWidth { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+            clip: true
             radius: surface.innerPillRadius
             topLeftRadius: root.pillTopLeftRadius
             topRightRadius: root.pillTopRightRadius
             bottomLeftRadius: root.pillBottomLeftRadius
             bottomRightRadius: root.pillBottomRightRadius
-            color: wifiMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
+            color: hovered ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
                 anchors.fill: parent
                 anchors.margins: root.moduleInnerMargin
                 spacing: root.moduleSpacing
                 Text {
                     text: shell.wifiIcon
-                    Layout.fillWidth: root.compactRailOnly
+                    Layout.fillWidth: !networkPill.hovered
                     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                     font.family: "Iosevka Nerd Font"
                     font.pixelSize: shell.s(15)
@@ -917,7 +996,8 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                 }
                 Text {
-                    visible: !root.compactRailOnly
+                    visible: networkPill.hovered
+                    opacity: networkPill.hovered ? 1 : 0
                     text: shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off"
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
@@ -926,35 +1006,43 @@ Item {
                     font.letterSpacing: shell.themeLetterSpacing
                     color: shell.isWifiOn ? mocha.text : mocha.subtext0
                     elide: Text.ElideRight
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                 }
             }
             MouseArea {
                 id: wifiMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                onEntered: root.setDrawerOpen(true, "network", parent)
-                onExited: root.setDrawerOpen(false)
+                onEntered: root.railHoverEnter()
+                onExited: root.railHoverExit()
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network wifi"])
             }
         }
 
         Rectangle {
+            id: bluetoothPill
             visible: shell.moduleList.includes("bluetooth")
-            Layout.fillWidth: true
+            property bool hovered: btMouse.containsMouse
+            property real targetWidth: hovered ? root.hoverExpandedWidth : root.railWidth
+            Layout.fillWidth: false
+            Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
+            Layout.preferredWidth: targetWidth
             Layout.preferredHeight: root.moduleHeight
+            Behavior on targetWidth { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+            clip: true
             radius: surface.innerPillRadius
             topLeftRadius: root.pillTopLeftRadius
             topRightRadius: root.pillTopRightRadius
             bottomLeftRadius: root.pillBottomLeftRadius
             bottomRightRadius: root.pillBottomRightRadius
-            color: btMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
+            color: hovered ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
                 anchors.fill: parent
                 anchors.margins: root.moduleInnerMargin
                 spacing: root.moduleSpacing
                 Text {
                     text: shell.btIcon
-                    Layout.fillWidth: root.compactRailOnly
+                    Layout.fillWidth: !bluetoothPill.hovered
                     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                     font.family: "Iosevka Nerd Font"
                     font.pixelSize: shell.s(15)
@@ -963,7 +1051,8 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                 }
                 Text {
-                    visible: !root.compactRailOnly
+                    visible: bluetoothPill.hovered
+                    opacity: bluetoothPill.hovered ? 1 : 0
                     text: shell.btDevice
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
@@ -972,33 +1061,43 @@ Item {
                     font.letterSpacing: shell.themeLetterSpacing
                     color: shell.isBtOn ? mocha.text : mocha.subtext0
                     elide: Text.ElideRight
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                 }
             }
             MouseArea {
                 id: btMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                onEntered: root.setDrawerOpen(true, "bluetooth", parent)
-                onExited: root.setDrawerOpen(false)
+                onEntered: root.railHoverEnter()
+                onExited: root.railHoverExit()
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network bt"])
             }
         }
 
         Rectangle {
+            id: volumePill
             visible: shell.moduleList.includes("volume")
-            Layout.fillWidth: true
+            property bool hovered: volMouse.containsMouse
+            property real targetWidth: hovered ? root.hoverExpandedWidth : root.railWidth
+            Layout.fillWidth: false
+            Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
+            Layout.preferredWidth: targetWidth
             Layout.preferredHeight: root.moduleHeight
+            Behavior on targetWidth { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+            clip: true
             radius: surface.innerPillRadius
             topLeftRadius: root.pillTopLeftRadius
             topRightRadius: root.pillTopRightRadius
             bottomLeftRadius: root.pillBottomLeftRadius
             bottomRightRadius: root.pillBottomRightRadius
-            color: volMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
+            color: hovered ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
-                visible: !root.compactRailOnly
+                visible: volumePill.hovered
+                opacity: volumePill.hovered ? 1 : 0
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(8)
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                 Text {
                     text: shell.volIcon
                     font.family: "Iosevka Nerd Font"
@@ -1017,9 +1116,11 @@ Item {
                 }
             }
             Row {
-                visible: root.compactRailOnly
+                visible: !volumePill.hovered
+                opacity: volumePill.hovered ? 0 : 1
                 anchors.centerIn: parent
                 spacing: shell.s(4)
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(120) } }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.volIcon
@@ -1041,8 +1142,8 @@ Item {
                 id: volMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                onEntered: root.setDrawerOpen(true, "volume", parent)
-                onExited: root.setDrawerOpen(false)
+                onEntered: root.railHoverEnter()
+                onExited: root.railHoverExit()
                 onClicked: shell.toggleAudioControlsPopup()
                 onWheel: (wheel) => {
                     shell.handleVolumeWheel(wheel.angleDelta.y);
@@ -1052,20 +1153,29 @@ Item {
         }
 
         Rectangle {
+            id: batteryPill
             visible: shell.moduleList.includes("battery")
-            Layout.fillWidth: true
+            property bool hovered: batMouse.containsMouse
+            property real targetWidth: hovered ? root.hoverExpandedWidth : root.railWidth
+            Layout.fillWidth: false
+            Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
+            Layout.preferredWidth: targetWidth
             Layout.preferredHeight: root.moduleHeight
+            Behavior on targetWidth { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+            clip: true
             radius: surface.innerPillRadius
             topLeftRadius: root.pillTopLeftRadius
             topRightRadius: root.pillTopRightRadius
             bottomLeftRadius: root.pillBottomLeftRadius
             bottomRightRadius: root.pillBottomRightRadius
-            color: batMouse.containsMouse ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
+            color: hovered ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
             RowLayout {
-                visible: !root.compactRailOnly
+                visible: batteryPill.hovered
+                opacity: batteryPill.hovered ? 1 : 0
                 anchors.fill: parent
                 anchors.margins: shell.s(8)
                 spacing: shell.s(8)
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                 Text {
                     text: shell.batIcon
                     font.family: "Iosevka Nerd Font"
@@ -1084,9 +1194,11 @@ Item {
                 }
             }
             Row {
-                visible: root.compactRailOnly
+                visible: !batteryPill.hovered
+                opacity: batteryPill.hovered ? 0 : 1
                 anchors.centerIn: parent
                 spacing: shell.s(4)
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(120) } }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.batIcon
@@ -1108,94 +1220,11 @@ Item {
                 id: batMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                onEntered: root.setDrawerOpen(true, "battery", parent)
-                onExited: root.setDrawerOpen(false)
+                onEntered: root.railHoverEnter()
+                onExited: root.railHoverExit()
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"])
             }
         }
-            }
-        }
-    }
-
-    Rectangle {
-        id: contextDrawer
-        visible: root.compactAnimatedSidebar && root.drawerAllowed
-        width: shell.sidebarDrawerWidth
-        height: drawerContent.implicitHeight + shell.s(18)
-        radius: surface.panelRadius
-        border.width: 1
-        border.color: ThemeConfig.drawerStyle === "rail-panel"
-                      ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, drawerOpen ? 0.46 : 0.0)
-                      : Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, drawerOpen ? 0.52 : 0.0)
-        color: ThemeConfig.drawerStyle === "rail-panel"
-               ? Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.94)
-               : Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, 0.90)
-        opacity: drawerOpen ? 1.0 : 0.0
-        scale: drawerOpen ? 1.0 : 0.985
-        x: shell.isLeftBar ? root.railWidth + shell.s(8) : root.width - root.railWidth - width - shell.s(8)
-        y: Math.max(shell.s(8), Math.min(root.height - height - shell.s(8), root.drawerAnchorY - height / 2))
-        z: 20
-        clip: true
-
-        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.InOutSine } }
-        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.OutCubic } }
-        Behavior on y { NumberAnimation { duration: ThemeConfig.duration(120); easing.type: Easing.OutCubic } }
-
-        MouseArea {
-            anchors.fill: parent
-            enabled: root.drawerOpen
-            hoverEnabled: true
-            onEntered: root.setDrawerOpen(true, root.drawerKind, contextDrawer)
-            onExited: root.setDrawerOpen(false)
-        }
-
-        ColumnLayout {
-            id: drawerContent
-            anchors.fill: parent
-            anchors.margins: shell.s(9)
-            spacing: shell.s(5)
-
-            Text {
-                text: root.drawerTitle()
-                Layout.fillWidth: true
-                font.family: shell.uiFontFamily
-                font.pixelSize: shell.s(11)
-                font.weight: Font.DemiBold
-                font.letterSpacing: 0
-                color: mocha.subtext0
-                elide: Text.ElideRight
-            }
-
-            Text {
-                text: root.drawerPrimary()
-                Layout.fillWidth: true
-                font.family: shell.displayFontFamily
-                font.pixelSize: shell.s(15)
-                minimumPixelSize: shell.s(10)
-                fontSizeMode: Text.Fit
-                font.weight: Font.Black
-                font.letterSpacing: 0
-                color: mocha.text
-                elide: Text.ElideRight
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.32)
-            }
-
-            Text {
-                text: root.drawerSecondary()
-                Layout.fillWidth: true
-                font.family: shell.monoFontFamily
-                font.pixelSize: shell.s(10)
-                font.weight: shell.themeFontWeight
-                font.letterSpacing: 0
-                color: mocha.overlay2
-                wrapMode: Text.WordWrap
-                maximumLineCount: 2
-                elide: Text.ElideRight
             }
         }
     }

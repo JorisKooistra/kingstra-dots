@@ -73,11 +73,11 @@ Item {
     // STATE
     // -------------------------------------------------------------------------
     property int currentTab: 0
-    property var tabNames: ["Theme", "Bar", "Widgets", "Keybinds", "Input", "Display", "Network", "Audio", "Weather & Time", "Session", "Updates", "Advanced", "About"]
-    property var tabIcons: ["󰏘", "󰓡", "󰀻", "󰌌", "󰍽", "󰍹", "󰤨", "󰕾", "󰖐", "󰒲", "󰚰", "󰒓", ""]
+    property var tabNames: ["Quick", "Theme", "Bar", "Widgets", "Keybinds", "Input", "Display", "Network", "Audio", "Weather & Time", "Session", "Updates", "Advanced", "About"]
+    property var tabIcons: ["󰐊", "󰏘", "󰓡", "󰀻", "󰌌", "󰍽", "󰍹", "󰤨", "󰕾", "󰖐", "󰒲", "󰚰", "󰒓", ""]
     onCurrentTabChanged: {
-        if (currentTab === 5) refreshDisplayStatus();
-        if (currentTab === 7) refreshAudioState();
+        if (currentTab === 6) refreshDisplayStatus();
+        if (currentTab === 8) refreshAudioState();
     }
 
     property real introBase: 0.0
@@ -921,6 +921,10 @@ Item {
         Quickshell.execDetached(args);
     }
 
+    function lockSession() {
+        Quickshell.execDetached(["bash", "-lc", "if [ -x \"$HOME/.config/hypr/scripts/lock.sh\" ]; then \"$HOME/.config/hypr/scripts/lock.sh\"; else loginctl lock-session; fi"]);
+    }
+
     function refreshAudioState() {
         audioStateProc.running = true;
         audioStatusProc.running = true;
@@ -1700,7 +1704,7 @@ Item {
         id: audioAutoRefreshTimer
         interval: 3000
         repeat: true
-        running: root.currentTab === 7
+        running: root.currentTab === 8
         onTriggered: root.refreshAudioState()
     }
 
@@ -2251,11 +2255,224 @@ Item {
             transform: Translate { y: root.s(20) * (1.0 - introContent) }
 
             // =================================================================
-            // TAB 12: ABOUT
+            // TAB 0: QUICK
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 12
+                visible: root.currentTab === 0
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 250 } }
+
+                ScrollView {
+                    id: quickScroll
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    clip: true
+                    contentWidth: availableWidth
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+
+                    ColumnLayout {
+                        id: quickColumn
+                        width: quickScroll.availableWidth
+                        spacing: root.s(14)
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: root.s(12)
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: root.s(4)
+                                Text {
+                                    text: "Quick Settings"
+                                    font.family: root.displayFontFamily
+                                    font.weight: root.themedFontWeight
+                                    font.letterSpacing: root.themedLetterSpacing
+                                    font.pixelSize: root.s(28)
+                                    color: root.text
+                                }
+                                Text {
+                                    text: "Dagelijkse controls op een plek: thema, bar, widgets, modus en sessie."
+                                    font.family: root.uiFontFamily
+                                    font.pixelSize: root.s(11)
+                                    color: root.subtext0
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.preferredWidth: root.s(190)
+                                Layout.preferredHeight: root.s(42)
+                                Layout.alignment: Qt.AlignLeft
+                                radius: root.s(8)
+                                color: quickThemeMa.containsMouse ? Qt.alpha(root.mauve, 0.20) : Qt.alpha(root.surface0, 0.62)
+                                border.color: quickThemeMa.containsMouse ? root.mauve : root.surface2
+                                border.width: 1
+                                RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: root.s(7)
+                                    Text { text: "󰏘"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(15); color: root.mauve }
+                                    Text {
+                                        text: "Theme-editor"
+                                        font.family: root.uiFontFamily
+                                        font.weight: Font.Bold
+                                        font.pixelSize: root.s(11)
+                                        color: root.text
+                                    }
+                                }
+                                MouseArea {
+                                    id: quickThemeMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.currentTab = 1
+                                }
+                            }
+                        }
+
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: 1
+                            rowSpacing: root.s(10)
+                            columnSpacing: root.s(10)
+
+                            SettingsInfoCard {
+                                title: "Actief thema"
+                                icon: root.activeThemeIcon || "󰏘"
+                                accent: root.mauve
+                                value: (root.activeThemeName || "Onbekend") +
+                                       "\nID: " + (root.activeThemeId || "geen") +
+                                       "\nMatugen: " + root.formatSchemeLabel(root.editSchemeType) + " / " + root.editMode
+                            }
+
+                            SettingsInfoCard {
+                                title: "Bar"
+                                icon: "󰓡"
+                                accent: root.blue
+                                value: "Positie: " + root.editBarPosition +
+                                       "\nLayout: " + root.derivedBarTemplate(root.editBarPosition, root.editBarTemplate) +
+                                       "\nVorm: " + root.editBarShape + ", hoogte " + root.editBarHeight + "px"
+                            }
+
+                            SettingsInfoCard {
+                                title: "Sessie"
+                                icon: "󰒲"
+                                accent: root.green
+                                value: "Mode: " + root.sessionModeText +
+                                       "\nPower: " + root.powerProfileLabel(root.currentPowerProfileText) +
+                                       "\n" + root.sessionIdleSummary()
+                            }
+
+                            SettingsInfoCard {
+                                title: "Status"
+                                icon: root.themeDirty ? "󰐖" : "󰄬"
+                                accent: root.themeDirty ? root.yellow : root.green
+                                value: root.themeDirty
+                                       ? "Onopgeslagen theme-wijzigingen in " + root.themeEditThemeId + "."
+                                       : "Geen openstaande theme-wijzigingen."
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: quickThemeControls.implicitHeight + root.s(24)
+                            radius: root.s(10)
+                            color: Qt.alpha(root.surface0, 0.46)
+                            border.color: Qt.alpha(root.surface2, 0.82)
+                            border.width: 1
+
+                            ColumnLayout {
+                                id: quickThemeControls
+                                anchors.fill: parent
+                                anchors.margins: root.s(12)
+                                spacing: root.s(10)
+
+                                Text { text: "Thema & kleur"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text }
+
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    columns: 1
+                                    rowSpacing: root.s(9)
+                                    columnSpacing: root.s(12)
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Kleurschema"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox {
+                                            model: root.schemeOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editSchemeType))
+                                            onActivated: root.editSchemeType = currentText
+                                        }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Modus"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox {
+                                            model: root.modeOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editMode))
+                                            onActivated: root.editMode = currentText
+                                        }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Barpositie"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox {
+                                            model: root.barPositionOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editBarPosition))
+                                            onActivated: root.setEditBarPosition(currentText)
+                                        }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Barvorm"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
+                                        ThemedComboBox {
+                                            model: root.barShapeOptions
+                                            currentIndex: Math.max(0, model.indexOf(root.editBarShape))
+                                            onActivated: root.editBarShape = currentText
+                                        }
+                                    }
+                                }
+
+                                Flow {
+                                    width: Math.max(0, quickColumn.width - root.s(24))
+                                    Layout.fillWidth: true
+                                    Layout.preferredWidth: Math.max(0, quickColumn.width - root.s(24))
+                                    spacing: root.s(10)
+                                    SettingsActionButton { label: root.themeDirty ? "Opslaan" : "Geen wijzigingen"; icon: root.themeDirty ? "󰆓" : "󰄬"; accent: root.green; primary: root.themeDirty; onTriggered: root.saveThemeEdits() }
+                                    SettingsActionButton { label: "Bar toepassen"; icon: "󰑓"; accent: root.blue; onTriggered: root.applyTopbarEdits() }
+                                    SettingsActionButton { label: "Thema kiezen"; icon: "󰏘"; accent: root.mauve; onTriggered: root.currentTab = 1 }
+                                }
+                            }
+                        }
+
+                        Text { text: "Snelle acties"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(15); color: root.text }
+
+                        Flow {
+                            width: Math.max(0, quickColumn.width)
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: Math.max(0, quickColumn.width)
+                            spacing: root.s(10)
+                            SettingsActionButton { label: "Netwerk"; icon: "󰤨"; accent: root.blue; onTriggered: root.openShellWidget("network", "wifi") }
+                            SettingsActionButton { label: "Volume"; icon: "󰕾"; accent: root.green; onTriggered: root.openShellWidget("volume", "") }
+                            SettingsActionButton { label: "Monitoren"; icon: "󰍹"; accent: root.peach; onTriggered: root.openShellWidget("monitors", "") }
+                            SettingsActionButton { label: "Keybinds"; icon: "󰌌"; accent: root.sapphire; onTriggered: root.currentTab = 4 }
+                            SettingsActionButton { label: "Office mode"; icon: "󰈙"; accent: root.blue; onTriggered: root.switchSessionMode("office") }
+                            SettingsActionButton { label: "Gaming mode"; icon: "󰊴"; accent: root.red; onTriggered: root.switchSessionMode("gaming") }
+                            SettingsActionButton { label: "Media mode"; icon: "󰝚"; accent: root.pink; onTriggered: root.switchSessionMode("media") }
+                            SettingsActionButton { label: "Lock"; icon: "󰌾"; accent: root.yellow; onTriggered: root.lockSession() }
+                        }
+                    }
+                }
+            }
+
+            // =================================================================
+            // TAB 13: ABOUT
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentTab === 13
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -2413,12 +2630,12 @@ Item {
             }
 
             // =================================================================
-            // TAB 3: KEYBINDINGS
+            // TAB 4: KEYBINDINGS
             // =================================================================
             Item {
                 id: keybindTab
                 anchors.fill: parent
-                visible: root.currentTab === 3
+                visible: root.currentTab === 4
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -2664,11 +2881,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 8: WEATHER & TIME
+            // TAB 9: WEATHER & TIME
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 8
+                visible: root.currentTab === 9
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -2859,11 +3076,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 4: INPUT
+            // TAB 5: INPUT
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 4
+                visible: root.currentTab === 5
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -2999,11 +3216,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 1: BAR
+            // TAB 2: BAR
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 1
+                visible: root.currentTab === 2
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3132,7 +3349,7 @@ Item {
                             spacing: root.s(10)
                             SettingsActionButton { label: root.themeDirty ? "Opslaan" : "Geen wijzigingen"; icon: root.themeDirty ? "󰆓" : "󰄬"; accent: root.green; primary: root.themeDirty; onTriggered: root.saveThemeEdits() }
                             SettingsActionButton { label: "Topbar toepassen"; icon: "󰑓"; accent: root.blue; onTriggered: root.applyTopbarEdits() }
-                            SettingsActionButton { label: "Open Theme-editor"; icon: "󰏘"; accent: root.mauve; onTriggered: { root.themeEditorTab = "bar"; root.currentTab = 0; } }
+                            SettingsActionButton { label: "Open Theme-editor"; icon: "󰏘"; accent: root.mauve; onTriggered: { root.themeEditorTab = "bar"; root.currentTab = 1; } }
                             Item { Layout.fillWidth: true }
                         }
 
@@ -3147,11 +3364,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 2: WIDGETS
+            // TAB 3: WIDGETS
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 2
+                visible: root.currentTab === 3
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3189,11 +3406,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 5: DISPLAY
+            // TAB 6: DISPLAY
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 5
+                visible: root.currentTab === 6
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3330,11 +3547,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 6: NETWORK
+            // TAB 7: NETWORK
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 6
+                visible: root.currentTab === 7
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3360,11 +3577,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 7: AUDIO
+            // TAB 8: AUDIO
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 7
+                visible: root.currentTab === 8
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3532,11 +3749,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 9: SESSION
+            // TAB 10: SESSION
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 9
+                visible: root.currentTab === 10
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3815,11 +4032,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 10: UPDATES
+            // TAB 11: UPDATES
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 10
+                visible: root.currentTab === 11
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3845,11 +4062,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 11: ADVANCED
+            // TAB 12: ADVANCED
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 11
+                visible: root.currentTab === 12
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3908,12 +4125,12 @@ Item {
             }
 
             // =================================================================
-            // TAB 0: THEME (MATUGEN)
+            // TAB 1: THEME (MATUGEN)
             // =================================================================
             Item {
                 id: themeTab
                 anchors.fill: parent
-                visible: root.currentTab === 0
+                visible: root.currentTab === 1
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 

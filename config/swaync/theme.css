@@ -4,11 +4,11 @@
 }
 
 .control-center {
-  background: alpha(@mantle, 0.8200000000000001);
-  border: 1px solid alpha(@outline, 0.18);
-  border-radius: 24px;
+  background: alpha(@mantle, 0.876);
+  border: 1px solid alpha(@outline, 0.0);
+  border-radius: 22px;
   box-shadow: 0 18px 52px alpha(@crust, 0.22);
-  padding: 15px;
+  padding: 14px;
 }
 
 .widget-title > button,
@@ -16,18 +16,18 @@
 .notification,
 .widget-mpris-player,
 .notification-action {
-  border-radius: 20px;
+  border-radius: 18px;
 }
 
 .widget-title > button,
 .widget-dnd,
 .widget-mpris-player,
 .notification {
-  background: alpha(@surface0, 0.8150000000000001);
+  background: alpha(@surface0, 0.872);
 }
 
 .notification {
-  border: 1px solid alpha(@outline-variant, 0.18);
+  border: 1px solid alpha(@outline-variant, 0.0);
 }
 
 .app-name,

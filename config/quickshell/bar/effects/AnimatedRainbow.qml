@@ -2,17 +2,10 @@ import QtQuick
 import "../.."  // ThemeConfig — voor ThemeConfig.duration()
 
 // ── AnimatedRainbow ───────────────────────────────────────────────────────────
-// Twee animaties voor het Animated-theme, samen in één component:
-//
-//   Rainbow shift — een horizontaal kleurverloop waarvan de kleuren langzaam
-//                   rouleren: mauve → roze → teal → groen → ...
-//                   Aan/uit: showRainbowShift. Sterkte: rainbowAlpha.
-//                   Snelheid: rainbowCycleMs (ms per kleurovergang).
-//
-//   Aurora sweep  — een diagonaal kleurvlak (roze + saffier) dat van links
-//                   naar rechts over de bar trekt, alsof er een poollichtkrans
-//                   voorbijkomt. Aan/uit: showAuroraSweep. Sterkte: auroraAlpha.
-//                   Snelheid: auroraCycleMs (ms per sweep).
+// Rainbow shift — een horizontaal kleurverloop waarvan de kleuren langzaam
+//                 rouleren: mauve → roze → teal → groen → ...
+//                 Aan/uit: showRainbowShift. Sterkte: rainbowAlpha.
+//                 Snelheid: rainbowCycleMs (ms per kleurovergang).
 // ─────────────────────────────────────────────────────────────────────────────
 Item {
     id: root
@@ -45,36 +38,6 @@ Item {
             ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.peach; duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("rainbowCycleMs", 8000)) / 4) }
             ColorAnimation { target: rainbowLayer; property: "c1"; to: mocha.teal;  duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("rainbowCycleMs", 8000)) / 4) }
             ColorAnimation { target: rainbowLayer; property: "c2"; to: mocha.green; duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("rainbowCycleMs", 8000)) / 4) }
-        }
-    }
-
-    // ── Aurora sweep (z=0.12) ─────────────────────────────────────────────────
-    Item {
-        visible: surface.ambientEnabled("animated-rainbow", "animated") && surface.skinBool("showAuroraSweep", false)
-        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-        height: surface.continuousBarMode ? surface.continuousRailHeight : parent.height
-        z: 0.12; clip: true
-
-        Rectangle {
-            id: auroraSweep
-            // Smaller dan de bar zodat de randen uitfaden in transparant
-            width: parent.width * 0.55; height: parent.height * 1.4
-            y: -parent.height * 0.2   // iets boven de rand voor een zachte overloop
-            x: -width                  // startpositie links buiten beeld
-            opacity: surface.effectAlpha(surface.skinNumber("auroraAlpha", 0.13))
-            rotation: -8               // lichte diagonaal voor een natuurlijker effect
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0;  color: "transparent" }
-                GradientStop { position: 0.25; color: Qt.rgba(mocha.pink.r,     mocha.pink.g,     mocha.pink.b,     0.95) }
-                GradientStop { position: 0.7;  color: Qt.rgba(mocha.sapphire.r, mocha.sapphire.g, mocha.sapphire.b, 0.90) }
-                GradientStop { position: 1.0;  color: "transparent" }
-            }
-            SequentialAnimation on x {
-                running: parent.visible; loops: Animation.Infinite
-                NumberAnimation { to: parent.width + auroraSweep.width * 0.2; duration: ThemeConfig.duration(surface.effectCycleMs(surface.skinNumber("auroraCycleMs", 4200))); easing.type: Easing.InOutSine }
-                NumberAnimation { to: -auroraSweep.width; duration: 0 }  // reset zonder animatie
-            }
         }
     }
 

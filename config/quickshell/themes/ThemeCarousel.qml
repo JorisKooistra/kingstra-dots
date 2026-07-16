@@ -20,6 +20,8 @@ Item {
     property bool initialFocusSet: false
     property bool isReady: false
     property bool isApplying: false
+    property string applyingThemeId: ""
+    property bool applySignalSent: false
     property bool isItemAnimating: false
     property int scrollAccum: 0
     property real scrollThreshold: root.s(300)
@@ -138,8 +140,10 @@ Item {
     }
 
     function applyTheme(themeId) {
-        if (!themeId || root.isApplying) return;
+        if (!themeId || root.isApplying || applyProc.running) return;
         root.isApplying = true;
+        root.applyingThemeId = String(themeId);
+        root.applySignalSent = false;
         applyProc.themeName = themeId;
         applyProc.running = true;
     }
@@ -147,6 +151,42 @@ Item {
     function applySelectedTheme() {
         if (!root.selectedThemeId) return;
         applyTheme(root.selectedThemeId);
+    }
+
+    function finishVisibleApply(themeId) {
+        let appliedTheme = String(themeId || "");
+        if (appliedTheme === "") return;
+
+        root.activeTheme = appliedTheme;
+        root.isApplying = false;
+        if (!root.applySignalSent) {
+            root.applySignalSent = true;
+            root.themeApplied(appliedTheme);
+        }
+    }
+
+    function maybeFinishVisibleApply(themeId) {
+        if (!root.isApplying || root.applyingThemeId === "") return;
+
+        let currentTheme = String(themeId || "").toLowerCase();
+        let pendingTheme = String(root.applyingThemeId || "").toLowerCase();
+        if (currentTheme !== "" && currentTheme === pendingTheme) {
+            finishVisibleApply(root.applyingThemeId);
+        }
+    }
+
+    function maybeFinishVisibleApplyFromJson(rawText) {
+        if (!root.isApplying || root.applyingThemeId === "") return;
+
+        let raw = String(rawText || "").trim();
+        if (raw === "") return;
+
+        try {
+            let data = JSON.parse(raw);
+            maybeFinishVisibleApply(data.theme);
+        } catch (e) {
+            // theme.json can be observed while it is being rewritten.
+        }
     }
 
     function accentForScheme(schemeType) {
@@ -235,13 +275,35 @@ Item {
             }
         }
         onExited: (exitCode) => {
-            root.isApplying = false;
             if (exitCode === 0) {
-                root.activeTheme = applyProc.themeName;
-                root.themeApplied(applyProc.themeName);
+                finishVisibleApply(applyProc.themeName);
             } else {
-                Quickshell.execDetached(["notify-send", "Theme", "Thema toepassen mislukt"]);
+                if (!root.applySignalSent) {
+                    root.isApplying = false;
+                    Quickshell.execDetached(["notify-send", "Theme", "Thema toepassen mislukt"]);
+                } else {
+                    Quickshell.execDetached(["notify-send", "Theme", "Thema zichtbaar, naverwerking mislukt"]);
+                }
             }
+            root.applyingThemeId = "";
+        }
+    }
+
+    FileView {
+        id: appliedThemeFile
+        path: Quickshell.env("HOME") + "/.config/quickshell/theme.json"
+        watchChanges: true
+        preload: true
+        onInternalTextChanged: root.maybeFinishVisibleApplyFromJson(__text)
+    }
+
+    Timer {
+        interval: 100
+        running: root.isApplying && root.applyingThemeId !== ""
+        repeat: true
+        onTriggered: {
+            root.maybeFinishVisibleApply(ThemeConfig.theme);
+            appliedThemeFile.reload();
         }
     }
 

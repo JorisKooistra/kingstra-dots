@@ -11,15 +11,15 @@ contrast = 0.2
 mode = "dark"
 
 [appearance]
-border_radius = 2
-border_width = 4
-gaps_in = 2
-gaps_out = 4
-bar_opacity = 1.0
-popup_opacity = 0.99
+border_radius = 3
+border_width = 2
+gaps_in = 4
+gaps_out = 8
+bar_opacity = 0.98
+popup_opacity = 0.96
 blur_size = 0
 blur_passes = 0
-animation_speed = 1.6
+animation_speed = 1.25
 
 [fonts]
 ui_font = "JetBrains Mono"
@@ -34,14 +34,14 @@ letter_spacing = 0
 icon_theme = "Breeze"
 
 [quickshell]
-bar_height = 48
+bar_height = 44
 bar_position = "bottom"
 
 [color_transform]
 hue_shift = 0
-saturation_adjust = -0.2
-lightness_adjust = -0.05
-thematic_mix = 0.08
+saturation_adjust = -0.16
+lightness_adjust = -0.03
+thematic_mix = 0.06
 
 [material]
 texture = "noise"
@@ -74,20 +74,20 @@ family = "rocky"
 density = "compact"
 surface_mode = "solid"
 motion = "firm"
-panel_shadow = 0.12
-outline_strength = 0.50
+panel_shadow = 0.16
+outline_strength = 0.34
 glass_strength = 0.0
 widget_radius = 4
-panel_padding = 7
+panel_padding = 8
 
 [effects]
 particles = "none"
 particle_count = 0
 particle_speed = 0
 ambient_effect = "rocky-bevel"
-effect_intensity = 1.20
+effect_intensity = 0.82
 effect_cycle_ms = 0
-hover_reactivity = 0.15
+hover_reactivity = 0.20
 
 [bar_dynamics]
 drawer_style = "none"
