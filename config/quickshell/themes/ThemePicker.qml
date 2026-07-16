@@ -120,6 +120,7 @@ Item {
     Keys.onLeftPressed: { stepToIndex(-1); event.accepted = true; }
     Keys.onRightPressed: { stepToIndex(1); event.accepted = true; }
     Keys.onReturnPressed: { applySelectedTheme(); event.accepted = true; }
+    Keys.onEnterPressed: { applySelectedTheme(); event.accepted = true; }
     Keys.onEscapePressed: {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
         event.accepted = true;

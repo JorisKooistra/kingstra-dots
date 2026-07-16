@@ -1,4 +1,5 @@
 [meta]
+order = 2
 name = "Gaming"
 description = "Prestaties & hardware monitoring"
 icon = "󰊗"

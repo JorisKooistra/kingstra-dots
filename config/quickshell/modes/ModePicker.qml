@@ -17,6 +17,8 @@ Item {
 
     MatugenColors { id: _theme }
 
+    // Fallback als kingstra-mode-read niet beschikbaar is; normaal wordt dit
+    // model vervangen door de mode-TOML's in ~/.config/kingstra/modes/.
     property var modeModel: [
         { id: "office", icon: "\uf0b1", labelKey: "mode_label_office", labelFallback: "Office", descKey: "mode_desc_office", descFallback: "Werk & productiviteit" },
         { id: "gaming", icon: "\uf11b", labelKey: "mode_label_gaming", labelFallback: "Gaming", descKey: "mode_desc_gaming", descFallback: "Prestaties & hardware" },
@@ -58,6 +60,34 @@ Item {
         applyMode(modeModel[selectedIndex].id);
     }
 
+    // Laad het mode-aanbod uit de TOML's (bron van waarheid); daarna pas de
+    // actieve mode lezen zodat de selectie op het juiste model landt.
+    Process {
+        id: modesLoader
+        command: ["bash", "-c",
+            "\"${HOME}/.local/bin/kingstra-mode-read\" --list 2>/dev/null || echo []"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const list = JSON.parse(this.text || "[]");
+                    if (Array.isArray(list) && list.length > 0) {
+                        window.modeModel = list.map(function(m) {
+                            return {
+                                id: String(m.id || ""),
+                                icon: String(m.icon || ""),
+                                labelKey: "mode_label_" + m.id,
+                                labelFallback: String(m.name || m.id || ""),
+                                descKey: "mode_desc_" + m.id,
+                                descFallback: String(m.description || "")
+                            };
+                        });
+                    }
+                } catch (e) {}
+                modeReader.running = true;
+            }
+        }
+    }
+
     Process {
         id: modeReader
         command: ["bash", "-c",
@@ -73,7 +103,7 @@ Item {
     }
 
     Component.onCompleted: {
-        modeReader.running = true;
+        modesLoader.running = true;
         window.forceActiveFocus();
     }
 
@@ -317,6 +347,11 @@ Item {
     }
 
     Keys.onReturnPressed: {
+        window.applySelectedMode();
+        event.accepted = true;
+    }
+
+    Keys.onEnterPressed: {
         window.applySelectedMode();
         event.accepted = true;
     }

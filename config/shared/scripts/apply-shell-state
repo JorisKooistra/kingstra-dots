@@ -74,14 +74,16 @@ _sync_skwd_config() {
         return 0
     fi
 
+    # Temp in dezelfde directory: atomaire rename i.p.v. cross-device copy
     local tmp_file
-    tmp_file="$(mktemp)"
+    tmp_file="$(mktemp "$SKWD_CONFIG.XXXXXX")"
     if jq --arg scheme "$scheme" --arg mode "$mode" \
         '.features.matugen = false
          | .features.wallhaven = true
          | .matugen.schemeType = $scheme
          | .matugen.mode = $mode' \
         "$SKWD_CONFIG" > "$tmp_file" 2>/dev/null; then
+        chmod 644 "$tmp_file"
         mv "$tmp_file" "$SKWD_CONFIG"
     else
         rm -f "$tmp_file"
@@ -391,8 +393,9 @@ fi
 VSCODE_MATUGEN="${XDG_CONFIG_HOME:-$HOME/.config}/Code/User/matugen-colors.json"
 VSCODE_SETTINGS="${XDG_CONFIG_HOME:-$HOME/.config}/Code/User/settings.json"
 if [[ -f "$VSCODE_MATUGEN" && -f "$VSCODE_SETTINGS" ]] && command -v jq &>/dev/null; then
-    _tmp=$(mktemp)
+    _tmp=$(mktemp "$VSCODE_SETTINGS.XXXXXX")
     if jq -s '.[0] * .[1]' "$VSCODE_SETTINGS" "$VSCODE_MATUGEN" > "$_tmp" 2>/dev/null; then
+        chmod 644 "$_tmp"
         mv "$_tmp" "$VSCODE_SETTINGS"
         _log "VSCode kleuren bijgewerkt"
     else

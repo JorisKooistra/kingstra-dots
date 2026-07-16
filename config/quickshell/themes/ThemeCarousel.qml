@@ -176,6 +176,11 @@ Item {
         event.accepted = true;
     }
 
+    Keys.onEnterPressed: {
+        applySelectedTheme();
+        event.accepted = true;
+    }
+
     Process {
         id: loadThemes
         command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" --list"]

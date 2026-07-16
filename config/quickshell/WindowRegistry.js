@@ -66,6 +66,9 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
 
         // Mode picker — groter voor leesbaarheid van kaarten + hintbalk
         "mode":      { w: s(980, scale), h: s(560, scale), rx: Math.floor((mw/2)-(s(980, scale)/2)), ry: Math.floor((mh/2)-(s(560, scale)/2)), comp: "modes/ModePicker.qml" },
+
+        // Sneltoetsen-cheatsheet (Super + F1)
+        "help":      { w: s(1250, scale), h: s(780, scale), rx: Math.floor((mw/2)-(s(1250, scale)/2)), ry: Math.floor((mh/2)-(s(780, scale)/2)), comp: "help/KeybindsHelp.qml" },
         
         "hidden":    { w: 1, h: 1, rx: -5000 - mx, ry: -5000 - my, comp: "" } 
     };
