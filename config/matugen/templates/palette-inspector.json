@@ -6,6 +6,12 @@
     { "key": "primary_container", "label": "Primary container", "hex": "{{colors.primary_container.default.hex}}" },
     { "key": "on_primary_container", "label": "On primary container", "hex": "{{colors.on_primary_container.default.hex}}" },
 
+    { "key": "secondary_accent_source", "label": "Accent 2 (bron)", "hex": "{{colors.secondary_accent_source.default.hex}}" },
+    { "key": "secondary_accent", "label": "Accent 2", "hex": "{{colors.secondary_accent.default.hex}}" },
+    { "key": "on_secondary_accent", "label": "On accent 2", "hex": "{{colors.on_secondary_accent.default.hex}}" },
+    { "key": "secondary_accent_container", "label": "Accent 2 container", "hex": "{{colors.secondary_accent_container.default.hex}}" },
+    { "key": "on_secondary_accent_container", "label": "On accent 2 container", "hex": "{{colors.on_secondary_accent_container.default.hex}}" },
+
     { "key": "secondary", "label": "Secondary", "hex": "{{colors.secondary.default.hex}}" },
     { "key": "on_secondary", "label": "On secondary", "hex": "{{colors.on_secondary.default.hex}}" },
     { "key": "secondary_container", "label": "Secondary container", "hex": "{{colors.secondary_container.default.hex}}" },

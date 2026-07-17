@@ -421,6 +421,35 @@ _dominant_hex_color() {
             }'
 }
 
+# Injecteert/vervangt een [config.custom_colors]-blok in matugen/config.toml.
+# Waarom: matugen leidt primary/secondary/tertiary allemaal wiskundig af van
+# ÉÉN seed-kleur (hue-rotatie binnen het gekozen scheme_type). Een wallpaper
+# met twee losstaande dominante tinten (bv. blauw water + groen gebergte)
+# versmelt daardoor tot één tintfamilie, vooral bij terughoudende schemes
+# als scheme-content. Een custom color met blend=true voegt een echte
+# tweede, uit de foto bemonsterde tint toe — licht richting het schema
+# geharmoniseerd, zonder de eigen hue kwijt te raken. Idempotent: verwijdert
+# een eerder ingevoegd blok voordat het een vers blok aan het bestand toevoegt.
+_set_custom_colors_block() {
+    local file="$1"
+    local name="$2"
+    local hex="$3"
+    local begin_marker="# BEGIN kingstra-custom-colors"
+    local end_marker="# END kingstra-custom-colors"
+
+    if grep -qF "$begin_marker" "$file" 2>/dev/null; then
+        sed -i "/^${begin_marker}\$/,/^${end_marker}\$/d" "$file"
+    fi
+
+    {
+        echo ""
+        echo "$begin_marker"
+        echo "[config.custom_colors]"
+        echo "${name} = { color = \"${hex}\", blend = true }"
+        echo "$end_marker"
+    } >> "$file"
+}
+
 SOURCE_HEX=""
 if (( COLOR_INDEX > 0 )); then
     SOURCE_HEX="$(_dominant_hex_color "$WALLPAPER" "$COLOR_INDEX" || true)"
@@ -429,6 +458,15 @@ if (( COLOR_INDEX > 0 )); then
         SOURCE_HEX=""
     fi
 fi
+
+# Tweede, onafhankelijk bemonsterde tint uit dezelfde wallpaper (naast de
+# primaire seed hierboven) als matugen custom color — zie
+# _set_custom_colors_block hierboven voor de motivatie.
+SECONDARY_HEX="$(_dominant_hex_color "$WALLPAPER" "$((COLOR_INDEX + 1))" || true)"
+if [[ ! "$SECONDARY_HEX" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
+    SECONDARY_HEX="${SOURCE_HEX:-#7f849c}"
+fi
+_set_custom_colors_block "$MATUGEN_CONF" "secondary_accent" "$SECONDARY_HEX"
 
 if [[ -n "$SOURCE_HEX" ]]; then
     MATUGEN_ARGS=(

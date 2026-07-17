@@ -36,5 +36,6 @@
   "pink":               "{{colors.on_tertiary.default.hex}}",
   "sky":                "{{colors.tertiary_container.default.hex}}",
   "teal":               "{{colors.secondary_container.default.hex}}",
-  "lavender":           "{{colors.primary_container.default.hex}}"
+  "lavender":           "{{colors.primary_container.default.hex}}",
+  "accent2":            "{{colors.secondary_accent.default.hex}}"
 }

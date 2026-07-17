@@ -48,6 +48,11 @@ Item {
     readonly property color surfaceContainerHigh: surface1
     readonly property color surfaceContainerHighest: surface2
 
+    // Tweede, onafhankelijk bemonsterde wallpaper-tint (matugen custom color
+    // met blend=true, zie kingstra-matugen-run) — voorkomt dat het hele
+    // palet van één seed-hue afhangt.
+    property color accent2: "#94e2d5"
+
     property string rawJson: ""
 
     FileView {
