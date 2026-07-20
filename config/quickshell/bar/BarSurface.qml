@@ -47,12 +47,8 @@ Item {
     required property var mocha
 
     // ── Actief theme & skin ───────────────────────────────────────────────────
-    readonly property string activeTheme: String(ThemeConfig.theme || "botanical").toLowerCase()
-    readonly property bool isOcean:     activeTheme === "ocean"
-    readonly property bool isSpace:     activeTheme === "space"
-    readonly property bool isBotanical: activeTheme === "botanical"
-    readonly property bool isRocky:     activeTheme === "rocky"
-    readonly property bool isAnimated:  activeTheme === "animated"
+    readonly property string activeTheme: String(ThemeConfig.theme || "organic").toLowerCase()
+    readonly property bool isOrganic: activeTheme === "organic"
     readonly property string activeBarTemplate: String(ThemeConfig.effectiveBarTemplate || "horizontal").toLowerCase()
     readonly property bool useSidebarTemplate: activeBarTemplate === "sidebar"
                                              || activeBarTemplate === "compact-sidebar"
@@ -71,12 +67,10 @@ Item {
     }
 
     readonly property string skinSource: {
-        if (activeTheme === "rocky")    return "skins/RockyBar.qml";
-        if (activeTheme === "ocean")    return "skins/OceanBar.qml";
-        if (activeTheme === "space")    return "skins/SpaceBar.qml";
-        if (activeTheme === "cyber")    return "skins/CyberBar.qml";
-        if (activeTheme === "animated") return "skins/AnimatedBar.qml";
-        return "skins/BotanicalBar.qml";
+        if (activeTheme === "paper") return "skins/PaperBar.qml";
+        if (activeTheme === "modern") return "skins/ModernBar.qml";
+        if (activeTheme === "mono") return "skins/MonoBar.qml";
+        return "skins/OrganicBar.qml";
     }
 
     Loader { id: barSkin; source: barSurfaceRoot.skinSource; visible: false }
@@ -89,6 +83,11 @@ Item {
     function skinBool(name, fallbackValue) {
         if (!skin || skin[name] === undefined) return fallbackValue;
         return !!skin[name];
+    }
+    function skinString(name, fallbackValue) {
+        if (!skin || skin[name] === undefined) return fallbackValue;
+        let value = String(skin[name] || "").trim();
+        return value === "" ? fallbackValue : value;
     }
     function effectAlpha(baseValue) {
         return Math.max(0.0, Math.min(1.0, Number(baseValue) * ThemeConfig.effectIntensity));
@@ -111,20 +110,22 @@ Item {
     readonly property bool topBarLooseBlocksEnabled: ThemeConfig.topBarLooseBlocksOverride === 1
     readonly property bool continuousBarMode: shell.edgeAttachedBar
                                             && (topBarLooseBlocksOverrideActive ? !topBarLooseBlocksEnabled : skinContinuousBarMode)
-    readonly property bool isCyberContinuousBar: continuousBarMode && activeTheme === "cyber"
+    readonly property bool isTechnicalContinuousBar: continuousBarMode && activeTheme === "modern"
 
-    readonly property bool cyberTopWithBulge:    isCyberContinuousBar && shell.isTopBar
+    readonly property bool technicalTopWithBulge: isTechnicalContinuousBar && shell.isTopBar
     readonly property int  particleOverflow:     shell.isHorizontalBar ? (shell.particleVisualOverflow || 0) : 0
     readonly property int  visualContentY:       shell.isBottomBar ? particleOverflow : 0
     readonly property int  visualContentHeight:  Math.max(1, barSurfaceRoot.height - particleOverflow)
-    readonly property int  cyberRailHeight:      cyberTopWithBulge ? shell.barHeight : barSurfaceRoot.height
+    readonly property int technicalRailHeight: technicalTopWithBulge ? shell.barHeight : barSurfaceRoot.height
     readonly property int  continuousRailHeight: continuousBarMode
-                                                 ? (cyberTopWithBulge ? cyberRailHeight : visualContentHeight)
+                                                 ? (technicalTopWithBulge ? technicalRailHeight : visualContentHeight)
                                                  : visualContentHeight
 
     // ── Textuuroverlay ────────────────────────────────────────────────────────
-    readonly property bool   themeHasDefaultTexture: activeTheme === "botanical" || activeTheme === "rocky"
-                                                      || activeTheme === "ocean"  || activeTheme === "space"
+    readonly property bool themeHasDefaultTexture: activeTheme === "rocky"
+                                                   || activeTheme === "space"
+                                                   || activeTheme === "botanical"
+                                                   || activeTheme === "ocean"
     readonly property string configuredTextureOverlaySource: String(shell.textureOverlayAsset || "")
     readonly property string fallbackTextureOverlayPrimary:  themeHasDefaultTexture
                                                              ? (Quickshell.env("HOME") + "/kingstra-dots/assets/themes/" + activeTheme + "/texture-overlay.png")
@@ -133,19 +134,13 @@ Item {
                                                               ? (Quickshell.env("HOME") + "/.config/kingstra-dots/assets/themes/" + activeTheme + "/texture-overlay.png")
                                                               : ""
     property string activeTextureOverlaySource: ""
-    readonly property real minTextureOpacity: activeTheme === "rocky" ? 0.14 : (activeTheme === "botanical" ? 0.12 : 0.08)
+    readonly property real minTextureOpacity: activeTheme === "mono" ? 0.06 : (activeTheme === "organic" ? 0.08 : 0.0)
     readonly property real textureOverlayOpacity: activeTextureOverlaySource !== ""
                                                  ? Math.max(minTextureOpacity, ThemeConfig.materialOverlayOpacity)
                                                  : 0.0
     readonly property bool particlesEnabled: String(shell.particleType || "none").toLowerCase() !== "none"
                                              && Number(shell.particleCount || 0) > 0
-    readonly property bool botanicalGlowEnabled: ambientEnabled("botanical-glow", "botanical") && skinBool("showWarmGlow", false)
-    readonly property bool oceanWaveEnabled: ambientEnabled("ocean-wave", "ocean") && skinBool("showWaveShimmer", false)
-    readonly property bool spaceNebulaEnabled: ambientEnabled("space-nebula", "space") && skinBool("showNebulaGlow", false)
-    readonly property bool animatedRainbowEnabled: ambientEnabled("animated-rainbow", "animated")
-                                                  && skinBool("showRainbowShift", false)
-    readonly property bool cyberGridEnabled: ambientEnabled("cyber-grid", "cyber") && skinBool("showCyberGrid", false)
-    readonly property bool rockyBevelEnabled: ambientEnabled("rocky-bevel", "rocky") && skinBool("showBevelHighlight", false)
+    readonly property bool organicGlowEnabled: ambientEnabled("organic-glow", "organic") && skinBool("showWarmGlow", false)
 
     function resetTextureOverlaySource() {
         if (configuredTextureOverlaySource !== "") { activeTextureOverlaySource = configuredTextureOverlaySource; return; }
@@ -169,15 +164,25 @@ Item {
     property color panelBorderColor:      continuousBarMode ? Qt.rgba(0, 0, 0, 0) : basePanelBorderColor
     property color panelBorderHoverColor: continuousBarMode ? Qt.rgba(0, 0, 0, 0) : basePanelBorderHoverColor
     property color innerPillColor: continuousBarMode
-                                  ? (isCyberContinuousBar
+                                  ? (isTechnicalContinuousBar
                                         ? Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.08)
                                         : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.10))
                                   : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, Math.min(0.95, ThemeConfig.popupOpacity * (0.42 + ThemeConfig.styleGlassStrength * 0.5 + skinNumber("innerBoost", 0.0))))
     property color innerPillHoverColor: continuousBarMode
-                                       ? (isCyberContinuousBar
+                                       ? (isTechnicalContinuousBar
                                             ? Qt.rgba(mocha.blue.r,     mocha.blue.g,     mocha.blue.b,     0.22)
                                             : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.18))
                                        : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.98, ThemeConfig.popupOpacity * (0.58 + ThemeConfig.styleGlassStrength * 0.6 + skinNumber("innerBoost", 0.0))))
+
+    // Semantic chrome roles. Names resolve against MatugenColors in consumers,
+    // keeping skin choice separate from per-module rendering code.
+    readonly property string moduleFillColorName: skinString("moduleFillColorName", "surface0")
+    readonly property string moduleHoverFillColorName: skinString("moduleHoverFillColorName", "surface1")
+    readonly property string accentColorName: skinString("accentColorName", "blue")
+    readonly property string accentHotColorName: skinString("accentHotColorName", "yellow")
+    readonly property string textHotColorName: skinString("textHotColorName", "yellow")
+    readonly property real chromeBorderAlphaMultiplier: skinNumber("chromeBorderAlphaMultiplier", 1.0)
+    readonly property bool showModuleTick: skinBool("showModuleTick", false)
 
     // ─────────────────────────────────────────────────────────────────────────
     // Visuele lagen — z-volgorde (laag = verder naar achteren):
@@ -275,23 +280,8 @@ Item {
             sourceComponent: particleLayerComponent
         }
 
-        // z=0.10 — Botanical: warme geel-perzik-groen gloed
-        Loader { active: barSurfaceRoot.botanicalGlowEnabled; anchors.fill: parent; sourceComponent: botanicalGlowComponent }
-
-        // z=0.10 — Ocean: teal-blauw golf
-        Loader { active: barSurfaceRoot.oceanWaveEnabled; anchors.fill: parent; sourceComponent: oceanWaveComponent }
-
-        // z=0.10 — Space: mauve-blauw-roze nevelgloed
-        Loader { active: barSurfaceRoot.spaceNebulaEnabled; anchors.fill: parent; sourceComponent: spaceNebulaComponent }
-
-        // z=0.10/0.12 — Animated: regenboogverschuiving + aurora-sweep
-        Loader { active: barSurfaceRoot.animatedRainbowEnabled; anchors.fill: parent; sourceComponent: animatedRainbowComponent }
-
-        // z=0.50 — Cyber: rasteroverlay met sweep-licht
-        Loader { active: barSurfaceRoot.cyberGridEnabled; anchors.fill: parent; sourceComponent: cyberGridComponent }
-
-        // z=0.60 — Rocky: gebeitelde randlijnen
-        Loader { active: barSurfaceRoot.rockyBevelEnabled; anchors.fill: parent; sourceComponent: rockyBevelComponent }
+        // z=0.10 — warm organisch accent, uitsluitend wanneer de skin dat vraagt
+        Loader { active: barSurfaceRoot.organicGlowEnabled; anchors.fill: parent; sourceComponent: organicGlowComponent }
 
         // z=1.00 — bar-inhoud (modules, knoppen, klok)
         Loader {
@@ -314,32 +304,12 @@ Item {
                 height: barSurfaceRoot.visualContentHeight + barSurfaceRoot.particleOverflow
                 shell: barSurfaceRoot.shell
                 mocha: barSurfaceRoot.mocha
-                fireflyBoost: barSurfaceRoot.isBotanical ? 1.25 : 1.0
+                fireflyBoost: barSurfaceRoot.isOrganic ? 1.25 : 1.0
             }
         }
         Component {
-            id: botanicalGlowComponent
+            id: organicGlowComponent
             BotanicalGlow { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
-        }
-        Component {
-            id: oceanWaveComponent
-            OceanWave { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
-        }
-        Component {
-            id: spaceNebulaComponent
-            SpaceNebula { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
-        }
-        Component {
-            id: animatedRainbowComponent
-            AnimatedRainbow { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
-        }
-        Component {
-            id: cyberGridComponent
-            CyberGrid { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
-        }
-        Component {
-            id: rockyBevelComponent
-            RockyBevel { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
         }
         Component {
             id: sidebarContentComponent

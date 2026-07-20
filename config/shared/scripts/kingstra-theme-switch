@@ -15,6 +15,7 @@ THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+DEFAULT_THEME="organic"
 
 APPLY=""
 
@@ -63,24 +64,22 @@ resolve_apply_cmd() {
 }
 
 reload_topbar_runtime() {
-    local quickshell_cmd=""
-    local topbar_qml="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/TopBar.qml"
-
-    quickshell_cmd="$(command -v quickshell 2>/dev/null || true)"
-    if [[ -z "$quickshell_cmd" ]]; then
-        _warn "quickshell niet gevonden — topbar reload overgeslagen"
+    if [[ "${KINGSTRA_THEME_PICKER_ACTIVE:-0}" == "1" ]]; then
+        _log "Quickshell-herstart overgeslagen: actieve theme picker blijft zichtbaar"
         return 0
     fi
 
-    if [[ ! -f "$topbar_qml" ]]; then
-        _warn "TopBar.qml niet gevonden — topbar reload overgeslagen"
+    local session_cmd="${HOME}/.local/bin/kingstra-session-start"
+    if [[ -x "$session_cmd" ]]; then
+        # restart-shell: alleen Quickshell herstarten. Een thema-wissel verandert
+        # de wallpaper niet, dus de wallpaper-daemons (awww/skwd) blijven staan.
+        # Dat voorkomt de wallpaper-flash/re-roll die je zag bij het wisselen.
+        setsid -f "$session_cmd" restart-shell >/dev/null 2>&1 || true
+        _log "Quickshell-shell herstart aangevraagd (wallpaper ongemoeid)"
         return 0
     fi
 
-    pkill -f 'quickshell.*[T]opBar.qml' >/dev/null 2>&1 || true
-    sleep 0.2
-    nohup "$quickshell_cmd" -p "$topbar_qml" >/dev/null 2>&1 &
-    _log "TopBar herstart"
+    _warn "kingstra-session-start niet gevonden — topbar reload overgeslagen"
 }
 
 resolve_reader_cmd() {
@@ -190,6 +189,16 @@ bool_json() {
     else
         echo "false"
     fi
+}
+
+canonical_theme_name() {
+    case "${1,,}" in
+        paper|organic|modern|mono) printf '%s\n' "${1,,}" ;;
+        botanical|animated) printf '%s\n' "organic" ;;
+        cyber|space|ocean) printf '%s\n' "modern" ;;
+        rocky) printf '%s\n' "mono" ;;
+        *) printf '%s\n' "" ;;
+    esac
 }
 
 sync_skwd_config() {
@@ -345,7 +354,9 @@ asset_exists() {
 # Arguments
 # ---------------------------------------------------------------------------
 if [[ "${1:-}" == "--current" ]]; then
-    cat "$ACTIVE_FILE" 2>/dev/null || echo "dusk"
+    current_theme="$(cat "$ACTIVE_FILE" 2>/dev/null || true)"
+    canonical_theme="$(canonical_theme_name "$current_theme")"
+    echo "${canonical_theme:-$DEFAULT_THEME}"
     exit 0
 fi
 
@@ -360,7 +371,15 @@ if [[ "${1:-}" == "--list" ]]; then
     exit 0
 fi
 
-THEME_NAME="${1:?Gebruik: kingstra-theme-switch <theme_naam>}"
+REQUESTED_THEME="${1:?Gebruik: kingstra-theme-switch <theme_naam>}"
+THEME_NAME="$(canonical_theme_name "$REQUESTED_THEME")"
+if [[ -z "$THEME_NAME" ]]; then
+    _warn "Onbekend thema: $REQUESTED_THEME (beschikbaar: paper, organic, modern, mono)"
+    exit 1
+fi
+if [[ "$THEME_NAME" != "${REQUESTED_THEME,,}" ]]; then
+    _warn "Legacy-thema '$REQUESTED_THEME' gemigreerd naar '$THEME_NAME'"
+fi
 THEME_FILE="$THEMES_DIR/${THEME_NAME}.toml"
 
 if [[ ! -f "$THEME_FILE" ]]; then
@@ -411,6 +430,20 @@ BAR_BOTTOM_EDGE_STYLE_JSON=$(pick_enum "${BAR_BOTTOM_EDGE_STYLE:-soft}" "soft" "
     flush soft hard beveled ornate-rounded)
 CLOCK_STYLE_JSON=$(pick_enum "${BAR_CLOCK_STYLE:-digital}" "digital" "bar.clock_style" \
     digital analog hybrid)
+if [[ -n "${QUICKSHELL_BAR_RAIL_ENABLED+x}" ]]; then
+    BAR_RAIL_ENABLED_JSON=$(bool_json "${QUICKSHELL_BAR_RAIL_ENABLED}")
+else
+    BAR_RAIL_ENABLED_JSON=$(bool_json "$([[ "$BAR_POSITION_JSON" == "left" || "$BAR_POSITION_JSON" == "right" ]] && echo true || echo false)")
+fi
+BAR_RAIL_EDGE_JSON=$(pick_enum "${QUICKSHELL_BAR_RAIL_EDGE:-left}" "left" "quickshell.bar_rail_edge" top bottom left right)
+BAR_RAIL_WIDTH_JSON=$(sanitize_int "${QUICKSHELL_BAR_RAIL_WIDTH:-52}" "52" "44" "96" "quickshell.bar_rail_width")
+if [[ -n "${QUICKSHELL_BAR_STATUS_STRIP_ENABLED+x}" ]]; then
+    BAR_STATUS_STRIP_ENABLED_JSON=$(bool_json "${QUICKSHELL_BAR_STATUS_STRIP_ENABLED}")
+else
+    BAR_STATUS_STRIP_ENABLED_JSON=$(bool_json "$([[ "$BAR_POSITION_JSON" == "top" || "$BAR_POSITION_JSON" == "bottom" ]] && echo true || echo false)")
+fi
+BAR_STATUS_STRIP_EDGE_JSON=$(pick_enum "${QUICKSHELL_BAR_STATUS_STRIP_EDGE:-$BAR_POSITION_JSON}" "$BAR_POSITION_JSON" "quickshell.bar_status_strip_edge" top bottom left right)
+BAR_STATUS_STRIP_HEIGHT_JSON=$(sanitize_int "${QUICKSHELL_BAR_STATUS_STRIP_HEIGHT:-${QUICKSHELL_BAR_HEIGHT:-36}}" "36" "30" "96" "quickshell.bar_status_strip_height")
 
 TOPBAR_LOOSE_BLOCKS_LINE=""
 if [[ -n "${BAR_TOPBAR_LOOSE_BLOCKS+x}" ]]; then
@@ -425,7 +458,7 @@ PARTICLE_TYPE_JSON=$(pick_enum "${EFFECTS_PARTICLES:-none}" "none" "effects.part
 PARTICLE_COUNT_JSON=$(sanitize_int "${EFFECTS_PARTICLE_COUNT:-0}" "0" "0" "50" "effects.particle_count")
 PARTICLE_SPEED_JSON=$(sanitize_float "${EFFECTS_PARTICLE_SPEED:-0.0}" "0.0" "0.0" "2.0" "effects.particle_speed")
 AMBIENT_EFFECT_JSON=$(pick_enum "${EFFECTS_AMBIENT_EFFECT:-theme-default}" "theme-default" "effects.ambient_effect" \
-    theme-default none botanical-glow cyber-grid animated-rainbow ocean-wave space-nebula rocky-bevel)
+    theme-default none organic-glow)
 EFFECT_INTENSITY_JSON=$(sanitize_float "${EFFECTS_EFFECT_INTENSITY:-1.0}" "1.0" "0.0" "2.0" "effects.effect_intensity")
 EFFECT_CYCLE_MS_JSON=$(sanitize_int "${EFFECTS_EFFECT_CYCLE_MS:-0}" "0" "0" "30000" "effects.effect_cycle_ms")
 EFFECT_HOVER_REACTIVITY_JSON=$(sanitize_float "${EFFECTS_HOVER_REACTIVITY:-0.4}" "0.4" "0.0" "1.0" "effects.hover_reactivity")
@@ -454,7 +487,7 @@ fi
 # ---------------------------------------------------------------------------
 # Theme style profiles — one coherent visual language per theme
 # ---------------------------------------------------------------------------
-STYLE_FAMILY="botanical"
+STYLE_FAMILY="organic"
 STYLE_DENSITY="comfortable"
 STYLE_SURFACE_MODE="soft-glass"
 STYLE_MOTION="gentle"
@@ -465,19 +498,8 @@ STYLE_WIDGET_RADIUS=${APPEARANCE_BORDER_RADIUS:-12}
 STYLE_PANEL_PADDING=14
 
 case "$THEME_NAME" in
-    animated)
-        STYLE_FAMILY="animated"
-        STYLE_DENSITY="comfortable"
-        STYLE_SURFACE_MODE="vivid-glass"
-        STYLE_MOTION="playful"
-        STYLE_PANEL_SHADOW=0.28
-        STYLE_OUTLINE_STRENGTH=0.22
-        STYLE_GLASS_STRENGTH=0.16
-        STYLE_WIDGET_RADIUS=18
-        STYLE_PANEL_PADDING=15
-        ;;
-    botanical)
-        STYLE_FAMILY="botanical"
+    organic)
+        STYLE_FAMILY="organic"
         STYLE_DENSITY="comfortable"
         STYLE_SURFACE_MODE="soft-glass"
         STYLE_MOTION="gentle"
@@ -487,8 +509,8 @@ case "$THEME_NAME" in
         STYLE_WIDGET_RADIUS=20
         STYLE_PANEL_PADDING=15
         ;;
-    cyber)
-        STYLE_FAMILY="cyber"
+    modern)
+        STYLE_FAMILY="modern"
         STYLE_DENSITY="compact"
         STYLE_SURFACE_MODE="hard-surface"
         STYLE_MOTION="snappy"
@@ -498,19 +520,8 @@ case "$THEME_NAME" in
         STYLE_WIDGET_RADIUS=6
         STYLE_PANEL_PADDING=10
         ;;
-    ocean)
-        STYLE_FAMILY="ocean"
-        STYLE_DENSITY="airy"
-        STYLE_SURFACE_MODE="mist"
-        STYLE_MOTION="smooth"
-        STYLE_PANEL_SHADOW=0.26
-        STYLE_OUTLINE_STRENGTH=0.16
-        STYLE_GLASS_STRENGTH=0.12
-        STYLE_WIDGET_RADIUS=18
-        STYLE_PANEL_PADDING=16
-        ;;
-    rocky)
-        STYLE_FAMILY="rocky"
+    mono)
+        STYLE_FAMILY="mono"
         STYLE_DENSITY="compact"
         STYLE_SURFACE_MODE="solid"
         STYLE_MOTION="firm"
@@ -520,27 +531,27 @@ case "$THEME_NAME" in
         STYLE_WIDGET_RADIUS=4
         STYLE_PANEL_PADDING=9
         ;;
-    space)
-        STYLE_FAMILY="space"
-        STYLE_DENSITY="airy"
-        STYLE_SURFACE_MODE="cinematic-glass"
-        STYLE_MOTION="float"
-        STYLE_PANEL_SHADOW=0.32
-        STYLE_OUTLINE_STRENGTH=0.18
-        STYLE_GLASS_STRENGTH=0.14
-        STYLE_WIDGET_RADIUS=16
-        STYLE_PANEL_PADDING=16
+    paper)
+        STYLE_FAMILY="paper"
+        STYLE_DENSITY="comfortable"
+        STYLE_SURFACE_MODE="paper-glass"
+        STYLE_MOTION="calm"
+        STYLE_PANEL_SHADOW=0.12
+        STYLE_OUTLINE_STRENGTH=0.12
+        STYLE_GLASS_STRENGTH=0.05
+        STYLE_WIDGET_RADIUS=10
+        STYLE_PANEL_PADDING=12
         ;;
 esac
 
 STYLE_FAMILY=$(pick_enum "${STYLE_PROFILE_FAMILY:-$STYLE_FAMILY}" "$STYLE_FAMILY" "style_profile.family" \
-    botanical cyber rocky ocean space animated)
+    paper organic modern mono)
 STYLE_DENSITY=$(pick_enum "${STYLE_PROFILE_DENSITY:-$STYLE_DENSITY}" "$STYLE_DENSITY" "style_profile.density" \
     compact comfortable airy)
 STYLE_SURFACE_MODE=$(pick_enum "${STYLE_PROFILE_SURFACE_MODE:-$STYLE_SURFACE_MODE}" "$STYLE_SURFACE_MODE" "style_profile.surface_mode" \
-    soft-glass vivid-glass hard-surface mist solid cinematic-glass)
+    paper-glass soft-glass hard-surface solid)
 STYLE_MOTION=$(pick_enum "${STYLE_PROFILE_MOTION:-$STYLE_MOTION}" "$STYLE_MOTION" "style_profile.motion" \
-    gentle snappy smooth firm float playful)
+    calm gentle snappy firm)
 STYLE_PANEL_SHADOW=$(sanitize_float "${STYLE_PROFILE_PANEL_SHADOW:-$STYLE_PANEL_SHADOW}" "$STYLE_PANEL_SHADOW" "0.0" "0.5" "style_profile.panel_shadow")
 STYLE_OUTLINE_STRENGTH=$(sanitize_float "${STYLE_PROFILE_OUTLINE_STRENGTH:-$STYLE_OUTLINE_STRENGTH}" "$STYLE_OUTLINE_STRENGTH" "0.0" "0.5" "style_profile.outline_strength")
 STYLE_GLASS_STRENGTH=$(sanitize_float "${STYLE_PROFILE_GLASS_STRENGTH:-$STYLE_GLASS_STRENGTH}" "$STYLE_GLASS_STRENGTH" "0.0" "0.5" "style_profile.glass_strength")
@@ -609,6 +620,12 @@ cat > "$THEME_JSON" <<EOF
     "icon_theme": "${ICONS_ICON_THEME:-Papirus-Dark}",
     "bar_height": ${QUICKSHELL_BAR_HEIGHT:-36},
     "bar_position": "${BAR_POSITION_JSON}",
+    "bar_rail_enabled": ${BAR_RAIL_ENABLED_JSON},
+    "bar_rail_edge": "${BAR_RAIL_EDGE_JSON}",
+    "bar_rail_width": ${BAR_RAIL_WIDTH_JSON},
+    "bar_status_strip_enabled": ${BAR_STATUS_STRIP_ENABLED_JSON},
+    "bar_status_strip_edge": "${BAR_STATUS_STRIP_EDGE_JSON}",
+    "bar_status_strip_height": ${BAR_STATUS_STRIP_HEIGHT_JSON},
     "bar_template": "${BAR_TEMPLATE_JSON}",
 ${TOPBAR_LOOSE_BLOCKS_LINE}
     "bar_shape": "${BAR_SHAPE_JSON}",

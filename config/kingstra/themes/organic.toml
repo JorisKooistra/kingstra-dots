@@ -1,0 +1,106 @@
+[meta]
+name = "Organic"
+description = "Donker, warm en tactiel - zachte vormen met terughoudende gloed"
+icon = "󰌪"
+preview_image = "organic.jpg"
+
+[matugen]
+scheme_type = "scheme-content"
+color_index = 1
+contrast = 0.12
+mode = "dark"
+
+[appearance]
+border_radius = 24
+border_width = 1
+gaps_in = 12
+gaps_out = 20
+bar_opacity = 0.88
+popup_opacity = 0.90
+blur_size = 24
+blur_passes = 4
+animation_speed = 0.92
+
+[fonts]
+ui_font = "Fira Sans"
+ui_font_size = 13
+mono_font = "Fira Code"
+mono_font_size = 12
+display_font = "Fira Sans"
+font_weight = "regular"
+letter_spacing = 0
+
+[icons]
+icon_theme = "Papirus"
+
+[quickshell]
+bar_height = 40
+bar_position = "top"
+bar_rail_enabled = true
+bar_rail_edge = "left"
+bar_rail_width = 56
+bar_status_strip_enabled = true
+bar_status_strip_edge = "top"
+bar_status_strip_height = 40
+
+[color_transform]
+hue_shift = 8
+saturation_adjust = 0.02
+lightness_adjust = -0.08
+thematic_mix = 0.30
+
+[material]
+texture = "grain"
+overlay_opacity = 0.05
+glow_intensity = 0.12
+
+[terminal]
+bg_opacity = 0.84
+blur = true
+padding = 16
+cursor_style = "beam"
+
+[bar]
+shape = "organic-grown"
+template = "horizontal"
+width_mode = "full"
+floating = false
+attach_to_screen_edge = true
+top_edge_style = "flush"
+bottom_edge_style = "ornate-rounded"
+clock_style = "hybrid"
+topbar_loose_blocks = true
+
+[widgets]
+shape = "soft-organic"
+surface = "wood-matte"
+
+[style_profile]
+family = "organic"
+density = "comfortable"
+surface_mode = "soft-glass"
+motion = "gentle"
+panel_shadow = 0.30
+outline_strength = 0.05
+glass_strength = 0.14
+widget_radius = 22
+panel_padding = 16
+
+[effects]
+particles = "fireflies"
+particle_count = 7
+particle_speed = 0.12
+ambient_effect = "organic-glow"
+effect_intensity = 0.42
+effect_cycle_ms = 9000
+hover_reactivity = 0.40
+
+[bar_dynamics]
+drawer_style = "context-card"
+module_density = "rich"
+workspace_preview = "hybrid"
+rail_accent = "edge-line"
+
+[terminal_visual]
+overlay_asset = ""
+overlay_opacity = 0.0

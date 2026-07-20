@@ -1,7 +1,7 @@
 /* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
 @define-color accent_color          {{colors.primary.default.hex}};
 @define-color accent_fg_color       {{colors.on_primary.default.hex}};
-@define-color accent_bg_color       {{colors.primary.default.hex}};
+@define-color accent_bg_color       {{colors.secondary_accent.default.hex}};
 
 @define-color window_bg_color       {{colors.background.default.hex}};
 @define-color window_fg_color       {{colors.on_background.default.hex}};

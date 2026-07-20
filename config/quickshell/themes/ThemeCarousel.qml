@@ -209,21 +209,21 @@ Item {
         return parts.join(" ");
     }
 
-    Keys.onLeftPressed: { stepToIndex(-1); event.accepted = true; }
-    Keys.onRightPressed: { stepToIndex(1); event.accepted = true; }
-    Keys.onReturnPressed: {
+    Keys.onLeftPressed: (event) => { stepToIndex(-1); event.accepted = true; }
+    Keys.onRightPressed: (event) => { stepToIndex(1); event.accepted = true; }
+    Keys.onReturnPressed: (event) => {
         applySelectedTheme();
         event.accepted = true;
     }
 
-    Keys.onEnterPressed: {
+    Keys.onEnterPressed: (event) => {
         applySelectedTheme();
         event.accepted = true;
     }
 
     Process {
         id: loadThemes
-        command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" --list"]
+        command: [root.themeSwitchSafeCmd, "--list"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let raw = this.text.trim();
@@ -248,7 +248,7 @@ Item {
 
     Process {
         id: loadActiveTheme
-        command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" --current"]
+        command: [root.themeSwitchSafeCmd, "--current"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let activeFromConfig = String(ThemeConfig.theme || "").trim();
@@ -268,7 +268,10 @@ Item {
     Process {
         id: applyProc
         property string themeName: ""
-        command: ["bash", "-c", "\"" + root.themeSwitchSafeCmd + "\" \"" + themeName + "\""]
+        // The active picker must survive this switch so it can report success
+        // and close deliberately. A regular shortcut switch still restarts the
+        // legacy surfaces after applying the new runtime state.
+        command: ["env", "KINGSTRA_THEME_PICKER_ACTIVE=1", root.themeSwitchSafeCmd, themeName]
         stdout: StdioCollector {
             onStreamFinished: {
                 // handled in onExited to avoid false-positive "applied" feedback

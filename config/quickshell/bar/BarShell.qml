@@ -17,6 +17,10 @@ Variants {
         PanelWindow {
         id: barWindow
 
+        // New theme state is rendered by ShellSurface. Legacy state keeps this
+        // window until it is migrated by kingstra-theme-switch.
+        visible: !ThemeConfig.barZoneSchemaLoaded
+
         required property var modelData
             
             // Bind this specific bar instance to the dynamically assigned screen
@@ -61,7 +65,7 @@ Variants {
             property string activeThemeNormalized: String(activeThemeName || "").toLowerCase()
             property string activeBarTemplate: ThemeConfig.effectiveBarTemplate
             property bool compactSidebarTemplate: activeBarTemplate === "compact-sidebar"
-            property bool animatedVerticalBar: isVerticalBar && (activeThemeNormalized === "animated" || compactSidebarTemplate)
+            property bool animatedVerticalBar: isVerticalBar && compactSidebarTemplate
             property bool sidebarDrawerOpen: false
             property int sidebarDrawerWidth: animatedVerticalBar ? s(touchOptimized ? 178 : 160) : 0
             property int minBarHeight: s(touchOptimized ? 44 : 36)
@@ -82,13 +86,13 @@ Variants {
             property string clockStyle: ThemeConfig.clockStyle
             property real themeLetterSpacing: ThemeConfig.letterSpacing
             property int themeFontWeight: ThemeConfig.fontWeight
-            property int cyberUnderhang: (isHorizontalBar && isTopBar && activeThemeNormalized === "cyber") ? 0 : 0
+            property int cyberUnderhang: 0
             property int topEdgeBleed: (isHorizontalBar
                                         && isTopBar
                                         && edgeAttachedBar
-                                        && (activeThemeNormalized === "botanical"
-                                            || activeThemeNormalized === "rocky"
-                                            || activeThemeNormalized === "cyber")) ? 2 : 0
+                                        && (ThemeConfig.barShape === "organic-grown"
+                                            || ThemeConfig.barShape === "block"
+                                            || ThemeConfig.barShape === "beveled")) ? 2 : 0
             property string particleType: ThemeConfig.particleType
             property int particleCount: ThemeConfig.particleCount
             property real particleSpeed: ThemeConfig.particleSpeed

@@ -282,6 +282,17 @@ PanelWindow {
             masterWindow.syncFocusedMonitorBounds();
         }
 
+        let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "gaming", "settings"];
+        if (ThemeConfig.barZoneSchemaLoaded && cmd === "close") {
+            switchWidget("hidden", "");
+            return;
+        }
+        if (ThemeConfig.barZoneSchemaLoaded && surfaceTargets.indexOf(cmd) !== -1) {
+            if (masterWindow.currentActive !== "hidden")
+                switchWidget("hidden", "");
+            return;
+        }
+
         if (cmd === "close") {
             switchWidget("hidden", "");
         } else if (getLayout(cmd)) {

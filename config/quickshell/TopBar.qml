@@ -4,6 +4,7 @@
 import QtQuick
 import Quickshell
 import "bar"
+import "shellsurface"
 import "volume"
 
 ShellRoot {
@@ -14,5 +15,6 @@ ShellRoot {
     }
 
     BarShell {}
+    ShellSurface {}
     VolumeBarPopup {}
 }

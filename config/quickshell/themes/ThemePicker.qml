@@ -62,13 +62,7 @@ Item {
     property bool isApplying: carouselLoader.item ? carouselLoader.item.isApplying : false
     property bool isReady: carouselLoader.item ? carouselLoader.item.isReady : true
     readonly property string activeThemeName: String(ThemeConfig.theme || "").toLowerCase()
-    readonly property color titleBarColor: {
-        let mixed = mixColor(_theme.mantle, _theme.surface0, 0.32, 0.94);
-        if (activeThemeName === "ocean") {
-            return mixColor(mixed, _theme.surface1, 0.22, 0.95);
-        }
-        return mixed;
-    }
+    readonly property color titleBarColor: mixColor(_theme.mantle, _theme.surface0, 0.32, 0.94)
     readonly property color hintBarColor: mixColor(_theme.mantle, _theme.surface0, 0.24, 0.88)
     readonly property color titleTextColor: pickReadableColor(titleBarColor, [
         _theme.text,

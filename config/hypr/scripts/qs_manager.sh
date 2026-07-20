@@ -234,6 +234,21 @@ fi
 if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     ACTIVE_WIDGET=$(cat /tmp/qs_active_widget 2>/dev/null)
     CURRENT_MODE=$(cat "$NETWORK_MODE_FILE" 2>/dev/null)
+
+    # Surface-native panelen leven in de shell-surface en hebben de legacy
+    # qs-master focus-machinerie niet nodig. Die zou hier juist de
+    # HyprlandFocusGrab verbreken, waardoor het paneel direct weer sluit.
+    SURFACE_NATIVE=" launcher "
+    if [[ "$SURFACE_NATIVE" == *" $TARGET "* ]]; then
+        if [[ "$ACTION" == "toggle" && "$ACTIVE_WIDGET" == "$TARGET" ]]; then
+            qs_ipc_send "close"
+            printf 'hidden' > /tmp/qs_active_widget
+        else
+            qs_ipc_send "$TARGET"
+            printf '%s' "$TARGET" > /tmp/qs_active_widget
+        fi
+        exit 0
+    fi
     QS_VISIBLE=false
     if qs_master_visible; then
         QS_VISIBLE=true

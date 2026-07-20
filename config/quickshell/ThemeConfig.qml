@@ -6,8 +6,8 @@ import Quickshell.Io
 Item {
     id: root
 
-    property string theme: "botanical"
-    property string name: "Botanical"
+    property string theme: "organic"
+    property string name: "Organic"
     property string icon: "󰌪"
 
     property int borderRadius: 12
@@ -31,6 +31,13 @@ Item {
 
     property int barHeight: 40
     property string barPosition: "top"
+    property bool barRailEnabled: false
+    property string barRailEdge: "left"
+    property int barRailWidth: 52
+    property bool barStatusStripEnabled: true
+    property string barStatusStripEdge: "top"
+    property int barStatusStripHeight: 40
+    property bool barZoneSchemaLoaded: false
     property string barTemplate: "auto"
     property int topBarLooseBlocksOverride: -1
     property string barShape: "rounded"
@@ -57,7 +64,7 @@ Item {
     property real materialOverlayOpacity: 0.0
     property real materialGlowIntensity: 0.0
 
-    property string styleFamily: "botanical"
+    property string styleFamily: "organic"
     property string styleDensity: "comfortable"
     property string styleSurfaceMode: "soft-glass"
     property string styleMotion: "gentle"
@@ -95,10 +102,27 @@ Item {
         return Math.max(minimum, Math.min(maximum, value));
     }
 
-    function duration(ms) {
-        let parsed = Number(ms);
+    function duration(value) {
+        if (typeof value === "string") return durationToken(value);
+        let parsed = Number(value);
         if (isNaN(parsed) || parsed <= 0) return 0;
         return Math.max(1, Math.round(parsed * motionDurationScale));
+    }
+
+    function durationToken(name) {
+        let token = String(name || "medium").toLowerCase();
+        let ms = token === "fast" ? 160
+               : token === "slow" ? 400
+               : token === "spatial" ? 500
+               : 250;
+        return duration(ms);
+    }
+
+    function easingToken(name) {
+        let token = String(name || "standard").toLowerCase();
+        if (token === "emphasized") return Easing.OutBack;
+        if (token === "effects") return Easing.InOutSine;
+        return Easing.OutCubic;
     }
 
     function mapFontWeight(value) {
@@ -122,12 +146,27 @@ Item {
         return "top";
     }
 
+    function canonicalTheme(value) {
+        let normalized = String(value || "organic").toLowerCase();
+        if (normalized === "paper" || normalized === "organic" || normalized === "modern" || normalized === "mono") return normalized;
+        if (normalized === "botanical" || normalized === "animated") return "organic";
+        if (normalized === "cyber" || normalized === "space" || normalized === "ocean") return "modern";
+        if (normalized === "rocky") return "mono";
+        return "organic";
+    }
+
     function normalizeBarTemplate(value) {
         let normalized = String(value || "auto").toLowerCase();
         if (normalized === "horizontal" || normalized === "sidebar" || normalized === "compact-sidebar") {
             return normalized;
         }
         return "auto";
+    }
+
+    function normalizeEdge(value, fallback) {
+        let normalized = String(value || fallback).toLowerCase();
+        return normalized === "top" || normalized === "bottom" || normalized === "left" || normalized === "right"
+            ? normalized : fallback;
     }
 
     function deriveBarTemplate(position, template) {
@@ -154,7 +193,7 @@ Item {
                 let material = data.material || {};
                 let terminal = data.terminal || {};
 
-                if (data.theme !== undefined) root.theme = String(data.theme);
+                if (data.theme !== undefined) root.theme = root.canonicalTheme(data.theme);
                 if (data.name !== undefined) root.name = String(data.name);
                 if (data.icon !== undefined) root.icon = String(data.icon);
 
@@ -184,6 +223,17 @@ Item {
                     }
                 }
                 if (data.bar_position !== undefined) root.barPosition = root.normalizeBarPosition(data.bar_position);
+                let legacyPosition = root.normalizeBarPosition(data.bar_position !== undefined ? data.bar_position : root.barPosition);
+                root.barZoneSchemaLoaded = data.bar_rail_enabled !== undefined
+                    || data.bar_status_strip_enabled !== undefined;
+                root.barRailEnabled = data.bar_rail_enabled !== undefined
+                    ? !!data.bar_rail_enabled : (legacyPosition === "left" || legacyPosition === "right");
+                root.barRailEdge = root.normalizeEdge(data.bar_rail_edge, legacyPosition === "right" ? "right" : "left");
+                root.barRailWidth = parseInt(root.clamp(Number(data.bar_rail_width !== undefined ? data.bar_rail_width : 52), 44, 96));
+                root.barStatusStripEnabled = data.bar_status_strip_enabled !== undefined
+                    ? !!data.bar_status_strip_enabled : (legacyPosition === "top" || legacyPosition === "bottom");
+                root.barStatusStripEdge = root.normalizeEdge(data.bar_status_strip_edge, legacyPosition === "bottom" ? "bottom" : "top");
+                root.barStatusStripHeight = parseInt(root.clamp(Number(data.bar_status_strip_height !== undefined ? data.bar_status_strip_height : root.barHeight), 30, 96));
                 if (data.bar_template !== undefined) root.barTemplate = root.normalizeBarTemplate(data.bar_template);
                 if (data.topbar_loose_blocks !== undefined) {
                     root.topBarLooseBlocksOverride = data.topbar_loose_blocks ? 1 : 0;

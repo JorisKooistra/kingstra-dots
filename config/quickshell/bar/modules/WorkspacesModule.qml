@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
+import "../.."
 
 // Left-bar pill: clickable workspace indicator dots.
 // Uses Quickshell.Hyprland for event-driven workspace state (no polling).
@@ -13,6 +14,10 @@ Rectangle {
     required property var ctx           // BarContent root — supplies theme chrome colors/flags
 
     readonly property int wsCount: 10
+
+    function roleColor(name, fallbackColor) {
+        return mocha[name] !== undefined ? mocha[name] : fallbackColor;
+    }
 
     // ── Special workspace indicator ──────────────────────────────────────────
     readonly property var thisMonitor: Hyprland.monitorFor(shell.screen)
@@ -49,16 +54,26 @@ Rectangle {
     opacity: visible ? 1 : 0
     clip: true
 
-    color: ctx.cyberChrome ? ctx.cyberModuleColor : surface.panelColor
+    color: ctx.cyberChrome
+           ? Qt.rgba(roleColor(ctx.moduleFillColorName, mocha.crust).r,
+                     roleColor(ctx.moduleFillColorName, mocha.crust).g,
+                     roleColor(ctx.moduleFillColorName, mocha.crust).b,
+                     0.12)
+           : surface.panelColor
     radius: surface.panelRadius
     topLeftRadius: ctx.panelTopLeftRadius
     topRightRadius: ctx.panelTopRightRadius
     bottomLeftRadius: ctx.panelBottomLeftRadius
     bottomRightRadius: ctx.panelBottomRightRadius
     border.width: 1
-    border.color: ctx.cyberChrome ? ctx.cyberModuleBorderColor : ctx.themeAccentBorderColor
+    border.color: ctx.cyberChrome
+                  ? Qt.rgba(roleColor(ctx.accentHotColorName, mocha.teal).r,
+                            roleColor(ctx.accentHotColorName, mocha.teal).g,
+                            roleColor(ctx.accentHotColorName, mocha.teal).b,
+                            0.34 * ctx.chromeBorderAlphaMultiplier)
+                  : ctx.themeAccentBorderColor
 
-    Behavior on opacity { NumberAnimation { duration: 300 } }
+    Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("medium") } }
 
     MouseArea {
         anchors.fill: parent
@@ -149,12 +164,12 @@ Rectangle {
 
     // Cyber bottom tick line
     Rectangle {
-        visible: ctx.cyberChrome
+        visible: ctx.showModuleTick
         anchors.left: parent.left; anchors.leftMargin: shell.s(10)
         anchors.right: parent.right; anchors.rightMargin: shell.s(10)
         anchors.bottom: parent.bottom; anchors.bottomMargin: shell.s(4)
         height: 1
-        color: ctx.cyberModuleTickColor
+        color: root.roleColor(ctx.accentHotColorName, ctx.cyberModuleTickColor)
         opacity: 0.52
     }
 
@@ -190,7 +205,7 @@ Rectangle {
                                            ? Math.max(shell.s(32), (iconColumns * iconSize) + ((iconColumns - 1) * shell.s(useIconGrid ? 3 : 4)) + shell.s(14))
                                            : shell.s(32)
                 width: targetWidth
-                Behavior on targetWidth { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+                Behavior on targetWidth { NumberAnimation { duration: ThemeConfig.durationToken("medium"); easing.type: ThemeConfig.easingToken("emphasized") } }
 
                 height: shell.s(34)
                 radius: surface.innerPillRadius
@@ -208,14 +223,14 @@ Rectangle {
                                 : "transparent"))
 
                 scale: isHovered && stateLabel !== "active" ? 1.08 : 1.0
-                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+                Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("medium"); easing.type: ThemeConfig.easingToken("emphasized") } }
 
                 // Staggered entry animation
                 property bool initAnimTrigger: false
                 opacity: initAnimTrigger ? 1 : 0
                 transform: Translate {
                     y: wsPill.initAnimTrigger ? 0 : shell.s(15)
-                    Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } }
+                    Behavior on y { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }
                 }
                 Component.onCompleted: {
                     if (!shell.startupCascadeFinished) {
@@ -231,8 +246,8 @@ Rectangle {
                     onTriggered: wsPill.initAnimTrigger = true
                 }
 
-                Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
-                Behavior on color { ColorAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("standard") } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("medium") } }
 
                 Text {
                     anchors.centerIn: parent
@@ -247,8 +262,8 @@ Rectangle {
                             : (isHovered
                                 ? (ctx.cyberChrome ? mocha.text : mocha.crust)
                                 : (stateLabel === "occupied" ? mocha.text : mocha.overlay0))
-                    Behavior on color { ColorAnimation { duration: 250 } }
-                    Behavior on opacity { NumberAnimation { duration: 120 } }
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("medium") } }
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
                 }
 
                 Grid {
@@ -258,7 +273,7 @@ Rectangle {
                     columnSpacing: shell.s(wsPill.useIconGrid ? 3 : 4)
                     opacity: wsPill.showAppIcons ? 1 : 0
                     visible: opacity > 0
-                    Behavior on opacity { NumberAnimation { duration: 140 } }
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
 
                     Repeater {
                         model: wsPill.visibleAppIcons
@@ -311,11 +326,11 @@ Rectangle {
             id: specialBadge
             visible: opacity > 0
             opacity: root.activeSpecialWorkspace !== "" ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") } }
 
             height: shell.s(34)
             width: specialBadgeRow.implicitWidth + shell.s(14)
-            Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") } }
 
             radius: surface.innerPillRadius
             color: ctx.cyberChrome

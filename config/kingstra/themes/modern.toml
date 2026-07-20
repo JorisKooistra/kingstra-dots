@@ -1,0 +1,106 @@
+[meta]
+name = "Modern"
+description = "Precisie en contrast - compacte techniek zonder neon-overdaad"
+icon = "󰙷"
+preview_image = "modern.jpg"
+
+[matugen]
+scheme_type = "scheme-expressive"
+color_index = 1
+contrast = 0.46
+mode = "dark"
+
+[appearance]
+border_radius = 3
+border_width = 1
+gaps_in = 6
+gaps_out = 8
+bar_opacity = 0.98
+popup_opacity = 0.98
+blur_size = 0
+blur_passes = 0
+animation_speed = 1.22
+
+[fonts]
+ui_font = "Inter"
+ui_font_size = 12
+mono_font = "JetBrainsMono Nerd Font"
+mono_font_size = 12
+display_font = "Inter"
+font_weight = "medium"
+letter_spacing = 0
+
+[icons]
+icon_theme = "Papirus-Dark"
+
+[quickshell]
+bar_height = 34
+bar_position = "top"
+bar_rail_enabled = true
+bar_rail_edge = "left"
+bar_rail_width = 48
+bar_status_strip_enabled = true
+bar_status_strip_edge = "top"
+bar_status_strip_height = 34
+
+[color_transform]
+hue_shift = 0
+saturation_adjust = 0.18
+lightness_adjust = -0.02
+thematic_mix = 0.03
+
+[material]
+texture = "none"
+overlay_opacity = 0.0
+glow_intensity = 0.02
+
+[terminal]
+bg_opacity = 0.94
+blur = false
+padding = 10
+cursor_style = "block"
+
+[bar]
+shape = "beveled"
+template = "horizontal"
+width_mode = "full"
+floating = false
+attach_to_screen_edge = true
+top_edge_style = "beveled"
+bottom_edge_style = "hard"
+clock_style = "digital"
+topbar_loose_blocks = false
+
+[widgets]
+shape = "segmented"
+surface = "hard-tech"
+
+[style_profile]
+family = "modern"
+density = "compact"
+surface_mode = "hard-surface"
+motion = "snappy"
+panel_shadow = 0.10
+outline_strength = 0.36
+glass_strength = 0.02
+widget_radius = 3
+panel_padding = 8
+
+[effects]
+particles = "none"
+particle_count = 0
+particle_speed = 0.0
+ambient_effect = "none"
+effect_intensity = 0.0
+effect_cycle_ms = 0
+hover_reactivity = 0.72
+
+[bar_dynamics]
+drawer_style = "rail-panel"
+module_density = "minimal"
+workspace_preview = "numbers"
+rail_accent = "segmented"
+
+[terminal_visual]
+overlay_asset = ""
+overlay_opacity = 0.0

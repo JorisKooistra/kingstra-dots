@@ -62,7 +62,10 @@ def get_value(data, dotpath):
     return obj
 
 
-def list_themes(themes_dir):
+CANONICAL_THEME_IDS = ("paper", "organic", "modern", "mono")
+
+
+def list_themes(themes_dir, include_legacy=False):
     """List all themes as JSON array with meta info."""
     themes = []
     for fname in sorted(os.listdir(themes_dir)):
@@ -72,6 +75,8 @@ def list_themes(themes_dir):
         try:
             data = read_toml(path)
             theme_id = fname[:-5]  # strip .toml
+            if not include_legacy and theme_id not in CANONICAL_THEME_IDS:
+                continue
             meta = data.get("meta", {})
             appearance = data.get("appearance", {})
             fonts = data.get("fonts", {})
@@ -124,7 +129,8 @@ def main():
 
     if sys.argv[1] == "--list":
         themes_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser("~/.config/kingstra/themes")
-        print(json.dumps(list_themes(themes_dir)))
+        include_legacy = "--include-legacy" in sys.argv[3:]
+        print(json.dumps(list_themes(themes_dir, include_legacy)))
         sys.exit(0)
 
     if sys.argv[1] == "--json":

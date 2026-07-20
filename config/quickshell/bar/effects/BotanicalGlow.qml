@@ -16,7 +16,7 @@ Rectangle {
     anchors.topMargin: surface.visualContentY === 0 ? 0 : Math.max(0, surface.visualContentY - surface.particleOverflow)
     height: (surface.continuousBarMode ? surface.continuousRailHeight : surface.visualContentHeight) + surface.particleOverflow
     z: 0.1
-    visible: surface.ambientEnabled("botanical-glow", "botanical") && surface.skinBool("showWarmGlow", false)
+    visible: surface.ambientEnabled("organic-glow", "organic") && surface.skinBool("showWarmGlow", false)
     opacity: surface.effectAlpha(surface.skinNumber("warmGlowAlpha", 0.04))
 
     gradient: Gradient {

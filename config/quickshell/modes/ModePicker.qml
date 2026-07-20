@@ -7,7 +7,8 @@ import "../"
 
 Item {
     id: window
-    anchors.fill: parent
+    width: parent ? parent.width : 0
+    height: parent ? parent.height : 0
     clip: true
     focus: true
 
@@ -336,27 +337,27 @@ Item {
         }
     }
 
-    Keys.onLeftPressed: {
+    Keys.onLeftPressed: (event) => {
         window.stepSelection(-1);
         event.accepted = true;
     }
 
-    Keys.onRightPressed: {
+    Keys.onRightPressed: (event) => {
         window.stepSelection(1);
         event.accepted = true;
     }
 
-    Keys.onReturnPressed: {
+    Keys.onReturnPressed: (event) => {
         window.applySelectedMode();
         event.accepted = true;
     }
 
-    Keys.onEnterPressed: {
+    Keys.onEnterPressed: (event) => {
         window.applySelectedMode();
         event.accepted = true;
     }
 
-    Keys.onEscapePressed: {
+    Keys.onEscapePressed: (event) => {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
         event.accepted = true;
     }

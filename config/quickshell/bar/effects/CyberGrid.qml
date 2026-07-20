@@ -32,7 +32,7 @@ Item {
         anchors.fill: parent
         opacity: Math.max(0.0, Math.min(0.26,
             surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
-            * ((surface.activeTheme === "cyber") ? 0.9 : 0.35)))
+            * ((surface.activeTheme === "modern") ? 0.9 : 0.35)))
         gradient: Gradient {
             orientation: Gradient.Vertical
             GradientStop { position: 0.0; color: Qt.rgba(mocha.sapphire.r, mocha.sapphire.g, mocha.sapphire.b, 0.55) }
@@ -46,7 +46,7 @@ Item {
         color: Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b,
             Math.max(0.0, Math.min(0.34,
                 surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
-                * ((surface.activeTheme === "cyber") ? 0.52 : 0.18))))
+                * ((surface.activeTheme === "modern") ? 0.52 : 0.18))))
     }
 
     // ── 3. Verticale gridlijnen ───────────────────────────────────────────────
@@ -57,7 +57,7 @@ Item {
             color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b,
                 Math.max(0.0, Math.min(0.42,
                     surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
-                    * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
+                    * ((surface.activeTheme === "modern") ? 1.7 : 1.0)
                     * ((index % 6) === 0 ? 0.90 : 0.30))))
         }
     }
@@ -70,7 +70,7 @@ Item {
             color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b,
                 Math.max(0.0, Math.min(0.34,
                     surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
-                    * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
+                    * ((surface.activeTheme === "modern") ? 1.7 : 1.0)
                     * ((index % 3) === 0 ? 0.62 : 0.24))))
         }
     }
@@ -94,7 +94,7 @@ Item {
         color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b,
             Math.max(0.0, Math.min(0.28,
                 surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
-                * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
+                * ((surface.activeTheme === "modern") ? 1.7 : 1.0)
                 * 0.85)))
     }
 
@@ -105,7 +105,7 @@ Item {
         color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b,
             Math.max(0.0, Math.min(0.42,
                 surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
-                * ((surface.activeTheme === "cyber") ? 1.7 : 1.0)
+                * ((surface.activeTheme === "modern") ? 1.7 : 1.0)
                 * 1.05)))
     }
 
@@ -116,7 +116,7 @@ Item {
         width: shell.s(120); height: parent.height; x: -width
         opacity: Math.max(0.0, Math.min(0.34,
             surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
-            * ((surface.activeTheme === "cyber") ? 1.8 : 1.0)
+            * ((surface.activeTheme === "modern") ? 1.8 : 1.0)
             * 0.55))
         gradient: Gradient {
             orientation: Gradient.Horizontal

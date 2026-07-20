@@ -284,6 +284,12 @@ Item {
     property var modeOptions: ["dark", "light"]
     property int editBarHeight: 40
     property string editBarPosition: "top"
+    property bool editBarRailEnabled: false
+    property string editBarRailEdge: "left"
+    property int editBarRailWidth: 52
+    property bool editBarStatusStripEnabled: true
+    property string editBarStatusStripEdge: "top"
+    property int editBarStatusStripHeight: 40
     property string editBarTemplate: "auto"
     property string editBarWidthMode: "full"
     property string editBarShape: "rounded"
@@ -311,7 +317,7 @@ Item {
     property string editHoverReactivity: "0.4"
 
     // Karakter
-    property string editStyleFamily: "botanical"
+    property string editStyleFamily: "organic"
     property string editStyleDensity: "comfortable"
     property string editSurfaceMode: "soft-glass"
     property string editStyleMotion: "gentle"
@@ -362,11 +368,11 @@ Item {
     property var clockStyleOptions: ["digital", "analog", "hybrid"]
     property var fontWeightOptions: ["light", "regular", "medium", "bold"]
     property var particleTypeOptions: ["none", "fireflies", "space-specks", "space-specks-layered", "sparkles", "rain", "snow", "dust"]
-    property var styleFamilyOptions: ["botanical", "cyber", "rocky", "ocean", "space", "animated"]
+    property var styleFamilyOptions: ["paper", "organic", "modern", "mono"]
     property var styleDensityOptions: ["compact", "comfortable", "airy"]
-    property var surfaceModeOptions: ["soft-glass", "vivid-glass", "hard-surface", "mist", "solid", "cinematic-glass"]
-    property var styleMotionOptions: ["gentle", "snappy", "smooth", "firm", "float", "playful"]
-    property var ambientEffectOptions: ["theme-default", "none", "botanical-glow", "cyber-grid", "animated-rainbow", "ocean-wave", "space-nebula", "rocky-bevel"]
+    property var surfaceModeOptions: ["paper-glass", "soft-glass", "hard-surface", "solid"]
+    property var styleMotionOptions: ["calm", "gentle", "snappy", "firm"]
+    property var ambientEffectOptions: ["theme-default", "none", "organic-glow"]
     property var drawerStyleOptions: ["none", "context-card", "rail-panel"]
     property var moduleDensityOptions: ["minimal", "balanced", "rich"]
     property var workspacePreviewOptions: ["numbers", "app-icons", "hybrid"]
@@ -628,7 +634,7 @@ Item {
 
         // Fallback op de historische style-defaults zolang de key niet in het theme staat.
         let safeThemeId = normalizeThemeId(themeId || "");
-        if (safeThemeId === "rocky" || safeThemeId === "cyber") return false;
+        if (safeThemeId === "mono" || safeThemeId === "modern") return false;
         return true;
     }
 
@@ -758,6 +764,12 @@ Item {
             "digital"
         );
         editTopbarLooseBlocks = defaultTopbarLooseBlocks(themeData, safeThemeId);
+        editBarRailEnabled = themeValue(themeData, "quickshell", "bar_rail_enabled", false) === true;
+        editBarRailEdge = normalizeOption(themeValue(themeData, "quickshell", "bar_rail_edge", "left"), barPositionOptions, "left");
+        editBarRailWidth = Math.max(44, toIntValue(themeValue(themeData, "quickshell", "bar_rail_width", 52), 52));
+        editBarStatusStripEnabled = themeValue(themeData, "quickshell", "bar_status_strip_enabled", true) !== false;
+        editBarStatusStripEdge = normalizeOption(themeValue(themeData, "quickshell", "bar_status_strip_edge", editBarPosition), barPositionOptions, editBarPosition);
+        editBarStatusStripHeight = Math.max(30, toIntValue(themeValue(themeData, "quickshell", "bar_status_strip_height", editBarHeight), editBarHeight));
 
         editBarOpacity = toFloatString(themeValue(themeData, "appearance", "bar_opacity", 0.72), 0.72);
         editPopupOpacity = toFloatString(themeValue(themeData, "appearance", "popup_opacity", 0.80), 0.80);
@@ -780,7 +792,7 @@ Item {
         editEffectCycleMs = Math.max(0, toIntValue(themeValue(themeData, "effects", "effect_cycle_ms", 0), 0));
         editHoverReactivity = toFloatString(themeValue(themeData, "effects", "hover_reactivity", 0.4), 0.4);
 
-        editStyleFamily = normalizeOption(themeValue(themeData, "style_profile", "family", safeThemeId), styleFamilyOptions, "botanical");
+        editStyleFamily = normalizeOption(themeValue(themeData, "style_profile", "family", safeThemeId), styleFamilyOptions, "organic");
         editStyleDensity = normalizeOption(themeValue(themeData, "style_profile", "density", "comfortable"), styleDensityOptions, "comfortable");
         editSurfaceMode = normalizeOption(themeValue(themeData, "style_profile", "surface_mode", "soft-glass"), surfaceModeOptions, "soft-glass");
         editStyleMotion = normalizeOption(themeValue(themeData, "style_profile", "motion", "gentle"), styleMotionOptions, "gentle");
@@ -832,6 +844,12 @@ Item {
             "matugen.mode", normalizeOption(editMode, modeOptions, "dark"),
             "quickshell.bar_height", String(Math.max(30, editBarHeight)),
             "quickshell.bar_position", normalizeOption(editBarPosition, barPositionOptions, "top"),
+            "quickshell.bar_rail_enabled", String(!!editBarRailEnabled),
+            "quickshell.bar_rail_edge", normalizeOption(editBarRailEdge, barPositionOptions, "left"),
+            "quickshell.bar_rail_width", String(Math.max(44, editBarRailWidth)),
+            "quickshell.bar_status_strip_enabled", String(!!editBarStatusStripEnabled),
+            "quickshell.bar_status_strip_edge", normalizeOption(editBarStatusStripEdge, barPositionOptions, "top"),
+            "quickshell.bar_status_strip_height", String(Math.max(30, editBarStatusStripHeight)),
             "bar.template", derivedBarTemplate(editBarPosition, editBarTemplate),
             "bar.width_mode", normalizeOption(editBarWidthMode, barWidthModeOptions, "full"),
             "bar.floating", String(editBarWidthMode === "floating"),
@@ -853,7 +871,7 @@ Item {
             "effects.effect_intensity", toFloatString(editEffectIntensity, 1.0),
             "effects.effect_cycle_ms", String(Math.max(0, editEffectCycleMs)),
             "effects.hover_reactivity", toFloatString(editHoverReactivity, 0.4),
-            "style_profile.family", normalizeOption(editStyleFamily, styleFamilyOptions, "botanical"),
+            "style_profile.family", normalizeOption(editStyleFamily, styleFamilyOptions, "organic"),
             "style_profile.density", normalizeOption(editStyleDensity, styleDensityOptions, "comfortable"),
             "style_profile.surface_mode", normalizeOption(editSurfaceMode, surfaceModeOptions, "soft-glass"),
             "style_profile.motion", normalizeOption(editStyleMotion, styleMotionOptions, "gentle"),

@@ -220,24 +220,21 @@ _set_static() {
 
     _stop_video
 
-    if ! command -v awww &>/dev/null; then
-        _warn "awww niet gevonden — kan wallpaper niet instellen"
+    # skwd is de enige wallpaper-daemon: het rendert, levert de picker-UI
+    # (Super+Ctrl+W) en doet de kleuranalyse. Voorheen draaide awww er als
+    # tweede renderer naast; skwd-paper ligt bovenop awww, dus je zag skwd's
+    # beeld terwijl de kingstra-state awww's keuze bevatte -> desync/flicker.
+    if ! command -v skwd &>/dev/null; then
+        _warn "skwd niet gevonden — kan wallpaper niet instellen"
         return 1
     fi
 
-    if ! pgrep -x awww-daemon &>/dev/null && command -v awww-daemon &>/dev/null; then
-        awww-daemon >/dev/null 2>&1 &
-        disown || true
-        sleep 0.5
-    fi
-
-    if awww img "$file" --transition-type random >/dev/null 2>&1 || \
-       awww img "$file" >/dev/null 2>&1; then
-        _log "Statisch wallpaper ingesteld via awww: $(basename "$file")"
+    if skwd wall apply "{\"path\":\"$file\"}" >/dev/null 2>&1; then
+        _log "Statisch wallpaper ingesteld via skwd: $(basename "$file")"
         return 0
     fi
 
-    _warn "awww kon wallpaper niet instellen: $file"
+    _warn "skwd kon wallpaper niet instellen: $file"
     return 1
 }
 
@@ -587,10 +584,10 @@ cmd_status() {
         echo "mpvpaper:  gestopt"
     fi
 
-    if pgrep -x awww-daemon &>/dev/null; then
-        echo "awww:      actief"
+    if pgrep -f skwd-daemon &>/dev/null; then
+        echo "skwd:      actief"
     else
-        echo "awww:      gestopt"
+        echo "skwd:      gestopt"
     fi
 
 }

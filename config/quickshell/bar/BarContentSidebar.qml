@@ -16,7 +16,7 @@ Item {
 
     property var currentDate: new Date()
     readonly property bool compactAnimatedSidebar: ThemeConfig.effectiveBarTemplate === "compact-sidebar"
-                                                  || String(shell.activeThemeName || "").toLowerCase() === "animated"
+                                                  || ThemeConfig.effectiveBarTemplate === "compact-sidebar"
     readonly property bool expandAllowed: ThemeConfig.drawerStyle !== "none"
     readonly property bool compactRailOnly: compactAnimatedSidebar
     readonly property int railWidth: compactAnimatedSidebar && shell.isVerticalBar ? shell.baseBarThickness : width
@@ -24,7 +24,7 @@ Item {
     property int hoverDepth: 0
     readonly property int outerMargin: compactAnimatedSidebar ? shell.s(4) : (shell.edgeAttachedBar ? shell.s(8) : shell.s(10))
     readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
-                                                     && String(shell.activeThemeName || "").toLowerCase() === "botanical"
+                                                     && String(shell.activeThemeName || "").toLowerCase() === "organic"
     readonly property bool edgeSidebarChrome: flattenScreenEdgeCorners && shell.isVerticalBar
     readonly property int screenEdgeMargin: flattenScreenEdgeCorners ? 0 : outerMargin
     readonly property int panelBorderWidth: edgeSidebarChrome ? 0 : 1

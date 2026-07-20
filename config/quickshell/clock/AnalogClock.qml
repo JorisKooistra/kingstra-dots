@@ -6,8 +6,8 @@ Item {
     required property var mocha
     property bool showSecondHand: false
 
-    readonly property string activeTheme: String(shell.activeThemeName || "botanical").toLowerCase()
-    readonly property bool botanicalStyle: activeTheme === "botanical"
+    readonly property string activeTheme: String(shell.activeThemeName || "organic").toLowerCase()
+    readonly property bool botanicalStyle: activeTheme === "organic"
 
     property date now: new Date()
     readonly property real hourAngle: ((now.getHours() % 12) + now.getMinutes() / 60 + now.getSeconds() / 3600) * 30

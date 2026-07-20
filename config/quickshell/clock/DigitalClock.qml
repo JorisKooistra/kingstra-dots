@@ -7,7 +7,7 @@ Item {
     required property var mocha
     property real cyberScale: 1.0
     readonly property string activeTheme: String(shell.activeThemeName || "").toLowerCase()
-    readonly property bool cyberTheme: activeTheme === "cyber"
+    readonly property bool cyberTheme: activeTheme === "modern"
     readonly property string cyberRawTimeText: String(shell.timeStr || "--:--")
     readonly property string cyberTimeText: {
         let parts = cyberRawTimeText.split(":");

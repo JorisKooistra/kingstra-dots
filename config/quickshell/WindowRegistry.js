@@ -26,9 +26,8 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
     boost = Math.min(1.35, boost);
     scale *= boost;
 
-    let theme = String(themeName || "").toLowerCase();
     let position = String(barPosition || "top").toLowerCase();
-    let useLeftSidebarPopups = position === "left" && theme === "animated";
+    let useLeftSidebarPopups = position === "left";
     let useRightSidebarPopups = position === "right";
     let sidebarRail = s(52, scale);
     let sidebarGap = s(10, scale);

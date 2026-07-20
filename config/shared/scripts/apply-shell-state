@@ -150,7 +150,7 @@ else
 
     RESOLVED_JSON="$("$MATUGEN_RUNNER" "${RUNNER_RESOLVE_ARGS[@]}" --resolved-json 2>/dev/null || echo '{}')"
 
-    THEME_NAME="$(echo "$RESOLVED_JSON" | jq -r '.theme // "botanical"' 2>/dev/null || echo "botanical")"
+    THEME_NAME="$(echo "$RESOLVED_JSON" | jq -r '.theme // "organic"' 2>/dev/null || echo "organic")"
     SCHEME="$(echo "$RESOLVED_JSON" | jq -r '.scheme_type // "scheme-tonal-spot"' 2>/dev/null || echo "scheme-tonal-spot")"
     COLOR_IDX="$(echo "$RESOLVED_JSON" | jq -r '.color_index // 0' 2>/dev/null || echo "0")"
     MODE="$(echo "$RESOLVED_JSON" | jq -r '.mode // "dark"' 2>/dev/null || echo "dark")"

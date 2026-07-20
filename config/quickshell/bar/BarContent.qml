@@ -42,24 +42,31 @@ Item {
     // ── Theme chrome helpers ───────────────────────────────────────────────
     readonly property int edgeInset: shell.edgeAttachedBar ? shell.s(10) : 0
     readonly property bool flattenScreenEdgeCorners: shell.edgeAttachedBar
-                                                     && String(shell.activeThemeName || "").toLowerCase() === "botanical"
+                                                     && String(shell.activeThemeName || "").toLowerCase() === "organic"
     readonly property int panelTopLeftRadius:     flattenScreenEdgeCorners && (shell.isTopBar || shell.isLeftBar)   ? 0 : surface.panelRadius
     readonly property int panelTopRightRadius:    flattenScreenEdgeCorners && (shell.isTopBar || shell.isRightBar)  ? 0 : surface.panelRadius
     readonly property int panelBottomLeftRadius:  flattenScreenEdgeCorners && (shell.isBottomBar || shell.isLeftBar)  ? 0 : surface.panelRadius
     readonly property int panelBottomRightRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isRightBar) ? 0 : surface.panelRadius
 
     readonly property bool cyberContinuousLine: surface.continuousBarMode
-                                               && String(shell.activeThemeName || "").toLowerCase() === "cyber"
-    readonly property bool cyberCenterFeature: String(shell.activeThemeName || "").toLowerCase() === "cyber"
+                                               && String(shell.activeThemeName || "").toLowerCase() === "modern"
+    readonly property bool cyberCenterFeature: String(shell.activeThemeName || "").toLowerCase() === "modern"
                                              && shell.isTopBar
-    readonly property bool cyberChrome:     String(shell.activeThemeName || "").toLowerCase() === "cyber"
-    readonly property bool oceanChrome:     String(shell.activeThemeName || "").toLowerCase() === "ocean"
-    readonly property bool spaceChrome:     String(shell.activeThemeName || "").toLowerCase() === "space"
-    readonly property bool botanicalChrome: String(shell.activeThemeName || "").toLowerCase() === "botanical"
-    readonly property bool rockyChrome:     String(shell.activeThemeName || "").toLowerCase() === "rocky"
-    readonly property bool animatedChrome:  String(shell.activeThemeName || "").toLowerCase() === "animated"
+    readonly property bool cyberChrome:     String(shell.activeThemeName || "").toLowerCase() === "modern"
+    readonly property bool oceanChrome:     String(shell.activeThemeName || "").toLowerCase() === "paper"
+    readonly property bool spaceChrome:     false
+    readonly property bool botanicalChrome: String(shell.activeThemeName || "").toLowerCase() === "organic"
+    readonly property bool rockyChrome:     String(shell.activeThemeName || "").toLowerCase() === "mono"
+    readonly property bool animatedChrome:  false
     readonly property int moduleSpacing: botanicalChrome ? 0 : shell.s(4)
     readonly property int centerGap: botanicalChrome ? 0 : shell.s(12)
+    readonly property string moduleFillColorName: surface.moduleFillColorName
+    readonly property string moduleHoverFillColorName: surface.moduleHoverFillColorName
+    readonly property string accentColorName: surface.accentColorName
+    readonly property string accentHotColorName: surface.accentHotColorName
+    readonly property string textHotColorName: surface.textHotColorName
+    readonly property real chromeBorderAlphaMultiplier: surface.chromeBorderAlphaMultiplier
+    readonly property bool showModuleTick: surface.showModuleTick
 
     readonly property color themeAccentBorderColor:
         oceanChrome     ? Qt.rgba(mocha.teal.r,  mocha.teal.g,  mocha.teal.b,  0.28) :

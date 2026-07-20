@@ -51,7 +51,7 @@
 
   /* === Aliassen voor brede website-compatibiliteit === */
   --accent:                     {{colors.primary.default.hex}};
-  --accent-color:               {{colors.primary.default.hex}};
+  --accent-color:               {{colors.secondary_accent.default.hex}};
   --text:                       {{colors.on_background.default.hex}};
   --text-color:                 {{colors.on_background.default.hex}};
   --bg:                         {{colors.background.default.hex}};
@@ -60,7 +60,7 @@
   --muted:                      {{colors.on_surface_variant.default.hex}};
   --border:                     {{colors.outline_variant.default.hex}};
   --border-color:               {{colors.outline_variant.default.hex}};
-  --link-color:                 {{colors.primary.default.hex}};
+  --link-color:                 {{colors.secondary_accent.default.hex}};
   --visited-color:              {{colors.secondary.default.hex}};
   --selection-bg:               {{colors.primary_container.default.hex}};
   --selection-color:            {{colors.on_primary_container.default.hex}};
