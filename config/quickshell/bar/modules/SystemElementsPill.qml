@@ -455,10 +455,10 @@ Rectangle {
             MouseArea { id: batMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) }
         }
 
-        // ── Power settings (geen batterij aanwezig) ────────────────────────
+        // ── Afsluitmenu ────────────────────────────────────────────────────
         Rectangle {
             id: powerPill
-            visible: shell.moduleList.includes("battery") && !shell.hasBattery
+            visible: true
             property bool isHovered: powerMouse.containsMouse
             color: ctx.cyberChrome
                    ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
@@ -484,7 +484,7 @@ Rectangle {
                 font.pixelSize: shell.s(16)
                 color: ctx.cyberChrome ? ctx.cyberTextColor : mocha.subtext0
             }
-            MouseArea { id: powerMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) }
+            MouseArea { id: powerMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle power"]) }
         }
     }
 

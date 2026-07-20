@@ -1225,6 +1225,64 @@ Item {
                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"])
             }
         }
+
+        Rectangle {
+            id: powerPill
+            property bool hovered: powerMouse.containsMouse
+            property real targetWidth: hovered ? root.hoverExpandedWidth : root.railWidth
+            Layout.fillWidth: false
+            Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
+            Layout.preferredWidth: targetWidth
+            Layout.preferredHeight: root.moduleHeight
+            Behavior on targetWidth { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+            clip: true
+            radius: surface.innerPillRadius
+            topLeftRadius: root.pillTopLeftRadius
+            topRightRadius: root.pillTopRightRadius
+            bottomLeftRadius: root.pillBottomLeftRadius
+            bottomRightRadius: root.pillBottomRightRadius
+            color: hovered ? surface.innerPillHoverColor : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58)
+            border.width: hovered ? 1 : 0
+            border.color: hovered ? Qt.rgba(mocha.red.r, mocha.red.g, mocha.red.b, 0.36) : "transparent"
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: root.moduleInnerMargin
+                spacing: root.moduleSpacing
+                Text {
+                    text: "󰐥"
+                    Layout.fillWidth: !powerPill.hovered
+                    Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+                    font.family: "Iosevka Nerd Font"
+                    font.pixelSize: shell.s(15)
+                    color: mocha.red
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                Text {
+                    visible: powerPill.hovered
+                    opacity: powerPill.hovered ? 1 : 0
+                    text: "Afsluitmenu"
+                    Layout.fillWidth: true
+                    font.family: shell.monoFontFamily
+                    font.pixelSize: shell.s(11)
+                    font.weight: shell.themeFontWeight
+                    font.letterSpacing: shell.themeLetterSpacing
+                    color: mocha.text
+                    elide: Text.ElideRight
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
+                }
+            }
+
+            MouseArea {
+                id: powerMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: root.railHoverEnter()
+                onExited: root.railHoverExit()
+                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle power"])
+            }
+        }
             }
         }
     }

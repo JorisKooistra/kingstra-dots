@@ -45,6 +45,8 @@ Rectangle {
     // de zijkanten, en sluit hij aan op de bogen in de omlijning.
     anchors.bottomMargin: flushBottom ? -(_strokeW + 2) : 0
     radius: squareCorners ? 0 : Math.max(14, ThemeConfig.styleWidgetRadius + 8)
+    topLeftRadius: radius
+    topRightRadius: radius
     bottomLeftRadius: flushBottom ? 0 : radius
     bottomRightRadius: flushBottom ? 0 : radius
     color: _defaultFill
@@ -70,6 +72,20 @@ Rectangle {
             GradientStop { position: 0.0; color: root._borderStart }
             GradientStop { position: 1.0; color: root._borderEnd }
         }
+    }
+
+    TopCornerStroke {
+        visible: root.flushBottom
+        z: 3
+        mirrorH: false
+        strokeColor: root._borderStart
+    }
+
+    TopCornerStroke {
+        visible: root.flushBottom
+        z: 3
+        mirrorH: true
+        strokeColor: root._borderEnd
     }
 
     Rectangle {
@@ -121,5 +137,43 @@ Rectangle {
     Behavior on scale {
         enabled: !root.flushBottom
         NumberAnimation { duration: ThemeConfig.durationToken("medium"); easing.type: ThemeConfig.easingToken("emphasized") }
+    }
+
+    component TopCornerStroke: Canvas {
+        id: corner
+        property bool mirrorH: false
+        property color strokeColor: root._defaultBorder
+
+        width: root.radius
+        height: root.radius
+        x: mirrorH ? root.width - root.radius : 0
+        y: 0
+        antialiasing: true
+
+        onMirrorHChanged: requestPaint()
+        onStrokeColorChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        Component.onCompleted: requestPaint()
+
+        onPaint: {
+            let ctx = getContext("2d");
+            let r = root.radius;
+            let half = root._strokeW / 2;
+            ctx.reset();
+            ctx.clearRect(0, 0, width, height);
+            ctx.save();
+            if (corner.mirrorH) {
+                ctx.translate(r, 0);
+                ctx.scale(-1, 1);
+            }
+            ctx.beginPath();
+            ctx.arc(r, r, Math.max(0, r - half), Math.PI, Math.PI * 1.5, false);
+            ctx.strokeStyle = corner.strokeColor;
+            ctx.lineWidth = root._strokeW;
+            ctx.lineCap = "butt";
+            ctx.stroke();
+            ctx.restore();
+        }
     }
 }

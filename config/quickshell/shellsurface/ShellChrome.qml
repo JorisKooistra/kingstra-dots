@@ -31,6 +31,8 @@ Item {
     // Dunne omlijning rechts/onder, zodat de content een volledig afgerond
     // kader krijgt (caelestia-stijl). Links/boven kosten al rail+strip.
     readonly property int shellBorderWidth: 8
+    readonly property int cornerStrokeWidth: 2
+    readonly property int cornerSeamOverlap: 3
     readonly property string styleFamily: String(ThemeConfig.styleFamily || "").toLowerCase()
     readonly property bool paperStyle: styleFamily === "paper"
     readonly property bool organicStyle: styleFamily === "organic"
@@ -458,13 +460,14 @@ Item {
 
         // Accent-"spine": twee wallpaper-hues over de binnenrand van de rail.
         Rectangle {
+            visible: !root.cornersActive
             width: 2
             anchors.top: parent.top
             // Boven de strip is dit een interne naad, geen buitenrand; daar
             // hoort geen lijn. De boog neemt het hoekstuk voor zijn rekening.
-            anchors.topMargin: root.cornersActive ? root.stripHeight + root.cornerR - 2 : 0
+            anchors.topMargin: root.cornersActive ? root.stripHeight + root.cornerR - root.cornerSeamOverlap : 0
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: root.cornersActive ? root.shellBorderWidth + root.cornerR - 2 : 0
+            anchors.bottomMargin: root.cornersActive ? root.shellBorderWidth + root.cornerR - root.cornerSeamOverlap : 0
             anchors.left: root.railOnRight ? parent.left : undefined
             anchors.right: root.railOnRight ? undefined : parent.right
             opacity: root.chromeAccentAlpha
@@ -647,6 +650,11 @@ Item {
                 accent: root.mocha.yellow
                 onTriggered: root.togglePanel("battery")
             }
+            RailButton { tooltip: "Afsluitmenu";
+                icon: "󰐥"
+                accent: root.mocha.red
+                onTriggered: root.togglePanel("power")
+            }
             RailButton { tooltip: "Instellingen";
                 visible: root.activeMode !== "media"
                 icon: "󰒓"
@@ -703,11 +711,12 @@ Item {
 
             // Accent-lijn: twee wallpaper-hues over de buitenrand van de strip.
             Rectangle {
+                visible: !root.cornersActive
                 height: 2
                 anchors.left: parent.left
-                anchors.leftMargin: root.cornersActive ? root.cornerR - 2 : 0
+                anchors.leftMargin: root.cornersActive ? root.cornerR - root.cornerSeamOverlap : 0
                 anchors.right: parent.right
-                anchors.rightMargin: root.cornersActive ? root.shellBorderWidth + root.cornerR - 2 : 0
+                anchors.rightMargin: root.cornersActive ? root.shellBorderWidth + root.cornerR - root.cornerSeamOverlap : 0
                 anchors.top: root.stripOnBottom ? parent.top : undefined
                 anchors.bottom: root.stripOnBottom ? undefined : parent.bottom
                 opacity: root.chromeAccentAlpha
@@ -836,6 +845,11 @@ Item {
                     accent: root.mocha.yellow
                     onTriggered: root.togglePanel("battery")
                 }
+                StripButton { tooltip: "Afsluitmenu";
+                    icon: "󰐥"
+                    accent: root.mocha.red
+                    onTriggered: root.togglePanel("power")
+                }
                 StripButton { tooltip: "Instellingen"; visible: !root.railEnabled && root.activeMode !== "media"; icon: "󰒓"; accent: root.mocha.subtext1; onTriggered: root.togglePanel("settings") }
             }
         }
@@ -862,12 +876,13 @@ Item {
         }
 
         Rectangle {
+            visible: !root.cornersActive
             width: 2
             anchors.left: parent.left
             anchors.top: parent.top
-            anchors.topMargin: root.cornerR - 2
+            anchors.topMargin: root.cornerR - root.cornerSeamOverlap
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: root.shellBorderWidth + root.cornerR - 2
+            anchors.bottomMargin: root.shellBorderWidth + root.cornerR - root.cornerSeamOverlap
             opacity: root.chromeAccentAlpha
             gradient: Gradient {
                 orientation: Gradient.Vertical
@@ -892,12 +907,13 @@ Item {
 
         // Linkerdeel: van de hoek linksonder tot waar de launcher begint.
         Rectangle {
+            visible: !root.cornersActive
             height: 2
             y: 0
-            x: root.cornerR - 2
+            x: root.cornerR - root.cornerSeamOverlap
             width: Math.max(0, (root.launcherOpen
-                    ? root.launcherX - root.railWidth - root.cornerR
-                    : parent.width - root.cornerR) - root.cornerR + 2 + (root.launcherOpen ? 1 : 0))
+                    ? root.launcherX - root.railWidth - root.cornerR + root.cornerSeamOverlap
+                    : parent.width - root.cornerR + root.cornerSeamOverlap) - x)
             opacity: root.chromeAccentAlpha
             gradient: Gradient {
                 orientation: Gradient.Horizontal
@@ -907,11 +923,11 @@ Item {
         }
         // Rechterdeel: pas nodig zodra de launcher de rand onderbreekt.
         Rectangle {
-            visible: root.launcherOpen
+            visible: !root.cornersActive && root.launcherOpen
             height: 2
             y: 0
-            x: root.launcherX + root.launcherWidth - root.railWidth + root.cornerR - 2
-            width: Math.max(0, parent.width - root.cornerR - x)
+            x: root.launcherX + root.launcherWidth - root.railWidth + root.cornerR - root.cornerSeamOverlap
+            width: Math.max(0, parent.width - root.cornerR + root.cornerSeamOverlap - x)
             opacity: root.chromeAccentAlpha
             gradient: Gradient {
                 orientation: Gradient.Horizontal
@@ -927,8 +943,9 @@ Item {
         mirrorH: true
         mirrorV: true
         visible: root.cornersActive && root.launcherOpen
-        x: root.launcherX - root.cornerR + 1
+        x: root.launcherX - root.cornerR
         y: root.height - root.shellBorderWidth - root.cornerR
+        drawStroke: false
         fillColor: root.launcherFillLeft
         accentColor: root.launcherHueLeft
         horizontalFillColor: root._bottomFillAt(root.launcherX)
@@ -941,6 +958,7 @@ Item {
         visible: root.cornersActive && root.launcherOpen
         x: root.launcherX + root.launcherWidth - 1
         y: root.height - root.shellBorderWidth - root.cornerR
+        drawStroke: false
         fillColor: root.launcherFillRight
         accentColor: root.launcherHueRight
         horizontalFillColor: root._bottomFillAt(root.launcherX + root.launcherWidth)
@@ -949,10 +967,28 @@ Item {
         verticalAccentColor: root.launcherHueRight
     }
 
+    LauncherConnectorStroke {
+        visible: root.cornersActive && root.launcherOpen
+        x: root.launcherX - root.cornerR - root.cornerSeamOverlap
+        y: root.height - root.shellBorderWidth - root.cornerR - root.cornerSeamOverlap
+        horizontalAccentColor: root._bottomHueAt(root.launcherX)
+        verticalAccentColor: root.launcherHueLeft
+    }
+
+    LauncherConnectorStroke {
+        visible: root.cornersActive && root.launcherOpen
+        mirrorH: true
+        x: root.launcherX + root.launcherWidth - root.cornerSeamOverlap
+        y: root.height - root.shellBorderWidth - root.cornerR - root.cornerSeamOverlap
+        horizontalAccentColor: root._bottomHueAt(root.launcherX + root.launcherWidth)
+        verticalAccentColor: root.launcherHueRight
+    }
+
     component InnerCorner: Canvas {
         id: ic
         property bool mirrorH: false
         property bool mirrorV: false
+        property bool drawStroke: true
         property color fillColor: root.barGradStart
         property color accentColor: root.barHueA
         property color horizontalFillColor: fillColor
@@ -995,17 +1031,79 @@ Item {
             ctx.fillStyle = fill;
             ctx.fill();
 
+            if (!ic.drawStroke) {
+                ctx.restore();
+                return;
+            }
+
             let stroke = ctx.createLinearGradient(r, 0, 0, r);
             stroke.addColorStop(0.0, Qt.rgba(ic.horizontalAccentColor.r, ic.horizontalAccentColor.g, ic.horizontalAccentColor.b,
                                              root.chromeAccentAlpha));
             stroke.addColorStop(1.0, Qt.rgba(ic.verticalAccentColor.r, ic.verticalAccentColor.g, ic.verticalAccentColor.b,
                                              root.chromeAccentAlpha));
+            let halfStroke = root.cornerStrokeWidth / 2;
             ctx.beginPath();
-            ctx.moveTo(r, 0);
-            ctx.arc(r, r, r, -Math.PI / 2, Math.PI, true);
+            ctx.moveTo(r, halfStroke);
+            ctx.arc(r, r, Math.max(0, r - halfStroke), -Math.PI / 2, Math.PI, true);
             ctx.strokeStyle = stroke;
-            ctx.lineWidth = 2;
-            ctx.lineCap = "butt";
+            ctx.lineWidth = root.cornerStrokeWidth;
+            ctx.lineCap = "square";
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    component LauncherConnectorStroke: Canvas {
+        id: connector
+        property bool mirrorH: false
+        property color horizontalAccentColor: root.barHueA
+        property color verticalAccentColor: root.barHueA
+
+        width: root.cornerR + root.cornerSeamOverlap * 2
+        height: root.cornerR + root.cornerSeamOverlap * 2
+        antialiasing: true
+        z: 12
+
+        onMirrorHChanged: requestPaint()
+        onHorizontalAccentColorChanged: requestPaint()
+        onVerticalAccentColorChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        Component.onCompleted: requestPaint()
+
+        onPaint: {
+            let ctx = getContext("2d");
+            let r = root.cornerR;
+            let o = root.cornerSeamOverlap;
+            let bottomY = r + o;
+            let sideX = r + o;
+            ctx.reset();
+            ctx.clearRect(0, 0, width, height);
+            ctx.save();
+            if (connector.mirrorH) {
+                ctx.translate(width, 0);
+                ctx.scale(-1, 1);
+            }
+
+            let stroke = ctx.createLinearGradient(0, bottomY, sideX, 0);
+            stroke.addColorStop(0.0, Qt.rgba(connector.horizontalAccentColor.r,
+                                             connector.horizontalAccentColor.g,
+                                             connector.horizontalAccentColor.b,
+                                             root.chromeAccentAlpha));
+            stroke.addColorStop(1.0, Qt.rgba(connector.verticalAccentColor.r,
+                                             connector.verticalAccentColor.g,
+                                             connector.verticalAccentColor.b,
+                                             root.chromeAccentAlpha));
+
+            ctx.beginPath();
+            ctx.moveTo(0, bottomY);
+            ctx.lineTo(o, bottomY);
+            ctx.arc(o, o, Math.max(0, r - root.cornerStrokeWidth / 2),
+                    Math.PI / 2, 0, true);
+            ctx.lineTo(sideX, 0);
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = root.cornerStrokeWidth;
+            ctx.lineCap = "square";
             ctx.stroke();
             ctx.restore();
         }
@@ -1017,6 +1115,7 @@ Item {
         visible: root.cornersActive
         x: root.railWidth - 1
         y: root.stripHeight - 1
+        drawStroke: false
         fillColor: root.barGradStart
         horizontalFillColor: root._stripFillAt(root.railWidth + root.cornerR)
         verticalFillColor: root._railFillAt(root.stripHeight + root.cornerR)
@@ -1028,6 +1127,7 @@ Item {
         mirrorH: true
         x: root.width - root.shellBorderWidth - root.cornerR + 1
         y: root.stripHeight - 1
+        drawStroke: false
         fillColor: root.barGradEnd
         accentColor: root.barHueB
         horizontalFillColor: root._stripFillAt(root.width - root.shellBorderWidth - root.cornerR)
@@ -1040,6 +1140,7 @@ Item {
         mirrorV: true
         x: root.railWidth - 1
         y: root.height - root.shellBorderWidth - root.cornerR + 1
+        drawStroke: false
         fillColor: root.barGradEnd
         accentColor: root.barHueB
         horizontalFillColor: root._bottomFillAt(root.railWidth + root.cornerR)
@@ -1053,12 +1154,235 @@ Item {
         mirrorV: true
         x: root.width - root.shellBorderWidth - root.cornerR + 1
         y: root.height - root.shellBorderWidth - root.cornerR + 1
+        drawStroke: false
         fillColor: root.barGradStart
         accentColor: root.barHueA
         horizontalFillColor: root._bottomFillAt(root.width - root.shellBorderWidth - root.cornerR)
         verticalFillColor: root._rightFillAt(root.height - root.shellBorderWidth - root.cornerR)
         horizontalAccentColor: root._bottomHueAt(root.width - root.shellBorderWidth - root.cornerR)
         verticalAccentColor: root._rightHueAt(root.height - root.shellBorderWidth - root.cornerR)
+    }
+
+    FrameCornerStroke {
+        visible: false
+        x: root.railWidth - 1 - root.cornerSeamOverlap
+        y: root.stripHeight - 1 - root.cornerSeamOverlap
+        horizontalAccentColor: root._stripHueAt(root.railWidth + root.cornerR)
+        verticalAccentColor: root._railHueAt(root.stripHeight + root.cornerR)
+    }
+
+    FrameCornerStroke {
+        visible: false
+        mirrorH: true
+        x: root.width - root.shellBorderWidth - root.cornerR + 1 - root.cornerSeamOverlap
+        y: root.stripHeight - 1 - root.cornerSeamOverlap
+        horizontalAccentColor: root._stripHueAt(root.width - root.shellBorderWidth - root.cornerR)
+        verticalAccentColor: root._rightHueAt(root.stripHeight + root.cornerR)
+    }
+
+    FrameCornerStroke {
+        visible: false
+        mirrorV: true
+        x: root.railWidth - 1 - root.cornerSeamOverlap
+        y: root.height - root.shellBorderWidth - root.cornerR + 1 - root.cornerSeamOverlap
+        horizontalAccentColor: root._bottomHueAt(root.railWidth + root.cornerR)
+        verticalAccentColor: root._railHueAt(root.height - root.shellBorderWidth - root.cornerR)
+    }
+
+    FrameCornerStroke {
+        visible: false
+        mirrorH: true
+        mirrorV: true
+        x: root.width - root.shellBorderWidth - root.cornerR + 1 - root.cornerSeamOverlap
+        y: root.height - root.shellBorderWidth - root.cornerR + 1 - root.cornerSeamOverlap
+        horizontalAccentColor: root._bottomHueAt(root.width - root.shellBorderWidth - root.cornerR)
+        verticalAccentColor: root._rightHueAt(root.height - root.shellBorderWidth - root.cornerR)
+    }
+
+    component FrameCornerStroke: Canvas {
+        id: frameCorner
+        property bool mirrorH: false
+        property bool mirrorV: false
+        property color horizontalAccentColor: root.barHueA
+        property color verticalAccentColor: root.barHueA
+
+        width: root.cornerR + root.cornerSeamOverlap * 2
+        height: root.cornerR + root.cornerSeamOverlap * 2
+        antialiasing: true
+        z: 11
+
+        onMirrorHChanged: requestPaint()
+        onMirrorVChanged: requestPaint()
+        onHorizontalAccentColorChanged: requestPaint()
+        onVerticalAccentColorChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        Component.onCompleted: requestPaint()
+
+        onPaint: {
+            let ctx = getContext("2d");
+            let r = root.cornerR;
+            let o = root.cornerSeamOverlap;
+            let halfStroke = root.cornerStrokeWidth / 2;
+            ctx.reset();
+            ctx.clearRect(0, 0, width, height);
+            ctx.save();
+            ctx.translate(frameCorner.mirrorH ? width - o : o,
+                          frameCorner.mirrorV ? height - o : o);
+            ctx.scale(frameCorner.mirrorH ? -1 : 1,
+                      frameCorner.mirrorV ? -1 : 1);
+
+            let stroke = ctx.createLinearGradient(r, 0, 0, r);
+            stroke.addColorStop(0.0, Qt.rgba(frameCorner.horizontalAccentColor.r,
+                                             frameCorner.horizontalAccentColor.g,
+                                             frameCorner.horizontalAccentColor.b,
+                                             root.chromeAccentAlpha));
+            stroke.addColorStop(1.0, Qt.rgba(frameCorner.verticalAccentColor.r,
+                                             frameCorner.verticalAccentColor.g,
+                                             frameCorner.verticalAccentColor.b,
+                                             root.chromeAccentAlpha));
+
+            ctx.beginPath();
+            ctx.moveTo(r + o, halfStroke);
+            ctx.lineTo(r, halfStroke);
+            ctx.arc(r, r, Math.max(0, r - halfStroke), -Math.PI / 2, Math.PI, true);
+            ctx.lineTo(halfStroke, r + o);
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = root.cornerStrokeWidth;
+            ctx.lineCap = "square";
+            ctx.lineJoin = "round";
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    Canvas {
+        id: frameOutline
+        visible: root.cornersActive
+        anchors.fill: parent
+        antialiasing: true
+        z: 11
+
+        onVisibleChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        Connections {
+            target: root
+            function onLauncherOpenChanged() { frameOutline.requestPaint(); }
+            function onLauncherXChanged() { frameOutline.requestPaint(); }
+            function onLauncherWidthChanged() { frameOutline.requestPaint(); }
+        }
+
+        onPaint: {
+            let ctx = getContext("2d");
+            let r = root.cornerR;
+            let sw = root.cornerStrokeWidth;
+            let half = sw / 2;
+            let over = root.cornerSeamOverlap;
+            let left = root.railWidth - half;
+            let top = root.stripHeight - half;
+            let right = root.width - root.shellBorderWidth + half;
+            let bottom = root.height - root.shellBorderWidth + half;
+
+            function rgba(c) {
+                return Qt.rgba(c.r, c.g, c.b, root.chromeAccentAlpha);
+            }
+
+            function strokePath(pathFn, gradient) {
+                ctx.beginPath();
+                pathFn();
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = sw;
+                ctx.lineCap = "square";
+                ctx.lineJoin = "round";
+                ctx.stroke();
+            }
+
+            ctx.reset();
+            ctx.clearRect(0, 0, width, height);
+
+            let topGrad = ctx.createLinearGradient(left + r, top, right - r, top);
+            topGrad.addColorStop(0.0, rgba(root._stripHueAt(left + r)));
+            topGrad.addColorStop(1.0, rgba(root._stripHueAt(right - r)));
+
+            let rightGrad = ctx.createLinearGradient(right, top + r, right, bottom - r);
+            rightGrad.addColorStop(0.0, rgba(root._rightHueAt(top + r)));
+            rightGrad.addColorStop(1.0, rgba(root._rightHueAt(bottom - r)));
+
+            let bottomGrad = ctx.createLinearGradient(left + r, bottom, right - r, bottom);
+            bottomGrad.addColorStop(0.0, rgba(root._bottomHueAt(left + r)));
+            bottomGrad.addColorStop(1.0, rgba(root._bottomHueAt(right - r)));
+
+            let leftGrad = ctx.createLinearGradient(left, top + r, left, bottom - r);
+            leftGrad.addColorStop(0.0, rgba(root._railHueAt(top + r)));
+            leftGrad.addColorStop(1.0, rgba(root._railHueAt(bottom - r)));
+
+            let tlGrad = ctx.createLinearGradient(left + r, top, left, top + r);
+            tlGrad.addColorStop(0.0, rgba(root._stripHueAt(left + r)));
+            tlGrad.addColorStop(1.0, rgba(root._railHueAt(top + r)));
+
+            let trGrad = ctx.createLinearGradient(right - r, top, right, top + r);
+            trGrad.addColorStop(0.0, rgba(root._stripHueAt(right - r)));
+            trGrad.addColorStop(1.0, rgba(root._rightHueAt(top + r)));
+
+            let brGrad = ctx.createLinearGradient(right - r, bottom, right, bottom - r);
+            brGrad.addColorStop(0.0, rgba(root._bottomHueAt(right - r)));
+            brGrad.addColorStop(1.0, rgba(root._rightHueAt(bottom - r)));
+
+            let blGrad = ctx.createLinearGradient(left + r, bottom, left, bottom - r);
+            blGrad.addColorStop(0.0, rgba(root._bottomHueAt(left + r)));
+            blGrad.addColorStop(1.0, rgba(root._railHueAt(bottom - r)));
+
+            strokePath(function() {
+                ctx.moveTo(left + r - over, top);
+                ctx.arc(left + r, top + r, r, Math.PI * 1.5, Math.PI, true);
+                ctx.lineTo(left, top + r + over);
+            }, tlGrad);
+
+            strokePath(function() {
+                ctx.moveTo(left + r - over, top);
+                ctx.lineTo(right - r + over, top);
+            }, topGrad);
+
+            strokePath(function() {
+                ctx.moveTo(right - r - over, top);
+                ctx.arc(right - r, top + r, r, Math.PI * 1.5, 0, false);
+                ctx.lineTo(right, top + r + over);
+            }, trGrad);
+
+            strokePath(function() {
+                ctx.moveTo(right, top + r - over);
+                ctx.lineTo(right, bottom - r + over);
+            }, rightGrad);
+
+            strokePath(function() {
+                ctx.moveTo(right, bottom - r - over);
+                ctx.arc(right - r, bottom - r, r, 0, Math.PI / 2, false);
+                ctx.lineTo(right - r - over, bottom);
+            }, brGrad);
+
+            strokePath(function() {
+                ctx.moveTo(left + r - over, bottom);
+                if (root.launcherOpen) {
+                    let cutL = Math.max(left + r, root.launcherX);
+                    let cutR = Math.min(right - r, root.launcherX + root.launcherWidth);
+                    ctx.lineTo(cutL + over, bottom);
+                    ctx.moveTo(cutR - over, bottom);
+                }
+                ctx.lineTo(right - r + over, bottom);
+            }, bottomGrad);
+
+            strokePath(function() {
+                ctx.moveTo(left + r + over, bottom);
+                ctx.arc(left + r, bottom - r, r, Math.PI / 2, Math.PI, false);
+                ctx.lineTo(left, bottom - r - over);
+            }, blGrad);
+
+            strokePath(function() {
+                ctx.moveTo(left, bottom - r + over);
+                ctx.lineTo(left, top + r - over);
+            }, leftGrad);
+        }
     }
 
     // --- Hover-tooltip -------------------------------------------------------

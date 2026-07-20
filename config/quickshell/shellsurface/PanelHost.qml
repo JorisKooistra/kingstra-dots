@@ -11,11 +11,13 @@ Item {
     property string sourceEntryId: ""
     property bool open: sourceEntryId !== ""
     property real openProgress: open ? 1.0 : 0.0
+    onSourceEntryIdChanged: syncActiveWidgetState()
     readonly property bool isRailDrawer: sourceEntryId === "performance"
     readonly property bool isCentered: sourceEntryId === "calendar"
                                       || sourceEntryId === "focustime"
-                                      || sourceEntryId === "monitors"
-                                      || sourceEntryId === "settings"
+                                          || sourceEntryId === "monitors"
+                                          || sourceEntryId === "settings"
+                                          || sourceEntryId === "power"
     readonly property bool fromRail: ThemeConfig.barRailEnabled
                                      && (sourceEntryId === "battery"
                                          || sourceEntryId === "network"
@@ -25,10 +27,12 @@ Item {
                                          || sourceEntryId === "monitors"
                                          || sourceEntryId === "performance"
                                          || sourceEntryId === "gaming"
-                                         || sourceEntryId === "settings")
+                                         || sourceEntryId === "settings"
+                                         || sourceEntryId === "power")
     readonly property bool fromRailBottom: sourceEntryId === "battery"
                                            || sourceEntryId === "network"
                                            || sourceEntryId === "volume"
+                                           || sourceEntryId === "power"
     readonly property bool railOnRight: ThemeConfig.barRailEdge === "right"
     readonly property bool stripOnBottom: ThemeConfig.barStatusStripEdge === "bottom"
 
@@ -54,6 +58,15 @@ Item {
     readonly property bool fromStrip: ThemeConfig.barStatusStripEnabled && !stripOnBottom
                                       && anchorY < ThemeConfig.barStatusStripHeight + 4
     function _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    function syncActiveWidgetState() {
+        Quickshell.execDetached([
+            "sh",
+            "-c",
+            "printf '%s' \"$1\" > /tmp/qs_active_widget",
+            "qs-active",
+            root.sourceEntryId === "" ? "hidden" : root.sourceEntryId
+        ]);
+    }
 
     MatugenColors { id: mocha }
 
@@ -68,6 +81,7 @@ Item {
         if (entryId === "settings") return Math.min(1200, available - 48);
         if (entryId === "gaming") return Math.min(720, available - 48);
         if (entryId === "launcher") return Math.min(620, available - 48);
+        if (entryId === "power") return Math.min(360, available - 32);
         if (entryId === "volume") return Math.min(420, available - 32);
         return Math.min(460, available - 32);
     }
@@ -80,6 +94,7 @@ Item {
         if (entryId === "music") return Math.min(560, available - 72);
         if (entryId === "monitors") return Math.min(540, available - 72);
         if (entryId === "launcher") return Math.min(560, available - 72);
+        if (entryId === "power") return Math.min(430, available - 72);
         if (entryId === "volume") return Math.min(460, available - 72);
         if (entryId === "performance") {
             let strip = ThemeConfig.barStatusStripEnabled ? ThemeConfig.barStatusStripHeight : 0;
@@ -102,6 +117,7 @@ Item {
         if (entryId === "performance") return Qt.resolvedUrl("PerformanceDrawer.qml");
         if (entryId === "gaming") return Qt.resolvedUrl("../monitors/GamingPopup.qml");
         if (entryId === "settings") return Qt.resolvedUrl("../settings/SettingsPopup.qml");
+        if (entryId === "power") return Qt.resolvedUrl("../power/PowerMenu.qml");
         return "";
     }
 

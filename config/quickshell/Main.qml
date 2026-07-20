@@ -282,7 +282,7 @@ PanelWindow {
             masterWindow.syncFocusedMonitorBounds();
         }
 
-        let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "gaming", "settings"];
+        let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "gaming", "settings", "power"];
         if (ThemeConfig.barZoneSchemaLoaded && cmd === "close") {
             switchWidget("hidden", "");
             return;

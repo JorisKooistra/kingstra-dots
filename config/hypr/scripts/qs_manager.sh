@@ -18,6 +18,11 @@ qs_ipc_send() {
     printf '%s:%s\n' "$1" "$RANDOM" > /tmp/qs_widget_state
 }
 
+qs_ipc_close() {
+    qs_ipc_send "close"
+    printf 'hidden' > /tmp/qs_active_widget
+}
+
 ACTION="$1"
 TARGET="$2"
 SUBTARGET="$3"
@@ -44,7 +49,7 @@ hide_widget_async() {
     local prev_addr="$1"
     # Writing "close" to the state file triggers Main.qml FileView watcher,
     # which unmaps the WlrLayer.Overlay PanelWindow. No hyprctl dispatch needed.
-    qs_ipc_send "close"
+    qs_ipc_close
 
     # Restore focus to the previously active window (layer-shell exclusive focus
     # may hold it until the surface unmaps; give it a short head-start).
@@ -137,7 +142,7 @@ if [[ "$ACTION" == "workspace" && "$TARGET" =~ ^[0-9]+$ ]]; then
     TARGET_WS="$TARGET"
     MOVE_OPT="$SUBTARGET"
 
-    qs_ipc_send "close"
+    qs_ipc_close
     dispatch_workspace_target "$TARGET_WS" "$MOVE_OPT"
     rm -f "$PREV_FOCUS_FILE"
     exit 0
@@ -151,7 +156,7 @@ if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
         CURRENT_WS=1
     fi
     TARGET_WS=$(( ((CURRENT_WS - 1) / 10) * 10 + WORKSPACE_NUM ))
-    qs_ipc_send "close"
+    qs_ipc_close
     dispatch_workspace_target "$TARGET_WS" "$MOVE_OPT"
     rm -f "$PREV_FOCUS_FILE"
     exit 0
@@ -238,11 +243,10 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     # Surface-native panelen leven in de shell-surface en hebben de legacy
     # qs-master focus-machinerie niet nodig. Die zou hier juist de
     # HyprlandFocusGrab verbreken, waardoor het paneel direct weer sluit.
-    SURFACE_NATIVE=" launcher "
+    SURFACE_NATIVE=" launcher power "
     if [[ "$SURFACE_NATIVE" == *" $TARGET "* ]]; then
         if [[ "$ACTION" == "toggle" && "$ACTIVE_WIDGET" == "$TARGET" ]]; then
-            qs_ipc_send "close"
-            printf 'hidden' > /tmp/qs_active_widget
+            qs_ipc_close
         else
             qs_ipc_send "$TARGET"
             printf '%s' "$TARGET" > /tmp/qs_active_widget

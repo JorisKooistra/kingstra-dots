@@ -27,6 +27,9 @@ Item {
     }
     readonly property color rowHover: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.16)
     readonly property color rowActive: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.28)
+    readonly property int panelCornerRadius: Math.max(18, ThemeConfig.styleWidgetRadius + 8)
+    readonly property int controlCornerRadius: Math.max(12, Math.round(panelCornerRadius * 0.62))
+    readonly property int rowCornerRadius: Math.max(12, Math.round(panelCornerRadius * 0.56))
 
     readonly property var filtered: {
         let q = query.trim().toLowerCase();
@@ -94,7 +97,7 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 42
-            radius: Math.max(10, ThemeConfig.styleWidgetRadius + 6)
+            radius: root.controlCornerRadius
             color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.10)
             border.width: 1
             border.color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.35)
@@ -161,7 +164,7 @@ Item {
 
                 width: appList.width
                 height: 46
-                radius: Math.max(8, ThemeConfig.styleWidgetRadius + 4)
+                radius: root.rowCornerRadius
                 color: current ? root.rowActive : (rowMouse.containsMouse ? root.rowHover : "transparent")
 
                 Behavior on color {
