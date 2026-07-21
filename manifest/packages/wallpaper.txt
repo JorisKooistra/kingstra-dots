@@ -2,9 +2,6 @@
 # manifest/packages/wallpaper.txt — Wallpaperlaag
 # =============================================================================
 
-# Statische wallpaper-backend
-aur:awww
-
 # Beeldverwerking voor matugen + thumbnails
 imagemagick
 ffmpeg

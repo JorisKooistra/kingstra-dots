@@ -527,9 +527,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: window.s(20)
-            color: window.crust
-            border.color: Qt.alpha(window.surface1, 0.2)
-            border.width: 1
+            color: "transparent"
+            border.width: 0
             clip: true
 
             Rectangle {

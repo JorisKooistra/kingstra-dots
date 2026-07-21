@@ -8,6 +8,7 @@
 set -euo pipefail
 
 LOG_PREFIX="[kingstra-resume]"
+export QML_IMPORT_PATH="$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
 _log()  { echo "$LOG_PREFIX $*" | systemd-cat --identifier=kingstra-resume 2>/dev/null || echo "$LOG_PREFIX $*"; }
 _run_timeout() {
     local seconds="$1"
@@ -81,9 +82,10 @@ fi
 # ---------------------------------------------------------------------------
 # 6 — Wallpaper-backend herstellen (kan sterven na suspend)
 # ---------------------------------------------------------------------------
-if command -v awww-daemon &>/dev/null && ! pgrep -x awww-daemon &>/dev/null; then
-    _log "awww-daemon niet actief — herstart..."
-    _spawn_detached awww-daemon
+# skwd is de enige wallpaper-renderer (awww is uit de pipeline verwijderd).
+if command -v skwd &>/dev/null && ! pgrep -f skwd-daemon &>/dev/null; then
+    _log "skwd-daemon niet actief — herstart..."
+    systemctl --user start skwd-daemon.service >/dev/null 2>&1 || true
     sleep 0.8
     if command -v kingstra-wallpaper &>/dev/null; then
         _run_timeout 6 kingstra-wallpaper reload

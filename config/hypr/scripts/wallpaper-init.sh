@@ -24,16 +24,13 @@ if command -v kingstra-wallpaper &>/dev/null; then
 fi
 
 # ---------------------------------------------------------------------------
-# Pad 2 — Fallback: minimale awww-aanroep zonder orchestrator
+# Pad 2 — Fallback: minimale skwd-aanroep zonder orchestrator
 # ---------------------------------------------------------------------------
 _set_wallpaper() {
     local file="$1"
-    if command -v awww &>/dev/null; then
-        if ! pgrep -x awww-daemon >/dev/null 2>&1 && command -v awww-daemon >/dev/null 2>&1; then
-            awww-daemon >/dev/null 2>&1 &
-            sleep 0.5
-        fi
-        awww img "$file" >/dev/null 2>&1 || true
+    if command -v skwd &>/dev/null; then
+        systemctl --user start skwd-daemon.service >/dev/null 2>&1 || true
+        skwd wall apply "{\"path\":\"$file\"}" >/dev/null 2>&1 || true
     fi
 }
 

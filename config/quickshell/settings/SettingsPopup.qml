@@ -903,6 +903,7 @@ Item {
             "if [ ! -f \"$HOME/.config/quickshell/TopBar.qml\" ]; then echo 'TopBar.qml niet gevonden' >&2; exit 1; fi; " +
             "pkill -f 'quickshell.*[T]opBar.qml' >/dev/null 2>&1 || true; " +
             "sleep 0.2; " +
+            "export QML_IMPORT_PATH=\"$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}\"; " +
             "nohup quickshell -p \"$HOME/.config/quickshell/TopBar.qml\" >/dev/null 2>&1 &"
         ];
         topbarReloadProc.running = true;
@@ -1089,7 +1090,7 @@ Item {
 
     function restartQuickshell() {
         advancedStatusText = "Quickshell herstart aangevraagd";
-        Quickshell.execDetached(["bash", "-lc", "pkill -f 'quickshell.*TopBar.qml' >/dev/null 2>&1 || true; pkill -f 'quickshell.*Main.qml' >/dev/null 2>&1 || true; sleep 0.3; quickshell -p '$HOME/.config/quickshell/TopBar.qml' >/dev/null 2>&1 & quickshell -p '$HOME/.config/quickshell/Main.qml' >/dev/null 2>&1 &"]);
+        Quickshell.execDetached(["bash", "-lc", "pkill -f 'quickshell.*TopBar.qml' >/dev/null 2>&1 || true; pkill -f 'quickshell.*Main.qml' >/dev/null 2>&1 || true; sleep 0.3; export QML_IMPORT_PATH=\"$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}\"; quickshell -p '$HOME/.config/quickshell/TopBar.qml' >/dev/null 2>&1 & quickshell -p '$HOME/.config/quickshell/Main.qml' >/dev/null 2>&1 &"]);
         notify("Advanced", "Quickshell wordt herstart");
     }
 

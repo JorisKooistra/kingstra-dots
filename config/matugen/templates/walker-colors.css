@@ -15,6 +15,18 @@
   --tertiary-container:         {{colors.tertiary_container.default.hex}};
   --on-tertiary-container:      {{colors.on_tertiary_container.default.hex}};
 
+  --accent2-source:             {{colors.secondary_accent_source.default.hex}};
+  --accent2:                    {{colors.secondary_accent.default.hex}};
+  --on-accent2:                 {{colors.on_secondary_accent.default.hex}};
+  --accent2-container:          {{colors.secondary_accent_container.default.hex}};
+  --on-accent2-container:       {{colors.on_secondary_accent_container.default.hex}};
+
+  --accent3-source:             {{colors.tertiary_accent_source.default.hex}};
+  --accent3:                    {{colors.tertiary_accent.default.hex}};
+  --on-accent3:                 {{colors.on_tertiary_accent.default.hex}};
+  --accent3-container:          {{colors.tertiary_accent_container.default.hex}};
+  --on-accent3-container:       {{colors.on_tertiary_accent_container.default.hex}};
+
   --error:                      {{colors.error.default.hex}};
   --on-error:                   {{colors.on_error.default.hex}};
   --error-container:            {{colors.error_container.default.hex}};
@@ -41,4 +53,6 @@
   --base:                       {{colors.background.default.hex}};
   --mantle:                     {{colors.surface_container_lowest.default.hex}};
   --crust:                      {{colors.shadow.default.hex}};
+  --accent:                     {{colors.secondary_accent.default.hex}};
+  --accent-alt:                 {{colors.tertiary_accent.default.hex}};
 }

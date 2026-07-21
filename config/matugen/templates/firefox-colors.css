@@ -20,6 +20,18 @@
   --tertiary-container:         {{colors.tertiary_container.default.hex}};
   --on-tertiary-container:      {{colors.on_tertiary_container.default.hex}};
 
+  /* === Extra wallpaper-samples === */
+  --accent2-source:             {{colors.secondary_accent_source.default.hex}};
+  --accent2:                    {{colors.secondary_accent.default.hex}};
+  --on-accent2:                 {{colors.on_secondary_accent.default.hex}};
+  --accent2-container:          {{colors.secondary_accent_container.default.hex}};
+  --on-accent2-container:       {{colors.on_secondary_accent_container.default.hex}};
+  --accent3-source:             {{colors.tertiary_accent_source.default.hex}};
+  --accent3:                    {{colors.tertiary_accent.default.hex}};
+  --on-accent3:                 {{colors.on_tertiary_accent.default.hex}};
+  --accent3-container:          {{colors.tertiary_accent_container.default.hex}};
+  --on-accent3-container:       {{colors.on_tertiary_accent_container.default.hex}};
+
   /* === Fout- en statuskleuren === */
   --error:                      {{colors.error.default.hex}};
   --on-error:                   {{colors.on_error.default.hex}};
@@ -52,6 +64,7 @@
   /* === Aliassen voor brede website-compatibiliteit === */
   --accent:                     {{colors.primary.default.hex}};
   --accent-color:               {{colors.secondary_accent.default.hex}};
+  --accent-alt:                 {{colors.tertiary_accent.default.hex}};
   --text:                       {{colors.on_background.default.hex}};
   --text-color:                 {{colors.on_background.default.hex}};
   --bg:                         {{colors.background.default.hex}};
@@ -61,11 +74,11 @@
   --border:                     {{colors.outline_variant.default.hex}};
   --border-color:               {{colors.outline_variant.default.hex}};
   --link-color:                 {{colors.secondary_accent.default.hex}};
-  --visited-color:              {{colors.secondary.default.hex}};
+  --visited-color:              {{colors.tertiary_accent.default.hex}};
   --selection-bg:               {{colors.primary_container.default.hex}};
   --selection-color:            {{colors.on_primary_container.default.hex}};
-  --success:                    {{colors.tertiary.default.hex}};
-  --warning:                    {{colors.on_tertiary_container.default.hex}};
+  --success:                    {{colors.secondary_accent.default.hex}};
+  --warning:                    {{colors.tertiary_accent.default.hex}};
   --danger:                     {{colors.error.default.hex}};
   --info:                       {{colors.primary.default.hex}};
 
@@ -77,9 +90,9 @@
   --code-bg:                    {{colors.surface_container.default.hex}};
   --code-color:                 {{colors.on_surface.default.hex}};
   --keyword:                    {{colors.primary.default.hex}};
-  --string:                     {{colors.tertiary.default.hex}};
+  --string:                     {{colors.secondary_accent.default.hex}};
   --comment:                    {{colors.on_surface_variant.default.hex}};
-  --number:                     {{colors.secondary.default.hex}};
+  --number:                     {{colors.tertiary_accent.default.hex}};
   --function:                   {{colors.on_primary_container.default.hex}};
 
   /* === Microsoft Fluent / Outlook tokens (mail + calendar) === */

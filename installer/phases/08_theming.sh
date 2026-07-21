@@ -68,6 +68,8 @@ phase_run() {
     validate_file "$HOME/.local/bin/kingstra-mode-read"           "kingstra-mode-read"
     validate_file "$HOME/.local/bin/kingstra-color-transform"     "kingstra-color-transform"
     validate_file "$HOME/.local/bin/kingstra-matugen-run"         "kingstra-matugen-run"
+    validate_file "$HOME/.local/bin/kingstra-idle-apply"          "kingstra-idle-apply"
+    validate_file "$HOME/.local/bin/kingstra-idle-inhibit"        "kingstra-idle-inhibit"
     validate_file "$HOME/.local/bin/kingstra-wallhaven-tags"      "kingstra-wallhaven-tags"
     validate_dir  "$HOME/.config/kingstra/themes"                 "kingstra/themes/"
     validate_dir  "$HOME/.config/kingstra/modes"                  "kingstra/modes/"
@@ -141,6 +143,8 @@ _phase08_deploy_state_scripts() {
         ["apply-shell-state"]="apply-shell-state"
         ["kingstra-color-transform"]="kingstra-color-transform"
         ["kingstra-matugen-run"]="kingstra-matugen-run"
+        ["kingstra-idle-apply"]="kingstra-idle-apply"
+        ["kingstra-idle-inhibit"]="kingstra-idle-inhibit"
         ["kingstra-touch-detect"]="kingstra-touch-detect"
         ["kingstra-wallhaven-tags"]="kingstra-wallhaven-tags"
     )
@@ -153,7 +157,7 @@ _phase08_deploy_state_scripts() {
         chmod +x "$src"
     done
 
-    log_ok "State-scripts beschikbaar: kingstra-state-read/write, kingstra-session-start/update, apply-shell-state, kingstra-color-transform, kingstra-matugen-run, kingstra-touch-detect, kingstra-wallhaven-tags"
+    log_ok "State-scripts beschikbaar: kingstra-state-read/write, kingstra-session-start/update, apply-shell-state, kingstra-color-transform, kingstra-matugen-run, kingstra-idle-apply/inhibit, kingstra-touch-detect, kingstra-wallhaven-tags"
 }
 
 _phase08_deploy_mode_scripts() {

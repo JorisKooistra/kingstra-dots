@@ -55,11 +55,13 @@ if ! $RELOAD_ONLY; then
     mkdir -p "$(dirname "$STATE_FILE")"
     echo "$WALLPAPER" > "$STATE_FILE"
 
-    # awww static wallpaper backend
-    if command -v awww &>/dev/null; then
-        awww img "$WALLPAPER" --transition-type random 2>/dev/null || \
-        awww img "$WALLPAPER" 2>/dev/null || true
-        _log "Wallpaper ingesteld via awww"
+    # skwd is de enige wallpaper-renderer; awww is uit de pipeline verwijderd.
+    if command -v skwd &>/dev/null; then
+        skwd wall apply "{\"path\":\"$WALLPAPER\"}" >/dev/null 2>&1 \
+            && _log "Wallpaper ingesteld via skwd" \
+            || _warn "skwd kon wallpaper niet instellen: $WALLPAPER"
+    else
+        _warn "skwd niet gevonden — wallpaper niet gewisseld"
     fi
 fi
 

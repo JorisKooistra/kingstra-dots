@@ -1,4 +1,5 @@
 import QtQuick
+import Kingstra.Blobs 1.0
 import ".."
 
 Rectangle {
@@ -9,6 +10,7 @@ Rectangle {
     // Vlak op de schermrand landen: onderhoeken vierkant en de barkleur
     // overnemen, zodat het paneel uit de omlijning lijkt te groeien.
     property bool flushBottom: false
+    property string edge: flushBottom ? "bottom" : ""
     property color fillOverride: "transparent"
     property color fillStartOverride: "transparent"
     property color fillEndOverride: "transparent"
@@ -17,6 +19,17 @@ Rectangle {
     property color borderEndOverride: "transparent"
     property int bottomConnectorRadius: Math.max(14, ThemeConfig.styleWidgetRadius + 8)
     property int bottomConnectorLift: 0
+    property int sideConnectorOverlap: 0
+    property var blobGroup: null
+    readonly property bool nativeBlob: edge !== "" && blobGroup !== null
+    readonly property var nativeDeformMatrix: nativePanelBlob.deformMatrix
+    readonly property int edgeOverlap: nativeBlob
+        ? (edge === "left" || edge === "right"
+            ? Math.max(sideConnectorOverlap, _strokeW + 2)
+            : Math.max(bottomConnectorRadius,
+                       edge === "top" ? ThemeConfig.barStatusStripHeight : bottomConnectorRadius,
+                       _strokeW + 2))
+        : (_strokeW + 2)
 
     // Zelfde matugen-tint als de bar-chrome: mantle/crust is in veel paletten
     // bijna zwart, waardoor panelen ongethematiseerd oogden naast de bar.
@@ -37,31 +50,52 @@ Rectangle {
         : Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.32)
     readonly property color _borderStart: borderStartOverride.a > 0 ? borderStartOverride : _defaultBorder
     readonly property color _borderEnd: borderEndOverride.a > 0 ? borderEndOverride : _defaultBorder
-    readonly property int _strokeW: flushBottom ? 2 : border.width
+    readonly property int _strokeW: (flushBottom || nativeBlob) ? 2 : border.width
 
     anchors.fill: parent
     // Bij flushBottom rekt het vlak onder de host uit; PanelHost clipt, dus de
     // onderste randlijn valt weg. Zo loopt de accentrand alleen over de top en
     // de zijkanten, en sluit hij aan op de bogen in de omlijning.
-    anchors.bottomMargin: flushBottom ? -(_strokeW + 2) : 0
+    anchors.leftMargin: edge === "left" ? -edgeOverlap : 0
+    anchors.rightMargin: edge === "right" ? -edgeOverlap : 0
+    anchors.topMargin: edge === "top" ? -edgeOverlap : 0
+    anchors.bottomMargin: (edge === "bottom" || flushBottom) ? -edgeOverlap : 0
     radius: squareCorners ? 0 : Math.max(14, ThemeConfig.styleWidgetRadius + 8)
     topLeftRadius: radius
     topRightRadius: radius
-    bottomLeftRadius: flushBottom ? 0 : radius
-    bottomRightRadius: flushBottom ? 0 : radius
-    color: _defaultFill
+    bottomLeftRadius: edge === "bottom" || edge === "left" ? 0 : radius
+    bottomRightRadius: edge === "bottom" || edge === "right" ? 0 : radius
+    color: nativeBlob ? "transparent" : _defaultFill
     gradient: Gradient {
         orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: root._fillStart }
-        GradientStop { position: 1.0; color: root._fillEnd }
+        GradientStop { position: 0.0; color: root.nativeBlob ? "transparent" : root._fillStart }
+        GradientStop { position: 1.0; color: root.nativeBlob ? "transparent" : root._fillEnd }
     }
-    border.width: flushBottom ? 0 : 1
+    border.width: nativeBlob || flushBottom ? 0 : 1
     border.color: _defaultBorder
     opacity: open ? 1.0 : 0.0
     scale: flushBottom ? 1.0 : (open ? 1.0 : 0.98)
 
+    BlobRect {
+        id: nativePanelBlob
+
+        anchors.fill: parent
+        visible: root.nativeBlob
+        group: root.blobGroup
+        radius: root.radius
+        topLeftRadius: root.edge === "top" || root.edge === "left" ? 0 : -1
+        topRightRadius: root.edge === "top" || root.edge === "right" ? 0 : -1
+        bottomLeftRadius: root.edge === "bottom" || root.edge === "left" ? 0 : -1
+        bottomRightRadius: root.edge === "bottom" || root.edge === "right" ? 0 : -1
+        deformScale: 0.00001
+    }
+
+    // De accentrand van een native blob komt volledig uit de blob-shader (band
+    // op de samengesmolten SDF). De vroegere Canvas-outline hier tekende er
+    // een losse rechthoek overheen en is verwijderd.
+
     Rectangle {
-        visible: root.flushBottom
+        visible: root.flushBottom && !root.nativeBlob
         z: 3
         x: root.radius
         y: 0
@@ -75,21 +109,21 @@ Rectangle {
     }
 
     TopCornerStroke {
-        visible: root.flushBottom
+        visible: root.flushBottom && !root.nativeBlob
         z: 3
         mirrorH: false
         strokeColor: root._borderStart
     }
 
     TopCornerStroke {
-        visible: root.flushBottom
+        visible: root.flushBottom && !root.nativeBlob
         z: 3
         mirrorH: true
         strokeColor: root._borderEnd
     }
 
     Rectangle {
-        visible: root.flushBottom
+        visible: root.flushBottom && !root.nativeBlob
         z: 3
         x: 0
         y: root.radius
@@ -99,7 +133,7 @@ Rectangle {
     }
 
     Rectangle {
-        visible: root.flushBottom
+        visible: root.flushBottom && !root.nativeBlob
         z: 3
         width: root._strokeW
         x: root.width - width
@@ -112,7 +146,7 @@ Rectangle {
     // Hide the straight panel sides inside that connector zone, otherwise the
     // launcher reads as a separate rectangle sitting on top of the bar.
     Rectangle {
-        visible: root.flushBottom
+        visible: root.flushBottom && !root.nativeBlob
         z: 2
         x: 0
         y: Math.max(0, root.height - root.bottomConnectorRadius - root.bottomConnectorLift - root._strokeW)
@@ -122,7 +156,7 @@ Rectangle {
     }
 
     Rectangle {
-        visible: root.flushBottom
+        visible: root.flushBottom && !root.nativeBlob
         z: 2
         width: root._strokeW + 1
         x: root.width - width

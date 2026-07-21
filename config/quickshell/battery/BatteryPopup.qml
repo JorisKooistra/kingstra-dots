@@ -239,9 +239,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: window.themedRadius
-            color: window.popupFill
-            border.color: window.surface0 // Back to neutral so it doesn't clash
-            border.width: Math.max(1, ThemeConfig.borderWidth)
+            color: "transparent"
+            border.width: 0
             clip: true
 
             // Rotating Background Blobs

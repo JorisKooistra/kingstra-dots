@@ -14,6 +14,18 @@
 @define-color tertiary-container        {{colors.tertiary_container.default.hex}};
 @define-color on-tertiary-container     {{colors.on_tertiary_container.default.hex}};
 
+@define-color accent2-source            {{colors.secondary_accent_source.default.hex}};
+@define-color accent2                   {{colors.secondary_accent.default.hex}};
+@define-color on-accent2                {{colors.on_secondary_accent.default.hex}};
+@define-color accent2-container         {{colors.secondary_accent_container.default.hex}};
+@define-color on-accent2-container      {{colors.on_secondary_accent_container.default.hex}};
+
+@define-color accent3-source            {{colors.tertiary_accent_source.default.hex}};
+@define-color accent3                   {{colors.tertiary_accent.default.hex}};
+@define-color on-accent3                {{colors.on_tertiary_accent.default.hex}};
+@define-color accent3-container         {{colors.tertiary_accent_container.default.hex}};
+@define-color on-accent3-container      {{colors.on_tertiary_accent_container.default.hex}};
+
 @define-color error                     {{colors.error.default.hex}};
 @define-color on-error                  {{colors.on_error.default.hex}};
 @define-color error-container           {{colors.error_container.default.hex}};
@@ -45,9 +57,9 @@
 @define-color base                      {{colors.background.default.hex}};
 @define-color mantle                    {{colors.surface_container_lowest.default.hex}};
 @define-color crust                     {{colors.shadow.default.hex}};
-@define-color green                     {{colors.tertiary.default.hex}};
-@define-color yellow                    {{colors.on_tertiary_container.default.hex}};
+@define-color green                     {{colors.secondary_accent.default.hex}};
+@define-color yellow                    {{colors.tertiary_accent.default.hex}};
 @define-color red                       {{colors.error.default.hex}};
-@define-color mauve                     {{colors.secondary.default.hex}};
+@define-color mauve                     {{colors.tertiary_accent.default.hex}};
 @define-color blue                      {{colors.primary.default.hex}};
 @define-color sky                       {{colors.tertiary_container.default.hex}};

@@ -7,6 +7,7 @@ QS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BT_PID_FILE="$HOME/.cache/bt_scan_pid"
 BT_SCAN_LOG="$HOME/.cache/bt_scan.log"
 FOCUSTIME_DAEMON="$HOME/.config/quickshell/focustime/focus_daemon.py"
+export QML_IMPORT_PATH="$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
 
 NETWORK_MODE_FILE="/tmp/qs_network_mode"
 PREV_FOCUS_FILE="/tmp/qs_prev_focus"
@@ -182,7 +183,10 @@ BAR_PID=$(pgrep -f "quickshell.*TopBar\.qml")
 if [[ -z "$QS_PID" ]]; then
     # Maak het state-bestand aan vóór Main.qml start, zodat FileView het
     # direct kan bekijken (Qt's inotify vereist dat het bestand bestaat).
-    touch /tmp/qs_widget_state 2>/dev/null || true
+    # Leeg het meteen: een achtergebleven widgetnaam van de vorige sessie zou
+    # anders bij het opstarten direct dat paneel heropenen.
+    : > /tmp/qs_widget_state 2>/dev/null || true
+    printf 'hidden' > /tmp/qs_active_widget 2>/dev/null || true
     quickshell --no-duplicate -p "$HOME/.config/quickshell/Main.qml" >/dev/null 2>&1 &
     disown
     sleep 0.3

@@ -7,6 +7,7 @@ set -uo pipefail
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra"
 LOG_FILE="$LOG_DIR/session.log"
+export QML_IMPORT_PATH="$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
 
 mkdir -p "$LOG_DIR" 2>/dev/null || LOG_FILE="/tmp/kingstra-session-${UID:-$(id -u)}.log"
 
@@ -72,7 +73,12 @@ start_core() {
     run_bg_once "wl-paste --type image --watch cliphist store" "cliphist image watcher" wl-paste --type image --watch cliphist store
     run_bg_once "nm-applet --indicator" "NetworkManager applet" nm-applet --indicator
     run_bg_once "swaync$" "SwayNC" swaync
-    run_bg_once "hypridle( |$)" "hypridle" hypridle
+    if [[ -x "$CONFIG_HOME/shared/scripts/kingstra-idle-inhibit" ]] \
+        && [[ "$("$CONFIG_HOME/shared/scripts/kingstra-idle-inhibit" status 2>/dev/null)" == "on" ]]; then
+        log "idle inhibit active: hypridle skipped"
+    else
+        run_bg_once "hypridle( |$)" "hypridle" hypridle
+    fi
     run_bg_once "playerctld daemon" "playerctld" playerctld daemon
 
     run_once "fingerprint-first-run.sh" "fingerprint first-run" "$CONFIG_HOME/hypr/scripts/fingerprint-first-run.sh"
@@ -89,9 +95,8 @@ start_ui() {
     log "start ui"
 
     # skwd is de enige wallpaper-daemon (rendert + picker-UI + kleuranalyse).
-    # awww draaide hier vroeger als tweede renderer naast; skwd-paper ligt
-    # bovenop awww, waardoor scherm en state uit elkaar liepen. Zie ook
-    # kingstra-wallpaper::_set_static. stop_session ruimt oude awww nog op.
+    # awww is volledig uit de pipeline verwijderd; stop_session ruimt een
+    # eventueel nog lopende legacy awww-daemon op.
     systemctl_user start skwd-daemon.service
     run_once "wallpaper-init.sh" "wallpaper init" "$CONFIG_HOME/hypr/scripts/wallpaper-init.sh"
 
@@ -111,7 +116,7 @@ start_ui() {
 
 # Alleen de Quickshell-shellprocessen (geen wallpaper-daemons, geen core).
 # Gebruikt door thema-wissels: die hoeven de wallpaper niet te herladen, dus
-# awww/skwd en wallpaper-init blijven staan -> geen wallpaper-flash of re-roll.
+# skwd en wallpaper-init blijven staan -> geen wallpaper-flash of re-roll.
 start_shell() {
     log "start shell"
 
@@ -144,6 +149,9 @@ stop_pattern() {
 stop_session() {
     log "stop"
 
+    [[ -x "$CONFIG_HOME/shared/scripts/kingstra-idle-inhibit" ]] \
+        && "$CONFIG_HOME/shared/scripts/kingstra-idle-inhibit" off >/dev/null 2>&1 || true
+
     stop_pattern "quickshell.*$CONFIG_HOME/quickshell/TopBar.qml" "Quickshell topbar"
     stop_pattern "quickshell.*$CONFIG_HOME/quickshell/Main.qml" "Quickshell popups"
     stop_pattern "qs.*$CONFIG_HOME/quickshell/overview/shell.qml" "Quickshell overview"
@@ -171,7 +179,6 @@ status_session() {
         "walker --gapplication-service"
         "swaync$"
         "hypridle( |$)"
-        "awww-daemon"
     )
 
     local pattern

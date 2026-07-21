@@ -4,7 +4,7 @@ list-apps.py — desktop entries als JSON voor de shell-launcher.
 
 Quickshell's eigen DesktopEntries-API levert op dit systeem 0 resultaten,
 daarom scannen we de XDG-applicatiemappen zelf. Output: JSON-array met
-{name, exec, icon, comment}, gesorteerd op naam en ontdubbeld op desktop-id.
+appmetadata, gesorteerd op naam en ontdubbeld op desktop-id.
 """
 import json
 import os
@@ -63,11 +63,18 @@ def parse_entry(path):
     if not name or not exec_raw:
         return None
 
+    exec_clean = FIELD_CODES.sub("", exec_raw).strip()
     return {
+        "id": os.path.basename(path),
         "name": name,
-        "exec": FIELD_CODES.sub("", exec_raw).strip(),
+        "exec": exec_clean,
+        "execString": exec_clean,
         "icon": data.get("Icon", "").strip(),
         "comment": data.get("Comment", "").strip(),
+        "genericName": data.get("GenericName", "").strip(),
+        "keywords": data.get("Keywords", "").strip(),
+        "categories": data.get("Categories", "").strip(),
+        "startupClass": data.get("StartupWMClass", "").strip(),
         "terminal": data.get("Terminal", "").lower() == "true",
     }
 

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Quickshell.Networking
 import Quickshell.Bluetooth
 import ".."
@@ -24,6 +25,17 @@ Item {
     readonly property bool wifiOn: Networking.wifiEnabled
     readonly property bool hasBluetooth: Bluetooth.defaultAdapter !== null
     readonly property bool bluetoothOn: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
+    readonly property string idleInhibitCommand:
+        "if command -v kingstra-idle-inhibit >/dev/null 2>&1; then " +
+        "kingstra-idle-inhibit; " +
+        "elif [ -x \"$HOME/.local/bin/kingstra-idle-inhibit\" ]; then " +
+        "\"$HOME/.local/bin/kingstra-idle-inhibit\"; " +
+        "elif [ -x \"$HOME/.config/shared/scripts/kingstra-idle-inhibit\" ]; then " +
+        "\"$HOME/.config/shared/scripts/kingstra-idle-inhibit\"; " +
+        "else " +
+        "\"$HOME/kingstra-dots/config/shared/scripts/kingstra-idle-inhibit\"; " +
+        "fi"
+    property bool idleInhibited: false
 
     function closePanel() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
@@ -32,6 +44,38 @@ Item {
     function runAndClose(command) {
         closePanel();
         Quickshell.execDetached(["bash", "-lc", command]);
+    }
+
+    function refreshIdleInhibit() {
+        if (!idleStatusProc.running) idleStatusProc.running = true;
+    }
+
+    function toggleIdleInhibit() {
+        Quickshell.execDetached(["bash", "-lc", root.idleInhibitCommand + " toggle"]);
+        idleRefreshTimer.restart();
+    }
+
+    Process {
+        id: idleStatusProc
+        command: ["bash", "-lc", root.idleInhibitCommand + " status"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: root.idleInhibited = this.text.trim() === "on"
+        }
+    }
+
+    Timer {
+        id: idleRefreshTimer
+        interval: 450
+        repeat: false
+        onTriggered: root.refreshIdleInhibit()
+    }
+
+    Timer {
+        interval: 2500
+        running: true
+        repeat: true
+        onTriggered: root.refreshIdleInhibit()
     }
 
     ColumnLayout {
@@ -83,7 +127,7 @@ Item {
         }
 
         Rectangle {
-            visible: root.hasWifi || root.hasBluetooth
+            visible: true
             Layout.fillWidth: true
             Layout.preferredHeight: visible ? 58 : 0
             radius: root.itemRadius
@@ -118,6 +162,15 @@ Item {
                         Quickshell.env("HOME") + "/.config/quickshell/network/bluetooth_panel_logic.sh",
                         "--toggle"
                     ])
+                }
+
+                ToggleTile {
+                    Layout.fillWidth: true
+                    icon: root.idleInhibited ? "󰅶" : "󰾪"
+                    label: "Scherm aan"
+                    active: root.idleInhibited
+                    accent: mocha.yellow
+                    onTriggered: root.toggleIdleInhibit()
                 }
             }
         }

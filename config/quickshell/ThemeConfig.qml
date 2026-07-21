@@ -109,18 +109,22 @@ Item {
         return Math.max(1, Math.round(parsed * motionDurationScale));
     }
 
+    // Kort gehouden: panelen groeien uit een schermrand en zijn dagelijks
+    // gereedschap, dus de beweging moet af zijn tegen de tijd dat je oog er is.
     function durationToken(name) {
         let token = String(name || "medium").toLowerCase();
-        let ms = token === "fast" ? 160
-               : token === "slow" ? 400
-               : token === "spatial" ? 500
-               : 250;
+        let ms = token === "fast" ? 120
+               : token === "slow" ? 300
+               : token === "spatial" ? 260
+               : 180;
         return duration(ms);
     }
 
     function easingToken(name) {
         let token = String(name || "standard").toLowerCase();
-        if (token === "emphasized") return Easing.OutBack;
+        // OutBack schiet door en laat een paneel terugveren; op de korte
+        // spatial-duur leest dat als trillen in plaats van als accent.
+        if (token === "emphasized") return Easing.OutQuint;
         if (token === "effects") return Easing.InOutSine;
         return Easing.OutCubic;
     }

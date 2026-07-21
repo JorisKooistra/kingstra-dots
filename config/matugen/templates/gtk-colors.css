@@ -2,6 +2,12 @@
 @define-color accent_color          {{colors.primary.default.hex}};
 @define-color accent_fg_color       {{colors.on_primary.default.hex}};
 @define-color accent_bg_color       {{colors.secondary_accent.default.hex}};
+@define-color accent2_color         {{colors.secondary_accent.default.hex}};
+@define-color accent2_bg_color      {{colors.secondary_accent_container.default.hex}};
+@define-color accent2_fg_color      {{colors.on_secondary_accent.default.hex}};
+@define-color accent3_color         {{colors.tertiary_accent.default.hex}};
+@define-color accent3_bg_color      {{colors.tertiary_accent_container.default.hex}};
+@define-color accent3_fg_color      {{colors.on_tertiary_accent.default.hex}};
 
 @define-color window_bg_color       {{colors.background.default.hex}};
 @define-color window_fg_color       {{colors.on_background.default.hex}};
@@ -36,13 +42,13 @@
 @define-color error_bg_color        {{colors.error_container.default.hex}};
 @define-color error_fg_color        {{colors.on_error_container.default.hex}};
 
-@define-color success_color         {{colors.tertiary.default.hex}};
-@define-color success_bg_color      {{colors.tertiary_container.default.hex}};
-@define-color success_fg_color      {{colors.on_tertiary_container.default.hex}};
+@define-color success_color         {{colors.secondary_accent.default.hex}};
+@define-color success_bg_color      {{colors.secondary_accent_container.default.hex}};
+@define-color success_fg_color      {{colors.on_secondary_accent_container.default.hex}};
 
-@define-color warning_color         {{colors.on_tertiary_container.default.hex}};
-@define-color warning_bg_color      {{colors.tertiary_container.default.hex}};
-@define-color warning_fg_color      {{colors.on_tertiary_container.default.hex}};
+@define-color warning_color         {{colors.tertiary_accent.default.hex}};
+@define-color warning_bg_color      {{colors.tertiary_accent_container.default.hex}};
+@define-color warning_fg_color      {{colors.on_tertiary_accent_container.default.hex}};
 
 @define-color destructive_color     {{colors.error.default.hex}};
 @define-color destructive_bg_color  {{colors.error_container.default.hex}};

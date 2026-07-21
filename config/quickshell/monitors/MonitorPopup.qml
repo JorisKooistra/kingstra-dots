@@ -256,9 +256,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: window.s(30)
-            color: window.base
-            border.color: window.surface0
-            border.width: 1
+            color: "transparent"
+            border.width: 0
             clip: true
 
             Rectangle {

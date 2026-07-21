@@ -137,22 +137,6 @@ _monitors() {
         2>/dev/null || echo ""
 }
 
-_query_awww_wallpaper() {
-    command -v awww >/dev/null 2>&1 || return 1
-
-    local line candidate
-    line="$(awww query 2>/dev/null | grep -m1 'image:' || true)"
-    [[ -n "$line" ]] || return 1
-
-    candidate="${line#*image: }"
-    candidate="${candidate%% (}"
-    candidate="$(_expand_user_path "$candidate")"
-    [[ -n "$candidate" && -f "$candidate" ]] || return 1
-
-    printf '%s\n' "$candidate"
-    return 0
-}
-
 _read_skwd_cached_wallpaper() {
     local candidate path=""
 
@@ -183,13 +167,10 @@ _read_skwd_cached_wallpaper() {
 }
 
 _current_static_wallpaper() {
+    # skwd is de enige bron van waarheid. Voorheen werd hier eerst `awww query`
+    # geraadpleegd; zolang awww-daemon nog draaide met een oud beeld won die
+    # oude keuze het bij elke reload van de zojuist via skwd gekozen wallpaper.
     local candidate=""
-
-    candidate="$(_query_awww_wallpaper || true)"
-    if [[ -n "$candidate" && -f "$candidate" ]]; then
-        printf '%s\n' "$candidate"
-        return 0
-    fi
 
     candidate="$(_read_skwd_cached_wallpaper || true)"
     if [[ -n "$candidate" && -f "$candidate" ]]; then
@@ -204,7 +185,7 @@ WALLPAPER_DIR="$(_resolve_wallpaper_dir)"
 VIDEO_WALLPAPER_DIR="$(_resolve_video_wallpaper_dir)"
 
 # ---------------------------------------------------------------------------
-# Backend: statisch (awww)
+# Backend: statisch (skwd)
 # ---------------------------------------------------------------------------
 _stop_video() {
     if pgrep -x mpvpaper &>/dev/null; then

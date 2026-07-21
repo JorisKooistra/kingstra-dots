@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-idle-inhibit — Runtime idle blokkering voor de huidige sessie
+# =============================================================================
+set -euo pipefail
+
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}/kingstra-idle-inhibit"
+STATE_FILE="$RUNTIME_DIR/enabled"
+PID_FILE="$RUNTIME_DIR/inhibitor.pid"
+LOG_PREFIX="[kingstra-idle-inhibit]"
+
+log() { printf '%s %s\n' "$LOG_PREFIX" "$*" >&2; }
+
+pid_running() {
+    local pid="${1:-}"
+    [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" >/dev/null 2>&1
+}
+
+current_pid() {
+    [[ -f "$PID_FILE" ]] && cat "$PID_FILE" 2>/dev/null || true
+}
+
+stop_inhibitor_process() {
+    local pid
+    pid="$(current_pid)"
+    if pid_running "$pid"; then
+        pkill -TERM -P "$pid" >/dev/null 2>&1 || true
+        kill "$pid" >/dev/null 2>&1 || true
+    fi
+    rm -f "$PID_FILE"
+}
+
+start_inhibitor_process() {
+    local pid
+
+    mkdir -p "$RUNTIME_DIR"
+    stop_inhibitor_process
+
+    if command -v systemd-inhibit >/dev/null 2>&1; then
+        if command -v setsid >/dev/null 2>&1; then
+            setsid bash -c 'exec systemd-inhibit --what=idle:sleep --mode=block --who=Kingstra --why="Idle blokkering via Kingstra" sleep infinity' >/dev/null 2>&1 &
+        else
+            nohup bash -c 'exec systemd-inhibit --what=idle:sleep --mode=block --who=Kingstra --why="Idle blokkering via Kingstra" sleep infinity' >/dev/null 2>&1 &
+        fi
+        pid="$!"
+        sleep 0.15
+        if pid_running "$pid"; then
+            printf '%s\n' "$pid" > "$PID_FILE"
+            return
+        fi
+        pkill -TERM -P "$pid" >/dev/null 2>&1 || true
+        kill "$pid" >/dev/null 2>&1 || true
+    fi
+
+    # Fallback: hypridle is already stopped, which is what prevents DPMS-off.
+    # Keep a live marker process so status/toggle remains reliable even on
+    # systems where systemd inhibitors are unavailable in the user session.
+    nohup sleep infinity >/dev/null 2>&1 &
+    printf '%s\n' "$!" > "$PID_FILE"
+}
+
+start_hypridle() {
+    command -v hypridle >/dev/null 2>&1 || {
+        log "hypridle niet gevonden"
+        return 0
+    }
+    pgrep -f '(^|/)hypridle( |$)' >/dev/null 2>&1 && return 0
+    if command -v setsid >/dev/null 2>&1; then
+        setsid -f hypridle >/dev/null 2>&1 || log "hypridle start mislukt"
+    else
+        nohup hypridle >/dev/null 2>&1 &
+    fi
+}
+
+enable_inhibit() {
+    mkdir -p "$RUNTIME_DIR"
+    printf 'on\n' > "$STATE_FILE"
+    hyprctl dispatch dpms on >/dev/null 2>&1 || true
+    pkill -x hypridle >/dev/null 2>&1 || true
+    start_inhibitor_process
+    printf 'on\n'
+}
+
+disable_inhibit() {
+    stop_inhibitor_process
+    rm -f "$STATE_FILE"
+    hyprctl dispatch dpms on >/dev/null 2>&1 || true
+    start_hypridle
+    printf 'off\n'
+}
+
+status_inhibit() {
+    if [[ -f "$STATE_FILE" ]]; then
+        printf 'on\n'
+    else
+        printf 'off\n'
+    fi
+}
+
+case "${1:-toggle}" in
+    on|enable)
+        enable_inhibit
+        ;;
+    off|disable)
+        disable_inhibit
+        ;;
+    toggle)
+        if [[ "$(status_inhibit)" == "on" ]]; then
+            disable_inhibit
+        else
+            enable_inhibit
+        fi
+        ;;
+    status)
+        status_inhibit
+        ;;
+    *)
+        printf 'Gebruik: %s [on|off|toggle|status]\n' "$0" >&2
+        exit 2
+        ;;
+esac

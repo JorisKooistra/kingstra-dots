@@ -3,7 +3,7 @@
 # Fase 09 — Wallpapermodule
 # =============================================================================
 # Doel:
-#   - skwd-wall, awww en optioneel mpvpaper installeren
+#   - skwd-wall en optioneel mpvpaper installeren
 #   - kingstra-wallpaper orchestrator deployen naar ~/.local/bin/
 #   - Wallpaper-map aanmaken als die nog niet bestaat
 #   - Voorbeeldwallpaper plaatsen als map leeg is (gegenereerde kleur-gradient)
@@ -11,7 +11,6 @@
 
 phase_run() {
     log_step "Wallpaper-pakketten installeren..."
-    aur_install awww                    # wallpaper daemon voor statische wallpapers
     aur_install skwd-wall               # standalone skwd-wall CLI + user daemon
     pacman_install imagemagick          # voor gradient-fallback + manipulatie
     pacman_install ffmpeg               # voor videothumbnails / -verwerking
@@ -39,10 +38,8 @@ phase_run() {
 
     log_step "Fase 09 valideren..."
     if "${DRY_RUN:-false}"; then
-        log_dry "Commando-check overgeslagen (dry-run): awww"
         log_dry "Commando-check overgeslagen (dry-run): skwd"
     else
-        validate_cmd awww
         validate_cmd skwd
     fi
     validate_file "$HOME/.config/skwd-wall/config.json"    "skwd-wall/config.json"
@@ -433,17 +430,6 @@ _phase09_apply_initial_wallpaper() {
             log_ok "Standaard wallpaper toegepast: $wallpaper"
             return 0
         }
-    fi
-
-    if command -v awww &>/dev/null; then
-        if ! pgrep -x awww-daemon >/dev/null 2>&1 && command -v awww-daemon >/dev/null 2>&1; then
-            awww-daemon >/dev/null 2>&1 &
-        fi
-        sleep 0.3
-        if awww img "$wallpaper" >/dev/null 2>&1; then
-            log_ok "Standaard wallpaper toegepast via awww: $wallpaper"
-            return 0
-        fi
     fi
 
     log_warn "Kon standaard wallpaper niet direct toepassen; Hyprland autostart herstelt hem later"

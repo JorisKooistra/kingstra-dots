@@ -8,6 +8,7 @@ CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 SETTINGS_FILE="$CONFIG_HOME/quickshell/settings/settings.json"
 HYPRIDLE_DIR="$CONFIG_HOME/hypridle"
 HYPRIDLE_FILE="$HYPRIDLE_DIR/hypridle.conf"
+IDLE_INHIBIT_STATE="${XDG_RUNTIME_DIR:-/tmp}/kingstra-idle-inhibit/enabled"
 LOG_PREFIX="[kingstra-idle-apply]"
 
 log() { printf '%s %s\n' "$LOG_PREFIX" "$*" >&2; }
@@ -154,6 +155,11 @@ main() {
     write_config "$lock" "$screen_off" "$suspend" "$dim"
 
     pkill -x hypridle >/dev/null 2>&1 || true
+    if [[ -f "$IDLE_INHIBIT_STATE" ]]; then
+        hyprctl dispatch dpms on >/dev/null 2>&1 || true
+        log "idle blokkering actief; hypridle niet gestart"
+        return
+    fi
     if command -v hypridle >/dev/null 2>&1; then
         nohup hypridle >/dev/null 2>&1 &
     else

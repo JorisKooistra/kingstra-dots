@@ -31,27 +31,59 @@ Item {
     property color lavender: "#b4befe"
     property color sky: "#89dceb"
 
+    property color materialPrimary: "#89b4fa"
+    property color materialOnPrimary: "#11111b"
+    property color materialPrimaryContainer: "#74c7ec"
+    property color materialOnPrimaryContainer: "#cdd6f4"
+    property color materialSecondary: "#cba6f7"
+    property color materialOnSecondary: "#11111b"
+    property color materialSecondaryContainer: "#94e2d5"
+    property color materialOnSecondaryContainer: "#cdd6f4"
+    property color materialTertiary: "#a6e3a1"
+    property color materialOnTertiary: "#11111b"
+    property color materialTertiaryContainer: "#f9e2af"
+    property color materialOnTertiaryContainer: "#11111b"
+    property color materialError: "#f38ba8"
+    property color materialOnError: "#11111b"
+    property color materialErrorContainer: "#eba0ac"
+    property color materialOnErrorContainer: "#11111b"
+    property color materialSurface: "#11111b"
+    property color materialOnSurface: "#cdd6f4"
+    property color materialOnSurfaceVariant: "#a6adc8"
+    property color materialSurfaceContainer: "#313244"
+    property color materialSurfaceContainerHigh: "#45475a"
+    property color materialSurfaceContainerHighest: "#585b70"
+
+    // Extra wallpaper-samples uit kingstra-matugen-run. *Source* is de echte
+    // ImageMagick-kleur uit de wallpaper; de andere rollen zijn Matugen-
+    // geharmoniseerd en hebben normale contrastrollen.
+    property color accent2Source: "#94e2d5"
+    property color accent2: "#94e2d5"
+    property color accent2Text: "#11111b"
+    property color accent2Container: "#94e2d5"
+    property color accent2ContainerText: "#11111b"
+    property color accent3Source: "#f9e2af"
+    property color accent3: "#f9e2af"
+    property color accent3Text: "#11111b"
+    property color accent3Container: "#f9e2af"
+    property color accent3ContainerText: "#11111b"
+
     // Material/Matugen semantic names. The legacy Catppuccin-style names above
     // are populated from Matugen in colors.json; these aliases make new code read
     // like the palette it actually uses.
-    readonly property color primary: blue
-    readonly property color primaryContainer: sapphire
-    readonly property color secondary: green
-    readonly property color secondaryContainer: yellow
-    readonly property color tertiary: peach
-    readonly property color tertiaryContainer: pink
-    readonly property color errorContainer: maroon
-    readonly property color surface: crust
-    readonly property color onSurface: text
-    readonly property color onSurfaceVariant: subtext0
-    readonly property color surfaceContainer: surface0
-    readonly property color surfaceContainerHigh: surface1
-    readonly property color surfaceContainerHighest: surface2
-
-    // Tweede, onafhankelijk bemonsterde wallpaper-tint (matugen custom color
-    // met blend=true, zie kingstra-matugen-run) — voorkomt dat het hele
-    // palet van één seed-hue afhangt.
-    property color accent2: "#94e2d5"
+    readonly property color primary: materialPrimary
+    readonly property color primaryContainer: materialPrimaryContainer
+    readonly property color secondary: materialSecondary
+    readonly property color secondaryContainer: materialSecondaryContainer
+    readonly property color tertiary: materialTertiary
+    readonly property color tertiaryContainer: materialTertiaryContainer
+    readonly property color errorContainer: materialErrorContainer
+    readonly property color surface: materialSurface
+    readonly property color onSurface: materialOnSurface
+    readonly property color onSurfaceVariant: materialOnSurfaceVariant
+    readonly property color surfaceContainer: materialSurfaceContainer
+    readonly property color surfaceContainerHigh: materialSurfaceContainerHigh
+    readonly property color surfaceContainerHighest: materialSurfaceContainerHighest
 
     property string rawJson: ""
 
@@ -91,6 +123,38 @@ Item {
                 if (c.teal) root.teal = c.teal;
                 if (c.lavender) root.lavender = c.lavender;
                 if (c.sky) root.sky = c.sky;
+                if (c.primary) root.materialPrimary = c.primary;
+                if (c.on_primary) root.materialOnPrimary = c.on_primary;
+                if (c.primary_container) root.materialPrimaryContainer = c.primary_container;
+                if (c.on_primary_container) root.materialOnPrimaryContainer = c.on_primary_container;
+                if (c.secondary) root.materialSecondary = c.secondary;
+                if (c.on_secondary) root.materialOnSecondary = c.on_secondary;
+                if (c.secondary_container) root.materialSecondaryContainer = c.secondary_container;
+                if (c.on_secondary_container) root.materialOnSecondaryContainer = c.on_secondary_container;
+                if (c.tertiary) root.materialTertiary = c.tertiary;
+                if (c.on_tertiary) root.materialOnTertiary = c.on_tertiary;
+                if (c.tertiary_container) root.materialTertiaryContainer = c.tertiary_container;
+                if (c.on_tertiary_container) root.materialOnTertiaryContainer = c.on_tertiary_container;
+                if (c.error) root.materialError = c.error;
+                if (c.on_error) root.materialOnError = c.on_error;
+                if (c.error_container) root.materialErrorContainer = c.error_container;
+                if (c.on_error_container) root.materialOnErrorContainer = c.on_error_container;
+                if (c.surface) root.materialSurface = c.surface;
+                if (c.on_surface) root.materialOnSurface = c.on_surface;
+                if (c.on_surface_variant) root.materialOnSurfaceVariant = c.on_surface_variant;
+                if (c.surface_container) root.materialSurfaceContainer = c.surface_container;
+                if (c.surface_container_high) root.materialSurfaceContainerHigh = c.surface_container_high;
+                if (c.surface_container_highest) root.materialSurfaceContainerHighest = c.surface_container_highest;
+                if (c.accent2_source) root.accent2Source = c.accent2_source;
+                if (c.accent2) root.accent2 = c.accent2;
+                if (c.on_accent2) root.accent2Text = c.on_accent2;
+                if (c.accent2_container) root.accent2Container = c.accent2_container;
+                if (c.on_accent2_container) root.accent2ContainerText = c.on_accent2_container;
+                if (c.accent3_source) root.accent3Source = c.accent3_source;
+                if (c.accent3) root.accent3 = c.accent3;
+                if (c.on_accent3) root.accent3Text = c.on_accent3;
+                if (c.accent3_container) root.accent3Container = c.accent3_container;
+                if (c.on_accent3_container) root.accent3ContainerText = c.on_accent3_container;
             } catch (e) {}
         }
     }

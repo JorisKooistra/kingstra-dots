@@ -283,6 +283,17 @@ PanelWindow {
         }
 
         let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "gaming", "settings", "power"];
+        // De shell-surface tekent deze widgets. Bij de allereerste read is
+        // theme.json vaak nog niet geladen en staat barZoneSchemaLoaded nog op
+        // false; dan viel een achtergebleven widgetnaam uit de state-file door
+        // deze guard heen en tekende dit venster de widget een tweede keer,
+        // naast die van de surface. Vandaar dat surfaceTargets hier ook zonder
+        // geladen schema geldt.
+        if (surfaceTargets.indexOf(cmd) !== -1) {
+            if (masterWindow.currentActive !== "hidden")
+                switchWidget("hidden", "");
+            return;
+        }
         if (ThemeConfig.barZoneSchemaLoaded && cmd === "close") {
             switchWidget("hidden", "");
             return;

@@ -39,7 +39,6 @@ _phase15_validate_commands() {
     # Kern
     validate_cmd Hyprland
     validate_cmd hyprctl
-    validate_cmd awww
     validate_cmd hypridle
     validate_cmd hyprlock
     # Shell
@@ -130,6 +129,10 @@ _phase15_validate_links() {
                   "$cfg/shared/scripts/kingstra-matugen-run"  "kingstra-matugen-run"
     validate_link "$HOME/.local/bin/kingstra-session-start" \
                   "$cfg/shared/scripts/kingstra-session-start"  "kingstra-session-start"
+    validate_link "$HOME/.local/bin/kingstra-idle-apply" \
+                  "$cfg/shared/scripts/kingstra-idle-apply"  "kingstra-idle-apply"
+    validate_link "$HOME/.local/bin/kingstra-idle-inhibit" \
+                  "$cfg/shared/scripts/kingstra-idle-inhibit"  "kingstra-idle-inhibit"
     validate_link "$HOME/.local/bin/kingstra-touch-detect" \
                   "$cfg/shared/scripts/kingstra-touch-detect"  "kingstra-touch-detect"
     validate_link "$HOME/.local/bin/kingstra-firefox-optimize" \

@@ -8,6 +8,7 @@ import Quickshell.Networking
 import Quickshell.Bluetooth
 import Quickshell.Services.UPower
 import Quickshell.Services.Mpris
+import Kingstra.Blobs 1.0
 import ".."
 
 Item {
@@ -17,10 +18,13 @@ Item {
 
     readonly property bool railEnabled: ThemeConfig.barRailEnabled
     readonly property bool stripEnabled: ThemeConfig.barStatusStripEnabled
+    readonly property bool stripControlsEnabled: stripEnabled && !railEnabled
     readonly property bool stripOnBottom: ThemeConfig.barStatusStripEdge === "bottom"
     readonly property bool railOnRight: ThemeConfig.barRailEdge === "right"
     readonly property int railWidth: ThemeConfig.barRailWidth
-    readonly property int stripHeight: ThemeConfig.barStatusStripHeight
+    // Als alle statusstrip-content naar de rail is verhuisd, blijft boven alleen
+    // de omlijsting over. Die hoort even dun te zijn als de onderrand.
+    readonly property int stripHeight: stripControlsEnabled ? ThemeConfig.barStatusStripHeight : shellBorderWidth
     // De rail bezit de volledige zijrand (top→bottom). De strip begint al bij
     // rail.right, dus zonder deze full-height rail bleef er een gat in de
     // hoek waar rail en strip elkaar niet raakten ("de ontbrekende hoek").
@@ -31,14 +35,17 @@ Item {
     // Dunne omlijning rechts/onder, zodat de content een volledig afgerond
     // kader krijgt (caelestia-stijl). Links/boven kosten al rail+strip.
     readonly property int shellBorderWidth: 8
-    readonly property int cornerStrokeWidth: 2
+    // Breedte van de accentband die de blob-shader net binnen de contour
+    // tekent. De chrome-vlakken (rail/strip/randen) laten deze strook vrij,
+    // anders schilderen ze de lijn van de omlijsting dicht.
+    readonly property int frameBandW: 2
     readonly property int cornerSeamOverlap: 3
     readonly property string styleFamily: String(ThemeConfig.styleFamily || "").toLowerCase()
     readonly property bool paperStyle: styleFamily === "paper"
     readonly property bool organicStyle: styleFamily === "organic"
     readonly property bool modernStyle: styleFamily === "modern"
     readonly property bool monoStyle: styleFamily === "mono"
-    // --- Matugen twee-kleur chrome ------------------------------------------
+    // --- Matugen multi-color chrome -----------------------------------------
     // De bar leunde voorheen op crust/base (bijna-zwart), waardoor matugen
     // visueel vrijwel niets deed. We tinten nu een donker chrome-oppervlak met
     // twee onderscheiden wallpaper-hues en leggen daar een subtiele
@@ -49,43 +56,94 @@ Item {
                        a.b + (b.b - a.b) * t,
                        1.0);
     }
+    function _mix3(a, b, c, t) {
+        let k = _clamp01(t);
+        return k < 0.5 ? _mix(a, b, k * 2.0) : _mix(b, c, (k - 0.5) * 2.0);
+    }
     // Donkere basis waarop we tinten; behoudt de bestaande donkerte per stijl.
     readonly property color barFloor: paperStyle ? mocha.mantle
         : (modernStyle || monoStyle ? mocha.crust : mocha.base)
     readonly property real barFillAlpha: paperStyle ? 0.82
         : (modernStyle || monoStyle ? 0.97 : Math.min(0.98, ThemeConfig.barOpacity + 0.04))
-    // Twee visueel onderscheiden wallpaper-hues. Mono blijft bewust neutraal.
-    readonly property color barHueA: mocha.primary
-    readonly property color barHueB: mocha.secondary || mocha.accent2 || mocha.primary
+    // Echte wallpaper-samples uit matugen custom colors. De geharmoniseerde
+    // Material-rollen blijven beschikbaar voor iconen en tekstcontrast.
+    readonly property color barHueA: mocha.accent2Source
+    readonly property color barHueB: mocha.accent3Source
+    readonly property color barHueC: mocha.primary
     readonly property real barTintK: monoStyle ? 0.04 : (paperStyle ? 0.12 : 0.30)
     readonly property color barGradStart: {
         let c = _mix(barFloor, barHueA, barTintK);
         return Qt.rgba(c.r, c.g, c.b, barFillAlpha);
     }
+    readonly property color barGradMid: {
+        let c = _mix(barFloor, barHueB, barTintK * 1.05);
+        return Qt.rgba(c.r, c.g, c.b, barFillAlpha);
+    }
     readonly property color barGradEnd: {
-        let c = _mix(barFloor, barHueB, barTintK * 1.1);
+        let c = _mix(barFloor, barHueC, barTintK * 1.1);
         return Qt.rgba(c.r, c.g, c.b, barFillAlpha);
     }
-    // Het kader draagt twee gespiegelde sweeps: rail en strip lopen hue A -> B,
-    // de rechter- en onderrand lopen terug B -> A. Daardoor krijgen beide
-    // diagonalen gelijke hoeken (linksboven = rechtsonder = A, rechtsboven =
-    // linksonder = B) en sluit de gradient rondom op zichzelf aan.
-    // De onderrand loopt B -> A; in het midden (waar de launcher staat) is dat
-    // exact het halverwege-punt. Launcher en aansluitbogen nemen die kleur over.
-    readonly property color barGradCenter: {
-        let c = _mix(barGradEnd, barGradStart, 0.5);
-        return Qt.rgba(c.r, c.g, c.b, barFillAlpha);
-    }
-    readonly property color barHueCenter: _mix(barHueB, barHueA, 0.5)
+    readonly property color barGradCenter: barGradMid
+    readonly property color barHueCenter: barHueB
     readonly property real chromeAccentAlpha: monoStyle ? 0.45 : 1.0
-    // Geometrie van de launcher, doorgegeven vanuit ShellSurface, zodat de
-    // onderrand eromheen kan buigen i.p.v. er blind onderdoor te lopen.
-    property bool launcherOpen: false
-    property real launcherX: 0
-    property real launcherWidth: 0
+
+    // Accentrand-kleuren. De rauwe wallpaper-samples (barHueA/B/C) zijn prima
+    // als subtiele tint ín de vulling, maar als lijn kunnen ze vrijwel
+    // onzichtbaar worden: accent3_source is bij donkere wallpapers al gauw
+    // bijna zwart. Voor de rand tillen we daarom elke tint naar een
+    // minimum-helderheid, richting wit zodat de tint zelf behouden blijft.
+    function _ensureLum(c, minLum) {
+        let lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+        if (lum >= minLum) return c;
+        let t = 1.0 - lum / minLum;
+        return Qt.rgba(c.r + (1.0 - c.r) * t,
+                       c.g + (1.0 - c.g) * t,
+                       c.b + (1.0 - c.b) * t,
+                       1.0);
+    }
+    // Kleur van het schermbrede diagonale verloop op een gegeven punt. De
+    // losse chrome-vlakken (rail, strip, randen) tekenen hun eigen verloop
+    // met een QML-Gradient, die alleen verticaal of horizontaal kan. Door hun
+    // stops op deze functie te baseren volgen ze exact dezelfde diagonaal als
+    // de blob eronder, in plaats van elk hun eigen volledige a→b over te doen.
+    function _diagColor(x, y) {
+        let t = _clamp01((x + y) / Math.max(1, root.width + root.height));
+        let a = root.barGradStart;
+        let b = root.barGradEnd;
+        return Qt.rgba(a.r + (b.r - a.r) * t,
+                       a.g + (b.g - a.g) * t,
+                       a.b + (b.b - a.b) * t,
+                       a.a + (b.a - a.a) * t);
+    }
+
+    readonly property real edgeAccentMinLum: 0.55
+    readonly property color edgeAccentA: _ensureLum(barHueA, edgeAccentMinLum)
+    readonly property color edgeAccentB: _ensureLum(barHueB, edgeAccentMinLum)
+    readonly property color edgeAccentC: _ensureLum(barHueC, edgeAccentMinLum)
+    // Geometrie van een paneel dat uit een schermrand groeit. Dit volgt de
+    // Caelestia-blobgroep-benadering: de rand en het paneel worden als één
+    // samengestelde vorm behandeld in plaats van losse connectorstukjes.
+    property bool edgeBlobOpen: false
+    property string edgeBlobEdge: ""
+    property real edgeBlobProgress: 0
+    property real edgeBlobX: 0
+    property real edgeBlobY: 0
+    property real edgeBlobWidth: 0
+    property real edgeBlobHeight: 0
     function _clamp01(v) {
         return Math.max(0.0, Math.min(1.0, Number(v) || 0.0));
     }
+    function _easeOutCubic(v) {
+        let t = _clamp01(v);
+        return 1.0 - Math.pow(1.0 - t, 3);
+    }
+    readonly property real edgeBlobReveal: _easeOutCubic(edgeBlobProgress)
+    readonly property real edgeBlobConnectorOpacity: _clamp01((edgeBlobReveal - 0.08) / 0.74)
+    readonly property real edgeBlobConnectorRadius: Math.max(1, cornerR * edgeBlobConnectorOpacity)
+    readonly property real edgeBlobCutInset: Math.max(0, edgeBlobWidth * (1.0 - edgeBlobReveal) / 2.0)
+    readonly property real edgeBlobCutX: edgeBlobX + edgeBlobCutInset
+    readonly property real edgeBlobCutRight: edgeBlobX + edgeBlobWidth - edgeBlobCutInset
+    readonly property bool nativeEdgeBlobActive: edgeBlobOpen && edgeBlobEdge !== ""
     function _bottomGradientT(screenX) {
         let w = Math.max(1, root.width - root.railWidth - root.shellBorderWidth);
         return root._clamp01((screenX - root.railWidth) / w);
@@ -97,43 +155,75 @@ Item {
     }
     function _stripFillAt(screenX) {
         let w = Math.max(1, root.width - root.railWidth);
-        return root._mix(root.barGradStart, root.barGradEnd, root._clamp01((screenX - root.railWidth) / w));
+        return root._mix3(root.barGradStart, root.barGradMid, root.barGradEnd, root._clamp01((screenX - root.railWidth) / w));
     }
     function _railFillAt(screenY) {
-        return root._mix(root.barGradStart, root.barGradEnd, root._clamp01(screenY / Math.max(1, root.height)));
+        return root._mix3(root.barGradStart, root.barGradMid, root.barGradEnd, root._clamp01(screenY / Math.max(1, root.height)));
     }
     function _rightFillAt(screenY) {
         let h = Math.max(1, root.height - root.stripHeight);
-        return root._mix(root.barGradEnd, root.barGradStart, root._clamp01((screenY - root.stripHeight) / h));
+        return root._mix3(root.barGradEnd, root.barGradMid, root.barGradStart, root._clamp01((screenY - root.stripHeight) / h));
     }
     function _bottomFillAt(screenX) {
-        return root._mix(root.barGradEnd, root.barGradStart, root._bottomGradientT(screenX));
+        return root._mix3(root.barGradEnd, root.barGradMid, root.barGradStart, root._bottomGradientT(screenX));
     }
     function _stripHueAt(screenX) {
         let x0 = root.railWidth + root.cornerR;
         let w = Math.max(1, root.width - root.railWidth - root.shellBorderWidth - root.cornerR * 2);
-        return root._mix(root.barHueA, root.barHueB, root._clamp01((screenX - x0) / w));
+        return root._mix3(root.barHueA, root.barHueB, root.barHueC, root._clamp01((screenX - x0) / w));
     }
     function _railHueAt(screenY) {
         let y0 = root.stripHeight + root.cornerR;
         let h = Math.max(1, root.height - root.stripHeight - root.shellBorderWidth - root.cornerR * 2);
-        return root._mix(root.barHueA, root.barHueB, root._clamp01((screenY - y0) / h));
+        return root._mix3(root.barHueA, root.barHueB, root.barHueC, root._clamp01((screenY - y0) / h));
     }
     function _rightHueAt(screenY) {
         let y0 = root.stripHeight + root.cornerR;
         let h = Math.max(1, root.height - root.stripHeight - root.shellBorderWidth - root.cornerR * 2);
-        return root._mix(root.barHueB, root.barHueA, root._clamp01((screenY - y0) / h));
+        return root._mix3(root.barHueC, root.barHueB, root.barHueA, root._clamp01((screenY - y0) / h));
     }
     function _bottomHueAt(screenX) {
-        return root._mix(root.barHueB, root.barHueA, root._bottomAccentT(screenX));
+        return root._mix3(root.barHueC, root.barHueB, root.barHueA, root._bottomAccentT(screenX));
     }
-    readonly property color launcherFillLeft: _bottomFillAt(launcherX)
-    readonly property color launcherFillRight: _bottomFillAt(launcherX + launcherWidth)
-    readonly property color launcherHueLeft: _bottomHueAt(launcherX)
-    readonly property color launcherHueRight: _bottomHueAt(launcherX + launcherWidth)
+    readonly property color edgeBlobFillLeft: _bottomFillAt(edgeBlobX)
+    readonly property color edgeBlobFillRight: _bottomFillAt(edgeBlobX + edgeBlobWidth)
+    readonly property color edgeBlobHueLeft: _bottomHueAt(edgeBlobX)
+    readonly property color edgeBlobHueRight: _bottomHueAt(edgeBlobX + edgeBlobWidth)
+    readonly property color edgeBlobFillStart: {
+        if (edgeBlobEdge === "left") return _railFillAt(edgeBlobY);
+        if (edgeBlobEdge === "right") return _rightFillAt(edgeBlobY);
+        if (edgeBlobEdge === "top") return _stripFillAt(edgeBlobX);
+        return _bottomFillAt(edgeBlobX);
+    }
+    readonly property color edgeBlobFillEnd: {
+        if (edgeBlobEdge === "left") return _railFillAt(edgeBlobY + edgeBlobHeight);
+        if (edgeBlobEdge === "right") return _rightFillAt(edgeBlobY + edgeBlobHeight);
+        if (edgeBlobEdge === "top") return _stripFillAt(edgeBlobX + edgeBlobWidth);
+        return _bottomFillAt(edgeBlobX + edgeBlobWidth);
+    }
+    readonly property color edgeBlobFillMid: {
+        if (edgeBlobEdge === "left") return _railFillAt(edgeBlobY + edgeBlobHeight / 2);
+        if (edgeBlobEdge === "right") return _rightFillAt(edgeBlobY + edgeBlobHeight / 2);
+        if (edgeBlobEdge === "top") return _stripFillAt(edgeBlobX + edgeBlobWidth / 2);
+        return _bottomFillAt(edgeBlobX + edgeBlobWidth / 2);
+    }
+    readonly property color edgeBlobHueStart: {
+        if (edgeBlobEdge === "left") return _railHueAt(edgeBlobY);
+        if (edgeBlobEdge === "right") return _rightHueAt(edgeBlobY);
+        if (edgeBlobEdge === "top") return _stripHueAt(edgeBlobX);
+        return _bottomHueAt(edgeBlobX);
+    }
+    readonly property color edgeBlobHueEnd: {
+        if (edgeBlobEdge === "left") return _railHueAt(edgeBlobY + edgeBlobHeight);
+        if (edgeBlobEdge === "right") return _rightHueAt(edgeBlobY + edgeBlobHeight);
+        if (edgeBlobEdge === "top") return _stripHueAt(edgeBlobX + edgeBlobWidth);
+        return _bottomHueAt(edgeBlobX + edgeBlobWidth);
+    }
+    readonly property bool edgeBlobGradientVertical: edgeBlobEdge === "left" || edgeBlobEdge === "right"
+    readonly property var edgeBlobGroup: cornersActive ? nativeBlobGroup : null
 
     readonly property color panelColor: {
-        let c = _mix(barFloor, barHueA, barTintK * 0.6);
+        let c = _mix(barFloor, barHueCenter, barTintK * 0.6);
         return Qt.rgba(c.r, c.g, c.b, barFillAlpha);
     }
     readonly property color pillColor: {
@@ -197,6 +287,8 @@ Item {
 
     readonly property Item railHitRegion: railHitArea
     readonly property Item stripHitRegion: stripHitArea
+    readonly property Item topHoverHitRegion: topHoverHitArea
+    readonly property bool topHoverHovered: topHover.hovered
     property string activeMode: "office"
     property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications"]
     property bool barAutoHide: false
@@ -214,6 +306,7 @@ Item {
     property real lastTriggerX: 0
     property real lastTriggerY: 0
     signal panelRequested(string sourceEntryId, real anchorX, real anchorY)
+    signal panelCloseRequested(string sourceEntryId)
 
     function _defaultModules(mode) {
         if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "fps", "battery", "volume", "game_launcher", "clock"];
@@ -406,6 +499,54 @@ Item {
         }
     }
 
+    BlobGroup {
+        id: nativeBlobGroup
+        color: root.barGradCenter
+        // Eén verloop over het volle scherm, gedeeld door de omlijsting en elk
+        // paneel. Eerder wisselde de groep van verloop zodra er een paneel
+        // openging en berekende elk paneel zijn eigen start/eind-kleur; dan
+        // volgt het verloop de omhulzing i.p.v. het scherm en sluit een blob
+        // qua kleur niet aan op de rand waar hij uit groeit. De shader sampelt
+        // op scene-positie, dus origin/span zijn schermcoördinaten.
+        gradientStart: root.barGradStart
+        // Het middenpunt is bewust precies het gemiddelde van start en eind:
+        // dan is het verloop één rechte overgang van kleur a naar kleur b.
+        // barGradMid komt uit een derde wallpaper-hue die vaak veel donkerder
+        // is, waardoor je donker → licht → donker kreeg in plaats van a → b.
+        gradientMid: Qt.rgba((root.barGradStart.r + root.barGradEnd.r) / 2,
+                             (root.barGradStart.g + root.barGradEnd.g) / 2,
+                             (root.barGradStart.b + root.barGradEnd.b) / 2,
+                             (root.barGradStart.a + root.barGradEnd.a) / 2)
+        gradientEnd: root.barGradEnd
+        // Diagonaal verloop over het volle scherm: langs de as linksboven →
+        // rechtsonder gaat de kleur van a naar b, en elke lijn loodrecht
+        // daarop (de andere diagonaal) houdt exact één kleur. De span is de
+        // projectie van de schermdiagonaal op die richting.
+        gradientDirection: Qt.point(0.7071, 0.7071)
+        gradientOrigin: 0
+        gradientSpan: Math.max(1, (root.width + root.height) * 0.7071)
+        // De accentrand wordt in dezelfde SDF getekend als de vulling, dus hij
+        // loopt automatisch om de samengesmolten vorm van omlijsting + panelen
+        // heen. Losse Canvas-outlines per paneel konden in de hoeken nooit
+        // naadloos aansluiten en lieten daar een open kant achter.
+        // Zelfde opzet als de vulling: recht van a naar b, middenpunt op het
+        // gemiddelde, zodat rand en vlak in dezelfde richting verlopen.
+        borderStart: Qt.rgba(root.edgeAccentA.r, root.edgeAccentA.g, root.edgeAccentA.b, root.chromeAccentAlpha)
+        borderMid: Qt.rgba((root.edgeAccentA.r + root.edgeAccentC.r) / 2,
+                           (root.edgeAccentA.g + root.edgeAccentC.g) / 2,
+                           (root.edgeAccentA.b + root.edgeAccentC.b) / 2,
+                           root.chromeAccentAlpha)
+        borderEnd: Qt.rgba(root.edgeAccentC.r, root.edgeAccentC.g, root.edgeAccentC.b, root.chromeAccentAlpha)
+        borderWidth: root.frameBandW
+        smoothing: Math.max(18, root.cornerR)
+        cornerFill: true
+    }
+
+    // De omlijstings-blob zelf staat bewust niet hier maar als aparte laag
+    // onder de panelhost in ShellSurface: hij vloeit met de SDF-blend een eind
+    // naar binnen uit, en zou vanuit deze (hoger liggende) chrome over de
+    // paneelinhoud heen tekenen. Zie frameBlobLayer daar.
+
     Timer {
         interval: 2500
         running: true
@@ -436,14 +577,42 @@ Item {
         }
     }
 
+    Item {
+        id: topHoverHitArea
+
+        visible: root.stripEnabled && !root.stripControlsEnabled && !root.stripOnBottom
+        anchors.top: parent.top
+        anchors.left: root.railEnabled && !root.railOnRight ? rail.right : parent.left
+        anchors.right: root.railEnabled && root.railOnRight ? rail.left : parent.right
+        height: Math.max(root.shellBorderWidth, 8)
+        z: 30
+
+        HoverHandler {
+            id: topHover
+            onHoveredChanged: {
+                if (hovered) {
+                    root.lastTriggerX = root.width / 2;
+                    root.lastTriggerY = 0;
+                    root.panelRequested("tophover", root.lastTriggerX, root.lastTriggerY);
+                } else {
+                    root.panelCloseRequested("tophover");
+                }
+            }
+        }
+    }
+
     Rectangle {
         id: rail
         visible: root.railEnabled
         anchors.fill: railHitArea
+        // De blob-shader tekent de accentband op de binnenrand van de
+        // omlijsting; laat die strook vrij in plaats van hem dicht te verven.
+        anchors.rightMargin: root.cornersActive && !root.railOnRight ? root.frameBandW : 0
+        anchors.leftMargin: root.cornersActive && root.railOnRight ? root.frameBandW : 0
         gradient: Gradient {
             orientation: Gradient.Vertical
-            GradientStop { position: 0.0; color: root.barGradStart }
-            GradientStop { position: 1.0; color: root.barGradEnd }
+            GradientStop { position: 0.0; color: root._diagColor(root.railWidth / 2, 0) }
+            GradientStop { position: 1.0; color: root._diagColor(root.railWidth / 2, root.height) }
         }
         border.width: 0
         opacity: root.railContentVisible ? 1 : 0.82
@@ -458,7 +627,7 @@ Item {
             NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
         }
 
-        // Accent-"spine": twee wallpaper-hues over de binnenrand van de rail.
+        // Accent-spine: drie wallpaper-hues over de binnenrand van de rail.
         Rectangle {
             visible: !root.cornersActive
             width: 2
@@ -474,7 +643,8 @@ Item {
             gradient: Gradient {
                 orientation: Gradient.Vertical
                 GradientStop { position: 0.0; color: root.barHueA }
-                GradientStop { position: 1.0; color: root.barHueB }
+                GradientStop { position: 0.5; color: root.barHueB }
+                GradientStop { position: 1.0; color: root.barHueC }
             }
         }
 
@@ -487,6 +657,31 @@ Item {
                 icon: "󰣇"
                 accent: root.hotColor
                 onTriggered: root.togglePanel("launcher")
+            }
+
+            RailButton {
+                tooltip: root.moduleEnabled("clock") ? root.dateText : "Agenda"
+                visible: root.moduleEnabled("clock")
+                icon: "󰃰"
+                text: root.timeText
+                accent: root.mocha.blue
+                onTriggered: root.togglePanel("calendar")
+            }
+
+            RailButton {
+                tooltip: "Meldingen"
+                visible: root.moduleEnabled("notifications")
+                icon: "󰍜"
+                accent: root.mocha.yellow
+                onTriggered: Quickshell.execDetached(["bash", "-lc", "swaync-client -t -sw"])
+            }
+
+            RailButton {
+                tooltip: "Media"
+                visible: root.mediaVisible
+                icon: "󰎆"
+                accent: root.mocha.green
+                onTriggered: root.togglePanel("music")
             }
 
             ColumnLayout {
@@ -609,6 +804,22 @@ Item {
                 onTriggered: root.togglePanel("performance")
             }
 
+            RailButton {
+                tooltip: "Monitoren"
+                visible: root.anyModuleEnabled(["updates", "cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"])
+                icon: "󰍹"
+                accent: root.mocha.teal
+                onTriggered: root.togglePanel("monitors")
+            }
+
+            RailButton {
+                tooltip: "Games"
+                visible: root.moduleEnabled("game_launcher")
+                icon: "󰊴"
+                accent: root.mocha.mauve
+                onTriggered: root.togglePanel("gaming")
+            }
+
             Item { Layout.fillHeight: true }
 
             RailButton { tooltip: "Netwerk";
@@ -675,6 +886,7 @@ Item {
 
         Item {
             id: stripHitArea
+            visible: root.stripControlsEnabled
             anchors.fill: parent
 
             HoverHandler {
@@ -691,10 +903,13 @@ Item {
 
         Rectangle {
             anchors.fill: parent
+            // Zelfde als bij de rail: de accentband van de shader vrijlaten.
+            anchors.bottomMargin: root.cornersActive && !root.stripOnBottom ? root.frameBandW : 0
+            anchors.topMargin: root.cornersActive && root.stripOnBottom ? root.frameBandW : 0
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: root.barGradStart }
-                GradientStop { position: 1.0; color: root.barGradEnd }
+                GradientStop { position: 0.0; color: root._diagColor(0, root.stripHeight / 2) }
+                GradientStop { position: 1.0; color: root._diagColor(root.width, root.stripHeight / 2) }
             }
             border.width: 0
             opacity: root.stripContentVisible ? 1 : 0.84
@@ -709,7 +924,7 @@ Item {
                 NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
             }
 
-            // Accent-lijn: twee wallpaper-hues over de buitenrand van de strip.
+            // Accent-lijn: drie wallpaper-hues over de buitenrand van de strip.
             Rectangle {
                 visible: !root.cornersActive
                 height: 2
@@ -723,11 +938,13 @@ Item {
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: root.barHueA }
-                    GradientStop { position: 1.0; color: root.barHueB }
+                    GradientStop { position: 0.5; color: root.barHueB }
+                    GradientStop { position: 1.0; color: root.barHueC }
                 }
             }
 
             RowLayout {
+                visible: root.stripControlsEnabled
                 anchors.left: parent.left
                 anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
@@ -751,7 +968,7 @@ Item {
                         Layout.preferredHeight: 24
                         radius: Math.min(6, ThemeConfig.styleWidgetRadius)
                         color: active ? root.hotColor
-                            : (wsMouse.containsMouse ? root.pillHoverColor
+                            : (stripWsMouse.containsMouse ? root.pillHoverColor
                                 : (occupied ? root.pillColor : "transparent"))
                         border.width: active || occupied ? 0 : 1
                         border.color: Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.14)
@@ -764,7 +981,7 @@ Item {
                             color: active ? root.mocha.base : root.mocha.text
                         }
                         MouseArea {
-                            id: wsMouse
+                            id: stripWsMouse
                             anchors.fill: parent
                             hoverEnabled: true
                             onClicked: root.switchWorkspace(wsId)
@@ -783,7 +1000,7 @@ Item {
 
             RowLayout {
                 anchors.centerIn: parent
-                visible: root.moduleEnabled("clock")
+                visible: root.stripControlsEnabled && root.moduleEnabled("clock")
                 spacing: 10
                 Text {
                     text: root.timeText
@@ -809,6 +1026,7 @@ Item {
             }
 
             RowLayout {
+                visible: root.stripControlsEnabled
                 anchors.right: parent.right
                 anchors.rightMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
@@ -846,6 +1064,7 @@ Item {
                     onTriggered: root.togglePanel("battery")
                 }
                 StripButton { tooltip: "Afsluitmenu";
+                    visible: !root.railEnabled
                     icon: "󰐥"
                     accent: root.mocha.red
                     onTriggered: root.togglePanel("power")
@@ -865,30 +1084,16 @@ Item {
     Rectangle {
         id: rightBorder
         visible: root.cornersActive
-        x: root.width - root.shellBorderWidth
+        // frameBandW erbij opgeteld: de accentband van de blob-shader ligt op
+        // de binnenrand van de omlijsting en moet zichtbaar blijven.
+        x: root.width - root.shellBorderWidth + root.frameBandW
         y: root.stripHeight
-        width: root.shellBorderWidth
+        width: root.shellBorderWidth - root.frameBandW
         height: root.height - root.stripHeight
         gradient: Gradient {
             orientation: Gradient.Vertical
-            GradientStop { position: 0.0; color: root.barGradEnd }
-            GradientStop { position: 1.0; color: root.barGradStart }
-        }
-
-        Rectangle {
-            visible: !root.cornersActive
-            width: 2
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.topMargin: root.cornerR - root.cornerSeamOverlap
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: root.shellBorderWidth + root.cornerR - root.cornerSeamOverlap
-            opacity: root.chromeAccentAlpha
-            gradient: Gradient {
-                orientation: Gradient.Vertical
-                GradientStop { position: 0.0; color: root.barHueB }
-                GradientStop { position: 1.0; color: root.barHueA }
-            }
+            GradientStop { position: 0.0; color: root._diagColor(root.width, root.stripHeight) }
+            GradientStop { position: 1.0; color: root._diagColor(root.width, root.height) }
         }
     }
 
@@ -896,494 +1101,20 @@ Item {
         id: bottomBorder
         visible: root.cornersActive
         x: root.railWidth
-        y: root.height - root.shellBorderWidth
+        y: root.height - root.shellBorderWidth + root.frameBandW
         width: root.width - root.railWidth - root.shellBorderWidth
-        height: root.shellBorderWidth
+        height: root.shellBorderWidth - root.frameBandW
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: root.barGradEnd }
-            GradientStop { position: 1.0; color: root.barGradStart }
-        }
-
-        // Linkerdeel: van de hoek linksonder tot waar de launcher begint.
-        Rectangle {
-            visible: !root.cornersActive
-            height: 2
-            y: 0
-            x: root.cornerR - root.cornerSeamOverlap
-            width: Math.max(0, (root.launcherOpen
-                    ? root.launcherX - root.railWidth - root.cornerR + root.cornerSeamOverlap
-                    : parent.width - root.cornerR + root.cornerSeamOverlap) - x)
-            opacity: root.chromeAccentAlpha
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: root.barHueB }
-                GradientStop { position: 1.0; color: root.launcherOpen ? root.launcherHueLeft : root.barHueA }
-            }
-        }
-        // Rechterdeel: pas nodig zodra de launcher de rand onderbreekt.
-        Rectangle {
-            visible: !root.cornersActive && root.launcherOpen
-            height: 2
-            y: 0
-            x: root.launcherX + root.launcherWidth - root.railWidth + root.cornerR - root.cornerSeamOverlap
-            width: Math.max(0, parent.width - root.cornerR + root.cornerSeamOverlap - x)
-            opacity: root.chromeAccentAlpha
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: root.launcherHueRight }
-                GradientStop { position: 1.0; color: root.barHueA }
-            }
+            GradientStop { position: 0.0; color: root._diagColor(root.railWidth, root.height) }
+            GradientStop { position: 1.0; color: root._diagColor(root.width, root.height) }
         }
     }
 
-    // Aansluitbogen links en rechts van de launcher: de onderrand buigt hier
-    // omhoog de launcher in, zodat het één doorlopende vorm lijkt.
-    InnerCorner {
-        mirrorH: true
-        mirrorV: true
-        visible: root.cornersActive && root.launcherOpen
-        x: root.launcherX - root.cornerR
-        y: root.height - root.shellBorderWidth - root.cornerR
-        drawStroke: false
-        fillColor: root.launcherFillLeft
-        accentColor: root.launcherHueLeft
-        horizontalFillColor: root._bottomFillAt(root.launcherX)
-        verticalFillColor: root.launcherFillLeft
-        horizontalAccentColor: root._bottomHueAt(root.launcherX)
-        verticalAccentColor: root.launcherHueLeft
-    }
-    InnerCorner {
-        mirrorV: true
-        visible: root.cornersActive && root.launcherOpen
-        x: root.launcherX + root.launcherWidth - 1
-        y: root.height - root.shellBorderWidth - root.cornerR
-        drawStroke: false
-        fillColor: root.launcherFillRight
-        accentColor: root.launcherHueRight
-        horizontalFillColor: root._bottomFillAt(root.launcherX + root.launcherWidth)
-        verticalFillColor: root.launcherFillRight
-        horizontalAccentColor: root._bottomHueAt(root.launcherX + root.launcherWidth)
-        verticalAccentColor: root.launcherHueRight
-    }
-
-    LauncherConnectorStroke {
-        visible: root.cornersActive && root.launcherOpen
-        x: root.launcherX - root.cornerR - root.cornerSeamOverlap
-        y: root.height - root.shellBorderWidth - root.cornerR - root.cornerSeamOverlap
-        horizontalAccentColor: root._bottomHueAt(root.launcherX)
-        verticalAccentColor: root.launcherHueLeft
-    }
-
-    LauncherConnectorStroke {
-        visible: root.cornersActive && root.launcherOpen
-        mirrorH: true
-        x: root.launcherX + root.launcherWidth - root.cornerSeamOverlap
-        y: root.height - root.shellBorderWidth - root.cornerR - root.cornerSeamOverlap
-        horizontalAccentColor: root._bottomHueAt(root.launcherX + root.launcherWidth)
-        verticalAccentColor: root.launcherHueRight
-    }
-
-    component InnerCorner: Canvas {
-        id: ic
-        property bool mirrorH: false
-        property bool mirrorV: false
-        property bool drawStroke: true
-        property color fillColor: root.barGradStart
-        property color accentColor: root.barHueA
-        property color horizontalFillColor: fillColor
-        property color verticalFillColor: fillColor
-        property color horizontalAccentColor: accentColor
-        property color verticalAccentColor: accentColor
-
-        width: root.cornerR
-        height: root.cornerR
-        antialiasing: true
-
-        onMirrorHChanged: requestPaint()
-        onMirrorVChanged: requestPaint()
-        onHorizontalFillColorChanged: requestPaint()
-        onVerticalFillColorChanged: requestPaint()
-        onHorizontalAccentColorChanged: requestPaint()
-        onVerticalAccentColorChanged: requestPaint()
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        Component.onCompleted: requestPaint()
-
-        onPaint: {
-            let ctx = getContext("2d");
-            let r = root.cornerR;
-            ctx.reset();
-            ctx.clearRect(0, 0, width, height);
-            ctx.save();
-            ctx.translate(ic.mirrorH ? r : 0, ic.mirrorV ? r : 0);
-            ctx.scale(ic.mirrorH ? -1 : 1, ic.mirrorV ? -1 : 1);
-
-            let fill = ctx.createLinearGradient(r, 0, 0, r);
-            fill.addColorStop(0.0, ic.horizontalFillColor);
-            fill.addColorStop(1.0, ic.verticalFillColor);
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(r, 0);
-            ctx.arc(r, r, r, -Math.PI / 2, Math.PI, true);
-            ctx.lineTo(0, 0);
-            ctx.closePath();
-            ctx.fillStyle = fill;
-            ctx.fill();
-
-            if (!ic.drawStroke) {
-                ctx.restore();
-                return;
-            }
-
-            let stroke = ctx.createLinearGradient(r, 0, 0, r);
-            stroke.addColorStop(0.0, Qt.rgba(ic.horizontalAccentColor.r, ic.horizontalAccentColor.g, ic.horizontalAccentColor.b,
-                                             root.chromeAccentAlpha));
-            stroke.addColorStop(1.0, Qt.rgba(ic.verticalAccentColor.r, ic.verticalAccentColor.g, ic.verticalAccentColor.b,
-                                             root.chromeAccentAlpha));
-            let halfStroke = root.cornerStrokeWidth / 2;
-            ctx.beginPath();
-            ctx.moveTo(r, halfStroke);
-            ctx.arc(r, r, Math.max(0, r - halfStroke), -Math.PI / 2, Math.PI, true);
-            ctx.strokeStyle = stroke;
-            ctx.lineWidth = root.cornerStrokeWidth;
-            ctx.lineCap = "square";
-            ctx.stroke();
-            ctx.restore();
-        }
-    }
-
-    component LauncherConnectorStroke: Canvas {
-        id: connector
-        property bool mirrorH: false
-        property color horizontalAccentColor: root.barHueA
-        property color verticalAccentColor: root.barHueA
-
-        width: root.cornerR + root.cornerSeamOverlap * 2
-        height: root.cornerR + root.cornerSeamOverlap * 2
-        antialiasing: true
-        z: 12
-
-        onMirrorHChanged: requestPaint()
-        onHorizontalAccentColorChanged: requestPaint()
-        onVerticalAccentColorChanged: requestPaint()
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        Component.onCompleted: requestPaint()
-
-        onPaint: {
-            let ctx = getContext("2d");
-            let r = root.cornerR;
-            let o = root.cornerSeamOverlap;
-            let bottomY = r + o;
-            let sideX = r + o;
-            ctx.reset();
-            ctx.clearRect(0, 0, width, height);
-            ctx.save();
-            if (connector.mirrorH) {
-                ctx.translate(width, 0);
-                ctx.scale(-1, 1);
-            }
-
-            let stroke = ctx.createLinearGradient(0, bottomY, sideX, 0);
-            stroke.addColorStop(0.0, Qt.rgba(connector.horizontalAccentColor.r,
-                                             connector.horizontalAccentColor.g,
-                                             connector.horizontalAccentColor.b,
-                                             root.chromeAccentAlpha));
-            stroke.addColorStop(1.0, Qt.rgba(connector.verticalAccentColor.r,
-                                             connector.verticalAccentColor.g,
-                                             connector.verticalAccentColor.b,
-                                             root.chromeAccentAlpha));
-
-            ctx.beginPath();
-            ctx.moveTo(0, bottomY);
-            ctx.lineTo(o, bottomY);
-            ctx.arc(o, o, Math.max(0, r - root.cornerStrokeWidth / 2),
-                    Math.PI / 2, 0, true);
-            ctx.lineTo(sideX, 0);
-            ctx.strokeStyle = stroke;
-            ctx.lineWidth = root.cornerStrokeWidth;
-            ctx.lineCap = "square";
-            ctx.stroke();
-            ctx.restore();
-        }
-    }
-
-    // De vier content-hoeken. 1px naar de bar toe: de stroke ligt gecentreerd
-    // op het pad terwijl de rechte lijnen tegen de rand liggen.
-    InnerCorner {
-        visible: root.cornersActive
-        x: root.railWidth - 1
-        y: root.stripHeight - 1
-        drawStroke: false
-        fillColor: root.barGradStart
-        horizontalFillColor: root._stripFillAt(root.railWidth + root.cornerR)
-        verticalFillColor: root._railFillAt(root.stripHeight + root.cornerR)
-        horizontalAccentColor: root._stripHueAt(root.railWidth + root.cornerR)
-        verticalAccentColor: root._railHueAt(root.stripHeight + root.cornerR)
-    }
-    InnerCorner {
-        visible: root.cornersActive
-        mirrorH: true
-        x: root.width - root.shellBorderWidth - root.cornerR + 1
-        y: root.stripHeight - 1
-        drawStroke: false
-        fillColor: root.barGradEnd
-        accentColor: root.barHueB
-        horizontalFillColor: root._stripFillAt(root.width - root.shellBorderWidth - root.cornerR)
-        verticalFillColor: root._rightFillAt(root.stripHeight + root.cornerR)
-        horizontalAccentColor: root._stripHueAt(root.width - root.shellBorderWidth - root.cornerR)
-        verticalAccentColor: root._rightHueAt(root.stripHeight + root.cornerR)
-    }
-    InnerCorner {
-        visible: root.cornersActive
-        mirrorV: true
-        x: root.railWidth - 1
-        y: root.height - root.shellBorderWidth - root.cornerR + 1
-        drawStroke: false
-        fillColor: root.barGradEnd
-        accentColor: root.barHueB
-        horizontalFillColor: root._bottomFillAt(root.railWidth + root.cornerR)
-        verticalFillColor: root._railFillAt(root.height - root.shellBorderWidth - root.cornerR)
-        horizontalAccentColor: root._bottomHueAt(root.railWidth + root.cornerR)
-        verticalAccentColor: root._railHueAt(root.height - root.shellBorderWidth - root.cornerR)
-    }
-    InnerCorner {
-        visible: root.cornersActive
-        mirrorH: true
-        mirrorV: true
-        x: root.width - root.shellBorderWidth - root.cornerR + 1
-        y: root.height - root.shellBorderWidth - root.cornerR + 1
-        drawStroke: false
-        fillColor: root.barGradStart
-        accentColor: root.barHueA
-        horizontalFillColor: root._bottomFillAt(root.width - root.shellBorderWidth - root.cornerR)
-        verticalFillColor: root._rightFillAt(root.height - root.shellBorderWidth - root.cornerR)
-        horizontalAccentColor: root._bottomHueAt(root.width - root.shellBorderWidth - root.cornerR)
-        verticalAccentColor: root._rightHueAt(root.height - root.shellBorderWidth - root.cornerR)
-    }
-
-    FrameCornerStroke {
-        visible: false
-        x: root.railWidth - 1 - root.cornerSeamOverlap
-        y: root.stripHeight - 1 - root.cornerSeamOverlap
-        horizontalAccentColor: root._stripHueAt(root.railWidth + root.cornerR)
-        verticalAccentColor: root._railHueAt(root.stripHeight + root.cornerR)
-    }
-
-    FrameCornerStroke {
-        visible: false
-        mirrorH: true
-        x: root.width - root.shellBorderWidth - root.cornerR + 1 - root.cornerSeamOverlap
-        y: root.stripHeight - 1 - root.cornerSeamOverlap
-        horizontalAccentColor: root._stripHueAt(root.width - root.shellBorderWidth - root.cornerR)
-        verticalAccentColor: root._rightHueAt(root.stripHeight + root.cornerR)
-    }
-
-    FrameCornerStroke {
-        visible: false
-        mirrorV: true
-        x: root.railWidth - 1 - root.cornerSeamOverlap
-        y: root.height - root.shellBorderWidth - root.cornerR + 1 - root.cornerSeamOverlap
-        horizontalAccentColor: root._bottomHueAt(root.railWidth + root.cornerR)
-        verticalAccentColor: root._railHueAt(root.height - root.shellBorderWidth - root.cornerR)
-    }
-
-    FrameCornerStroke {
-        visible: false
-        mirrorH: true
-        mirrorV: true
-        x: root.width - root.shellBorderWidth - root.cornerR + 1 - root.cornerSeamOverlap
-        y: root.height - root.shellBorderWidth - root.cornerR + 1 - root.cornerSeamOverlap
-        horizontalAccentColor: root._bottomHueAt(root.width - root.shellBorderWidth - root.cornerR)
-        verticalAccentColor: root._rightHueAt(root.height - root.shellBorderWidth - root.cornerR)
-    }
-
-    component FrameCornerStroke: Canvas {
-        id: frameCorner
-        property bool mirrorH: false
-        property bool mirrorV: false
-        property color horizontalAccentColor: root.barHueA
-        property color verticalAccentColor: root.barHueA
-
-        width: root.cornerR + root.cornerSeamOverlap * 2
-        height: root.cornerR + root.cornerSeamOverlap * 2
-        antialiasing: true
-        z: 11
-
-        onMirrorHChanged: requestPaint()
-        onMirrorVChanged: requestPaint()
-        onHorizontalAccentColorChanged: requestPaint()
-        onVerticalAccentColorChanged: requestPaint()
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        Component.onCompleted: requestPaint()
-
-        onPaint: {
-            let ctx = getContext("2d");
-            let r = root.cornerR;
-            let o = root.cornerSeamOverlap;
-            let halfStroke = root.cornerStrokeWidth / 2;
-            ctx.reset();
-            ctx.clearRect(0, 0, width, height);
-            ctx.save();
-            ctx.translate(frameCorner.mirrorH ? width - o : o,
-                          frameCorner.mirrorV ? height - o : o);
-            ctx.scale(frameCorner.mirrorH ? -1 : 1,
-                      frameCorner.mirrorV ? -1 : 1);
-
-            let stroke = ctx.createLinearGradient(r, 0, 0, r);
-            stroke.addColorStop(0.0, Qt.rgba(frameCorner.horizontalAccentColor.r,
-                                             frameCorner.horizontalAccentColor.g,
-                                             frameCorner.horizontalAccentColor.b,
-                                             root.chromeAccentAlpha));
-            stroke.addColorStop(1.0, Qt.rgba(frameCorner.verticalAccentColor.r,
-                                             frameCorner.verticalAccentColor.g,
-                                             frameCorner.verticalAccentColor.b,
-                                             root.chromeAccentAlpha));
-
-            ctx.beginPath();
-            ctx.moveTo(r + o, halfStroke);
-            ctx.lineTo(r, halfStroke);
-            ctx.arc(r, r, Math.max(0, r - halfStroke), -Math.PI / 2, Math.PI, true);
-            ctx.lineTo(halfStroke, r + o);
-            ctx.strokeStyle = stroke;
-            ctx.lineWidth = root.cornerStrokeWidth;
-            ctx.lineCap = "square";
-            ctx.lineJoin = "round";
-            ctx.stroke();
-            ctx.restore();
-        }
-    }
-
-    Canvas {
-        id: frameOutline
-        visible: root.cornersActive
-        anchors.fill: parent
-        antialiasing: true
-        z: 11
-
-        onVisibleChanged: requestPaint()
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        Connections {
-            target: root
-            function onLauncherOpenChanged() { frameOutline.requestPaint(); }
-            function onLauncherXChanged() { frameOutline.requestPaint(); }
-            function onLauncherWidthChanged() { frameOutline.requestPaint(); }
-        }
-
-        onPaint: {
-            let ctx = getContext("2d");
-            let r = root.cornerR;
-            let sw = root.cornerStrokeWidth;
-            let half = sw / 2;
-            let over = root.cornerSeamOverlap;
-            let left = root.railWidth - half;
-            let top = root.stripHeight - half;
-            let right = root.width - root.shellBorderWidth + half;
-            let bottom = root.height - root.shellBorderWidth + half;
-
-            function rgba(c) {
-                return Qt.rgba(c.r, c.g, c.b, root.chromeAccentAlpha);
-            }
-
-            function strokePath(pathFn, gradient) {
-                ctx.beginPath();
-                pathFn();
-                ctx.strokeStyle = gradient;
-                ctx.lineWidth = sw;
-                ctx.lineCap = "square";
-                ctx.lineJoin = "round";
-                ctx.stroke();
-            }
-
-            ctx.reset();
-            ctx.clearRect(0, 0, width, height);
-
-            let topGrad = ctx.createLinearGradient(left + r, top, right - r, top);
-            topGrad.addColorStop(0.0, rgba(root._stripHueAt(left + r)));
-            topGrad.addColorStop(1.0, rgba(root._stripHueAt(right - r)));
-
-            let rightGrad = ctx.createLinearGradient(right, top + r, right, bottom - r);
-            rightGrad.addColorStop(0.0, rgba(root._rightHueAt(top + r)));
-            rightGrad.addColorStop(1.0, rgba(root._rightHueAt(bottom - r)));
-
-            let bottomGrad = ctx.createLinearGradient(left + r, bottom, right - r, bottom);
-            bottomGrad.addColorStop(0.0, rgba(root._bottomHueAt(left + r)));
-            bottomGrad.addColorStop(1.0, rgba(root._bottomHueAt(right - r)));
-
-            let leftGrad = ctx.createLinearGradient(left, top + r, left, bottom - r);
-            leftGrad.addColorStop(0.0, rgba(root._railHueAt(top + r)));
-            leftGrad.addColorStop(1.0, rgba(root._railHueAt(bottom - r)));
-
-            let tlGrad = ctx.createLinearGradient(left + r, top, left, top + r);
-            tlGrad.addColorStop(0.0, rgba(root._stripHueAt(left + r)));
-            tlGrad.addColorStop(1.0, rgba(root._railHueAt(top + r)));
-
-            let trGrad = ctx.createLinearGradient(right - r, top, right, top + r);
-            trGrad.addColorStop(0.0, rgba(root._stripHueAt(right - r)));
-            trGrad.addColorStop(1.0, rgba(root._rightHueAt(top + r)));
-
-            let brGrad = ctx.createLinearGradient(right - r, bottom, right, bottom - r);
-            brGrad.addColorStop(0.0, rgba(root._bottomHueAt(right - r)));
-            brGrad.addColorStop(1.0, rgba(root._rightHueAt(bottom - r)));
-
-            let blGrad = ctx.createLinearGradient(left + r, bottom, left, bottom - r);
-            blGrad.addColorStop(0.0, rgba(root._bottomHueAt(left + r)));
-            blGrad.addColorStop(1.0, rgba(root._railHueAt(bottom - r)));
-
-            strokePath(function() {
-                ctx.moveTo(left + r - over, top);
-                ctx.arc(left + r, top + r, r, Math.PI * 1.5, Math.PI, true);
-                ctx.lineTo(left, top + r + over);
-            }, tlGrad);
-
-            strokePath(function() {
-                ctx.moveTo(left + r - over, top);
-                ctx.lineTo(right - r + over, top);
-            }, topGrad);
-
-            strokePath(function() {
-                ctx.moveTo(right - r - over, top);
-                ctx.arc(right - r, top + r, r, Math.PI * 1.5, 0, false);
-                ctx.lineTo(right, top + r + over);
-            }, trGrad);
-
-            strokePath(function() {
-                ctx.moveTo(right, top + r - over);
-                ctx.lineTo(right, bottom - r + over);
-            }, rightGrad);
-
-            strokePath(function() {
-                ctx.moveTo(right, bottom - r - over);
-                ctx.arc(right - r, bottom - r, r, 0, Math.PI / 2, false);
-                ctx.lineTo(right - r - over, bottom);
-            }, brGrad);
-
-            strokePath(function() {
-                ctx.moveTo(left + r - over, bottom);
-                if (root.launcherOpen) {
-                    let cutL = Math.max(left + r, root.launcherX);
-                    let cutR = Math.min(right - r, root.launcherX + root.launcherWidth);
-                    ctx.lineTo(cutL + over, bottom);
-                    ctx.moveTo(cutR - over, bottom);
-                }
-                ctx.lineTo(right - r + over, bottom);
-            }, bottomGrad);
-
-            strokePath(function() {
-                ctx.moveTo(left + r + over, bottom);
-                ctx.arc(left + r, bottom - r, r, Math.PI / 2, Math.PI, false);
-                ctx.lineTo(left, bottom - r - over);
-            }, blGrad);
-
-            strokePath(function() {
-                ctx.moveTo(left, bottom - r + over);
-                ctx.lineTo(left, top + r - over);
-            }, leftGrad);
-        }
-    }
+    // De accentlijn om omlijsting én panelen komt volledig uit de blob-shader:
+    // één band op de samengesmolten SDF (zie blob.frag). De vroegere Canvas
+    // hier tekende een geïdealiseerde outline met eigen hoekbogen overheen,
+    // wat dubbele lijnen en afwijkende hoekvormen gaf zodra een paneel open was.
 
     // --- Hover-tooltip -------------------------------------------------------
     // Eén gedeelde tooltip die naar de gehoverde knop toe beweegt. Rail-knoppen

@@ -170,7 +170,8 @@ start_quickshell_config_live() {
         return 0
     fi
 
-    if qs --no-duplicate --daemonize -c "$config" >/dev/null 2>&1; then
+    local qml_import_path="$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+    if QML_IMPORT_PATH="$qml_import_path" qs --no-duplicate --daemonize -c "$config" >/dev/null 2>&1; then
         log_ok "$label live gestart"
     else
         log_warn "$label kon niet live worden gestart."
@@ -196,7 +197,8 @@ start_quickshell_path_live() {
         return 0
     fi
 
-    if qs --no-duplicate --daemonize -p "$path" >/dev/null 2>&1; then
+    local qml_import_path="$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+    if QML_IMPORT_PATH="$qml_import_path" qs --no-duplicate --daemonize -p "$path" >/dev/null 2>&1; then
         log_ok "$label live gestart"
     else
         log_warn "$label kon niet live worden gestart."

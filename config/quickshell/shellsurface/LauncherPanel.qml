@@ -8,7 +8,13 @@ import ".."
 // App-launcher die vanaf de onderkant van het scherm uitgroeit, in dezelfde
 // chrome-taal als de bar. De desktop-entries komen uit list-apps.py; de
 // Quickshell DesktopEntries-API levert op dit systeem geen resultaten.
-Item {
+//
+// FocusScope, geen Item: het paneel wordt via een Loader in de PanelHost
+// geladen en een Loader geeft toetsenbordfocus niet vanzelf door aan zijn
+// inhoud. Daardoor bleef de focus op de PanelHost hangen — Escape kwam wel
+// aan, maar getypte tekens bereikten het zoekveld nooit. Als scope kan de
+// host hier focus aan geven, die dan bij searchInput (focus: true) landt.
+FocusScope {
     id: root
 
     MatugenColors { id: mocha }
@@ -32,19 +38,94 @@ Item {
     readonly property int rowCornerRadius: Math.max(12, Math.round(panelCornerRadius * 0.56))
 
     readonly property var filtered: {
-        let q = query.trim().toLowerCase();
+        let q = root.normalizeSearch(query);
         if (q === "") return allApps;
-        let starts = [], contains = [];
+        let scored = [];
         for (let i = 0; i < allApps.length; i++) {
             let a = allApps[i];
-            let n = String(a.name || "").toLowerCase();
-            if (n.indexOf(q) === 0) starts.push(a);
-            else if (n.indexOf(q) !== -1 || String(a.comment || "").toLowerCase().indexOf(q) !== -1) contains.push(a);
+            let score = root.appScore(a, q);
+            if (score > 0) scored.push({ app: a, score: score });
         }
-        return starts.concat(contains);
+        scored.sort((a, b) => {
+            if (a.score !== b.score) return b.score - a.score;
+            return String(a.app.name || "").length - String(b.app.name || "").length;
+        });
+        return scored.map(r => r.app);
     }
 
     onFilteredChanged: selectedIndex = 0
+
+    function normalizeSearch(value) {
+        return String(value || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ")
+            .trim()
+            .replace(/\s+/g, " ");
+    }
+
+    function initials(value) {
+        let text = normalizeSearch(value);
+        if (text === "") return "";
+        return text.split(" ").map(w => w.charAt(0)).join("");
+    }
+
+    function wordStartsWith(value, q) {
+        let words = normalizeSearch(value).split(" ");
+        for (let i = 0; i < words.length; i++) {
+            if (words[i].indexOf(q) === 0) return true;
+        }
+        return false;
+    }
+
+    function subsequenceScore(value, q, base) {
+        let text = normalizeSearch(value);
+        if (text === "" || q === "") return 0;
+        let qi = 0;
+        let first = -1;
+        let last = -1;
+        let bonus = 0;
+        let consecutive = 0;
+        for (let i = 0; i < text.length && qi < q.length; i++) {
+            if (text.charAt(i) !== q.charAt(qi)) continue;
+            if (first < 0) first = i;
+            if (i === 0 || text.charAt(i - 1) === " ") bonus += 80;
+            if (last >= 0 && i === last + 1) {
+                consecutive += 1;
+                bonus += 16;
+            }
+            last = i;
+            qi += 1;
+        }
+        if (qi !== q.length) return 0;
+        let span = Math.max(1, last - first + 1);
+        return base + bonus + consecutive * 8 - first * 10 - span * 5 - text.length;
+    }
+
+    function fieldScore(value, q, base) {
+        let text = normalizeSearch(value);
+        if (text === "") return 0;
+        let acro = initials(text);
+        if (text === q) return base + 5000;
+        if (text.indexOf(q) === 0) return base + 4200 - text.length;
+        if (wordStartsWith(text, q)) return base + 3600 - text.length;
+        if (acro === q) return base + 3900 - text.length;
+        if (acro.indexOf(q) === 0) return base + 3400 - text.length;
+        if (text.indexOf(q) !== -1) return base + 2500 - text.indexOf(q) * 4 - text.length;
+        return subsequenceScore(text, q, base + 1200);
+    }
+
+    function appScore(app, q) {
+        return Math.max(
+            fieldScore(app.name, q, 5000),
+            fieldScore(app.genericName, q, 3600),
+            fieldScore(app.startupClass, q, 3400),
+            fieldScore(app.id, q, 3300),
+            fieldScore(app.execString || app.exec, q, 3200),
+            fieldScore(app.keywords, q, 2600),
+            fieldScore(app.comment, q, 2200),
+            fieldScore(app.categories, q, 1400)
+        );
+    }
 
     Process {
         id: scanProc

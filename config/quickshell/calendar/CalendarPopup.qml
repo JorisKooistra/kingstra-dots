@@ -416,9 +416,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: window.themedRadius
-            color: window.popupFill
-            border.color: window.surface0
-            border.width: Math.max(1, ThemeConfig.borderWidth)
+            color: "transparent"
+            border.width: 0
             clip: true
 
             // =======================================================
@@ -453,6 +452,7 @@ Item {
 
             // Big Parallax Weather Icon (Tied to Weather Transition)
             Text {
+                id: weatherIconBackdrop
                 anchors.centerIn: parent
                 anchors.verticalCenterOffset: window.s(-100)
                 text: window.weatherData && window.weatherData.forecast[window.weatherView] ? window.weatherData.forecast[window.weatherView].icon : ""
@@ -471,7 +471,7 @@ Item {
                 }
                 
                 transform: [
-                    Translate { y: parent.drift },
+                    Translate { y: weatherIconBackdrop.drift },
                     Translate { x: window.weatherContentOffset * 2 } // Exaggerated shift for background depth
                 ]
             }

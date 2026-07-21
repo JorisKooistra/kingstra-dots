@@ -622,9 +622,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: window.themedRadius
-            color: window.popupFill
-            border.color: window.surface0
-            border.width: Math.max(1, ThemeConfig.borderWidth)
+            color: "transparent"
+            border.width: 0
             clip: true
             Rectangle {
                 width: parent.width * 0.8; height: width; radius: width / 2
@@ -851,7 +850,7 @@ Item {
                         y: (orbitContainer.height / 2 - height / 2) + (Math.sin(coreOrbitAngle) * myOrbitRadiusY * multiShift * activeTransition)
                         
                         opacity: activeTransition
-                        scale: bumpScale * (0.8 + 0.2 * activeTransition)
+                        scale: 0.8 + 0.2 * activeTransition
                         visible: opacity > 0.01
 
                         property string myId: myDevice ? (window.activeMode === "wifi" ? myDevice.ssid : myDevice.mac) : "unknown"

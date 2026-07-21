@@ -19,6 +19,9 @@ phase_run() {
     # User-state bestanden initialiseren vanuit .default templates
     deploy_defaults "$REPO_ROOT/config/quickshell"
 
+    log_step "Kingstra QML-plugin bouwen/installeren..."
+    _phase05_install_kingstra_qml_plugin
+
     log_step "UI-autostart aanmaken..."
     _phase05_write_autostart_ui
 
@@ -93,11 +96,26 @@ _phase05_apply_live() {
     fi
 
     if command -v kingstra-session-start >/dev/null 2>&1; then
-        kingstra-session-start start-ui >/dev/null 2>&1 || \
-            log_warn "Kingstra UI-entrypoint kon niet live starten"
+        if _phase05_shell_running; then
+            kingstra-session-start restart-shell >/dev/null 2>&1 || \
+                log_warn "Kingstra shell kon niet live herstarten"
+        else
+            kingstra-session-start start-ui >/dev/null 2>&1 || \
+                log_warn "Kingstra UI-entrypoint kon niet live starten"
+        fi
     else
         start_quickshell_path_live "$HOME/.config/quickshell/overview/shell.qml" "Quickshell overview"
     fi
+}
+
+_phase05_shell_running() {
+    if command -v qs >/dev/null 2>&1; then
+        qs list --all 2>/dev/null | grep -Eq \
+            "$HOME/.config/quickshell/(TopBar|Main)\\.qml|$HOME/.config/quickshell/overview/shell\\.qml" \
+            && return 0
+    fi
+
+    pgrep -f "quickshell.*(TopBar|Main|overview/shell)\\.qml" >/dev/null 2>&1
 }
 
 _phase05_validate() {
@@ -108,5 +126,46 @@ _phase05_validate() {
     validate_file "$HOME/.config/quickshell/focustime/focus_daemon.py" "FocusTime daemon"
     validate_file "$HOME/.config/quickshell/sys_info.sh"       "sys_info.sh"
     validate_file "$HOME/.config/hypr/scripts/qs_manager.sh"   "qs_manager.sh"
+    validate_file "$HOME/.local/lib/qml/Kingstra/Blobs/qmldir" "Kingstra.Blobs qmldir"
+    validate_file "$HOME/.local/lib/qml/Kingstra/Blobs/libkingstrablobs.so" "Kingstra.Blobs plugin"
     validate_report
+}
+
+_phase05_install_kingstra_qml_plugin() {
+    local plugin_src="$REPO_ROOT/plugin"
+    local build_dir="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/qml-plugin-build"
+    local install_prefix="$HOME/.local"
+
+    if [[ ! -f "$plugin_src/CMakeLists.txt" ]]; then
+        log_warn "QML-pluginbron ontbreekt: $plugin_src — build overgeslagen"
+        return 0
+    fi
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Kingstra QML-plugin zou worden gebouwd vanuit $plugin_src"
+        log_dry "Install prefix: $install_prefix"
+        return 0
+    fi
+
+    ensure_dir "$build_dir"
+    ensure_dir "$install_prefix/lib/qml"
+
+    local -a generator_args=()
+    if command -v ninja >/dev/null 2>&1; then
+        generator_args=(-G Ninja)
+    fi
+
+    INSTALL_NEXT_RUN_LABEL="CMake configureren: Kingstra QML-plugin" \
+        run_cmd cmake -S "$plugin_src" -B "$build_dir" \
+            "${generator_args[@]}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$install_prefix"
+
+    INSTALL_NEXT_RUN_LABEL="CMake bouwen: Kingstra QML-plugin" \
+        run_cmd cmake --build "$build_dir"
+
+    INSTALL_NEXT_RUN_LABEL="CMake installeren: Kingstra QML-plugin" \
+        run_cmd cmake --install "$build_dir"
+
+    log_ok "Kingstra QML-plugin geïnstalleerd in $install_prefix/lib/qml"
 }

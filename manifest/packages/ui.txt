@@ -6,11 +6,14 @@
 quickshell
 aur:quickshell-overview-git
 pacman-contrib
+cmake
+ninja
 qt6-base
 qt6-declarative
 qt6-multimedia
 qt6-wayland
 qt6-svg
+qt6-shadertools
 
 # SwayNC (notificaties + control center)
 swaync
