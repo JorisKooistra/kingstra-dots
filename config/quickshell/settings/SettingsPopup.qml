@@ -2123,7 +2123,11 @@ Item {
 
         Rectangle {
             anchors.fill: parent; radius: root.themedRadius
-            color: root.popupFill; border.color: root.surface0; border.width: Math.max(1, ThemeConfig.borderWidth)
+            // Transparant net als de overige widgets (zie NetworkPopup): de
+            // PanelBackdrop-blob levert de gethematiseerde glasvulling + accentrand.
+            // Een eigen dekkende popupFill dekte die blob volledig af, waardoor de
+            // settings-widget als enige een vlakke donkere doos buiten het thema bleef.
+            color: "transparent"; border.width: 0
             clip: true
 
             property real time: 0
