@@ -13,7 +13,7 @@ Rectangle {
     required property var mocha
     required property var ctx   // BarContent root — supplies theme chrome colors/flags
 
-    Layout.preferredHeight: ctx.cyberSideModuleHeight
+    Layout.preferredHeight: ctx.neonSideModuleHeight
     Layout.alignment: Qt.AlignVCenter
     radius: surface.panelRadius
     topLeftRadius: ctx.panelTopLeftRadius
@@ -56,14 +56,14 @@ Rectangle {
             || haystack.indexOf("network-wireless-signal") !== -1;
     }
 
-    // Cyber bottom tick line
+    // Neon bottom tick line
     Rectangle {
-        visible: ctx.cyberChrome
+        visible: ctx.neonChrome
         anchors.left: parent.left; anchors.leftMargin: shell.s(8)
         anchors.right: parent.right; anchors.rightMargin: shell.s(8)
         anchors.bottom: parent.bottom; anchors.bottomMargin: shell.s(4)
         height: 1
-        color: ctx.cyberModuleTickColor
+        color: ctx.neonModuleTickColor
         opacity: 0.48
     }
 
@@ -88,7 +88,7 @@ Rectangle {
                 property bool isHovered: trayMouse.containsMouse
                 property bool initAnimTrigger: false
 
-                opacity: initAnimTrigger ? (ctx.cyberChrome ? 1.0 : (isHovered ? 1.0 : 0.8)) : 0.0
+                opacity: initAnimTrigger ? (ctx.neonChrome ? 1.0 : (isHovered ? 1.0 : 0.8)) : 0.0
                 scale:   initAnimTrigger ? (isHovered ? 1.15 : 1.0) : 0.0
 
                 Component.onCompleted: {

@@ -1,7 +1,7 @@
 {
   "_comment": "Automatisch gegenereerd door matugen. Inspectiepalette voor styling/debugging.",
   "colors": [
-    { "key": "primary", "label": "Primary", "hex": "{{colors.primary.default.hex}}" },
+    { "key": "primary", "label": "Accent 1 / Primary", "hex": "{{colors.primary.default.hex}}" },
     { "key": "on_primary", "label": "On primary", "hex": "{{colors.on_primary.default.hex}}" },
     { "key": "primary_container", "label": "Primary container", "hex": "{{colors.primary_container.default.hex}}" },
     { "key": "on_primary_container", "label": "On primary container", "hex": "{{colors.on_primary_container.default.hex}}" },

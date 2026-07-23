@@ -49,18 +49,16 @@ Item {
     readonly property int panelBottomLeftRadius:  flattenScreenEdgeCorners && (shell.isBottomBar || shell.isLeftBar)  ? 0 : surface.panelRadius
     readonly property int panelBottomRightRadius: flattenScreenEdgeCorners && (shell.isBottomBar || shell.isRightBar) ? 0 : surface.panelRadius
 
-    readonly property bool cyberContinuousLine: surface.continuousBarMode
-                                               && String(shell.activeThemeName || "").toLowerCase() === "modern"
-    readonly property bool cyberCenterFeature: String(shell.activeThemeName || "").toLowerCase() === "modern"
+    readonly property bool neonContinuousLine: surface.continuousBarMode
+                                               && String(shell.activeThemeName || "").toLowerCase() === "neon"
+    readonly property bool neonCenterFeature: String(shell.activeThemeName || "").toLowerCase() === "neon"
                                              && shell.isTopBar
-    readonly property bool cyberChrome:     String(shell.activeThemeName || "").toLowerCase() === "modern"
-    readonly property bool oceanChrome:     String(shell.activeThemeName || "").toLowerCase() === "paper"
-    readonly property bool spaceChrome:     false
-    readonly property bool botanicalChrome: String(shell.activeThemeName || "").toLowerCase() === "organic"
-    readonly property bool rockyChrome:     String(shell.activeThemeName || "").toLowerCase() === "mono"
-    readonly property bool animatedChrome:  false
-    readonly property int moduleSpacing: botanicalChrome ? 0 : shell.s(4)
-    readonly property int centerGap: botanicalChrome ? 0 : shell.s(12)
+    readonly property bool neonChrome:   String(shell.activeThemeName || "").toLowerCase() === "neon"
+    readonly property bool paperChrome:  String(shell.activeThemeName || "").toLowerCase() === "paper"
+    readonly property bool organicChrome: String(shell.activeThemeName || "").toLowerCase() === "organic"
+    readonly property bool monoChrome:   String(shell.activeThemeName || "").toLowerCase() === "mono"
+    readonly property int moduleSpacing: organicChrome ? 0 : shell.s(4)
+    readonly property int centerGap: organicChrome ? 0 : shell.s(12)
     readonly property string moduleFillColorName: surface.moduleFillColorName
     readonly property string moduleHoverFillColorName: surface.moduleHoverFillColorName
     readonly property string accentColorName: surface.accentColorName
@@ -68,15 +66,19 @@ Item {
     readonly property string textHotColorName: surface.textHotColorName
     readonly property real chromeBorderAlphaMultiplier: surface.chromeBorderAlphaMultiplier
     readonly property bool showModuleTick: surface.showModuleTick
+    function roleColor(name, fallbackColor) {
+        return mocha[name] !== undefined ? mocha[name] : fallbackColor;
+    }
+    readonly property color neonAccentColor: roleColor(accentColorName, mocha.mauve)
+    readonly property color neonHotColor: roleColor(accentHotColorName, mocha.teal)
+    readonly property color neonSignalColor: roleColor(textHotColorName, mocha.pink)
 
     readonly property color themeAccentBorderColor:
-        oceanChrome     ? Qt.rgba(mocha.teal.r,  mocha.teal.g,  mocha.teal.b,  0.28) :
-        spaceChrome     ? Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.28) :
-        botanicalChrome ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.0) :
-        rockyChrome     ? Qt.rgba(mocha.text.r,  mocha.text.g,  mocha.text.b,  0.30) :
-        animatedChrome  ? Qt.rgba(mocha.pink.r,  mocha.pink.g,  mocha.pink.b,  0.28) :
+        paperChrome   ? Qt.rgba(mocha.teal.r,  mocha.teal.g,  mocha.teal.b,  0.28) :
+        organicChrome ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.0) :
+        monoChrome    ? Qt.rgba(mocha.text.r,  mocha.text.g,  mocha.text.b,  0.30) :
                           surface.panelBorderColor
-    readonly property color themeAccentBorderHoverColor: botanicalChrome
+    readonly property color themeAccentBorderHoverColor: organicChrome
         ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.0)
         : Qt.rgba(
             themeAccentBorderColor.r,
@@ -85,53 +87,53 @@ Item {
             Math.min(0.9, themeAccentBorderColor.a + 0.18)
         )
 
-    // Cyber center colors
-    readonly property color cyberCenterColor:            Qt.rgba(mocha.crust.r,   mocha.crust.g,   mocha.crust.b,   0.18)
-    readonly property color cyberCenterHoverColor:       Qt.rgba(mocha.base.r,    mocha.base.g,    mocha.base.b,    0.30)
-    readonly property color cyberCenterBorderColor:      Qt.rgba(mocha.blue.r,    mocha.blue.g,    mocha.blue.b,    0.50)
-    readonly property color cyberCenterBorderHoverColor: Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.72)
-    readonly property color cyberCenterInnerLineColor:   Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.30)
-    readonly property color cyberCenterAccentColor:      Qt.rgba(mocha.blue.r,    mocha.blue.g,    mocha.blue.b,    0.82)
-    readonly property color cyberCenterDividerColor:     Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.62)
+    // Neon center colors
+    readonly property color neonCenterColor:            Qt.rgba(mocha.crust.r,   mocha.crust.g,   mocha.crust.b,   0.18)
+    readonly property color neonCenterHoverColor:       Qt.rgba(mocha.base.r,    mocha.base.g,    mocha.base.b,    0.30)
+    readonly property color neonCenterBorderColor:      Qt.rgba(neonAccentColor.r, neonAccentColor.g, neonAccentColor.b, 0.62)
+    readonly property color neonCenterBorderHoverColor: Qt.rgba(neonHotColor.r,    neonHotColor.g,    neonHotColor.b,    0.84)
+    readonly property color neonCenterInnerLineColor:   Qt.rgba(neonHotColor.r,    neonHotColor.g,    neonHotColor.b,    0.38)
+    readonly property color neonCenterAccentColor:      Qt.rgba(neonAccentColor.r, neonAccentColor.g, neonAccentColor.b, 0.92)
+    readonly property color neonCenterDividerColor:     Qt.rgba(neonHotColor.r,    neonHotColor.g,    neonHotColor.b,    0.72)
 
-    // Cyber weather colors
-    readonly property color cyberWeatherTempOnColor:  Qt.lighter(mocha.yellow, 1.06)
-    readonly property color cyberWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.14)
+    // Neon weather colors
+    readonly property color neonWeatherTempOnColor:  Qt.lighter(neonSignalColor, 1.08)
+    readonly property color neonWeatherTempOffColor: Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.14)
 
-    // Cyber module (pill) colors — used by every status pill
-    readonly property color cyberModuleColor:            Qt.rgba(mocha.crust.r,   mocha.crust.g,   mocha.crust.b,   0.12)
-    readonly property color cyberModuleHoverColor:       Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.26)
-    readonly property color cyberModuleBorderColor:      Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.34)
-    readonly property color cyberModuleBorderHoverColor: Qt.rgba(mocha.blue.r,    mocha.blue.g,    mocha.blue.b,    0.62)
-    readonly property color cyberModuleTickColor:        Qt.rgba(mocha.teal.r,    mocha.teal.g,    mocha.teal.b,    0.58)
+    // Neon module (pill) colors — used by every status pill
+    readonly property color neonModuleColor:            Qt.rgba(mocha.crust.r,   mocha.crust.g,   mocha.crust.b,   0.16)
+    readonly property color neonModuleHoverColor:       Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.26)
+    readonly property color neonModuleBorderColor:      Qt.rgba(neonHotColor.r,    neonHotColor.g,    neonHotColor.b,    0.44)
+    readonly property color neonModuleBorderHoverColor: Qt.rgba(neonAccentColor.r, neonAccentColor.g, neonAccentColor.b, 0.74)
+    readonly property color neonModuleTickColor:        Qt.rgba(neonHotColor.r,    neonHotColor.g,    neonHotColor.b,    0.72)
 
-    // Cyber text colors
-    readonly property color cyberTextColor:      Qt.rgba(mocha.text.r,   mocha.text.g,   mocha.text.b,   0.98)
-    readonly property color cyberTextMutedColor: Qt.rgba(mocha.text.r,   mocha.text.g,   mocha.text.b,   0.84)
-    readonly property color cyberTextHotColor:   Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 1.0)
+    // Neon text colors
+    readonly property color neonTextColor:      Qt.rgba(mocha.text.r,   mocha.text.g,   mocha.text.b,   0.98)
+    readonly property color neonTextMutedColor: Qt.rgba(mocha.text.r,   mocha.text.g,   mocha.text.b,   0.84)
+    readonly property color neonTextHotColor:   Qt.rgba(neonSignalColor.r, neonSignalColor.g, neonSignalColor.b, 1.0)
 
-    // Cyber workspace colors
-    readonly property color cyberWorkspaceActiveColor:   Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.88)
-    readonly property color cyberWorkspaceOccupiedColor: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.10)
+    // Neon workspace colors
+    readonly property color neonWorkspaceActiveColor:   Qt.rgba(neonAccentColor.r, neonAccentColor.g, neonAccentColor.b, 0.94)
+    readonly property color neonWorkspaceOccupiedColor: Qt.rgba(neonHotColor.r,    neonHotColor.g,    neonHotColor.b,    0.14)
 
-    // Cyber center geometry
-    readonly property real cyberCenterScale:        cyberCenterFeature ? 1.6 : 1.0
-    readonly property int  cyberWindowUnderhang:    Number(shell.cyberUnderhang || 0)
-    readonly property int  cyberRailCenterOffset:   cyberCenterFeature ? -Math.round(cyberWindowUnderhang * 0.5) : 0
-    readonly property int  cyberCenterBodyHeight:   shell.barHeight
-    readonly property int  cyberSideYOffset:        cyberRailCenterOffset
-    readonly property int  cyberSideModuleHeight:   shell.barHeight
+    // Neon center geometry
+    readonly property real neonCenterScale:        neonCenterFeature ? 1.6 : 1.0
+    readonly property int  neonWindowUnderhang:    Number(shell.neonUnderhang || 0)
+    readonly property int  neonRailCenterOffset:   neonCenterFeature ? -Math.round(neonWindowUnderhang * 0.5) : 0
+    readonly property int  neonCenterBodyHeight:   shell.barHeight
+    readonly property int  neonSideYOffset:        neonRailCenterOffset
+    readonly property int  neonSideModuleHeight:   shell.barHeight
 
     // Right-group pill colors (system tray + system elements)
     readonly property color rightGroupColor: surface.continuousBarMode
-                                            ? (cyberContinuousLine
-                                                ? cyberModuleColor
+                                            ? (neonContinuousLine
+                                                ? neonModuleColor
                                                 : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.42))
                                             : surface.panelColor
     readonly property color rightGroupBorderColor: surface.continuousBarMode
-                                                  ? (cyberContinuousLine
-                                                        ? cyberModuleBorderColor
-                                                        : (botanicalChrome
+                                                  ? (neonContinuousLine
+                                                        ? neonModuleBorderColor
+                                                        : (organicChrome
                                                             ? Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.0)
                                                             : Qt.rgba(mocha.overlay1.r, mocha.overlay1.g, mocha.overlay1.b, 0.70)))
                                                   : themeAccentBorderColor
@@ -158,7 +160,7 @@ Item {
         anchors.bottom: parent.bottom
         spacing: root.moduleSpacing
 
-        property int moduleHeight: root.cyberSideModuleHeight
+        property int moduleHeight: root.neonSideModuleHeight
 
         // Altijd zichtbaar (geen moduleList-check)
         SearchButton        { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }

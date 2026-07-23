@@ -14,7 +14,9 @@ THEME_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/35-theme.conf"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
+SKWD_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall"
 STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
 DEFAULT_THEME="organic"
 
 APPLY=""
@@ -122,6 +124,179 @@ _notify() {
                 2>/dev/null || true
 }
 
+_expand_user_path() {
+    local path="${1:-}"
+    case "$path" in
+        "~") printf '%s\n' "$HOME" ;;
+        "~/"*) printf '%s\n' "$HOME/${path#\~/}" ;;
+        *) printf '%s\n' "$path" ;;
+    esac
+}
+
+_current_wallpaper_path() {
+    local candidate path=""
+
+    for candidate in \
+        "$STATE_DIR/wallpaper.json" \
+        "$SKWD_CACHE/current_wallpaper" \
+        "$SKWD_CACHE/current-wallpaper" \
+        "$SKWD_CACHE/last_wallpaper" \
+        "$SKWD_CACHE/last-wallpaper" \
+        "$SKWD_CACHE/last-wallpaper.json" \
+        "$CACHE_DIR/last-wallpaper"; do
+        [[ -f "$candidate" ]] || continue
+
+        if [[ "$candidate" == *.json ]]; then
+            command -v jq >/dev/null 2>&1 || continue
+            path="$(jq -r '.path // .wallpaper // .currentWallpaper // .lastWallpaper // ""' "$candidate" 2>/dev/null || true)"
+        else
+            path="$(cat "$candidate" 2>/dev/null || true)"
+        fi
+
+        path="$(_expand_user_path "$path")"
+        if [[ -n "$path" && -f "$path" ]]; then
+            printf '%s\n' "$path"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+_is_generated_theme_wallpaper() {
+    local file="${1:-}"
+    [[ "$file" == "$CACHE_DIR/theme-wallpapers/"* ]]
+}
+
+_theme_wallpaper_source() {
+    local current="${1:-}"
+    local original_file="$CACHE_DIR/theme-wallpaper-source"
+
+    if _is_generated_theme_wallpaper "$current" && [[ -f "$original_file" ]]; then
+        cat "$original_file" 2>/dev/null || true
+        return 0
+    fi
+
+    printf '%s\n' "$current"
+}
+
+_write_wallpaper_state() {
+    local file="$1"
+    [[ -n "$file" && -f "$file" ]] || return 0
+
+    mkdir -p "$CACHE_DIR" "$STATE_DIR" "$SKWD_CACHE"
+    printf '%s\n' "$file" > "$CACHE_DIR/last-wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/current_wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/current-wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/last_wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/last-wallpaper"
+
+    if command -v jq >/dev/null 2>&1; then
+        jq -n --arg name "$(basename "$file")" --arg path "$file" \
+            '{"name":$name,"path":$path}' > "$STATE_DIR/wallpaper.json" 2>/dev/null || true
+        jq -n --arg path "$file" --arg type "static" \
+            '{"path":$path,"type":$type}' > "$SKWD_CACHE/last-wallpaper.json" 2>/dev/null || true
+    fi
+}
+
+_path_matches() {
+    local left="${1:-}" right="${2:-}"
+    [[ -n "$left" && -n "$right" ]] || return 1
+    [[ "$(realpath -m "$left" 2>/dev/null || printf '%s' "$left")" == "$(realpath -m "$right" 2>/dev/null || printf '%s' "$right")" ]]
+}
+
+_apply_skwd_static_wallpaper() {
+    local file="$1"
+    [[ -n "$file" && -f "$file" ]] || return 0
+    command -v skwd >/dev/null 2>&1 || return 0
+
+    local payload current
+    current="$(_current_wallpaper_path || true)"
+    _write_wallpaper_state "$file"
+
+    if _path_matches "$current" "$file"; then
+        _log "Wallpaper al actief via skwd: $(basename "$file")"
+        return 0
+    fi
+
+    if command -v jq >/dev/null 2>&1; then
+        payload="$(jq -cn --arg name "$(basename "$file")" --arg path "$file" \
+            '{name:$name,path:$path,type:"static"}')"
+    else
+        payload="{\"path\":\"$file\"}"
+    fi
+
+    if skwd wall apply "$payload" >/dev/null 2>&1; then
+        _log "Wallpaper toegepast via skwd: $(basename "$file")"
+    else
+        _warn "Kon wallpaper niet toepassen via skwd: $file"
+    fi
+}
+
+_prepare_theme_wallpaper() {
+    local theme_name="$1"
+    local current source original_file target_dir target_file hash effect_key ext
+
+    current="$(_current_wallpaper_path || true)"
+    original_file="$CACHE_DIR/theme-wallpaper-source"
+
+    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
+        [[ -n "$current" && -f "$current" ]] || return 0
+
+        source="$(_theme_wallpaper_source "$current")"
+        if [[ -n "$source" && -f "$source" ]]; then
+            printf '%s\n' "$source" > "$original_file"
+        else
+            source="$current"
+            printf '%s\n' "$source" > "$original_file"
+        fi
+        [[ -n "$source" && -f "$source" ]] || return 0
+
+        if command -v magick >/dev/null 2>&1; then
+            case "$theme_name" in
+                paper) effect_key="paper-sketch-v6" ;;
+                neon)  effect_key="neon-glass-tint-v1" ;;
+                *)     effect_key="mono-gray-v1" ;;
+            esac
+            hash="$(printf '%s:%s:%s:%s' "$effect_key" "$source" "$(stat -c '%Y' "$source" 2>/dev/null || echo 0)" "$(stat -c '%s' "$source" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
+            target_dir="$CACHE_DIR/theme-wallpapers/$theme_name"
+            mkdir -p "$target_dir"
+            target_file="$target_dir/${hash}.jpg"
+            if [[ ! -f "$target_file" ]]; then
+                if [[ "$theme_name" == "paper" ]]; then
+                    magick "$source" -auto-orient -colorspace Gray \
+                        \( +clone -negate -blur 0x18 \) -compose ColorDodge -composite \
+                        -blur 0x0.75 -level 12%,98%,0.88 \
+                        -colorspace sRGB -type TrueColor \
+                        -fill "#c7a16b" -tint 42% \
+                        -fill "#f3e0bd" -colorize 12% \
+                        -attenuate 0.018 +noise Gaussian \
+                        -quality 92 "$target_file"
+                elif [[ "$theme_name" == "neon" ]]; then
+                    magick "$source" -auto-orient -colorspace sRGB \
+                        -modulate 100,104,100 \
+                        -fill "#00b7ff" -colorize 4% \
+                        -fill "#06131d" -colorize 2% \
+                        -quality 92 "$target_file"
+                else
+                    magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
+                fi
+            fi
+            _apply_skwd_static_wallpaper "$target_file"
+        else
+            _warn "ImageMagick ontbreekt — theme wallpaper blijft origineel"
+        fi
+        return 0
+    fi
+
+    if [[ -n "$current" ]] && _is_generated_theme_wallpaper "$current" && [[ -f "$original_file" ]]; then
+        source="$(cat "$original_file" 2>/dev/null || true)"
+        if [[ -n "$source" && -f "$source" ]]; then
+            _apply_skwd_static_wallpaper "$source"
+        fi
+    fi
+}
+
 set_ini_value() {
     local file="$1"
     local section="$2"
@@ -193,9 +368,9 @@ bool_json() {
 
 canonical_theme_name() {
     case "${1,,}" in
-        paper|organic|modern|mono) printf '%s\n' "${1,,}" ;;
+        paper|organic|neon|mono) printf '%s\n' "${1,,}" ;;
         botanical|animated) printf '%s\n' "organic" ;;
-        cyber|space|ocean) printf '%s\n' "modern" ;;
+        modern|cyber|space|ocean) printf '%s\n' "neon" ;;
         rocky) printf '%s\n' "mono" ;;
         *) printf '%s\n' "" ;;
     esac
@@ -204,6 +379,12 @@ canonical_theme_name() {
 sync_skwd_config() {
     local scheme_type="$1"
     local mode="$2"
+    local theme_name="${3:-}"
+    local wallhaven_enabled=true
+
+    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
+        wallhaven_enabled=false
+    fi
 
     [[ -f "$SKWD_CONFIG" ]] || return 0
     if ! command -v jq &>/dev/null; then
@@ -217,14 +398,22 @@ sync_skwd_config() {
     if jq \
         --arg scheme "$scheme_type" \
         --arg mode "$mode" \
+        --argjson wallhaven_enabled "$wallhaven_enabled" \
         '
         .features.matugen = false
-        | .features.wallhaven = true
+        | .features.wallhaven = $wallhaven_enabled
         | .matugen.schemeType = $scheme
         | .matugen.mode = $mode
+        | .postProcessing = (
+            [(.postProcessing // [])[] | select((.type // "") != "static")]
+            + [{
+                "command": "~/.local/bin/apply-shell-state --wallpaper %path%; skwd wall unsuppress",
+                "type": "static"
+              }]
+          )
         ' "$SKWD_CONFIG" > "$tmp_file" 2>/dev/null; then
         mv "$tmp_file" "$SKWD_CONFIG"
-        _log "skwd-wall config gesynchroniseerd (scheme: $scheme_type, mode: $mode, matugen=false)"
+        _log "skwd-wall config gesynchroniseerd (scheme: $scheme_type, mode: $mode, matugen=false, wallhaven=$wallhaven_enabled)"
     else
         rm -f "$tmp_file"
         _warn "Kon skwd-wall config niet synchroniseren: $SKWD_CONFIG"
@@ -374,7 +563,7 @@ fi
 REQUESTED_THEME="${1:?Gebruik: kingstra-theme-switch <theme_naam>}"
 THEME_NAME="$(canonical_theme_name "$REQUESTED_THEME")"
 if [[ -z "$THEME_NAME" ]]; then
-    _warn "Onbekend thema: $REQUESTED_THEME (beschikbaar: paper, organic, modern, mono)"
+    _warn "Onbekend thema: $REQUESTED_THEME (beschikbaar: paper, organic, neon, mono)"
     exit 1
 fi
 if [[ "$THEME_NAME" != "${REQUESTED_THEME,,}" ]]; then
@@ -458,7 +647,7 @@ PARTICLE_TYPE_JSON=$(pick_enum "${EFFECTS_PARTICLES:-none}" "none" "effects.part
 PARTICLE_COUNT_JSON=$(sanitize_int "${EFFECTS_PARTICLE_COUNT:-0}" "0" "0" "50" "effects.particle_count")
 PARTICLE_SPEED_JSON=$(sanitize_float "${EFFECTS_PARTICLE_SPEED:-0.0}" "0.0" "0.0" "2.0" "effects.particle_speed")
 AMBIENT_EFFECT_JSON=$(pick_enum "${EFFECTS_AMBIENT_EFFECT:-theme-default}" "theme-default" "effects.ambient_effect" \
-    theme-default none organic-glow)
+    theme-default none organic-glow neon-grid cyber-grid)
 EFFECT_INTENSITY_JSON=$(sanitize_float "${EFFECTS_EFFECT_INTENSITY:-1.0}" "1.0" "0.0" "2.0" "effects.effect_intensity")
 EFFECT_CYCLE_MS_JSON=$(sanitize_int "${EFFECTS_EFFECT_CYCLE_MS:-0}" "0" "0" "30000" "effects.effect_cycle_ms")
 EFFECT_HOVER_REACTIVITY_JSON=$(sanitize_float "${EFFECTS_HOVER_REACTIVITY:-0.4}" "0.4" "0.0" "1.0" "effects.hover_reactivity")
@@ -509,43 +698,43 @@ case "$THEME_NAME" in
         STYLE_WIDGET_RADIUS=20
         STYLE_PANEL_PADDING=15
         ;;
-    modern)
-        STYLE_FAMILY="modern"
+    neon)
+        STYLE_FAMILY="neon"
         STYLE_DENSITY="compact"
         STYLE_SURFACE_MODE="hard-surface"
         STYLE_MOTION="snappy"
-        STYLE_PANEL_SHADOW=0.34
-        STYLE_OUTLINE_STRENGTH=0.40
-        STYLE_GLASS_STRENGTH=0.03
-        STYLE_WIDGET_RADIUS=6
-        STYLE_PANEL_PADDING=10
+        STYLE_PANEL_SHADOW=0.42
+        STYLE_OUTLINE_STRENGTH=0.58
+        STYLE_GLASS_STRENGTH=0.02
+        STYLE_WIDGET_RADIUS=5
+        STYLE_PANEL_PADDING=9
         ;;
     mono)
         STYLE_FAMILY="mono"
         STYLE_DENSITY="compact"
         STYLE_SURFACE_MODE="solid"
         STYLE_MOTION="firm"
-        STYLE_PANEL_SHADOW=0.12
-        STYLE_OUTLINE_STRENGTH=0.34
-        STYLE_GLASS_STRENGTH=0.02
-        STYLE_WIDGET_RADIUS=4
-        STYLE_PANEL_PADDING=9
+        STYLE_PANEL_SHADOW=0.02
+        STYLE_OUTLINE_STRENGTH=0.42
+        STYLE_GLASS_STRENGTH=0.0
+        STYLE_WIDGET_RADIUS=0
+        STYLE_PANEL_PADDING=7
         ;;
     paper)
         STYLE_FAMILY="paper"
         STYLE_DENSITY="comfortable"
         STYLE_SURFACE_MODE="paper-glass"
         STYLE_MOTION="calm"
-        STYLE_PANEL_SHADOW=0.12
-        STYLE_OUTLINE_STRENGTH=0.12
-        STYLE_GLASS_STRENGTH=0.05
+        STYLE_PANEL_SHADOW=0.04
+        STYLE_OUTLINE_STRENGTH=0.10
+        STYLE_GLASS_STRENGTH=0.02
         STYLE_WIDGET_RADIUS=10
-        STYLE_PANEL_PADDING=12
+        STYLE_PANEL_PADDING=16
         ;;
 esac
 
 STYLE_FAMILY=$(pick_enum "${STYLE_PROFILE_FAMILY:-$STYLE_FAMILY}" "$STYLE_FAMILY" "style_profile.family" \
-    paper organic modern mono)
+    paper organic neon mono)
 STYLE_DENSITY=$(pick_enum "${STYLE_PROFILE_DENSITY:-$STYLE_DENSITY}" "$STYLE_DENSITY" "style_profile.density" \
     compact comfortable airy)
 STYLE_SURFACE_MODE=$(pick_enum "${STYLE_PROFILE_SURFACE_MODE:-$STYLE_SURFACE_MODE}" "$STYLE_SURFACE_MODE" "style_profile.surface_mode" \
@@ -555,7 +744,7 @@ STYLE_MOTION=$(pick_enum "${STYLE_PROFILE_MOTION:-$STYLE_MOTION}" "$STYLE_MOTION
 STYLE_PANEL_SHADOW=$(sanitize_float "${STYLE_PROFILE_PANEL_SHADOW:-$STYLE_PANEL_SHADOW}" "$STYLE_PANEL_SHADOW" "0.0" "0.5" "style_profile.panel_shadow")
 STYLE_OUTLINE_STRENGTH=$(sanitize_float "${STYLE_PROFILE_OUTLINE_STRENGTH:-$STYLE_OUTLINE_STRENGTH}" "$STYLE_OUTLINE_STRENGTH" "0.0" "0.5" "style_profile.outline_strength")
 STYLE_GLASS_STRENGTH=$(sanitize_float "${STYLE_PROFILE_GLASS_STRENGTH:-$STYLE_GLASS_STRENGTH}" "$STYLE_GLASS_STRENGTH" "0.0" "0.5" "style_profile.glass_strength")
-STYLE_WIDGET_RADIUS=$(sanitize_int "${STYLE_PROFILE_WIDGET_RADIUS:-$STYLE_WIDGET_RADIUS}" "$STYLE_WIDGET_RADIUS" "4" "48" "style_profile.widget_radius")
+STYLE_WIDGET_RADIUS=$(sanitize_int "${STYLE_PROFILE_WIDGET_RADIUS:-$STYLE_WIDGET_RADIUS}" "$STYLE_WIDGET_RADIUS" "0" "48" "style_profile.widget_radius")
 STYLE_PANEL_PADDING=$(sanitize_int "${STYLE_PROFILE_PANEL_PADDING:-$STYLE_PANEL_PADDING}" "$STYLE_PANEL_PADDING" "6" "28" "style_profile.panel_padding")
 
 # ---------------------------------------------------------------------------
@@ -567,7 +756,11 @@ if [[ -f "$MATUGEN_CONF" ]]; then
     sed -i "s|^mode\s*=.*|mode = \"${MATUGEN_MODE_JSON}\"|" "$MATUGEN_CONF"
     _log "Matugen config bijgewerkt (scheme: ${MATUGEN_SCHEME_JSON}, mode: ${MATUGEN_MODE_JSON})"
 fi
-sync_skwd_config "${MATUGEN_SCHEME_JSON}" "${MATUGEN_MODE_JSON}"
+sync_skwd_config "${MATUGEN_SCHEME_JSON}" "${MATUGEN_MODE_JSON}" "$THEME_NAME"
+
+# Paper/Mono hebben een theme-specifieke wallpaper-variant. Doe dit vóór de rest
+# van de theme-generatie, zodat je niet eerst nog naar de onbewerkte foto kijkt.
+_prepare_theme_wallpaper "$THEME_NAME"
 
 # ---------------------------------------------------------------------------
 # Step 2 — Generate 35-theme.conf (Hyprland overrides)
@@ -883,7 +1076,7 @@ fi
 
 # Gebruik altijd de centrale resolver (kingstra-matugen-run) via apply-shell-state.
 # Zo gebruiken wallpaper- en theme-picker exact dezelfde input-resolutie.
-if ! run_helper "$APPLY"; then
+if ! run_helper "$APPLY" --theme "$THEME_NAME"; then
     _warn "apply-shell-state mislukt"
     exit 1
 fi

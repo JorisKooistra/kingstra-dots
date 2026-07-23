@@ -5,7 +5,7 @@ Usage:
   python3 kingstra-theme-update.py <theme_id> <section.key> <value> [<section.key> <value> ...]
 
 Examples:
-  python3 kingstra-theme-update.py rocky appearance.border_radius 18 fonts.ui_font "JetBrains Mono"
+  python3 kingstra-theme-update.py neon appearance.border_radius 8 fonts.ui_font "JetBrains Mono"
 """
 
 from __future__ import annotations

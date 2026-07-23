@@ -11,19 +11,19 @@ import "skins"
 //   1. De achtergrond-rail (in continuous-mode: één doorgaande balk)
 //   2. De textuurlaag (grain/noise overlay per theme)
 //   3. De deeltjeslaag (fireflies, sparkles, enz.) via ParticleLayer
-//   4. Per-theme sfeereffecten — elk in een eigen bestand in effects/
+//   4. Per-theme sfeereffecten, elk in een eigen bestand in effects/
 //   5. De bar-inhoud zelf via een Loader → BarContent of BarContentSidebar
 //
 // Alle kleuren en radii die modules nodig hebben (panelColor, panelRadius ...)
 // worden hier berekend en via `surface: barSurfaceRoot` doorgegeven.
 //
 // ── Hoe skins werken ─────────────────────────────────────────────────────────
-// Een skin (bijv. CyberBar.qml) is een klein QtObject met alleen properties:
-//   readonly property bool showCyberGrid: true
+// Een skin (bijv. NeonBar.qml) is een klein QtObject met alleen properties:
+//   readonly property bool showNeonGrid: true
 //   readonly property real gridAlpha: 0.38
 //
 // BarSurface laadt de juiste skin via een Loader en leest de waarden op via
-// skinBool("showCyberGrid", false) en skinNumber("gridAlpha", 0.0).
+// skinBool("showNeonGrid", false) en skinNumber("gridAlpha", 0.0).
 // Zo hoeft de rendercode hier niets te weten van welk theme actief is.
 //
 // ── Effecten (effects/) ───────────────────────────────────────────────────────
@@ -32,13 +32,9 @@ import "skins"
 //   mocha   — kleurenpalet
 //   surface — barSurfaceRoot (heeft skinBool/skinNumber/continuousBarMode/...)
 //
-//   BotanicalGlow.qml  — warme geel-perzik-groen gloed
-//   OceanWave.qml      — teal-blauw golf die heen en weer schuift
-//   SpaceNebula.qml    — mauve-blauw-roze nevelgloed
-//   AnimatedRainbow.qml — regenboogverschuiving + aurora-sweep
-//   RockyBevel.qml     — licht/donker randlijnen (gebeiteld effect)
-//   CyberGrid.qml      — raster met sweep-licht
-//   ParticleLayer.qml  — bewegende deeltjes (fireflies, space-specks)
+//   BotanicalGlow.qml — warme organische gloed
+//   NeonGrid.qml      — scanraster, signaalnodes en sweep-licht
+//   ParticleLayer.qml — bewegende deeltjes
 // ─────────────────────────────────────────────────────────────────────────────
 
 Item {
@@ -68,7 +64,7 @@ Item {
 
     readonly property string skinSource: {
         if (activeTheme === "paper") return "skins/PaperBar.qml";
-        if (activeTheme === "modern") return "skins/ModernBar.qml";
+        if (activeTheme === "neon") return "skins/NeonBar.qml";
         if (activeTheme === "mono") return "skins/MonoBar.qml";
         return "skins/OrganicBar.qml";
     }
@@ -110,7 +106,7 @@ Item {
     readonly property bool topBarLooseBlocksEnabled: ThemeConfig.topBarLooseBlocksOverride === 1
     readonly property bool continuousBarMode: shell.edgeAttachedBar
                                             && (topBarLooseBlocksOverrideActive ? !topBarLooseBlocksEnabled : skinContinuousBarMode)
-    readonly property bool isTechnicalContinuousBar: continuousBarMode && activeTheme === "modern"
+    readonly property bool isTechnicalContinuousBar: continuousBarMode && activeTheme === "neon"
 
     readonly property bool technicalTopWithBulge: isTechnicalContinuousBar && shell.isTopBar
     readonly property int  particleOverflow:     shell.isHorizontalBar ? (shell.particleVisualOverflow || 0) : 0
@@ -122,10 +118,7 @@ Item {
                                                  : visualContentHeight
 
     // ── Textuuroverlay ────────────────────────────────────────────────────────
-    readonly property bool themeHasDefaultTexture: activeTheme === "rocky"
-                                                   || activeTheme === "space"
-                                                   || activeTheme === "botanical"
-                                                   || activeTheme === "ocean"
+    readonly property bool themeHasDefaultTexture: false
     readonly property string configuredTextureOverlaySource: String(shell.textureOverlayAsset || "")
     readonly property string fallbackTextureOverlayPrimary:  themeHasDefaultTexture
                                                              ? (Quickshell.env("HOME") + "/kingstra-dots/assets/themes/" + activeTheme + "/texture-overlay.png")
@@ -141,6 +134,9 @@ Item {
     readonly property bool particlesEnabled: String(shell.particleType || "none").toLowerCase() !== "none"
                                              && Number(shell.particleCount || 0) > 0
     readonly property bool organicGlowEnabled: ambientEnabled("organic-glow", "organic") && skinBool("showWarmGlow", false)
+    readonly property bool neonGridEnabled: skinBool("showNeonGrid", false)
+                                           && (ambientEnabled("neon-grid", "neon")
+                                               || ambientEnabled("cyber-grid", "neon"))
 
     function resetTextureOverlaySource() {
         if (configuredTextureOverlaySource !== "") { activeTextureOverlaySource = configuredTextureOverlaySource; return; }
@@ -153,8 +149,8 @@ Item {
 
     // ── Gedeelde kleur- en radiuseigenschappen ────────────────────────────────
     // Worden via `surface: barSurfaceRoot` doorgegeven aan alle modules.
-    property int   panelRadius:               shell.s(Math.max(6, ThemeConfig.styleWidgetRadius + skinNumber("cornerRadiusDelta", 0)))
-    property int   innerPillRadius:           shell.s(Math.max(6, ThemeConfig.styleWidgetRadius - 4 + Math.floor(skinNumber("cornerRadiusDelta", 0) / 2)))
+    property int   panelRadius:               shell.s(Math.max(0, ThemeConfig.styleWidgetRadius + skinNumber("cornerRadiusDelta", 0)))
+    property int   innerPillRadius:           shell.s(Math.max(0, ThemeConfig.styleWidgetRadius - 4 + Math.floor(skinNumber("cornerRadiusDelta", 0) / 2)))
     property color basePanelColor:            Qt.rgba(mocha.base.r,     mocha.base.g,     mocha.base.b,     Math.min(1.0,  ThemeConfig.barOpacity + skinNumber("panelOpacityBoost", 0.0)))
     property color basePanelHoverColor:       Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, Math.min(0.98, ThemeConfig.barOpacity + 0.12 + ThemeConfig.styleGlassStrength * 0.35 + skinNumber("hoverBoost", 0.0)))
     property color basePanelBorderColor:      Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05 + ThemeConfig.styleOutlineStrength + ThemeConfig.materialGlowIntensity * 0.5 + skinNumber("borderBoost", 0.0))
@@ -188,11 +184,10 @@ Item {
     // Visuele lagen — z-volgorde (laag = verder naar achteren):
     //
     //   z=0.00  ParticleLayer      effects/ParticleLayer.qml
-    //   z=0.10  Sfeereffecten      effects/Botanical|Ocean|Space|AnimatedRainbow
+    //   z=0.10  Organic glow       effects/BotanicalGlow.qml
     //   z=0.25  Continuous rail    inline Rectangle
     //   z=0.35  Textuuroverlay     inline Image
-    //   z=0.50  CyberGrid          effects/CyberGrid.qml
-    //   z=0.60  RockyBevel         effects/RockyBevel.qml
+    //   z=0.50  NeonGrid           effects/NeonGrid.qml
     //   z=1.00  BarContent         via Loader
     // ─────────────────────────────────────────────────────────────────────────
     Item {
@@ -283,6 +278,14 @@ Item {
         // z=0.10 — warm organisch accent, uitsluitend wanneer de skin dat vraagt
         Loader { active: barSurfaceRoot.organicGlowEnabled; anchors.fill: parent; sourceComponent: organicGlowComponent }
 
+        // z=0.50 — futuristische scan/grid-laag voor Neon
+        Loader {
+            active: barSurfaceRoot.neonGridEnabled
+            anchors.fill: parent
+            z: 0.50
+            sourceComponent: neonGridComponent
+        }
+
         // z=1.00 — bar-inhoud (modules, knoppen, klok)
         Loader {
             id: contentLoader
@@ -310,6 +313,10 @@ Item {
         Component {
             id: organicGlowComponent
             BotanicalGlow { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+        }
+        Component {
+            id: neonGridComponent
+            NeonGrid { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
         }
         Component {
             id: sidebarContentComponent

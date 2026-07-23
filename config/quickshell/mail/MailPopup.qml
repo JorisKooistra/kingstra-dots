@@ -89,19 +89,82 @@ FocusScope {
         }
 
         ListView {
+            id: filterList
+            Layout.fillWidth: true
+            Layout.preferredHeight: visible ? 30 : 0
+            clip: true
+            spacing: 6
+            orientation: ListView.Horizontal
+            boundsBehavior: Flickable.StopAtBounds
+            model: MailService.filterOptions
+            visible: MailService.filterOptions.length > 1
+
+            function resetPosition() {
+                contentX = 0;
+                positionViewAtBeginning();
+            }
+
+            Component.onCompleted: Qt.callLater(resetPosition)
+            onVisibleChanged: if (visible) Qt.callLater(resetPosition)
+
+            delegate: Rectangle {
+                id: filterChip
+                required property var modelData
+
+                readonly property string address: String(modelData.address || "")
+                readonly property bool selected: String(MailService.selectedAccount || "").toLowerCase() === address.toLowerCase()
+
+                width: Math.min(filterList.width * 0.72, Math.max(68, chipText.implicitWidth + 20))
+                height: 28
+                radius: 8
+                color: selected
+                    ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.24)
+                    : (chipMouse.containsMouse
+                        ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.42)
+                        : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.24))
+                border.width: 1
+                border.color: selected
+                    ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.55)
+                    : root.subtleBorder
+
+                Text {
+                    id: chipText
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    verticalAlignment: Text.AlignVCenter
+                    text: String(filterChip.modelData.label || "Adres")
+                        + (Number(filterChip.modelData.count || 0) > 0 ? " " + Number(filterChip.modelData.count || 0) : "")
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 10
+                    font.weight: filterChip.selected ? Font.Bold : Font.Medium
+                    color: filterChip.selected ? mocha.blue : mocha.subtext0
+                    elide: Text.ElideRight
+                }
+
+                MouseArea {
+                    id: chipMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: MailService.selectAccount(filterChip.address)
+                }
+            }
+        }
+
+        ListView {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
             spacing: 8
-            model: MailService.recent
-            visible: MailService.recent.length > 0
+            model: MailService.filteredRecent
+            visible: MailService.filteredRecent.length > 0
 
             delegate: Rectangle {
                 id: mailRow
                 required property var modelData
 
                 width: ListView.view.width
-                height: rowContent.implicitHeight + 18
+                height: Math.max(70, rowContent.implicitHeight + 18)
                 radius: root.itemRadius
                 color: rowHover.hovered
                     ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.38)
@@ -134,6 +197,28 @@ FocusScope {
                         color: mocha.subtext0
                         elide: Text.ElideRight
                     }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 5
+                        visible: String(mailRow.modelData.recipient || "") !== ""
+
+                        Text {
+                            text: "󰄻"
+                            font.family: "Iosevka Nerd Font"
+                            font.pixelSize: 10
+                            color: mocha.blue
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Aan " + String(mailRow.modelData.recipient || "")
+                            font.family: ThemeConfig.uiFont
+                            font.pixelSize: 10
+                            color: mocha.blue
+                            elide: Text.ElideRight
+                        }
+                    }
                 }
 
                 HoverHandler { id: rowHover }
@@ -145,7 +230,7 @@ FocusScope {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 8
-            visible: MailService.recent.length === 0
+            visible: MailService.filteredRecent.length === 0
 
             Item { Layout.fillHeight: true }
 
@@ -159,7 +244,9 @@ FocusScope {
 
             Text {
                 Layout.fillWidth: true
-                text: MailService.available
+                text: MailService.available && MailService.recent.length > 0 && MailService.selectedAccount !== ""
+                    ? "Geen recente mail voor dit adres"
+                    : MailService.available
                     ? (MailService.profileFound ? "Geen recente mails gevonden" : "Thunderbird-profiel niet gevonden")
                     : "Thunderbird is niet geïnstalleerd"
                 font.family: ThemeConfig.displayFont
@@ -172,7 +259,9 @@ FocusScope {
 
             Text {
                 Layout.fillWidth: true
-                text: MailService.available
+                text: MailService.available && MailService.recent.length > 0 && MailService.selectedAccount !== ""
+                    ? "Kies Alles om de volledige lijst weer te tonen."
+                    : MailService.available
                     ? "Open Thunderbird om je inbox te bekijken."
                     : "Installeer Thunderbird om deze widget te gebruiken."
                 font.family: ThemeConfig.uiFont

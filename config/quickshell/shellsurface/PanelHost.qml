@@ -152,7 +152,7 @@ Item {
         if (entryId === "performance") return Math.min(380, availableW);
         if (entryId === "gaming") return Math.min(720, availableW);
         if (entryId === "notifications") return Math.min(460, availableW);
-        if (entryId === "mail") return Math.min(460, availableW);
+        if (entryId === "mail") return Math.min(520, availableW);
         let reg = registrySize(entryId);
         if (reg) return Math.min(reg.w, availableW);
         return Math.min(460, availableW);

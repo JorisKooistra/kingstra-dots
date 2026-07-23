@@ -6,7 +6,7 @@
 #
 # Voorbeeld:
 #   kingstra-state-write wallpaper.json name "forest.jpg"
-#   kingstra-state-write theme.json name "ocean"
+#   kingstra-state-write theme.json name "neon"
 #
 # Het <bestand> mag een absoluut pad zijn of alleen de bestandsnaam;
 # bij alleen een naam wordt gezocht in $STATE_DIR.

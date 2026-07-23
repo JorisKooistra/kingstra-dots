@@ -16,7 +16,7 @@ Rectangle {
     readonly property bool _isActive: shell.mediaStatus === "Playing" || shell.mediaStatus === "Paused"
 
     // ── Layout ────────────────────────────────────────────────────────────────
-    Layout.preferredHeight: ctx.cyberSideModuleHeight
+    Layout.preferredHeight: ctx.neonSideModuleHeight
     Layout.alignment: Qt.AlignVCenter
     clip: true
 
@@ -29,22 +29,22 @@ Rectangle {
     Behavior on opacity     { NumberAnimation { duration: 300 } }
 
     // ── Styling ───────────────────────────────────────────────────────────────
-    color: ctx.cyberChrome ? ctx.cyberModuleColor : surface.panelColor
+    color: ctx.neonChrome ? ctx.neonModuleColor : surface.panelColor
     radius: surface.panelRadius
     topLeftRadius:     ctx.panelTopLeftRadius
     topRightRadius:    ctx.panelTopRightRadius
     bottomLeftRadius:  ctx.panelBottomLeftRadius
     bottomRightRadius: ctx.panelBottomRightRadius
     border.width: 1
-    border.color: ctx.cyberChrome ? ctx.cyberModuleBorderColor : ctx.themeAccentBorderColor
+    border.color: ctx.neonChrome ? ctx.neonModuleBorderColor : ctx.themeAccentBorderColor
 
     Rectangle {
-        visible: ctx.cyberChrome
+        visible: ctx.neonChrome
         anchors.left: parent.left;   anchors.leftMargin: shell.s(10)
         anchors.right: parent.right;  anchors.rightMargin: shell.s(10)
         anchors.bottom: parent.bottom; anchors.bottomMargin: shell.s(4)
         height: 1
-        color: ctx.cyberModuleTickColor
+        color: ctx.neonModuleTickColor
         opacity: root._isActive ? 0.62 : 0.0
         Behavior on opacity { NumberAnimation { duration: 250 } }
     }

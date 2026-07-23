@@ -32,12 +32,36 @@ _sync_skwd_monitor() {
     fi
 }
 
+_active_theme() {
+    local active_file="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/active-theme"
+    local theme_json="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
+    local theme=""
+
+    if [[ -f "$active_file" ]]; then
+        theme="$(cat "$active_file" 2>/dev/null || true)"
+    fi
+    if [[ -z "$theme" && -f "$theme_json" ]] && command -v jq >/dev/null 2>&1; then
+        theme="$(jq -r '.theme // ""' "$theme_json" 2>/dev/null || true)"
+    fi
+
+    printf '%s\n' "${theme,,}"
+}
+
 if command -v skwd >/dev/null 2>&1; then
     systemctl --user start skwd-daemon.service >/dev/null 2>&1 || true
     _sync_skwd_monitor
+    active_theme="$(_active_theme)"
+    if [[ "$active_theme" == "mono" || "$active_theme" == "paper" || "$active_theme" == "neon" ]]; then
+        skwd wall suppress >/dev/null 2>&1 || true
+        (
+            sleep 90
+            skwd wall unsuppress >/dev/null 2>&1 || true
+        ) >/dev/null 2>&1 &
+    fi
     if skwd wall toggle >/dev/null 2>&1; then
         exit 0
     fi
+    skwd wall unsuppress >/dev/null 2>&1 || true
 fi
 
 if command -v kingstra-wallpaper >/dev/null 2>&1; then

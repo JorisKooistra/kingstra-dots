@@ -20,6 +20,7 @@ Item {
     readonly property bool stripEnabled: ThemeConfig.barStatusStripEnabled
     readonly property bool stripControlsEnabled: stripEnabled && !railEnabled
     readonly property bool stripOnBottom: ThemeConfig.barStatusStripEdge === "bottom"
+    readonly property bool topHoverHitEnabled: stripEnabled && !stripControlsEnabled && !stripOnBottom
     readonly property bool railOnRight: ThemeConfig.barRailEdge === "right"
     readonly property int railWidth: ThemeConfig.barRailWidth
     // Als alle statusstrip-content naar de rail is verhuisd, blijft boven alleen
@@ -40,13 +41,19 @@ Item {
     // Binnenhoek van de schermomlijsting. Deze moet dezelfde visuele familie
     // hebben als Hyprland's window rounding; een losse grote radius laat vooral
     // onderin vensterhoeken en framehoeken optisch door elkaar snijden.
-    readonly property int cornerR: Math.round(Math.max(10, Math.min(34, Math.max(ThemeConfig.borderRadius, ThemeConfig.styleWidgetRadius) + frameBandW)))
+    readonly property int cornerR: Math.round(monoStyle
+        ? Math.max(2, Math.min(8, Math.max(ThemeConfig.borderRadius, ThemeConfig.styleWidgetRadius) + frameBandW))
+        : Math.max(paperStyle ? 12 : 10,
+                   Math.min(organicStyle ? 34 : 20,
+                            Math.max(ThemeConfig.borderRadius, ThemeConfig.styleWidgetRadius) + frameBandW)))
     readonly property int cornerSeamOverlap: 3
     readonly property string styleFamily: String(ThemeConfig.styleFamily || "").toLowerCase()
     readonly property bool paperStyle: styleFamily === "paper"
     readonly property bool organicStyle: styleFamily === "organic"
-    readonly property bool modernStyle: styleFamily === "modern"
+    readonly property bool neonStyle: styleFamily === "neon"
     readonly property bool monoStyle: styleFamily === "mono"
+    readonly property color paperBase: "#f1e3c6"
+    readonly property color paperSurface: "#f6ecd6"
     // --- Matugen multi-color chrome -----------------------------------------
     // De bar leunde voorheen op crust/base (bijna-zwart), waardoor matugen
     // visueel vrijwel niets deed. We tinten nu een donker chrome-oppervlak met
@@ -62,20 +69,26 @@ Item {
         let k = _clamp01(t);
         return k < 0.5 ? _mix(a, b, k * 2.0) : _mix(b, c, (k - 0.5) * 2.0);
     }
-    // Donkere basis waarop we tinten; behoudt de bestaande donkerte per stijl.
-    readonly property color barFloor: paperStyle ? mocha.mantle
-        : (modernStyle || monoStyle ? mocha.crust : mocha.base)
+    // Materiaalvloer per familie. Paper mag juist licht en warm lezen; mono
+    // blijft vlak en bijna kleurloos; neon/organic mogen op donker tinten.
+    readonly property color barFloor: paperStyle ? paperBase
+        : (neonStyle || monoStyle ? mocha.crust : mocha.base)
     // De schermrand-chrome zit direct op de wallpaper. Elke transparantie in
     // deze laag laat vooral in de afgeronde schermhoeken de wallpaper-hoek
     // meedoen met de kleur, waardoor de vorm wel klopt maar de hoek alsnog
     // doorschijnt. Popups gebruiken hun eigen opacity; de edge zelf is solid.
     readonly property real barFillAlpha: 1.0
-    // Echte wallpaper-samples uit matugen custom colors. De geharmoniseerde
-    // Material-rollen blijven beschikbaar voor iconen en tekstcontrast.
-    readonly property color barHueA: mocha.accent2Source
-    readonly property color barHueB: mocha.accent3Source
-    readonly property color barHueC: mocha.primary
-    readonly property real barTintK: monoStyle ? 0.04 : (paperStyle ? 0.12 : 0.30)
+    // Drie stabiele accentrollen: accent1 = primary/cyan, accent2 = warme
+    // lucht, accent3 = organisch groen. De *source* samples blijven bruikbaar
+    // voor kleurherkomst, maar voor de UI nemen we geharmoniseerde rollen zodat
+    // donkere source-kleuren zoals accent3_source niet onzichtbaar worden.
+    readonly property color barHueA: monoStyle ? mocha.text
+        : (paperStyle ? (mocha.accent2Container || mocha.accent2) : (mocha.accent1 || mocha.primary))
+    readonly property color barHueB: monoStyle ? mocha.subtext0
+        : (paperStyle ? (mocha.surfaceContainer || mocha.surface1) : (mocha.accent3Container || mocha.accent3))
+    readonly property color barHueC: monoStyle ? mocha.overlay0
+        : (paperStyle ? (mocha.primaryContainer || mocha.accent1Container) : (mocha.accent2Container || mocha.accent2))
+    readonly property real barTintK: monoStyle ? 0.0 : (paperStyle ? 0.055 : (neonStyle ? 0.38 : 0.30))
     readonly property color barGradStart: {
         let c = _mix(barFloor, barHueA, barTintK);
         return Qt.rgba(c.r, c.g, c.b, barFillAlpha);
@@ -90,7 +103,7 @@ Item {
     }
     readonly property color barGradCenter: barGradMid
     readonly property color barHueCenter: barHueB
-    readonly property real chromeAccentAlpha: monoStyle ? 0.45 : 1.0
+    readonly property real chromeAccentAlpha: monoStyle ? 0.62 : (paperStyle ? 0.42 : 1.0)
 
     // Accentrand-kleuren. De rauwe wallpaper-samples (barHueA/B/C) zijn prima
     // als subtiele tint ín de vulling, maar als lijn kunnen ze vrijwel
@@ -113,18 +126,16 @@ Item {
     // de blob eronder, in plaats van elk hun eigen volledige a→b over te doen.
     function _diagColor(x, y) {
         let t = _clamp01((x + y) / Math.max(1, root.width + root.height));
-        let a = root.barGradStart;
-        let b = root.barGradEnd;
-        return Qt.rgba(a.r + (b.r - a.r) * t,
-                       a.g + (b.g - a.g) * t,
-                       a.b + (b.b - a.b) * t,
-                       a.a + (b.a - a.a) * t);
+        return root._mix3(root.barGradStart, root.barGradMid, root.barGradEnd, t);
     }
 
-    readonly property real edgeAccentMinLum: 0.55
-    readonly property color edgeAccentA: _ensureLum(barHueA, edgeAccentMinLum)
-    readonly property color edgeAccentB: _ensureLum(barHueB, edgeAccentMinLum)
-    readonly property color edgeAccentC: _ensureLum(barHueC, edgeAccentMinLum)
+    readonly property real edgeAccentMinLum: paperStyle ? 0.34 : (neonStyle ? 0.68 : 0.55)
+    readonly property color edgeAccentA: monoStyle ? mocha.text
+        : _ensureLum(paperStyle ? barHueA : (mocha.accent1 || barHueA), edgeAccentMinLum)
+    readonly property color edgeAccentB: monoStyle ? mocha.subtext0
+        : _ensureLum(paperStyle ? barHueB : (mocha.accent3 || barHueB), edgeAccentMinLum)
+    readonly property color edgeAccentC: monoStyle ? mocha.overlay0
+        : _ensureLum(paperStyle ? barHueC : (mocha.accent2 || barHueC), edgeAccentMinLum)
     // Geometrie van een paneel dat uit een schermrand groeit. Dit volgt de
     // Caelestia-blobgroep-benadering: de rand en het paneel worden als één
     // samengestelde vorm behandeld in plaats van losse connectorstukjes.
@@ -228,31 +239,40 @@ Item {
     readonly property var edgeBlobGroup: cornersActive ? nativeBlobGroup : null
 
     readonly property color panelColor: {
+        if (paperStyle) {
+            let p = _mix(paperSurface, barHueA, 0.055);
+            return Qt.rgba(p.r, p.g, p.b, 1.0);
+        }
+        if (monoStyle) return Qt.rgba(barFloor.r, barFloor.g, barFloor.b, 1.0);
         let c = _mix(barFloor, barHueCenter, barTintK * 0.6);
         return Qt.rgba(c.r, c.g, c.b, barFillAlpha);
     }
     readonly property color pillColor: {
-        if (paperStyle) return Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.38);
-        if (modernStyle) return Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.24);
-        if (monoStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08);
+        if (paperStyle) {
+            let p = _mix(paperBase, mocha.text, 0.055);
+            return Qt.rgba(p.r, p.g, p.b, 0.92);
+        }
+        if (neonStyle) return Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, 0.72);
+        if (monoStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06);
         return Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58);
     }
     readonly property color pillHoverColor: {
-        if (modernStyle) return Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.22);
-        if (monoStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.16);
+        if (paperStyle) return Qt.rgba(barHueA.r, barHueA.g, barHueA.b, 0.24);
+        if (neonStyle) return Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.34);
+        if (monoStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.14);
         return Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, paperStyle ? 0.64 : 0.86);
     }
     readonly property color borderColor: {
-        if (paperStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.16);
-        if (modernStyle) return Qt.rgba(mocha.accent2.r, mocha.accent2.g, mocha.accent2.b, 0.30);
+        if (paperStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.24);
+        if (neonStyle) return Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.58);
         if (monoStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.34);
         return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06 + ThemeConfig.styleOutlineStrength);
     }
     readonly property color hotColor: {
         if (monoStyle) return mocha.text;
-        if (modernStyle) return mocha.teal || mocha.accent2 || mocha.mauve;
-        if (paperStyle) return mocha.lavender || mocha.accent2 || mocha.mauve;
-        return mocha.accent2 || mocha.mauve;
+        if (neonStyle) return mocha.teal;
+        if (paperStyle) return mocha.accent2Container;
+        return mocha.accent2;
     }
     // --- Special workspaces (scratchpads: spotify, discord, ...) -------------
     // Hyprland geeft deze een negatieve id en de naam "special:<naam>". De
@@ -545,14 +565,10 @@ Item {
         // qua kleur niet aan op de rand waar hij uit groeit. De shader sampelt
         // op scene-positie, dus origin/span zijn schermcoördinaten.
         gradientStart: root.barGradStart
-        // Het middenpunt is bewust precies het gemiddelde van start en eind:
-        // dan is het verloop één rechte overgang van kleur a naar kleur b.
-        // barGradMid komt uit een derde wallpaper-hue die vaak veel donkerder
-        // is, waardoor je donker → licht → donker kreeg in plaats van a → b.
-        gradientMid: Qt.rgba((root.barGradStart.r + root.barGradEnd.r) / 2,
-                             (root.barGradStart.g + root.barGradEnd.g) / 2,
-                             (root.barGradStart.b + root.barGradEnd.b) / 2,
-                             (root.barGradStart.a + root.barGradEnd.a) / 2)
+        // Drie accentrollen in één schermbreed verloop: accent1/cyan,
+        // accent3/groen en accent2/warm. Dit houdt de wallpaper-kleuren
+        // herkenbaar zonder dat één rode luchtkleur de hele chrome overneemt.
+        gradientMid: root.barGradMid
         gradientEnd: root.barGradEnd
         // Diagonaal verloop over het volle scherm: langs de as linksboven →
         // rechtsonder gaat de kleur van a naar b, en elke lijn loodrecht
@@ -565,13 +581,10 @@ Item {
         // loopt automatisch om de samengesmolten vorm van omlijsting + panelen
         // heen. Losse Canvas-outlines per paneel konden in de hoeken nooit
         // naadloos aansluiten en lieten daar een open kant achter.
-        // Zelfde opzet als de vulling: recht van a naar b, middenpunt op het
-        // gemiddelde, zodat rand en vlak in dezelfde richting verlopen.
+        // Zelfde driepunts-opzet als de vulling, maar met opgelichte
+        // accentrand-kleuren zodat ook donkere derde kleuren zichtbaar blijven.
         borderStart: Qt.rgba(root.edgeAccentA.r, root.edgeAccentA.g, root.edgeAccentA.b, root.chromeAccentAlpha)
-        borderMid: Qt.rgba((root.edgeAccentA.r + root.edgeAccentC.r) / 2,
-                           (root.edgeAccentA.g + root.edgeAccentC.g) / 2,
-                           (root.edgeAccentA.b + root.edgeAccentC.b) / 2,
-                           root.chromeAccentAlpha)
+        borderMid: Qt.rgba(root.edgeAccentB.r, root.edgeAccentB.g, root.edgeAccentB.b, root.chromeAccentAlpha)
         borderEnd: Qt.rgba(root.edgeAccentC.r, root.edgeAccentC.g, root.edgeAccentC.b, root.chromeAccentAlpha)
         borderWidth: root.frameBandW
         smoothing: Math.max(18, root.cornerR)
@@ -599,7 +612,7 @@ Item {
         anchors.bottomMargin: root.railBottomOffset
         anchors.left: root.railOnRight ? undefined : parent.left
         anchors.right: root.railOnRight ? parent.right : undefined
-        width: root.railWidth
+        width: root.railEnabled ? root.railWidth : 0
 
         HoverHandler {
             id: railHover
@@ -616,11 +629,11 @@ Item {
     Item {
         id: topHoverHitArea
 
-        visible: root.stripEnabled && !root.stripControlsEnabled && !root.stripOnBottom
+        visible: root.topHoverHitEnabled
         anchors.top: parent.top
         anchors.left: root.railEnabled && !root.railOnRight ? rail.right : parent.left
         anchors.right: root.railEnabled && root.railOnRight ? rail.left : parent.right
-        height: Math.max(root.shellBorderWidth, 8)
+        height: root.topHoverHitEnabled ? Math.max(root.shellBorderWidth, 8) : 0
         z: 30
 
         HoverHandler {
@@ -700,7 +713,7 @@ Item {
                 visible: root.moduleEnabled("clock")
                 icon: "󰃰"
                 text: root.timeText
-                accent: root.mocha.blue
+                accent: root.mocha.accent1
                 onTriggered: root.togglePanel("calendar")
             }
 
@@ -708,7 +721,7 @@ Item {
                 tooltip: "Meldingen"
                 visible: root.moduleEnabled("notifications")
                 icon: "󰍜"
-                accent: root.mocha.yellow
+                accent: root.mocha.accent2
                 onTriggered: root.togglePanel("notifications")
             }
 
@@ -717,7 +730,7 @@ Item {
                 visible: root.moduleEnabled("mail")
                 icon: "󰇮"
                 text: MailService.badgeText
-                accent: MailService.unreadKnown && MailService.unreadCount > 0 ? root.mocha.red : root.mocha.blue
+                accent: MailService.unreadKnown && MailService.unreadCount > 0 ? root.mocha.accent2 : root.mocha.accent1
                 onTriggered: root.togglePanel("mail")
             }
 
@@ -725,7 +738,7 @@ Item {
                 tooltip: "Media"
                 visible: root.mediaVisible
                 icon: "󰎆"
-                accent: root.mocha.green
+                accent: root.mocha.accent3
                 onTriggered: root.togglePanel("music")
             }
 
@@ -838,14 +851,14 @@ Item {
             RailButton { tooltip: "Focus";
                 visible: root.activeMode === "office" || root.moduleEnabled("focus")
                 icon: "󰥔"
-                accent: root.mocha.peach
+                accent: root.mocha.accent1
                 onTriggered: root.togglePanel("focustime")
             }
 
             RailButton { tooltip: "Systeem";
                 visible: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps"])
                 icon: "󰍛"
-                accent: root.mocha.teal
+                accent: root.mocha.accent1
                 onTriggered: root.togglePanel("performance")
             }
 
@@ -853,7 +866,7 @@ Item {
                 tooltip: "Monitoren"
                 visible: root.anyModuleEnabled(["updates", "cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"])
                 icon: "󰍹"
-                accent: root.mocha.teal
+                accent: root.mocha.accent3
                 onTriggered: root.togglePanel("monitors")
             }
 
@@ -861,7 +874,7 @@ Item {
                 tooltip: "Games"
                 visible: root.moduleEnabled("game_launcher")
                 icon: "󰊴"
-                accent: root.mocha.mauve
+                accent: root.mocha.accent2
                 onTriggered: root.togglePanel("gaming")
             }
 
@@ -870,13 +883,13 @@ Item {
             RailButton { tooltip: "Netwerk";
                 visible: root.moduleEnabled("network") && root.hasWifi
                 icon: root.isWifiOn ? "󰤨" : "󰤮"
-                accent: root.isWifiOn ? root.mocha.blue : root.mocha.subtext0
+                accent: root.isWifiOn ? root.mocha.accent3 : root.mocha.subtext0
                 onTriggered: root.togglePanel("network")
             }
             RailButton { tooltip: "Bedraad netwerk";
                 visible: root.moduleEnabled("network") && !root.hasWifi && root.isEthConnected
                 icon: "󰈀"
-                accent: root.mocha.teal
+                accent: root.mocha.accent3
                 onTriggered: {
                     Quickshell.execDetached(["bash", "-lc", "printf eth > /tmp/qs_network_mode"]);
                     root.togglePanel("network");
@@ -885,7 +898,7 @@ Item {
             RailButton { tooltip: "Bluetooth";
                 visible: root.moduleEnabled("bluetooth") && root.hasBluetooth
                 icon: root.isBtOn ? "󰂱" : "󰂲"
-                accent: root.isBtOn ? root.mocha.mauve : root.mocha.subtext0
+                accent: root.isBtOn ? root.mocha.accent3 : root.mocha.subtext0
                 onTriggered: {
                     Quickshell.execDetached(["bash", "-lc", "printf bt > /tmp/qs_network_mode"]);
                     root.togglePanel("network");
@@ -895,7 +908,7 @@ Item {
                 visible: root.moduleEnabled("volume")
                 icon: root.volIcon
                 text: root.volPercent
-                accent: root.isSoundActive ? root.mocha.peach : root.mocha.subtext0
+                accent: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
                 onTriggered: root.togglePanel("volume")
                 onWheelDelta: (delta) => root.handleVolumeWheel(delta)
             }
@@ -903,7 +916,7 @@ Item {
                 visible: root.moduleEnabled("battery") && root.hasBattery
                 icon: "󰁹"
                 text: root.batCap + "%"
-                accent: root.mocha.yellow
+                accent: root.mocha.accent2
                 onTriggered: root.togglePanel("battery")
             }
             RailButton { tooltip: "Afsluitmenu";
@@ -932,7 +945,12 @@ Item {
         Item {
             id: stripHitArea
             visible: root.stripControlsEnabled
-            anchors.fill: parent
+            anchors.left: root.stripControlsEnabled ? parent.left : undefined
+            anchors.right: root.stripControlsEnabled ? parent.right : undefined
+            anchors.top: root.stripControlsEnabled ? parent.top : undefined
+            anchors.bottom: root.stripControlsEnabled ? parent.bottom : undefined
+            width: root.stripControlsEnabled ? parent.width : 0
+            height: root.stripControlsEnabled ? parent.height : 0
 
             HoverHandler {
                 id: stripHover
@@ -1037,11 +1055,11 @@ Item {
                         }
                     }
                 }
-                StripButton { tooltip: "Meldingen"; visible: root.moduleEnabled("notifications"); icon: "󰍜"; accent: root.mocha.yellow; onTriggered: root.togglePanel("notifications") }
-                StripButton { tooltip: MailService.statusText; visible: root.moduleEnabled("mail"); icon: "󰇮"; accent: MailService.unreadKnown && MailService.unreadCount > 0 ? root.mocha.red : root.mocha.blue; onTriggered: root.togglePanel("mail") }
-                StripButton { tooltip: "Agenda"; visible: root.moduleEnabled("clock"); icon: "󰃰"; accent: root.mocha.blue; onTriggered: root.togglePanel("calendar") }
-                StripButton { tooltip: "Monitoren"; visible: root.anyModuleEnabled(["updates", "cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"]); icon: "󰍹"; accent: root.mocha.teal; onTriggered: root.togglePanel("monitors") }
-                StripButton { tooltip: "Games"; visible: root.moduleEnabled("game_launcher"); icon: "󰊴"; accent: root.mocha.mauve; onTriggered: root.togglePanel("gaming") }
+                StripButton { tooltip: "Meldingen"; visible: root.moduleEnabled("notifications"); icon: "󰍜"; accent: root.mocha.accent2; onTriggered: root.togglePanel("notifications") }
+                StripButton { tooltip: MailService.statusText; visible: root.moduleEnabled("mail"); icon: "󰇮"; accent: MailService.unreadKnown && MailService.unreadCount > 0 ? root.mocha.accent2 : root.mocha.accent1; onTriggered: root.togglePanel("mail") }
+                StripButton { tooltip: "Agenda"; visible: root.moduleEnabled("clock"); icon: "󰃰"; accent: root.mocha.accent1; onTriggered: root.togglePanel("calendar") }
+                StripButton { tooltip: "Monitoren"; visible: root.anyModuleEnabled(["updates", "cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"]); icon: "󰍹"; accent: root.mocha.accent3; onTriggered: root.togglePanel("monitors") }
+                StripButton { tooltip: "Games"; visible: root.moduleEnabled("game_launcher"); icon: "󰊴"; accent: root.mocha.accent2; onTriggered: root.togglePanel("gaming") }
             }
 
             RowLayout {
@@ -1083,13 +1101,13 @@ Item {
                 StripButton { tooltip: "Netwerk";
                     visible: !root.railEnabled && root.moduleEnabled("network") && root.hasWifi
                     icon: root.isWifiOn ? "󰤨" : "󰤮"
-                    accent: root.isWifiOn ? root.mocha.blue : root.mocha.subtext0
+                    accent: root.isWifiOn ? root.mocha.accent3 : root.mocha.subtext0
                     onTriggered: root.togglePanel("network")
                 }
                 StripButton { tooltip: "Bedraad netwerk";
                     visible: !root.railEnabled && root.moduleEnabled("network") && !root.hasWifi && root.isEthConnected
                     icon: "󰈀"
-                    accent: root.mocha.teal
+                    accent: root.mocha.accent3
                     onTriggered: {
                         Quickshell.execDetached(["bash", "-lc", "printf eth > /tmp/qs_network_mode"]);
                         root.togglePanel("network");
@@ -1099,14 +1117,14 @@ Item {
                     // Rail bezit de systeemcontrols; strip toont ze alleen zonder rail.
                     visible: !root.railEnabled && root.moduleEnabled("volume")
                     icon: root.volIcon
-                    accent: root.isSoundActive ? root.mocha.peach : root.mocha.subtext0
+                    accent: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
                     onTriggered: root.togglePanel("volume")
                     onWheelDelta: (delta) => root.handleVolumeWheel(delta)
                 }
                 StripButton { tooltip: "Batterij";
                     visible: !root.railEnabled && root.moduleEnabled("battery") && root.hasBattery
                     icon: "󰁹"
-                    accent: root.mocha.yellow
+                    accent: root.mocha.accent2
                     onTriggered: root.togglePanel("battery")
                 }
                 StripButton { tooltip: "Afsluitmenu";
@@ -1264,7 +1282,7 @@ Item {
                 text: mp.playing ? "\udb81\udf5a" : "\udb81\udf5a"
                 font.family: "Iosevka Nerd Font"
                 font.pixelSize: 13
-                color: root.mocha.green
+                color: root.mocha.accent3
             }
 
             Text {

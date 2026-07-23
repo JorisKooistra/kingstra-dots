@@ -86,7 +86,7 @@ Variants {
             property string clockStyle: ThemeConfig.clockStyle
             property real themeLetterSpacing: ThemeConfig.letterSpacing
             property int themeFontWeight: ThemeConfig.fontWeight
-            property int cyberUnderhang: 0
+            property int neonUnderhang: 0
             property int topEdgeBleed: (isHorizontalBar
                                         && isTopBar
                                         && edgeAttachedBar
@@ -101,7 +101,7 @@ Variants {
 
             // THICKER BAR, MINIMAL MARGINS (Scaled)
             implicitHeight: barWindow.isHorizontalBar
-                            ? (barHeight + (barWindow.isTopBar ? cyberUnderhang : 0) + particleVisualOverflow)
+                            ? (barHeight + (barWindow.isTopBar ? neonUnderhang : 0) + particleVisualOverflow)
                             : 0
             implicitWidth: barWindow.isVerticalBar ? barThickness : 0
             margins {
@@ -126,7 +126,7 @@ Variants {
                     return barWindow.baseBarThickness + (barWindow.isRightBar ? margins.right : margins.left);
                 }
                 return barWindow.barHeight
-                       + (barWindow.isTopBar ? barWindow.cyberUnderhang : 0)
+                       + (barWindow.isTopBar ? barWindow.neonUnderhang : 0)
                        + (barWindow.isBottomBar ? margins.bottom : margins.top);
             }
             color: "transparent"

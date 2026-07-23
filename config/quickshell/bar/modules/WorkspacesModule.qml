@@ -45,7 +45,7 @@ Rectangle {
         return "󱂬";
     }
 
-    Layout.preferredHeight: ctx.cyberSideModuleHeight
+    Layout.preferredHeight: ctx.neonSideModuleHeight
     Layout.alignment: Qt.AlignVCenter
     property real targetWidth: wsLayout.implicitWidth + shell.s(20)
     Layout.preferredWidth: targetWidth
@@ -54,7 +54,7 @@ Rectangle {
     opacity: visible ? 1 : 0
     clip: true
 
-    color: ctx.cyberChrome
+    color: ctx.neonChrome
            ? Qt.rgba(roleColor(ctx.moduleFillColorName, mocha.crust).r,
                      roleColor(ctx.moduleFillColorName, mocha.crust).g,
                      roleColor(ctx.moduleFillColorName, mocha.crust).b,
@@ -66,7 +66,7 @@ Rectangle {
     bottomLeftRadius: ctx.panelBottomLeftRadius
     bottomRightRadius: ctx.panelBottomRightRadius
     border.width: 1
-    border.color: ctx.cyberChrome
+    border.color: ctx.neonChrome
                   ? Qt.rgba(roleColor(ctx.accentHotColorName, mocha.teal).r,
                             roleColor(ctx.accentHotColorName, mocha.teal).g,
                             roleColor(ctx.accentHotColorName, mocha.teal).b,
@@ -162,14 +162,14 @@ Rectangle {
         return visibleIcons;
     }
 
-    // Cyber bottom tick line
+    // Neon bottom tick line
     Rectangle {
         visible: ctx.showModuleTick
         anchors.left: parent.left; anchors.leftMargin: shell.s(10)
         anchors.right: parent.right; anchors.rightMargin: shell.s(10)
         anchors.bottom: parent.bottom; anchors.bottomMargin: shell.s(4)
         height: 1
-        color: root.roleColor(ctx.accentHotColorName, ctx.cyberModuleTickColor)
+        color: root.roleColor(ctx.accentHotColorName, ctx.neonModuleTickColor)
         opacity: 0.52
     }
 
@@ -211,14 +211,14 @@ Rectangle {
                 radius: surface.innerPillRadius
 
                 color: stateLabel === "active"
-                        ? (ctx.cyberChrome ? ctx.cyberWorkspaceActiveColor : mocha.mauve)
+                        ? (ctx.neonChrome ? ctx.neonWorkspaceActiveColor : mocha.mauve)
                         : (isHovered
-                            ? (ctx.cyberChrome
+                            ? (ctx.neonChrome
                                 ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.26)
                                 : Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.9))
                             : (stateLabel === "occupied"
-                                ? (ctx.cyberChrome
-                                    ? ctx.cyberWorkspaceOccupiedColor
+                                ? (ctx.neonChrome
+                                    ? ctx.neonWorkspaceOccupiedColor
                                     : Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.9))
                                 : "transparent"))
 
@@ -258,9 +258,9 @@ Rectangle {
                     font.weight: stateLabel === "active" ? Font.Black : (stateLabel === "occupied" ? Font.Bold : Font.Medium)
                     font.letterSpacing: shell.themeLetterSpacing
                     color: stateLabel === "active"
-                            ? (ctx.cyberChrome ? mocha.base : mocha.crust)
+                            ? (ctx.neonChrome ? mocha.base : mocha.crust)
                             : (isHovered
-                                ? (ctx.cyberChrome ? mocha.text : mocha.crust)
+                                ? (ctx.neonChrome ? mocha.text : mocha.crust)
                                 : (stateLabel === "occupied" ? mocha.text : mocha.overlay0))
                     Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("medium") } }
                     Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
@@ -302,7 +302,7 @@ Rectangle {
                                 font.family: shell.monoFontFamily
                                 font.pixelSize: shell.s(9)
                                 font.weight: Font.Bold
-                                color: wsPill.stateLabel === "active" ? (ctx.cyberChrome ? mocha.base : mocha.crust) : mocha.text
+                                color: wsPill.stateLabel === "active" ? (ctx.neonChrome ? mocha.base : mocha.crust) : mocha.text
                             }
                         }
                     }
@@ -333,7 +333,7 @@ Rectangle {
             Behavior on width { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") } }
 
             radius: surface.innerPillRadius
-            color: ctx.cyberChrome
+            color: ctx.neonChrome
                 ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.22)
                 : Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.18)
             border.width: 1

@@ -20,6 +20,10 @@ FocusScope {
     MatugenColors { id: mocha }
 
     property var allApps: []
+    property var usageCounts: ({})
+    property var lastLaunchTimes: ({})
+    property var pinnedIds: []
+    property int maxPinnedApps: 3
     property string query: ""
     property int selectedIndex: 0
 
@@ -39,7 +43,7 @@ FocusScope {
 
     readonly property var filtered: {
         let q = root.normalizeSearch(query);
-        if (q === "") return allApps;
+        if (q === "") return root.sortedApps(allApps);
         let scored = [];
         for (let i = 0; i < allApps.length; i++) {
             let a = allApps[i];
@@ -48,7 +52,7 @@ FocusScope {
         }
         scored.sort((a, b) => {
             if (a.score !== b.score) return b.score - a.score;
-            return String(a.app.name || "").length - String(b.app.name || "").length;
+            return root.compareApps(a.app, b.app);
         });
         return scored.map(r => r.app);
     }
@@ -127,6 +131,67 @@ FocusScope {
         );
     }
 
+    function launchCount(app) {
+        if (!app || !app.id || !usageCounts) return 0;
+        let count = usageCounts[app.id];
+        return count === undefined ? 0 : Number(count);
+    }
+
+    function pinIndex(app) {
+        if (!app || !app.id || !pinnedIds) return -1;
+        return pinnedIds.indexOf(app.id);
+    }
+
+    function isPinned(app) {
+        return pinIndex(app) >= 0;
+    }
+
+    function compareApps(a, b) {
+        let ap = pinIndex(a);
+        let bp = pinIndex(b);
+        if (ap !== bp) {
+            if (ap < 0) return 1;
+            if (bp < 0) return -1;
+            return ap - bp;
+        }
+
+        let ac = launchCount(a);
+        let bc = launchCount(b);
+        if (ac !== bc) return bc - ac;
+
+        let at = Number((a && a.id && lastLaunchTimes[a.id]) || 0);
+        let bt = Number((b && b.id && lastLaunchTimes[b.id]) || 0);
+        if (at !== bt) return bt - at;
+
+        return String(a.name || "").localeCompare(String(b.name || ""));
+    }
+
+    function sortedApps(apps) {
+        let out = apps.slice();
+        out.sort((a, b) => root.compareApps(a, b));
+        return out;
+    }
+
+    function applyLauncherState(data) {
+        if (!data || typeof data !== "object") {
+            usageCounts = ({});
+            lastLaunchTimes = ({});
+            pinnedIds = [];
+            return;
+        }
+        usageCounts = data.counts && typeof data.counts === "object" ? data.counts : ({});
+        lastLaunchTimes = data.lastLaunched && typeof data.lastLaunched === "object" ? data.lastLaunched : ({});
+        pinnedIds = Array.isArray(data.pins) ? data.pins.slice(0, maxPinnedApps) : [];
+    }
+
+    function applyLauncherStateJson(text) {
+        try {
+            applyLauncherState(JSON.parse(String(text || "{}")));
+        } catch (e) {
+            applyLauncherState({});
+        }
+    }
+
     Process {
         id: scanProc
         command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/shellsurface/list-apps.py"]
@@ -142,12 +207,65 @@ FocusScope {
         }
     }
 
+    Process {
+        id: stateLoadProc
+        command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/shellsurface/launcher-state.py", "get"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: root.applyLauncherStateJson(this.text)
+        }
+    }
+
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        onTriggered: if (!stateLoadProc.running) stateLoadProc.running = true
+    }
+
     function closePanel() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
     }
 
+    function updateState(action, app) {
+        if (!app || !app.id) return;
+        let counts = Object.assign({}, usageCounts || {});
+        let launches = Object.assign({}, lastLaunchTimes || {});
+        let pins = pinnedIds ? pinnedIds.slice(0, maxPinnedApps) : [];
+        if (action === "launch") {
+            counts[app.id] = Number(counts[app.id] || 0) + 1;
+            launches[app.id] = Math.round(Date.now() / 1000);
+        } else if (action === "pin") {
+            if (pins.indexOf(app.id) < 0 && pins.length < maxPinnedApps)
+                pins.push(app.id);
+        } else if (action === "unpin") {
+            let idx = pins.indexOf(app.id);
+            if (idx >= 0) pins.splice(idx, 1);
+        }
+        usageCounts = counts;
+        lastLaunchTimes = launches;
+        pinnedIds = pins;
+        Quickshell.execDetached([
+            "python3",
+            Quickshell.env("HOME") + "/.config/quickshell/shellsurface/launcher-state.py",
+            action,
+            app.id
+        ]);
+    }
+
+    function togglePin(app) {
+        if (!app || !app.id) return;
+        if (isPinned(app)) {
+            updateState("unpin", app);
+            return;
+        }
+        if (pinnedIds.length >= maxPinnedApps) return;
+        updateState("pin", app);
+    }
+
     function launch(app) {
         if (!app) return;
+        updateState("launch", app);
         let cmd = app.terminal ? ("kitty -e " + app.exec) : app.exec;
         Quickshell.execDetached(["bash", "-lc", "setsid " + cmd + " >/dev/null 2>&1 &"]);
         closePanel();
@@ -257,6 +375,7 @@ FocusScope {
                     anchors.leftMargin: 12
                     anchors.rightMargin: 12
                     spacing: 12
+                    z: 1
 
                     Item {
                         Layout.preferredWidth: 26
@@ -304,11 +423,62 @@ FocusScope {
                             color: mocha.subtext0
                         }
                     }
+
+                    Rectangle {
+                        Layout.preferredWidth: 52
+                        Layout.preferredHeight: 22
+                        Layout.alignment: Qt.AlignVCenter
+                        radius: 8
+                        visible: root.launchCount(row.modelData) > 0
+                        color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.10)
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.launchCount(row.modelData) + "x"
+                            font.family: ThemeConfig.monoFont
+                            font.pixelSize: 10
+                            color: mocha.subtext0
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.preferredWidth: 30
+                        Layout.preferredHeight: 30
+                        Layout.alignment: Qt.AlignVCenter
+                        radius: 9
+                        color: root.isPinned(row.modelData)
+                            ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.24)
+                            : (pinMouse.containsMouse ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.14) : "transparent")
+                        border.width: root.isPinned(row.modelData) ? 1 : 0
+                        border.color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.45)
+                        opacity: root.isPinned(row.modelData) || root.pinnedIds.length < root.maxPinnedApps ? 1.0 : 0.38
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.isPinned(row.modelData) ? "󰓎" : "󰐃"
+                            font.family: "Iosevka Nerd Font"
+                            font.pixelSize: 15
+                            color: root.isPinned(row.modelData) ? mocha.primary : mocha.subtext0
+                        }
+
+                        MouseArea {
+                            id: pinMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: root.isPinned(row.modelData) || root.pinnedIds.length < root.maxPinnedApps
+                                         ? Qt.PointingHandCursor : Qt.ForbiddenCursor
+                            onClicked: mouse => {
+                                mouse.accepted = true;
+                                root.togglePin(row.modelData);
+                            }
+                        }
+                    }
                 }
 
                 MouseArea {
                     id: rowMouse
                     anchors.fill: parent
+                    z: 0
                     hoverEnabled: true
                     onEntered: root.selectedIndex = row.index
                     onClicked: root.launch(row.modelData)

@@ -76,9 +76,9 @@ _valid_scheme() {
 
 _canonical_theme_name() {
     case "${1,,}" in
-        paper|organic|modern|mono) printf '%s\n' "${1,,}" ;;
+        paper|organic|neon|mono) printf '%s\n' "${1,,}" ;;
         botanical|animated) printf '%s\n' "organic" ;;
-        cyber|space|ocean) printf '%s\n' "modern" ;;
+        modern|cyber|space|ocean) printf '%s\n' "neon" ;;
         rocky) printf '%s\n' "mono" ;;
         *) printf '%s\n' "" ;;
     esac

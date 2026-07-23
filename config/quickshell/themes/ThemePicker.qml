@@ -73,11 +73,11 @@ Item {
         Qt.rgba(0, 0, 0, 0.97)
     ], _theme.text)
     readonly property color titleAccentColor: pickReadableColor(titleBarColor, [
-        _theme.blue,
-        _theme.sapphire,
-        _theme.teal,
-        _theme.mauve,
-        _theme.yellow,
+        _theme.accent1,
+        _theme.accent2,
+        _theme.accent3,
+        _theme.accent1Container,
+        _theme.accent2Container,
         titleTextColor
     ], titleTextColor)
     readonly property color hintPrimaryColor: pickReadableColor(hintBarColor, [
@@ -120,13 +120,6 @@ Item {
         event.accepted = true;
     }
 
-    Timer {
-        id: applyNotifTimer; interval: 800
-        onTriggered: {
-            Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
-        }
-    }
-
     Rectangle {
         anchors.fill: parent
         color: Qt.rgba(_theme.crust.r, _theme.crust.g, _theme.crust.b, 0.35)
@@ -143,7 +136,7 @@ Item {
 
         onLoaded: {
             if (item) {
-                item.applyOnItemClick = true;
+                item.applyOnItemClick = false;
             }
         }
     }
@@ -153,7 +146,6 @@ Item {
         ignoreUnknownSignals: true
         function onThemeApplied(themeId) {
             window.themeApplied(themeId);
-            applyNotifTimer.start();
         }
     }
 

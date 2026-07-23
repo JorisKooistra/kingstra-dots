@@ -102,6 +102,11 @@ Item {
         return Math.max(minimum, Math.min(maximum, value));
     }
 
+    function intOr(value, fallback) {
+        let parsed = parseInt(value);
+        return isNaN(parsed) ? fallback : parsed;
+    }
+
     function duration(value) {
         if (typeof value === "string") return durationToken(value);
         let parsed = Number(value);
@@ -152,9 +157,9 @@ Item {
 
     function canonicalTheme(value) {
         let normalized = String(value || "organic").toLowerCase();
-        if (normalized === "paper" || normalized === "organic" || normalized === "modern" || normalized === "mono") return normalized;
+        if (normalized === "paper" || normalized === "organic" || normalized === "neon" || normalized === "mono") return normalized;
         if (normalized === "botanical" || normalized === "animated") return "organic";
-        if (normalized === "cyber" || normalized === "space" || normalized === "ocean") return "modern";
+        if (normalized === "modern" || normalized === "cyber" || normalized === "space" || normalized === "ocean") return "neon";
         if (normalized === "rocky") return "mono";
         return "organic";
     }
@@ -201,20 +206,20 @@ Item {
                 if (data.name !== undefined) root.name = String(data.name);
                 if (data.icon !== undefined) root.icon = String(data.icon);
 
-                if (data.border_radius !== undefined) root.borderRadius = parseInt(data.border_radius) || root.borderRadius;
-                if (data.border_width !== undefined) root.borderWidth = parseInt(data.border_width) || root.borderWidth;
-                if (data.gaps_in !== undefined) root.gapsIn = parseInt(data.gaps_in) || root.gapsIn;
-                if (data.gaps_out !== undefined) root.gapsOut = parseInt(data.gaps_out) || root.gapsOut;
+                if (data.border_radius !== undefined) root.borderRadius = root.intOr(data.border_radius, root.borderRadius);
+                if (data.border_width !== undefined) root.borderWidth = root.intOr(data.border_width, root.borderWidth);
+                if (data.gaps_in !== undefined) root.gapsIn = root.intOr(data.gaps_in, root.gapsIn);
+                if (data.gaps_out !== undefined) root.gapsOut = root.intOr(data.gaps_out, root.gapsOut);
                 if (data.bar_opacity !== undefined) root.barOpacity = root.clamp(Number(data.bar_opacity), 0.15, 1.0);
                 if (data.popup_opacity !== undefined) root.popupOpacity = root.clamp(Number(data.popup_opacity), 0.15, 1.0);
-                if (data.blur_size !== undefined) root.blurSize = parseInt(data.blur_size) || root.blurSize;
-                if (data.blur_passes !== undefined) root.blurPasses = parseInt(data.blur_passes) || root.blurPasses;
+                if (data.blur_size !== undefined) root.blurSize = root.intOr(data.blur_size, root.blurSize);
+                if (data.blur_passes !== undefined) root.blurPasses = root.intOr(data.blur_passes, root.blurPasses);
                 if (data.animation_speed !== undefined) root.animationSpeed = root.clamp(Number(data.animation_speed), 0.25, 3.0);
 
                 if (data.ui_font !== undefined) root.uiFont = String(data.ui_font);
-                if (data.ui_font_size !== undefined) root.uiFontSize = parseInt(data.ui_font_size) || root.uiFontSize;
+                if (data.ui_font_size !== undefined) root.uiFontSize = root.intOr(data.ui_font_size, root.uiFontSize);
                 if (data.mono_font !== undefined) root.monoFont = String(data.mono_font);
-                if (data.mono_font_size !== undefined) root.monoFontSize = parseInt(data.mono_font_size) || root.monoFontSize;
+                if (data.mono_font_size !== undefined) root.monoFontSize = root.intOr(data.mono_font_size, root.monoFontSize);
                 if (data.display_font !== undefined) root.displayFont = String(data.display_font);
                 if (data.font_weight !== undefined) root.fontWeightName = String(data.font_weight);
                 if (data.letter_spacing !== undefined) root.letterSpacing = Number(data.letter_spacing) || 0.0;
@@ -277,8 +282,8 @@ Item {
                 if (style.panel_shadow !== undefined) root.stylePanelShadow = root.clamp(Number(style.panel_shadow), 0.0, 0.5);
                 if (style.outline_strength !== undefined) root.styleOutlineStrength = root.clamp(Number(style.outline_strength), 0.0, 0.5);
                 if (style.glass_strength !== undefined) root.styleGlassStrength = root.clamp(Number(style.glass_strength), 0.0, 0.5);
-                if (style.widget_radius !== undefined) root.styleWidgetRadius = parseInt(style.widget_radius) || root.styleWidgetRadius;
-                if (style.panel_padding !== undefined) root.stylePanelPadding = parseInt(style.panel_padding) || root.stylePanelPadding;
+                if (style.widget_radius !== undefined) root.styleWidgetRadius = root.intOr(style.widget_radius, root.styleWidgetRadius);
+                if (style.panel_padding !== undefined) root.stylePanelPadding = root.intOr(style.panel_padding, root.stylePanelPadding);
 
                 let barDynamics = data.bar_dynamics || {};
                 if (barDynamics.drawer_style !== undefined) root.drawerStyle = String(barDynamics.drawer_style);
@@ -289,7 +294,7 @@ Item {
                 if (terminal.cursor_style !== undefined) root.terminalCursorStyle = String(terminal.cursor_style);
                 if (terminal.bg_opacity !== undefined) root.terminalBgOpacity = root.clamp(Number(terminal.bg_opacity), 0.15, 1.0);
                 if (terminal.blur !== undefined) root.terminalBlur = !!terminal.blur;
-                if (terminal.padding !== undefined) root.terminalPadding = parseInt(terminal.padding) || root.terminalPadding;
+                if (terminal.padding !== undefined) root.terminalPadding = root.intOr(terminal.padding, root.terminalPadding);
             } catch (e) {}
         }
     }

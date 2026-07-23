@@ -20,6 +20,8 @@ DEFAULT_WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
 SKWD_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+ACTIVE_THEME_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/active-theme"
+THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 STATE_FILE="$CACHE_DIR/last-wallpaper"
 IMAGE_STATE_FILE="$CACHE_DIR/last-image-wallpaper"
 MODE_FILE="$CACHE_DIR/wallpaper-mode"          # "static" of "video"
@@ -181,6 +183,12 @@ _current_static_wallpaper() {
     return 1
 }
 
+_path_matches() {
+    local left="${1:-}" right="${2:-}"
+    [[ -n "$left" && -n "$right" ]] || return 1
+    [[ "$(realpath -m "$left" 2>/dev/null || printf '%s' "$left")" == "$(realpath -m "$right" 2>/dev/null || printf '%s' "$right")" ]]
+}
+
 WALLPAPER_DIR="$(_resolve_wallpaper_dir)"
 VIDEO_WALLPAPER_DIR="$(_resolve_video_wallpaper_dir)"
 
@@ -209,6 +217,13 @@ _set_static() {
         _warn "skwd niet gevonden — kan wallpaper niet instellen"
         return 1
     fi
+
+    # Prime alle state vóór de zichtbare apply. skwd-postprocessing en
+    # apply-shell-state kunnen direct daarna gaan lezen; met de oude volgorde
+    # konden zij nog één cyclus het vorige pad terugzetten.
+    _save_state "$file" "static"
+    _update_wallpaper_json "$file"
+    _sync_skwd_current_wallpaper "$file" "static"
 
     if skwd wall apply "{\"path\":\"$file\"}" >/dev/null 2>&1; then
         _log "Statisch wallpaper ingesteld via skwd: $(basename "$file")"
@@ -298,21 +313,136 @@ _sync_skwd_current_wallpaper() {
     fi
 }
 
+_active_theme() {
+    local theme=""
+
+    if [[ -f "$ACTIVE_THEME_FILE" ]]; then
+        theme="$(cat "$ACTIVE_THEME_FILE" 2>/dev/null || true)"
+    fi
+
+    if [[ -z "$theme" && -f "$THEME_JSON" ]] && command -v jq >/dev/null 2>&1; then
+        theme="$(jq -r '.theme // ""' "$THEME_JSON" 2>/dev/null || true)"
+    fi
+
+    printf '%s\n' "${theme,,}"
+}
+
+_is_generated_theme_wallpaper() {
+    local file="${1:-}"
+    [[ "$file" == "$CACHE_DIR/theme-wallpapers/"* ]]
+}
+
+_theme_wallpaper_source() {
+    local current="${1:-}"
+    local original_file="$CACHE_DIR/theme-wallpaper-source"
+
+    if _is_generated_theme_wallpaper "$current" && [[ -f "$original_file" ]]; then
+        cat "$original_file" 2>/dev/null || true
+        return 0
+    fi
+
+    printf '%s\n' "$current"
+}
+
+_theme_wallpaper_for() {
+    local theme_name="$1"
+    local source="$2"
+    local requested="$source"
+    local target_dir target_file hash original_file effect_key
+
+    [[ -n "$source" && -f "$source" ]] || {
+        printf '%s\n' "$source"
+        return 0
+    }
+
+    if ! command -v magick >/dev/null 2>&1; then
+        _warn "ImageMagick ontbreekt — theme wallpaper blijft origineel"
+        printf '%s\n' "$source"
+        return 0
+    fi
+
+    mkdir -p "$CACHE_DIR"
+    original_file="$CACHE_DIR/theme-wallpaper-source"
+    source="$(_theme_wallpaper_source "$source")"
+    if [[ -z "$source" || ! -f "$source" ]]; then
+        printf '%s\n' "$requested"
+        return 0
+    fi
+    printf '%s\n' "$source" > "$original_file"
+
+    case "$theme_name" in
+        paper) effect_key="paper-sketch-v6" ;;
+        neon)  effect_key="neon-glass-tint-v1" ;;
+        *)     effect_key="mono-gray-v1" ;;
+    esac
+    hash="$(printf '%s:%s:%s:%s' "$effect_key" "$source" "$(stat -c '%Y' "$source" 2>/dev/null || echo 0)" "$(stat -c '%s' "$source" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
+    target_dir="$CACHE_DIR/theme-wallpapers/$theme_name"
+    mkdir -p "$target_dir"
+    target_file="$target_dir/${hash}.jpg"
+
+    if [[ ! -f "$target_file" ]]; then
+        if [[ "$theme_name" == "paper" ]]; then
+            magick "$source" -auto-orient -colorspace Gray \
+                \( +clone -negate -blur 0x18 \) -compose ColorDodge -composite \
+                -blur 0x0.75 -level 12%,98%,0.88 \
+                -colorspace sRGB -type TrueColor \
+                -fill "#c7a16b" -tint 42% \
+                -fill "#f3e0bd" -colorize 12% \
+                -attenuate 0.018 +noise Gaussian \
+                -quality 92 "$target_file"
+        elif [[ "$theme_name" == "neon" ]]; then
+            magick "$source" -auto-orient -colorspace sRGB \
+                -modulate 100,104,100 \
+                -fill "#00b7ff" -colorize 4% \
+                -fill "#06131d" -colorize 2% \
+                -quality 92 "$target_file"
+        else
+            magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
+        fi
+    fi
+
+    printf '%s\n' "$target_file"
+}
+
+_prepare_static_for_active_theme() {
+    local file="$1"
+    local theme_name
+    theme_name="$(_active_theme)"
+
+    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]] && _is_image "$file"; then
+        _theme_wallpaper_for "$theme_name" "$file"
+        return 0
+    fi
+
+    printf '%s\n' "$file"
+}
+
 _apply_skwd_wallpaper() {
     local name="$1" file="$2" mode="$3"
+    local source_file="$file" current_file=""
     local payload
+
+    if [[ "$mode" == "static" ]]; then
+        file="$(_prepare_static_for_active_theme "$file")"
+        name="$(basename "$file")"
+    fi
 
     command -v skwd >/dev/null 2>&1 || return 1
     command -v jq >/dev/null 2>&1 || return 1
 
-    payload="$(jq -cn --arg name "$name" --arg path "$file" --arg type "$mode" \
-        '{name:$name,path:$path,type:$type}')"
-    skwd wall apply "$payload" >/dev/null 2>&1 || return 1
-
+    current_file="$(_current_static_wallpaper || true)"
     _save_state "$file" "$mode"
     _update_wallpaper_json "$file"
     _sync_skwd_current_wallpaper "$file" "$mode"
     _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
+
+    if [[ "$mode" == "static" ]] && _path_matches "$current_file" "$file"; then
+        _log "Wallpaper al actief via skwd: $(basename "$file")"
+    else
+        payload="$(jq -cn --arg name "$name" --arg path "$file" --arg type "$mode" \
+            '{name:$name,path:$path,type:$type}')"
+        skwd wall apply "$payload" >/dev/null 2>&1 || return 1
+    fi
 
     local APPLY="${HOME}/.local/bin/apply-shell-state"
     if [[ -f "$APPLY" ]]; then
@@ -320,7 +450,7 @@ _apply_skwd_wallpaper() {
     else
         _notify "Wallpaper ingesteld" "$(basename "$file")"
     fi
-    _cache_wallhaven_tags "$file"
+    _cache_wallhaven_tags "$source_file"
 }
 
 _cmd_random_via_skwd() {
@@ -371,10 +501,10 @@ cmd_set() {
     [[ -z "$file" ]] && _die "Gebruik: kingstra-wallpaper set <bestand>"
     file="$(realpath "$file")"
 
+    local source_file="$file"
+    file="$(_prepare_static_for_active_theme "$file")"
+
     _set_static "$file"
-    _save_state "$file" "static"
-    _update_wallpaper_json "$file"
-    _sync_skwd_current_wallpaper "$file" "static"
     _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
 
     # Kleuren genereren + apps herladen
@@ -385,7 +515,7 @@ cmd_set() {
         _warn "apply-shell-state niet gevonden — alleen wallpaper ingesteld"
         _notify "Wallpaper ingesteld" "$(basename "$file")"
     fi
-    _cache_wallhaven_tags "$file"
+    _cache_wallhaven_tags "$source_file"
 }
 
 cmd_video() {
@@ -481,10 +611,19 @@ cmd_reload() {
         local last_image
         last_image="$(cat "$IMAGE_STATE_FILE" 2>/dev/null || echo "")"
         if [[ -f "$last_image" ]]; then
+            last_image="$(_prepare_static_for_active_theme "$last_image")"
             local APPLY="${HOME}/.local/bin/apply-shell-state"
             [[ -f "$APPLY" ]] && _run_helper "$APPLY" --wallpaper "$last_image" 2>/dev/null || true
         fi
     else
+        local source_file="$file"
+        file="$(_prepare_static_for_active_theme "$file")"
+        if [[ "$file" != "$source_file" ]]; then
+            _save_state "$file" "static"
+            _update_wallpaper_json "$file"
+            _sync_skwd_current_wallpaper "$file" "static"
+            _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
+        fi
         _set_static "$file"
         # Herlaad kleuren + apps
         APPLY="${HOME}/.local/bin/apply-shell-state"
@@ -538,6 +677,7 @@ cmd_stop_video() {
     local file
     file="$(cat "$IMAGE_STATE_FILE" 2>/dev/null || echo "")"
     if [[ -f "$file" ]] && _is_image "$file"; then
+        file="$(_prepare_static_for_active_theme "$file")"
         _set_static "$file"
         echo "static" > "$MODE_FILE"
         _save_state "$file" "static"

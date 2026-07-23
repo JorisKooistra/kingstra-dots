@@ -76,10 +76,10 @@ Item {
         anchors.margins: 22
         spacing: 14
 
-        MetricRow { label: "CPU"; value: root.cpuPercent + "%"; detail: root.cpuTemperature; fraction: root.cpuPercent / 100.0; accent: mocha.blue }
-        MetricRow { label: "RAM"; value: root.ramPercent + "%"; detail: "geheugen"; fraction: root.ramPercent / 100.0; accent: mocha.green }
-        MetricRow { label: "GPU"; value: root.gpuPercent + "%"; detail: root.gpuTemperature; fraction: root.gpuPercent / 100.0; accent: mocha.mauve }
-        MetricRow { label: "FPS"; value: root.fps; detail: "actief scherm"; fraction: 1.0; accent: mocha.teal; showTrack: false }
+        MetricRow { label: "CPU"; value: root.cpuPercent + "%"; detail: root.cpuTemperature; fraction: root.cpuPercent / 100.0; accent: mocha.accent1 }
+        MetricRow { label: "RAM"; value: root.ramPercent + "%"; detail: "geheugen"; fraction: root.ramPercent / 100.0; accent: mocha.accent3 }
+        MetricRow { label: "GPU"; value: root.gpuPercent + "%"; detail: root.gpuTemperature; fraction: root.gpuPercent / 100.0; accent: mocha.accent2 }
+        MetricRow { label: "FPS"; value: root.fps; detail: "actief scherm"; fraction: 1.0; accent: mocha.accent1Container; showTrack: false }
     }
 
     component MetricRow: ColumnLayout {

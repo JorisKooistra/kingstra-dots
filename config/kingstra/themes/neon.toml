@@ -1,34 +1,34 @@
 [meta]
-name = "Modern"
-description = "Precisie en contrast - compacte techniek zonder neon-overdaad"
+name = "Neon"
+description = "Futuristische cockpit - zwart glas, scanlijnen, cyan/magenta neon"
 icon = "󰙷"
-preview_image = "modern.jpg"
+preview_image = "neon.jpg"
 
 [matugen]
-scheme_type = "scheme-expressive"
+scheme_type = "scheme-rainbow"
 color_index = 1
-contrast = 0.46
+contrast = 0.82
 mode = "dark"
 
 [appearance]
-border_radius = 3
-border_width = 1
+border_radius = 5
+border_width = 2
 gaps_in = 6
-gaps_out = 8
-bar_opacity = 0.98
+gaps_out = 10
+bar_opacity = 0.99
 popup_opacity = 0.98
-blur_size = 0
-blur_passes = 0
-animation_speed = 1.22
+blur_size = 5
+blur_passes = 1
+animation_speed = 1.34
 
 [fonts]
-ui_font = "Inter"
+ui_font = "Share Tech Mono"
 ui_font_size = 12
 mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
-display_font = "Inter"
-font_weight = "medium"
-letter_spacing = 0
+display_font = "Share Tech Mono"
+font_weight = "bold"
+letter_spacing = 0.25
 
 [icons]
 icon_theme = "Papirus-Dark"
@@ -45,14 +45,14 @@ bar_status_strip_height = 34
 
 [color_transform]
 hue_shift = 0
-saturation_adjust = 0.18
-lightness_adjust = -0.02
-thematic_mix = 0.03
+saturation_adjust = 0.42
+lightness_adjust = -0.16
+thematic_mix = 0.01
 
 [material]
-texture = "none"
-overlay_opacity = 0.0
-glow_intensity = 0.02
+texture = "scanline"
+overlay_opacity = 0.08
+glow_intensity = 0.42
 
 [terminal]
 bg_opacity = 0.94
@@ -76,24 +76,24 @@ shape = "segmented"
 surface = "hard-tech"
 
 [style_profile]
-family = "modern"
+family = "neon"
 density = "compact"
 surface_mode = "hard-surface"
 motion = "snappy"
-panel_shadow = 0.10
-outline_strength = 0.36
+panel_shadow = 0.42
+outline_strength = 0.58
 glass_strength = 0.02
-widget_radius = 3
-panel_padding = 8
+widget_radius = 5
+panel_padding = 9
 
 [effects]
-particles = "none"
-particle_count = 0
-particle_speed = 0.0
-ambient_effect = "none"
-effect_intensity = 0.0
-effect_cycle_ms = 0
-hover_reactivity = 0.72
+particles = "space-specks"
+particle_count = 12
+particle_speed = 0.26
+ambient_effect = "neon-grid"
+effect_intensity = 1.0
+effect_cycle_ms = 3600
+hover_reactivity = 1.0
 
 [bar_dynamics]
 drawer_style = "rail-panel"

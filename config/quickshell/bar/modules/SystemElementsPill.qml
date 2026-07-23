@@ -32,7 +32,7 @@ Rectangle {
     required property var ctx           // BarContent root — supplies theme chrome colors/flags
     required property bool layoutVisible
 
-    Layout.preferredHeight: ctx.cyberSideModuleHeight
+    Layout.preferredHeight: ctx.neonSideModuleHeight
     Layout.alignment: Qt.AlignVCenter
     radius: surface.panelRadius
     topLeftRadius: ctx.panelTopLeftRadius
@@ -48,14 +48,14 @@ Rectangle {
     Layout.preferredWidth: targetWidth
     Layout.maximumWidth: targetWidth
 
-    // Cyber bottom tick line
+    // Neon bottom tick line
     Rectangle {
-        visible: ctx.cyberChrome
+        visible: ctx.neonChrome
         anchors.left: parent.left; anchors.leftMargin: shell.s(10)
         anchors.right: parent.right; anchors.rightMargin: shell.s(10)
         anchors.bottom: parent.bottom; anchors.bottomMargin: shell.s(4)
         height: 1
-        color: ctx.cyberModuleTickColor
+        color: ctx.neonModuleTickColor
         opacity: 0.48
     }
 
@@ -70,8 +70,8 @@ Rectangle {
             id: kbPill
             visible: shell.kbLayoutCount > 1
             property bool isHovered: kbMouse.containsMouse
-            color: ctx.cyberChrome
-                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+            color: ctx.neonChrome
+                   ? (isHovered ? ctx.neonModuleHoverColor : ctx.neonModuleColor)
                    : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
             radius: surface.innerPillRadius
             height: sysLayout.pillHeight
@@ -95,7 +95,7 @@ Rectangle {
                 font.pixelSize: shell.s(12)
                 font.weight: Font.Black
                 font.letterSpacing: shell.themeLetterSpacing
-                color: ctx.cyberChrome ? ctx.cyberTextColor : (kbPill.isHovered ? mocha.text : mocha.overlay2)
+                color: ctx.neonChrome ? ctx.neonTextColor : (kbPill.isHovered ? mocha.text : mocha.overlay2)
             }
             MouseArea {
                 id: kbMouse
@@ -115,15 +115,15 @@ Rectangle {
             radius: surface.innerPillRadius
             height: sysLayout.pillHeight
             clip: true
-            color: ctx.cyberChrome
-                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+            color: ctx.neonChrome
+                   ? (isHovered ? ctx.neonModuleHoverColor : ctx.neonModuleColor)
                    : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
 
             // Active-updates gradient background
             Rectangle {
                 anchors.fill: parent
                 radius: surface.innerPillRadius
-                opacity: ctx.cyberChrome ? 0.0 : (updatesPill.updates > 0 ? 1.0 : 0.0)
+                opacity: ctx.neonChrome ? 0.0 : (updatesPill.updates > 0 ? 1.0 : 0.0)
                 Behavior on opacity { NumberAnimation { duration: 300 } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -150,8 +150,8 @@ Rectangle {
                 id: updatesLayoutRow
                 anchors.centerIn: parent
                 spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: "󰚰"; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.cyberChrome ? ctx.cyberTextHotColor : (updatesPill.updates > 0 ? mocha.base : mocha.subtext0) }
-                Text { anchors.verticalCenter: parent.verticalCenter; text: updatesPill.updates.toString(); font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.cyberChrome ? ctx.cyberTextColor : (updatesPill.updates > 0 ? mocha.base : mocha.text) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: "󰚰"; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? ctx.neonTextHotColor : (updatesPill.updates > 0 ? mocha.base : mocha.subtext0) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: updatesPill.updates.toString(); font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.neonChrome ? ctx.neonTextColor : (updatesPill.updates > 0 ? mocha.base : mocha.text) }
             }
             MouseArea { id: updatesMouse; hoverEnabled: true; anchors.fill: parent; onClicked: shell.openUpdatesTerminal() }
         }
@@ -199,14 +199,14 @@ Rectangle {
             visible: shell.moduleList.includes("network") && shell.hasWifi
             property bool isHovered: wifiMouse.containsMouse
             radius: surface.innerPillRadius; height: sysLayout.pillHeight
-            color: ctx.cyberChrome
-                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+            color: ctx.neonChrome
+                   ? (isHovered ? ctx.neonModuleHoverColor : ctx.neonModuleColor)
                    : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
             clip: true
 
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
-                opacity: ctx.cyberChrome ? 0.0 : (shell.isWifiOn ? 1.0 : 0.0)
+                opacity: ctx.neonChrome ? 0.0 : (shell.isWifiOn ? 1.0 : 0.0)
                 Behavior on opacity { NumberAnimation { duration: 300 } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -231,13 +231,13 @@ Rectangle {
 
             Row {
                 id: wifiLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.wifiIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.cyberChrome ? (shell.isWifiOn ? ctx.cyberTextColor : ctx.cyberTextMutedColor) : (shell.isWifiOn ? mocha.base : mocha.subtext0) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.wifiIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? (shell.isWifiOn ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isWifiOn ? mocha.base : mocha.subtext0) }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.sysPollerLoaded ? (shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off") : ""
                     visible: text !== ""
                     font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing
-                    color: ctx.cyberChrome ? (shell.isWifiOn ? ctx.cyberTextColor : ctx.cyberTextMutedColor) : (shell.isWifiOn ? mocha.base : mocha.text)
+                    color: ctx.neonChrome ? (shell.isWifiOn ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isWifiOn ? mocha.base : mocha.text)
                     width: Math.min(implicitWidth, shell.s(100)); elide: Text.ElideRight
                 }
             }
@@ -250,14 +250,14 @@ Rectangle {
             visible: shell.moduleList.includes("network") && shell.isEthConnected
             property bool isHovered: ethMouse.containsMouse
             radius: surface.innerPillRadius; height: sysLayout.pillHeight
-            color: ctx.cyberChrome
-                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+            color: ctx.neonChrome
+                   ? (isHovered ? ctx.neonModuleHoverColor : ctx.neonModuleColor)
                    : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
             clip: true
 
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
-                opacity: ctx.cyberChrome ? 0.0 : 1.0
+                opacity: ctx.neonChrome ? 0.0 : 1.0
                 Behavior on opacity { NumberAnimation { duration: 300 } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -282,13 +282,13 @@ Rectangle {
 
             Row {
                 id: ethLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.ethIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.cyberChrome ? ctx.cyberTextColor : mocha.base }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.ethIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? ctx.neonTextColor : mocha.base }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.sysPollerLoaded ? (shell.ethSpeed !== "" ? shell.ethSpeed : "LAN") : ""
                     visible: text !== ""
                     font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing
-                    color: ctx.cyberChrome ? ctx.cyberTextColor : mocha.base
+                    color: ctx.neonChrome ? ctx.neonTextColor : mocha.base
                 }
             }
             MouseArea { id: ethMouse; hoverEnabled: true; anchors.fill: parent }
@@ -300,14 +300,14 @@ Rectangle {
             visible: shell.moduleList.includes("bluetooth") && shell.hasBluetooth
             property bool isHovered: btMouse.containsMouse
             radius: surface.innerPillRadius; height: sysLayout.pillHeight
-            color: ctx.cyberChrome
-                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+            color: ctx.neonChrome
+                   ? (isHovered ? ctx.neonModuleHoverColor : ctx.neonModuleColor)
                    : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
             clip: true
 
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
-                opacity: ctx.cyberChrome ? 0.0 : (shell.isBtOn ? 1.0 : 0.0)
+                opacity: ctx.neonChrome ? 0.0 : (shell.isBtOn ? 1.0 : 0.0)
                 Behavior on opacity { NumberAnimation { duration: 300 } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -332,13 +332,13 @@ Rectangle {
 
             Row {
                 id: btLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.btIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.cyberChrome ? (shell.isBtOn ? ctx.cyberTextColor : ctx.cyberTextMutedColor) : (shell.isBtOn ? mocha.base : mocha.subtext0) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.btIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? (shell.isBtOn ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isBtOn ? mocha.base : mocha.subtext0) }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.sysPollerLoaded ? shell.btDevice : ""
                     visible: text !== ""
                     font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing
-                    color: ctx.cyberChrome ? (shell.isBtOn ? ctx.cyberTextColor : ctx.cyberTextMutedColor) : (shell.isBtOn ? mocha.base : mocha.text)
+                    color: ctx.neonChrome ? (shell.isBtOn ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isBtOn ? mocha.base : mocha.text)
                     width: Math.min(implicitWidth, shell.s(100)); elide: Text.ElideRight
                 }
             }
@@ -350,15 +350,15 @@ Rectangle {
             id: volPill
             visible: shell.moduleList.includes("volume")
             property bool isHovered: volMouse.containsMouse
-            color: ctx.cyberChrome
-                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+            color: ctx.neonChrome
+                   ? (isHovered ? ctx.neonModuleHoverColor : ctx.neonModuleColor)
                    : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
             radius: surface.innerPillRadius; height: sysLayout.pillHeight
             clip: true
 
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
-                opacity: ctx.cyberChrome ? 0.0 : (shell.isSoundActive ? 1.0 : 0.0)
+                opacity: ctx.neonChrome ? 0.0 : (shell.isSoundActive ? 1.0 : 0.0)
                 Behavior on opacity { NumberAnimation { duration: 300 } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -383,8 +383,8 @@ Rectangle {
 
             Row {
                 id: volLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.volIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.cyberChrome ? (shell.isSoundActive ? ctx.cyberTextColor : ctx.cyberTextMutedColor) : (shell.isSoundActive ? mocha.base : mocha.subtext0) }
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.volPercent; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.cyberChrome ? (shell.isSoundActive ? ctx.cyberTextColor : ctx.cyberTextMutedColor) : (shell.isSoundActive ? mocha.base : mocha.text) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.volIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? (shell.isSoundActive ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isSoundActive ? mocha.base : mocha.subtext0) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.volPercent; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.neonChrome ? (shell.isSoundActive ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isSoundActive ? mocha.base : mocha.text) }
             }
             MouseArea {
                 id: volMouse; hoverEnabled: true; anchors.fill: parent
@@ -416,15 +416,15 @@ Rectangle {
             id: batPill
             visible: shell.moduleList.includes("battery") && shell.hasBattery
             property bool isHovered: batMouse.containsMouse
-            color: ctx.cyberChrome
-                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+            color: ctx.neonChrome
+                   ? (isHovered ? ctx.neonModuleHoverColor : ctx.neonModuleColor)
                    : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
             radius: surface.innerPillRadius; height: sysLayout.pillHeight
             clip: true
 
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
-                opacity: ctx.cyberChrome ? 0.0 : ((shell.isCharging || shell.batCap <= 20) ? 1.0 : 0.0)
+                opacity: ctx.neonChrome ? 0.0 : ((shell.isCharging || shell.batCap <= 20) ? 1.0 : 0.0)
                 Behavior on opacity { NumberAnimation { duration: 300 } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -449,8 +449,8 @@ Rectangle {
 
             Row {
                 id: batLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.batIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.cyberChrome ? ((shell.isCharging || shell.batCap <= 20) ? ctx.cyberTextHotColor : ctx.cyberTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor); Behavior on color { ColorAnimation { duration: 300 } } }
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.batPercent; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.cyberChrome ? ((shell.isCharging || shell.batCap <= 20) ? ctx.cyberTextHotColor : ctx.cyberTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor); Behavior on color { ColorAnimation { duration: 300 } } }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.batIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? ((shell.isCharging || shell.batCap <= 20) ? ctx.neonTextHotColor : ctx.neonTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor); Behavior on color { ColorAnimation { duration: 300 } } }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.batPercent; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.neonChrome ? ((shell.isCharging || shell.batCap <= 20) ? ctx.neonTextHotColor : ctx.neonTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor); Behavior on color { ColorAnimation { duration: 300 } } }
             }
             MouseArea { id: batMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) }
         }
@@ -460,8 +460,8 @@ Rectangle {
             id: powerPill
             visible: true
             property bool isHovered: powerMouse.containsMouse
-            color: ctx.cyberChrome
-                   ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+            color: ctx.neonChrome
+                   ? (isHovered ? ctx.neonModuleHoverColor : ctx.neonModuleColor)
                    : (isHovered ? surface.innerPillHoverColor : surface.innerPillColor)
             radius: surface.innerPillRadius; height: sysLayout.pillHeight
             width: sysLayout.pillHeight
@@ -482,7 +482,7 @@ Rectangle {
                 text: ""
                 font.family: "Iosevka Nerd Font"
                 font.pixelSize: shell.s(16)
-                color: ctx.cyberChrome ? ctx.cyberTextColor : mocha.subtext0
+                color: ctx.neonChrome ? ctx.neonTextColor : mocha.subtext0
             }
             MouseArea { id: powerMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle power"]) }
         }

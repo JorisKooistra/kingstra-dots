@@ -2,7 +2,7 @@
 # =============================================================================
 # apply-shell-state — Centrale apply pipeline: matugen + reloads
 # =============================================================================
-# Gebruik: apply-shell-state [--verbose] [--wallpaper <pad>]
+# Gebruik: apply-shell-state [--verbose] [--wallpaper <pad>] [--theme <naam>]
 #
 # Resolve't wallpaper + theme-matugen-instellingen via `kingstra-matugen-run`
 # en laat uitsluitend die runner Matugen uitvoeren.
@@ -16,10 +16,12 @@ STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
 MODES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/modes"
 MATUGEN_RUNNER=""
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
+SKWD_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/skwd-wall"
 TAGS_SCRIPT="${HOME}/.local/bin/kingstra-wallhaven-tags"
 LOG_PREFIX="[apply-shell-state]"
 VERBOSE=false
 WALLPAPER_ARG=""
+THEME_ARG=""
 
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
@@ -38,6 +40,174 @@ _run_helper() {
     else
         return 127
     fi
+}
+
+_is_generated_theme_wallpaper() {
+    local file="${1:-}"
+    [[ "$file" == "$CACHE_DIR/theme-wallpapers/"* ]]
+}
+
+_theme_wallpaper_source() {
+    local current="${1:-}"
+    local original_file="$CACHE_DIR/theme-wallpaper-source"
+
+    if _is_generated_theme_wallpaper "$current" && [[ -f "$original_file" ]]; then
+        cat "$original_file" 2>/dev/null || true
+        return 0
+    fi
+
+    printf '%s\n' "$current"
+}
+
+_write_wallpaper_state() {
+    local file="$1"
+    [[ -n "$file" && -f "$file" ]] || return 0
+
+    mkdir -p "$CACHE_DIR" "$STATE_DIR" "$SKWD_CACHE"
+    printf '%s\n' "$file" > "$CACHE_DIR/last-wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/current_wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/current-wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/last_wallpaper"
+    printf '%s\n' "$file" > "$SKWD_CACHE/last-wallpaper"
+
+    if command -v jq >/dev/null 2>&1; then
+        jq -n --arg name "$(basename "$file")" --arg path "$file" \
+            '{"name":$name,"path":$path}' > "$STATE_DIR/wallpaper.json" 2>/dev/null || true
+        jq -n --arg path "$file" --arg type "static" \
+            '{"path":$path,"type":$type}' > "$SKWD_CACHE/last-wallpaper.json" 2>/dev/null || true
+    fi
+}
+
+_cached_wallpaper_path() {
+    local candidate path=""
+
+    for candidate in \
+        "$SKWD_CACHE/current_wallpaper" \
+        "$SKWD_CACHE/current-wallpaper" \
+        "$SKWD_CACHE/last_wallpaper" \
+        "$SKWD_CACHE/last-wallpaper" \
+        "$SKWD_CACHE/last-wallpaper.json"; do
+        [[ -f "$candidate" ]] || continue
+
+        if [[ "$candidate" == *.json ]]; then
+            command -v jq >/dev/null 2>&1 || continue
+            path="$(jq -r '.path // .wallpaper // .currentWallpaper // .lastWallpaper // ""' "$candidate" 2>/dev/null || true)"
+        else
+            path="$(cat "$candidate" 2>/dev/null || true)"
+        fi
+
+        if [[ -n "$path" && -f "$path" ]]; then
+            printf '%s\n' "$path"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+_path_matches() {
+    local left="${1:-}" right="${2:-}"
+    [[ -n "$left" && -n "$right" ]] || return 1
+    [[ "$(realpath -m "$left" 2>/dev/null || printf '%s' "$left")" == "$(realpath -m "$right" 2>/dev/null || printf '%s' "$right")" ]]
+}
+
+_apply_skwd_static_wallpaper() {
+    local file="$1"
+    [[ -n "$file" && -f "$file" ]] || return 0
+    command -v skwd >/dev/null 2>&1 || return 0
+
+    local payload current
+    current="$(_cached_wallpaper_path || true)"
+    _write_wallpaper_state "$file"
+
+    if _path_matches "$current" "$file"; then
+        _log "Theme-wallpaper al actief via skwd: $(basename "$file")"
+        return 0
+    fi
+
+    if command -v jq >/dev/null 2>&1; then
+        payload="$(jq -cn --arg name "$(basename "$file")" --arg path "$file" \
+            '{name:$name,path:$path,type:"static"}')"
+    else
+        payload="{\"path\":\"$file\"}"
+    fi
+
+    if skwd wall apply "$payload" >/dev/null 2>&1; then
+        _log "Theme-wallpaper toegepast via skwd: $(basename "$file")"
+    else
+        _warn "Kon theme-wallpaper niet toepassen via skwd: $file"
+    fi
+}
+
+_prepare_theme_wallpaper() {
+    local theme_name="$1"
+    local wallpaper="$2"
+    local original_file="$CACHE_DIR/theme-wallpaper-source"
+    local source target_dir target_file hash effect_key
+
+    [[ -n "$wallpaper" && -f "$wallpaper" ]] || {
+        printf '%s\n' "$wallpaper"
+        return 0
+    }
+
+    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
+        mkdir -p "$CACHE_DIR"
+        source="$(_theme_wallpaper_source "$wallpaper")"
+        [[ -n "$source" && -f "$source" ]] || source="$wallpaper"
+        printf '%s\n' "$source" > "$original_file"
+
+        if ! command -v magick >/dev/null 2>&1; then
+            _warn "ImageMagick ontbreekt — theme wallpaper blijft origineel"
+            printf '%s\n' "$wallpaper"
+            return 0
+        fi
+
+        case "$theme_name" in
+            paper) effect_key="paper-sketch-v6" ;;
+            neon)  effect_key="neon-glass-tint-v1" ;;
+            *)     effect_key="mono-gray-v1" ;;
+        esac
+        hash="$(printf '%s:%s:%s:%s' "$effect_key" "$source" "$(stat -c '%Y' "$source" 2>/dev/null || echo 0)" "$(stat -c '%s' "$source" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
+        target_dir="$CACHE_DIR/theme-wallpapers/$theme_name"
+        mkdir -p "$target_dir"
+        target_file="$target_dir/${hash}.jpg"
+
+        if [[ ! -f "$target_file" ]]; then
+            if [[ "$theme_name" == "paper" ]]; then
+                magick "$source" -auto-orient -colorspace Gray \
+                    \( +clone -negate -blur 0x18 \) -compose ColorDodge -composite \
+                    -blur 0x0.75 -level 12%,98%,0.88 \
+                    -colorspace sRGB -type TrueColor \
+                    -fill "#c7a16b" -tint 42% \
+                    -fill "#f3e0bd" -colorize 12% \
+                    -attenuate 0.018 +noise Gaussian \
+                    -quality 92 "$target_file"
+            elif [[ "$theme_name" == "neon" ]]; then
+                magick "$source" -auto-orient -colorspace sRGB \
+                    -modulate 100,104,100 \
+                    -fill "#00b7ff" -colorize 4% \
+                    -fill "#06131d" -colorize 2% \
+                    -quality 92 "$target_file"
+            else
+                magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
+            fi
+        fi
+
+        _apply_skwd_static_wallpaper "$target_file" >&2
+        printf '%s\n' "$target_file"
+        return 0
+    fi
+
+    if _is_generated_theme_wallpaper "$wallpaper" && [[ -f "$original_file" ]]; then
+        source="$(cat "$original_file" 2>/dev/null || true)"
+        if [[ -n "$source" && -f "$source" ]]; then
+            _apply_skwd_static_wallpaper "$source" >&2
+            printf '%s\n' "$source"
+            return 0
+        fi
+    fi
+
+    printf '%s\n' "$wallpaper"
 }
 
 SCRIPT_REALPATH="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -67,6 +237,12 @@ resolve_matugen_runner() {
 _sync_skwd_config() {
     local scheme="$1"
     local mode="$2"
+    local theme_name="${3:-}"
+    local wallhaven_enabled=true
+
+    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
+        wallhaven_enabled=false
+    fi
 
     [[ -f "$SKWD_CONFIG" ]] || return 0
     if ! command -v jq >/dev/null 2>&1; then
@@ -77,11 +253,18 @@ _sync_skwd_config() {
     # Temp in dezelfde directory: atomaire rename i.p.v. cross-device copy
     local tmp_file
     tmp_file="$(mktemp "$SKWD_CONFIG.XXXXXX")"
-    if jq --arg scheme "$scheme" --arg mode "$mode" \
+    if jq --arg scheme "$scheme" --arg mode "$mode" --argjson wallhaven_enabled "$wallhaven_enabled" \
         '.features.matugen = false
-         | .features.wallhaven = true
+         | .features.wallhaven = $wallhaven_enabled
          | .matugen.schemeType = $scheme
-         | .matugen.mode = $mode' \
+         | .matugen.mode = $mode
+         | .postProcessing = (
+             [(.postProcessing // [])[] | select((.type // "") != "static")]
+             + [{
+                 "command": "~/.local/bin/apply-shell-state --wallpaper %path%; skwd wall unsuppress",
+                 "type": "static"
+               }]
+           )' \
         "$SKWD_CONFIG" > "$tmp_file" 2>/dev/null; then
         chmod 644 "$tmp_file"
         mv "$tmp_file" "$SKWD_CONFIG"
@@ -97,7 +280,7 @@ for arg in "$@"; do
     esac
 done
 
-# Parsen van extra opties (huidige wallpaper kan expliciet meegegeven worden)
+# Parsen van extra opties (wallpaper/thema kunnen expliciet meegegeven worden)
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --verbose|-v)
@@ -110,6 +293,15 @@ while [[ $# -gt 0 ]]; do
                 shift
             else
                 _warn "Optie --wallpaper verwacht een pad"
+            fi
+            ;;
+        --theme|-t)
+            shift
+            if [[ $# -gt 0 ]]; then
+                THEME_ARG="$1"
+                shift
+            else
+                _warn "Optie --theme verwacht een naam"
             fi
             ;;
         *)
@@ -132,7 +324,7 @@ trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT
 # ---------------------------------------------------------------------------
 # Stap 1 — Resolve inputs via centrale matugen-runner
 # ---------------------------------------------------------------------------
-THEME_NAME="botanical"
+THEME_NAME="organic"
 SCHEME="scheme-tonal-spot"
 COLOR_IDX=0
 MODE="dark"
@@ -147,6 +339,9 @@ else
     if [[ -n "$WALLPAPER_ARG" ]]; then
         RUNNER_RESOLVE_ARGS+=(--wallpaper "$WALLPAPER_ARG")
     fi
+    if [[ -n "$THEME_ARG" ]]; then
+        RUNNER_RESOLVE_ARGS+=(--theme "$THEME_ARG")
+    fi
 
     RESOLVED_JSON="$("$MATUGEN_RUNNER" "${RUNNER_RESOLVE_ARGS[@]}" --resolved-json 2>/dev/null || echo '{}')"
 
@@ -157,11 +352,15 @@ else
     WALLPAPER="$(echo "$RESOLVED_JSON" | jq -r '.wallpaper // ""' 2>/dev/null || echo "")"
 fi
 
+if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
+    WALLPAPER="$(_prepare_theme_wallpaper "$THEME_NAME" "$WALLPAPER")"
+fi
+
 if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
     _warn "Geen geldige wallpaper gevonden — matugen overgeslagen, apps wel herladen"
 fi
 
-_sync_skwd_config "$SCHEME" "$MODE"
+_sync_skwd_config "$SCHEME" "$MODE" "$THEME_NAME"
 
 # Fallback: onbekende mode → office (modes-dir TOML's zijn de bron van waarheid)
 SESSION_MODE=$(jq -r '.mode // "office"' "$SESSION_FILE" 2>/dev/null || echo "office")
@@ -203,14 +402,19 @@ COLORS_JSON="{}"
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
     if [[ -x "$MATUGEN_RUNNER" ]]; then
         # Eén aanroep: genereert templates én geeft kleur-JSON terug
-        COLORS_JSON=$("$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" --json hex 2>/dev/null || echo "{}")
+        RUNNER_APPLY_ARGS=(--wallpaper "$WALLPAPER")
+        if [[ -n "$THEME_ARG" ]]; then
+            RUNNER_APPLY_ARGS+=(--theme "$THEME_ARG")
+        fi
+
+        COLORS_JSON=$("$MATUGEN_RUNNER" "${RUNNER_APPLY_ARGS[@]}" --json hex 2>/dev/null || echo "{}")
         if [[ "$COLORS_JSON" == "{}" ]]; then
             _warn "matugen runner mislukt"
         else
             _log "Matugen templates gegenereerd"
         fi
         if $VERBOSE; then
-            "$MATUGEN_RUNNER" --wallpaper "$WALLPAPER" --show-colors 2>/dev/null || true
+            "$MATUGEN_RUNNER" "${RUNNER_APPLY_ARGS[@]}" --show-colors 2>/dev/null || true
         fi
     fi
 

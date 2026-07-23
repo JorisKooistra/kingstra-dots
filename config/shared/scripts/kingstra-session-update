@@ -28,7 +28,7 @@ THEME_FILE="$STATE_DIR/theme.json"
 MODE_FILE="$STATE_DIR/mode.json"
 
 wallpaper=""
-theme="botanical"
+theme="organic"
 mode="office"
 language="nl"
 
@@ -40,9 +40,9 @@ if [[ -z "$wallpaper" && -f "$CACHE_WALLPAPER" ]]; then
 fi
 
 if [[ -f "$THEME_CONFIG" ]]; then
-    theme=$(jq -r '.theme // "botanical"' "$THEME_CONFIG")
+    theme=$(jq -r '.theme // "organic"' "$THEME_CONFIG")
 elif [[ -f "$THEME_FILE" ]]; then
-    theme=$(jq -r '.name // "botanical"' "$THEME_FILE")
+    theme=$(jq -r '.name // "organic"' "$THEME_FILE")
 fi
 
 if [[ -f "$MODE_FILE" ]]; then

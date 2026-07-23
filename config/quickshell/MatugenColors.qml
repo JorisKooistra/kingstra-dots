@@ -54,6 +54,10 @@ Item {
     property color materialSurfaceContainerHigh: "#45475a"
     property color materialSurfaceContainerHighest: "#585b70"
 
+    property color accent1: "#89b4fa"
+    property color accent1Text: "#11111b"
+    property color accent1Container: "#74c7ec"
+    property color accent1ContainerText: "#11111b"
     // Extra wallpaper-samples uit kingstra-matugen-run. *Source* is de echte
     // ImageMagick-kleur uit de wallpaper; de andere rollen zijn Matugen-
     // geharmoniseerd en hebben normale contrastrollen.
@@ -145,6 +149,14 @@ Item {
                 if (c.surface_container) root.materialSurfaceContainer = c.surface_container;
                 if (c.surface_container_high) root.materialSurfaceContainerHigh = c.surface_container_high;
                 if (c.surface_container_highest) root.materialSurfaceContainerHighest = c.surface_container_highest;
+                if (c.accent1) root.accent1 = c.accent1;
+                else if (c.primary) root.accent1 = c.primary;
+                if (c.on_accent1) root.accent1Text = c.on_accent1;
+                else if (c.on_primary) root.accent1Text = c.on_primary;
+                if (c.accent1_container) root.accent1Container = c.accent1_container;
+                else if (c.primary_container) root.accent1Container = c.primary_container;
+                if (c.on_accent1_container) root.accent1ContainerText = c.on_accent1_container;
+                else if (c.on_primary_container) root.accent1ContainerText = c.on_primary_container;
                 if (c.accent2_source) root.accent2Source = c.accent2_source;
                 if (c.accent2) root.accent2 = c.accent2;
                 if (c.on_accent2) root.accent2Text = c.on_accent2;

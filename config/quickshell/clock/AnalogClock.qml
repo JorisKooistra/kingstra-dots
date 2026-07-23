@@ -7,33 +7,33 @@ Item {
     property bool showSecondHand: false
 
     readonly property string activeTheme: String(shell.activeThemeName || "organic").toLowerCase()
-    readonly property bool botanicalStyle: activeTheme === "organic"
+    readonly property bool organicStyle: activeTheme === "organic"
 
     property date now: new Date()
     readonly property real hourAngle: ((now.getHours() % 12) + now.getMinutes() / 60 + now.getSeconds() / 3600) * 30
     readonly property real minuteAngle: (now.getMinutes() + now.getSeconds() / 60) * 6
     readonly property real secondAngle: now.getSeconds() * 6
 
-    readonly property int clockSize: shell.s(botanicalStyle ? 40 : 34)
+    readonly property int clockSize: shell.s(organicStyle ? 40 : 34)
     implicitWidth: clockSize
     implicitHeight: clockSize
 
-    readonly property color outerRingColor: botanicalStyle
+    readonly property color outerRingColor: organicStyle
                                            ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.72)
                                            : Qt.rgba(mocha.overlay2.r, mocha.overlay2.g, mocha.overlay2.b, 0.60)
-    readonly property color innerDialColor: botanicalStyle
+    readonly property color innerDialColor: organicStyle
                                            ? Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, 0.70)
                                            : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.72)
-    readonly property color minuteTickColor: botanicalStyle
+    readonly property color minuteTickColor: organicStyle
                                             ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.42)
                                             : Qt.rgba(mocha.overlay2.r, mocha.overlay2.g, mocha.overlay2.b, 0.32)
-    readonly property color hourTickColor: botanicalStyle
+    readonly property color hourTickColor: organicStyle
                                           ? Qt.rgba(mocha.peach.r, mocha.peach.g, mocha.peach.b, 0.88)
                                           : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.72)
-    readonly property color hourHandColor: botanicalStyle ? mocha.peach : mocha.text
-    readonly property color minuteHandColor: botanicalStyle ? mocha.green : mocha.blue
+    readonly property color hourHandColor: organicStyle ? mocha.peach : mocha.text
+    readonly property color minuteHandColor: organicStyle ? mocha.green : mocha.blue
     readonly property color secondHandColor: mocha.red
-    readonly property color capColor: botanicalStyle ? mocha.yellow : mocha.text
+    readonly property color capColor: organicStyle ? mocha.yellow : mocha.text
 
     Timer {
         interval: root.showSecondHand ? 1000 : 60000
@@ -147,7 +147,7 @@ Item {
                 ctx.fill();
             }
 
-            if (root.botanicalStyle) {
+            if (root.organicStyle) {
                 for (let p = 0; p < 4; p += 1) {
                     let a = (p * 90 - 90) * Math.PI / 180.0;
                     let x = cx + Math.cos(a) * (radius * 0.78);

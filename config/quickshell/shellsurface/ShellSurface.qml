@@ -280,6 +280,35 @@ Scope {
                     WlrLayershell.exclusiveZone: chrome.shellBorderWidth
                     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
                 }
+
+                PanelWindow {
+                    screen: surfaceWindow.screen
+                    visible: String(ThemeConfig.theme || ThemeConfig.styleFamily || "").toLowerCase() === "neon"
+                    anchors {
+                        top: true
+                        bottom: true
+                        left: true
+                        right: true
+                    }
+                    implicitWidth: screen ? screen.width : 0
+                    implicitHeight: screen ? screen.height : 0
+                    color: "transparent"
+                    mask: Region {}
+
+                    MatugenColors { id: neonOverlayMocha }
+                    NeonViewportOverlay {
+                        anchors.fill: parent
+                        mocha: neonOverlayMocha
+                        shellBorderWidth: 8
+                        railWidth: ThemeConfig.barRailEnabled ? ThemeConfig.barRailWidth : 0
+                        stripHeight: ThemeConfig.barStatusStripEnabled ? ThemeConfig.barStatusStripHeight : 0
+                    }
+
+                    WlrLayershell.namespace: "quickshell:kingstra-neon-wallpaper-overlay"
+                    WlrLayershell.layer: WlrLayer.Bottom
+                    WlrLayershell.exclusiveZone: -1
+                    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+                }
             }
         }
     }

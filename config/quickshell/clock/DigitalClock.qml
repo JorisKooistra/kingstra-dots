@@ -5,32 +5,32 @@ Item {
     id: root
     required property var shell
     required property var mocha
-    property real cyberScale: 1.0
+    property real neonScale: 1.0
     readonly property string activeTheme: String(shell.activeThemeName || "").toLowerCase()
-    readonly property bool cyberTheme: activeTheme === "modern"
-    readonly property string cyberRawTimeText: String(shell.timeStr || "--:--")
-    readonly property string cyberTimeText: {
-        let parts = cyberRawTimeText.split(":");
+    readonly property bool neonTheme: activeTheme === "neon"
+    readonly property string neonRawTimeText: String(shell.timeStr || "--:--")
+    readonly property string neonTimeText: {
+        let parts = neonRawTimeText.split(":");
         if (parts.length >= 2) return parts[0] + ":" + parts[1];
-        return cyberRawTimeText;
+        return neonRawTimeText;
     }
-    readonly property string cyberDateText: {
+    readonly property string neonDateText: {
         let d = new Date();
         let dd = String(d.getDate()).padStart(2, "0");
         let mm = String(d.getMonth() + 1).padStart(2, "0");
         return dd + "-" + mm;
     }
-    readonly property color cyberSegmentOnColor: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.98)
-    readonly property color cyberSegmentOffColor: Qt.rgba(mocha.primaryContainer.r, mocha.primaryContainer.g, mocha.primaryContainer.b, 0.20)
-    readonly property color cyberDateOnColor: Qt.rgba(mocha.onSurfaceVariant.r, mocha.onSurfaceVariant.g, mocha.onSurfaceVariant.b, 0.94)
-    readonly property color cyberDateOffColor: Qt.rgba(mocha.surfaceContainerHighest.r, mocha.surfaceContainerHighest.g, mocha.surfaceContainerHighest.b, 0.16)
-    readonly property real effectiveCyberScale: Math.max(1.0, Number(cyberScale) || 1.0)
-    readonly property int cyberGlyphWidth: Math.round(shell.s(15) * effectiveCyberScale)
-    readonly property int cyberGlyphHeight: Math.round(shell.s(25) * effectiveCyberScale)
-    readonly property int cyberGlyphSpacing: Math.max(shell.s(2), Math.round(shell.s(2) * effectiveCyberScale))
-    readonly property int cyberDateGlyphWidth: Math.round(shell.s(8) * effectiveCyberScale)
-    readonly property int cyberDateGlyphHeight: Math.round(shell.s(12) * effectiveCyberScale)
-    readonly property int cyberDateGlyphSpacing: Math.max(shell.s(1), Math.round(shell.s(1) * effectiveCyberScale))
+    readonly property color neonSegmentOnColor: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.98)
+    readonly property color neonSegmentOffColor: Qt.rgba(mocha.primaryContainer.r, mocha.primaryContainer.g, mocha.primaryContainer.b, 0.20)
+    readonly property color neonDateOnColor: Qt.rgba(mocha.onSurfaceVariant.r, mocha.onSurfaceVariant.g, mocha.onSurfaceVariant.b, 0.94)
+    readonly property color neonDateOffColor: Qt.rgba(mocha.surfaceContainerHighest.r, mocha.surfaceContainerHighest.g, mocha.surfaceContainerHighest.b, 0.16)
+    readonly property real effectiveNeonScale: Math.max(1.0, Number(neonScale) || 1.0)
+    readonly property int neonGlyphWidth: Math.round(shell.s(15) * effectiveNeonScale)
+    readonly property int neonGlyphHeight: Math.round(shell.s(25) * effectiveNeonScale)
+    readonly property int neonGlyphSpacing: Math.max(shell.s(2), Math.round(shell.s(2) * effectiveNeonScale))
+    readonly property int neonDateGlyphWidth: Math.round(shell.s(8) * effectiveNeonScale)
+    readonly property int neonDateGlyphHeight: Math.round(shell.s(12) * effectiveNeonScale)
+    readonly property int neonDateGlyphSpacing: Math.max(shell.s(1), Math.round(shell.s(1) * effectiveNeonScale))
 
     implicitWidth: clockLoader.implicitWidth
     implicitHeight: clockLoader.implicitHeight
@@ -38,7 +38,7 @@ Item {
     Loader {
         id: clockLoader
         anchors.centerIn: parent
-        sourceComponent: root.cyberTheme ? cyberClockComponent : defaultClockComponent
+        sourceComponent: root.neonTheme ? neonClockComponent : defaultClockComponent
     }
 
     Component {
@@ -72,19 +72,19 @@ Item {
     }
 
     Component {
-        id: cyberClockComponent
+        id: neonClockComponent
         RowLayout {
             anchors.centerIn: parent
             spacing: shell.s(6)
 
             SevenSegmentText {
-                text: root.cyberTimeText
+                text: root.neonTimeText
                 Layout.alignment: Qt.AlignVCenter
-                glyphWidth: root.cyberGlyphWidth
-                glyphHeight: root.cyberGlyphHeight
-                glyphSpacing: root.cyberGlyphSpacing
-                segmentOnColor: root.cyberSegmentOnColor
-                segmentOffColor: root.cyberSegmentOffColor
+                glyphWidth: root.neonGlyphWidth
+                glyphHeight: root.neonGlyphHeight
+                glyphSpacing: root.neonGlyphSpacing
+                segmentOnColor: root.neonSegmentOnColor
+                segmentOffColor: root.neonSegmentOffColor
             }
 
             Rectangle {
@@ -95,13 +95,13 @@ Item {
             }
 
             SevenSegmentText {
-                text: root.cyberDateText
+                text: root.neonDateText
                 Layout.alignment: Qt.AlignVCenter
-                glyphWidth: root.cyberDateGlyphWidth
-                glyphHeight: root.cyberDateGlyphHeight
-                glyphSpacing: root.cyberDateGlyphSpacing
-                segmentOnColor: root.cyberDateOnColor
-                segmentOffColor: root.cyberDateOffColor
+                glyphWidth: root.neonDateGlyphWidth
+                glyphHeight: root.neonDateGlyphHeight
+                glyphSpacing: root.neonDateGlyphSpacing
+                segmentOnColor: root.neonDateOnColor
+                segmentOffColor: root.neonDateOffColor
             }
         }
     }

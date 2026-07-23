@@ -67,6 +67,14 @@
   --accent-alt:                 {{colors.tertiary_accent.default.hex}};
   --text:                       {{colors.on_background.default.hex}};
   --text-color:                 {{colors.on_background.default.hex}};
+  --foreground:                 {{colors.on_surface.default.hex}};
+  --fg:                         {{colors.on_surface.default.hex}};
+  --body-color:                 {{colors.on_surface.default.hex}};
+  --body-fg:                    {{colors.on_surface.default.hex}};
+  --main-text:                  {{colors.on_surface.default.hex}};
+  --primary-text:               {{colors.on_surface.default.hex}};
+  --secondary-text:             {{colors.on_surface_variant.default.hex}};
+  --caption-color:              {{colors.on_surface_variant.default.hex}};
   --bg:                         {{colors.background.default.hex}};
   --bg-color:                   {{colors.background.default.hex}};
   --subtext:                    {{colors.on_surface_variant.default.hex}};
@@ -93,7 +101,7 @@
   --string:                     {{colors.secondary_accent.default.hex}};
   --comment:                    {{colors.on_surface_variant.default.hex}};
   --number:                     {{colors.tertiary_accent.default.hex}};
-  --function:                   {{colors.on_primary_container.default.hex}};
+  --function:                   {{colors.primary.default.hex}};
 
   /* === Microsoft Fluent / Outlook tokens (mail + calendar) === */
   --colorBrandBackground:       {{colors.primary.default.hex}};
@@ -106,6 +114,9 @@
   --colorNeutralBackgroundInverted: {{colors.inverse_surface.default.hex}};
   --colorNeutralForeground1:    {{colors.on_surface.default.hex}};
   --colorNeutralForeground2:    {{colors.on_surface_variant.default.hex}};
+  --colorNeutralForeground3:    {{colors.outline.default.hex}};
+  --colorNeutralForegroundDisabled: {{colors.outline.default.hex}};
+  --colorNeutralForegroundInverted: {{colors.inverse_on_surface.default.hex}};
   --colorNeutralForegroundOnBrand: {{colors.on_primary.default.hex}};
   --colorNeutralStroke1:        {{colors.outline.default.hex}};
   --colorNeutralStroke2:        {{colors.outline_variant.default.hex}};

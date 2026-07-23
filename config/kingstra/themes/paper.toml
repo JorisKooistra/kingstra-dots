@@ -1,37 +1,37 @@
 [meta]
 name = "Paper"
-description = "Rustig en helder - editorial ritme, lichte randen, minimale beweging"
+description = "Warme e-reader - licht, mat papier, bijna geen beweging"
 icon = "󰈙"
 preview_image = "paper.jpg"
 
 [matugen]
 scheme_type = "scheme-fidelity"
 color_index = 0
-contrast = 0.02
-mode = "dark"
+contrast = 0.34
+mode = "light"
 
 [appearance]
-border_radius = 12
+border_radius = 10
 border_width = 1
-gaps_in = 12
-gaps_out = 20
-bar_opacity = 0.74
-popup_opacity = 0.88
-blur_size = 22
-blur_passes = 4
-animation_speed = 0.78
+gaps_in = 14
+gaps_out = 22
+bar_opacity = 0.96
+popup_opacity = 0.99
+blur_size = 0
+blur_passes = 0
+animation_speed = 0.68
 
 [fonts]
-ui_font = "Inter"
+ui_font = "IBM Plex Sans"
 ui_font_size = 13
-mono_font = "JetBrainsMono Nerd Font"
+mono_font = "IBM Plex Mono"
 mono_font_size = 12
-display_font = "Inter"
-font_weight = "medium"
+display_font = "IBM Plex Serif"
+font_weight = "regular"
 letter_spacing = 0
 
 [icons]
-icon_theme = "Papirus-Dark"
+icon_theme = "Papirus"
 
 [quickshell]
 bar_height = 40
@@ -44,20 +44,20 @@ bar_status_strip_edge = "top"
 bar_status_strip_height = 40
 
 [color_transform]
-hue_shift = 0
-saturation_adjust = -0.12
-lightness_adjust = 0.06
-thematic_mix = 0.06
+hue_shift = 6
+saturation_adjust = -0.18
+lightness_adjust = 0.02
+thematic_mix = 0.18
 
 [material]
-texture = "none"
-overlay_opacity = 0.0
+texture = "paper-fiber"
+overlay_opacity = 0.08
 glow_intensity = 0.0
 
 [terminal]
-bg_opacity = 0.90
-blur = true
-padding = 12
+bg_opacity = 0.96
+blur = false
+padding = 14
 cursor_style = "beam"
 
 [bar]
@@ -80,11 +80,11 @@ family = "paper"
 density = "comfortable"
 surface_mode = "paper-glass"
 motion = "calm"
-panel_shadow = 0.08
-outline_strength = 0.16
-glass_strength = 0.12
-widget_radius = 12
-panel_padding = 14
+panel_shadow = 0.04
+outline_strength = 0.18
+glass_strength = 0.0
+widget_radius = 10
+panel_padding = 16
 
 [effects]
 particles = "none"

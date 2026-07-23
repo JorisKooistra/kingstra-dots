@@ -36,29 +36,29 @@ Rectangle {
     // Dit is gewone ternary-logica, maar het verschil met PHP/Python is:
     // zodra isHovered verandert, past QML de kleur AUTOMATISCH aan.
     // Je hoeft niks te "aanroepen" — het systeem houdt dit bij.
-    color: ctx.cyberCenterFeature
-           ? (isHovered ? ctx.cyberCenterHoverColor : ctx.cyberCenterColor)
+    color: ctx.neonCenterFeature
+           ? (isHovered ? ctx.neonCenterHoverColor : ctx.neonCenterColor)
            : (isHovered ? surface.panelHoverColor   : surface.panelColor)
 
     // Afgeronde hoeken — normaal overal gelijk, maar bij botanical-thema
     // worden de hoeken die aan de schermrand zitten plat gemaakt (= 0).
-    radius: ctx.cyberCenterFeature ? shell.s(6) : surface.panelRadius
+    radius: ctx.neonCenterFeature ? shell.s(6) : surface.panelRadius
     topLeftRadius:     ctx.panelTopLeftRadius
     topRightRadius:    ctx.panelTopRightRadius
     bottomLeftRadius:  ctx.panelBottomLeftRadius
     bottomRightRadius: ctx.panelBottomRightRadius
 
     border.width: 1
-    border.color: ctx.cyberCenterFeature
-                  ? (isHovered ? ctx.cyberCenterBorderHoverColor : ctx.cyberCenterBorderColor)
+    border.color: ctx.neonCenterFeature
+                  ? (isHovered ? ctx.neonCenterBorderHoverColor : ctx.neonCenterBorderColor)
                   : (isHovered ? surface.panelBorderHoverColor   : surface.panelBorderColor)
 
     // Hoogte staat vast; breedte past zich aan aan de inhoud + wat padding.
     // shell.s(n) schaalt pixels mee met de schermresolutie.
     height: shell.isHorizontalBar && shell.edgeAttachedBar && parent
             ? parent.height
-            : ctx.cyberCenterBodyHeight
-    width: centerLayout.implicitWidth + (ctx.cyberCenterFeature ? shell.s(12) : shell.s(36))
+            : ctx.neonCenterBodyHeight
+    width: centerLayout.implicitWidth + (ctx.neonCenterFeature ? shell.s(12) : shell.s(36))
 
     // ── Animaties ─────────────────────────────────────────────────────────────
     // "Behavior on X" betekent: als X verandert, animeer de overgang.
@@ -66,8 +66,8 @@ Rectangle {
     Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
     Behavior on color { ColorAnimation  { duration: 250 } }
 
-    // Lichte vergrotingsanimatie bij hover (uitgeschakeld voor cyber-thema).
-    scale: ctx.cyberCenterFeature ? 1.0 : (isHovered ? 1.03 : 1.0)
+    // Lichte vergrotingsanimatie bij hover (uitgeschakeld voor neon-theme).
+    scale: ctx.neonCenterFeature ? 1.0 : (isHovered ? 1.03 : 1.0)
     Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutExpo } }
 
     // ── Muisgebied ────────────────────────────────────────────────────────────
@@ -90,7 +90,7 @@ Rectangle {
     RowLayout {
         id: centerLayout
         anchors.centerIn: parent   // gecentreerd in de Rectangle
-        spacing: ctx.cyberCenterFeature ? shell.s(6) : shell.s(24)
+        spacing: ctx.neonCenterFeature ? shell.s(6) : shell.s(24)
 
         // ── Klok ──────────────────────────────────────────────────────────────
         // Item is een onzichtbare container — puur voor groepering/sizing.
@@ -117,7 +117,7 @@ Rectangle {
             // het aanvraagt. Vergelijk met een klasse die nog niet geïnstantieerd is.
             Component {
                 id: digitalClockComponent
-                DigitalClock { shell: root.shell; mocha: root.mocha; cyberScale: 1.0 }
+                DigitalClock { shell: root.shell; mocha: root.mocha; neonScale: 1.0 }
             }
             Component {
                 id: analogClockComponent
@@ -141,7 +141,7 @@ Rectangle {
             }
         }
 
-        // Cyber-stijl verticale scheidingslijn (momenteel uitgeschakeld)
+        // Neon-stijl verticale scheidingslijn (momenteel uitgeschakeld)
         Item {
             visible: false
             Layout.alignment: Qt.AlignVCenter
@@ -151,18 +151,18 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
                 width: 1; height: parent.height
-                color: ctx.cyberCenterDividerColor
+                color: ctx.neonCenterDividerColor
             }
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 0; width: shell.s(5); height: shell.s(2)
-                color: ctx.cyberCenterDividerColor
+                color: ctx.neonCenterDividerColor
             }
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
                 width: shell.s(5); height: shell.s(2)
-                color: ctx.cyberCenterDividerColor
+                color: ctx.neonCenterDividerColor
             }
         }
 
@@ -177,12 +177,12 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 font.family: "Iosevka Nerd Font"
                 font.pixelSize: shell.s(20)
-                color: ctx.cyberChrome
-                       ? ctx.cyberTextHotColor
+                color: ctx.neonChrome
+                       ? ctx.neonTextHotColor
                        : Qt.tint(shell.weatherHex, Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.4))
             }
 
-            // Temperatuur — cyber-thema toont 7-segment display, rest gewone tekst
+            // Temperatuur — neon-theme toont 7-segment display, rest gewone tekst
             Item {
                 Layout.alignment: Qt.AlignVCenter
                 implicitWidth: weatherTempLoader.implicitWidth
@@ -191,18 +191,18 @@ Rectangle {
                 Loader {
                     id: weatherTempLoader
                     anchors.centerIn: parent
-                    sourceComponent: ctx.cyberCenterFeature ? cyberWeatherTempComponent : defaultWeatherTempComponent
+                    sourceComponent: ctx.neonCenterFeature ? neonWeatherTempComponent : defaultWeatherTempComponent
                 }
 
                 Component {
-                    id: cyberWeatherTempComponent
+                    id: neonWeatherTempComponent
                     SevenSegmentText {
                         text: String(shell.weatherTemp || "--°C")
                         glyphWidth: shell.s(9)
                         glyphHeight: shell.s(14)
                         glyphSpacing: shell.s(1)
-                        segmentOnColor: ctx.cyberWeatherTempOnColor
-                        segmentOffColor: ctx.cyberWeatherTempOffColor
+                        segmentOnColor: ctx.neonWeatherTempOnColor
+                        segmentOffColor: ctx.neonWeatherTempOffColor
                     }
                 }
                 Component {
@@ -213,7 +213,7 @@ Rectangle {
                         font.pixelSize: shell.s(14)
                         font.weight: shell.themeFontWeight
                         font.letterSpacing: shell.themeLetterSpacing
-                        color: ctx.cyberChrome ? ctx.cyberTextHotColor : mocha.peach
+                        color: ctx.neonChrome ? ctx.neonTextHotColor : mocha.peach
                     }
                 }
             }

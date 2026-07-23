@@ -1,6 +1,6 @@
 * {
-  font-family: "Fira Sans", "Fira Code", sans-serif;
-  font-size: 13px;
+  font-family: "Share Tech Mono", "JetBrainsMono Nerd Font", sans-serif;
+  font-size: 12px;
 }
 
 # Zelfde blob-gradient + accentrand als de QML-widgets. De chrome-blob sampelt
@@ -10,15 +10,15 @@
 # met een bijna-onzichtbare @outline-rand liet het control-center als enige paneel
 # als een vlakke zwarte doos buiten het thema vallen ("waar is de gradient?").
 .control-center {
-  background-color: alpha(mix(@base, @accent2-source, 0.34), 0.95);
+  background-color: alpha(mix(@base, @accent2-source, 0.34), 0.984);
   background-image: linear-gradient(135deg,
-      alpha(mix(@base, @accent2-source, 0.34), 0.95),
-      alpha(mix(@base, @accent3-source, 0.33), 0.95),
-      alpha(mix(@base, @primary, 0.32), 0.95));
-  border: 1px solid alpha(@primary, 0.32);
-  border-radius: 26px;
-  box-shadow: 0 18px 52px alpha(@crust, 0.3);
-  padding: 16px;
+      alpha(mix(@base, @accent2-source, 0.34), 0.984),
+      alpha(mix(@base, @accent3-source, 0.33), 0.984),
+      alpha(mix(@base, @primary, 0.32), 0.984));
+  border: 2px solid alpha(@primary, 0.32);
+  border-radius: 9px;
+  box-shadow: 0 18px 52px alpha(@crust, 0.42);
+  padding: 9px;
 }
 
 .widget-title > button,
@@ -26,26 +26,26 @@
 .notification,
 .widget-mpris-player,
 .notification-action {
-  border-radius: 22px;
+  border-radius: 5px;
 }
 
 .widget-title > button,
 .widget-dnd,
 .widget-mpris-player,
 .notification {
-  background: alpha(@surface0, 0.921);
+  background: alpha(@surface0, 0.98);
 }
 
 .notification {
-  border: 1px solid alpha(@outline-variant, 0.05);
+  border: 2px solid alpha(@outline-variant, 0.5);
 }
 
 .app-name,
 .summary {
-  font-family: "Fira Sans", sans-serif;
+  font-family: "Share Tech Mono", sans-serif;
 }
 
 .body,
 .time {
-  font-family: "Fira Sans", sans-serif;
+  font-family: "Share Tech Mono", sans-serif;
 }

@@ -1,20 +1,20 @@
 [meta]
 name = "Mono"
-description = "Materieel en stil - monochroom, hard afgewerkt, zeer leesbaar"
+description = "Monochroom en stil - vlak, hoekig, compact en maximaal leesbaar"
 icon = "󰋘"
 preview_image = "mono.jpg"
 
 [matugen]
 scheme_type = "scheme-monochrome"
 color_index = 0
-contrast = 0.42
+contrast = 0.58
 mode = "dark"
 
 [appearance]
 border_radius = 0
 border_width = 1
-gaps_in = 4
-gaps_out = 6
+gaps_in = 3
+gaps_out = 5
 bar_opacity = 0.99
 popup_opacity = 0.99
 blur_size = 0
@@ -27,7 +27,7 @@ ui_font_size = 12
 mono_font = "JetBrainsMono Nerd Font"
 mono_font_size = 12
 display_font = "JetBrains Mono"
-font_weight = "regular"
+font_weight = "medium"
 letter_spacing = 0
 
 [icons]
@@ -50,8 +50,8 @@ lightness_adjust = -0.08
 thematic_mix = 0.0
 
 [material]
-texture = "noise"
-overlay_opacity = 0.03
+texture = "fine-noise"
+overlay_opacity = 0.02
 glow_intensity = 0.0
 
 [terminal]
@@ -80,8 +80,8 @@ family = "mono"
 density = "compact"
 surface_mode = "solid"
 motion = "firm"
-panel_shadow = 0.10
-outline_strength = 0.30
+panel_shadow = 0.02
+outline_strength = 0.42
 glass_strength = 0.0
 widget_radius = 0
 panel_padding = 7
@@ -93,7 +93,7 @@ particle_speed = 0.0
 ambient_effect = "none"
 effect_intensity = 0.0
 effect_cycle_ms = 0
-hover_reactivity = 0.12
+hover_reactivity = 0.08
 
 [bar_dynamics]
 drawer_style = "none"

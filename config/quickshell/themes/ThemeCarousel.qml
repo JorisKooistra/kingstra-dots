@@ -29,6 +29,8 @@ Item {
     readonly property real itemWidth: embedded ? root.s(260) : root.s(400)
     readonly property real itemHeight: embedded ? root.s(180) : root.s(300)
     readonly property real spacing: embedded ? root.s(16) : root.s(20)
+    readonly property real slotWidth: itemWidth + spacing
+    readonly property real slotHeight: itemHeight + root.s(42)
     readonly property real borderWidth: embedded ? root.s(2) : root.s(3)
     readonly property real skewFactor: embedded ? -0.05 : -0.08
     readonly property real previewInfoHeight: embedded ? root.s(72) : root.s(84)
@@ -192,10 +194,19 @@ Item {
     function accentForScheme(schemeType) {
         let value = String(schemeType || "");
         if (value.indexOf("monochrome") >= 0) return _theme.overlay2;
-        if (value.indexOf("neutral") >= 0) return _theme.yellow;
-        if (value.indexOf("fidelity") >= 0) return _theme.green;
-        if (value.indexOf("content") >= 0) return _theme.blue;
-        return _theme.mauve;
+        if (value.indexOf("neutral") >= 0) return _theme.accent2Container;
+        if (value.indexOf("fidelity") >= 0) return _theme.accent2;
+        if (value.indexOf("content") >= 0) return _theme.accent3;
+        return _theme.accent1;
+    }
+
+    function accentForTheme(themeId, schemeType) {
+        let id = String(themeId || "").toLowerCase();
+        if (id === "paper") return _theme.accent2Container;
+        if (id === "mono") return _theme.text;
+        if (id === "neon") return _theme.accent1;
+        if (id === "organic") return _theme.accent3;
+        return accentForScheme(schemeType);
     }
 
     function formatSchemeLabel(schemeType) {
@@ -331,9 +342,9 @@ Item {
         reuseItems: false
 
         highlightRangeMode: ListView.StrictlyEnforceRange
-        preferredHighlightBegin: (width / 2) - ((root.itemWidth * 1.5 + root.spacing) / 2)
-        preferredHighlightEnd: (width / 2) + ((root.itemWidth * 1.5 + root.spacing) / 2)
-        highlightMoveDuration: root.initialFocusSet ? 500 : 0
+        preferredHighlightBegin: (width / 2) - (root.slotWidth / 2)
+        preferredHighlightEnd: (width / 2) + (root.slotWidth / 2)
+        highlightMoveDuration: root.initialFocusSet ? 280 : 0
         focus: true
 
         onCurrentIndexChanged: {
@@ -342,20 +353,11 @@ Item {
             root.syncSelection();
         }
 
-        add: Transition {
-            enabled: root.initialFocusSet
-            ParallelAnimation {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 400; easing.type: Easing.OutCubic }
-                NumberAnimation { property: "scale"; from: 0.5; to: 1; duration: 400; easing.type: Easing.OutBack }
-            }
-        }
-        addDisplaced: Transition {
-            enabled: root.initialFocusSet
-            NumberAnimation { property: "x"; duration: 400; easing.type: Easing.OutCubic }
-        }
+        add: Transition {}
+        addDisplaced: Transition {}
 
-        header: Item { width: Math.max(0, (view.width / 2) - ((root.itemWidth * 1.5) / 2)) }
-        footer: Item { width: Math.max(0, (view.width / 2) - ((root.itemWidth * 1.5) / 2)) }
+        header: Item { width: Math.max(0, (view.width / 2) - (root.slotWidth / 2)) }
+        footer: Item { width: Math.max(0, (view.width / 2) - (root.slotWidth / 2)) }
         model: themeModel
 
         MouseArea {
@@ -406,30 +408,29 @@ Item {
             readonly property int borderRadius: appearanceData.border_radius !== undefined ? appearanceData.border_radius : (border_radius !== undefined ? border_radius : 12)
             readonly property int gapsOut: appearanceData.gaps_out !== undefined ? appearanceData.gaps_out : (gaps_out !== undefined ? gaps_out : 10)
             readonly property int previewRadius: root.s(Math.max(12, borderRadius))
-            readonly property color accentColor: root.accentForScheme(schemeType)
+            readonly property color accentColor: root.accentForTheme(themeId, schemeType)
 
             readonly property bool isCurrent: ListView.isCurrentItem
             readonly property bool isActive: themeId === root.activeTheme
 
-            readonly property real targetWidth: isCurrent ? (root.itemWidth * 1.5) : (root.itemWidth * 0.5)
-            readonly property real targetHeight: isCurrent ? (root.itemHeight + root.s(30)) : root.itemHeight
+            readonly property real targetScale: isCurrent ? 1.0 : (root.embedded ? 0.86 : 0.82)
 
-            width: targetWidth + root.spacing
+            width: root.slotWidth
             opacity: isCurrent ? 1.0 : 0.6
-            height: targetHeight
+            height: root.slotHeight
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: root.embedded ? root.s(6) : root.s(15)
             z: isCurrent ? 10 : 1
 
-            Behavior on width { enabled: root.initialFocusSet; NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
-            Behavior on height { enabled: root.initialFocusSet; NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
-            Behavior on opacity { enabled: root.initialFocusSet; NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
+            Behavior on opacity { enabled: root.initialFocusSet; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
             Item {
                 anchors.centerIn: parent
                 anchors.horizontalCenterOffset: ((root.itemHeight - height) / 2) * root.skewFactor
-                width: parent.width > 0 ? parent.width * (targetWidth / (targetWidth + root.spacing)) : 0
-                height: parent.height
+                width: root.itemWidth
+                height: root.itemHeight
+                scale: delegateRoot.targetScale
+                Behavior on scale { enabled: root.initialFocusSet; NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
 
                 transform: Matrix4x4 {
                     property real s: root.skewFactor
@@ -443,6 +444,11 @@ Item {
                         view.currentIndex = index;
                         root.syncSelection();
                         if (root.applyOnItemClick) root.applySelectedTheme();
+                    }
+                    onDoubleClicked: {
+                        view.currentIndex = index;
+                        root.syncSelection();
+                        root.applySelectedTheme();
                     }
                 }
 
@@ -606,7 +612,7 @@ Item {
                             width: root.s(32)
                             height: root.s(32)
                             radius: root.s(16)
-                            color: Qt.rgba(_theme.green.r, _theme.green.g, _theme.green.b, 0.92)
+                            color: Qt.rgba(_theme.accent3.r, _theme.accent3.g, _theme.accent3.b, 0.92)
 
                             transform: Matrix4x4 {
                                 property real s: -root.skewFactor

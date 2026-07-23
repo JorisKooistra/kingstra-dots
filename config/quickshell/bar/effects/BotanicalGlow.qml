@@ -2,8 +2,8 @@ import QtQuick
 
 // ── BotanicalGlow ─────────────────────────────────────────────────────────────
 // Warme gloed over de bar: geel (boven) → perzik (midden) → groen (onder).
-// Aan/uit via BotanicalBar.qml:  showWarmGlow: true/false
-// Sterkte via BotanicalBar.qml:  warmGlowAlpha: 0.04   (hogere waarde = feller)
+// Aan/uit via OrganicBar.qml:  showWarmGlow: true/false
+// Sterkte via OrganicBar.qml:  warmGlowAlpha: 0.04   (hogere waarde = feller)
 // ─────────────────────────────────────────────────────────────────────────────
 Rectangle {
     id: botanicalGlow

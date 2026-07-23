@@ -368,11 +368,11 @@ Item {
     property var clockStyleOptions: ["digital", "analog", "hybrid"]
     property var fontWeightOptions: ["light", "regular", "medium", "bold"]
     property var particleTypeOptions: ["none", "fireflies", "space-specks", "space-specks-layered", "sparkles", "rain", "snow", "dust"]
-    property var styleFamilyOptions: ["paper", "organic", "modern", "mono"]
+    property var styleFamilyOptions: ["paper", "organic", "neon", "mono"]
     property var styleDensityOptions: ["compact", "comfortable", "airy"]
     property var surfaceModeOptions: ["paper-glass", "soft-glass", "hard-surface", "solid"]
     property var styleMotionOptions: ["calm", "gentle", "snappy", "firm"]
-    property var ambientEffectOptions: ["theme-default", "none", "organic-glow"]
+    property var ambientEffectOptions: ["theme-default", "none", "organic-glow", "neon-grid"]
     property var drawerStyleOptions: ["none", "context-card", "rail-panel"]
     property var moduleDensityOptions: ["minimal", "balanced", "rich"]
     property var workspacePreviewOptions: ["numbers", "app-icons", "hybrid"]
@@ -634,7 +634,7 @@ Item {
 
         // Fallback op de historische style-defaults zolang de key niet in het theme staat.
         let safeThemeId = normalizeThemeId(themeId || "");
-        if (safeThemeId === "mono" || safeThemeId === "modern") return false;
+        if (safeThemeId === "mono" || safeThemeId === "neon") return false;
         return true;
     }
 

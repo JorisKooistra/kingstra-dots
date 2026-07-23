@@ -12,12 +12,12 @@ Rectangle {
 
     property bool isHovered: searchMouse.containsMouse
 
-    Layout.preferredHeight: ctx.cyberSideModuleHeight
+    Layout.preferredHeight: ctx.neonSideModuleHeight
     Layout.preferredWidth: shell.barHeight
     Layout.alignment: Qt.AlignVCenter
 
-    color: ctx.cyberChrome
-           ? (isHovered ? ctx.cyberModuleHoverColor : ctx.cyberModuleColor)
+    color: ctx.neonChrome
+           ? (isHovered ? ctx.neonModuleHoverColor : ctx.neonModuleColor)
            : (isHovered ? surface.panelHoverColor : surface.panelColor)
     radius: surface.panelRadius
     topLeftRadius: ctx.panelTopLeftRadius
@@ -25,8 +25,8 @@ Rectangle {
     bottomLeftRadius: ctx.panelBottomLeftRadius
     bottomRightRadius: ctx.panelBottomRightRadius
     border.width: 1
-    border.color: ctx.cyberChrome
-                  ? (isHovered ? ctx.cyberModuleBorderHoverColor : ctx.cyberModuleBorderColor)
+    border.color: ctx.neonChrome
+                  ? (isHovered ? ctx.neonModuleBorderHoverColor : ctx.neonModuleBorderColor)
                   : (isHovered ? ctx.themeAccentBorderHoverColor : ctx.themeAccentBorderColor)
 
     scale: isHovered ? 1.05 : 1.0
@@ -38,21 +38,21 @@ Rectangle {
         text: "󰍉"
         font.family: "Iosevka Nerd Font"
         font.pixelSize: shell.s(24)
-        color: ctx.cyberChrome
-               ? (root.isHovered ? ctx.cyberTextHotColor : ctx.cyberTextColor)
+        color: ctx.neonChrome
+               ? (root.isHovered ? ctx.neonTextHotColor : ctx.neonTextColor)
                : (root.isHovered ? mocha.blue : mocha.text)
         Behavior on color { ColorAnimation { duration: 200 } }
     }
 
-    // Cyber bottom tick line
+    // Neon bottom tick line
     Rectangle {
-        visible: ctx.cyberChrome
+        visible: ctx.neonChrome
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: shell.s(4)
         width: root.isHovered ? shell.s(18) : shell.s(10)
         height: 1
-        color: ctx.cyberModuleTickColor
+        color: ctx.neonModuleTickColor
         Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
     }
 

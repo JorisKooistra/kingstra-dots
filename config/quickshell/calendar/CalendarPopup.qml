@@ -75,6 +75,9 @@ Item {
     readonly property color teal: _theme.teal
     readonly property color green: _theme.green
     readonly property color red: _theme.red
+    readonly property color accent1: _theme.accent1
+    readonly property color accent2: _theme.accent2
+    readonly property color accent3: _theme.accent3
     readonly property int themedRadius: window.s(Math.max(14, ThemeConfig.styleWidgetRadius))
     readonly property int themedInnerRadius: window.s(Math.max(10, ThemeConfig.styleWidgetRadius - 4))
     readonly property string uiFontFamily: ThemeConfig.uiFont
@@ -316,10 +319,75 @@ Item {
         }
     }
 
+    property var thunderbirdCalendarData: ({})
+    property var thunderbirdCalendars: []
+    property var thunderbirdEvents: []
+    property var localAgendaEvents: []
+    property string selectedDateKey: Qt.formatDateTime(window.currentTime, "yyyy-MM-dd")
+    property bool addEventOpen: false
+
+    Process {
+        id: thunderbirdCalendarPoller
+        command: ["python3", window.scriptsDir + "/thunderbird_calendar_status.py"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let txt = this.text.trim();
+                if (txt === "") return;
+                try {
+                    let data = JSON.parse(txt);
+                    window.thunderbirdCalendarData = data;
+                    window.thunderbirdCalendars = Array.isArray(data.calendars) ? data.calendars : [];
+                    window.thunderbirdEvents = Array.isArray(data.events) ? data.events : [];
+                    window.updateCalendarGrid();
+                } catch (e) {
+                    window.thunderbirdCalendarData = ({});
+                    window.thunderbirdCalendars = [];
+                    window.thunderbirdEvents = [];
+                    window.updateCalendarGrid();
+                }
+            }
+        }
+    }
+
+    Process {
+        id: localAgendaPoller
+        command: ["python3", window.scriptsDir + "/agenda_events.py", "list"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: window.applyLocalAgendaJson(this.text)
+        }
+    }
+
+    Process {
+        id: localAgendaAction
+        property string action: "list"
+        property string eventId: ""
+        property string eventDate: ""
+        property string eventTime: ""
+        property string eventTitle: ""
+        command: ["python3", window.scriptsDir + "/agenda_events.py", action, eventId, eventDate, eventTime, eventTitle]
+        stdout: StdioCollector {
+            onStreamFinished: window.applyLocalAgendaJson(this.text)
+        }
+    }
+
     Timer {
         interval: 150000 
         running: true; repeat: true
         onTriggered: weatherPoller.running = true
+    }
+
+    Timer {
+        interval: 90000
+        running: true; repeat: true
+        onTriggered: if (!thunderbirdCalendarPoller.running) thunderbirdCalendarPoller.running = true
+    }
+
+    Timer {
+        interval: 45000
+        running: true; repeat: true
+        onTriggered: if (!localAgendaPoller.running) localAgendaPoller.running = true
     }
 
     // -------------------------------------------------------------------------
@@ -388,16 +456,126 @@ Item {
         calendarModel.clear();
 
         for (let i = firstDay - 1; i >= 0; i--) {
-            calendarModel.append({ dayNum: (daysInPrevMonth - i).toString(), isCurrentMonth: false, isToday: false });
+            let day = daysInPrevMonth - i;
+            let date = new Date(targetYear, targetMonth - 1, day);
+            let key = Qt.formatDateTime(date, "yyyy-MM-dd");
+            calendarModel.append({ dayNum: day.toString(), dateKey: key, isCurrentMonth: false, isToday: false, eventCount: window.eventCountForDate(key) });
         }
         for (let i = 1; i <= daysInMonth; i++) {
-            calendarModel.append({ dayNum: i.toString(), isCurrentMonth: true, isToday: (isRealCurrentMonth && i === todayDate) });
+            let date = new Date(targetYear, targetMonth, i);
+            let key = Qt.formatDateTime(date, "yyyy-MM-dd");
+            calendarModel.append({ dayNum: i.toString(), dateKey: key, isCurrentMonth: true, isToday: (isRealCurrentMonth && i === todayDate), eventCount: window.eventCountForDate(key) });
         }
         let remaining = 42 - calendarModel.count;
         for (let i = 1; i <= remaining; i++) {
-            calendarModel.append({ dayNum: i.toString(), isCurrentMonth: false, isToday: false });
+            let date = new Date(targetYear, targetMonth + 1, i);
+            let key = Qt.formatDateTime(date, "yyyy-MM-dd");
+            calendarModel.append({ dayNum: i.toString(), dateKey: key, isCurrentMonth: false, isToday: false, eventCount: window.eventCountForDate(key) });
         }
     }
+
+    function eventCountForDate(dateKey) {
+        let count = 0;
+        let events = combinedAgendaEvents();
+        for (let i = 0; i < events.length; i++) {
+            if (String(events[i].dateKey || "") === dateKey)
+                count += 1;
+        }
+        return count;
+    }
+
+    function eventsForDate(dateKey) {
+        let out = [];
+        let events = combinedAgendaEvents();
+        for (let i = 0; i < events.length; i++) {
+            let ev = events[i] || {};
+            if (String(ev.dateKey || "") === dateKey)
+                out.push(ev);
+        }
+        return out;
+    }
+
+    function upcomingEvents(limit) {
+        return combinedAgendaEvents().slice(0, limit);
+    }
+
+    function combinedAgendaEvents() {
+        let out = [];
+        for (let i = 0; i < thunderbirdEvents.length; i++) out.push(thunderbirdEvents[i]);
+        for (let j = 0; j < localAgendaEvents.length; j++) out.push(localAgendaEvents[j]);
+        out.sort((a, b) => {
+            let ad = String((a && a.dateKey) || "");
+            let bd = String((b && b.dateKey) || "");
+            if (ad !== bd) return ad.localeCompare(bd);
+            let at = String((a && a.timeRaw) || ((a && a.allDay) ? "" : a.time) || "99:99");
+            let bt = String((b && b.timeRaw) || ((b && b.allDay) ? "" : b.time) || "99:99");
+            if (at !== bt) return at.localeCompare(bt);
+            return String((a && a.title) || "").localeCompare(String((b && b.title) || ""));
+        });
+        return out;
+    }
+
+    function calendarColor(value) {
+        let text = String(value || "");
+        if (text === "accent1") return window.accent1;
+        if (text === "accent2") return window.accent2;
+        if (text === "accent3") return window.accent3;
+        if (text.length > 0) {
+            try { return Qt.color(text); } catch (e) {}
+        }
+        return window.blue;
+    }
+
+    function applyLocalAgendaJson(text) {
+        let txt = String(text || "").trim();
+        if (txt === "") return;
+        try {
+            let data = JSON.parse(txt);
+            window.localAgendaEvents = Array.isArray(data.events) ? data.events : [];
+            window.updateCalendarGrid();
+        } catch (e) {
+            window.localAgendaEvents = [];
+            window.updateCalendarGrid();
+        }
+    }
+
+    function normalizedInputTime(value) {
+        let text = String(value || "").trim();
+        if (text === "") return "";
+        let match = text.match(/^([0-2]?[0-9])[:.]([0-5][0-9])$/);
+        if (!match) return text;
+        let h = Math.min(23, parseInt(match[1], 10));
+        let m = parseInt(match[2], 10);
+        return (h < 10 ? "0" + h : "" + h) + ":" + (m < 10 ? "0" + m : "" + m);
+    }
+
+    function runLocalAgendaAction(action, eventId, dateKey, timeText, title) {
+        if (localAgendaAction.running) localAgendaAction.running = false;
+        localAgendaAction.action = action;
+        localAgendaAction.eventId = eventId || "";
+        localAgendaAction.eventDate = dateKey || "";
+        localAgendaAction.eventTime = timeText || "";
+        localAgendaAction.eventTitle = title || "";
+        localAgendaAction.running = true;
+    }
+
+    function addLocalAgendaEvent(title, timeText) {
+        let cleanTitle = String(title || "").trim().replace(/\s+/g, " ");
+        if (cleanTitle === "") return;
+        window.runLocalAgendaAction("add", "", selectedDateKey, normalizedInputTime(timeText), cleanTitle);
+        window.addEventOpen = false;
+    }
+
+    function deleteLocalAgendaEvent(eventId) {
+        if (String(eventId || "") === "") return;
+        window.runLocalAgendaAction("delete", eventId, "", "", "");
+    }
+
+    readonly property var selectedEvents: eventsForDate(selectedDateKey)
+    readonly property var agendaEvents: selectedEvents.length > 0 ? selectedEvents : upcomingEvents(6)
+    readonly property string agendaTitle: selectedEvents.length > 0
+        ? "AGENDA " + Qt.formatDateTime(new Date(selectedDateKey + "T12:00:00"), "dd MMM").toUpperCase()
+        : "KOMENDE AFSPRAKEN"
 
     onMonthOffsetChanged: updateCalendarGrid()
 
@@ -797,11 +975,13 @@ Item {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 
-                                color: isToday ? window.textAccent : (dayMa.containsMouse ? Qt.alpha(window.surface2, 0.4) : "transparent")
+                                readonly property bool selectedDay: dateKey === window.selectedDateKey
+
+                                color: isToday ? window.textAccent : (selectedDay ? Qt.alpha(window.blue, 0.22) : (dayMa.containsMouse ? Qt.alpha(window.surface2, 0.4) : "transparent"))
                                 radius: window.s(10)
                                 scale: dayMa.containsMouse ? 1.2 : 1.0
-                                border.color: isToday ? window.surface0 : (dayMa.containsMouse ? window.overlay0 : "transparent")
-                                border.width: isToday || dayMa.containsMouse ? 1 : 0
+                                border.color: isToday ? window.surface0 : (selectedDay ? window.blue : (dayMa.containsMouse ? window.overlay0 : "transparent"))
+                                border.width: isToday || selectedDay || dayMa.containsMouse ? 1 : 0
                                 
                                 Behavior on color { ColorAnimation { duration: 150 } }
                                 Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
@@ -816,9 +996,376 @@ Item {
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                 }
 
-                                MouseArea { id: dayMa; anchors.fill: parent; hoverEnabled: true }
+                                Row {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.bottom: parent.bottom
+                                    anchors.bottomMargin: window.s(4)
+                                    spacing: window.s(2)
+                                    visible: eventCount > 0
+
+                                    Repeater {
+                                        model: Math.min(3, eventCount)
+                                        Rectangle {
+                                            width: window.s(4)
+                                            height: window.s(4)
+                                            radius: width / 2
+                                            color: isToday ? window.base : window.timeAccent
+                                            opacity: isCurrentMonth ? 0.95 : 0.45
+                                        }
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: dayMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: window.selectedDateKey = dateKey
+                                }
                             }
                         }
+                    }
+                }
+            }
+
+            // =======================================================
+            // LEFT LOWER WING: THUNDERBIRD AGENDA
+            // =======================================================
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: calendarRect.bottom
+                anchors.leftMargin: window.s(40)
+                anchors.topMargin: window.s(18)
+                width: window.s(420)
+                height: window.s(232)
+                color: Qt.alpha(window.surface0, 0.18)
+                radius: window.s(14)
+                border.color: Qt.alpha(window.surface1, 0.38)
+                border.width: 1
+                z: 10
+
+                opacity: introCalendar
+                transform: Translate { x: window.s(-40) * (1.0 - introCalendar) }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: window.s(18)
+                    spacing: window.s(10)
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: window.s(10)
+
+                        Text {
+                            text: "󰃰"
+                            font.family: "Iosevka Nerd Font"
+                            font.pixelSize: window.s(17)
+                            color: window.timeAccent
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: window.agendaTitle
+                            font.family: window.monoFontFamily
+                            font.weight: Font.Black
+                            font.pixelSize: window.s(13)
+                            color: window.text
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            text: window.thunderbirdCalendars.length + ""
+                            font.family: window.monoFontFamily
+                            font.weight: Font.Bold
+                            font.pixelSize: window.s(11)
+                            color: window.subtext0
+                        }
+
+                        Rectangle {
+                            Layout.preferredWidth: window.s(26)
+                            Layout.preferredHeight: window.s(26)
+                            radius: window.s(8)
+                            color: addEventMa.containsMouse || window.addEventOpen ? Qt.alpha(window.timeAccent, 0.24) : Qt.alpha(window.surface1, 0.18)
+                            border.width: 1
+                            border.color: window.addEventOpen ? Qt.alpha(window.timeAccent, 0.7) : Qt.alpha(window.surface2, 0.35)
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: window.addEventOpen ? "" : ""
+                                font.family: "Iosevka Nerd Font"
+                                font.pixelSize: window.s(12)
+                                color: window.addEventOpen ? window.timeAccent : window.text
+                            }
+
+                            MouseArea {
+                                id: addEventMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    window.addEventOpen = !window.addEventOpen;
+                                    if (window.addEventOpen)
+                                        Qt.callLater(() => eventTitleInput.forceActiveFocus());
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: window.addEventOpen ? window.s(38) : 0
+                        visible: height > 1
+                        radius: window.s(10)
+                        color: Qt.alpha(window.surface1, 0.18)
+                        border.width: 1
+                        border.color: Qt.alpha(window.timeAccent, 0.34)
+                        clip: true
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: window.s(10)
+                            anchors.rightMargin: window.s(8)
+                            spacing: window.s(8)
+
+                            TextInput {
+                                id: eventTitleInput
+                                Layout.fillWidth: true
+                                color: window.text
+                                selectionColor: Qt.alpha(window.timeAccent, 0.34)
+                                selectedTextColor: window.base
+                                font.family: window.uiFontFamily
+                                font.pixelSize: window.s(12)
+                                clip: true
+                                onAccepted: {
+                                    window.addLocalAgendaEvent(text, eventTimeInput.text);
+                                    eventTitleInput.text = "";
+                                    eventTimeInput.text = "";
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: eventTitleInput.text === ""
+                                    text: "Nieuwe gebeurtenis"
+                                    font: eventTitleInput.font
+                                    color: window.subtext0
+                                }
+                            }
+
+                            TextInput {
+                                id: eventTimeInput
+                                Layout.preferredWidth: window.s(54)
+                                color: window.text
+                                selectionColor: Qt.alpha(window.timeAccent, 0.34)
+                                selectedTextColor: window.base
+                                font.family: window.monoFontFamily
+                                font.pixelSize: window.s(12)
+                                horizontalAlignment: Text.AlignHCenter
+                                maximumLength: 5
+                                onAccepted: {
+                                    window.addLocalAgendaEvent(eventTitleInput.text, text);
+                                    eventTitleInput.text = "";
+                                    eventTimeInput.text = "";
+                                }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: eventTimeInput.text === ""
+                                    text: "--:--"
+                                    font: eventTimeInput.font
+                                    color: window.overlay0
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.preferredWidth: window.s(28)
+                                Layout.preferredHeight: window.s(28)
+                                radius: window.s(8)
+                                color: saveEventMa.containsMouse ? Qt.alpha(window.green, 0.28) : Qt.alpha(window.green, 0.16)
+                                border.width: 1
+                                border.color: Qt.alpha(window.green, 0.48)
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: ""
+                                    font.family: "Iosevka Nerd Font"
+                                    font.pixelSize: window.s(12)
+                                    color: window.green
+                                }
+
+                                MouseArea {
+                                    id: saveEventMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        window.addLocalAgendaEvent(eventTitleInput.text, eventTimeInput.text);
+                                        eventTitleInput.text = "";
+                                        eventTimeInput.text = "";
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: window.s(6)
+                        visible: window.thunderbirdCalendars.length > 0
+
+                        Repeater {
+                            model: window.thunderbirdCalendars.slice(0, 3)
+                            Rectangle {
+                                Layout.preferredHeight: window.s(20)
+                                Layout.preferredWidth: Math.min(window.s(128), calLabel.implicitWidth + window.s(24))
+                                radius: window.s(7)
+                                color: Qt.alpha(window.calendarColor(modelData.color), 0.18)
+                                border.width: 1
+                                border.color: Qt.alpha(window.calendarColor(modelData.color), 0.55)
+                                clip: true
+
+                                Text {
+                                    id: calLabel
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.leftMargin: window.s(8)
+                                    anchors.rightMargin: window.s(8)
+                                    text: modelData.name || "Kalender"
+                                    font.family: window.uiFontFamily
+                                    font.pixelSize: window.s(10)
+                                    font.weight: Font.DemiBold
+                                    color: window.text
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
+                    }
+
+                    ListView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        spacing: window.s(6)
+                        model: window.agendaEvents
+                        visible: window.agendaEvents.length > 0
+
+                        delegate: Rectangle {
+                            width: ListView.view.width
+                            height: window.s(42)
+                            radius: window.s(10)
+                            color: agendaHover.hovered ? Qt.alpha(window.surface2, 0.34) : Qt.alpha(window.surface1, 0.16)
+                            border.width: 1
+                            border.color: agendaHover.hovered ? Qt.alpha(window.calendarColor(modelData.color), 0.62) : Qt.alpha(window.surface2, 0.22)
+
+                            HoverHandler { id: agendaHover }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: window.s(10)
+                                anchors.rightMargin: window.s(10)
+                                spacing: window.s(10)
+
+                                Rectangle {
+                                    Layout.preferredWidth: window.s(4)
+                                    Layout.fillHeight: true
+                                    Layout.topMargin: window.s(8)
+                                    Layout.bottomMargin: window.s(8)
+                                    radius: width / 2
+                                    color: window.calendarColor(modelData.color)
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 0
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: modelData.title || "(Geen titel)"
+                                        font.family: window.uiFontFamily
+                                        font.weight: Font.DemiBold
+                                        font.pixelSize: window.s(12)
+                                        color: window.text
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: (modelData.time || "") + "  ·  " + (modelData.calendar || "")
+                                        font.family: window.monoFontFamily
+                                        font.pixelSize: window.s(10)
+                                        color: window.subtext0
+                                        elide: Text.ElideRight
+                                    }
+                                }
+
+                                Text {
+                                    Layout.preferredWidth: window.s(62)
+                                    text: modelData.source === "local" ? "Lokaal" : (modelData.day || "")
+                                    horizontalAlignment: Text.AlignRight
+                                    font.family: window.monoFontFamily
+                                    font.weight: Font.Bold
+                                    font.pixelSize: window.s(10)
+                                    color: window.overlay1
+                                    elide: Text.ElideRight
+                                }
+
+                                Rectangle {
+                                    Layout.preferredWidth: modelData.source === "local" ? window.s(24) : 0
+                                    Layout.preferredHeight: window.s(24)
+                                    visible: modelData.source === "local"
+                                    radius: window.s(7)
+                                    color: deleteEventMa.containsMouse ? Qt.alpha(window.red, 0.22) : "transparent"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: ""
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: window.s(11)
+                                        color: deleteEventMa.containsMouse ? window.red : window.overlay1
+                                    }
+
+                                    MouseArea {
+                                        id: deleteEventMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: mouse => {
+                                            mouse.accepted = true;
+                                            window.deleteLocalAgendaEvent(modelData.id);
+                                        }
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: window.agendaEvents.length === 0
+                        spacing: window.s(7)
+
+                        Item { Layout.fillHeight: true }
+                        Text {
+                            Layout.fillWidth: true
+                            text: window.thunderbirdCalendars.length > 0 ? "Geen afspraken gevonden" : "Geen kalenderbronnen gevonden"
+                            horizontalAlignment: Text.AlignHCenter
+                            font.family: window.uiFontFamily
+                            font.weight: Font.DemiBold
+                            font.pixelSize: window.s(12)
+                            color: window.text
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: window.thunderbirdCalendars.length > 0 ? "Gebruik de plusknop om een lokale gebeurtenis toe te voegen." : "Open Thunderbird om kalenders te koppelen of voeg lokaal een gebeurtenis toe."
+                            horizontalAlignment: Text.AlignHCenter
+                            font.family: window.uiFontFamily
+                            font.pixelSize: window.s(10)
+                            color: window.subtext0
+                            wrapMode: Text.WordWrap
+                        }
+                        Item { Layout.fillHeight: true }
                     }
                 }
             }
