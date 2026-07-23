@@ -17,7 +17,6 @@
 ~/.config/kitty|symlink
 ~/.config/zsh|symlink
 ~/.config/matugen|symlink
-~/.config/swaync|symlink
 ~/.config/walker|symlink
 ~/.config/yazi|symlink
 ~/.config/firefox|symlink

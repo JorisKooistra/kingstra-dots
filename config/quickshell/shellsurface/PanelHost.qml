@@ -60,6 +60,8 @@ Item {
             || entryId === "performance"
             || entryId === "gaming"
             || entryId === "power"
+            || entryId === "notifications"
+            || entryId === "mail"
             || entryId === "calendar"
             || entryId === "settings";
     }
@@ -72,6 +74,7 @@ Item {
                 || entryId === "monitors"
                 || entryId === "gaming"
                 || entryId === "settings"
+                || entryId === "mail"
                 || (!ThemeConfig.barRailEnabled
                     && (entryId === "battery"
                         || entryId === "network"
@@ -148,6 +151,8 @@ Item {
         if (entryId === "tophover") return Math.min(1020, availableW);
         if (entryId === "performance") return Math.min(380, availableW);
         if (entryId === "gaming") return Math.min(720, availableW);
+        if (entryId === "notifications") return Math.min(460, availableW);
+        if (entryId === "mail") return Math.min(460, availableW);
         let reg = registrySize(entryId);
         if (reg) return Math.min(reg.w, availableW);
         return Math.min(460, availableW);
@@ -159,6 +164,8 @@ Item {
         // Was volle schermhoogte terwijl er maar een handvol meters in staat.
         if (entryId === "performance") return Math.min(360, availableH);
         if (entryId === "gaming") return Math.min(560, availableH);
+        if (entryId === "notifications") return Math.min(620, availableH);
+        if (entryId === "mail") return Math.min(560, availableH);
         let reg = registrySize(entryId);
         if (reg) return Math.min(reg.h, availableH);
         return Math.min(620, availableH);
@@ -178,6 +185,8 @@ Item {
         if (entryId === "gaming") return Qt.resolvedUrl("../monitors/GamingPopup.qml");
         if (entryId === "settings") return Qt.resolvedUrl("../settings/SettingsPopup.qml");
         if (entryId === "power") return Qt.resolvedUrl("../power/PowerMenu.qml");
+        if (entryId === "notifications") return Qt.resolvedUrl("../notifications/NotificationPopup.qml");
+        if (entryId === "mail") return Qt.resolvedUrl("../mail/MailPopup.qml");
         return "";
     }
 

@@ -30,8 +30,6 @@ Item {
     // hoek waar rail en strip elkaar niet raakten ("de ontbrekende hoek").
     readonly property int railTopOffset: 0
     readonly property int railBottomOffset: 0
-    // Fillet-radius voor de concave hoek waar de content in de bar-L nestelt.
-    readonly property int cornerR: Math.max(20, ThemeConfig.styleWidgetRadius + 14)
     // Dunne omlijning rechts/onder, zodat de content een volledig afgerond
     // kader krijgt (caelestia-stijl). Links/boven kosten al rail+strip.
     readonly property int shellBorderWidth: 8
@@ -39,6 +37,10 @@ Item {
     // tekent. De chrome-vlakken (rail/strip/randen) laten deze strook vrij,
     // anders schilderen ze de lijn van de omlijsting dicht.
     readonly property int frameBandW: 2
+    // Binnenhoek van de schermomlijsting. Deze moet dezelfde visuele familie
+    // hebben als Hyprland's window rounding; een losse grote radius laat vooral
+    // onderin vensterhoeken en framehoeken optisch door elkaar snijden.
+    readonly property int cornerR: Math.round(Math.max(10, Math.min(34, Math.max(ThemeConfig.borderRadius, ThemeConfig.styleWidgetRadius) + frameBandW)))
     readonly property int cornerSeamOverlap: 3
     readonly property string styleFamily: String(ThemeConfig.styleFamily || "").toLowerCase()
     readonly property bool paperStyle: styleFamily === "paper"
@@ -63,8 +65,11 @@ Item {
     // Donkere basis waarop we tinten; behoudt de bestaande donkerte per stijl.
     readonly property color barFloor: paperStyle ? mocha.mantle
         : (modernStyle || monoStyle ? mocha.crust : mocha.base)
-    readonly property real barFillAlpha: paperStyle ? 0.82
-        : (modernStyle || monoStyle ? 0.97 : Math.min(0.98, ThemeConfig.barOpacity + 0.04))
+    // De schermrand-chrome zit direct op de wallpaper. Elke transparantie in
+    // deze laag laat vooral in de afgeronde schermhoeken de wallpaper-hoek
+    // meedoen met de kleur, waardoor de vorm wel klopt maar de hoek alsnog
+    // doorschijnt. Popups gebruiken hun eigen opacity; de edge zelf is solid.
+    readonly property real barFillAlpha: 1.0
     // Echte wallpaper-samples uit matugen custom colors. De geharmoniseerde
     // Material-rollen blijven beschikbaar voor iconen en tekstcontrast.
     readonly property color barHueA: mocha.accent2Source
@@ -290,7 +295,7 @@ Item {
     readonly property Item topHoverHitRegion: topHoverHitArea
     readonly property bool topHoverHovered: topHover.hovered
     property string activeMode: "office"
-    property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications"]
+    property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications", "mail"]
     property bool barAutoHide: false
     property bool autoHideVisible: true
     property string timeText: Qt.formatDateTime(new Date(), "HH:mm")
@@ -311,13 +316,14 @@ Item {
     function _defaultModules(mode) {
         if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "fps", "battery", "volume", "game_launcher", "clock"];
         if (mode === "media")  return ["volume", "brightness", "media_controls", "battery", "clock"];
-        return ["workspaces", "clock", "updates", "cpu_temp", "ram_usage", "network", "battery", "volume", "bluetooth", "notifications"];
+        return ["workspaces", "clock", "updates", "cpu_temp", "ram_usage", "network", "battery", "volume", "bluetooth", "notifications", "mail"];
     }
 
     function _normalizeModules(mode, modules) {
         let normalized = Array.isArray(modules) ? modules.slice() : [];
         if (mode === "office" && normalized.indexOf("updates") === -1) normalized.push("updates");
         if (mode === "office" && normalized.indexOf("cpu_temp") === -1) normalized.push("cpu_temp");
+        if (mode === "office" && normalized.indexOf("mail") === -1) normalized.push("mail");
         if ((mode === "office" || mode === "gaming" || mode === "media")
                 && normalized.indexOf("battery") === -1) {
             normalized.push("battery");
@@ -464,14 +470,44 @@ Item {
     }
     readonly property var activePlayer: {
         var players = Mpris.players.values;
+        var playingWithTitle = null;
+        var playingAny = null;
+        var pausedWithTitle = null;
+        var pausedAny = null;
+
         for (var i = 0; i < players.length; i++) {
-            if (players[i].playbackState === MprisPlaybackState.Playing) return players[i];
+            var player = players[i];
+            var title = String(player.trackTitle || "").trim();
+            var hasTitle = title !== "";
+
+            if (player.playbackState === MprisPlaybackState.Playing) {
+                if (playingAny === null) playingAny = player;
+                if (hasTitle && playingWithTitle === null) playingWithTitle = player;
+                continue;
+            }
+
+            if (player.playbackState === MprisPlaybackState.Paused) {
+                if (pausedAny === null) pausedAny = player;
+                if (hasTitle && pausedWithTitle === null) pausedWithTitle = player;
+            }
         }
+
+        if (playingWithTitle !== null) return playingWithTitle;
+        if (playingAny !== null) return playingAny;
+        if (pausedWithTitle !== null) return pausedWithTitle;
+        if (pausedAny !== null) return pausedAny;
+
+        for (var j = 0; j < players.length; j++) {
+            if (String(players[j].trackTitle || "").trim() !== "") return players[j];
+        }
+
         return players.length > 0 ? players[0] : null;
     }
     readonly property bool mediaVisible: activePlayer !== null
-        && String(activePlayer.trackTitle || "").trim() !== ""
-        && activePlayer.playbackState !== MprisPlaybackState.Stopped
+        && (activePlayer.playbackState !== MprisPlaybackState.Stopped
+            || ((activePlayer.canTogglePlaying || activePlayer.canPlay)
+                && (String(activePlayer.trackTitle || "").trim() !== ""
+                    || String(activePlayer.identity || "").trim() !== "")))
 
     Timer {
         interval: 1000
@@ -673,7 +709,16 @@ Item {
                 visible: root.moduleEnabled("notifications")
                 icon: "󰍜"
                 accent: root.mocha.yellow
-                onTriggered: Quickshell.execDetached(["bash", "-lc", "swaync-client -t -sw"])
+                onTriggered: root.togglePanel("notifications")
+            }
+
+            RailButton {
+                tooltip: MailService.statusText
+                visible: root.moduleEnabled("mail")
+                icon: "󰇮"
+                text: MailService.badgeText
+                accent: MailService.unreadKnown && MailService.unreadCount > 0 ? root.mocha.red : root.mocha.blue
+                onTriggered: root.togglePanel("mail")
             }
 
             RailButton {
@@ -992,7 +1037,8 @@ Item {
                         }
                     }
                 }
-                StripButton { tooltip: "Meldingen"; visible: root.moduleEnabled("notifications"); icon: "󰍜"; accent: root.mocha.yellow; onTriggered: Quickshell.execDetached(["bash", "-lc", "swaync-client -t -sw"]) }
+                StripButton { tooltip: "Meldingen"; visible: root.moduleEnabled("notifications"); icon: "󰍜"; accent: root.mocha.yellow; onTriggered: root.togglePanel("notifications") }
+                StripButton { tooltip: MailService.statusText; visible: root.moduleEnabled("mail"); icon: "󰇮"; accent: MailService.unreadKnown && MailService.unreadCount > 0 ? root.mocha.red : root.mocha.blue; onTriggered: root.togglePanel("mail") }
                 StripButton { tooltip: "Agenda"; visible: root.moduleEnabled("clock"); icon: "󰃰"; accent: root.mocha.blue; onTriggered: root.togglePanel("calendar") }
                 StripButton { tooltip: "Monitoren"; visible: root.anyModuleEnabled(["updates", "cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"]); icon: "󰍹"; accent: root.mocha.teal; onTriggered: root.togglePanel("monitors") }
                 StripButton { tooltip: "Games"; visible: root.moduleEnabled("game_launcher"); icon: "󰊴"; accent: root.mocha.mauve; onTriggered: root.togglePanel("gaming") }
@@ -1183,7 +1229,11 @@ Item {
         id: mp
         readonly property var player: root.activePlayer
         readonly property bool playing: player && player.playbackState === MprisPlaybackState.Playing
-        readonly property string title: player ? String(player.trackTitle || "") : ""
+        readonly property string title: player
+            ? (String(player.trackTitle || "").trim() !== ""
+                ? String(player.trackTitle || "")
+                : (String(player.identity || "").trim() !== "" ? String(player.identity || "") : "Media"))
+            : ""
         readonly property string artist: player ? String(player.trackArtist || "") : ""
         readonly property bool expanded: mpMouse.containsMouse
 
@@ -1236,7 +1286,14 @@ Item {
                 }
 
                 MediaCtl { icon: "\udb81\udcae"; onTriggered: if (mp.player) mp.player.previous() }
-                MediaCtl { icon: mp.playing ? "\udb80\udfe4" : "\udb81\udc0a"; onTriggered: if (mp.player) mp.player.togglePlaying() }
+                MediaCtl {
+                    icon: mp.playing ? "\udb80\udfe4" : "\udb81\udc0a"
+                    onTriggered: {
+                        if (!mp.player) return;
+                        if (mp.player.canTogglePlaying) mp.player.togglePlaying();
+                        else if (mp.player.canPlay) mp.player.play();
+                    }
+                }
                 MediaCtl { icon: "\udb81\udcad"; onTriggered: if (mp.player) mp.player.next() }
             }
         }

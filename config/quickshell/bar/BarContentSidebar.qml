@@ -433,8 +433,108 @@ Item {
                         onExited: root.railHoverExit()
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
                         onClicked: (mouse) => {
-                            if (mouse.button === Qt.LeftButton) Quickshell.execDetached(["swaync-client", "-t", "-sw"]);
-                            if (mouse.button === Qt.RightButton) Quickshell.execDetached(["swaync-client", "-d"]);
+                            if (mouse.button === Qt.LeftButton) {
+                                Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "notifications"]);
+                            }
+                            if (mouse.button === Qt.RightButton) {
+                                NotificationService.toggleDnd();
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item {
+                id: mailSlot
+                visible: shell.moduleList.includes("mail")
+                Layout.fillWidth: false
+                Layout.alignment: shell.isRightBar ? Qt.AlignRight : Qt.AlignLeft
+                Layout.preferredWidth: root.railWidth
+                Layout.preferredHeight: root.iconButtonSize
+
+                Rectangle {
+                    id: mailPill
+                    property bool hovered: mailMouse.containsMouse
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: hovered ? root.hoverExpandedWidth : root.railWidth
+                    Behavior on width { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+                    clip: true
+                    radius: surface.innerPillRadius
+                    topLeftRadius: root.pillTopLeftRadius
+                    topRightRadius: root.pillTopRightRadius
+                    bottomLeftRadius: root.pillBottomLeftRadius
+                    bottomRightRadius: root.pillBottomRightRadius
+                    color: hovered ? surface.innerPillHoverColor : surface.innerPillColor
+                    border.width: root.edgeSidebarChrome ? 0 : 1
+                    border.color: hovered ? surface.panelBorderHoverColor : "transparent"
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: shell.s(8)
+                        spacing: shell.s(8)
+
+                        Item {
+                            Layout.preferredWidth: shell.s(18)
+                            Layout.preferredHeight: shell.s(18)
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "󰇮"
+                                font.family: "Iosevka Nerd Font"
+                                font.pixelSize: shell.s(14)
+                                color: mailPill.hovered ? mocha.blue : mocha.text
+                            }
+
+                            Rectangle {
+                                visible: MailService.badgeText !== ""
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                                width: Math.max(shell.s(14), badgeText.implicitWidth + shell.s(5))
+                                height: shell.s(14)
+                                radius: height / 2
+                                color: mocha.red
+
+                                Text {
+                                    id: badgeText
+                                    anchors.centerIn: parent
+                                    text: MailService.badgeText
+                                    font.family: shell.monoFontFamily
+                                    font.pixelSize: shell.s(8)
+                                    font.weight: Font.Black
+                                    color: mocha.base
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: MailService.unreadKnown && MailService.unreadCount > 0 ? "Mail " + MailService.badgeText : "Mail"
+                            visible: mailPill.hovered
+                            opacity: mailPill.hovered ? 1 : 0
+                            Layout.fillWidth: true
+                            font.family: shell.monoFontFamily
+                            font.pixelSize: shell.s(11)
+                            font.weight: shell.themeFontWeight
+                            color: mocha.text
+                            elide: Text.ElideRight
+                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
+                        }
+                    }
+                    MouseArea {
+                        id: mailMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: root.railHoverEnter()
+                        onExited: root.railHoverExit()
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onClicked: (mouse) => {
+                            if (mouse.button === Qt.LeftButton) {
+                                Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "mail"]);
+                            }
+                            if (mouse.button === Qt.RightButton) {
+                                MailService.openThunderbird();
+                            }
                         }
                     }
                 }
@@ -603,8 +703,7 @@ Item {
         }
 
         Rectangle {
-            visible: (shell.mediaStatus === "Playing" || shell.mediaStatus === "Paused")
-                && String(shell.mediaTitle || "").trim() !== ""
+            visible: shell.mediaStatus === "Playing" || shell.mediaStatus === "Paused"
             Layout.fillWidth: true
             Layout.preferredHeight: shell.s(74)
             radius: surface.panelRadius
@@ -663,7 +762,7 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             hoverEnabled: true
-                            onClicked: { if (mediaCard.player && mediaCard.player.canTogglePlaying) mediaCard.player.togglePlaying(); }
+                            onClicked: shell.mediaPlayPause()
                         }
                     }
                     Text {

@@ -271,15 +271,8 @@ fi
 # automatisch aan zonder herstart.
 
 if pgrep -x swaync &>/dev/null; then
-    if swaync-client -rs 2>/dev/null; then
-        _log "SwayNC CSS herladen"
-    else
-        pkill -x swaync 2>/dev/null || true
-        sleep 0.3
-        swaync &
-        disown
-        _log "SwayNC hard herstart"
-    fi
+    pkill -x swaync 2>/dev/null || true
+    _log "SwayNC gestopt; Quickshell beheert notificaties"
 fi
 
 if pgrep -x kitty &>/dev/null; then

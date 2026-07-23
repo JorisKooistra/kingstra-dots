@@ -247,7 +247,7 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     # Surface-native panelen leven in de shell-surface en hebben de legacy
     # qs-master focus-machinerie niet nodig. Die zou hier juist de
     # HyprlandFocusGrab verbreken, waardoor het paneel direct weer sluit.
-    SURFACE_NATIVE=" launcher power "
+    SURFACE_NATIVE=" launcher power notifications mail "
     if [[ "$SURFACE_NATIVE" == *" $TARGET "* ]]; then
         if [[ "$ACTION" == "toggle" && "$ACTIVE_WIDGET" == "$TARGET" ]]; then
             qs_ipc_close

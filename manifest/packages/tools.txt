@@ -44,6 +44,9 @@ wtype
 # Media
 playerctl
 
+# Mail
+thunderbird
+
 # Screenshots
 grim
 slurp

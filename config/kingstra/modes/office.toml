@@ -9,4 +9,4 @@ visible = "always"
 autohide = false
 
 [modules]
-list = ["workspaces", "clock", "updates", "cpu_temp", "ram_usage", "network", "battery", "volume", "bluetooth", "notifications"]
+list = ["workspaces", "clock", "updates", "cpu_temp", "ram_usage", "network", "battery", "volume", "bluetooth", "notifications", "mail"]

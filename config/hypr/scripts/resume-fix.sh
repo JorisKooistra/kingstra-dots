@@ -72,11 +72,11 @@ if ! pgrep -f "python3 .*focustime/focus_daemon\\.py" &>/dev/null; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5 — SwayNC herstart als hij is afgesloten
+# 5 — Legacy SwayNC uit houden; Quickshell beheert notificaties
 # ---------------------------------------------------------------------------
-if ! pgrep -x swaync &>/dev/null; then
-    _log "SwayNC niet actief — herstart..."
-    _spawn_detached swaync
+if pgrep -x swaync &>/dev/null; then
+    _log "SwayNC actief — stoppen zodat Quickshell notificaties beheert..."
+    pkill -x swaync >/dev/null 2>&1 || true
 fi
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 # =============================================================================
-# manifest/packages/ui.txt — UI-laag (Quickshell, SwayNC, SwayOSD)
+# manifest/packages/ui.txt — UI-laag (Quickshell, SwayOSD)
 # =============================================================================
 
 # Quickshell en Qt6
@@ -14,9 +14,6 @@ qt6-multimedia
 qt6-wayland
 qt6-svg
 qt6-shadertools
-
-# SwayNC (notificaties + control center)
-swaync
 
 # SwayOSD (on-screen display voor volume/helderheid)
 swayosd

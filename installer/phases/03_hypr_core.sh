@@ -44,7 +44,6 @@ _phase03_install_packages() {
         wtype \
         grim \
         slurp \
-        swaync \
         playerctl
     aur_install satty
 }

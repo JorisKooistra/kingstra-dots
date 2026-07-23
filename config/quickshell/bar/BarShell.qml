@@ -173,7 +173,7 @@ Variants {
 
             // --- Mode State ---
             property string activeMode: "office"
-            property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications"]
+            property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications", "mail"]
             property bool barAutoHide: false
             property bool barVisible: true
             property int updateCount: 0
@@ -183,7 +183,7 @@ Variants {
             function _defaultModules(mode) {
                 if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "fps", "battery", "volume", "game_launcher", "clock"];
                 if (mode === "media")  return ["volume", "brightness", "media_controls", "battery", "clock"];
-                return ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications"];
+                return ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications", "mail"];
             }
 
             function _normalizeModules(mode, modules) {
@@ -193,6 +193,9 @@ Variants {
                 }
                 if (mode === "office" && normalized.indexOf("cpu_temp") === -1) {
                     normalized.push("cpu_temp");
+                }
+                if (mode === "office" && normalized.indexOf("mail") === -1) {
+                    normalized.push("mail");
                 }
                 if ((mode === "office" || mode === "gaming" || mode === "media")
                         && normalized.indexOf("battery") === -1) {
@@ -225,6 +228,10 @@ Variants {
                     _activePlayer.togglePlaying();
                     return;
                 }
+                if (_activePlayer && _activePlayer.canPlay) {
+                    _activePlayer.play();
+                    return;
+                }
 
                 // Fallback: some players expose metadata/state differently.
                 var players = Mpris.players.values;
@@ -240,6 +247,12 @@ Variants {
                 for (var j = 0; j < players.length; j++) {
                     if (players[j].canTogglePlaying) {
                         players[j].togglePlaying();
+                        return;
+                    }
+                }
+                for (var k = 0; k < players.length; k++) {
+                    if (players[k].canPlay) {
+                        players[k].play();
                         return;
                     }
                 }
@@ -479,12 +492,21 @@ Variants {
             }
 
             // Media — MPRIS event-driven (vervangt playerctl polling)
-            readonly property string mediaTitle: _activePlayer ? (_activePlayer.trackTitle || "") : ""
+            readonly property string mediaTitle: _activePlayer
+                ? (String(_activePlayer.trackTitle || "").trim() !== ""
+                    ? _activePlayer.trackTitle
+                    : (String(_activePlayer.identity || "").trim() !== "" ? _activePlayer.identity : "Media"))
+                : ""
             readonly property string mediaStatus: {
                 if (!_activePlayer) return "Stopped";
                 var state = _activePlayer.playbackState;
                 if (state === MprisPlaybackState.Playing) return "Playing";
                 if (state === MprisPlaybackState.Paused)  return "Paused";
+                if ((_activePlayer.canTogglePlaying || _activePlayer.canPlay)
+                        && (String(_activePlayer.trackTitle || "").trim() !== ""
+                            || String(_activePlayer.identity || "").trim() !== "")) {
+                    return "Paused";
+                }
                 return "Stopped";
             }
 
@@ -526,14 +548,13 @@ Variants {
             }
             readonly property bool isMediaPlaying: _activePlayer !== null
                 && _activePlayer.playbackState === MprisPlaybackState.Playing
-            readonly property bool isMediaActive: _activePlayer !== null
-                && _activePlayer.playbackState !== MprisPlaybackState.Stopped
+            readonly property bool isMediaActive: mediaStatus === "Playing" || mediaStatus === "Paused"
             readonly property var musicData: {
                 if (!_activePlayer || !isMediaActive)
                     return { "status": "Stopped", "title": "", "artUrl": "", "timeStr": "" };
                 var state = _activePlayer.playbackState;
                 var status = state === MprisPlaybackState.Playing ? "Playing"
-                           : state === MprisPlaybackState.Paused  ? "Paused" : "Stopped";
+                           : "Paused";
                 var timeStr = "";
                 if (_activePlayer.positionSupported && _activePlayer.lengthSupported && _activePlayer.length > 0) {
                     var pos = Math.floor(_activePlayer.position / 1000000);
@@ -541,7 +562,10 @@ Variants {
                     timeStr = Math.floor(pos/60) + ":" + String(pos%60).padStart(2,'0')
                             + " / " + Math.floor(len/60) + ":" + String(len%60).padStart(2,'0');
                 }
-                return { "status": status, "title": _activePlayer.trackTitle || "",
+                var title = String(_activePlayer.trackTitle || "").trim() !== ""
+                    ? _activePlayer.trackTitle
+                    : (String(_activePlayer.identity || "").trim() !== "" ? _activePlayer.identity : "Media");
+                return { "status": status, "title": title,
                          "artUrl": _activePlayer.trackArtUrl || "", "timeStr": timeStr };
             }
 

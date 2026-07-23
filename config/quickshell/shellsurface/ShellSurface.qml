@@ -167,7 +167,7 @@ Scope {
                         panelHost.sourceEntryId = "";
                         return;
                     }
-                    let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "gaming", "settings", "power", "launcher", "tophover"];
+                    let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "gaming", "settings", "power", "notifications", "mail", "launcher", "tophover"];
                     if (!ThemeConfig.barZoneSchemaLoaded || surfaceTargets.indexOf(target) === -1) return;
                     if (Hyprland.monitorFor(surfaceWindow.screen) === Hyprland.focusedMonitor)
                         panelHost.sourceEntryId = target;
@@ -253,7 +253,7 @@ Scope {
                 // tekenwerk zit in ShellChrome.
                 PanelWindow {
                     screen: surfaceWindow.screen
-                    visible: false
+                    visible: ThemeConfig.barZoneSchemaLoaded && chrome.cornersActive
                     anchors.right: true
                     anchors.top: true
                     anchors.bottom: true
@@ -268,7 +268,7 @@ Scope {
 
                 PanelWindow {
                     screen: surfaceWindow.screen
-                    visible: false
+                    visible: ThemeConfig.barZoneSchemaLoaded && chrome.cornersActive
                     anchors.left: true
                     anchors.right: true
                     anchors.bottom: true

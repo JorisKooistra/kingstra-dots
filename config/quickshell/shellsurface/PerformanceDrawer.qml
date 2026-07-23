@@ -74,47 +74,12 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 22
-        spacing: 16
-
-        RowLayout {
-            Layout.fillWidth: true
-            Text {
-                text: "Performance"
-                font.family: ThemeConfig.displayFont
-                font.pixelSize: 19
-                font.weight: Font.Black
-                color: mocha.text
-            }
-            Item { Layout.fillWidth: true }
-            Text {
-                text: "LIVE"
-                font.family: ThemeConfig.monoFont
-                font.pixelSize: 10
-                font.weight: Font.Bold
-                color: mocha.teal
-            }
-        }
-
-        Text {
-            text: "Systeemgebruik en temperaturen"
-            font.family: ThemeConfig.uiFont
-            font.pixelSize: 12
-            color: mocha.subtext0
-        }
+        spacing: 14
 
         MetricRow { label: "CPU"; value: root.cpuPercent + "%"; detail: root.cpuTemperature; fraction: root.cpuPercent / 100.0; accent: mocha.blue }
         MetricRow { label: "RAM"; value: root.ramPercent + "%"; detail: "geheugen"; fraction: root.ramPercent / 100.0; accent: mocha.green }
         MetricRow { label: "GPU"; value: root.gpuPercent + "%"; detail: root.gpuTemperature; fraction: root.gpuPercent / 100.0; accent: mocha.mauve }
         MetricRow { label: "FPS"; value: root.fps; detail: "actief scherm"; fraction: 1.0; accent: mocha.teal; showTrack: false }
-
-        Item { Layout.fillHeight: true }
-
-        Text {
-            text: "Vernieuwt elke 2,5 seconden"
-            font.family: ThemeConfig.uiFont
-            font.pixelSize: 11
-            color: mocha.subtext0
-        }
     }
 
     component MetricRow: ColumnLayout {

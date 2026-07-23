@@ -48,7 +48,6 @@ _phase15_validate_commands() {
     validate_cmd fastfetch
     # UI-laag
     validate_cmd quickshell
-    validate_cmd swaync
     validate_cmd walker
     validate_cmd swayosd-server
     # Thema
@@ -97,8 +96,7 @@ _phase15_validate_configs() {
     # Session
     validate_file "$HOME/.config/hypridle/hypridle.conf"               "hypridle.conf"
     validate_file "$HOME/.config/hyprlock/hyprlock.conf"               "hyprlock.conf"
-    # SwayNC / Walker
-    validate_file "$HOME/.config/swaync/config.json"                   "swaync/config.json"
+    # Walker
     validate_file "$HOME/.config/walker/config.toml"                   "walker/config.toml"
     # Yazi
     validate_file "$HOME/.config/yazi/yazi.toml"                       "yazi.toml"
@@ -115,7 +113,6 @@ _phase15_validate_links() {
     validate_link "$HOME/.config/hypr"       "$cfg/hypr"       "~/.config/hypr"
     validate_link "$HOME/.config/quickshell" "$cfg/quickshell" "~/.config/quickshell"
     validate_link "$HOME/.config/matugen"    "$cfg/matugen"    "~/.config/matugen"
-    validate_link "$HOME/.config/swaync"     "$cfg/swaync"     "~/.config/swaync"
     validate_link "$HOME/.config/walker"     "$cfg/walker"     "~/.config/walker"
     validate_link "$HOME/.config/kitty"      "$cfg/kitty"      "~/.config/kitty"
     validate_link "$HOME/.config/yazi"       "$cfg/yazi"       "~/.config/yazi"

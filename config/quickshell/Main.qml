@@ -282,7 +282,7 @@ PanelWindow {
             masterWindow.syncFocusedMonitorBounds();
         }
 
-        let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "gaming", "settings", "power"];
+        let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "gaming", "settings", "power", "notifications", "mail"];
         // De shell-surface tekent deze widgets. Bij de allereerste read is
         // theme.json vaak nog niet geladen en staat barZoneSchemaLoaded nog op
         // false; dan viel een achtergebleven widgetnaam uit de state-file door

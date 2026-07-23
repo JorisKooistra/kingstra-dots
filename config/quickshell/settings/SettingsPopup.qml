@@ -2123,10 +2123,9 @@ Item {
 
         Rectangle {
             anchors.fill: parent; radius: root.themedRadius
-            // Transparant net als de overige widgets (zie NetworkPopup): de
-            // PanelBackdrop-blob levert de gethematiseerde glasvulling + accentrand.
-            // Een eigen dekkende popupFill dekte die blob volledig af, waardoor de
-            // settings-widget als enige een vlakke donkere doos buiten het thema bleef.
+            // Transparant: de PanelBackdrop-blob eronder versmelt met de chrome
+            // (zelfde SDF-groep als network/music). Een eigen dekkende doos met
+            // rand brak die overloop en werd een los zwevend blok.
             color: "transparent"; border.width: 0
             clip: true
 

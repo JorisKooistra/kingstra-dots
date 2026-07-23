@@ -1,20 +1,18 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import "../.."
+import ".."
 
-// Left-bar button: left-click opens the Quickshell notifications blob,
-// right-click toggles DnD.
 Rectangle {
     id: root
     required property var shell
     required property var surface
     required property var mocha
-    required property var ctx   // BarContent root — supplies theme chrome colors/flags
+    required property var ctx
 
-    property bool isHovered: notifMouse.containsMouse
+    property bool isHovered: mailMouse.containsMouse
 
-    visible: shell.moduleList.includes("notifications")
+    visible: shell.moduleList.includes("mail")
     Layout.preferredHeight: ctx.cyberSideModuleHeight
     Layout.preferredWidth: shell.barHeight
     Layout.alignment: Qt.AlignVCenter
@@ -38,16 +36,35 @@ Rectangle {
 
     Text {
         anchors.centerIn: parent
-        text: ""
+        text: "󰇮"
         font.family: "Iosevka Nerd Font"
         font.pixelSize: shell.s(18)
-        color: ctx.cyberChrome
-               ? (root.isHovered ? ctx.cyberTextHotColor : ctx.cyberTextColor)
-               : (root.isHovered ? mocha.yellow : mocha.text)
+        color: root.isHovered ? mocha.blue : mocha.text
         Behavior on color { ColorAnimation { duration: 200 } }
     }
 
-    // Cyber bottom tick line
+    Rectangle {
+        visible: MailService.badgeText !== ""
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: shell.s(3)
+        anchors.rightMargin: shell.s(3)
+        width: Math.max(shell.s(16), badgeLabel.implicitWidth + shell.s(6))
+        height: shell.s(16)
+        radius: height / 2
+        color: mocha.red
+
+        Text {
+            id: badgeLabel
+            anchors.centerIn: parent
+            text: MailService.badgeText
+            font.family: shell.monoFontFamily
+            font.pixelSize: shell.s(9)
+            font.weight: Font.Black
+            color: mocha.base
+        }
+    }
+
     Rectangle {
         visible: ctx.cyberChrome
         anchors.horizontalCenter: parent.horizontalCenter
@@ -60,17 +77,15 @@ Rectangle {
     }
 
     MouseArea {
-        id: notifMouse
+        id: mailMouse
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {
-            if (mouse.button === Qt.LeftButton) {
-                Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "notifications"]);
-            }
-            if (mouse.button === Qt.RightButton) {
-                NotificationService.toggleDnd();
-            }
+            if (mouse.button === Qt.LeftButton)
+                Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "mail"]);
+            if (mouse.button === Qt.RightButton)
+                MailService.openThunderbird();
         }
     }
 }

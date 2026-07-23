@@ -1,40 +1,31 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Fase 06 — Notifications en control center (SwayNC)
+# Fase 06 — Quickshell notificaties
 # =============================================================================
 
 phase_run() {
-    log_step "SwayNC installeren..."
-    pacman_install swaync
-
-    log_step "SwayNC config deployen..."
-    deploy_config "swaync"
-
-    log_step "SwayNC herstarten als sessie actief is..."
-    _phase06_restart_swaync
+    log_step "Legacy SwayNC stoppen als die actief is..."
+    _phase06_stop_swaync
 
     log_step "Fase 06 valideren..."
-    validate_cmd swaync
-    validate_cmd swaync-client
-    validate_file "$HOME/.config/swaync/config.json"  "swaync/config.json"
-    validate_file "$HOME/.config/swaync/style.css"    "swaync/style.css"
+    validate_cmd quickshell
+    validate_file "$HOME/.config/quickshell/NotificationService.qml"                 "quickshell/NotificationService.qml"
+    validate_file "$HOME/.config/quickshell/notifications/NotificationPopup.qml"     "quickshell/notifications/NotificationPopup.qml"
+    validate_file "$HOME/.config/quickshell/notifications/notification_control.sh"   "quickshell/notifications/notification_control.sh"
     validate_report
 
-    log_ok "Fase 06 voltooid — SwayNC staat."
+    log_ok "Fase 06 voltooid — Quickshell-notificaties staan."
 }
 
-_phase06_restart_swaync() {
+_phase06_stop_swaync() {
     if "${DRY_RUN:-false}"; then
-        log_dry "swaync zou herstarten"
+        log_dry "swaync zou worden gestopt"
         return 0
     fi
     if pgrep -x swaync &>/dev/null; then
         pkill -x swaync || true
-        sleep 0.3
-        swaync &
-        disown
-        log_ok "SwayNC herstart"
+        log_ok "SwayNC gestopt"
     else
-        log_info "SwayNC draait niet — wordt gestart bij volgende sessie via autostart"
+        log_info "SwayNC draait niet"
     fi
 }

@@ -29,8 +29,6 @@ config/btop|~/.config/btop
 # config/matugen → ~/.config/matugen
 config/matugen|~/.config/matugen
 
-# config/swaync → ~/.config/swaync
-config/swaync|~/.config/swaync
 
 # config/walker → ~/.config/walker
 config/walker|~/.config/walker

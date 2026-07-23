@@ -238,10 +238,6 @@ output_path = "~/.config/kitty/kitty-matugen-colors.conf"
 input_path = "~/.config/matugen/templates/btop-colors.toml"
 output_path = "~/.config/btop/themes/kingstra.theme"
 
-[templates.swaync]
-input_path = "~/.config/matugen/templates/swaync-colors.css"
-output_path = "~/.config/swaync/colors.css"
-
 [templates.walker]
 input_path = "~/.config/matugen/templates/walker-colors.css"
 output_path = "~/.config/walker/colors.css"

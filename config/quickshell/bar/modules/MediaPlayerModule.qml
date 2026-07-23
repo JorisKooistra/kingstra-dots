@@ -12,9 +12,8 @@ Rectangle {
     required property var ctx
 
     readonly property bool _isPlaying: shell.mediaStatus === "Playing"
-    // Show controls only when playback is active and a track is known.
-    readonly property bool _isActive: (shell.mediaStatus === "Playing" || shell.mediaStatus === "Paused")
-        && String(shell.mediaTitle || "").trim() !== ""
+    // Keep controls visible while paused so playback can be resumed from the bar.
+    readonly property bool _isActive: shell.mediaStatus === "Playing" || shell.mediaStatus === "Paused"
 
     // ── Layout ────────────────────────────────────────────────────────────────
     Layout.preferredHeight: ctx.cyberSideModuleHeight
@@ -92,7 +91,7 @@ Rectangle {
             width: shell.s(90); height: parent.height
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: shell.mediaTitle
+                text: String(shell.mediaTitle || "").trim() !== "" ? shell.mediaTitle : "Media"
                 font.family: shell.monoFontFamily
                 font.pixelSize: shell.s(11)
                 font.weight: Font.Bold

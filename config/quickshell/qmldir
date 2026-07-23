@@ -3,4 +3,6 @@ singleton Colors 1.0 Colors.qml
 singleton ThemeConfig 1.0 ThemeConfig.qml
 singleton TouchProfile 1.0 TouchProfile.qml
 singleton I18n 1.0 I18n.qml
+singleton NotificationService 1.0 NotificationService.qml
+singleton MailService 1.0 MailService.qml
 Scaler 1.0 Scaler.qml

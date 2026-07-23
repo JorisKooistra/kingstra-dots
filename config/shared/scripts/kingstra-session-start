@@ -72,7 +72,7 @@ start_core() {
     run_bg_once "wl-paste --type text --watch cliphist store" "cliphist text watcher" wl-paste --type text --watch cliphist store
     run_bg_once "wl-paste --type image --watch cliphist store" "cliphist image watcher" wl-paste --type image --watch cliphist store
     run_bg_once "nm-applet --indicator" "NetworkManager applet" nm-applet --indicator
-    run_bg_once "swaync$" "SwayNC" swaync
+    stop_pattern "swaync$" "SwayNC"
     if [[ -x "$CONFIG_HOME/shared/scripts/kingstra-idle-inhibit" ]] \
         && [[ "$("$CONFIG_HOME/shared/scripts/kingstra-idle-inhibit" status 2>/dev/null)" == "on" ]]; then
         log "idle inhibit active: hypridle skipped"
@@ -100,6 +100,7 @@ start_ui() {
     systemctl_user start skwd-daemon.service
     run_once "wallpaper-init.sh" "wallpaper init" "$CONFIG_HOME/hypr/scripts/wallpaper-init.sh"
 
+    touch /tmp/qs_notifications_command 2>/dev/null || true
     run_bg_once "quickshell.*TopBar.qml" "Quickshell topbar" quickshell --no-duplicate -p "$CONFIG_HOME/quickshell/TopBar.qml"
     # Maak het IPC-state-bestand aan vóór Main.qml start. Qt's QFileSystemWatcher
     # (gebruikt door FileView) kan geen niet-bestaand bestand bewaken; het bestand
@@ -120,6 +121,7 @@ start_ui() {
 start_shell() {
     log "start shell"
 
+    touch /tmp/qs_notifications_command 2>/dev/null || true
     run_bg_once "quickshell.*TopBar.qml" "Quickshell topbar" quickshell --no-duplicate -p "$CONFIG_HOME/quickshell/TopBar.qml"
     touch /tmp/qs_widget_state 2>/dev/null || true
     run_bg_once "quickshell.*Main.qml" "Quickshell popups" quickshell --no-duplicate -p "$CONFIG_HOME/quickshell/Main.qml"
@@ -177,7 +179,6 @@ status_session() {
         "qs.*overview/shell.qml"
         "focus_daemon.py"
         "walker --gapplication-service"
-        "swaync$"
         "hypridle( |$)"
     )
 

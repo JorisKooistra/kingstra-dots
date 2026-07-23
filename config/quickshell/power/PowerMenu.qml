@@ -25,17 +25,8 @@ Item {
     readonly property bool wifiOn: Networking.wifiEnabled
     readonly property bool hasBluetooth: Bluetooth.defaultAdapter !== null
     readonly property bool bluetoothOn: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
-    readonly property string idleInhibitCommand:
-        "if command -v kingstra-idle-inhibit >/dev/null 2>&1; then " +
-        "kingstra-idle-inhibit; " +
-        "elif [ -x \"$HOME/.local/bin/kingstra-idle-inhibit\" ]; then " +
-        "\"$HOME/.local/bin/kingstra-idle-inhibit\"; " +
-        "elif [ -x \"$HOME/.config/shared/scripts/kingstra-idle-inhibit\" ]; then " +
-        "\"$HOME/.config/shared/scripts/kingstra-idle-inhibit\"; " +
-        "else " +
-        "\"$HOME/kingstra-dots/config/shared/scripts/kingstra-idle-inhibit\"; " +
-        "fi"
     property bool idleInhibited: false
+    readonly property bool idleSettingsEnabled: !idleInhibited
 
     function closePanel() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
@@ -50,14 +41,29 @@ Item {
         if (!idleStatusProc.running) idleStatusProc.running = true;
     }
 
-    function toggleIdleInhibit() {
-        Quickshell.execDetached(["bash", "-lc", root.idleInhibitCommand + " toggle"]);
+    function idleInhibitCommand(action) {
+        let safeAction = String(action || "status").replace(/'/g, "'\"'\"'");
+        return "kingstra_idle_action='" + safeAction + "'; " +
+            "if command -v kingstra-idle-inhibit >/dev/null 2>&1; then " +
+            "kingstra-idle-inhibit \"$kingstra_idle_action\"; " +
+            "elif [ -x \"$HOME/.local/bin/kingstra-idle-inhibit\" ]; then " +
+            "\"$HOME/.local/bin/kingstra-idle-inhibit\" \"$kingstra_idle_action\"; " +
+            "elif [ -x \"$HOME/.config/shared/scripts/kingstra-idle-inhibit\" ]; then " +
+            "\"$HOME/.config/shared/scripts/kingstra-idle-inhibit\" \"$kingstra_idle_action\"; " +
+            "else " +
+            "\"$HOME/kingstra-dots/config/shared/scripts/kingstra-idle-inhibit\" \"$kingstra_idle_action\"; " +
+            "fi";
+    }
+
+    function setIdleSettingsEnabled(enabled) {
+        root.idleInhibited = !enabled;
+        Quickshell.execDetached(["bash", "-lc", root.idleInhibitCommand(enabled ? "off" : "on")]);
         idleRefreshTimer.restart();
     }
 
     Process {
         id: idleStatusProc
-        command: ["bash", "-lc", root.idleInhibitCommand + " status"]
+        command: ["bash", "-lc", root.idleInhibitCommand("status")]
         running: true
         stdout: StdioCollector {
             onStreamFinished: root.idleInhibited = this.text.trim() === "on"
@@ -129,7 +135,7 @@ Item {
         Rectangle {
             visible: true
             Layout.fillWidth: true
-            Layout.preferredHeight: visible ? 58 : 0
+            Layout.preferredHeight: visible ? 66 : 0
             radius: root.itemRadius
             color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.28)
             border.width: 1
@@ -166,11 +172,13 @@ Item {
 
                 ToggleTile {
                     Layout.fillWidth: true
-                    icon: root.idleInhibited ? "󰅶" : "󰾪"
-                    label: "Scherm aan"
-                    active: root.idleInhibited
+                    icon: root.idleSettingsEnabled ? "󰾪" : "󰅶"
+                    label: "Idle-instellingen"
+                    subtitle: root.idleSettingsEnabled ? "Aan" : "Uit, scherm blijft aan"
+                    active: root.idleSettingsEnabled
+                    showSwitch: true
                     accent: mocha.yellow
-                    onTriggered: root.toggleIdleInhibit()
+                    onTriggered: root.setIdleSettingsEnabled(!root.idleSettingsEnabled)
                 }
             }
         }
@@ -218,11 +226,13 @@ Item {
         id: tile
         property string icon: ""
         property string label: ""
+        property string subtitle: ""
         property bool active: false
+        property bool showSwitch: false
         property color accent: mocha.primary
         signal triggered()
 
-        Layout.preferredHeight: 42
+        Layout.preferredHeight: showSwitch ? 50 : 42
         radius: root.itemRadius
         color: active
             ? Qt.rgba(accent.r, accent.g, accent.b, 0.24)
@@ -244,14 +254,55 @@ Item {
                 font.pixelSize: 16
                 color: tile.active ? tile.accent : mocha.subtext0
             }
-            Text {
+
+            ColumnLayout {
                 Layout.fillWidth: true
-                text: tile.label
-                font.family: ThemeConfig.uiFont
-                font.pixelSize: 12
-                font.weight: Font.DemiBold
-                color: mocha.text
-                elide: Text.ElideRight
+                spacing: 0
+
+                Text {
+                    Layout.fillWidth: true
+                    text: tile.label
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: tile.subtitle === "" ? 12 : 11
+                    font.weight: Font.DemiBold
+                    color: mocha.text
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    visible: tile.subtitle !== ""
+                    Layout.fillWidth: true
+                    text: tile.subtitle
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 9
+                    color: tile.active ? tile.accent : mocha.subtext0
+                    elide: Text.ElideRight
+                }
+            }
+
+            Rectangle {
+                visible: tile.showSwitch
+                Layout.preferredWidth: 34
+                Layout.preferredHeight: 18
+                radius: height / 2
+                color: tile.active
+                    ? Qt.rgba(tile.accent.r, tile.accent.g, tile.accent.b, 0.42)
+                    : Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.50)
+                border.width: 1
+                border.color: tile.active
+                    ? Qt.rgba(tile.accent.r, tile.accent.g, tile.accent.b, 0.62)
+                    : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
+
+                Rectangle {
+                    width: 14
+                    height: 14
+                    radius: 7
+                    x: tile.active ? parent.width - width - 2 : 2
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: tile.active ? tile.accent : mocha.subtext0
+                    Behavior on x { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") } }
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+                }
             }
         }
 

@@ -738,18 +738,29 @@ row:hover {
 }
 EOF
 
+# Glasdekking voor het swaync control-center: bijna dekkend zodat de donkere
+# desktop er niet doorheen lekt (dat las als een zwart blok), met net genoeg
+# glas voor diepte. Zelfde lijn als de settings-paneelvulling (panelFillOpacity).
+SWAYNC_GLASS_OPACITY=$(python3 -c "print(min(0.99, max(0.95, ${APPEARANCE_POPUP_OPACITY:-0.92} + ${STYLE_GLASS_STRENGTH} * 0.20)))")
+
 cat > "$SWAYNC_THEME_CSS" <<EOF
 * {
   font-family: "${FONTS_UI_FONT:-Inter}", "${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}", sans-serif;
   font-size: ${FONTS_UI_FONT_SIZE:-13}px;
 }
 
-# Zelfde gethematiseerde glasvulling + primary-accentrand als de QML-widgets
-# (zie PanelBackdrop: mix(mantle, primary, 0.20) met een primary-band als rand).
-# Pure @mantle met een bijna-onzichtbare @outline-rand liet het control-center
-# als enige paneel als een vlakke zwarte doos buiten het thema vallen.
+# Zelfde blob-gradient + accentrand als de QML-widgets. De chrome-blob sampelt
+# één diagonaal verloop (linksboven warm accent2-source -> rechtsonder primary)
+# over dark barFloor; zie ShellChrome.barGradStart/barGradEnd. swaync kan de SDF-
+# shader niet draaien, dus we benaderen datzelfde verloop in GTK-CSS. Pure @mantle
+# met een bijna-onzichtbare @outline-rand liet het control-center als enige paneel
+# als een vlakke zwarte doos buiten het thema vallen ("waar is de gradient?").
 .control-center {
-  background: alpha(mix(@mantle, @primary, 0.20), $(python3 -c "print(min(0.99, max(0.76, ${APPEARANCE_POPUP_OPACITY:-0.92} + ${STYLE_GLASS_STRENGTH} * 0.20)))"));
+  background-color: alpha(mix(@base, @accent2-source, 0.34), ${SWAYNC_GLASS_OPACITY});
+  background-image: linear-gradient(135deg,
+      alpha(mix(@base, @accent2-source, 0.34), ${SWAYNC_GLASS_OPACITY}),
+      alpha(mix(@base, @accent3-source, 0.33), ${SWAYNC_GLASS_OPACITY}),
+      alpha(mix(@base, @primary, 0.32), ${SWAYNC_GLASS_OPACITY}));
   border: ${APPEARANCE_BORDER_WIDTH:-1}px solid alpha(@primary, 0.32);
   border-radius: $((STYLE_WIDGET_RADIUS + 4))px;
   box-shadow: 0 18px 52px alpha(@crust, ${STYLE_PANEL_SHADOW});
