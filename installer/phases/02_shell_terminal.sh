@@ -104,6 +104,7 @@ _phase02_deploy_configs() {
     deploy_config "fastfetch"
     deploy_config "cava"
     deploy_config "btop"
+    deploy_defaults "$REPO_ROOT/config/cava"
     deploy_defaults "$REPO_ROOT/config/btop"
 }
 

@@ -1,0 +1,56 @@
+# =============================================================================
+# cava/config — Kingstra fallback config
+# =============================================================================
+# Deze basisconfig zorgt dat bootstrap-validatie en CAVA direct werken.
+# De matugen-pipeline kan dit bestand later vervangen met wallpaper-kleuren.
+
+[general]
+mode = normal
+framerate = 60
+autosens = 1
+sensitivity = 100
+bars = 0
+bar_width = 2
+bar_spacing = 1
+bar_height = 32
+channels = stereo
+sleep_timer = 0
+
+[input]
+method = pipewire
+source = auto
+
+[output]
+method = ncurses
+raw_target = /dev/stdout
+data_format = binary
+bit_format = 16bit
+ascii_max_range = 1000
+alsa_hint = default
+
+[color]
+gradient = 1
+gradient_count = 8
+gradient_color_1 = '#89B4FA'
+gradient_color_2 = '#74C7EC'
+gradient_color_3 = '#94E2D5'
+gradient_color_4 = '#A6E3A1'
+gradient_color_5 = '#F9E2AF'
+gradient_color_6 = '#FAB387'
+gradient_color_7 = '#F38BA8'
+gradient_color_8 = '#CBA6F7'
+
+background = '#1E1E2E'
+
+[smoothing]
+monstercat = 0
+waves = 0
+gravity = 100
+ignore_le = 0
+
+[eq]
+1 = 1
+2 = 1
+3 = 1
+4 = 1
+5 = 1
