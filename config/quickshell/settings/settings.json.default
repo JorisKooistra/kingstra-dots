@@ -5,6 +5,7 @@
     "mouseScrollFactor": 1.35,
     "touchpadRightClickButtonArea": true,
     "keyboardLayout": "us",
+    "keyboardDeadKeys": false,
     "idleLockSeconds": 300,
     "idleScreenOffSeconds": 480,
     "idleSuspendSeconds": 1800,

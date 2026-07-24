@@ -10,6 +10,22 @@ import ".."
 // Keep the spike transparent and input-transparent until a later phase owns
 // explicit interactive regions.
 Scope {
+    id: shellSurface
+
+    readonly property bool neonHudActive: String(ThemeConfig.theme || ThemeConfig.styleFamily || "").toLowerCase() === "neon"
+
+    HudTelemetry {
+        id: hudTelemetry
+        active: shellSurface.neonHudActive
+    }
+
+    // Eén helperproces voor alle schermen: het pollt Hyprland en duwt alleen
+    // bij wijziging een regel door.
+    WindowFrameSource {
+        id: windowFrameSource
+        active: shellSurface.neonHudActive
+    }
+
     Variants {
         model: Quickshell.screens
 
@@ -53,6 +69,18 @@ Scope {
                     borderRight: chrome.shellBorderWidth - anchors.margins
                     borderTop: chrome.stripHeight - anchors.margins
                     borderBottom: chrome.shellBorderWidth - anchors.margins
+                }
+
+                WindowTechFrames {
+                    anchors.fill: parent
+                    z: 8
+                    mocha: mocha
+                    source: windowFrameSource
+                    screenName: surfaceWindow.screen ? surfaceWindow.screen.name : ""
+                    monitorId: {
+                        let mon = Hyprland.monitorFor(surfaceWindow.screen);
+                        return mon && mon.lastIpcObject ? Number(mon.lastIpcObject.id) : -1;
+                    }
                 }
 
                 ShellChrome {
@@ -299,6 +327,7 @@ Scope {
                     NeonViewportOverlay {
                         anchors.fill: parent
                         mocha: neonOverlayMocha
+                        telemetry: hudTelemetry
                         shellBorderWidth: 8
                         railWidth: ThemeConfig.barRailEnabled ? ThemeConfig.barRailWidth : 0
                         stripHeight: ThemeConfig.barStatusStripEnabled ? ThemeConfig.barStatusStripHeight : 0

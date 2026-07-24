@@ -134,6 +134,7 @@ Item {
         mouseScrollFactor: 1.35,
         touchpadRightClickButtonArea: true,
         keyboardLayout: "us",
+        keyboardDeadKeys: false,
         idleLockSeconds: 300,
         idleScreenOffSeconds: 480,
         idleSuspendSeconds: 1800,
@@ -143,16 +144,22 @@ Item {
             "power-saver": { idleLockSeconds: 180, idleScreenOffSeconds: 300, idleSuspendSeconds: 900 }
         })
     })
-    property var keyboardLayoutCodes: ["us", "us,intl", "nl", "be", "gb", "de", "fr"]
+    property var keyboardLayoutCodes: ["us", "nl", "be", "gb", "de", "fr"]
     property var keyboardLayoutLabels: [
         "English (US)",
-        "English (US International)",
         "Nederlands",
         "Belgisch",
         "English (UK)",
         "Deutsch",
         "Français"
     ]
+    // Dode toetsen zitten in xkb in de variant, niet in de layout. Twee families:
+    // us/gb hebben van zichzelf geen dode toetsen (aanzetten = "intl"), be/de/fr
+    // hebben ze wel (uitzetten = "nodeadkeys"). nl kent geen variant zonder dode
+    // toetsen, dus daar valt niets te kiezen.
+    property var keyboardDeadKeysOnVariants: ({ "us": "intl", "gb": "intl" })
+    property var keyboardDeadKeysOffVariants: ({ "be": "nodeadkeys", "de": "nodeadkeys", "fr": "nodeadkeys" })
+    property var keyboardDeadKeysDefaultLayouts: ["nl", "be", "de", "fr"]
     property var idleTimeoutOptions: [
         "Off",
         "30 sec",
@@ -184,7 +191,10 @@ Item {
                     touchpadScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.touchpadScrollFactor, 0.45), 0.45),
                     mouseScrollFactor: root.scrollFactorFromPercent(root.scrollPercentFromSetting(parsed.mouseScrollFactor, 1.35), 1.35),
                     touchpadRightClickButtonArea: parsed.touchpadRightClickButtonArea !== false,
-                    keyboardLayout: root.normalizeOption(parsed.keyboardLayout, root.keyboardLayoutCodes, "us"),
+                    keyboardLayout: root.normalizeKeyboardLayout(parsed.keyboardLayout),
+                    keyboardDeadKeys: root.normalizeKeyboardDeadKeys(
+                        String(parsed.keyboardLayout || "") === "us,intl" ? true : parsed.keyboardDeadKeys,
+                        parsed.keyboardLayout),
                     idleLockSeconds: root.normalizeIdleSeconds(parsed.idleLockSeconds, 300),
                     idleScreenOffSeconds: root.normalizeIdleSeconds(parsed.idleScreenOffSeconds, 480),
                     idleSuspendSeconds: root.normalizeIdleSeconds(parsed.idleSuspendSeconds, 1800),
@@ -430,10 +440,40 @@ Item {
         return Math.round(clamp(parsed / 100.0, 0.20, 3.00) * 100) / 100;
     }
 
+    function normalizeKeyboardLayout(value) {
+        // "us,intl" was de oude manier om US International te kiezen; dat is nu
+        // layout "us" met de dode-toetsen-schakelaar aan.
+        if (String(value || "") === "us,intl") return "us";
+        return normalizeOption(value, keyboardLayoutCodes, "us");
+    }
+
     function keyboardLayoutIndex(value) {
-        let normalized = normalizeOption(value, keyboardLayoutCodes, "us");
+        let normalized = normalizeKeyboardLayout(value);
         let index = keyboardLayoutCodes.indexOf(normalized);
         return index >= 0 ? index : 0;
+    }
+
+    function keyboardDeadKeysAdjustable(layout) {
+        let safe = normalizeKeyboardLayout(layout);
+        return keyboardDeadKeysOnVariants[safe] !== undefined
+            || keyboardDeadKeysOffVariants[safe] !== undefined;
+    }
+
+    function keyboardDeadKeysDefault(layout) {
+        return keyboardDeadKeysDefaultLayouts.indexOf(normalizeKeyboardLayout(layout)) >= 0;
+    }
+
+    function normalizeKeyboardDeadKeys(value, layout) {
+        let safe = normalizeKeyboardLayout(layout);
+        if (!keyboardDeadKeysAdjustable(safe)) return keyboardDeadKeysDefault(safe);
+        if (value === undefined || value === null) return keyboardDeadKeysDefault(safe);
+        return value === true;
+    }
+
+    function keyboardVariant(layout, deadKeys) {
+        let safe = normalizeKeyboardLayout(layout);
+        if (normalizeKeyboardDeadKeys(deadKeys, safe)) return keyboardDeadKeysOnVariants[safe] || "";
+        return keyboardDeadKeysOffVariants[safe] || "";
     }
 
     function normalizeIdleSeconds(value, fallback) {
@@ -1920,7 +1960,7 @@ Item {
     // -------------------------------------------------------------------------
     // HELPER: save settings.json
     // -------------------------------------------------------------------------
-    function saveSettings(timeFormat, dateFormat, touchpadScrollPercent, mouseScrollPercent, touchpadRightClickButtonArea, keyboardLayout, idleLockSeconds, idleScreenOffSeconds, idleSuspendSeconds, idleProfiles) {
+    function saveSettings(timeFormat, dateFormat, touchpadScrollPercent, mouseScrollPercent, touchpadRightClickButtonArea, keyboardLayout, keyboardDeadKeys, idleLockSeconds, idleScreenOffSeconds, idleSuspendSeconds, idleProfiles) {
         var configRoot = configHome();
         var settingsDir = configRoot + "/quickshell/settings";
         var path = settingsDir + "/settings.json";
@@ -1928,7 +1968,9 @@ Item {
         var inputPath = configRoot + "/hypr/conf.d/74-input-settings.conf";
         var touchpadFactor = scrollFactorFromPercent(touchpadScrollPercent, 0.45);
         var mouseFactor = scrollFactorFromPercent(mouseScrollPercent, 1.35);
-        var safeKeyboardLayout = normalizeOption(keyboardLayout, keyboardLayoutCodes, "us");
+        var safeKeyboardLayout = normalizeKeyboardLayout(keyboardLayout);
+        var safeKeyboardDeadKeys = normalizeKeyboardDeadKeys(keyboardDeadKeys, safeKeyboardLayout);
+        var safeKeyboardVariant = keyboardVariant(safeKeyboardLayout, safeKeyboardDeadKeys);
         var useButtonArea = touchpadRightClickButtonArea === true;
         var safeIdleLockSeconds = normalizeIdleSeconds(idleLockSeconds, settingsData.idleLockSeconds || 300);
         var safeIdleScreenOffSeconds = normalizeIdleSeconds(idleScreenOffSeconds, settingsData.idleScreenOffSeconds || 480);
@@ -1941,6 +1983,7 @@ Item {
             mouseScrollFactor: mouseFactor,
             touchpadRightClickButtonArea: useButtonArea,
             keyboardLayout: safeKeyboardLayout,
+            keyboardDeadKeys: safeKeyboardDeadKeys,
             idleLockSeconds: safeIdleLockSeconds,
             idleScreenOffSeconds: safeIdleScreenOffSeconds,
             idleSuspendSeconds: safeIdleSuspendSeconds,
@@ -1967,6 +2010,8 @@ Item {
             "# =============================================================================\n\n" +
             "input {\n" +
             "    kb_layout = " + safeKeyboardLayout + "\n" +
+            "    # Leeg = de standaardvariant van de layout; dode toetsen komen hiervandaan.\n" +
+            "    kb_variant = " + safeKeyboardVariant + "\n" +
             "    kb_options =\n\n" +
             "    touchpad {\n" +
             "        # false = button areas (Windows-achtig), true = clickfinger gedrag\n" +
@@ -1983,6 +2028,7 @@ Item {
             "hyprctl keyword input:touchpad:scroll_factor '" + touchpadFactor.toFixed(2) + "' >/dev/null 2>&1 || true",
             "hyprctl keyword input:touchpad:clickfinger_behavior '" + (useButtonArea ? "false" : "true") + "' >/dev/null 2>&1 || true",
             "hyprctl keyword input:kb_layout '" + shellSingleQuote(safeKeyboardLayout) + "' >/dev/null 2>&1 || true",
+            "hyprctl keyword input:kb_variant '" + shellSingleQuote(safeKeyboardVariant) + "' >/dev/null 2>&1 || true",
             "hyprctl keyword input:kb_options '' >/dev/null 2>&1 || true",
             "'" + shellSingleQuote(idleApplyScript) + "' >/dev/null 2>&1 || true"
         ].join(" && ");
@@ -2995,7 +3041,8 @@ Item {
                                             touchpadScrollSpin.value,
                                             mouseScrollSpin.value,
                                             touchpadRightClickCombo.currentIndex === 0,
-                                            root.keyboardLayoutCodes[keyboardLayoutCombo.currentIndex]
+                                            root.keyboardLayoutCodes[keyboardLayoutCombo.currentIndex],
+                                            keyboardDeadKeysCombo.currentIndex === 0
                                         )
                                     }
                                 }
@@ -3178,6 +3225,19 @@ Item {
                                         id: keyboardLayoutCombo
                                         model: root.keyboardLayoutLabels
                                         currentIndex: root.keyboardLayoutIndex(root.settingsData.keyboardLayout)
+                                        // Elke layout heeft zijn eigen dode-toetsen-standaard; bij een wissel
+                                        // wint die standaard van de vorige keuze. Alleen onActivated: dat
+                                        // vuurt puur bij een gebruikersselectie, terwijl onCurrentIndexChanged
+                                        // ook bij het opbouwen van de UI afgaat en dan de binding hieronder
+                                        // sloopt vóór settings.json is ingelezen.
+                                        onActivated: function(index) {
+                                            let code = root.keyboardLayoutCodes[index] || "us";
+                                            let saved = code === root.settingsData.keyboardLayout
+                                                ? root.settingsData.keyboardDeadKeys
+                                                : undefined;
+                                            keyboardDeadKeysCombo.currentIndex =
+                                                root.normalizeKeyboardDeadKeys(saved, code) ? 0 : 1;
+                                        }
                                     }
                                     Text {
                                         text: "Chooses the active Hyprland keyboard language/layout."
@@ -3205,6 +3265,38 @@ Item {
                             }
 
                             RowLayout {
+                                Layout.fillWidth: true; spacing: root.s(15)
+
+                                ColumnLayout {
+                                    id: keyboardDeadKeysColumn
+                                    property string layoutCode: root.keyboardLayoutCodes[keyboardLayoutCombo.currentIndex] || "us"
+                                    property bool adjustable: root.keyboardDeadKeysAdjustable(layoutCode)
+
+                                    Layout.fillWidth: true; spacing: root.s(6)
+                                    Text { text: "Dead keys"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    ThemedComboBox {
+                                        id: keyboardDeadKeysCombo
+                                        model: ["On", "Off"]
+                                        enabled: keyboardDeadKeysColumn.adjustable
+                                        opacity: enabled ? 1.0 : 0.5
+                                        currentIndex: root.normalizeKeyboardDeadKeys(
+                                            root.settingsData.keyboardDeadKeys, root.settingsData.keyboardLayout) ? 0 : 1
+                                    }
+                                    Text {
+                                        text: !keyboardDeadKeysColumn.adjustable
+                                            ? "This layout has no variant without dead keys, so they stay on."
+                                            : (keyboardDeadKeysCombo.currentIndex === 0
+                                                ? "On lets ´ ` ^ ¨ wait for the next key to compose é è ê ë."
+                                                : "Off types accent characters directly instead of composing them.")
+                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.mauve
+                                        wrapMode: Text.WordWrap; Layout.fillWidth: true
+                                    }
+                                }
+
+                                Item { Layout.fillWidth: true }
+                            }
+
+                            RowLayout {
                                 Layout.fillWidth: true; spacing: root.s(10)
                                 Text { text: "Saved instantly and applied live in Hyprland."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
                                 Item { Layout.fillWidth: true }
@@ -3225,7 +3317,8 @@ Item {
                                             touchpadScrollSpin.value,
                                             mouseScrollSpin.value,
                                             touchpadRightClickCombo.currentIndex === 0,
-                                            root.keyboardLayoutCodes[keyboardLayoutCombo.currentIndex]
+                                            root.keyboardLayoutCodes[keyboardLayoutCombo.currentIndex],
+                                            keyboardDeadKeysCombo.currentIndex === 0
                                         )
                                     }
                                 }
@@ -4020,6 +4113,7 @@ Item {
                                                 root.scrollPercentFromSetting(root.settingsData.mouseScrollFactor, 1.35),
                                                 root.settingsData.touchpadRightClickButtonArea,
                                                 root.settingsData.keyboardLayout,
+                                                root.settingsData.keyboardDeadKeys,
                                                 root.idleTimeoutSeconds(balancedIdleLockCombo.currentIndex),
                                                 root.idleTimeoutSeconds(balancedIdleScreenOffCombo.currentIndex),
                                                 root.idleTimeoutSeconds(balancedIdleSuspendCombo.currentIndex),

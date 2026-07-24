@@ -41,11 +41,14 @@ Item {
     // Binnenhoek van de schermomlijsting. Deze moet dezelfde visuele familie
     // hebben als Hyprland's window rounding; een losse grote radius laat vooral
     // onderin vensterhoeken en framehoeken optisch door elkaar snijden.
-    readonly property int cornerR: Math.round(monoStyle
+    readonly property int cornerR: Math.round(neonStyle
+        ? Math.max(1, Math.min(5, Math.max(ThemeConfig.borderRadius, ThemeConfig.styleWidgetRadius)))
+        : monoStyle
         ? Math.max(2, Math.min(8, Math.max(ThemeConfig.borderRadius, ThemeConfig.styleWidgetRadius) + frameBandW))
         : Math.max(paperStyle ? 12 : 10,
                    Math.min(organicStyle ? 34 : 20,
                             Math.max(ThemeConfig.borderRadius, ThemeConfig.styleWidgetRadius) + frameBandW)))
+    readonly property bool technicalFrameStyle: neonStyle && cornersActive
     readonly property int cornerSeamOverlap: 3
     readonly property string styleFamily: String(ThemeConfig.styleFamily || "").toLowerCase()
     readonly property bool paperStyle: styleFamily === "paper"
@@ -1172,6 +1175,68 @@ Item {
             orientation: Gradient.Horizontal
             GradientStop { position: 0.0; color: root._diagColor(root.railWidth, root.height) }
             GradientStop { position: 1.0; color: root._diagColor(root.width, root.height) }
+        }
+    }
+
+    Shape {
+        id: technicalFrameStroke
+        anchors.fill: parent
+        visible: root.technicalFrameStyle
+        z: 4
+        opacity: 0.92
+        layer.enabled: true
+        layer.smooth: true
+        layer.samples: 4
+
+        readonly property real l: root.railWidth + root.frameBandW + 2
+        readonly property real t: root.stripHeight + root.frameBandW + 2
+        readonly property real r: root.width - root.shellBorderWidth - root.frameBandW - 2
+        readonly property real b: root.height - root.shellBorderWidth - root.frameBandW - 2
+        readonly property real cut: Math.min(34, Math.max(22, root.width * 0.012))
+        readonly property real step: Math.min(70, Math.max(42, root.width * 0.026))
+        readonly property real notch: Math.min(92, Math.max(58, root.width * 0.035))
+
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: Qt.rgba(root.edgeAccentA.r, root.edgeAccentA.g, root.edgeAccentA.b, 0.88)
+            strokeWidth: 1.2
+            capStyle: ShapePath.SquareCap
+            joinStyle: ShapePath.MiterJoin
+
+            PathMove { x: technicalFrameStroke.l + technicalFrameStroke.cut; y: technicalFrameStroke.t }
+            PathLine { x: technicalFrameStroke.l + technicalFrameStroke.step; y: technicalFrameStroke.t }
+            PathLine { x: technicalFrameStroke.l + technicalFrameStroke.step + 14; y: technicalFrameStroke.t + 10 }
+            PathLine { x: technicalFrameStroke.r - technicalFrameStroke.step - 14; y: technicalFrameStroke.t + 10 }
+            PathLine { x: technicalFrameStroke.r - technicalFrameStroke.step; y: technicalFrameStroke.t }
+            PathLine { x: technicalFrameStroke.r - technicalFrameStroke.cut; y: technicalFrameStroke.t }
+            PathLine { x: technicalFrameStroke.r; y: technicalFrameStroke.t + technicalFrameStroke.cut }
+            PathLine { x: technicalFrameStroke.r; y: technicalFrameStroke.b - technicalFrameStroke.cut }
+            PathLine { x: technicalFrameStroke.r - technicalFrameStroke.cut; y: technicalFrameStroke.b }
+            PathLine { x: technicalFrameStroke.r - technicalFrameStroke.step; y: technicalFrameStroke.b }
+            PathLine { x: technicalFrameStroke.r - technicalFrameStroke.step - 14; y: technicalFrameStroke.b - 10 }
+            PathLine { x: technicalFrameStroke.l + technicalFrameStroke.step + 14; y: technicalFrameStroke.b - 10 }
+            PathLine { x: technicalFrameStroke.l + technicalFrameStroke.step; y: technicalFrameStroke.b }
+            PathLine { x: technicalFrameStroke.l + technicalFrameStroke.cut; y: technicalFrameStroke.b }
+            PathLine { x: technicalFrameStroke.l; y: technicalFrameStroke.b - technicalFrameStroke.cut }
+            PathLine { x: technicalFrameStroke.l; y: technicalFrameStroke.t + technicalFrameStroke.cut }
+            PathLine { x: technicalFrameStroke.l + technicalFrameStroke.cut; y: technicalFrameStroke.t }
+        }
+
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: Qt.rgba(root.edgeAccentC.r, root.edgeAccentC.g, root.edgeAccentC.b, 0.62)
+            strokeWidth: 1
+            capStyle: ShapePath.SquareCap
+            joinStyle: ShapePath.MiterJoin
+
+            PathMove { x: technicalFrameStroke.l + technicalFrameStroke.notch; y: technicalFrameStroke.t + 16 }
+            PathLine { x: technicalFrameStroke.l + technicalFrameStroke.notch + 24; y: technicalFrameStroke.t + 16 }
+            PathMove { x: technicalFrameStroke.r - technicalFrameStroke.notch - 24; y: technicalFrameStroke.t + 16 }
+            PathLine { x: technicalFrameStroke.r - technicalFrameStroke.notch; y: technicalFrameStroke.t + 16 }
+            PathMove { x: technicalFrameStroke.l + technicalFrameStroke.notch; y: technicalFrameStroke.b - 16 }
+            PathLine { x: technicalFrameStroke.l + technicalFrameStroke.notch + 24; y: technicalFrameStroke.b - 16 }
+            PathMove { x: technicalFrameStroke.r - technicalFrameStroke.notch - 24; y: technicalFrameStroke.b - 16 }
+            PathLine { x: technicalFrameStroke.r - technicalFrameStroke.notch; y: technicalFrameStroke.b - 16 }
         }
     }
 

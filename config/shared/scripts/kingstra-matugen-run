@@ -379,6 +379,15 @@ _set_toml_value "$MATUGEN_CONF" "color_index" "$COLOR_INDEX"
 # goed Material-palet, maar primary/secondary/tertiary blijven scheme-afgeleiden
 # van een enkele seed. Voor chrome en app-accenten willen we daarnaast 2 extra
 # kleuren die echt in de afbeelding zitten.
+#
+# Twee histogrammen, bewust met verschillende korrel:
+#   - grof (192x192, 48 kleuren) bepaalt de seed. Dit is de bestaande
+#     kwantisatie; primary blijft daardoor identiek aan wat een theme al
+#     opleverde, ook na deze wijziging.
+#   - fijn (512x512, 128 kleuren) bepaalt accent 2 en 3. Op de grove korrel
+#     smelten kleine, felle vlakken (neonreclame, lampen, signalering) weg in
+#     het dominante achtergrondvlak, waardoor er buiten de seed-tintfamilie
+#     vrijwel niets overbleef om uit te kiezen.
 _extract_wallpaper_palette() {
     local image="$1"
     local index="$2"
@@ -394,7 +403,6 @@ _extract_wallpaper_palette() {
 
     python3 - "$magick_bin" "$image" "$index" <<'PY'
 import colorsys
-import json
 import math
 import re
 import subprocess
@@ -406,15 +414,16 @@ try:
 except Exception:
     color_index = 0
 
-try:
-    hist = subprocess.check_output(
+
+def histogram(resize, ncolors):
+    out = subprocess.check_output(
         [
             magick_bin,
             image,
             "-resize",
-            "192x192!",
+            resize,
             "-colors",
-            "48",
+            str(ncolors),
             "-depth",
             "8",
             "-format",
@@ -424,86 +433,168 @@ try:
         stderr=subprocess.DEVNULL,
         text=True,
     )
-except Exception:
-    sys.exit(1)
+    counts = {}
+    for line in out.splitlines():
+        count_match = re.match(r"\s*(\d+):", line)
+        hex_match = re.search(r"#([0-9A-Fa-f]{6})", line)
+        if not count_match or not hex_match:
+            continue
+        hexc = "#" + hex_match.group(1).upper()
+        counts[hexc] = counts.get(hexc, 0) + int(count_match.group(1))
+    return counts
 
-counts = {}
-for line in hist.splitlines():
-    count_match = re.match(r"\s*(\d+):", line)
-    hex_match = re.search(r"#([0-9A-Fa-f]{6})", line)
-    if not count_match or not hex_match:
-        continue
-    hexc = "#" + hex_match.group(1).upper()
-    counts[hexc] = counts.get(hexc, 0) + int(count_match.group(1))
 
-def rgb_of(hexc):
-    return tuple(int(hexc[i : i + 2], 16) for i in (1, 3, 5))
+def analyse(counts):
+    total = sum(counts.values()) or 1
+    out = []
+    for hexc, count in counts.items():
+        r, g, b = (int(hexc[i : i + 2], 16) for i in (1, 3, 5))
+        mx, mn = max(r, g, b), min(r, g, b)
+        h, l, s = colorsys.rgb_to_hls(r / 255.0, g / 255.0, b / 255.0)
+        chroma = mx - mn
+        balance = max(0.25, 1.0 - abs(l - 0.48) * 1.15)
+        score = math.log(count + 1.0) * (0.45 + s) * (0.60 + chroma / 255.0) * balance
+        out.append(
+            {
+                "hex": hexc,
+                "count": count,
+                "rgb": (r, g, b),
+                "h": h,
+                "l": l,
+                "s": s,
+                "chroma": chroma,
+                "score": score,
+                "share": count / total,
+            }
+        )
+    return sorted(out, key=lambda c: (-c["score"], -c["count"]))
+
 
 def hue_delta(a, b):
     d = abs(a - b) % 1.0
     return min(d, 1.0 - d)
 
-def rgb_distance(a, b):
-    return math.sqrt(sum((x - y) ** 2 for x, y in zip(a["rgb"], b["rgb"])))
 
-candidates = []
-for hexc, count in counts.items():
-    r, g, b = rgb_of(hexc)
-    mx, mn = max(r, g, b), min(r, g, b)
-    h, l, s = colorsys.rgb_to_hls(r / 255.0, g / 255.0, b / 255.0)
-    chroma = mx - mn
-    balance = max(0.25, 1.0 - abs(l - 0.48) * 1.15)
-    score = math.log(count + 1.0) * (0.45 + s) * (0.60 + chroma / 255.0) * balance
-    candidates.append(
-        {
-            "hex": hexc,
-            "count": count,
-            "rgb": (r, g, b),
-            "h": h,
-            "l": l,
-            "s": s,
-            "chroma": chroma,
-            "score": score,
-        }
-    )
-
-if not candidates:
+try:
+    coarse = analyse(histogram("192x192!", 48))
+except Exception:
     sys.exit(1)
 
-ranked = sorted(candidates, key=lambda c: (-c["score"], -c["count"]))
-chromatic = [
+if not coarse:
+    sys.exit(1)
+
+seed_pool = [
     c
-    for c in ranked
+    for c in coarse
     if c["chroma"] >= 16 and max(c["rgb"]) >= 36 and 0.07 <= c["l"] <= 0.92
+] or coarse
+seed = seed_pool[color_index] if color_index < len(seed_pool) else seed_pool[0]
+
+try:
+    fine = analyse(histogram("512x512!", 128))
+except Exception:
+    fine = coarse
+if not fine:
+    fine = coarse
+
+MAX_ROT = 15.0 / 360.0
+
+
+def harmonized(h, source_h):
+    """Voorspel de tint die matugen van deze bron zal maken.
+
+    Custom colors staan hier op blend=true, waardoor matugen Material's
+    Blend.harmonize toepast: de tint draait tot 15 graden naar de bronkleur toe.
+    De scheiding moet daarom op de uitkomst worden gemeten, niet op de bron —
+    anders levert een bron die net ver genoeg lijkt alsnog een accent op dat
+    tegen de primary aan kruipt.
+    """
+    rot = min(hue_delta(h, source_h) * 0.5, MAX_ROT)
+    direction = 1.0 if ((source_h - h) % 1.0) <= 0.5 else -1.0
+    return (h + direction * rot) % 1.0
+
+
+# Kwaliteitspoorten voor accentkandidaten, van streng naar soepel. Chroma is
+# leidend en oppervlak nadrukkelijk niet: een accent moet kleur hebben, ook als
+# het maar een paar procent van het beeld beslaat. De laatste poort is een
+# vangnet dat ook vrijwel kleurloze kandidaten toelaat en alleen meedoet als er
+# in de andere poorten niet eens twee kandidaten zitten.
+TIERS = [
+    {"chroma": 90, "s": 0.40, "lmin": 0.24, "lmax": 0.78, "share": 0.00060},
+    {"chroma": 64, "s": 0.32, "lmin": 0.20, "lmax": 0.82, "share": 0.00040},
+    {"chroma": 46, "s": 0.24, "lmin": 0.17, "lmax": 0.86, "share": 0.00020},
+    {"chroma": 30, "s": 0.16, "lmin": 0.13, "lmax": 0.90, "share": 0.00010},
+    {"chroma": 14, "s": 0.00, "lmin": 0.06, "lmax": 0.94, "share": 0.00000},
 ]
-pool = chromatic or ranked
+SEP_TARGET = 0.105  # ~38 graden; daarboven telt extra scheiding niet meer mee
 
-seed = pool[color_index] if color_index < len(pool) else pool[0]
-picked = [seed]
 
-def pick_next(existing, min_hue, require_hue=False):
-    if require_hue:
-        for threshold in (min_hue, 0.14, 0.10):
-            separated = [
-                c
-                for c in pool
-                if not any(c["hex"] == p["hex"] for p in existing)
-                and all(hue_delta(c["h"], p["h"]) >= threshold for p in existing)
-            ]
-            if separated:
-                return max(separated, key=lambda c: (c["score"], c["count"]))
-    for c in pool:
-        if any(c["hex"] == p["hex"] for p in existing):
-            continue
-        if all(hue_delta(c["h"], p["h"]) >= min_hue or rgb_distance(c, p) >= 58 for p in existing):
-            return c
-    for c in ranked:
-        if not any(c["hex"] == p["hex"] for p in existing):
-            return c
-    return existing[-1]
+def gated(pool, tier):
+    return [
+        c
+        for c in pool
+        if c["chroma"] >= tier["chroma"]
+        and c["s"] >= tier["s"]
+        and tier["lmin"] <= c["l"] <= tier["lmax"]
+        and c["share"] >= tier["share"]
+        and max(c["rgb"]) >= 48
+    ]
 
-picked.append(pick_next(picked, 0.085))
-picked.append(pick_next(picked, 0.18, True))
+
+def best_pair(candidates, source_h):
+    """Kies beide accenten in één keer, op de krapste van de drie tintafstanden.
+
+    Accent 2 en 3 los na elkaar kiezen loopt vast: de tweede keuze verwerpt dan
+    een sterke kleur omdat die te dicht bij de eerste ligt, en wijkt uit naar een
+    zwakke kleur die toevallig ver weg ligt. Door het paar als geheel te wegen
+    wint de combinatie die primary, accent 2 en accent 3 het verst uit elkaar
+    zet, met prominentie als tiebreak.
+    """
+    out = None
+    for i, a in enumerate(candidates):
+        for b in candidates[i + 1 :]:
+            spread = min(
+                hue_delta(a["_eh"], source_h),
+                hue_delta(b["_eh"], source_h),
+                hue_delta(a["_eh"], b["_eh"]),
+            )
+            key = (min(spread / SEP_TARGET, 1.0), a["score"] * b["score"])
+            if out is None or key > out[0]:
+                out = (key, (a, b))
+    return out
+
+
+seed_hue = seed["h"]
+accent_pool = [c for c in fine if c["hex"] != seed["hex"]]
+for c in accent_pool:
+    c["_eh"] = harmonized(c["h"], seed_hue)
+
+# Kwaliteit is een harde ondergrens: een bron met te weinig chroma levert na
+# matugen geen herkenbare kleur op, hoe mooi de tintspreiding ook uitpakt.
+# Binnen de bruikbare poorten wint de beste spreiding; bij gelijke spreiding
+# houdt de strengste poort het.
+chosen = None
+for tier in TIERS[:-1]:
+    candidates = gated(accent_pool, tier)
+    if len(candidates) < 2:
+        continue
+    tier_best = best_pair(candidates, seed_hue)
+    if tier_best is None:
+        continue
+    if chosen is None or tier_best[0][0] > chosen[0][0] + 1e-9:
+        chosen = tier_best
+if chosen is None:
+    candidates = gated(accent_pool, TIERS[-1])
+    if len(candidates) >= 2:
+        chosen = best_pair(candidates, seed_hue)
+
+if chosen is None:
+    picked = [seed, seed, seed]
+else:
+    a2, a3 = chosen[1]
+    if a3["score"] > a2["score"]:
+        a2, a3 = a3, a2
+    picked = [seed, a2, a3]
 
 for c in picked[:3]:
     print(c["hex"])
@@ -528,6 +619,11 @@ _set_custom_colors_block() {
     if grep -qF "$begin_marker" "$file" 2>/dev/null; then
         sed -i "/^${begin_marker}\$/,/^${end_marker}\$/d" "$file"
     fi
+
+    # De sed hierboven haalt het blok weg maar laat de scheidingsregel staan die
+    # er bij het schrijven voor is gezet. Zonder deze opschoning groeit
+    # config.toml bij elke themawissel met een lege regel.
+    printf '%s\n' "$(sed -e :a -e '/^\s*$/{$d;N;ba' -e '}' "$file")" > "$file"
 
     {
         echo ""

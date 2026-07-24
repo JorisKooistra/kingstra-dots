@@ -11,7 +11,7 @@ contrast = 0.82
 mode = "dark"
 
 [appearance]
-border_radius = 5
+border_radius = 2
 border_width = 2
 gaps_in = 6
 gaps_out = 10
@@ -83,7 +83,7 @@ motion = "snappy"
 panel_shadow = 0.42
 outline_strength = 0.58
 glass_strength = 0.02
-widget_radius = 5
+widget_radius = 2
 panel_padding = 9
 
 [effects]

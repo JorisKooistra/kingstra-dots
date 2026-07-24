@@ -518,7 +518,8 @@ if [[ -f "$PALETTE_JSON" ]] && command -v jq &>/dev/null; then
     jq -n \
         --slurpfile p "$PALETTE_JSON" \
         --arg wall "${WALLPAPER:-}" \
-        '($p[0].colors | map({(.key): .hex}) | add) as $c |
+        '(if ($p[0].groups // null) then [$p[0].groups[].colors[]] else ($p[0].colors // []) end
+          | map({(.key): .hex}) | add) as $c |
         {
             wallpaper: $wall,
             alpha: "100",
