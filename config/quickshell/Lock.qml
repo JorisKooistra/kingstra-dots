@@ -240,7 +240,7 @@ ShellRoot {
 
                 property real globalOrbitAngle: 0
                 NumberAnimation on globalOrbitAngle {
-                    from: 0; to: Math.PI * 2; duration: 90000; loops: Animation.Infinite; running: true
+                    from: 0; to: Math.PI * 2; duration: 90000; loops: Animation.Infinite; running: ThemeConfig.continuousEffects
                 }
 
                 // Auto-hide input field if empty and idle for 15 seconds
@@ -288,7 +288,7 @@ ShellRoot {
                         }
                     }
                 }
-                Timer { interval: 150; running: true; repeat: true; triggeredOnStart: true; onTriggered: kbPoller.running = true }
+                Timer { interval: 2000; running: true; repeat: true; triggeredOnStart: true; onTriggered: if (!kbPoller.running) kbPoller.running = true }
 
                 Process {
                     id: batPoller
@@ -482,9 +482,12 @@ ShellRoot {
                             interval: 1000; running: true; repeat: true; triggeredOnStart: true
                             onTriggered: {
                                 let d = new Date();
-                                clockHours.text = Qt.formatDateTime(d, "hh");
-                                clockMinutes.text = Qt.formatDateTime(d, "mm");
-                                dateText.text = Qt.formatDateTime(d, "dddd, MMMM dd");
+                                let nextHours = Qt.formatDateTime(d, "hh");
+                                let nextMinutes = Qt.formatDateTime(d, "mm");
+                                let nextDate = Qt.formatDateTime(d, "dddd, MMMM dd");
+                                if (clockHours.text !== nextHours) clockHours.text = nextHours;
+                                if (clockMinutes.text !== nextMinutes) clockMinutes.text = nextMinutes;
+                                if (dateText.text !== nextDate) dateText.text = nextDate;
                             }
                         }
                     }

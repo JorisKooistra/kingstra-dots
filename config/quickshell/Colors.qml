@@ -23,7 +23,7 @@ Item {
     }
 
     // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
-    Timer { interval: 1000; running: true; repeat: true; onTriggered: colorsFileView.reload() }
+    Timer { interval: 5000; running: true; repeat: true; onTriggered: colorsFileView.reload() }
 
     // ---------------------------------------------------------------------------
     // Material-kleuren — reactief op _data, fallback = Catppuccin Mocha

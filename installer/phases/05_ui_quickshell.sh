@@ -22,6 +22,9 @@ phase_run() {
     log_step "Kingstra QML-plugin bouwen/installeren..."
     _phase05_install_kingstra_qml_plugin
 
+    log_step "Intel GPU telemetry-helper bouwen..."
+    _phase05_install_intel_gpu_helper
+
     log_step "UI-autostart aanmaken..."
     _phase05_write_autostart_ui
 
@@ -125,10 +128,51 @@ _phase05_validate() {
     validate_file "$HOME/.config/quickshell/MatugenColors.qml" "MatugenColors.qml"
     validate_file "$HOME/.config/quickshell/focustime/focus_daemon.py" "FocusTime daemon"
     validate_file "$HOME/.config/quickshell/sys_info.sh"       "sys_info.sh"
+    validate_file "$HOME/.config/quickshell/shellsurface/kingstra-intel-gpu-usage" "Intel GPU telemetry helper"
     validate_file "$HOME/.config/hypr/scripts/qs_manager.sh"   "qs_manager.sh"
     validate_file "$HOME/.local/lib/qml/Kingstra/Blobs/qmldir" "Kingstra.Blobs qmldir"
     validate_file "$HOME/.local/lib/qml/Kingstra/Blobs/libkingstrablobs.so" "Kingstra.Blobs plugin"
     validate_report
+}
+
+_phase05_install_intel_gpu_helper() {
+    local helper_src="$REPO_ROOT/config/quickshell/shellsurface/kingstra-intel-gpu-usage.c"
+    local helper_bin="$REPO_ROOT/config/quickshell/shellsurface/kingstra-intel-gpu-usage"
+
+    if [[ ! -f "$helper_src" ]]; then
+        log_warn "Intel GPU helperbron ontbreekt: $helper_src — build overgeslagen"
+        return 0
+    fi
+
+    if ! command -v gcc >/dev/null 2>&1; then
+        log_warn "gcc ontbreekt — Intel GPU helper kan niet worden gebouwd"
+        return 0
+    fi
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Intel GPU helper zou worden gebouwd: $helper_bin"
+        log_dry "cap_perfmon zou worden gezet op: $helper_bin"
+        return 0
+    fi
+
+    if gcc -O2 -Wall -Wextra -o "$helper_bin" "$helper_src"; then
+        chmod 755 "$helper_bin"
+        log_ok "Intel GPU telemetry-helper gebouwd: $helper_bin"
+    else
+        log_warn "Intel GPU telemetry-helper build mislukt"
+        return 0
+    fi
+
+    if command -v setcap >/dev/null 2>&1; then
+        if sudo setcap cap_perfmon+ep "$helper_bin" 2>/dev/null; then
+            log_ok "cap_perfmon gezet op Intel GPU telemetry-helper"
+        else
+            log_warn "Kon cap_perfmon niet zetten — GPU-load kan 0 blijven zonder permissie"
+            log_info "Handmatig: sudo setcap cap_perfmon+ep '$helper_bin'"
+        fi
+    else
+        log_warn "setcap ontbreekt — GPU-load kan 0 blijven zonder cap_perfmon"
+    fi
 }
 
 _phase05_install_kingstra_qml_plugin() {

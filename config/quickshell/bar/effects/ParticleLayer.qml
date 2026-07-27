@@ -1,4 +1,5 @@
 import QtQuick
+import "../.."  // ThemeConfig
 
 // ── Wat is dit bestand? ───────────────────────────────────────────────────────
 // ParticleLayer tekent bewegende lichtpuntjes over de bar.
@@ -55,6 +56,8 @@ Item {
     }
     readonly property int  safeCount: Math.max(0, Math.min(50, Number(shell.particleCount || 0)))
     readonly property real safeSpeed: Math.max(0.1, Math.min(2.0, Number(shell.particleSpeed || 1.0)))
+    readonly property bool continuousMotion: ThemeConfig.continuousEffects
+        && ThemeConfig.effectIntensity > 0.0
     readonly property bool useSharedAmbientClock: normalizedType === "fireflies" || normalizedType === "sparkles"
     property real ambientClockSeconds: 0.0
 
@@ -63,7 +66,7 @@ Item {
     Timer {
         id: ambientClock
         interval: root.normalizedType === "sparkles" ? 100 : 150
-        running: root.useSharedAmbientClock && root.width > 0 && root.height > 0
+        running: root.continuousMotion && root.useSharedAmbientClock && root.width > 0 && root.height > 0
         repeat: true
         onTriggered: root.ambientClockSeconds += interval / 1000
     }
@@ -239,7 +242,7 @@ Item {
 
             // Snow gebruikt nog een lokale fase voor de zijwaartse sway.
             NumberAnimation on pathPhase {
-                running: particle.isSnow
+                running: root.continuousMotion && particle.isSnow
                 from: 0; to: Math.PI * 2
                 duration: (9000 + (index % 6) * 650) / root.safeSpeed
                 loops: Animation.Infinite; easing.type: Easing.Linear
@@ -247,7 +250,7 @@ Item {
 
             // Fade in/uit — elke deeltje heeft een unieke timing via index % N
             SequentialAnimation on animatedOpacity {
-                running: root.normalizedType !== "none" && !particle.isFireflies && !particle.isSparkles
+                running: root.continuousMotion && root.normalizedType !== "none" && !particle.isFireflies && !particle.isSparkles
                 loops: Animation.Infinite
                 NumberAnimation {
                     to: isRain ? 0.38 : (isSnow ? 0.52 : (isDust ? 0.24 : (largeLayeredSpeck ? 0.52 : 0.38)))
@@ -263,7 +266,7 @@ Item {
 
             // Zweef-beweging omhoog/omlaag (alleen space-specks, niet fireflies)
             SequentialAnimation on y {
-                running: root.normalizedType !== "none" && !particle.isFireflies && !particle.driftingDown; loops: Animation.Infinite
+                running: root.continuousMotion && root.normalizedType !== "none" && !particle.isFireflies && !particle.driftingDown; loops: Animation.Infinite
                 NumberAnimation {
                     to: particle.baseY + (largeLayeredSpeck ? shell.s(5) : shell.s(3))
                     duration: (3800 + (index % 5) * 220) / (root.safeSpeed * (largeLayeredSpeck ? 1.15 : 0.75))
@@ -277,7 +280,7 @@ Item {
             }
 
             SequentialAnimation on y {
-                running: particle.driftingDown
+                running: root.continuousMotion && particle.driftingDown
                 loops: Animation.Infinite
                 NumberAnimation {
                     to: particle.baseY + particle.fallDistance
@@ -294,7 +297,7 @@ Item {
     // acceptedButtons: Qt.NoButton → deze MouseArea "slikt" geen klikken op.
     MouseArea {
         anchors.fill: parent
-        hoverEnabled: root.normalizedType === "fireflies"
+        hoverEnabled: root.continuousMotion && root.normalizedType === "fireflies"
         acceptedButtons: Qt.NoButton
         propagateComposedEvents: true
         onPositionChanged: mouse => {

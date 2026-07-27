@@ -29,6 +29,7 @@ Scope {
     property string cpuName: "CPU"
     property string coreCount: "--"
     property string ipAddress: "--"
+    property string platformProfile: "--"
 
     property double previousCpuTotal: 0
     property double previousCpuIdle: 0
@@ -82,7 +83,7 @@ Scope {
     }
 
     Timer {
-        interval: 2000
+        interval: 5000
         running: root.active
         repeat: true
         onTriggered: if (!dynamicPoll.running) dynamicPoll.running = true
@@ -97,7 +98,7 @@ Scope {
 
     Process {
         id: staticPoll
-        command: [root.helperPath, "--static"]
+        command: ["bash", root.helperPath, "--static"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const parts = this.text.trim().split("|");
@@ -115,7 +116,7 @@ Scope {
 
     Process {
         id: dynamicPoll
-        command: [root.helperPath]
+        command: ["bash", root.helperPath]
         stdout: StdioCollector {
             onStreamFinished: {
                 const parts = this.text.trim().split("|");
@@ -156,6 +157,7 @@ Scope {
                 root.interfaceName = parts[14] || "--";
                 root.batteryPercent = parts[15] === "" || parts[15] === "--"
                     ? -1 : root.clampPercent(parts[15]);
+                root.platformProfile = parts.length > 16 && parts[16] !== "" ? parts[16] : "--";
 
                 if (!root.warmupDone) {
                     root.warmupDone = true;

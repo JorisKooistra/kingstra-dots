@@ -97,10 +97,11 @@ Rectangle {
         }
     }
 
-    Timer { interval: 3000; running: showTemperature; repeat: true; onTriggered: cpuPoller.running = true }
-    Timer { interval: 3000; running: true; repeat: true; onTriggered: cpuUsagePoller.running = true }
-    Timer { interval: 3000; running: !showTemperature; repeat: true; onTriggered: ramPoller.running = true }
+    Timer { interval: 3000; running: root.visible && showTemperature; repeat: true; onTriggered: cpuPoller.running = true }
+    Timer { interval: 3000; running: root.visible; repeat: true; onTriggered: cpuUsagePoller.running = true }
+    Timer { interval: 3000; running: root.visible && !showTemperature; repeat: true; onTriggered: ramPoller.running = true }
     Component.onCompleted: {
+        if (!root.visible) return;
         if (showTemperature) {
             cpuPoller.running = true;
         } else {
@@ -109,11 +110,18 @@ Rectangle {
         cpuUsagePoller.running = true;
     }
     onShowTemperatureChanged: {
+        if (!root.visible) return;
         if (showTemperature) {
             cpuPoller.running = true;
         } else {
             ramPoller.running = true;
         }
+    }
+    onVisibleChanged: {
+        if (!visible) return;
+        if (showTemperature && !cpuPoller.running) cpuPoller.running = true;
+        if (!showTemperature && !ramPoller.running) ramPoller.running = true;
+        if (!cpuUsagePoller.running) cpuUsagePoller.running = true;
     }
 
     property real targetWidth: cpuRow.width + 24

@@ -47,8 +47,9 @@ Rectangle {
         }
     }
 
-    Timer { interval: 3000; running: true; repeat: true; onTriggered: ramPoller.running = true }
-    Component.onCompleted: ramPoller.running = true
+    Timer { interval: 3000; running: root.visible; repeat: true; onTriggered: ramPoller.running = true }
+    Component.onCompleted: if (root.visible) ramPoller.running = true
+    onVisibleChanged: if (visible && !ramPoller.running) ramPoller.running = true
 
     property real targetWidth: ramRow.width + 24
     width: targetWidth

@@ -38,6 +38,8 @@ Item {
     readonly property real gridStrength: surface.effectAlpha(surface.skinNumber("gridAlpha", 0.0))
     readonly property real laneStrength: surface.effectAlpha(surface.skinNumber("neonLaneAlpha", 0.0))
     readonly property real nodeStrength: surface.effectAlpha(surface.skinNumber("neonNodeAlpha", 0.0))
+    readonly property bool continuousMotion: ThemeConfig.continuousEffects
+        && ThemeConfig.effectIntensity > 0.0
 
     // ── 1. Achtergrondgloed ───────────────────────────────────────────────────
     Rectangle {
@@ -176,7 +178,7 @@ Item {
             GradientStop { position: 1.0; color: "transparent" }
         }
         SequentialAnimation on x {
-            running: surface.skinBool("showNeonGrid", false); loops: Animation.Infinite
+            running: root.continuousMotion && surface.skinBool("showNeonGrid", false); loops: Animation.Infinite
             NumberAnimation { to: parent.width; duration: ThemeConfig.duration(surface.effectCycleMs(5200)); easing.type: Easing.Linear }
             NumberAnimation { to: -neonSweep.width; duration: 0 }  // reset zonder animatie
         }

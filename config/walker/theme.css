@@ -1,7 +1,7 @@
 #window {
   background: color-mix(in srgb, var(--mantle) 98%, transparent);
   border: 2px solid color-mix(in srgb, var(--outline) 50%, transparent);
-  border-radius: 5px;
+  border-radius: 2px;
   box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) 42%, transparent);
   font-family: "Share Tech Mono", sans-serif;
 }

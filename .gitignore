@@ -42,6 +42,7 @@ config/quickshell/overview/common/Appearance.colors.qml
 
 # Runtime preview cache
 config/quickshell/themes/previews/
+config/quickshell/shellsurface/kingstra-intel-gpu-usage
 
 # User-state bestanden (beschermd via .default templates)
 config/quickshell/settings/settings.json

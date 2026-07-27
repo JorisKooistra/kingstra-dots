@@ -12,6 +12,11 @@ Item {
     property int shellBorderWidth: 8
     property int railWidth: 48
     property int stripHeight: 34
+    readonly property int hudFrameLeftMargin: Math.max(root.shellBorderWidth + 20,
+        root.railWidth + root.shellBorderWidth + 6)
+    readonly property int hudFrameRightMargin: Math.max(root.shellBorderWidth + 20, 28)
+    readonly property real hudFrameCenterX: (root.hudFrameLeftMargin
+        + (root.width - root.hudFrameRightMargin)) / 2
 
     readonly property bool active: String(ThemeConfig.theme || ThemeConfig.styleFamily || "").toLowerCase() === "neon"
     readonly property color cyan: mocha.accent2 || "#4de8f2"
@@ -27,6 +32,9 @@ Item {
     readonly property color glass: mocha.crust || "#020712"
     readonly property real hudAlpha: 0.88
     readonly property real panelAlpha: 0.24
+    readonly property bool continuousMotion: active
+        && ThemeConfig.continuousEffects
+        && ThemeConfig.effectIntensity > 0.0
     // Kleine glyph-canvassen worden op deze factor getekend en teruggeschaald,
     // zodat ze scherp blijven in het 2x-layer van hun paneel.
     readonly property real glyphSupersample: 2.0
@@ -48,6 +56,7 @@ Item {
     readonly property bool fan2Available: fan2Rpm > 0
     readonly property bool fan3Available: fan3Rpm > 0
     readonly property bool fan4Available: fan4Rpm > 0
+    readonly property bool fanTelemetryAvailable: fan1Available || fan2Available || fan3Available || fan4Available
     readonly property string gpuDisplay: gpuAvailable ? (gpuPercent + "%") : "n/a"
 
     anchors.fill: parent
@@ -162,10 +171,9 @@ Item {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.topMargin: Math.max(root.shellBorderWidth + 20, 28)
-            anchors.rightMargin: Math.max(root.shellBorderWidth + 20, 28)
+            anchors.rightMargin: root.hudFrameRightMargin
             anchors.bottomMargin: Math.max(root.shellBorderWidth + 20, 28)
-            anchors.leftMargin: Math.max(root.shellBorderWidth + 20,
-                root.railWidth + root.shellBorderWidth + 6)
+            anchors.leftMargin: root.hudFrameLeftMargin
             accent: root.cyan
             topBypassWidth: Math.min(root.width * 0.35, 650)
             topBypassTop: Math.max(root.stripHeight + 28, 48)
@@ -191,7 +199,7 @@ Item {
                 GradientStop { position: 1.0; color: "transparent" }
             }
             SequentialAnimation on x {
-                running: root.active
+                running: root.continuousMotion
                 loops: Animation.Infinite
                 NumberAnimation { to: root.width; duration: ThemeConfig.duration(12500); easing.type: Easing.Linear }
                 NumberAnimation { to: -scanSweep.width; duration: 0 }
@@ -230,7 +238,7 @@ Item {
         HudFrame {
             id: topVisor
             revealIndex: 0
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: root.hudFrameCenterX - width / 2
             y: Math.max(root.stripHeight + 28, 48)
             width: Math.min(parent.width * 0.35, 650)
             height: 76
@@ -276,7 +284,7 @@ Item {
 
         HudFrame {
             revealIndex: 5
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: root.hudFrameCenterX - width / 2
             y: root.height - height - root.shellBorderWidth - 76
             width: Math.min(parent.width * 0.24, 440)
             height: 72
@@ -537,7 +545,7 @@ Item {
             opacity: parent.contentAlpha
             x: 16
             y: 13
-            text: "THERMAL // RPM"
+            text: "THERMAL // " + (root.fanTelemetryAvailable ? "RPM" : "PROFILE")
             font.family: ThemeConfig.monoFont
             font.pixelSize: 11
             font.weight: Font.Black
@@ -552,6 +560,7 @@ Item {
             width: parent.width - 32
             text: "CPU " + (root.telemetry.cpuTemperatureAvailable ? root.cpuTemperature + "°C" : "n/a")
                 + "   //   GPU " + (root.telemetry.gpuTemperatureAvailable ? root.gpuTemperature + "°C" : "n/a")
+                + "   //   " + root.telemetry.platformProfile.toUpperCase()
             font.family: ThemeConfig.monoFont
             font.pixelSize: 11
             color: Qt.rgba(root.cyanSoft.r, root.cyanSoft.g, root.cyanSoft.b, 0.78)
@@ -559,6 +568,7 @@ Item {
 
         GridLayout {
             z: 1
+            visible: root.fanTelemetryAvailable
             opacity: parent.contentAlpha
             x: 14
             y: 54
@@ -571,6 +581,61 @@ Item {
             FanTile { label: "FAN 02"; rpm: root.fan2Rpm; available: root.fan2Available; accent: root.cyanSoft }
             FanTile { label: "FAN 03"; rpm: root.fan3Rpm; available: root.fan3Available; accent: root.cyan }
             FanTile { label: "FAN 04"; rpm: root.fan4Rpm; available: root.fan4Available; accent: root.cyanSoft }
+        }
+
+        Rectangle {
+            z: 1
+            visible: !root.fanTelemetryAvailable
+            opacity: parent.contentAlpha
+            x: 14
+            y: 58
+            width: parent.width - 28
+            height: parent.height - 86
+            radius: 2
+            color: Qt.rgba(root.glass.r, root.glass.g, root.glass.b, 0.30)
+            border.width: 1
+            border.color: Qt.rgba(parent.accent.r, parent.accent.g, parent.accent.b, 0.62)
+
+            Text {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.leftMargin: 16
+                anchors.topMargin: 14
+                text: "SAMSUNG PROFILE"
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: 10
+                font.weight: Font.Black
+                color: Qt.rgba(root.cyan.r, root.cyan.g, root.cyan.b, 0.82)
+            }
+
+            Text {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                text: root.telemetry.platformProfile.toUpperCase()
+                elide: Text.ElideRight
+                font.family: ThemeConfig.displayFont
+                font.pixelSize: 24
+                font.weight: Font.Light
+                color: Qt.rgba(root.cyanSoft.r, root.cyanSoft.g, root.cyanSoft.b, 0.96)
+            }
+
+            Text {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                anchors.bottomMargin: 14
+                text: "RPM SENSOR UNEXPOSED"
+                elide: Text.ElideRight
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: 10
+                font.weight: Font.Bold
+                color: Qt.rgba(root.cyan.r, root.cyan.g, root.cyan.b, 0.48)
+            }
         }
     }
 
@@ -888,7 +953,7 @@ Item {
                     onHeightChanged: requestPaint()
                 }
                 RotationAnimation on rotation {
-                    running: root.active && available
+                    running: root.continuousMotion && available
                     loops: Animation.Infinite
                     from: 0
                     to: 360
@@ -915,7 +980,7 @@ Item {
             }
             Text {
                 Layout.fillWidth: true
-                text: available ? (rpm + " RPM") : "offline"
+                text: available ? (rpm + " RPM") : "n/a"
                 elide: Text.ElideRight
                 font.family: ThemeConfig.displayFont
                 font.pixelSize: 12
@@ -1079,7 +1144,7 @@ Item {
             transformOrigin: Item.Left
             color: Qt.rgba(parent.accent.r, parent.accent.g, parent.accent.b, 0.66)
             RotationAnimation on rotation {
-                running: root.active
+                running: root.continuousMotion
                 loops: Animation.Infinite
                 from: 0
                 to: 360

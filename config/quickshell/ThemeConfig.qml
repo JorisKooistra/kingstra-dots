@@ -56,6 +56,7 @@ Item {
     property real effectIntensity: 1.0
     property int effectCycleMs: 0
     property real hoverReactivity: 0.4
+    property bool continuousEffects: false
     property string textureOverlayAsset: ""
     property string terminalOverlayAsset: ""
     property real terminalOverlayOpacity: 0.0
@@ -265,6 +266,7 @@ Item {
                 if (data.effect_intensity !== undefined) root.effectIntensity = root.clamp(Number(data.effect_intensity), 0.0, 2.0);
                 if (data.effect_cycle_ms !== undefined) root.effectCycleMs = parseInt(root.clamp(Number(data.effect_cycle_ms), 0, 30000));
                 if (data.hover_reactivity !== undefined) root.hoverReactivity = root.clamp(Number(data.hover_reactivity), 0.0, 1.0);
+                if (data.continuous_effects !== undefined) root.continuousEffects = !!data.continuous_effects;
                 if (data.texture_overlay_asset !== undefined) root.textureOverlayAsset = String(data.texture_overlay_asset);
                 if (data.terminal_overlay_asset !== undefined) root.terminalOverlayAsset = String(data.terminal_overlay_asset);
                 if (data.terminal_overlay_opacity !== undefined) root.terminalOverlayOpacity = root.clamp(Number(data.terminal_overlay_opacity), 0.0, 1.0);
@@ -300,5 +302,5 @@ Item {
     }
 
     // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
-    Timer { interval: 1000; running: true; repeat: true; onTriggered: themeFileView.reload() }
+    Timer { interval: 5000; running: true; repeat: true; onTriggered: themeFileView.reload() }
 }

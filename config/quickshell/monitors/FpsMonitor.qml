@@ -57,8 +57,9 @@ Rectangle {
         }
     }
 
-    Timer { interval: 2000; running: true; repeat: true; onTriggered: fpsPoller.running = true }
-    Component.onCompleted: fpsPoller.running = true
+    Timer { interval: 2000; running: root.visible; repeat: true; onTriggered: fpsPoller.running = true }
+    Component.onCompleted: if (root.visible) fpsPoller.running = true
+    onVisibleChanged: if (visible && !fpsPoller.running) fpsPoller.running = true
 
     property real targetWidth: fpsRow.width + 24
     width: targetWidth

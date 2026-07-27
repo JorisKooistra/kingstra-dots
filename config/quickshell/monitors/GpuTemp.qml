@@ -72,8 +72,9 @@ Rectangle {
         }
     }
 
-    Timer { interval: 3000; running: true; repeat: true; onTriggered: gpuPoller.running = true }
-    Component.onCompleted: gpuPoller.running = true
+    Timer { interval: 3000; running: root.visible; repeat: true; onTriggered: gpuPoller.running = true }
+    Component.onCompleted: if (root.visible) gpuPoller.running = true
+    onVisibleChanged: if (visible && !gpuPoller.running) gpuPoller.running = true
 
     property real targetWidth: gpuRow.width + 24
     width: targetWidth

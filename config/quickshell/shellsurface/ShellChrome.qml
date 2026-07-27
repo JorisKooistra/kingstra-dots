@@ -444,7 +444,7 @@ Item {
     }
 
     Timer {
-        interval: 1000
+        interval: 2000
         running: true
         repeat: true
         onTriggered: modeFileView.reload()
@@ -539,8 +539,10 @@ Item {
         triggeredOnStart: true
         onTriggered: {
             let now = new Date();
-            root.timeText = Qt.formatDateTime(now, "HH:mm");
-            root.dateText = Qt.formatDateTime(now, "ddd d MMM");
+            let nextTimeText = Qt.formatDateTime(now, "HH:mm");
+            let nextDateText = Qt.formatDateTime(now, "ddd d MMM");
+            if (nextTimeText !== root.timeText) root.timeText = nextTimeText;
+            if (nextDateText !== root.dateText) root.dateText = nextDateText;
         }
     }
 
@@ -600,7 +602,7 @@ Item {
     // paneelinhoud heen tekenen. Zie frameBlobLayer daar.
 
     Timer {
-        interval: 2500
+        interval: 5000
         running: true
         repeat: true
         onTriggered: if (!volPoller.running) volPoller.running = true

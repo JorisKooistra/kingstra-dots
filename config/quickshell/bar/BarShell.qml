@@ -20,6 +20,7 @@ Variants {
         // New theme state is rendered by ShellSurface. Legacy state keeps this
         // window until it is migrated by kingstra-theme-switch.
         visible: !ThemeConfig.barZoneSchemaLoaded
+        readonly property bool runtimeActive: visible
 
         required property var modelData
             
@@ -169,7 +170,7 @@ Variants {
             // QS 0.3.0: watchChanges mist updates zodra het bestand via mv/rename
             // wordt vervangen (inode-wissel). Poll als vangnet; onInternalTextChanged
             // vuurt alleen bij daadwerkelijk gewijzigde inhoud.
-            Timer { interval: 1000; running: true; repeat: true; onTriggered: settingsFileView.reload() }
+            Timer { interval: 5000; running: barWindow.runtimeActive; repeat: true; onTriggered: settingsFileView.reload() }
 
             // --- Mode State ---
             property string activeMode: "office"
@@ -328,21 +329,21 @@ Variants {
             }
 
             // QS 0.3.0: watchChanges mist inode-vervanging (mode-switch schrijft via mv)
-            Timer { interval: 1000; running: true; repeat: true; onTriggered: modeFileView.reload() }
+            Timer { interval: 2000; running: barWindow.runtimeActive; repeat: true; onTriggered: modeFileView.reload() }
 
             // --- State Variables ---
 
             // Triggers layout animations immediately to feel fast
             property bool isStartupReady: false
-            Timer { interval: 10; running: true; onTriggered: barWindow.isStartupReady = true }
+            Timer { interval: 10; running: barWindow.runtimeActive; onTriggered: barWindow.isStartupReady = true }
             
             // Prevents repeaters (Workspaces/Tray) from flickering on data updates
             property bool startupCascadeFinished: false
-            Timer { interval: 1000; running: true; onTriggered: barWindow.startupCascadeFinished = true }
+            Timer { interval: 1000; running: barWindow.runtimeActive; onTriggered: barWindow.startupCascadeFinished = true }
             
             // Data is direct beschikbaar via event-driven bronnen (Networking, Hyprland)
             property bool isDataReady: true
-            Timer { interval: 600; running: true; onTriggered: barWindow.isDataReady = true }
+            Timer { interval: 600; running: barWindow.runtimeActive; onTriggered: barWindow.isDataReady = true }
             readonly property bool sysPollerLoaded: true
             
             property string timeStr: ""
@@ -443,7 +444,7 @@ Variants {
             Process {
                 id: volPoller
                 command: ["bash", "-c", "wpctl get-volume @DEFAULT_AUDIO_SINK@"]
-                running: true
+                running: barWindow.runtimeActive
                 stdout: StdioCollector {
                     onStreamFinished: {
                         let line = this.text.trim();
@@ -454,7 +455,7 @@ Variants {
                 }
             }
             Timer {
-                interval: 2500; running: true; repeat: true
+                interval: 5000; running: barWindow.runtimeActive; repeat: true
                 onTriggered: if (!volPoller.running) volPoller.running = true
             }
 
@@ -583,7 +584,7 @@ Variants {
             Timer {
                 id: updatesTimer
                 interval: 900000
-                running: true
+                running: barWindow.runtimeActive
                 repeat: true
                 triggeredOnStart: true
                 onTriggered: {
@@ -610,7 +611,7 @@ Variants {
             // kbLayoutCount = aantal geconfigureerde layouts in input:kb_layout (niet apparaten)
             Process {
                 id: kbInitPoller
-                running: true
+                running: barWindow.runtimeActive
                 command: ["bash", "-c",
                     "count=$(hyprctl getoption input:kb_layout -j 2>/dev/null | jq -r '.str // \"us\"' | awk -F, '{n=0; for(i=1;i<=NF;i++) if($i!=\"\") n++; print n}'); " +
                     "active=$(hyprctl devices -j 2>/dev/null | jq -r '.keyboards[] | select(.main==true) | .active_keymap // \"US\"' | head -n1); " +
@@ -652,7 +653,7 @@ Variants {
             }
             Timer {
                 interval: 150000
-                running: true
+                running: barWindow.runtimeActive
                 repeat: true
                 triggeredOnStart: true
                 onTriggered: {
@@ -662,7 +663,7 @@ Variants {
 
             // Native Qt Time Formatting — only starts after settings are loaded
             Timer {
-                interval: 1000; running: barWindow._settingsReady; repeat: true; triggeredOnStart: true
+                interval: 1000; running: barWindow.runtimeActive && barWindow._settingsReady; repeat: true; triggeredOnStart: true
                 onTriggered: {
                     let d = new Date();
                     let tf = barWindow._settingsData.timeFormat || "HH:mm:ss";
@@ -742,11 +743,18 @@ Variants {
             }
 
 
-            BarSurface {
-                id: barSurface
+            Loader {
                 anchors.fill: parent
-                shell: barWindow
-                mocha: mocha
+                active: barWindow.runtimeActive
+                sourceComponent: barSurfaceComponent
+            }
+
+            Component {
+                id: barSurfaceComponent
+                BarSurface {
+                    shell: barWindow
+                    mocha: mocha
+                }
             }
         }
     }

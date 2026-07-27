@@ -16,7 +16,7 @@
       alpha(mix(@base, @accent3-source, 0.33), 0.984),
       alpha(mix(@base, @primary, 0.32), 0.984));
   border: 2px solid alpha(@primary, 0.32);
-  border-radius: 9px;
+  border-radius: 6px;
   box-shadow: 0 18px 52px alpha(@crust, 0.42);
   padding: 9px;
 }
@@ -26,7 +26,7 @@
 .notification,
 .widget-mpris-player,
 .notification-action {
-  border-radius: 5px;
+  border-radius: 2px;
 }
 
 .widget-title > button,

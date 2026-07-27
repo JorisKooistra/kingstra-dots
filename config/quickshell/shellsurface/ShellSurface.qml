@@ -219,7 +219,7 @@ Scope {
                     onInternalTextChanged: surfaceWindow.handleWidgetState(__text)
                 }
                 Timer {
-                    interval: 400
+                    interval: 2000
                     running: true
                     repeat: true
                     onTriggered: widgetStateView.reload()
