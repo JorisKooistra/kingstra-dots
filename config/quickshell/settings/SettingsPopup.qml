@@ -1793,7 +1793,7 @@ Item {
         stdout: StdioCollector {
             onStreamFinished: {
                 let count = this.text.trim();
-                root.updateStatusText = count === "" ? "Updatecheck niet beschikbaar" : (count + " package updates beschikbaar");
+                root.updateStatusText = count === "" ? "Updatecheck niet beschikbaar" : (count + " updates beschikbaar");
             }
         }
     }
@@ -4162,12 +4162,12 @@ Item {
                     spacing: root.s(14)
 
                     Text { text: "Updates"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
-                    SettingsInfoCard { title: "Packages"; icon: "󰚰"; accent: root.green; value: root.updateStatusText }
+                        SettingsInfoCard { title: "Updates"; icon: "󰚰"; accent: root.green; value: root.updateStatusText }
 
                     Flow {
                         Layout.fillWidth: true
                         spacing: root.s(10)
-                        SettingsActionButton { label: "Package update"; icon: "󰚰"; accent: root.green; primary: true; onTriggered: root.runPackageUpgrade() }
+                        SettingsActionButton { label: "Alle updates"; icon: "󰚰"; accent: root.green; primary: true; onTriggered: root.runPackageUpgrade() }
                         SettingsActionButton { label: "Dotfiles update"; icon: "󰐕"; accent: root.blue; onTriggered: root.runUpdateBootstrap() }
                         SettingsActionButton { label: "Check opnieuw"; icon: "󰑓"; accent: root.peach; onTriggered: updatesStatusProc.running = true }
                     }

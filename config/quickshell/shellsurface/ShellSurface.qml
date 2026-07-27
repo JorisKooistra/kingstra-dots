@@ -219,7 +219,10 @@ Scope {
                     onInternalTextChanged: surfaceWindow.handleWidgetState(__text)
                 }
                 Timer {
-                    interval: 2000
+                    // FileView mist op Quickshell 0.3.0 geregeld een write.
+                    // Dit bestand bevat maar één korte regel; een snelle poll
+                    // houdt met name de launcher-sneltoets direct responsief.
+                    interval: 75
                     running: true
                     repeat: true
                     onTriggered: widgetStateView.reload()

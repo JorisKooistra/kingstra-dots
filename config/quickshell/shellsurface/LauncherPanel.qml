@@ -425,23 +425,6 @@ FocusScope {
                     }
 
                     Rectangle {
-                        Layout.preferredWidth: 52
-                        Layout.preferredHeight: 22
-                        Layout.alignment: Qt.AlignVCenter
-                        radius: 8
-                        visible: root.launchCount(row.modelData) > 0
-                        color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.10)
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: root.launchCount(row.modelData) + "x"
-                            font.family: ThemeConfig.monoFont
-                            font.pixelSize: 10
-                            color: mocha.subtext0
-                        }
-                    }
-
-                    Rectangle {
                         Layout.preferredWidth: 30
                         Layout.preferredHeight: 30
                         Layout.alignment: Qt.AlignVCenter

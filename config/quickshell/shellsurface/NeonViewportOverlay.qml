@@ -218,7 +218,7 @@ Item {
             y: Math.max(root.stripHeight + 104, root.height * 0.17)
             width: Math.min(root.width * 0.17, 304)
             height: 178
-            rotation: -0.60
+            rotation: 0
             accent: root.cyan
         }
 
@@ -228,7 +228,7 @@ Item {
             y: root.height - height - root.shellBorderWidth - 150
             width: 92
             height: Math.min(root.height * 0.30, 292)
-            rotation: -0.45
+            rotation: 0
             label: "ROOT"
             value: root.diskPercent
             display: root.diskPercent + "%"
@@ -242,7 +242,11 @@ Item {
             y: Math.max(root.stripHeight + 28, 48)
             width: Math.min(parent.width * 0.35, 650)
             height: 76
-            rotation: -0.16
+            // Een middenvlak hoort niet naar één kant te leunen. De vroegere
+            // minirotatie van -0.16° verplaatste een lange horizontale rand
+            // bovendien maar eens per honderden pixels naar de volgende
+            // scanline, wat als grove AA-verspringing zichtbaar werd.
+            rotation: 0
             accent: root.cyan
             label: "STATUS // 01"
             primary: "SYSTEM NOMINAL"
@@ -256,7 +260,7 @@ Item {
             y: Math.max(root.stripHeight + 104, root.height * 0.17)
             width: Math.min(root.width * 0.20, 370)
             height: 122
-            rotation: 0.60
+            rotation: 0
             accent: root.cyan
             label: "IDENT // HOST"
             primary: root.telemetry.hostName.toUpperCase()
@@ -278,7 +282,7 @@ Item {
             y: Math.max(root.stripHeight + 292, root.height * 0.37)
             width: Math.min(root.width * 0.16, 294)
             height: 224
-            rotation: 0.60
+            rotation: 0
             accent: root.cyan
         }
 
@@ -288,7 +292,7 @@ Item {
             y: root.height - height - root.shellBorderWidth - 76
             width: Math.min(parent.width * 0.24, 440)
             height: 72
-            rotation: 0.16
+            rotation: 0
             accent: root.cyan
             label: "DATALINK // " + root.telemetry.linkState
             primary: root.telemetry.interfaceName.toUpperCase()
@@ -441,12 +445,6 @@ Item {
         opacity: reveal
         scale: 0.94 + reveal * 0.06
 
-        layer.enabled: Math.abs(rotation) > 0.001
-        layer.smooth: true
-        layer.samples: 4
-        layer.textureSize: Qt.size(Math.max(1, Math.ceil(width * 2)),
-            Math.max(1, Math.ceil(height * 2)))
-
         // laag 1: het vak zelf
         HudPanelChrome {
             z: 0
@@ -525,12 +523,6 @@ Item {
         readonly property real contentAlpha: root.stagger(root.contentReveal, revealIndex)
         opacity: reveal
         scale: 0.94 + reveal * 0.06
-
-        layer.enabled: Math.abs(rotation) > 0.001
-        layer.smooth: true
-        layer.samples: 4
-        layer.textureSize: Qt.size(Math.max(1, Math.ceil(width * 2)),
-            Math.max(1, Math.ceil(height * 2)))
 
         // laag 1: het vak zelf
         HudPanelChrome {
@@ -639,19 +631,13 @@ Item {
         }
     }
 
-    // De omlijsting van een vak. Vectorwerk in plaats van een Canvas-bitmap:
-    // een Canvas tekent in een textuur op zijn eigen logische maat en wordt
-    // daarna in de 2x-layer van het paneel opgeblazen — dat is precies waarom
-    // de vakranden vaag oogden. Een Shape wordt door de curve-renderer op de
-    // uiteindelijke schaal gerasterd en blijft dus scherp, ook onder de lichte
-    // rotatie van de panelen.
+    // De omlijsting én vulling van een vak delen één vectorpad. Het hele
+    // paneel eerder eerst in een 2x-layer tekenen en die textuur daarna
+    // roteren hielp niet bij zeer flauwe hoeken: de al gerasterde rand sprong
+    // daar in lange pixelplateaus. Zonder tussen-FBO ziet de curve-renderer de
+    // uiteindelijke scene-transform en antialiast hij direct in schermruimte.
     component HudPanelChrome: Item {
         required property color accent
-
-        Rectangle {
-            anchors.fill: parent
-            color: Qt.rgba(root.glass.r, root.glass.g, root.glass.b, root.panelAlpha)
-        }
 
         Shape {
             id: chromeShape
@@ -667,7 +653,8 @@ Item {
                 strokeColor: Qt.rgba(chromeShape.accent.r, chromeShape.accent.g,
                     chromeShape.accent.b, 0.20)
                 strokeWidth: 5
-                fillColor: "transparent"
+                fillColor: Qt.rgba(root.glass.r, root.glass.g, root.glass.b,
+                    root.panelAlpha)
                 joinStyle: ShapePath.MiterJoin
                 startX: chromeShape.cut
                 startY: 0
@@ -719,6 +706,7 @@ Item {
             y: -3
             width: parent.width * 0.30
             height: 2
+            antialiasing: true
             color: Qt.rgba(parent.accent.r, parent.accent.g, parent.accent.b, 0.98)
         }
         Rectangle {
@@ -726,6 +714,7 @@ Item {
             y: parent.height + 1
             width: parent.width * 0.20
             height: 2
+            antialiasing: true
             color: Qt.rgba(root.accentAlt.r, root.accentAlt.g, root.accentAlt.b, 0.76)
         }
     }
@@ -741,12 +730,6 @@ Item {
         readonly property real contentAlpha: root.stagger(root.contentReveal, revealIndex)
         opacity: reveal
         scale: 0.94 + reveal * 0.06
-
-        layer.enabled: Math.abs(rotation) > 0.001
-        layer.smooth: true
-        layer.samples: 4
-        layer.textureSize: Qt.size(Math.max(1, Math.ceil(width * 2)),
-            Math.max(1, Math.ceil(height * 2)))
 
         // laag 1: het vak zelf
         HudPanelChrome {
@@ -767,14 +750,19 @@ Item {
             border.color: Qt.rgba(parent.accent.r, parent.accent.g, parent.accent.b, 0.34)
 
             Column {
+                id: meterSegments
                 anchors.fill: parent
-                anchors.margins: 3
-                spacing: 3
+                // 196px inhoud: 10 × 16px + 9 × 4px. Door de segmenten
+                // integraal te houden ontstaan er geen wisselende afrondingen
+                // of verspringende horizontale randen.
+                anchors.margins: 2
+                spacing: 4
                 Repeater {
                     model: 10
                     Rectangle {
                         width: parent.width
-                        height: Math.max(3, (parent.parent.height - 27) / 10)
+                        height: Math.max(1, Math.floor(
+                            (meterSegments.height - meterSegments.spacing * 9) / 10))
                         color: index >= 10 - Math.ceil(value * contentAlpha / 10)
                             ? Qt.rgba(parent.parent.parent.accent.r, parent.parent.parent.accent.g, parent.parent.parent.accent.b, 0.86)
                             : Qt.rgba(parent.parent.parent.accent.r, parent.parent.parent.accent.g, parent.parent.parent.accent.b, 0.10)
@@ -1005,12 +993,6 @@ Item {
         opacity: reveal
         scale: 0.94 + reveal * 0.06
 
-        layer.enabled: Math.abs(rotation) > 0.001
-        layer.smooth: true
-        layer.samples: 4
-        layer.textureSize: Qt.size(Math.max(1, Math.ceil(width * 2)),
-            Math.max(1, Math.ceil(height * 2)))
-
         // laag 1: het vak zelf
         HudPanelChrome {
             z: 0
@@ -1088,7 +1070,9 @@ Item {
             border.color: Qt.rgba(accent.r, accent.g, accent.b, 0.30)
             Rectangle {
                 width: available
-                    ? parent.width * Math.max(0.0, Math.min(1.0, value / 100.0)) * reveal
+                    ? Math.round(parent.width
+                        * Math.max(0.0, Math.min(1.0, value / 100.0))
+                        * reveal)
                     : 0
                 height: parent.height
                 color: Qt.rgba(accent.r, accent.g, accent.b, 0.88)

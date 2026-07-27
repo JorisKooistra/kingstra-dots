@@ -327,6 +327,11 @@ Item {
     property int workspaceWheelAccumulator: 0
     property int _volRaw: 0
     property bool isMuted: false
+    property int updateCount: 0
+    property int packageUpdateCount: 0
+    property int flatpakUpdateCount: 0
+    property int dotfilesUpdateCount: 0
+    property int dotfilesCommitCount: 0
     readonly property bool railContentVisible: !barAutoHide || autoHideVisible || railHover.hovered
     readonly property bool stripContentVisible: !barAutoHide || autoHideVisible || stripHover.hovered
     // Anker van de laatst getriggerde knop (host-coords), zodat panelen uit
@@ -384,6 +389,22 @@ Item {
 
     function togglePanel(target) {
         panelRequested(target, lastTriggerX, lastTriggerY);
+    }
+
+    function updateTooltip() {
+        if (updatesPoller.running) return "Updates controleren…";
+        let dotfilesText = dotfilesUpdateCount > 0
+            ? "ja (" + dotfilesCommitCount + " commit" + (dotfilesCommitCount === 1 ? "" : "s") + ")"
+            : "nee";
+        return updateCount + " updates · Arch/AUR " + packageUpdateCount
+            + " · Flatpak " + flatpakUpdateCount
+            + " · dotfiles " + dotfilesText;
+    }
+
+    function openUpdatesTerminal() {
+        let script = Quickshell.env("HOME") + "/.config/quickshell/package_upgrade.sh";
+        Quickshell.execDetached(["kitty", "--hold", "bash", script]);
+        Quickshell.execDetached(["notify-send", "Updates", "Updateworkflow gestart in terminal"]);
     }
 
     function launchWalker() {
@@ -558,6 +579,42 @@ Item {
                 root.isMuted = line.indexOf("[MUTED]") !== -1;
             }
         }
+    }
+
+    Process {
+        id: updatesPoller
+        command: [
+            "bash",
+            Quickshell.env("HOME") + "/.config/quickshell/package_updates.sh",
+            "--json"
+        ]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let raw = this.text.trim();
+                try {
+                    let state = JSON.parse(raw);
+                    root.updateCount = Math.max(0, parseInt(state.total) || 0);
+                    root.packageUpdateCount = Math.max(0, parseInt(state.packages) || 0);
+                    root.flatpakUpdateCount = Math.max(0, parseInt(state.flatpak) || 0);
+                    root.dotfilesUpdateCount = Math.max(0, parseInt(state.dotfiles) || 0);
+                    root.dotfilesCommitCount = Math.max(0, parseInt(state.dotfiles_commits) || 0);
+                } catch (e) {
+                    let total = parseInt(raw);
+                    if (!isNaN(total) && total >= 0) root.updateCount = total;
+                }
+            }
+        }
+    }
+
+    // De checker zelf cachet netwerkresultaten 5–15 minuten. Deze lichte poll
+    // leest iedere minuut ook snel een nieuwe cache in nadat de terminalrunner
+    // klaar is.
+    Timer {
+        interval: 60000
+        running: root.moduleEnabled("updates")
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: if (!updatesPoller.running) updatesPoller.running = true
     }
 
     BlobGroup {
@@ -868,8 +925,17 @@ Item {
             }
 
             RailButton {
+                tooltip: root.updateTooltip()
+                visible: root.moduleEnabled("updates")
+                icon: "󰚰"
+                text: root.updateCount.toString()
+                accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0
+                onTriggered: root.openUpdatesTerminal()
+            }
+
+            RailButton {
                 tooltip: "Monitoren"
-                visible: root.anyModuleEnabled(["updates", "cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"])
+                visible: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"])
                 icon: "󰍹"
                 accent: root.mocha.accent3
                 onTriggered: root.togglePanel("monitors")
@@ -1063,7 +1129,8 @@ Item {
                 StripButton { tooltip: "Meldingen"; visible: root.moduleEnabled("notifications"); icon: "󰍜"; accent: root.mocha.accent2; onTriggered: root.togglePanel("notifications") }
                 StripButton { tooltip: MailService.statusText; visible: root.moduleEnabled("mail"); icon: "󰇮"; accent: MailService.unreadKnown && MailService.unreadCount > 0 ? root.mocha.accent2 : root.mocha.accent1; onTriggered: root.togglePanel("mail") }
                 StripButton { tooltip: "Agenda"; visible: root.moduleEnabled("clock"); icon: "󰃰"; accent: root.mocha.accent1; onTriggered: root.togglePanel("calendar") }
-                StripButton { tooltip: "Monitoren"; visible: root.anyModuleEnabled(["updates", "cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"]); icon: "󰍹"; accent: root.mocha.accent3; onTriggered: root.togglePanel("monitors") }
+                StripButton { tooltip: root.updateTooltip(); visible: root.moduleEnabled("updates"); icon: "󰚰"; text: root.updateCount.toString(); accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0; onTriggered: root.openUpdatesTerminal() }
+                StripButton { tooltip: "Monitoren"; visible: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"]); icon: "󰍹"; accent: root.mocha.accent3; onTriggered: root.togglePanel("monitors") }
                 StripButton { tooltip: "Games"; visible: root.moduleEnabled("game_launcher"); icon: "󰊴"; accent: root.mocha.accent2; onTriggered: root.togglePanel("gaming") }
             }
 
@@ -1489,12 +1556,13 @@ Item {
     component StripButton: Rectangle {
         id: btn
         property string icon: ""
+        property string text: ""
         property color accent: root.hotColor
         property string tooltip: ""
         signal triggered()
         signal wheelDelta(int delta)
 
-        Layout.preferredWidth: 30
+        Layout.preferredWidth: text === "" ? 30 : 43
         Layout.preferredHeight: 28
         radius: Math.min(6, ThemeConfig.styleWidgetRadius)
         color: mouse.containsMouse ? root.pillHoverColor : "transparent"
@@ -1505,12 +1573,25 @@ Item {
         Behavior on color {
             ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
         }
-        Text {
+        Row {
             anchors.centerIn: parent
-            text: btn.icon
-            font.family: "Iosevka Nerd Font"
-            font.pixelSize: 16
-            color: btn.accent
+            spacing: 3
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: btn.icon
+                font.family: "Iosevka Nerd Font"
+                font.pixelSize: 15
+                color: btn.accent
+            }
+            Text {
+                visible: btn.text !== ""
+                anchors.verticalCenter: parent.verticalCenter
+                text: btn.text
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: 9
+                font.weight: Font.Bold
+                color: root.mocha.text
+            }
         }
         MouseArea {
             id: mouse

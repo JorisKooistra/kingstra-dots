@@ -211,10 +211,8 @@ Variants {
             }
 
             function openUpdatesTerminal() {
-                let cmd = "~/.config/quickshell/package_upgrade.sh";
-                Quickshell.execDetached(["kitty", "--hold", "bash", "-c", cmd]);
-                Quickshell.execDetached(["bash", "-c", "rm -f ~/.cache/quickshell/package_updates_count"]);
-                updatesPoller.running = true;
+                let script = Quickshell.env("HOME") + "/.config/quickshell/package_upgrade.sh";
+                Quickshell.execDetached(["kitty", "--hold", "bash", script]);
                 Quickshell.execDetached(["notify-send", "Updates", "Update gestart in terminal"]);
             }
 
@@ -583,7 +581,9 @@ Variants {
 
             Timer {
                 id: updatesTimer
-                interval: 900000
+                // package_updates.sh cachet de dure checks; zo ziet de legacy
+                // bar kort na afronding van de terminalrunner de nieuwe teller.
+                interval: 60000
                 running: barWindow.runtimeActive
                 repeat: true
                 triggeredOnStart: true

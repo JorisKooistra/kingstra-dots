@@ -307,7 +307,12 @@ Item {
     }
     Behavior on height {
         NumberAnimation {
-            duration: ThemeConfig.durationToken("spatial")
+            // De launcher is primair toetsenbordgereedschap en moet meteen
+            // bruikbaar voelen; de langere ruimtelijke animatie voegt daar
+            // onnodig wachttijd aan toe.
+            duration: root.visualEntryId === "launcher"
+                ? ThemeConfig.durationToken("fast")
+                : ThemeConfig.durationToken("spatial")
             easing.type: root.visualVerticalEdge ? ThemeConfig.easingToken("standard") : ThemeConfig.easingToken("emphasized")
         }
     }
