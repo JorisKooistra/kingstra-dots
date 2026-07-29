@@ -143,7 +143,7 @@ _prepare_theme_wallpaper() {
     local theme_name="$1"
     local wallpaper="$2"
     local original_file="$CACHE_DIR/theme-wallpaper-source"
-    local source target_dir target_file hash effect_key mono_accent_helper
+    local source target_dir target_file target_tmp hash effect_key mono_accent_helper
 
     [[ -n "$wallpaper" && -f "$wallpaper" ]] || {
         printf '%s\n' "$wallpaper"
@@ -173,32 +173,65 @@ _prepare_theme_wallpaper() {
         mkdir -p "$target_dir"
         target_file="$target_dir/${hash}.jpg"
 
-        if [[ ! -f "$target_file" ]]; then
+        # Schrijf nooit rechtstreeks naar het pad dat skwd gaat decoderen.
+        # Een gelijktijdige post-processing run kan hetzelfde cache-item vragen;
+        # een rename houdt voor beide lezers altijd een complete JPEG zichtbaar.
+        if [[ ! -s "$target_file" ]] || ! magick identify "$target_file" >/dev/null 2>&1; then
+            target_tmp="$(mktemp "$target_dir/.${hash}.XXXXXX.jpg")"
             if [[ "$theme_name" == "paper" ]]; then
-                magick "$source" -auto-orient -colorspace Gray \
+                if ! magick "$source" -auto-orient -colorspace Gray \
                     \( +clone -negate -blur 0x18 \) -compose ColorDodge -composite \
                     -blur 0x0.75 -level 12%,98%,0.88 \
                     -colorspace sRGB -type TrueColor \
                     -fill "#c7a16b" -tint 42% \
                     -fill "#f3e0bd" -colorize 12% \
                     -attenuate 0.018 +noise Gaussian \
-                    -quality 92 "$target_file"
+                    -quality 92 "$target_tmp"; then
+                    rm -f "$target_tmp"
+                    _warn "Paper-wallpaper kon niet worden gegenereerd"
+                    printf '%s\n' "$wallpaper"
+                    return 0
+                fi
             elif [[ "$theme_name" == "neon" ]]; then
-                magick "$source" -auto-orient -colorspace sRGB \
+                if ! magick "$source" -auto-orient -colorspace sRGB \
                     -modulate 100,104,100 \
                     -fill "#00b7ff" -colorize 4% \
                     -fill "#06131d" -colorize 2% \
-                    -quality 92 "$target_file"
+                    -quality 92 "$target_tmp"; then
+                    rm -f "$target_tmp"
+                    _warn "Neon-wallpaper kon niet worden gegenereerd"
+                    printf '%s\n' "$wallpaper"
+                    return 0
+                fi
             elif [[ "$theme_name" == "mono-accent" ]]; then
                 mono_accent_helper="${HOME}/.local/bin/kingstra-mono-accent"
                 [[ -f "$mono_accent_helper" ]] || mono_accent_helper="$REPO_ROOT/config/shared/scripts/kingstra-mono-accent"
-                if ! _run_helper "$mono_accent_helper" wallpaper "$source" "$target_file"; then
+                if ! _run_helper "$mono_accent_helper" wallpaper "$source" "$target_tmp"; then
                     _warn "Mono Accent color splash mislukt — grijze fallback gebruikt"
-                    magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
+                    if ! magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_tmp"; then
+                        rm -f "$target_tmp"
+                        _warn "Mono Accent fallback-wallpaper kon niet worden gegenereerd"
+                        printf '%s\n' "$wallpaper"
+                        return 0
+                    fi
                 fi
             else
-                magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
+                if ! magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_tmp"; then
+                    rm -f "$target_tmp"
+                    _warn "Mono-wallpaper kon niet worden gegenereerd"
+                    printf '%s\n' "$wallpaper"
+                    return 0
+                fi
             fi
+
+            if ! magick identify "$target_tmp" >/dev/null 2>&1; then
+                rm -f "$target_tmp"
+                _warn "Gegenereerde theme-wallpaper is ongeldig"
+                printf '%s\n' "$wallpaper"
+                return 0
+            fi
+            chmod 644 "$target_tmp"
+            mv -f "$target_tmp" "$target_file"
         fi
 
         _apply_skwd_static_wallpaper "$target_file" >&2
@@ -269,7 +302,7 @@ _sync_skwd_config() {
          | .postProcessing = (
              [(.postProcessing // [])[] | select((.type // "") != "static")]
              + [{
-                 "command": "~/.local/bin/apply-shell-state --wallpaper %path%; skwd wall unsuppress",
+                 "command": "case \"%path%\" in \"$HOME\"/.cache/kingstra/theme-wallpapers/*) ;; *) ~/.local/bin/apply-shell-state --wallpaper \"%path%\" ;; esac; skwd wall unsuppress",
                  "type": "static"
                }]
            )' \

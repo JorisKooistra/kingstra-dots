@@ -90,12 +90,15 @@ _sync_skwd_config() {
              (.postProcessing // [])
              | map(select(
                  if type == "string" then
-                     contains("apply-shell-state --wallpaper %path%") | not
+                     contains("apply-shell-state --wallpaper") | not
                  else
-                     ((.command // "") | contains("apply-shell-state --wallpaper %path%") | not)
+                     ((.command // "") | contains("apply-shell-state --wallpaper") | not)
                  end
              ))
-             + [{"command":"~/.local/bin/apply-shell-state --wallpaper %path%","type":"static"}]
+             + [{
+                 "command":"case \"%path%\" in \"$HOME\"/.cache/kingstra/theme-wallpapers/*) ;; *) ~/.local/bin/apply-shell-state --wallpaper \"%path%\" ;; esac; skwd wall unsuppress",
+                 "type":"static"
+               }]
          )' \
         "$SKWD_CONFIG" > "$tmp_file" 2>/dev/null; then
         mv "$tmp_file" "$SKWD_CONFIG"
