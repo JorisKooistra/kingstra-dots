@@ -21,6 +21,8 @@ Item {
     readonly property bool stripControlsEnabled: stripEnabled && !railEnabled
     readonly property bool stripOnBottom: ThemeConfig.barStatusStripEdge === "bottom"
     readonly property bool topHoverHitEnabled: stripEnabled && !stripControlsEnabled && !stripOnBottom
+    readonly property int topHoverHitWidth: Math.min(420, Math.max(0, width - railWidth - shellBorderWidth))
+    readonly property int topHoverOpenDelay: 500
     readonly property bool railOnRight: ThemeConfig.barRailEdge === "right"
     readonly property int railWidth: ThemeConfig.barRailWidth
     // Als alle statusstrip-content naar de rail is verhuisd, blijft boven alleen
@@ -693,19 +695,30 @@ Item {
 
         visible: root.topHoverHitEnabled
         anchors.top: parent.top
-        anchors.left: root.railEnabled && !root.railOnRight ? rail.right : parent.left
-        anchors.right: root.railEnabled && root.railOnRight ? rail.left : parent.right
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: root.topHoverHitEnabled ? root.topHoverHitWidth : 0
         height: root.topHoverHitEnabled ? Math.max(root.shellBorderWidth, 8) : 0
         z: 30
+
+        Timer {
+            id: topHoverOpenTimer
+            interval: root.topHoverOpenDelay
+            repeat: false
+            onTriggered: {
+                if (!topHover.hovered) return;
+                root.lastTriggerX = root.width / 2;
+                root.lastTriggerY = 0;
+                root.panelRequested("tophover", root.lastTriggerX, root.lastTriggerY);
+            }
+        }
 
         HoverHandler {
             id: topHover
             onHoveredChanged: {
                 if (hovered) {
-                    root.lastTriggerX = root.width / 2;
-                    root.lastTriggerY = 0;
-                    root.panelRequested("tophover", root.lastTriggerX, root.lastTriggerY);
+                    topHoverOpenTimer.restart();
                 } else {
+                    topHoverOpenTimer.stop();
                     root.panelCloseRequested("tophover");
                 }
             }
