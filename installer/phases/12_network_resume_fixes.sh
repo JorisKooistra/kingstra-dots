@@ -134,12 +134,13 @@ _phase12_install_resume_service() {
     fi
 
     ensure_dir "$HOME/.config/systemd/user"
-    deploy_link "$service_src" "$service_dest"
 
+    # Deze user-service wordt expliciet gestart vanuit resume-display.sh.
+    # User-managers ontvangen de system-suspend.target niet betrouwbaar.
+    systemctl --user disable kingstra-resume.service 2>/dev/null || true
+    deploy_link "$service_src" "$service_dest"
     systemctl --user daemon-reload 2>/dev/null || true
-    systemctl --user enable kingstra-resume.service 2>/dev/null && \
-        log_ok "kingstra-resume.service ingeschakeld" || \
-        log_warn "Service inschakelen mislukt — handmatig uitvoeren: systemctl --user enable kingstra-resume"
+    log_ok "kingstra-resume.service geïnstalleerd (gestart door resume-display.sh)"
 }
 
 _phase12_install_lid_lock_service() {

@@ -893,7 +893,7 @@ mkdir -p "$(dirname "$WALKER_THEME_CSS")" "$(dirname "$SWAYNC_THEME_CSS")"
 cat > "$WALKER_THEME_CSS" <<EOF
 #window {
   background: color-mix(in srgb, var(--mantle) $(python3 -c "print(round(min(98, max(72, (${APPEARANCE_POPUP_OPACITY:-0.92} + ${STYLE_GLASS_STRENGTH} * 0.35) * 100))))")%, transparent);
-  border: ${APPEARANCE_BORDER_WIDTH:-1}px solid color-mix(in srgb, var(--outline) $(python3 -c "print(round(${STYLE_OUTLINE_STRENGTH} * 100))")%, transparent);
+  border: ${APPEARANCE_BORDER_WIDTH:-1}px solid color-mix(in srgb, var(--accent-alt) $(python3 -c "print(round(max(32, ${STYLE_OUTLINE_STRENGTH} * 100)))")%, var(--outline));
   border-radius: ${STYLE_WIDGET_RADIUS}px;
   box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) $(python3 -c "print(round(${STYLE_PANEL_SHADOW} * 100))")%, transparent);
   font-family: "${FONTS_UI_FONT:-Inter}", sans-serif;
@@ -904,6 +904,10 @@ cat > "$WALKER_THEME_CSS" <<EOF
   padding: ${STYLE_PANEL_PADDING}px $((STYLE_PANEL_PADDING + 4))px;
 }
 
+#search:focus {
+  border-color: var(--accent);
+}
+
 row {
   border-radius: $(( STYLE_WIDGET_RADIUS > 8 ? STYLE_WIDGET_RADIUS - 8 : 4 ))px;
   margin: $([[ "$STYLE_DENSITY" == "compact" ]] && echo "1" || ([[ "$STYLE_DENSITY" == "airy" ]] && echo "3" || echo "2"))px 2px;
@@ -912,7 +916,11 @@ row {
 
 row:selected,
 row:hover {
-  background: color-mix(in srgb, var(--primary) $(python3 -c "print(round((0.10 + ${STYLE_GLASS_STRENGTH} * 0.60) * 100))")%, var(--surface));
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--accent) $(python3 -c "print(round((0.10 + ${STYLE_GLASS_STRENGTH} * 0.60) * 100))")%, var(--surface)),
+    color-mix(in srgb, var(--accent-alt) $(python3 -c "print(round((0.07 + ${STYLE_GLASS_STRENGTH} * 0.42) * 100))")%, var(--surface))
+  );
 }
 
 #name {
@@ -928,6 +936,7 @@ row:hover {
 
 #calc-result {
   font-family: "${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}", monospace;
+  color: var(--accent-alt);
 }
 EOF
 

@@ -1,7 +1,10 @@
 /* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
-@define-color accent_color          {{colors.primary.default.hex}};
-@define-color accent_fg_color       {{colors.on_primary.default.hex}};
+@define-color accent_color          {{colors.secondary_accent.default.hex}};
+@define-color accent_fg_color       {{colors.on_secondary_accent.default.hex}};
 @define-color accent_bg_color       {{colors.secondary_accent.default.hex}};
+@define-color accent1_color         {{colors.primary.default.hex}};
+@define-color accent1_bg_color      {{colors.primary.default.hex}};
+@define-color accent1_fg_color      {{colors.on_primary.default.hex}};
 @define-color accent2_color         {{colors.secondary_accent.default.hex}};
 @define-color accent2_bg_color      {{colors.secondary_accent_container.default.hex}};
 @define-color accent2_fg_color      {{colors.on_secondary_accent.default.hex}};

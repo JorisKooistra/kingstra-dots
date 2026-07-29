@@ -258,15 +258,91 @@ output_path = "~/.config/hyprlock/hyprlock.conf"
 input_path = "~/.config/matugen/templates/zsh-omp-colors.toml"
 output_path = "~/.config/zsh/omp-colors.toml"
 
+[templates.firefox]
+input_path = "~/.config/matugen/templates/firefox-colors.css"
+output_path = "~/.config/matugen/generated/firefox_websites.css"
+
+[templates.cava]
+input_path = "~/.config/matugen/templates/cava-colors.conf"
+output_path = "~/.config/cava/config"
+
+[templates.gtk3]
+input_path = "~/.config/matugen/templates/gtk-colors.css"
+output_path = "~/.config/gtk-3.0/colors.css"
+
+[templates.gtk4]
+input_path = "~/.config/matugen/templates/gtk-colors.css"
+output_path = "~/.config/gtk-4.0/colors.css"
+
+[templates.vscode]
+input_path = "~/.config/matugen/templates/vscode-colors.json"
+output_path = "~/.config/Code/User/matugen-colors.json"
+
+[templates.swaync]
+input_path = "~/.config/matugen/templates/swaync-colors.css"
+output_path = "~/.config/swaync/colors.css"
+
+[templates.sddm]
+input_path = "~/.config/matugen/templates/sddm-colors.qml"
+output_path = "~/.config/matugen/generated/sddm-colors.qml"
+
 [templates.palette_inspector]
 input_path = "~/.config/matugen/templates/palette-inspector.json"
 output_path = "~/.config/kingstra/state/matugen-palette.json"
+
+[templates.spicetify_colors]
+input_path = "~/.config/matugen/templates/spicetify-color.ini"
+output_path = "~/.config/spicetify/Themes/Matugen/color.ini"
+
+[templates.spicetify_user_css]
+input_path = "~/.config/matugen/templates/spicetify-user.css"
+output_path = "~/.config/spicetify/Themes/Matugen/user.css"
 EOF
         log_ok "Matugen baseline config aangemaakt: $matugen_conf"
     fi
 
-    _phase08_ensure_btop_template "$matugen_conf"
-    _phase08_ensure_palette_inspector_template "$matugen_conf"
+    # Matugen maakt bestanden aan, maar niet elke versie maakt ook alle
+    # bovenliggende appmappen. Houd een eerste run op een schone installatie
+    # daarom onafhankelijk van de installatievolgorde van die apps.
+    ensure_dir "$HOME/.config/matugen/generated"
+    ensure_dir "$HOME/.config/swaync"
+    ensure_dir "$HOME/.config/gtk-3.0"
+    ensure_dir "$HOME/.config/gtk-4.0"
+    ensure_dir "$HOME/.config/Code/User"
+
+    _phase08_ensure_template "$matugen_conf" btop \
+        "~/.config/matugen/templates/btop-colors.toml" \
+        "~/.config/btop/themes/kingstra.theme"
+    _phase08_ensure_template "$matugen_conf" firefox \
+        "~/.config/matugen/templates/firefox-colors.css" \
+        "~/.config/matugen/generated/firefox_websites.css"
+    _phase08_ensure_template "$matugen_conf" cava \
+        "~/.config/matugen/templates/cava-colors.conf" \
+        "~/.config/cava/config"
+    _phase08_ensure_template "$matugen_conf" gtk3 \
+        "~/.config/matugen/templates/gtk-colors.css" \
+        "~/.config/gtk-3.0/colors.css"
+    _phase08_ensure_template "$matugen_conf" gtk4 \
+        "~/.config/matugen/templates/gtk-colors.css" \
+        "~/.config/gtk-4.0/colors.css"
+    _phase08_ensure_template "$matugen_conf" vscode \
+        "~/.config/matugen/templates/vscode-colors.json" \
+        "~/.config/Code/User/matugen-colors.json"
+    _phase08_ensure_template "$matugen_conf" swaync \
+        "~/.config/matugen/templates/swaync-colors.css" \
+        "~/.config/swaync/colors.css"
+    _phase08_ensure_template "$matugen_conf" sddm \
+        "~/.config/matugen/templates/sddm-colors.qml" \
+        "~/.config/matugen/generated/sddm-colors.qml"
+    _phase08_ensure_template "$matugen_conf" palette_inspector \
+        "~/.config/matugen/templates/palette-inspector.json" \
+        "~/.config/kingstra/state/matugen-palette.json"
+    _phase08_ensure_template "$matugen_conf" spicetify_colors \
+        "~/.config/matugen/templates/spicetify-color.ini" \
+        "~/.config/spicetify/Themes/Matugen/color.ini"
+    _phase08_ensure_template "$matugen_conf" spicetify_user_css \
+        "~/.config/matugen/templates/spicetify-user.css" \
+        "~/.config/spicetify/Themes/Matugen/user.css"
 
     # 2) Quickshell colors fallback (valid JSON)
     if [[ ! -f "$qs_colors" ]]; then
@@ -297,10 +373,25 @@ EOF
   "primary": "#89b4fa",
   "on_primary": "#11111b",
   "primary_container": "#313244",
+  "on_primary_container": "#cdd6f4",
   "secondary": "#cba6f7",
   "on_secondary": "#11111b",
   "tertiary": "#94e2d5",
   "on_tertiary": "#11111b",
+  "accent1": "#89b4fa",
+  "on_accent1": "#11111b",
+  "accent1_container": "#313244",
+  "on_accent1_container": "#cdd6f4",
+  "accent2_source": "#f9e2af",
+  "accent2": "#f9e2af",
+  "on_accent2": "#11111b",
+  "accent2_container": "#45475a",
+  "on_accent2_container": "#cdd6f4",
+  "accent3_source": "#cba6f7",
+  "accent3": "#cba6f7",
+  "on_accent3": "#11111b",
+  "accent3_container": "#45475a",
+  "on_accent3_container": "#cdd6f4",
   "error": "#f38ba8",
   "on_error": "#11111b",
   "background": "#1e1e2e",
@@ -339,38 +430,20 @@ EOF
     fi
 }
 
-_phase08_ensure_btop_template() {
+_phase08_ensure_template() {
     local matugen_conf="$1"
+    local name="$2"
+    local input_path="$3"
+    local output_path="$4"
     [[ -f "$matugen_conf" ]] || return 0
 
-    if grep -Eq '^[[:space:]]*\[templates\.btop\][[:space:]]*$' "$matugen_conf"; then
+    if grep -Eq "^[[:space:]]*\\[templates\\.${name}\\][[:space:]]*$" "$matugen_conf"; then
         return 0
     fi
 
-    cat >> "$matugen_conf" <<'EOF'
-
-[templates.btop]
-input_path = "~/.config/matugen/templates/btop-colors.toml"
-output_path = "~/.config/btop/themes/kingstra.theme"
-EOF
-    log_ok "Matugen btop-template toegevoegd: $matugen_conf"
-}
-
-_phase08_ensure_palette_inspector_template() {
-    local matugen_conf="$1"
-    [[ -f "$matugen_conf" ]] || return 0
-
-    if grep -Eq '^[[:space:]]*\[templates\.palette_inspector\][[:space:]]*$' "$matugen_conf"; then
-        return 0
-    fi
-
-    cat >> "$matugen_conf" <<'EOF'
-
-[templates.palette_inspector]
-input_path = "~/.config/matugen/templates/palette-inspector.json"
-output_path = "~/.config/kingstra/state/matugen-palette.json"
-EOF
-    log_ok "Matugen palette-inspector template toegevoegd: $matugen_conf"
+    printf '\n[templates.%s]\ninput_path = "%s"\noutput_path = "%s"\n' \
+        "$name" "$input_path" "$output_path" >> "$matugen_conf"
+    log_ok "Matugen ${name}-template toegevoegd: $matugen_conf"
 }
 
 _phase08_install_game_launcher() {

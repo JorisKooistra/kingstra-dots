@@ -197,7 +197,7 @@ Item {
                 icon: "󰒲"
                 label: "Sluimerstand"
                 accent: mocha.blue
-                onTriggered: root.runAndClose("systemctl suspend")
+                onTriggered: root.runAndClose("\"$HOME/.config/hypr/scripts/suspend.sh\"")
             }
             ActionRow {
                 icon: "󰍃"

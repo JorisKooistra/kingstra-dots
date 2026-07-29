@@ -183,7 +183,7 @@ ShellRoot {
 
     Process {
         id: suspendProcess
-        command: ["systemctl", "suspend"]
+        command: ["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/suspend.sh"]
     }
 
     Process {

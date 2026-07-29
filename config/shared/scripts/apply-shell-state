@@ -509,8 +509,27 @@ if [[ -f "$FIREFOX_COLORS" ]]; then
     touch "$FIREFOX_COLORS" 2>/dev/null || true
 fi
 
+# SDDM draait buiten de usersessie en leest zijn theme uit /usr/share.
+# Matugen schrijft daarom eerst veilig naar de user-cache; synchroniseer die
+# output alleen wanneer de installer de theme-directory schrijfbaar heeft
+# gemaakt. Een ontbrekende SDDM-installatie mag de overige templates niet
+# blokkeren.
+SDDM_COLORS="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/generated/sddm-colors.qml"
+SDDM_THEME_COLORS="/usr/share/sddm/themes/kingstra/Colors.qml"
+if [[ -f "$SDDM_COLORS" && -d "$(dirname "$SDDM_THEME_COLORS")" ]]; then
+    if [[ -w "$(dirname "$SDDM_THEME_COLORS")" ]]; then
+        install -m 0644 "$SDDM_COLORS" "$SDDM_THEME_COLORS" 2>/dev/null \
+            && _log "SDDM meerkleurenpalette bijgewerkt"
+    else
+        _warn "SDDM theme-directory niet schrijfbaar — Colors.qml niet bijgewerkt"
+    fi
+fi
+
 # Pywalfox — Firefox UI theming (tabs, toolbar, borders).
-# Converteer matugen-palette naar pywal colors.json, roep dan pywalfox update aan.
+# Pywalfox gebruikt in dark mode vooral color10/color13 en in light mode
+# color3/color5 als primary/secondary accent. Vul juist die vier slots met de
+# twee echte wallpaper-samples; anders valt Firefox ongemerkt terug op de
+# gewone Material secondary-kleuren.
 PALETTE_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/matugen-palette.json"
 PYWAL_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/wal"
 if [[ -f "$PALETTE_JSON" ]] && command -v jq &>/dev/null; then
@@ -531,18 +550,18 @@ if [[ -f "$PALETTE_JSON" ]] && command -v jq &>/dev/null; then
             colors: {
                 color0:  $c.background,
                 color1:  $c.error,
-                color2:  $c.tertiary,
-                color3:  $c.secondary,
+                color2:  $c.secondary_accent,
+                color3:  $c.secondary_accent,
                 color4:  $c.primary,
-                color5:  $c.on_secondary_container,
-                color6:  $c.tertiary_container,
+                color5:  $c.tertiary_accent,
+                color6:  $c.tertiary,
                 color7:  $c.on_surface,
                 color8:  $c.outline,
                 color9:  $c.on_error_container,
-                color10: $c.primary,
+                color10: $c.secondary_accent,
                 color11: $c.on_surface_variant,
                 color12: $c.primary_container,
-                color13: $c.secondary,
+                color13: $c.tertiary_accent,
                 color14: $c.inverse_primary,
                 color15: $c.on_background
             }
@@ -550,6 +569,10 @@ if [[ -f "$PALETTE_JSON" ]] && command -v jq &>/dev/null; then
 
     if python3 -m pywalfox update 2>/dev/null; then
         _log "Pywalfox bijgewerkt"
+        if [[ "$MODE" == "light" || "$MODE" == "dark" ]]; then
+            python3 -m pywalfox "$MODE" >/dev/null 2>&1 || true
+            _log "Pywalfox mode: $MODE"
+        fi
     fi
 fi
 

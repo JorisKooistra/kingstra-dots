@@ -577,7 +577,7 @@ Item {
             "general {",
             "    lock_cmd         = bash ~/.config/hypr/scripts/lock.sh",
             "    before_sleep_cmd = loginctl lock-session",
-            "    after_sleep_cmd  = hyprctl dispatch dpms on",
+            "    after_sleep_cmd  = bash ~/.config/hypr/scripts/resume-display.sh",
             "}",
             ""
         ];
@@ -600,7 +600,7 @@ Item {
                 "listener {",
                 "    timeout   = " + safeLock,
                 "    on-timeout = loginctl lock-session",
-                "    on-resume  = hyprctl dispatch dpms on",
+                "    on-resume  = bash ~/.config/hypr/scripts/resume-display.sh --display-only",
                 "}",
                 ""
             );
@@ -612,7 +612,7 @@ Item {
                 "listener {",
                 "    timeout   = " + safeScreenOff,
                 "    on-timeout = hyprctl dispatch dpms off",
-                "    on-resume  = hyprctl dispatch dpms on",
+                "    on-resume  = bash ~/.config/hypr/scripts/resume-display.sh --display-only",
                 "}",
                 ""
             );
@@ -623,7 +623,7 @@ Item {
                 "# Suspend / slaapstand",
                 "listener {",
                 "    timeout   = " + safeSuspend,
-                "    on-timeout = systemctl suspend",
+                "    on-timeout = bash ~/.config/hypr/scripts/suspend.sh",
                 "}",
                 ""
             );

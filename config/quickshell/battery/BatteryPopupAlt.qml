@@ -823,7 +823,7 @@ Item {
                     Repeater {
                         model: ListModel {
                             ListElement { cmd: "bash ~/.config/hypr/scripts/lock.sh"; icon: ""; baseColor: "mauve"; weight: 1.0 }
-                            ListElement { cmd: "bash ~/.config/hypr/scripts/lock.sh & systemctl suspend"; icon: "ᶻ 𝗓 𐰁"; baseColor: "blue"; weight: 1.0 }
+                            ListElement { cmd: "bash ~/.config/hypr/scripts/suspend.sh"; icon: "ᶻ 𝗓 𐰁"; baseColor: "blue"; weight: 1.0 }
                             ListElement { cmd: "systemctl reboot"; icon: "󰑓"; baseColor: "yellow"; weight: 2.5 }
                             ListElement { cmd: "systemctl poweroff -i"; icon: ""; baseColor: "red"; weight: 3.5 }
                         }
@@ -840,7 +840,7 @@ Item {
                             property color c1: window[baseColor] || window.surface1
                             property color c2: Qt.lighter(c1, 1.2)
                             property bool isPowerAction: (typeof cmd === "string") && cmd.indexOf("poweroff") !== -1
-                            property string shortPressCmd: "bash ~/.config/hypr/scripts/lock.sh & systemctl suspend"
+                            property string shortPressCmd: "bash ~/.config/hypr/scripts/suspend.sh"
                             property string pendingCmd: cmd
 
                             color: actionMa.containsMouse ? window.surface1 : window.surface0

@@ -1,6 +1,6 @@
 #window {
   background: color-mix(in srgb, var(--mantle) 98%, transparent);
-  border: 2px solid color-mix(in srgb, var(--outline) 50%, transparent);
+  border: 2px solid color-mix(in srgb, var(--accent-alt) 58%, var(--outline));
   border-radius: 2px;
   box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) 42%, transparent);
   font-family: "Share Tech Mono", sans-serif;
@@ -11,6 +11,10 @@
   padding: 9px 13px;
 }
 
+#search:focus {
+  border-color: var(--accent);
+}
+
 row {
   border-radius: 4px;
   margin: 1px 2px;
@@ -19,7 +23,11 @@ row {
 
 row:selected,
 row:hover {
-  background: color-mix(in srgb, var(--primary) 11%, var(--surface));
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--accent) 11%, var(--surface)),
+    color-mix(in srgb, var(--accent-alt) 8%, var(--surface))
+  );
 }
 
 #name {
@@ -35,4 +43,5 @@ row:hover {
 
 #calc-result {
   font-family: "JetBrainsMono Nerd Font", monospace;
+  color: var(--accent-alt);
 }

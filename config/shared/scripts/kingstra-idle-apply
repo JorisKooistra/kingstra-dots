@@ -93,7 +93,7 @@ write_config() {
         printf '%s\n' 'general {'
         printf '%s\n' '    lock_cmd         = bash ~/.config/hypr/scripts/lock.sh'
         printf '%s\n' '    before_sleep_cmd = loginctl lock-session'
-        printf '%s\n' '    after_sleep_cmd  = hyprctl dispatch dpms on'
+        printf '%s\n' '    after_sleep_cmd  = bash ~/.config/hypr/scripts/resume-display.sh'
         printf '%s\n' '}'
         printf '\n'
 
@@ -112,7 +112,7 @@ write_config() {
             printf '%s\n' 'listener {'
             printf '    timeout   = %s\n' "$lock"
             printf '%s\n' '    on-timeout = loginctl lock-session'
-            printf '%s\n' '    on-resume  = hyprctl dispatch dpms on'
+            printf '%s\n' '    on-resume  = bash ~/.config/hypr/scripts/resume-display.sh --display-only'
             printf '%s\n' '}'
             printf '\n'
         fi
@@ -122,7 +122,7 @@ write_config() {
             printf '%s\n' 'listener {'
             printf '    timeout   = %s\n' "$screen_off"
             printf '%s\n' '    on-timeout = hyprctl dispatch dpms off'
-            printf '%s\n' '    on-resume  = hyprctl dispatch dpms on'
+            printf '%s\n' '    on-resume  = bash ~/.config/hypr/scripts/resume-display.sh --display-only'
             printf '%s\n' '}'
             printf '\n'
         fi
@@ -131,9 +131,8 @@ write_config() {
             printf '%s\n' '# Suspend / slaapstand'
             printf '%s\n' 'listener {'
             printf '    timeout   = %s\n' "$suspend"
-            printf '%s\n' '    on-timeout = systemctl suspend'
+            printf '%s\n' '    on-timeout = bash ~/.config/hypr/scripts/suspend.sh'
             printf '%s\n' '}'
-            printf '\n'
         fi
     } > "$HYPRIDLE_FILE"
 }
