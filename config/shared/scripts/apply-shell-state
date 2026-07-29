@@ -143,14 +143,14 @@ _prepare_theme_wallpaper() {
     local theme_name="$1"
     local wallpaper="$2"
     local original_file="$CACHE_DIR/theme-wallpaper-source"
-    local source target_dir target_file hash effect_key
+    local source target_dir target_file hash effect_key mono_accent_helper
 
     [[ -n "$wallpaper" && -f "$wallpaper" ]] || {
         printf '%s\n' "$wallpaper"
         return 0
     }
 
-    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
+    if [[ "$theme_name" == "mono" || "$theme_name" == "mono-accent" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
         mkdir -p "$CACHE_DIR"
         source="$(_theme_wallpaper_source "$wallpaper")"
         [[ -n "$source" && -f "$source" ]] || source="$wallpaper"
@@ -165,6 +165,7 @@ _prepare_theme_wallpaper() {
         case "$theme_name" in
             paper) effect_key="paper-sketch-v6" ;;
             neon)  effect_key="neon-glass-tint-v1" ;;
+            mono-accent) effect_key="mono-accent-splash-v1" ;;
             *)     effect_key="mono-gray-v1" ;;
         esac
         hash="$(printf '%s:%s:%s:%s' "$effect_key" "$source" "$(stat -c '%Y' "$source" 2>/dev/null || echo 0)" "$(stat -c '%s' "$source" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
@@ -188,6 +189,13 @@ _prepare_theme_wallpaper() {
                     -fill "#00b7ff" -colorize 4% \
                     -fill "#06131d" -colorize 2% \
                     -quality 92 "$target_file"
+            elif [[ "$theme_name" == "mono-accent" ]]; then
+                mono_accent_helper="${HOME}/.local/bin/kingstra-mono-accent"
+                [[ -f "$mono_accent_helper" ]] || mono_accent_helper="$REPO_ROOT/config/shared/scripts/kingstra-mono-accent"
+                if ! _run_helper "$mono_accent_helper" wallpaper "$source" "$target_file"; then
+                    _warn "Mono Accent color splash mislukt — grijze fallback gebruikt"
+                    magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
+                fi
             else
                 magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
             fi
@@ -240,7 +248,7 @@ _sync_skwd_config() {
     local theme_name="${3:-}"
     local wallhaven_enabled=true
 
-    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
+    if [[ "$theme_name" == "mono" || "$theme_name" == "mono-accent" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
         wallhaven_enabled=false
     fi
 
@@ -526,10 +534,10 @@ if [[ -f "$SDDM_COLORS" && -d "$(dirname "$SDDM_THEME_COLORS")" ]]; then
 fi
 
 # Pywalfox — Firefox UI theming (tabs, toolbar, borders).
-# Pywalfox gebruikt in dark mode vooral color10/color13 en in light mode
-# color3/color5 als primary/secondary accent. Vul juist die vier slots met de
-# twee echte wallpaper-samples; anders valt Firefox ongemerkt terug op de
-# gewone Material secondary-kleuren.
+# Pywalfox heeft twee expliciete accentrollen: in dark mode color10/color13 en
+# in light mode color3/color5. Geef die accent 1 + 2; accent 3 zit daarnaast in
+# de overige ANSI-slots en in onze userChrome-laag, zodat Firefox als geheel
+# het volledige driekleurencontract gebruikt.
 PALETTE_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/matugen-palette.json"
 PYWAL_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/wal"
 if [[ -f "$PALETTE_JSON" ]] && command -v jq &>/dev/null; then
@@ -550,18 +558,18 @@ if [[ -f "$PALETTE_JSON" ]] && command -v jq &>/dev/null; then
             colors: {
                 color0:  $c.background,
                 color1:  $c.error,
-                color2:  $c.secondary_accent,
-                color3:  $c.secondary_accent,
+                color2:  $c.tertiary_accent,
+                color3:  $c.primary,
                 color4:  $c.primary,
-                color5:  $c.tertiary_accent,
-                color6:  $c.tertiary,
+                color5:  $c.secondary_accent,
+                color6:  $c.tertiary_accent,
                 color7:  $c.on_surface,
                 color8:  $c.outline,
                 color9:  $c.on_error_container,
-                color10: $c.secondary_accent,
+                color10: $c.primary,
                 color11: $c.on_surface_variant,
                 color12: $c.primary_container,
-                color13: $c.tertiary_accent,
+                color13: $c.secondary_accent,
                 color14: $c.inverse_primary,
                 color15: $c.on_background
             }

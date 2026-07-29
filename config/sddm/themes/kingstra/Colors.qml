@@ -6,6 +6,8 @@ import QtQuick
 QtObject {
     readonly property color primary:       "#89b4fa"   // blue
     readonly property color on_primary:    "#1e1e2e"   // base
+    readonly property color accent1:       "#89b4fa"
+    readonly property color on_accent1:    "#1e1e2e"
     readonly property color secondary:     "#cba6f7"   // mauve
     readonly property color tertiary:      "#a6e3a1"   // green
     readonly property color accent2:       "#f9e2af"   // wallpaper accent 2 fallback
@@ -29,5 +31,5 @@ QtObject {
     readonly property color text:          "#cdd6f4"
     readonly property color mauve:         "#cba6f7"
     readonly property color blue:          "#f9e2af"
-    readonly property color green:         "#cba6f7"
+    readonly property color green:         "#f9e2af"
 }

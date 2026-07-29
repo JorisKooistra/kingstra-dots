@@ -1,4 +1,5 @@
 /* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
+/* Accent 1 = focus, accent 2 = status, accent 3 = attentie. */
 @define-color primary                   {{colors.primary.default.hex}};
 @define-color on-primary                {{colors.on_primary.default.hex}};
 @define-color primary-container         {{colors.primary_container.default.hex}};

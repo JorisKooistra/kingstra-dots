@@ -41,6 +41,11 @@
   border-color: var(--outline-variant) !important;
 }
 
+#navigator-toolbox {
+  border-top: 2px solid transparent !important;
+  border-image: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent3)) 1 !important;
+}
+
 #TabsToolbar,
 #nav-bar {
   --toolbarbutton-icon-fill: var(--on-surface-variant) !important;

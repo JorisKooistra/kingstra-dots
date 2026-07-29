@@ -62,7 +62,7 @@ def get_value(data, dotpath):
     return obj
 
 
-CANONICAL_THEME_IDS = ("paper", "organic", "neon", "mono")
+CANONICAL_THEME_IDS = ("paper", "organic", "neon", "mono", "mono-accent")
 
 
 def list_themes(themes_dir, include_legacy=False):

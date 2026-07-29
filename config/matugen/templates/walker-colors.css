@@ -1,4 +1,5 @@
 /* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
+/* Accent 1 = focus, accent 2 = selectie, accent 3 = resultaat/attentie. */
 :root {
   --primary:                    {{colors.primary.default.hex}};
   --on-primary:                 {{colors.on_primary.default.hex}};
@@ -53,6 +54,7 @@
   --base:                       {{colors.background.default.hex}};
   --mantle:                     {{colors.surface_container_lowest.default.hex}};
   --crust:                      {{colors.shadow.default.hex}};
-  --accent:                     {{colors.secondary_accent.default.hex}};
-  --accent-alt:                 {{colors.tertiary_accent.default.hex}};
+  --accent:                     {{colors.primary.default.hex}};
+  --accent-alt:                 {{colors.secondary_accent.default.hex}};
+  --accent-hot:                 {{colors.tertiary_accent.default.hex}};
 }

@@ -34,6 +34,30 @@ EXTRA_ARGS=()
 _warn() { echo "[kingstra-matugen-run] WARN: $*" >&2; }
 _die()  { echo "[kingstra-matugen-run] FOUT: $*" >&2; exit 1; }
 
+SCRIPT_REALPATH="$(readlink -f "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(cd "$(dirname "$SCRIPT_REALPATH")/../../.." && pwd)"
+
+_run_helper() {
+    local helper="$1"
+    shift
+
+    if [[ -x "$helper" ]]; then
+        "$helper" "$@"
+    elif [[ -f "$helper" ]]; then
+        python3 "$helper" "$@"
+    else
+        return 127
+    fi
+}
+
+_mono_accent_helper() {
+    if [[ -f "${HOME}/.local/bin/kingstra-mono-accent" ]]; then
+        printf '%s\n' "${HOME}/.local/bin/kingstra-mono-accent"
+    else
+        printf '%s\n' "$REPO_ROOT/config/shared/scripts/kingstra-mono-accent"
+    fi
+}
+
 _usage() {
     cat <<'EOF'
 Gebruik:
@@ -76,7 +100,7 @@ _valid_scheme() {
 
 _canonical_theme_name() {
     case "${1,,}" in
-        paper|organic|neon|mono) printf '%s\n' "${1,,}" ;;
+        paper|organic|neon|mono|mono-accent) printf '%s\n' "${1,,}" ;;
         botanical|animated) printf '%s\n' "organic" ;;
         modern|cyber|space|ocean) printf '%s\n' "neon" ;;
         rocky) printf '%s\n' "mono" ;;
@@ -542,22 +566,35 @@ def gated(pool, tier):
 
 
 def best_pair(candidates, source_h):
-    """Kies beide accenten in één keer, op de krapste van de drie tintafstanden.
+    """Kies beide accenten in één keer, op de krapste tintafstand.
 
     Accent 2 en 3 los na elkaar kiezen loopt vast: de tweede keuze verwerpt dan
     een sterke kleur omdat die te dicht bij de eerste ligt, en wijkt uit naar een
     zwakke kleur die toevallig ver weg ligt. Door het paar als geheel te wegen
     wint de combinatie die primary, accent 2 en accent 3 het verst uit elkaar
     zet, met prominentie als tiebreak.
+
+    Meet zowel de echte brontinten als de voorspelde geharmoniseerde tinten.
+    Alleen die laatste meten gaf rond de 0/360-grens een vals positief: twee
+    vrijwel gelijke rode bronnen aan weerszijden van de grens konden bij een
+    bijna tegengestelde seed elk een andere kant op draaien en daardoor uniek
+    lijken. Matugen hield ze in de uiteindelijke Material-tonen alsnog allebei
+    rood.
     """
     out = None
     for i, a in enumerate(candidates):
         for b in candidates[i + 1 :]:
-            spread = min(
+            source_spread = min(
+                hue_delta(a["h"], source_h),
+                hue_delta(b["h"], source_h),
+                hue_delta(a["h"], b["h"]),
+            )
+            harmonized_spread = min(
                 hue_delta(a["_eh"], source_h),
                 hue_delta(b["_eh"], source_h),
                 hue_delta(a["_eh"], b["_eh"]),
             )
+            spread = min(source_spread, harmonized_spread)
             key = (min(spread / SEP_TARGET, 1.0), a["score"] * b["score"])
             if out is None or key > out[0]:
                 out = (key, (a, b))
@@ -640,7 +677,7 @@ SECONDARY_HEX="${WALLPAPER_PALETTE[1]:-}"
 TERTIARY_HEX="${WALLPAPER_PALETTE[2]:-}"
 
 SOURCE_HEX=""
-if (( COLOR_INDEX > 0 )); then
+if (( COLOR_INDEX > 0 )) || [[ "$THEME_ID" == "mono-accent" ]]; then
     SOURCE_HEX="$PALETTE_SEED_HEX"
     if [[ ! "$SOURCE_HEX" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
         _warn "Kon dominante kleur #$COLOR_INDEX niet bepalen — fallback naar image-modus"
@@ -655,8 +692,12 @@ if [[ ! "$TERTIARY_HEX" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
     TERTIARY_HEX="$SECONDARY_HEX"
 fi
 SECONDARY_BLEND=true
-if [[ "$THEME_ID" == "mono" ]]; then
+if [[ "$THEME_ID" == "mono" || "$THEME_ID" == "mono-accent" ]]; then
     SECONDARY_BLEND=false
+fi
+if [[ "$THEME_ID" == "mono-accent" && "$SOURCE_HEX" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
+    SECONDARY_HEX="$SOURCE_HEX"
+    TERTIARY_HEX="$SOURCE_HEX"
 fi
 _set_custom_colors_block "$MATUGEN_CONF" \
     "secondary_accent = { color = \"${SECONDARY_HEX}\", blend = ${SECONDARY_BLEND} }" \
@@ -681,6 +722,31 @@ if [[ -f "$MATUGEN_CONF" ]]; then
     MATUGEN_ARGS+=(--config "$MATUGEN_CONF")
 fi
 
+MATUGEN_BASE_ARGS=("${MATUGEN_ARGS[@]}")
 MATUGEN_ARGS+=("${EXTRA_ARGS[@]}")
 
-matugen "${MATUGEN_ARGS[@]}"
+if [[ "$THEME_ID" == "mono-accent" ]]; then
+    JSON_REQUESTED=false
+    for arg in "${EXTRA_ARGS[@]}"; do
+        case "$arg" in
+            --json|-j|--json=*) JSON_REQUESTED=true ;;
+        esac
+    done
+
+    RAW_PALETTE="$(matugen "${MATUGEN_BASE_ARGS[@]}" --dry-run --json hex)"
+    ACTUAL_OUTPUT="$(matugen "${MATUGEN_ARGS[@]}")"
+    MONO_ACCENT_HELPER="$(_mono_accent_helper)"
+
+    if TRANSFORMED_PALETTE="$(printf '%s\n' "$RAW_PALETTE" | _run_helper "$MONO_ACCENT_HELPER" palette --config "$MATUGEN_CONF" --mode "$MODE")"; then
+        if $JSON_REQUESTED; then
+            printf '%s\n' "$TRANSFORMED_PALETTE"
+        elif [[ -n "$ACTUAL_OUTPUT" ]]; then
+            printf '%s\n' "$ACTUAL_OUTPUT"
+        fi
+    else
+        _warn "Mono Accent palette-normalisatie mislukt — onbewerkte Matugen-output behouden"
+        [[ -z "$ACTUAL_OUTPUT" ]] || printf '%s\n' "$ACTUAL_OUTPUT"
+    fi
+else
+    matugen "${MATUGEN_ARGS[@]}"
+fi

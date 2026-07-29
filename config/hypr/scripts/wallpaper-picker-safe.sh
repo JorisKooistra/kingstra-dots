@@ -51,7 +51,7 @@ if command -v skwd >/dev/null 2>&1; then
     systemctl --user start skwd-daemon.service >/dev/null 2>&1 || true
     _sync_skwd_monitor
     active_theme="$(_active_theme)"
-    if [[ "$active_theme" == "mono" || "$active_theme" == "paper" || "$active_theme" == "neon" ]]; then
+    if [[ "$active_theme" == "mono" || "$active_theme" == "mono-accent" || "$active_theme" == "paper" || "$active_theme" == "neon" ]]; then
         skwd wall suppress >/dev/null 2>&1 || true
         (
             sleep 90

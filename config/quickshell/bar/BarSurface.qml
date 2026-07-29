@@ -65,7 +65,7 @@ Item {
     readonly property string skinSource: {
         if (activeTheme === "paper") return "skins/PaperBar.qml";
         if (activeTheme === "neon") return "skins/NeonBar.qml";
-        if (activeTheme === "mono") return "skins/MonoBar.qml";
+        if (activeTheme === "mono" || activeTheme === "mono-accent") return "skins/MonoBar.qml";
         return "skins/OrganicBar.qml";
     }
 
@@ -127,7 +127,7 @@ Item {
                                                               ? (Quickshell.env("HOME") + "/.config/kingstra-dots/assets/themes/" + activeTheme + "/texture-overlay.png")
                                                               : ""
     property string activeTextureOverlaySource: ""
-    readonly property real minTextureOpacity: activeTheme === "mono" ? 0.06 : (activeTheme === "organic" ? 0.08 : 0.0)
+    readonly property real minTextureOpacity: (activeTheme === "mono" || activeTheme === "mono-accent") ? 0.06 : (activeTheme === "organic" ? 0.08 : 0.0)
     readonly property real textureOverlayOpacity: activeTextureOverlaySource !== ""
                                                  ? Math.max(minTextureOpacity, ThemeConfig.materialOverlayOpacity)
                                                  : 0.0

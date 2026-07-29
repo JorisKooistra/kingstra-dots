@@ -1,14 +1,14 @@
 #window {
   background: color-mix(in srgb, var(--mantle) 98%, transparent);
-  border: 2px solid color-mix(in srgb, var(--accent-alt) 58%, var(--outline));
-  border-radius: 2px;
-  box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) 42%, transparent);
-  font-family: "Share Tech Mono", sans-serif;
+  border: 1px solid color-mix(in srgb, var(--accent-hot) 42%, var(--outline));
+  border-radius: 0px;
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) 2%, transparent);
+  font-family: "JetBrains Mono", sans-serif;
 }
 
 #search {
   font-size: 12px;
-  padding: 9px 13px;
+  padding: 7px 11px;
 }
 
 #search:focus {
@@ -18,30 +18,31 @@
 row {
   border-radius: 4px;
   margin: 1px 2px;
-  padding: 5px 7px;
+  padding: 5px 5px;
 }
 
 row:selected,
 row:hover {
   background: linear-gradient(
     110deg,
-    color-mix(in srgb, var(--accent) 11%, var(--surface)),
-    color-mix(in srgb, var(--accent-alt) 8%, var(--surface))
+    color-mix(in srgb, var(--accent) 10%, var(--surface)),
+    color-mix(in srgb, var(--accent-alt) 8%, var(--surface)),
+    color-mix(in srgb, var(--accent-hot) 7%, var(--surface))
   );
 }
 
 #name {
-  font-family: "Share Tech Mono", sans-serif;
+  font-family: "JetBrains Mono", sans-serif;
   font-weight: 600;
 }
 
 #description,
 #label,
 #typeahead {
-  font-family: "Share Tech Mono", sans-serif;
+  font-family: "JetBrains Mono", sans-serif;
 }
 
 #calc-result {
   font-family: "JetBrainsMono Nerd Font", monospace;
-  color: var(--accent-alt);
+  color: var(--accent-hot);
 }

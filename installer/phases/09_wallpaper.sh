@@ -13,6 +13,8 @@ phase_run() {
     log_step "Wallpaper-pakketten installeren..."
     aur_install skwd-wall               # standalone skwd-wall CLI + user daemon
     pacman_install imagemagick          # voor gradient-fallback + manipulatie
+    pacman_install python-pillow         # Mono Accent beeldbewerking
+    pacman_install python-numpy          # Mono Accent pixelmasker
     pacman_install ffmpeg               # voor videothumbnails / -verwerking
     pacman_install sqlite               # walker/history dep, ook nuttig voor indexer
     pacman_install inotify-tools        # voor live-reloadwatcher (optioneel)

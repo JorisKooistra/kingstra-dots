@@ -1,13 +1,13 @@
 {
-  "_comment": "Automatisch gegenereerd door matugen. Inspectiepalette voor styling/debugging.",
+  "_comment": "Driekleurencontract: accent 1 = focus/navigatie, accent 2 = activiteit/succes, accent 3 = selectie/attentie.",
   "groups": [
     {
       "key": "accents",
       "label": "Accenten",
       "colors": [
-        { "key": "primary", "label": "Accent 1", "hex": "{{colors.primary.default.hex}}" },
-        { "key": "secondary_accent", "label": "Accent 2", "hex": "{{colors.secondary_accent.default.hex}}" },
-        { "key": "tertiary_accent", "label": "Accent 3", "hex": "{{colors.tertiary_accent.default.hex}}" },
+        { "key": "primary", "label": "Accent 1 · focus", "hex": "{{colors.primary.default.hex}}" },
+        { "key": "secondary_accent", "label": "Accent 2 · activiteit", "hex": "{{colors.secondary_accent.default.hex}}" },
+        { "key": "tertiary_accent", "label": "Accent 3 · attentie", "hex": "{{colors.tertiary_accent.default.hex}}" },
 
         { "key": "on_primary", "label": "On accent 1", "hex": "{{colors.on_primary.default.hex}}" },
         { "key": "on_secondary_accent", "label": "On accent 2", "hex": "{{colors.on_secondary_accent.default.hex}}" },

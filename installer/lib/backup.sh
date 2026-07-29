@@ -45,6 +45,7 @@ _BACKUP_KNOWN_PATHS=(
     "$HOME/.zshenv"
     "$HOME/.local/bin/kingstra-theme-apply"
     "$HOME/.local/bin/kingstra-session-start"
+    "$HOME/.local/bin/kingstra-mono-accent"
     "$HOME/.local/bin/kingstra-idle-apply"
     "$HOME/.local/bin/kingstra-idle-inhibit"
     "$HOME/.local/bin/kingstra-wallpaper"

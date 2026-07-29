@@ -1,11 +1,16 @@
 /* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
 :root {
+  /* Accent 1 = progress/selectie, accent 2 = play, accent 3 = hover/heart. */
   --matugen-bg: {{colors.background.default.hex}};
   --matugen-surface-low: {{colors.surface_container_low.default.hex}};
   --matugen-surface: {{colors.surface_container.default.hex}};
   --matugen-surface-hi: {{colors.surface_container_high.default.hex}};
   --matugen-sidebar: {{colors.surface_container_low.default.hex}};
   --matugen-player: {{colors.surface_container_high.default.hex}};
+  --matugen-accent1: {{colors.primary.default.hex}};
+  --matugen-accent1-soft: {{colors.primary_container.default.hex}};
+  --matugen-accent1-contrast: {{colors.on_primary.default.hex}};
+  --matugen-accent1-soft-contrast: {{colors.on_primary_container.default.hex}};
   --matugen-accent-source: {{colors.secondary_accent_source.default.hex}};
   --matugen-accent: {{colors.secondary_accent.default.hex}};
   --matugen-accent-soft: {{colors.secondary_accent_container.default.hex}};
@@ -56,7 +61,8 @@
 .main-actionBarBackground-background {
   background: linear-gradient(
     155deg,
-    color-mix(in srgb, var(--matugen-accent-soft) 12%, var(--matugen-surface-hi) 88%),
+    color-mix(in srgb, var(--matugen-accent1-soft) 12%, var(--matugen-surface-hi) 88%),
+    color-mix(in srgb, var(--matugen-accent-soft) 10%, var(--matugen-surface) 90%),
     color-mix(in srgb, var(--matugen-accent-alt-soft) 8%, var(--matugen-surface) 92%),
     var(--matugen-bg)
   ) !important;
@@ -144,6 +150,10 @@ button.Button-sc-1dqy6lx-0:active {
 }
 
 .x-progressBar-fillColor,
+.playback-bar .progress-bar__fg {
+  background-color: var(--matugen-accent1) !important;
+}
+
 .main-playPauseButton-button {
   background-color: var(--matugen-accent) !important;
   color: var(--matugen-accent-contrast) !important;

@@ -1,0 +1,322 @@
+#!/usr/bin/env python3
+"""Mono Accent wallpaper- en palettebewerking.
+
+Subcommands:
+  wallpaper <source> <target>
+  palette --config <matugen-config> --mode <dark|light>
+
+`palette` leest Matugen JSON van stdin, past alle gegenereerde template-output
+aan en schrijft het aangepaste JSON naar stdout.
+"""
+
+from __future__ import annotations
+
+import argparse
+import colorsys
+import json
+import math
+import os
+from pathlib import Path
+import re
+import sys
+import tempfile
+
+
+HEX_RE = re.compile(r"(?i)(?<![0-9a-f])#?([0-9a-f]{6})(?![0-9a-f])")
+
+
+def _rgb(hex_color: str) -> tuple[int, int, int]:
+    value = hex_color.lstrip("#")
+    return tuple(int(value[index : index + 2], 16) for index in (0, 2, 4))
+
+
+def _hex(rgb: tuple[int, int, int]) -> str:
+    return "#{:02X}{:02X}{:02X}".format(*rgb)
+
+
+def _gray(hex_color: str) -> str:
+    red, green, blue = _rgb(hex_color)
+    # sRGB-luma houdt de waargenomen helderheid beter vast dan een gemiddelde.
+    value = round(0.2126 * red + 0.7152 * green + 0.0722 * blue)
+    return _hex((value, value, value))
+
+
+def _dominant_accent(image) -> str:
+    from PIL import Image
+
+    sample = image.copy()
+    sample.thumbnail((192, 192), Image.Resampling.LANCZOS)
+    quantized = sample.convert("RGB").quantize(colors=48, method=Image.Quantize.MEDIANCUT)
+    palette = quantized.getpalette() or []
+    counts = quantized.getcolors(maxcolors=48) or []
+    total = sum(count for count, _ in counts) or 1
+    candidates = []
+
+    for count, palette_index in counts:
+        offset = palette_index * 3
+        if offset + 2 >= len(palette):
+            continue
+        red, green, blue = palette[offset : offset + 3]
+        hue, lightness, saturation = colorsys.rgb_to_hls(
+            red / 255.0, green / 255.0, blue / 255.0
+        )
+        chroma = max(red, green, blue) - min(red, green, blue)
+        balance = max(0.25, 1.0 - abs(lightness - 0.48) * 1.15)
+        score = (
+            math.log(count + 1.0)
+            * (0.45 + saturation)
+            * (0.60 + chroma / 255.0)
+            * balance
+        )
+        candidates.append(
+            {
+                "rgb": (red, green, blue),
+                "hue": hue,
+                "lightness": lightness,
+                "saturation": saturation,
+                "chroma": chroma,
+                "share": count / total,
+                "score": score,
+            }
+        )
+
+    usable = [
+        color
+        for color in candidates
+        if color["chroma"] >= 18
+        and color["saturation"] >= 0.14
+        and 0.07 <= color["lightness"] <= 0.92
+        and max(color["rgb"]) >= 36
+    ]
+    if not usable:
+        # Een werkelijk kleurloze wallpaper krijgt een rustig blauw fallback-
+        # accent; de wallpaper zelf blijft dan volledig grijs.
+        return "#8AADF4"
+
+    chosen = max(usable, key=lambda color: (color["score"], color["share"]))
+    return _hex(chosen["rgb"])
+
+
+def make_wallpaper(source: Path, target: Path) -> str:
+    try:
+        import numpy as np
+        from PIL import Image, ImageOps
+    except ImportError as error:
+        raise RuntimeError("Pillow en NumPy zijn nodig voor Mono Accent") from error
+
+    with Image.open(source) as opened:
+        image = ImageOps.exif_transpose(opened).convert("RGB")
+
+    accent = _dominant_accent(image)
+    accent_rgb = _rgb(accent)
+    accent_hue = colorsys.rgb_to_hsv(*(channel / 255.0 for channel in accent_rgb))[0]
+
+    rgb = np.asarray(image, dtype=np.float32)
+    hsv = np.asarray(image.convert("HSV"), dtype=np.float32) / 255.0
+    hue_distance = np.minimum(
+        np.abs(hsv[:, :, 0] - accent_hue),
+        1.0 - np.abs(hsv[:, :, 0] - accent_hue),
+    )
+
+    # Volle kleur binnen 12°, zachte overgang tot 28°. Lage saturatie en bijna
+    # zwarte pixels krijgen geen kleurmasker, zodat oppervlakken echt grijs zijn.
+    inner_hue = 12.0 / 360.0
+    outer_hue = 28.0 / 360.0
+    hue_mask = np.clip((outer_hue - hue_distance) / (outer_hue - inner_hue), 0.0, 1.0)
+    saturation_mask = np.clip((hsv[:, :, 1] - 0.12) / 0.20, 0.0, 1.0)
+    value_mask = np.clip((hsv[:, :, 2] - 0.08) / 0.10, 0.0, 1.0)
+    mask = (hue_mask * saturation_mask * value_mask)[:, :, None]
+    mask = mask * mask * (3.0 - 2.0 * mask)
+
+    gray = np.asarray(image.convert("L"), dtype=np.float32)[:, :, None]
+    output = np.clip(gray * (1.0 - mask) + rgb * mask, 0, 255).astype(np.uint8)
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(output, mode="RGB").save(
+        target, format="JPEG", quality=92, optimize=True
+    )
+    return accent
+
+
+def _primary_role(role: str) -> str | None:
+    for family in ("secondary", "tertiary"):
+        if role == family:
+            return "primary"
+        prefix = f"{family}_"
+        if role.startswith(prefix) and "_accent" not in role:
+            return "primary_" + role[len(prefix) :]
+        on_prefix = f"on_{family}"
+        if role == on_prefix:
+            return "on_primary"
+        if role.startswith(on_prefix + "_") and "_accent" not in role:
+            return "on_primary_" + role[len(on_prefix) + 1 :]
+    return None
+
+
+def _transformed_palette(palette: dict) -> dict:
+    colors = palette.get("colors")
+    if not isinstance(colors, dict):
+        raise ValueError("Matugen JSON bevat geen colors-object")
+
+    neutral_exact = {
+        "background",
+        "on_background",
+        "surface",
+        "surface_bright",
+        "surface_dim",
+        "surface_variant",
+        "on_surface",
+        "on_surface_variant",
+        "outline",
+        "outline_variant",
+        "shadow",
+        "scrim",
+        "inverse_surface",
+        "inverse_on_surface",
+    }
+
+    for mode, raw_roles in colors.items():
+        if not isinstance(raw_roles, dict):
+            continue
+        roles = dict(raw_roles)
+        transformed = dict(roles)
+
+        for role, value in roles.items():
+            if not isinstance(value, str) or not re.fullmatch(r"#[0-9A-Fa-f]{6}", value):
+                continue
+
+            primary_role = _primary_role(role)
+            if primary_role and isinstance(roles.get(primary_role), str):
+                transformed[role] = roles[primary_role]
+            elif role == "error":
+                transformed[role] = roles.get("primary", value)
+            elif role == "error_container":
+                transformed[role] = roles.get("primary_container", value)
+            elif role == "on_error":
+                transformed[role] = roles.get("on_primary", value)
+            elif role == "on_error_container":
+                transformed[role] = roles.get("on_primary_container", value)
+            elif role in neutral_exact or role.startswith("surface_container"):
+                transformed[role] = _gray(value)
+
+        colors[mode] = transformed
+
+    return palette
+
+
+def _output_paths(config_path: Path) -> list[Path]:
+    try:
+        import tomllib
+    except ImportError:  # pragma: no cover - Python < 3.11 fallback
+        import tomli as tomllib
+
+    with config_path.open("rb") as handle:
+        data = tomllib.load(handle)
+
+    paths = []
+    for template in data.get("templates", {}).values():
+        if not isinstance(template, dict):
+            continue
+        output = template.get("output_path")
+        if isinstance(output, str) and output:
+            paths.append(Path(os.path.expandvars(os.path.expanduser(output))))
+    return paths
+
+
+def _replacement_map(raw: dict, transformed: dict, mode: str) -> dict[str, str]:
+    raw_roles = raw.get("colors", {}).get(mode, {})
+    new_roles = transformed.get("colors", {}).get(mode, {})
+    mapping: dict[str, str] = {}
+    conflicts: set[str] = set()
+
+    for role, source in raw_roles.items():
+        target = new_roles.get(role)
+        if not (
+            isinstance(source, str)
+            and isinstance(target, str)
+            and re.fullmatch(r"#[0-9A-Fa-f]{6}", source)
+            and re.fullmatch(r"#[0-9A-Fa-f]{6}", target)
+        ):
+            continue
+        key = source.lstrip("#").upper()
+        value = target.lstrip("#").upper()
+        previous = mapping.get(key)
+        if previous is not None and previous != value:
+            conflicts.add(key)
+        else:
+            mapping[key] = value
+
+    # Als twee semantische rollen exact dezelfde bronhex delen maar een andere
+    # bestemming nodig hebben, is tekstuele vervanging niet veilig. Laat die
+    # zeldzame kleur dan ongemoeid in plaats van een accent per ongeluk te doven.
+    for key in conflicts:
+        mapping.pop(key, None)
+    return mapping
+
+
+def _rewrite_output(path: Path, mapping: dict[str, str]) -> None:
+    if not path.is_file():
+        return
+    original = path.read_text(encoding="utf-8")
+
+    def replace(match: re.Match[str]) -> str:
+        prefix = "#" if match.group(0).startswith("#") else ""
+        source = match.group(1).upper()
+        target = mapping.get(source)
+        return prefix + target if target else match.group(0)
+
+    updated = HEX_RE.sub(replace, original)
+    if updated == original:
+        return
+
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=path.parent, delete=False
+    ) as handle:
+        handle.write(updated)
+        temp_path = Path(handle.name)
+    temp_path.chmod(path.stat().st_mode)
+    temp_path.replace(path)
+
+
+def transform_palette(config: Path, mode: str, palette: dict) -> dict:
+    raw = json.loads(json.dumps(palette))
+    transformed = _transformed_palette(palette)
+    mapping = _replacement_map(raw, transformed, mode)
+    for output in _output_paths(config):
+        _rewrite_output(output, mapping)
+    return transformed
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    wallpaper_parser = subparsers.add_parser("wallpaper")
+    wallpaper_parser.add_argument("source", type=Path)
+    wallpaper_parser.add_argument("target", type=Path)
+    wallpaper_parser.add_argument("--print-accent", action="store_true")
+
+    palette_parser = subparsers.add_parser("palette")
+    palette_parser.add_argument("--config", required=True, type=Path)
+    palette_parser.add_argument("--mode", required=True, choices=("dark", "light"))
+
+    args = parser.parse_args()
+    if args.command == "wallpaper":
+        accent = make_wallpaper(args.source, args.target)
+        if args.print_accent:
+            print(accent)
+        return 0
+
+    palette = json.load(sys.stdin)
+    transformed = transform_palette(args.config, args.mode, palette)
+    json.dump(transformed, sys.stdout, separators=(",", ":"))
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except Exception as error:
+        print(f"[kingstra-mono-accent] FOUT: {error}", file=sys.stderr)
+        raise SystemExit(1)

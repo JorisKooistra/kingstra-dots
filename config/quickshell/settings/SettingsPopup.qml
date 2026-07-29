@@ -674,7 +674,7 @@ Item {
 
         // Fallback op de historische style-defaults zolang de key niet in het theme staat.
         let safeThemeId = normalizeThemeId(themeId || "");
-        if (safeThemeId === "mono" || safeThemeId === "neon") return false;
+        if (safeThemeId === "mono" || safeThemeId === "mono-accent" || safeThemeId === "neon") return false;
         return true;
     }
 

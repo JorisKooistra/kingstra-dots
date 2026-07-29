@@ -235,12 +235,12 @@ _apply_skwd_static_wallpaper() {
 
 _prepare_theme_wallpaper() {
     local theme_name="$1"
-    local current source original_file target_dir target_file hash effect_key ext
+    local current source original_file target_dir target_file hash effect_key ext mono_accent_helper
 
     current="$(_current_wallpaper_path || true)"
     original_file="$CACHE_DIR/theme-wallpaper-source"
 
-    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
+    if [[ "$theme_name" == "mono" || "$theme_name" == "mono-accent" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
         [[ -n "$current" && -f "$current" ]] || return 0
 
         source="$(_theme_wallpaper_source "$current")"
@@ -256,6 +256,7 @@ _prepare_theme_wallpaper() {
             case "$theme_name" in
                 paper) effect_key="paper-sketch-v6" ;;
                 neon)  effect_key="neon-glass-tint-v1" ;;
+                mono-accent) effect_key="mono-accent-splash-v1" ;;
                 *)     effect_key="mono-gray-v1" ;;
             esac
             hash="$(printf '%s:%s:%s:%s' "$effect_key" "$source" "$(stat -c '%Y' "$source" 2>/dev/null || echo 0)" "$(stat -c '%s' "$source" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
@@ -278,6 +279,13 @@ _prepare_theme_wallpaper() {
                         -fill "#00b7ff" -colorize 4% \
                         -fill "#06131d" -colorize 2% \
                         -quality 92 "$target_file"
+                elif [[ "$theme_name" == "mono-accent" ]]; then
+                    mono_accent_helper="${HOME}/.local/bin/kingstra-mono-accent"
+                    [[ -f "$mono_accent_helper" ]] || mono_accent_helper="$REPO_ROOT/config/shared/scripts/kingstra-mono-accent"
+                    if ! run_helper "$mono_accent_helper" wallpaper "$source" "$target_file"; then
+                        _warn "Mono Accent color splash mislukt — grijze fallback gebruikt"
+                        magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
+                    fi
                 else
                     magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
                 fi
@@ -368,7 +376,7 @@ bool_json() {
 
 canonical_theme_name() {
     case "${1,,}" in
-        paper|organic|neon|mono) printf '%s\n' "${1,,}" ;;
+        paper|organic|neon|mono|mono-accent) printf '%s\n' "${1,,}" ;;
         botanical|animated) printf '%s\n' "organic" ;;
         modern|cyber|space|ocean) printf '%s\n' "neon" ;;
         rocky) printf '%s\n' "mono" ;;
@@ -382,7 +390,7 @@ sync_skwd_config() {
     local theme_name="${3:-}"
     local wallhaven_enabled=true
 
-    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
+    if [[ "$theme_name" == "mono" || "$theme_name" == "mono-accent" || "$theme_name" == "paper" || "$theme_name" == "neon" ]]; then
         wallhaven_enabled=false
     fi
 
@@ -563,7 +571,7 @@ fi
 REQUESTED_THEME="${1:?Gebruik: kingstra-theme-switch <theme_naam>}"
 THEME_NAME="$(canonical_theme_name "$REQUESTED_THEME")"
 if [[ -z "$THEME_NAME" ]]; then
-    _warn "Onbekend thema: $REQUESTED_THEME (beschikbaar: paper, organic, neon, mono)"
+    _warn "Onbekend thema: $REQUESTED_THEME (beschikbaar: paper, organic, neon, mono, mono-accent)"
     exit 1
 fi
 if [[ "$THEME_NAME" != "${REQUESTED_THEME,,}" ]]; then
@@ -709,7 +717,7 @@ case "$THEME_NAME" in
         STYLE_WIDGET_RADIUS=5
         STYLE_PANEL_PADDING=9
         ;;
-    mono)
+    mono|mono-accent)
         STYLE_FAMILY="mono"
         STYLE_DENSITY="compact"
         STYLE_SURFACE_MODE="solid"
@@ -734,7 +742,7 @@ case "$THEME_NAME" in
 esac
 
 STYLE_FAMILY=$(pick_enum "${STYLE_PROFILE_FAMILY:-$STYLE_FAMILY}" "$STYLE_FAMILY" "style_profile.family" \
-    paper organic neon mono)
+    paper organic neon mono mono-accent)
 STYLE_DENSITY=$(pick_enum "${STYLE_PROFILE_DENSITY:-$STYLE_DENSITY}" "$STYLE_DENSITY" "style_profile.density" \
     compact comfortable airy)
 STYLE_SURFACE_MODE=$(pick_enum "${STYLE_PROFILE_SURFACE_MODE:-$STYLE_SURFACE_MODE}" "$STYLE_SURFACE_MODE" "style_profile.surface_mode" \
@@ -746,6 +754,16 @@ STYLE_OUTLINE_STRENGTH=$(sanitize_float "${STYLE_PROFILE_OUTLINE_STRENGTH:-$STYL
 STYLE_GLASS_STRENGTH=$(sanitize_float "${STYLE_PROFILE_GLASS_STRENGTH:-$STYLE_GLASS_STRENGTH}" "$STYLE_GLASS_STRENGTH" "0.0" "0.5" "style_profile.glass_strength")
 STYLE_WIDGET_RADIUS=$(sanitize_int "${STYLE_PROFILE_WIDGET_RADIUS:-$STYLE_WIDGET_RADIUS}" "$STYLE_WIDGET_RADIUS" "0" "48" "style_profile.widget_radius")
 STYLE_PANEL_PADDING=$(sanitize_int "${STYLE_PROFILE_PANEL_PADDING:-$STYLE_PANEL_PADDING}" "$STYLE_PANEL_PADDING" "6" "28" "style_profile.panel_padding")
+
+SCREEN_SHADER="[[EMPTY]]"
+if [[ "$THEME_NAME" == "mono" ]]; then
+    MONO_SCREEN_SHADER="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/shaders/mono-grayscale.glsl"
+    if [[ -f "$MONO_SCREEN_SHADER" ]]; then
+        SCREEN_SHADER="$MONO_SCREEN_SHADER"
+    else
+        _warn "Mono grayscale-shader niet gevonden: $MONO_SCREEN_SHADER"
+    fi
+fi
 
 # ---------------------------------------------------------------------------
 # Step 1 — Update matugen config.toml (scheme_type + color_index)
@@ -780,6 +798,7 @@ general {
 
 decoration {
     rounding = ${APPEARANCE_BORDER_RADIUS:-12}
+    screen_shader = ${SCREEN_SHADER}
     blur {
         size = ${APPEARANCE_BLUR_SIZE:-8}
         passes = ${APPEARANCE_BLUR_PASSES:-3}
@@ -893,7 +912,7 @@ mkdir -p "$(dirname "$WALKER_THEME_CSS")" "$(dirname "$SWAYNC_THEME_CSS")"
 cat > "$WALKER_THEME_CSS" <<EOF
 #window {
   background: color-mix(in srgb, var(--mantle) $(python3 -c "print(round(min(98, max(72, (${APPEARANCE_POPUP_OPACITY:-0.92} + ${STYLE_GLASS_STRENGTH} * 0.35) * 100))))")%, transparent);
-  border: ${APPEARANCE_BORDER_WIDTH:-1}px solid color-mix(in srgb, var(--accent-alt) $(python3 -c "print(round(max(32, ${STYLE_OUTLINE_STRENGTH} * 100)))")%, var(--outline));
+  border: ${APPEARANCE_BORDER_WIDTH:-1}px solid color-mix(in srgb, var(--accent-hot) $(python3 -c "print(round(max(32, ${STYLE_OUTLINE_STRENGTH} * 100)))")%, var(--outline));
   border-radius: ${STYLE_WIDGET_RADIUS}px;
   box-shadow: 0 14px 40px color-mix(in srgb, var(--crust) $(python3 -c "print(round(${STYLE_PANEL_SHADOW} * 100))")%, transparent);
   font-family: "${FONTS_UI_FONT:-Inter}", sans-serif;
@@ -919,7 +938,8 @@ row:hover {
   background: linear-gradient(
     110deg,
     color-mix(in srgb, var(--accent) $(python3 -c "print(round((0.10 + ${STYLE_GLASS_STRENGTH} * 0.60) * 100))")%, var(--surface)),
-    color-mix(in srgb, var(--accent-alt) $(python3 -c "print(round((0.07 + ${STYLE_GLASS_STRENGTH} * 0.42) * 100))")%, var(--surface))
+    color-mix(in srgb, var(--accent-alt) $(python3 -c "print(round((0.08 + ${STYLE_GLASS_STRENGTH} * 0.48) * 100))")%, var(--surface)),
+    color-mix(in srgb, var(--accent-hot) $(python3 -c "print(round((0.07 + ${STYLE_GLASS_STRENGTH} * 0.42) * 100))")%, var(--surface))
   );
 }
 
@@ -936,7 +956,7 @@ row:hover {
 
 #calc-result {
   font-family: "${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}", monospace;
-  color: var(--accent-alt);
+  color: var(--accent-hot);
 }
 EOF
 

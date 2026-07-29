@@ -1,5 +1,6 @@
 # Automatisch gegenereerd door matugen. Pas dit bestand NIET aan.
 # Wordt ingeladen door kingstra.omp.toml via @include (fase 8 update omp-thema)
+# Accent 1 = runtime/context, accent 2 = clean/succes, accent 3 = git-attentie.
 [palette]
 primary   = "{{colors.primary.default.hex}}"
 secondary = "{{colors.secondary_accent.default.hex}}"
@@ -16,4 +17,4 @@ red       = "{{colors.error.default.hex}}"
 yellow    = "{{colors.tertiary_accent.default.hex}}"
 blue      = "{{colors.primary.default.hex}}"
 mauve     = "{{colors.tertiary_accent.default.hex}}"
-peach     = "{{colors.tertiary.default.hex}}"
+peach     = "{{colors.primary.default.hex}}"

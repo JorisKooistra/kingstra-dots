@@ -204,6 +204,7 @@ Item {
         let id = String(themeId || "").toLowerCase();
         if (id === "paper") return _theme.accent2Container;
         if (id === "mono") return _theme.text;
+        if (id === "mono-accent") return _theme.accent2;
         if (id === "neon") return _theme.accent1;
         if (id === "organic") return _theme.accent3;
         return accentForScheme(schemeType);

@@ -1,7 +1,8 @@
 /* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
-@define-color accent_color          {{colors.secondary_accent.default.hex}};
-@define-color accent_fg_color       {{colors.on_secondary_accent.default.hex}};
-@define-color accent_bg_color       {{colors.secondary_accent.default.hex}};
+/* Accent 1 = focus, accent 2 = succes, accent 3 = waarschuwing. */
+@define-color accent_color          {{colors.primary.default.hex}};
+@define-color accent_fg_color       {{colors.on_primary.default.hex}};
+@define-color accent_bg_color       {{colors.primary.default.hex}};
 @define-color accent1_color         {{colors.primary.default.hex}};
 @define-color accent1_bg_color      {{colors.primary.default.hex}};
 @define-color accent1_fg_color      {{colors.on_primary.default.hex}};

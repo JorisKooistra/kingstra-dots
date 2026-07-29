@@ -49,13 +49,13 @@
     "tab.border":                               "{{colors.outline_variant.default.hex}}",
     "tab.activeModifiedBorder":                 "{{colors.tertiary_accent.default.hex}}",
 
-    "statusBar.background":                     "{{colors.secondary_accent.default.hex}}",
-    "statusBar.foreground":                     "{{colors.on_secondary_accent.default.hex}}",
+    "statusBar.background":                     "{{colors.primary.default.hex}}",
+    "statusBar.foreground":                     "{{colors.on_primary.default.hex}}",
     "statusBar.noFolderBackground":             "{{colors.surface_variant.default.hex}}",
     "statusBar.debuggingBackground":            "{{colors.error_container.default.hex}}",
     "statusBar.debuggingForeground":            "{{colors.on_error_container.default.hex}}",
-    "statusBarItem.hoverBackground":            "#{{colors.on_secondary_accent.default.hex_stripped}}22",
-    "statusBarItem.activeBackground":           "#{{colors.on_secondary_accent.default.hex_stripped}}33",
+    "statusBarItem.hoverBackground":            "#{{colors.on_primary.default.hex_stripped}}22",
+    "statusBarItem.activeBackground":           "#{{colors.on_primary.default.hex_stripped}}33",
 
     "titleBar.activeBackground":                "{{colors.surface_variant.default.hex}}",
     "titleBar.activeForeground":                "{{colors.on_surface_variant.default.hex}}",

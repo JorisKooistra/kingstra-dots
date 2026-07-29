@@ -26,6 +26,8 @@ STATE_FILE="$CACHE_DIR/last-wallpaper"
 IMAGE_STATE_FILE="$CACHE_DIR/last-image-wallpaper"
 MODE_FILE="$CACHE_DIR/wallpaper-mode"          # "static" of "video"
 LOG_PREFIX="[kingstra-wallpaper]"
+SCRIPT_REALPATH="$(readlink -f "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(cd "$(dirname "$SCRIPT_REALPATH")/../.." && pwd)"
 
 STATIC_EXTS=("jpg" "jpeg" "png" "webp" "gif")
 VIDEO_EXTS=("mp4" "mkv" "webm" "avi" "mov")
@@ -348,7 +350,7 @@ _theme_wallpaper_for() {
     local theme_name="$1"
     local source="$2"
     local requested="$source"
-    local target_dir target_file hash original_file effect_key
+    local target_dir target_file hash original_file effect_key mono_accent_helper
 
     [[ -n "$source" && -f "$source" ]] || {
         printf '%s\n' "$source"
@@ -373,6 +375,7 @@ _theme_wallpaper_for() {
     case "$theme_name" in
         paper) effect_key="paper-sketch-v6" ;;
         neon)  effect_key="neon-glass-tint-v1" ;;
+        mono-accent) effect_key="mono-accent-splash-v1" ;;
         *)     effect_key="mono-gray-v1" ;;
     esac
     hash="$(printf '%s:%s:%s:%s' "$effect_key" "$source" "$(stat -c '%Y' "$source" 2>/dev/null || echo 0)" "$(stat -c '%s' "$source" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
@@ -396,6 +399,13 @@ _theme_wallpaper_for() {
                 -fill "#00b7ff" -colorize 4% \
                 -fill "#06131d" -colorize 2% \
                 -quality 92 "$target_file"
+        elif [[ "$theme_name" == "mono-accent" ]]; then
+            mono_accent_helper="${HOME}/.local/bin/kingstra-mono-accent"
+            [[ -f "$mono_accent_helper" ]] || mono_accent_helper="$REPO_ROOT/config/shared/scripts/kingstra-mono-accent"
+            if ! _run_helper "$mono_accent_helper" wallpaper "$source" "$target_file"; then
+                _warn "Mono Accent color splash mislukt — grijze fallback gebruikt"
+                magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
+            fi
         else
             magick "$source" -auto-orient -colorspace Gray -modulate 100,0,100 -quality 92 "$target_file"
         fi
@@ -409,7 +419,7 @@ _prepare_static_for_active_theme() {
     local theme_name
     theme_name="$(_active_theme)"
 
-    if [[ "$theme_name" == "mono" || "$theme_name" == "paper" || "$theme_name" == "neon" ]] && _is_image "$file"; then
+    if [[ "$theme_name" == "mono" || "$theme_name" == "mono-accent" || "$theme_name" == "paper" || "$theme_name" == "neon" ]] && _is_image "$file"; then
         _theme_wallpaper_for "$theme_name" "$file"
         return 0
     fi

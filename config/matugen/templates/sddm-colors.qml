@@ -1,11 +1,14 @@
 // Automatisch gegenereerd door matugen. Pas dit bestand NIET aan.
 // Template: config/matugen/templates/sddm-colors.qml
+// Accent 1 = invoerfocus, accent 2 = biometrie, accent 3 = ambient.
 pragma Singleton
 import QtQuick
 
 QtObject {
     readonly property color primary:          "{{colors.primary.default.hex}}"
     readonly property color on_primary:       "{{colors.on_primary.default.hex}}"
+    readonly property color accent1:          "{{colors.primary.default.hex}}"
+    readonly property color on_accent1:       "{{colors.on_primary.default.hex}}"
     readonly property color secondary:        "{{colors.secondary.default.hex}}"
     readonly property color tertiary:         "{{colors.tertiary.default.hex}}"
     readonly property color accent2:          "{{colors.secondary_accent.default.hex}}"
@@ -29,5 +32,5 @@ QtObject {
     readonly property color text:             "{{colors.on_background.default.hex}}"
     readonly property color mauve:            "{{colors.tertiary_accent.default.hex}}"
     readonly property color blue:             "{{colors.secondary_accent.default.hex}}"
-    readonly property color green:            "{{colors.tertiary_accent.default.hex}}"
+    readonly property color green:            "{{colors.secondary_accent.default.hex}}"
 }

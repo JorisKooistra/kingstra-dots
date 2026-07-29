@@ -1,5 +1,6 @@
 # Automatisch gegenereerd door matugen. Pas dit bestand NIET aan.
 # Gegenereerd vanuit config/matugen/templates/yazi-theme.toml
+# Accent 1 = navigatie, accent 2 = kopiëren/zoeken, accent 3 = selecteren/attentie.
 
 [manager]
 cwd            = { fg = "{{colors.primary.default.hex}}" }
@@ -36,13 +37,13 @@ perm_exec  = { fg = "{{colors.tertiary_accent.default.hex}}" }
 perm_sep   = { fg = "{{colors.outline.default.hex}}" }
 
 [input]
-border   = { fg = "{{colors.primary.default.hex}}" }
+border   = { fg = "{{colors.secondary_accent.default.hex}}" }
 title    = { fg = "{{colors.on_background.default.hex}}" }
 value    = { fg = "{{colors.on_surface.default.hex}}" }
 selected = { reversed = true }
 
 [select]
-border   = { fg = "{{colors.primary.default.hex}}" }
+border   = { fg = "{{colors.tertiary_accent.default.hex}}" }
 active   = { fg = "{{colors.on_primary_container.default.hex}}", bg = "{{colors.primary_container.default.hex}}" }
 inactive = { fg = "{{colors.on_surface_variant.default.hex}}" }
 

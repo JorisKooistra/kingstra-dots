@@ -56,7 +56,10 @@ Item {
     readonly property bool neonChrome:   String(shell.activeThemeName || "").toLowerCase() === "neon"
     readonly property bool paperChrome:  String(shell.activeThemeName || "").toLowerCase() === "paper"
     readonly property bool organicChrome: String(shell.activeThemeName || "").toLowerCase() === "organic"
-    readonly property bool monoChrome:   String(shell.activeThemeName || "").toLowerCase() === "mono"
+    readonly property bool monoChrome: {
+        let themeName = String(shell.activeThemeName || "").toLowerCase();
+        return themeName === "mono" || themeName === "mono-accent";
+    }
     readonly property int moduleSpacing: organicChrome ? 0 : shell.s(4)
     readonly property int centerGap: organicChrome ? 0 : shell.s(12)
     readonly property string moduleFillColorName: surface.moduleFillColorName
