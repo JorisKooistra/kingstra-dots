@@ -66,22 +66,11 @@ resolve_apply_cmd() {
 }
 
 reload_topbar_runtime() {
-    if [[ "${KINGSTRA_THEME_PICKER_ACTIVE:-0}" == "1" ]]; then
-        _log "Quickshell-herstart overgeslagen: actieve theme picker blijft zichtbaar"
-        return 0
-    fi
-
-    local session_cmd="${HOME}/.local/bin/kingstra-session-start"
-    if [[ -x "$session_cmd" ]]; then
-        # restart-shell: alleen Quickshell herstarten. Een thema-wissel verandert
-        # de wallpaper niet, dus de wallpaper-daemon (skwd) blijft staan.
-        # Dat voorkomt de wallpaper-flash/re-roll die je zag bij het wisselen.
-        setsid -f "$session_cmd" restart-shell >/dev/null 2>&1 || true
-        _log "Quickshell-shell herstart aangevraagd (wallpaper ongemoeid)"
-        return 0
-    fi
-
-    _warn "kingstra-session-start niet gevonden — topbar reload overgeslagen"
+    # ThemeConfig.qml en MatugenColors.qml pollen de atomair geschreven
+    # theme.json/colors.json. Een procesherstart is hier niet alleen overbodig,
+    # maar gevaarlijk: een switch kan uit een context zonder WAYLAND_DISPLAY
+    # komen, waarna Qt naar xcb terugvalt en alle shell-processen aborteren.
+    _log "Quickshell live bijgewerkt via state-polling (geen herstart nodig)"
 }
 
 resolve_reader_cmd() {

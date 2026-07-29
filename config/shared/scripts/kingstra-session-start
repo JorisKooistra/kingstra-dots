@@ -57,6 +57,33 @@ systemctl_user() {
     systemctl --user "$@" >> "$LOG_FILE" 2>&1 || log "systemctl --user failed: $*"
 }
 
+prepare_wayland_environment() {
+    local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/${UID:-$(id -u)}}"
+    local wayland_socket=""
+
+    export XDG_RUNTIME_DIR="$runtime_dir"
+
+    if [[ -n "${WAYLAND_DISPLAY:-}" && -S "$runtime_dir/$WAYLAND_DISPLAY" ]]; then
+        wayland_socket="$WAYLAND_DISPLAY"
+    elif [[ -d "$runtime_dir" ]]; then
+        wayland_socket="$(
+            find "$runtime_dir" -maxdepth 1 -type s -name 'wayland-*' -printf '%f\n' 2>/dev/null \
+                | sort -V \
+                | tail -n 1
+        )"
+    fi
+
+    if [[ -z "$wayland_socket" || ! -S "$runtime_dir/$wayland_socket" ]]; then
+        log "Wayland environment unavailable: no socket in $runtime_dir"
+        return 1
+    fi
+
+    export WAYLAND_DISPLAY="$wayland_socket"
+    export XDG_SESSION_TYPE="wayland"
+    export QT_QPA_PLATFORM="wayland"
+    return 0
+}
+
 start_core() {
     log "start core"
 
@@ -94,6 +121,11 @@ start_core() {
 start_ui() {
     log "start ui"
 
+    if ! prepare_wayland_environment; then
+        log "start ui aborted: Wayland environment unavailable"
+        return 1
+    fi
+
     # skwd is de enige wallpaper-daemon (rendert + picker-UI + kleuranalyse).
     # awww is volledig uit de pipeline verwijderd; stop_session ruimt een
     # eventueel nog lopende legacy awww-daemon op.
@@ -120,6 +152,11 @@ start_ui() {
 # skwd en wallpaper-init blijven staan -> geen wallpaper-flash of re-roll.
 start_shell() {
     log "start shell"
+
+    if ! prepare_wayland_environment; then
+        log "start shell aborted: Wayland environment unavailable"
+        return 1
+    fi
 
     touch /tmp/qs_notifications_command 2>/dev/null || true
     run_bg_once "quickshell.*TopBar.qml" "Quickshell topbar" quickshell --no-duplicate -p "$CONFIG_HOME/quickshell/TopBar.qml"
@@ -213,6 +250,10 @@ case "${1:-start}" in
         ;;
     restart-shell)
         # Herstart alleen de Quickshell-shell; laat wallpaper-daemons met rust.
+        if ! prepare_wayland_environment; then
+            log "restart shell aborted before stop: Wayland environment unavailable"
+            exit 1
+        fi
         stop_shell
         for _ in 1 2 3 4 5 6 7 8 9 10; do
             pgrep -f "quickshell.*$CONFIG_HOME/quickshell/TopBar.qml" >/dev/null 2>&1 || break
