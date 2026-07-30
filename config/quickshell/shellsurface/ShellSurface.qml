@@ -312,35 +312,13 @@ Scope {
                     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
                 }
 
-                PanelWindow {
-                    screen: surfaceWindow.screen
-                    visible: String(ThemeConfig.theme || ThemeConfig.styleFamily || "").toLowerCase() === "neon"
-                    anchors {
-                        top: true
-                        bottom: true
-                        left: true
-                        right: true
-                    }
-                    implicitWidth: screen ? screen.width : 0
-                    implicitHeight: screen ? screen.height : 0
-                    color: "transparent"
-                    mask: Region {}
-
-                    MatugenColors { id: neonOverlayMocha }
-                    NeonViewportOverlay {
-                        anchors.fill: parent
-                        mocha: neonOverlayMocha
-                        telemetry: hudTelemetry
-                        shellBorderWidth: 8
-                        railWidth: ThemeConfig.barRailEnabled ? ThemeConfig.barRailWidth : 0
-                        stripHeight: ThemeConfig.barStatusStripEnabled ? ThemeConfig.barStatusStripHeight : 0
-                    }
-
-                    WlrLayershell.namespace: "quickshell:kingstra-neon-wallpaper-overlay"
-                    WlrLayershell.layer: WlrLayer.Bottom
-                    WlrLayershell.exclusiveZone: -1
-                    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-                }
+                // Geen theme-specifieke fullscreen wallpaper-surface naast
+                // skwd. De voormalige NeonViewportOverlay maakte per monitor
+                // een extra 1920x1080 layer met honderden scene-items, meerdere
+                // Canvas-textures en continue animaties. Bij het activeren van
+                // neon konden drie gelijktijdige surfaces de Qt/Wayland
+                // renderloop vastzetten. Neon-effecten blijven in de bar en
+                // shell-chrome; skwd blijft de enige wallpaper-renderer.
             }
         }
     }

@@ -1020,10 +1020,13 @@ Item {
     Item {
         id: statusStripZone
         visible: root.stripEnabled
-        anchors.top: root.stripOnBottom ? undefined : parent.top
-        anchors.bottom: root.stripOnBottom ? parent.bottom : undefined
-        anchors.left: root.railEnabled && !root.railOnRight ? rail.right : parent.left
-        anchors.right: root.railEnabled && root.railOnRight ? rail.left : parent.right
+        // Wissel hier niet dynamisch tussen top/bottom- of left/right-anchors.
+        // Tijdens bottom/geen-rail → top/rail kan Qt beide tegenoverliggende
+        // anchors een frame vasthouden. Dan rekt deze strip over het hele
+        // scherm en bedekt hij alle surfaces onder het layer-shell-venster.
+        x: root.railEnabled && !root.railOnRight ? root.railWidth : 0
+        y: root.stripOnBottom ? root.height - root.stripHeight : 0
+        width: Math.max(0, root.width - (root.railEnabled ? root.railWidth : 0))
         height: root.stripHeight
 
         Item {

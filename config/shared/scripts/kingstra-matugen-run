@@ -20,6 +20,9 @@ STATE_THEME_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/theme.json"
 STATE_WALLPAPER_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/wallpaper.json"
 SESSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
 CACHE_WALLPAPER="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
+MATUGEN_STAGE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/matugen-stage"
+HYPR_COLORS_TARGET="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/colors.conf"
+QUICKSHELL_COLORS_TARGET="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/colors.json"
 
 DEFAULT_SCHEME="scheme-tonal-spot"
 DEFAULT_MODE="dark"
@@ -50,6 +53,58 @@ _run_helper() {
     fi
 }
 
+_atomic_publish() {
+    local source="$1"
+    local target="$2"
+    local validator="${3:-nonempty}"
+    local target_dir=""
+    local target_tmp=""
+
+    target_dir="$(dirname "$target")"
+    mkdir -p "$target_dir"
+
+    case "$validator" in
+        json)
+            command -v jq >/dev/null 2>&1 || _die "jq ontbreekt voor JSON-validatie"
+            jq -e 'type == "object"' "$source" >/dev/null 2>&1 \
+                || _die "Matugen leverde ongeldige Quickshell-JSON: $source"
+            ;;
+        hypr)
+            [[ -s "$source" ]] || _die "Matugen leverde lege Hyprland-kleuren"
+            if grep -Eq '\{\{|\}\}' "$source"; then
+                _die "Onverwerkte Matugen-tokens in Hyprland-kleuren"
+            fi
+            ;;
+        nonempty)
+            [[ -s "$source" ]] || _die "Matugen leverde lege output: $source"
+            ;;
+    esac
+
+    target_tmp="$(mktemp "$target_dir/.kingstra-matugen.XXXXXX")"
+    if ! cp -- "$source" "$target_tmp"; then
+        rm -f -- "$target_tmp"
+        _die "Kon Matugen-output niet klaarzetten voor $target"
+    fi
+    chmod 0644 "$target_tmp"
+
+    # Geen inode-wissel en dus geen onnodige watcher/reload als de inhoud gelijk
+    # bleef (bijvoorbeeld bij twee snelle apply-runs voor dezelfde wallpaper).
+    if [[ -f "$target" ]] && cmp -s -- "$target_tmp" "$target"; then
+        rm -f -- "$target_tmp"
+        return 0
+    fi
+
+    mv -f -- "$target_tmp" "$target"
+}
+
+_publish_runtime_outputs() {
+    local staged_hypr="$MATUGEN_STAGE_DIR/hypr-colors.conf"
+    local staged_quickshell="$MATUGEN_STAGE_DIR/quickshell-colors.json"
+
+    _atomic_publish "$staged_hypr" "$HYPR_COLORS_TARGET" hypr
+    _atomic_publish "$staged_quickshell" "$QUICKSHELL_COLORS_TARGET" json
+}
+
 _mono_accent_helper() {
     if [[ -f "${HOME}/.local/bin/kingstra-mono-accent" ]]; then
         printf '%s\n' "${HOME}/.local/bin/kingstra-mono-accent"
@@ -78,6 +133,21 @@ _set_toml_value() {
     else
         printf '%s = %s\n' "$key" "$value" >> "$file"
     fi
+}
+
+_set_template_output_path() {
+    local file="$1"
+    local template="$2"
+    local output_path="$3"
+    local escaped_path=""
+
+    # config.toml is gegenereerde user-state en kan al bestaan uit een eerdere
+    # installatie. Forceer de twee live outputs daarom bij iedere contract-run
+    # naar staging, zonder te leunen op een niet-getrackte lokale config.
+    escaped_path="${output_path//|/\\|}"
+    sed -i -E \
+        "/^[[:space:]]*\\[templates\\.${template}\\][[:space:]]*$/,/^[[:space:]]*\\[/ s|^[[:space:]]*output_path[[:space:]]*=.*|output_path = \"${escaped_path}\"|" \
+        "$file"
 }
 
 _valid_mode() {
@@ -393,11 +463,14 @@ command -v matugen &>/dev/null || _die "matugen niet gevonden in PATH"
 if [[ -z "$WALLPAPER" || ! -f "$WALLPAPER" ]]; then
     _die "Geen geldig wallpaperbestand gevonden"
 fi
+mkdir -p "$MATUGEN_STAGE_DIR"
 
 # Houd matugen/config.toml gelijk aan actieve theme-contract settings.
 _set_toml_value "$MATUGEN_CONF" "scheme_type" "\"$SCHEME_TYPE\""
 _set_toml_value "$MATUGEN_CONF" "mode" "\"$MODE\""
 _set_toml_value "$MATUGEN_CONF" "color_index" "$COLOR_INDEX"
+_set_template_output_path "$MATUGEN_CONF" "hyprland" "$MATUGEN_STAGE_DIR/hypr-colors.conf"
+_set_template_output_path "$MATUGEN_CONF" "quickshell" "$MATUGEN_STAGE_DIR/quickshell-colors.json"
 
 # Haal een kleine, bruikbare set echte wallpaper-kleuren op. Matugen maakt een
 # goed Material-palet, maar primary/secondary/tertiary blijven scheme-afgeleiden
@@ -750,3 +823,8 @@ if [[ "$THEME_ID" == "mono-accent" ]]; then
 else
     matugen "${MATUGEN_ARGS[@]}"
 fi
+
+# Hyprland en Quickshell bewaken hun runtimebestanden live. Matugen schrijft
+# outputs met truncate/write; publiceer daarom pas na een geslaagde volledige
+# run en validatie, via een tijdelijke file op hetzelfde filesystem.
+_publish_runtime_outputs

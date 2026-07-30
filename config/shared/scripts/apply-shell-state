@@ -506,10 +506,11 @@ fi
 # ---------------------------------------------------------------------------
 # Stap 6 — Apps herladen
 # ---------------------------------------------------------------------------
-if command -v hyprctl &>/dev/null; then
-    hyprctl reload 2>/dev/null || true
-    _log "Hyprland herladen"
-fi
+# De runner publiceert colors.conf atomair; Hyprland bewaakt sourced configfiles
+# zelf. kingstra-theme-switch schrijft 35-theme.conf eveneens atomair en zet de
+# relevante appearance-keywords direct live. Een extra, late `hyprctl reload`
+# is daardoor dubbel werk en maakte de lange apply-pipeline compositor-kritiek.
+_log "Hyprland runtime atomair bijgewerkt (geen extra reload)"
 
 # Quickshell hoeft niet herstart te worden: MatugenColors.qml en ThemeConfig.qml
 # pollen colors.json en theme.json elke seconde en passen kleuren/instellingen

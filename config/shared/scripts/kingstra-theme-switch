@@ -801,7 +801,8 @@ _prepare_theme_wallpaper "$THEME_NAME"
 # Step 2 — Generate 35-theme.conf (Hyprland overrides)
 # ---------------------------------------------------------------------------
 mkdir -p "$(dirname "$THEME_CONF")"
-cat > "$THEME_CONF" <<EOF
+THEME_CONF_TMP="$(mktemp "${THEME_CONF}.XXXXXX")"
+if ! cat > "$THEME_CONF_TMP" <<EOF
 # =============================================================================
 # 35-theme.conf — Automatisch gegenereerd door kingstra-theme-switch
 # Thema: ${META_NAME:-$THEME_NAME}
@@ -822,6 +823,13 @@ decoration {
     }
 }
 EOF
+then
+    rm -f -- "$THEME_CONF_TMP"
+    _warn "35-theme.conf genereren mislukt"
+    exit 1
+fi
+chmod 0644 "$THEME_CONF_TMP"
+mv -f -- "$THEME_CONF_TMP" "$THEME_CONF"
 _log "35-theme.conf gegenereerd"
 
 # ---------------------------------------------------------------------------
