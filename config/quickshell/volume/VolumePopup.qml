@@ -84,6 +84,8 @@ Item {
     property int activeVol: 0
     property bool activeMute: false
     property string activeIcon: "󰓃"
+    property string hardwareNoticeTitle: ""
+    property string hardwareNoticeText: ""
 
     // Models
     ListModel { id: outputsModel }
@@ -113,6 +115,9 @@ Item {
             syncModel(outputsModel, data.outputs || []);
             syncModel(inputsModel, data.inputs || []);
             syncModel(appsModel, data.apps || []);
+            let notice = data.hardware_notice || {};
+            window.hardwareNoticeTitle = notice.title || "";
+            window.hardwareNoticeText = notice.message || "";
             updateHeroData();
         } catch(e) {}
     }
@@ -126,7 +131,7 @@ Item {
             if (d.is_default) {
                 window.activeId = d.id;
                 window.activeName = d.description;
-                window.activeDesc = d.name;
+                window.activeDesc = d.subtitle;
                 window.activeIcon = d.icon;
                 if (!window.draggingMaster) {
                     window.activeVol = d.volume;
@@ -142,7 +147,7 @@ Item {
             let d = targetModel.get(0);
             window.activeId = d.id;
             window.activeName = d.description;
-            window.activeDesc = d.name;
+            window.activeDesc = d.subtitle;
             window.activeIcon = d.icon;
             if (!window.draggingMaster) {
                 window.activeVol = d.volume;
@@ -170,6 +175,7 @@ Item {
             
             let obj = {
                 id: d.id, name: d.name, description: d.description,
+                subtitle: d.subtitle || d.name, kind: d.kind || "audio",
                 volume: d.volume, mute: d.mute, is_default: d.is_default, icon: d.icon
             };
 
@@ -654,9 +660,63 @@ Item {
                     opacity: introContent
                     transform: Translate { y: 20 * (1.0 - introContent) }
 
+                    Rectangle {
+                        id: hardwareNotice
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        height: visible ? 76 : 0
+                        visible: window.activeTab === "outputs" && window.hardwareNoticeTitle !== ""
+                        radius: window.themedInnerRadius
+                        color: Qt.rgba(window.peach.r, window.peach.g, window.peach.b, 0.12)
+                        border.color: Qt.rgba(window.peach.r, window.peach.g, window.peach.b, 0.55)
+                        border.width: 1
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 14
+                            anchors.rightMargin: 14
+                            spacing: 12
+
+                            Text {
+                                font.family: "Iosevka Nerd Font"
+                                font.pixelSize: 23
+                                color: window.peach
+                                text: "󰌪"
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+                                Text {
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                    font.family: window.monoFontFamily
+                                    font.weight: Font.Bold
+                                    font.pixelSize: 12
+                                    color: window.text
+                                    text: window.hardwareNoticeTitle
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                    maximumLineCount: 2
+                                    elide: Text.ElideRight
+                                    font.family: window.uiFontFamily
+                                    font.pixelSize: 10
+                                    color: window.subtext0
+                                    text: window.hardwareNoticeText
+                                }
+                            }
+                        }
+                    }
+
                     ListView {
                         id: contentList
-                        anchors.fill: parent
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.top: hardwareNotice.visible ? hardwareNotice.bottom : parent.top
+                        anchors.topMargin: hardwareNotice.visible ? 12 : 0
                         spacing: 12
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
@@ -683,7 +743,14 @@ Item {
                                 anchors.centerIn: parent
                                 spacing: 10
                                 Text { Layout.alignment: Qt.AlignHCenter; font.family: "Iosevka Nerd Font"; font.pixelSize: 32; color: window.surface2; text: "󰖁" }
-                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "JetBrains Mono"; font.pixelSize: 14; color: window.overlay0; text: "No active streams" }
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    font.family: window.monoFontFamily
+                                    font.pixelSize: 14
+                                    color: window.overlay0
+                                    text: window.activeTab === "outputs" ? "No available outputs"
+                                        : (window.activeTab === "inputs" ? "No available inputs" : "No active streams")
+                                }
                             }
                         }
 
@@ -753,9 +820,10 @@ Item {
                                         color: isActiveNode ? window.crust : window.text
                                         Behavior on color { ColorAnimation { duration: 200 } }
                                         text: {
-                                            if (window.activeTab === "inputs") return "󰍬";
-                                            if (window.activeTab === "apps") return "󰎆";
-                                            if (model.description.toLowerCase().indexOf("headset") !== -1 || model.description.toLowerCase().indexOf("headphones") !== -1) return "󰋎";
+                                            if (model.kind === "headset") return "󰋎";
+                                            if (model.kind === "display") return "󰍹";
+                                            if (model.kind === "microphone") return "󰍬";
+                                            if (model.kind === "application") return "󰎆";
                                             return "󰓃";
                                         }
                                     }
@@ -773,7 +841,7 @@ Item {
                                             Layout.fillWidth: true; elide: Text.ElideRight
                                             font.family: "JetBrains Mono"; font.pixelSize: 11
                                             color: isActiveNode ? Qt.darker(window.crust, 1.5) : window.subtext0
-                                            text: isActiveNode ? "Active Default" : model.name
+                                            text: isActiveNode ? "● Active · " + model.subtitle : model.subtitle
                                         }
                                     }
                                 }

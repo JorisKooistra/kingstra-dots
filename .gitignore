@@ -21,7 +21,9 @@ config/kitty/skwd-theme.generated.conf
 config/kitty/kitty-matugen-colors.conf
 config/quickshell/colors.json
 config/swaync/colors.css
+config/swaync/theme.generated.css
 config/walker/colors.css
+config/walker/theme.generated.css
 config/qt6ct/colors/matugen.conf
 config/zsh/omp-colors.toml
 config/zsh/.zcompdump*

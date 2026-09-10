@@ -936,8 +936,8 @@ THEME_JSON_TMP=""
 trap - EXIT
 _log "theme.json gegenereerd"
 
-WALKER_THEME_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/walker/theme.css"
-SWAYNC_THEME_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/theme.css"
+WALKER_THEME_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/walker/theme.generated.css"
+SWAYNC_THEME_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/theme.generated.css"
 mkdir -p "$(dirname "$WALKER_THEME_CSS")" "$(dirname "$SWAYNC_THEME_CSS")"
 
 cat > "$WALKER_THEME_CSS" <<EOF

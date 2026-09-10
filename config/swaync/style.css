@@ -4,6 +4,7 @@
 
 @import "colors.css";
 @import "theme.css";
+@import "theme.generated.css";
 
 /* ---------------------------------------------------------------------------
    Globale reset
