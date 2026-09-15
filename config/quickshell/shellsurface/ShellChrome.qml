@@ -462,6 +462,30 @@ Item {
         ]);
     }
 
+    // De rail blijft bewust compact en beweegt nooit mee met inhoud. Op hover
+    // krijgt een workspace daarom alleen een korte, bestaande tooltip met de
+    // echte context: genoeg om te navigeren zonder nóg een paneel te openen.
+    function workspaceTooltip(wsId) {
+        let list = Hyprland.workspaces.values;
+        for (let i = 0; i < list.length; i++) {
+            let workspace = list[i];
+            if (!workspace || workspace.id !== wsId) continue;
+            let windows = workspace.toplevels.values;
+            if (windows.length === 0) return "Workspace " + wsId + " · leeg";
+            let titles = [];
+            for (let j = 0; j < windows.length && j < 2; j++) {
+                let win = windows[j];
+                let ipc = win && win.lastIpcObject ? win.lastIpcObject : {};
+                let title = String(ipc.title || ipc.initialTitle || ipc.class || "venster").trim();
+                if (title !== "") titles.push(title);
+            }
+            let suffix = windows.length > titles.length ? " +" + (windows.length - titles.length) : "";
+            return "Workspace " + wsId + " · " + windows.length + " venster" + (windows.length === 1 ? "" : "s")
+                + (titles.length > 0 ? " · " + titles.join(" · ") + suffix : "");
+        }
+        return "Workspace " + wsId + " · leeg";
+    }
+
     function handleWorkspaceWheel(deltaY, workspaceCount) {
         if (!deltaY || deltaY === 0) return;
         root.workspaceWheelAccumulator += deltaY;
@@ -893,8 +917,10 @@ Item {
                 Repeater {
                     model: 8
                     delegate: Rectangle {
+                        id: workspacePill
                         required property int index
                         readonly property int wsId: index + 1
+                        readonly property string tooltipLabel: root.workspaceTooltip(wsId)
                         readonly property bool active: Hyprland.focusedWorkspace !== null
                             && Hyprland.focusedWorkspace.id === wsId
                         readonly property bool occupied: {
@@ -955,6 +981,8 @@ Item {
                             id: wsMouse
                             anchors.fill: parent
                             hoverEnabled: true
+                            onEntered: root.showTooltip(workspacePill, workspacePill.tooltipLabel, true)
+                            onExited: root.hideTooltip(workspacePill.tooltipLabel)
                             onClicked: root.switchWorkspace(wsId)
                             onWheel: (wheel) => {
                                 root.handleWorkspaceWheel(wheel.angleDelta.y, 8);
