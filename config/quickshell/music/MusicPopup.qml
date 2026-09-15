@@ -662,9 +662,16 @@ Item {
                                         width: root.s(11)
                                         height: width
                                         radius: width / 2
-                                        color: root.base
+                                        color: Qt.rgba(root.base.r, root.base.g, root.base.b, 0.96)
                                         border.width: 1
                                         border.color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.22)
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: root.s(3)
+                                            height: width
+                                            radius: width / 2
+                                            color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.58)
+                                        }
                                     }
                                 }
 
@@ -715,12 +722,36 @@ Item {
                                 readonly property bool tracking: root.musicData.status !== "Stopped"
                                     && root.musicData.status !== "Offline"
                                     && Number(root.musicData.length) > 0
-                                // The geometry is tuned to trace the record from outer to
-                                // inner grooves. A pause preserves the current location;
-                                // only an absent track returns the arm to its rest.
+                                // The geometry starts on the outer groove rather than near
+                                // the label, then traces a broad arc inward. A pause keeps
+                                // the current location; only an absent track returns home.
                                 readonly property real trackingAngle: tracking
-                                    ? 14 + trackProgress * 22
-                                    : 7
+                                    ? 4 + trackProgress * 31
+                                    : -7
+
+                                // Bearing housing: the static hardware that makes the arm
+                                // read as part of a deck, not a floating UI ornament.
+                                Rectangle {
+                                    z: -1
+                                    width: root.s(31)
+                                    height: width
+                                    radius: width / 2
+                                    x: parent.width - width
+                                    y: root.s(-2)
+                                    color: Qt.rgba(root.base.r, root.base.g, root.base.b, 0.96)
+                                    border.width: root.s(1)
+                                    border.color: Qt.rgba(root.overlay2.r, root.overlay2.g, root.overlay2.b, 0.68)
+
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: root.s(22)
+                                        height: width
+                                        radius: width / 2
+                                        color: Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.92)
+                                        border.width: 1
+                                        border.color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.34)
+                                    }
+                                }
 
                                 // Small, weighted pivot. It gives the arm a
                                 // believable origin without competing with the art.
@@ -757,6 +788,20 @@ Item {
                                     rotation: tonearm.trackingAngle
                                     Behavior on rotation { NumberAnimation { duration: 520; easing.type: Easing.OutCubic } }
                                     color: root.overlay2
+
+                                    // The counterweight sits just behind the pivot and turns
+                                    // with the tube. It is intentionally small so the arm
+                                    // stays refined instead of becoming a chunky graphic.
+                                    Rectangle {
+                                        width: root.s(13)
+                                        height: root.s(17)
+                                        radius: root.s(5)
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        y: root.s(-10)
+                                        color: Qt.rgba(root.base.r, root.base.g, root.base.b, 0.96)
+                                        border.width: 1
+                                        border.color: Qt.rgba(root.overlay2.r, root.overlay2.g, root.overlay2.b, 0.72)
+                                    }
 
                                     Rectangle {
                                         width: root.s(1)
