@@ -2137,16 +2137,13 @@ Item {
             return;
         }
 
-        var line = (item.t || "bind") + " = " + cleanedMods + ", " + cleanedKey + ", " + item.d;
-        if (item.args) line += ", " + item.args;
-        if (item.label) line += "   # " + item.label;
         var script = Quickshell.env("HOME") + "/.config/quickshell/settings/write_keybind.sh";
         root.keybindWriteError = "";
         if (item.bound && Number(item.ln) > 0) {
-            keybindWriteProc.command = ["bash", script, "--update", item.file, item.ln.toString(), line];
+            keybindWriteProc.command = ["bash", script, "--update", item.ln.toString(), cleanedMods, cleanedKey];
             root.keybindWriteSuccessMessage = "Keybinding bijgewerkt";
         } else {
-            keybindWriteProc.command = ["bash", script, "--add", item.file, line];
+            keybindWriteProc.command = ["bash", script, "--add", cleanedMods, cleanedKey, String(item.args || "")];
             root.keybindWriteSuccessMessage = "Keybinding toegevoegd";
         }
         keybindWriteProc.running = true;
@@ -2162,7 +2159,7 @@ Item {
         var script = Quickshell.env("HOME") + "/.config/quickshell/settings/write_keybind.sh";
         root.keybindWriteError = "";
         root.keybindWriteSuccessMessage = "Keybinding verwijderd";
-        keybindWriteProc.command = ["bash", script, "--remove", item.file, item.ln.toString()];
+        keybindWriteProc.command = ["bash", script, "--remove", item.ln.toString()];
         keybindWriteProc.running = true;
     }
 
