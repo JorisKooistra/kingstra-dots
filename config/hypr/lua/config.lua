@@ -15,7 +15,10 @@ hl.config({
         border_size = 2,
         col = {
             active_border = { colors = { "rgba(98cbffee)", "rgba(a5eb6eee)", "rgba(90d6a8ee)" }, angle = 55 },
-            inactive_border = "rgba(89919d44)",
+            -- Keep the same border width in every focus state. A quiet but
+            -- definite neutral line preserves the window's silhouette instead
+            -- of making unfocused clients look unfinished or jump on focus.
+            inactive_border = "rgba(89919d99)",
         },
         resize_on_border = true,
         extend_border_grab_area = 20,
@@ -26,7 +29,7 @@ hl.config({
     decoration = {
         rounding = 10,
         active_opacity = 1.0,
-        inactive_opacity = 0.94,
+        inactive_opacity = 0.97,
         fullscreen_opacity = 1.0,
         blur = {
             enabled = true, size = 8, passes = 2, xray = false,

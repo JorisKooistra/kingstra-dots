@@ -13,7 +13,8 @@ function M.apply()
                     },
                     angle = 55,
                 },
-                inactive_border = "rgba({{colors.outline.default.hex_stripped}}44)",
+                -- A defined inactive contour: muted, never invisible.
+                inactive_border = "rgba({{colors.outline.default.hex_stripped}}99)",
             },
         },
         decoration = {

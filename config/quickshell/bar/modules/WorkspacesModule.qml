@@ -210,8 +210,13 @@ Rectangle {
                 height: shell.s(34)
                 radius: surface.innerPillRadius
 
+                // The active workspace is a destination, not a solid colour
+                // chip: use a stable dark surface with an accent contour so it
+                // remains legible in every wallpaper-derived palette.
                 color: stateLabel === "active"
-                        ? (ctx.neonChrome ? ctx.neonWorkspaceActiveColor : mocha.mauve)
+                        ? (ctx.neonChrome
+                            ? ctx.neonWorkspaceActiveColor
+                            : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.96))
                         : (isHovered
                             ? (ctx.neonChrome
                                 ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.26)
@@ -221,6 +226,36 @@ Rectangle {
                                     ? ctx.neonWorkspaceOccupiedColor
                                     : Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.9))
                                 : "transparent"))
+
+                border.width: stateLabel === "active" ? 1 : 0
+                border.color: stateLabel === "active"
+                              ? (ctx.neonChrome ? mocha.base : Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.94))
+                              : "transparent"
+                Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("medium") } }
+
+                Rectangle {
+                    visible: stateLabel === "active" && !ctx.neonChrome
+                    width: shell.s(3)
+                    anchors.left: parent.left
+                    anchors.leftMargin: shell.s(4)
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.topMargin: shell.s(7)
+                    anchors.bottomMargin: shell.s(7)
+                    radius: width / 2
+                    color: mocha.mauve
+                }
+
+                Rectangle {
+                    visible: stateLabel === "occupied" && !isHovered
+                    width: shell.s(4)
+                    height: width
+                    anchors.right: parent.right
+                    anchors.rightMargin: shell.s(4)
+                    anchors.verticalCenter: parent.verticalCenter
+                    radius: width / 2
+                    color: ctx.neonChrome ? mocha.teal : Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.90)
+                }
 
                 scale: isHovered && stateLabel !== "active" ? 1.08 : 1.0
                 Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("medium"); easing.type: ThemeConfig.easingToken("emphasized") } }
@@ -258,7 +293,7 @@ Rectangle {
                     font.weight: stateLabel === "active" ? Font.Black : (stateLabel === "occupied" ? Font.Bold : Font.Medium)
                     font.letterSpacing: shell.themeLetterSpacing
                     color: stateLabel === "active"
-                            ? (ctx.neonChrome ? mocha.base : mocha.crust)
+                            ? (ctx.neonChrome ? mocha.base : mocha.text)
                             : (isHovered
                                 ? (ctx.neonChrome ? mocha.text : mocha.crust)
                                 : (stateLabel === "occupied" ? mocha.text : mocha.overlay0))

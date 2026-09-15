@@ -596,15 +596,49 @@ Item {
                         topRightRadius: root.pillTopRightRadius
                         bottomLeftRadius: root.pillBottomLeftRadius
                         bottomRightRadius: root.pillBottomRightRadius
+                        // Active workspaces keep the same footprint as every other
+                        // entry. A filled accent slab read as a random colour block
+                        // in the compact rail; a dark surface, contour and signal bar
+                        // make the current destination clear without moving windows.
                         color: stateLabel === "active"
-                                ? mocha.mauve
+                                ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.96)
                                 : (hovered
                                     ? Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.9)
                                     : (stateLabel === "occupied"
                                         ? Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.9)
                                         : "transparent"))
-                        border.width: stateLabel === "empty" ? 1 : 0
-                        border.color: Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.5)
+                        border.width: stateLabel === "active" || stateLabel === "empty" ? 1 : 0
+                        border.color: stateLabel === "active"
+                                      ? Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.94)
+                                      : Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.5)
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(180) } }
+                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(180) } }
+
+                        // A fixed-width signal preserves the rail geometry while
+                        // making the active destination readable at a glance.
+                        Rectangle {
+                            visible: wsPill.stateLabel === "active"
+                            width: shell.s(3)
+                            anchors.left: parent.left
+                            anchors.leftMargin: shell.s(3)
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            anchors.topMargin: shell.s(6)
+                            anchors.bottomMargin: shell.s(6)
+                            radius: width / 2
+                            color: mocha.mauve
+                        }
+
+                        Rectangle {
+                            visible: wsPill.stateLabel === "occupied" && !wsPill.hovered
+                            width: shell.s(4)
+                            height: width
+                            anchors.right: parent.right
+                            anchors.rightMargin: shell.s(4)
+                            anchors.verticalCenter: parent.verticalCenter
+                            radius: width / 2
+                            color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.90)
+                        }
 
                         Item {
                             id: indicatorZone
@@ -621,7 +655,7 @@ Item {
                                 font.pixelSize: shell.s(13)
                                 font.weight: wsPill.stateLabel === "active" ? Font.Black : Font.Bold
                                 font.letterSpacing: shell.themeLetterSpacing
-                                color: wsPill.stateLabel === "active" ? mocha.crust : mocha.text
+                                color: wsPill.stateLabel === "active" ? mocha.text : mocha.text
                                 Behavior on opacity { NumberAnimation { duration: 120 } }
                             }
 
@@ -661,7 +695,7 @@ Item {
                                             font.family: shell.monoFontFamily
                                             font.pixelSize: shell.s(9)
                                             font.weight: Font.Bold
-                                            color: wsPill.stateLabel === "active" ? mocha.crust : mocha.text
+                                            color: wsPill.stateLabel === "active" ? mocha.text : mocha.text
                                         }
                                     }
                                 }
@@ -680,7 +714,7 @@ Item {
                             font.family: shell.monoFontFamily
                             font.pixelSize: shell.s(10)
                             font.weight: shell.themeFontWeight
-                            color: wsPill.stateLabel === "active" ? mocha.crust : mocha.subtext0
+                            color: wsPill.stateLabel === "active" ? mocha.text : mocha.subtext0
                             elide: Text.ElideRight
                             Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                         }
