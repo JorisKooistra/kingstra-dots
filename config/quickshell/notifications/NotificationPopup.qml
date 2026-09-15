@@ -12,9 +12,9 @@ FocusScope {
     readonly property int pad: 16
     readonly property int panelRadius: Math.max(18, ThemeConfig.styleWidgetRadius + 6)
     readonly property int itemRadius: Math.max(12, Math.round(panelRadius * 0.56))
-    readonly property color cardColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.28)
-    readonly property color cardHoverColor: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.36)
-    readonly property color subtleBorder: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+    readonly property color cardColor: mocha.shellRaisedFill
+    readonly property color cardHoverColor: mocha.shellHoverFill
+    readonly property color subtleBorder: mocha.shellOutline
 
     function closePanel() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);

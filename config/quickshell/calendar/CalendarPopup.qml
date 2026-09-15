@@ -85,7 +85,7 @@ Item {
     readonly property string displayFontFamily: ThemeConfig.displayFont
     readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
     readonly property int themedFontWeight: ThemeConfig.fontWeight
-    readonly property color popupFill: Qt.rgba(window.base.r, window.base.g, window.base.b, ThemeConfig.popupOpacity)
+    readonly property color popupFill: _theme.shellContentFill
 
     readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/quickshell/calendar"
 

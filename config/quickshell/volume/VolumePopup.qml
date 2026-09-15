@@ -54,9 +54,9 @@ Item {
     readonly property string displayFontFamily: ThemeConfig.displayFont
     readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
     readonly property int themedFontWeight: ThemeConfig.fontWeight
-    readonly property color popupFill: Qt.rgba(window.base.r, window.base.g, window.base.b, Math.min(0.98, ThemeConfig.popupOpacity))
-    readonly property color glassFill: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, Math.min(0.94, ThemeConfig.popupOpacity * 0.4))
-    readonly property color popupBorderColor: Qt.rgba(window.surface2.r, window.surface2.g, window.surface2.b, 0.70)
+    readonly property color popupFill: _theme.shellContentFill
+    readonly property color glassFill: _theme.shellRaisedFill
+    readonly property color popupBorderColor: _theme.shellOutline
 
     // -------------------------------------------------------------------------
     // STATE & CONFIG

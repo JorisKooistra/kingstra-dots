@@ -396,6 +396,21 @@ Item {
             matrix: panelBackdrop.nativeDeformMatrix
         }
 
+        // De blob vormt de buitenkant; deze zeer lichte binnenlaag bindt de
+        // inhoud eraan. Hij is bewust onder alle popup-QML geplaatst, zodat
+        // ieder paneel dezelfde diepte krijgt zonder individuele layouts of
+        // hun interactiegebieden te veranderen.
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            gradient: Gradient {
+                orientation: Gradient.Vertical
+                GradientStop { position: 0.0; color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.13) }
+                GradientStop { position: 0.42; color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.025) }
+                GradientStop { position: 1.0; color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.08) }
+            }
+        }
+
         Loader {
             id: contentLoader
             x: 0

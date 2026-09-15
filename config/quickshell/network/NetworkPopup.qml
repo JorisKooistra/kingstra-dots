@@ -115,8 +115,8 @@ Item {
     readonly property string displayFontFamily: ThemeConfig.displayFont
     readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
     readonly property int themedFontWeight: ThemeConfig.fontWeight
-    readonly property color popupFill: Qt.rgba(window.base.r, window.base.g, window.base.b, ThemeConfig.popupOpacity)
-    readonly property color dockFill: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, Math.min(0.84, ThemeConfig.popupOpacity * 0.45))
+    readonly property color popupFill: _theme.shellContentFill
+    readonly property color dockFill: _theme.shellRaisedFill
 
     readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/quickshell/network"
     

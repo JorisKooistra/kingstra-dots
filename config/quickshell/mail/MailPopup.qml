@@ -10,7 +10,7 @@ FocusScope {
 
     readonly property int pad: 16
     readonly property int itemRadius: Math.max(12, ThemeConfig.styleWidgetRadius)
-    readonly property color subtleBorder: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+    readonly property color subtleBorder: mocha.shellOutline
 
     function closePanel() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);

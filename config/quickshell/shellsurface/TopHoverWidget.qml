@@ -16,8 +16,8 @@ Item {
 
     readonly property int pad: 14
     readonly property int cardRadius: Math.max(12, ThemeConfig.styleWidgetRadius)
-    readonly property color cardColor: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.26)
-    readonly property color cardBorder: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+    readonly property color cardColor: mocha.shellRaisedFill
+    readonly property color cardBorder: mocha.shellOutline
 
     property var now: new Date()
     // Expliciete locale: de sessie draait op een C/en_US-locale, waardoor

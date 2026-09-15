@@ -56,9 +56,9 @@ Item {
     readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
     readonly property int themedFontWeight: ThemeConfig.fontWeight
     readonly property real settingsOpacity: Math.max(0.92, ThemeConfig.popupOpacity)
-    readonly property color popupFill: Qt.rgba(root.base.r, root.base.g, root.base.b, settingsOpacity)
-    readonly property color popupPanelFill: Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, Math.max(0.68, Math.min(0.94, settingsOpacity * (0.52 + ThemeConfig.styleGlassStrength * 0.5))))
-    readonly property color popupPanelHoverFill: Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, Math.max(0.76, Math.min(0.98, settingsOpacity * (0.66 + ThemeConfig.styleGlassStrength * 0.6))))
+    readonly property color popupFill: _theme.shellContentFill
+    readonly property color popupPanelFill: _theme.shellRaisedFill
+    readonly property color popupPanelHoverFill: _theme.shellHoverFill
 
     property real colorBlend: 0.0
     SequentialAnimation on colorBlend {

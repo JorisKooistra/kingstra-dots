@@ -89,6 +89,26 @@ Item {
     readonly property color surfaceContainerHigh: materialSurfaceContainerHigh
     readonly property color surfaceContainerHighest: materialSurfaceContainerHighest
 
+    // Eén materiaaltaal voor de inhoud van alle shell-panelen. Vóór deze
+    // rollen hadden Battery, Network, Volume, Settings, enz. elk een eigen
+    // combinatie van base/surface en alpha. Daardoor hoorde de buitenste blob
+    // wel bij de shell, maar voelde de inhoud als losse widgets. Deze lagen
+    // zijn bewust semantisch: content, raised cards, controls en hover krijgen
+    // overal dezelfde diepte, terwijl accentkleuren uitsluitend status tonen.
+    readonly property real shellContentOpacity: Math.max(0.68, Math.min(0.84,
+        0.50 + ThemeConfig.popupOpacity * 0.34))
+    readonly property real shellRaisedOpacity: Math.max(0.46, Math.min(0.66,
+        0.30 + ThemeConfig.popupOpacity * 0.32 + ThemeConfig.styleGlassStrength * 0.22))
+    readonly property color shellContentFill: Qt.rgba(base.r, base.g, base.b, shellContentOpacity)
+    readonly property color shellRaisedFill: Qt.rgba(surface0.r, surface0.g, surface0.b, shellRaisedOpacity)
+    readonly property color shellControlFill: Qt.rgba(surface1.r, surface1.g, surface1.b,
+        Math.min(0.76, shellRaisedOpacity + 0.11))
+    readonly property color shellHoverFill: Qt.rgba(surface2.r, surface2.g, surface2.b,
+        Math.min(0.82, shellRaisedOpacity + 0.18))
+    readonly property color shellOutline: Qt.rgba(text.r, text.g, text.b,
+        Math.max(0.10, Math.min(0.22, 0.08 + ThemeConfig.styleOutlineStrength * 0.42)))
+    readonly property color shellDivider: Qt.rgba(text.r, text.g, text.b, 0.10)
+
     property string rawJson: ""
 
     FileView {
