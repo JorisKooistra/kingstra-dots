@@ -250,7 +250,7 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     # Keep this in lockstep with ShellSurface.qml and Main.qml. Every panel
     # below is rendered by the per-screen shell surface; routing one through
     # qs-master would reintroduce duplicate overlays and competing focus.
-    SURFACE_NATIVE=" battery focustime network volume music calendar monitors performance gaming settings power notifications mail launcher "
+    SURFACE_NATIVE=" battery focustime network volume music calendar monitors performance gaming settings power notifications mail launcher clipboard "
     if [[ "$SURFACE_NATIVE" == *" $TARGET "* ]]; then
         if [[ "$ACTION" == "toggle" && "$ACTIVE_WIDGET" == "$TARGET" ]]; then
             qs_ipc_close

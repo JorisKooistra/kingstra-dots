@@ -33,6 +33,7 @@ FocusScope {
         { icon: "󰍹", label: "Schermen", detail: "Indeling en profielen", target: "monitors" },
         { icon: "󰊢", label: "Overview", detail: "Werkruimten", target: "overview" },
         { icon: "󰍛", label: "Systeemmonitor", detail: "Open btop", target: "btop" },
+        { icon: "󰄀", label: "Klembord", detail: "Doorzoek recente items", target: "clipboard" },
         { icon: "󰂚", label: "Meldingen", detail: "Inbox en niet storen", target: "notifications" },
         { icon: "󰌾", label: "Vergrendelen", detail: "Huidige sessie", target: "lock" }
     ]
