@@ -28,10 +28,13 @@ FocusScope {
     property int selectedIndex: 0
     readonly property var quickActions: [
         { icon: "󰒓", label: "Instellingen", detail: "Shell en systeem", target: "settings" },
-        { icon: "󰏘", label: "Thema", detail: "Kleur en vorm", target: "theme" },
+        { icon: "󰏘", label: "Thema", detail: "Kleur en vorm · instellingen", target: "settings" },
         { icon: "󰓃", label: "Media", detail: "Nu afspelen", target: "music" },
         { icon: "󰍹", label: "Schermen", detail: "Indeling en profielen", target: "monitors" },
-        { icon: "󰊢", label: "Overview", detail: "Werkruimten", target: "overview" }
+        { icon: "󰊢", label: "Overview", detail: "Werkruimten", target: "overview" },
+        { icon: "󰍛", label: "Systeemmonitor", detail: "Open btop", target: "btop" },
+        { icon: "󰂚", label: "Meldingen", detail: "Inbox en niet storen", target: "notifications" },
+        { icon: "󰌾", label: "Vergrendelen", detail: "Huidige sessie", target: "lock" }
     ]
 
     readonly property color surfaceColor: {
@@ -62,6 +65,25 @@ FocusScope {
             return root.compareApps(a.app, b.app);
         });
         return scored.map(r => r.app);
+    }
+
+    // Actions are first-class launcher results rather than static decoration.
+    // This makes non-desktop tools such as btop discoverable through typing.
+    readonly property var filteredActions: {
+        let q = root.normalizeSearch(query);
+        if (q === "") return [];
+        let scored = [];
+        for (let i = 0; i < quickActions.length; i++) {
+            let action = quickActions[i];
+            let score = Math.max(
+                root.fieldScore(action.label, q, 5200),
+                root.fieldScore(action.detail, q, 3000),
+                root.fieldScore(action.target, q, 2800)
+            );
+            if (score > 0) scored.push({ action: action, score: score });
+        }
+        scored.sort((a, b) => b.score - a.score || String(a.action.label).localeCompare(String(b.action.label)));
+        return scored.map(result => result.action);
     }
 
     onFilteredChanged: selectedIndex = 0
@@ -285,6 +307,10 @@ FocusScope {
                 "bash",
                 Quickshell.env("HOME") + "/.config/hypr/scripts/overview-toggle.sh"
             ]);
+        } else if (action.target === "btop") {
+            Quickshell.execDetached(["kitty", "--title", "btop — Kingstra", "bash", "-lc", "exec btop"]);
+        } else if (action.target === "lock") {
+            Quickshell.execDetached(["loginctl", "lock-session"]);
         } else {
             Quickshell.execDetached([
                 "bash",
@@ -361,7 +387,7 @@ FocusScope {
                 }
 
                 Text {
-                    text: root.filtered.length + ""
+                    text: (root.filtered.length + root.filteredActions.length) + ""
                     font.family: ThemeConfig.monoFont
                     font.pixelSize: 12
                     color: mocha.subtext0
@@ -374,11 +400,13 @@ FocusScope {
         // tweede pad voor shell-state of focusafhandeling.
         Flow {
             Layout.fillWidth: true
-            visible: root.query === ""
+            // Empty query: a calm dashboard. Typed query: only matching
+            // commands survive, directly above matching apps.
+            visible: root.query === "" || root.filteredActions.length > 0
             spacing: 8
 
             Repeater {
-                model: root.quickActions
+                model: root.query === "" ? root.quickActions : root.filteredActions
 
                 delegate: Rectangle {
                     required property var modelData
