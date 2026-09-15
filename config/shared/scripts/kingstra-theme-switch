@@ -805,10 +805,10 @@ THEME_CONF_TMP="$(mktemp "${THEME_CONF}.XXXXXX")"
 SCREEN_SHADER_LUA="${SCREEN_SHADER//\\/\\\\}"
 SCREEN_SHADER_LUA="${SCREEN_SHADER_LUA//\"/\\\"}"
 if ! cat > "$THEME_CONF_TMP" <<EOF
-# =============================================================================
-# theme.lua — Automatisch gegenereerd door kingstra-theme-switch
-# Thema: ${META_NAME:-$THEME_NAME}
-# =============================================================================
+-- =============================================================================
+-- theme.lua — Automatisch gegenereerd door kingstra-theme-switch
+-- Thema: ${META_NAME:-$THEME_NAME}
+-- =============================================================================
 
 local M = {}
 function M.apply()
