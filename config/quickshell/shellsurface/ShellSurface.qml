@@ -112,6 +112,16 @@ Scope {
                     }
                 }
 
+                // Directe, korte feedback voor lokale acties (bijvoorbeeld een
+                // screenshot). Dit blijft volledig click-through en gebruikt
+                // dezelfde per-screen shell als de bar en frame.
+                FeedbackToast {
+                    shellWindow: surfaceWindow
+                    mocha: mocha
+                    topInset: chrome.stripHeight
+                    rightInset: chrome.shellBorderWidth
+                }
+
                 // Klik-buiten-om-te-sluiten. De geometrie is bewust aan de
                 // open-state gekoppeld i.p.v. alleen `visible`: de mask-Region
                 // hieronder volgt de item-geometrie en niet de zichtbaarheid,

@@ -11,8 +11,43 @@
 # =============================================================================
 
 SCREENSHOT_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+FEEDBACK_FILE="/tmp/kingstra-feedback.json"
+
+# Stuur korte, native feedback naar Quickshell. De file-route is bewust
+# atomair: meerdere ShellSurface-instanties kunnen hem veilig pollen zonder
+# ooit half JSON te lezen. Alleen als jq ontbreekt valt dit terug op de
+# reguliere notification-server.
+feedback() {
+    local icon="$1"
+    local title="$2"
+    local detail="$3"
+    local urgency="${4:-normal}"
+    local timeout="${5:-2400}"
+    local tmp_file
+
+    if command -v jq >/dev/null 2>&1; then
+        tmp_file="$(mktemp "${FEEDBACK_FILE}.XXXXXX")" || return 0
+        if jq -n -c \
+            --arg token "$(date +%s%N)-$$" \
+            --arg icon "$icon" \
+            --arg title "$title" \
+            --arg detail "$detail" \
+            --arg urgency "$urgency" \
+            --argjson timeout "$timeout" \
+            '{token: $token, scope: "focused", icon: $icon, title: $title, detail: $detail, urgency: $urgency, timeout: $timeout}' \
+            > "$tmp_file"; then
+            mv -f "$tmp_file" "$FEEDBACK_FILE"
+            return 0
+        fi
+        rm -f "$tmp_file"
+    fi
+
+    command -v notify-send >/dev/null 2>&1 \
+        && notify-send -u "$urgency" -i camera-photo "$title" "$detail" -t "$timeout" || true
+}
+
 if ! mkdir -p "$SCREENSHOT_DIR"; then
-    notify-send -u critical -i dialog-error "Screenshot" "Map kan niet worden aangemaakt: $SCREENSHOT_DIR"
+    feedback "󰅙" "Screenshot mislukt" "Map kan niet worden aangemaakt" "critical" 4500
     exit 1
 fi
 
@@ -34,7 +69,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 missing_tool() {
-    notify-send -u critical -i dialog-error "Screenshot" "$1 ontbreekt; installeer het pakket en probeer opnieuw."
+    feedback "󰅙" "Screenshot mislukt" "$1 ontbreekt" "critical" 4500
     exit 127
 }
 
@@ -51,7 +86,7 @@ copy_image() {
 # Capture
 if [[ "$MODE" == "full" ]]; then
     if ! grim "$OUTPUT_FILE"; then
-        notify-send -u critical -i dialog-error "Screenshot" "Volledig scherm vastleggen is mislukt"
+        feedback "󰅙" "Screenshot mislukt" "Volledig scherm vastleggen is mislukt" "critical" 4500
         exit 1
     fi
 else
@@ -59,7 +94,7 @@ else
     command -v slurp >/dev/null 2>&1 || missing_tool "slurp"
     SELECTION="$(slurp -d 2>/dev/null)" || exit 0 # bewust stil bij annuleren
     if [[ -z "$SELECTION" ]] || ! grim -g "$SELECTION" "$OUTPUT_FILE"; then
-        notify-send -u critical -i dialog-error "Screenshot" "Geselecteerd gebied vastleggen is mislukt"
+        feedback "󰅙" "Screenshot mislukt" "Geselecteerd gebied vastleggen is mislukt" "critical" 4500
         exit 1
     fi
 fi
@@ -70,9 +105,9 @@ fi
 case "$DEST" in
     clipboard)
         if copy_image; then
-            notify-send -i camera-photo "Screenshot" "Gekopieerd naar klembord" -t 2000
+            feedback "󰄀" "Screenshot gekopieerd" "Staat op je klembord" "normal" 2200
         else
-            notify-send -u normal -i camera-photo "Screenshot" "wl-copy ontbreekt; screenshot is niet gekopieerd" -t 3000
+            feedback "󰅙" "Screenshot opgeslagen" "wl-copy ontbreekt" "warning" 3200
         fi
         rm -f "$OUTPUT_FILE"   # Niet opslaan bij clipboard-modus
         ;;
@@ -84,22 +119,22 @@ case "$DEST" in
                   --early-exit \
                   --copy-command "wl-copy" \
                   2>/dev/null
-            notify-send -i camera-photo "Screenshot" "Opgeslagen: $OUTPUT_FILE" -t 2000
+            feedback "󰄀" "Screenshot opgeslagen" "$(basename "$OUTPUT_FILE")" "normal" 2400
         else
             # Satty niet gevonden — gewoon opslaan
             if copy_image; then
-                notify-send -i camera-photo "Screenshot" "Satty niet gevonden; opgeslagen en gekopieerd" -t 3000
+                feedback "󰄀" "Screenshot opgeslagen en gekopieerd" "Satty ontbreekt" "warning" 3200
             else
-                notify-send -u normal -i camera-photo "Screenshot" "Satty en wl-copy niet gevonden; opgeslagen" -t 3500
+                feedback "󰅙" "Screenshot opgeslagen" "Satty en wl-copy ontbreken" "warning" 3600
             fi
         fi
         ;;
 
     save|*)
         if copy_image; then
-            notify-send -i camera-photo "Screenshot" "Opgeslagen en gekopieerd: $(basename "$OUTPUT_FILE")" -t 2200
+            feedback "󰄀" "Screenshot opgeslagen en gekopieerd" "$(basename "$OUTPUT_FILE")" "normal" 2400
         else
-            notify-send -u normal -i camera-photo "Screenshot" "Opgeslagen: $(basename "$OUTPUT_FILE")" -t 2200
+            feedback "󰄀" "Screenshot opgeslagen" "$(basename "$OUTPUT_FILE")" "normal" 2400
         fi
         ;;
 esac
