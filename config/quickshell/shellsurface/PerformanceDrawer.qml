@@ -26,6 +26,10 @@ Item {
         fpsPoller.running = true;
     }
 
+    function openBtop() {
+        Quickshell.execDetached(["kitty", "--title", "btop — Kingstra", "bash", "-lc", "exec btop"]);
+    }
+
     Component.onCompleted: refresh()
 
     Timer {
@@ -80,6 +84,41 @@ Item {
         MetricRow { label: "RAM"; value: root.ramPercent + "%"; detail: "geheugen"; fraction: root.ramPercent / 100.0; accent: mocha.accent3 }
         MetricRow { label: "GPU"; value: root.gpuPercent + "%"; detail: root.gpuTemperature; fraction: root.gpuPercent / 100.0; accent: mocha.accent2 }
         MetricRow { label: "FPS"; value: root.fps; detail: "actief scherm"; fraction: 1.0; accent: mocha.accent1Container; showTrack: false }
+
+        Item { Layout.fillHeight: true }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 42
+            radius: Math.max(10, ThemeConfig.styleWidgetRadius)
+            color: btopMouse.containsMouse
+                ? Qt.rgba(mocha.accent1.r, mocha.accent1.g, mocha.accent1.b, 0.22)
+                : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.78)
+            border.width: 1
+            border.color: Qt.rgba(mocha.accent1.r, mocha.accent1.g, mocha.accent1.b, btopMouse.containsMouse ? 0.70 : 0.34)
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                Text { text: "󰍛"; font.family: "Iosevka Nerd Font"; font.pixelSize: 17; color: mocha.accent1 }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+                    Text { text: "Open btop"; font.family: ThemeConfig.uiFont; font.pixelSize: 12; font.weight: Font.DemiBold; color: mocha.text }
+                    Text { text: "processen en detailinspectie"; font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0 }
+                }
+                Text { text: "󰅂"; font.family: "Iosevka Nerd Font"; font.pixelSize: 14; color: mocha.subtext0 }
+            }
+
+            MouseArea {
+                id: btopMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.openBtop()
+            }
+        }
     }
 
     component MetricRow: ColumnLayout {

@@ -647,34 +647,54 @@ Item {
                             visible: root.vinylMode
                             anchors.fill: parent
                             z: 3
-                            Rectangle {
-                                width: root.s(7)
-                                height: root.s(92)
-                                radius: width / 2
-                                x: parent.width - root.s(47)
-                                y: root.s(13)
-                                color: root.yellow
-                                transformOrigin: Item.Top
-                                rotation: root.musicData.status === "Playing" ? 27 : 4
-                                Behavior on rotation { NumberAnimation { duration: 650; easing.type: Easing.OutCubic } }
+                            Item {
+                                id: tonearm
+                                width: root.s(82)
+                                height: root.s(98)
+                                x: parent.width - width - root.s(10)
+                                y: root.s(10)
+                                transformOrigin: Item.TopRight
+                                rotation: root.musicData.status === "Playing" ? 24 : 3
+                                Behavior on rotation { NumberAnimation { duration: 700; easing.type: Easing.OutCubic } }
+
+                                // Slanke, matte arm met één accentrand. De
+                                // oude massieve gele staaf hoorde niet bij de
+                                // rest van het door Matugen afgeleide thema.
                                 Rectangle {
-                                    width: root.s(22)
-                                    height: root.s(11)
-                                    radius: root.s(4)
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.bottom: parent.bottom
+                                    width: root.s(5)
+                                    height: root.s(76)
+                                    radius: width / 2
+                                    x: parent.width - root.s(18)
+                                    y: root.s(13)
                                     color: root.overlay2
+                                    Rectangle {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: root.s(1)
+                                        height: parent.height - root.s(8)
+                                        radius: width / 2
+                                        color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.86)
+                                    }
                                 }
-                            }
-                            Rectangle {
-                                width: root.s(17)
-                                height: width
-                                radius: width / 2
-                                x: parent.width - root.s(52)
-                                y: root.s(8)
-                                color: root.yellow
-                                border.width: 2
-                                border.color: root.surface0
+                                Rectangle {
+                                    width: root.s(19)
+                                    height: root.s(8)
+                                    radius: root.s(3)
+                                    x: parent.width - root.s(25)
+                                    y: root.s(81)
+                                    color: root.surface2
+                                    border.width: 1
+                                    border.color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.64)
+                                }
+                                Rectangle {
+                                    width: root.s(15)
+                                    height: width
+                                    radius: width / 2
+                                    x: parent.width - root.s(23)
+                                    y: root.s(5)
+                                    color: root.surface0
+                                    border.width: root.s(2)
+                                    border.color: root.mauve
+                                }
                             }
                         }
                     }

@@ -62,8 +62,7 @@ Scope {
                     z: 0
                     anchors.fill: parent
                     anchors.margins: -50
-                    visible: chrome.cornersActive
-                    opacity: chrome.chromePresence
+                    visible: chrome.frameEnabled
                     group: chrome.edgeBlobGroup
                     radius: chrome.cornerR
                     borderLeft: chrome.railWidth - anchors.margins
@@ -285,7 +284,7 @@ Scope {
                 // tekenwerk zit in ShellChrome.
                 PanelWindow {
                     screen: surfaceWindow.screen
-                    visible: ThemeConfig.barZoneSchemaLoaded && chrome.cornersActive
+                    visible: ThemeConfig.barZoneSchemaLoaded && chrome.frameEnabled
                     anchors.right: true
                     anchors.top: true
                     anchors.bottom: true
@@ -300,7 +299,7 @@ Scope {
 
                 PanelWindow {
                     screen: surfaceWindow.screen
-                    visible: ThemeConfig.barZoneSchemaLoaded && chrome.cornersActive
+                    visible: ThemeConfig.barZoneSchemaLoaded && chrome.frameEnabled
                     anchors.left: true
                     anchors.right: true
                     anchors.bottom: true

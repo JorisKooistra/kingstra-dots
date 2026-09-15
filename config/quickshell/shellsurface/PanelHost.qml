@@ -162,7 +162,7 @@ Item {
         if (entryId === "launcher") return Math.min(610, availableH);
         if (entryId === "tophover") return Math.min(232, availableH);
         // Was volle schermhoogte terwijl er maar een handvol meters in staat.
-        if (entryId === "performance") return Math.min(360, availableH);
+        if (entryId === "performance") return Math.min(430, availableH);
         if (entryId === "gaming") return Math.min(560, availableH);
         if (entryId === "notifications") return Math.min(620, availableH);
         if (entryId === "mail") return Math.min(560, availableH);

@@ -16,13 +16,27 @@ Item {
     required property var shellWindow
     required property var mocha
 
-    // Het scherm waarop gewerkt wordt mag de shell dragen; de andere
-    // schermen blijven aanwezig als ambient context, maar concurreren niet
-    // met de inhoud. Hover herstelt de volledige rail onmiddellijk.
+    // Focus en hoofdscherm zijn twee verschillende dingen: focus verplaatst
+    // bij normaal werken voortdurend, terwijl de visuele ankerplek stabiel
+    // moet blijven. Het hoofdscherm wordt gekozen in Settings > Display.
     readonly property var monitorForScreen: Hyprland.monitorFor(shellWindow.screen)
     readonly property bool focusedScreen: monitorForScreen !== null
         && Hyprland.focusedMonitor !== null
         && monitorForScreen.id === Hyprland.focusedMonitor.id
+    property string primaryMonitorName: ""
+    readonly property bool configuredPrimaryAvailable: {
+        if (primaryMonitorName === "") return false;
+        let monitors = Hyprland.monitors.values;
+        for (let i = 0; i < monitors.length; i++) {
+            let mon = monitors[i];
+            if (mon && mon.lastIpcObject && String(mon.lastIpcObject.name || "") === primaryMonitorName)
+                return true;
+        }
+        return false;
+    }
+    readonly property bool primaryScreen: configuredPrimaryAvailable
+        ? String(shellWindow.screen.name || "") === primaryMonitorName
+        : focusedScreen
 
     readonly property bool railEnabled: ThemeConfig.barRailEnabled
     readonly property bool stripEnabled: ThemeConfig.barStatusStripEnabled
@@ -58,7 +72,7 @@ Item {
         : Math.max(paperStyle ? 12 : 10,
                    Math.min(organicStyle ? 34 : 20,
                             Math.max(ThemeConfig.borderRadius, ThemeConfig.styleWidgetRadius) + frameBandW)))
-    readonly property bool technicalFrameStyle: neonStyle && cornersActive
+    readonly property bool technicalFrameStyle: neonStyle && frameEnabled
     readonly property int cornerSeamOverlap: 3
     readonly property string styleFamily: String(ThemeConfig.styleFamily || "").toLowerCase()
     readonly property bool paperStyle: styleFamily === "paper"
@@ -249,7 +263,7 @@ Item {
         return _bottomHueAt(edgeBlobX + edgeBlobWidth);
     }
     readonly property bool edgeBlobGradientVertical: edgeBlobEdge === "left" || edgeBlobEdge === "right"
-    readonly property var edgeBlobGroup: cornersActive ? nativeBlobGroup : null
+    readonly property var edgeBlobGroup: frameEnabled ? nativeBlobGroup : null
 
     readonly property color panelColor: {
         if (paperStyle) {
@@ -328,12 +342,15 @@ Item {
     readonly property Item topHoverHitRegion: topHoverHitArea
     readonly property bool topHoverHovered: topHover.hovered
     property string activeMode: "office"
-    readonly property bool ambientScreen: activeMode === "office" && !focusedScreen
+    readonly property bool secondaryScreen: !primaryScreen
     readonly property bool gamingMinimal: activeMode === "gaming" && !railHover.hovered
-    readonly property real chromePresence: ambientScreen
-        ? (railHover.hovered ? 1.0 : 0.42) : (gamingMinimal ? 0.76 : 1.0)
-    readonly property real railModulePresence: ambientScreen
-        ? (railHover.hovered ? 1.0 : 0.58) : (gamingMinimal ? 0.72 : 1.0)
+    // Nevenmonitoren krijgen expres géén gedeeltelijk frame: dat liet de SDF
+    // in de hoeken half zichtbaar en gaf precies de kapotte hoekbogen. Alleen
+    // het hoofdscherm bezit de volledige gesloten omlijsting.
+    readonly property bool frameEnabled: cornersActive && primaryScreen
+    readonly property real chromePresence: gamingMinimal ? 0.76 : 1.0
+    readonly property real railModulePresence: secondaryScreen
+        ? (railHover.hovered ? 1.0 : 0.78) : (gamingMinimal ? 0.72 : 1.0)
     property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications", "mail"]
     property bool barAutoHide: false
     property bool autoHideVisible: true
@@ -401,6 +418,15 @@ Item {
             if (root.barAutoHide) autoHideTimer.restart();
             else autoHideTimer.stop();
         } catch(e) {}
+    }
+
+    function applyPrimaryDisplayState(rawText) {
+        try {
+            let state = JSON.parse(String(rawText || "{}"));
+            root.primaryMonitorName = String(state.primary || "");
+        } catch (e) {
+            root.primaryMonitorName = "";
+        }
     }
 
     function togglePanel(target) {
@@ -472,6 +498,14 @@ Item {
         if (!volPoller.running) volPoller.running = true;
     }
 
+    // FileView kan geen afwezige file watchen. Initialiseer daarom de
+    // user-state eenmalig voordat de poll begint; de helper schrijft alleen
+    // de onschuldige automatische fallback wanneer er nog niets bestaat.
+    Process {
+        command: ["bash", Quickshell.env("HOME") + "/.config/quickshell/settings/primary-display.sh", "list"]
+        running: true
+    }
+
     FileView {
         id: modeFileView
         path: Quickshell.env("HOME") + "/.config/kingstra/state/mode.json"
@@ -480,11 +514,26 @@ Item {
         onInternalTextChanged: root.applyModeState(__text)
     }
 
+    FileView {
+        id: primaryDisplayFileView
+        path: Quickshell.env("HOME") + "/.config/kingstra/state/primary-display.json"
+        watchChanges: true
+        preload: true
+        onInternalTextChanged: root.applyPrimaryDisplayState(__text)
+    }
+
     Timer {
         interval: 2000
         running: true
         repeat: true
         onTriggered: modeFileView.reload()
+    }
+
+    Timer {
+        interval: 2000
+        running: true
+        repeat: true
+        onTriggered: primaryDisplayFileView.reload()
     }
 
     Timer {
@@ -745,15 +794,15 @@ Item {
         anchors.fill: railHitArea
         // De blob-shader tekent de accentband op de binnenrand van de
         // omlijsting; laat die strook vrij in plaats van hem dicht te verven.
-        anchors.rightMargin: root.cornersActive && !root.railOnRight ? root.frameBandW : 0
-        anchors.leftMargin: root.cornersActive && root.railOnRight ? root.frameBandW : 0
+        anchors.rightMargin: root.frameEnabled && !root.railOnRight ? root.frameBandW : 0
+        anchors.leftMargin: root.frameEnabled && root.railOnRight ? root.frameBandW : 0
         gradient: Gradient {
             orientation: Gradient.Vertical
             GradientStop { position: 0.0; color: root._diagColor(root.railWidth / 2, 0) }
             GradientStop { position: 1.0; color: root._diagColor(root.railWidth / 2, root.height) }
         }
         border.width: 0
-        opacity: (root.railContentVisible ? 1 : 0.82) * root.chromePresence
+        opacity: root.railContentVisible ? root.chromePresence : 0.82
         transform: Translate {
             id: railSlide
             x: root.railContentVisible ? 0 : (root.railOnRight ? root.railWidth - 7 : -root.railWidth + 7)
@@ -767,14 +816,14 @@ Item {
 
         // Accent-spine: drie wallpaper-hues over de binnenrand van de rail.
         Rectangle {
-            visible: !root.cornersActive
+            visible: !root.frameEnabled
             width: 2
             anchors.top: parent.top
             // Boven de strip is dit een interne naad, geen buitenrand; daar
             // hoort geen lijn. De boog neemt het hoekstuk voor zijn rekening.
-            anchors.topMargin: root.cornersActive ? root.stripHeight + root.cornerR - root.cornerSeamOverlap : 0
+            anchors.topMargin: root.frameEnabled ? root.stripHeight + root.cornerR - root.cornerSeamOverlap : 0
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: root.cornersActive ? root.shellBorderWidth + root.cornerR - root.cornerSeamOverlap : 0
+            anchors.bottomMargin: root.frameEnabled ? root.shellBorderWidth + root.cornerR - root.cornerSeamOverlap : 0
             anchors.left: root.railOnRight ? parent.left : undefined
             anchors.right: root.railOnRight ? undefined : parent.right
             opacity: root.chromeAccentAlpha
@@ -855,24 +904,50 @@ Item {
                             return false;
                         }
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 28
-                        radius: Math.min(7, ThemeConfig.styleWidgetRadius)
-                        color: active ? root.hotColor
+                        Layout.preferredHeight: 30
+                        radius: Math.min(9, ThemeConfig.styleWidgetRadius)
+                        color: active ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.20)
                             : (wsMouse.containsMouse ? root.pillHoverColor
-                                : (occupied ? root.pillColor : "transparent"))
-                        border.width: active || occupied ? 0 : 1
-                        border.color: Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.14)
+                                : (occupied ? Qt.rgba(root.pillColor.r, root.pillColor.g, root.pillColor.b, 0.92) : "transparent"))
+                        border.width: active ? 1 : (occupied ? 1 : 0)
+                        border.color: active ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.84)
+                            : Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.12)
                         Behavior on color {
                             ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
                         }
 
                         Text {
-                            anchors.centerIn: parent
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.horizontalCenterOffset: active ? 2 : 0
                             text: wsId
                             font.family: ThemeConfig.monoFont
                             font.pixelSize: 12
                             font.weight: active ? Font.Black : Font.Bold
-                            color: active ? root.mocha.base : root.mocha.text
+                            color: active ? root.hotColor : root.mocha.text
+                        }
+
+                        Rectangle {
+                            visible: active
+                            width: 3
+                            height: parent.height - 10
+                            radius: width / 2
+                            anchors.left: parent.left
+                            anchors.leftMargin: 5
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: root.hotColor
+                        }
+
+                        Rectangle {
+                            visible: occupied && !active
+                            width: 4
+                            height: width
+                            radius: width / 2
+                            anchors.right: parent.right
+                            anchors.rightMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: root.mocha.accent1
+                            opacity: 0.82
                         }
 
                         MouseArea {
@@ -1073,8 +1148,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             // Zelfde als bij de rail: de accentband van de shader vrijlaten.
-            anchors.bottomMargin: root.cornersActive && !root.stripOnBottom ? root.frameBandW : 0
-            anchors.topMargin: root.cornersActive && root.stripOnBottom ? root.frameBandW : 0
+            anchors.bottomMargin: root.frameEnabled && !root.stripOnBottom ? root.frameBandW : 0
+            anchors.topMargin: root.frameEnabled && root.stripOnBottom ? root.frameBandW : 0
             gradient: Gradient {
                 orientation: Gradient.Horizontal
                 GradientStop { position: 0.0; color: root._diagColor(0, root.stripHeight / 2) }
@@ -1095,12 +1170,12 @@ Item {
 
             // Accent-lijn: drie wallpaper-hues over de buitenrand van de strip.
             Rectangle {
-                visible: !root.cornersActive
+                visible: !root.frameEnabled
                 height: 2
                 anchors.left: parent.left
-                anchors.leftMargin: root.cornersActive ? root.cornerR - root.cornerSeamOverlap : 0
+                anchors.leftMargin: root.frameEnabled ? root.cornerR - root.cornerSeamOverlap : 0
                 anchors.right: parent.right
-                anchors.rightMargin: root.cornersActive ? root.shellBorderWidth + root.cornerR - root.cornerSeamOverlap : 0
+                anchors.rightMargin: root.frameEnabled ? root.shellBorderWidth + root.cornerR - root.cornerSeamOverlap : 0
                 anchors.top: root.stripOnBottom ? parent.top : undefined
                 anchors.bottom: root.stripOnBottom ? undefined : parent.bottom
                 opacity: root.chromeAccentAlpha
@@ -1133,21 +1208,32 @@ Item {
                             }
                             return false;
                         }
-                        Layout.preferredWidth: 26
+                        Layout.preferredWidth: active ? 40 : 28
                         Layout.preferredHeight: 24
-                        radius: Math.min(6, ThemeConfig.styleWidgetRadius)
-                        color: active ? root.hotColor
+                        radius: Math.min(8, ThemeConfig.styleWidgetRadius)
+                        color: active ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.20)
                             : (stripWsMouse.containsMouse ? root.pillHoverColor
-                                : (occupied ? root.pillColor : "transparent"))
-                        border.width: active || occupied ? 0 : 1
-                        border.color: Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.14)
+                                : (occupied ? Qt.rgba(root.pillColor.r, root.pillColor.g, root.pillColor.b, 0.92) : "transparent"))
+                        border.width: active ? 1 : (occupied ? 1 : 0)
+                        border.color: active ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.84)
+                            : Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.12)
                         Text {
                             anchors.centerIn: parent
                             text: wsId
                             font.family: ThemeConfig.monoFont
                             font.pixelSize: 11
                             font.weight: active ? Font.Black : Font.Bold
-                            color: active ? root.mocha.base : root.mocha.text
+                            color: active ? root.hotColor : root.mocha.text
+                        }
+                        Rectangle {
+                            visible: occupied && !active
+                            width: 4
+                            height: width
+                            radius: width / 2
+                            anchors.right: parent.right
+                            anchors.rightMargin: 5
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: root.mocha.accent1
                         }
                         MouseArea {
                             id: stripWsMouse
@@ -1254,7 +1340,7 @@ Item {
     // de content, met afgeronde binnenhoeken.
     Rectangle {
         id: rightBorder
-        visible: root.cornersActive
+        visible: root.frameEnabled
         // frameBandW erbij opgeteld: de accentband van de blob-shader ligt op
         // de binnenrand van de omlijsting en moet zichtbaar blijven.
         x: root.width - root.shellBorderWidth + root.frameBandW
@@ -1270,7 +1356,7 @@ Item {
 
     Rectangle {
         id: bottomBorder
-        visible: root.cornersActive
+        visible: root.frameEnabled
         x: root.railWidth
         y: root.height - root.shellBorderWidth + root.frameBandW
         width: root.width - root.railWidth - root.shellBorderWidth

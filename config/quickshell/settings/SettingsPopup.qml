@@ -101,6 +101,10 @@ Item {
     property var workspaceMonitorOptions: ["Vrij"]
     property bool workspaceMonitorDirty: false
     property bool workspaceMonitorSaveBusy: false
+    property var primaryDisplayOptions: ["Automatisch (gefocusd)"]
+    property string primaryDisplayName: ""
+    property string primaryDisplayEffective: ""
+    property bool primaryDisplaySaveBusy: false
     property string networkStatusText: "Netwerkstatus nog niet geladen"
     property string audioStatusText: "Audiostatus nog niet geladen"
     property bool audioStateBusy: false
@@ -114,6 +118,7 @@ Item {
     property bool showUninstallConfirm: false
     readonly property string monitorRestoreScript: Quickshell.env("HOME") + "/.config/hypr/scripts/monitor-hotplug-restore.sh"
     readonly property string workspaceMonitorScript: Quickshell.env("HOME") + "/.config/hypr/scripts/workspace-monitor-assignments.sh"
+    readonly property string primaryDisplayScript: Quickshell.env("HOME") + "/.config/quickshell/settings/primary-display.sh"
     readonly property string tabletModeScript: Quickshell.env("HOME") + "/.config/hypr/scripts/tablet-mode.sh"
     readonly property string displayStatusScript: Quickshell.env("HOME") + "/.config/quickshell/settings/display_status.sh"
     readonly property string idleApplyScript: Quickshell.env("HOME") + "/.config/shared/scripts/kingstra-idle-apply"
@@ -972,6 +977,7 @@ Item {
         displayTouchProc.running = true;
         displayBrightnessProc.running = true;
         workspaceMonitorLoadProc.running = true;
+        primaryDisplayLoadProc.running = true;
     }
 
     function openShellWidget(name, subtarget) {
@@ -1108,6 +1114,24 @@ Item {
         }
         workspaceMonitorSaveProc.command = args;
         workspaceMonitorSaveProc.running = true;
+    }
+
+    function applyPrimaryDisplayState(data) {
+        let monitors = (data && Array.isArray(data.monitors)) ? data.monitors : [];
+        let options = ["Automatisch (gefocusd)"];
+        for (let i = 0; i < monitors.length; i++) {
+            let name = String((monitors[i] && monitors[i].name) || "");
+            if (name !== "" && options.indexOf(name) < 0) options.push(name);
+        }
+        primaryDisplayOptions = options;
+        primaryDisplayName = String((data && data.primary) || "");
+        primaryDisplayEffective = String((data && data.effective) || "");
+    }
+
+    function setPrimaryDisplay(displayName) {
+        let selected = displayName === "Automatisch (gefocusd)" ? "" : String(displayName || "");
+        primaryDisplaySaveProc.command = ["bash", primaryDisplayScript, "set", selected];
+        primaryDisplaySaveProc.running = true;
     }
 
     function toggleTabletMode() {
@@ -1705,6 +1729,40 @@ Item {
                 root.workspaceMonitorDirty = false;
                 root.notify("Display", "Workspace-toewijzingen opgeslagen");
                 root.refreshDisplayStatus();
+            }
+        }
+    }
+
+    Process {
+        id: primaryDisplayLoadProc
+        command: ["bash", primaryDisplayScript, "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.applyPrimaryDisplayState(JSON.parse(this.text || "{}"));
+                } catch (e) {
+                    root.primaryDisplayOptions = ["Automatisch (gefocusd)"];
+                    root.primaryDisplayName = "";
+                    root.primaryDisplayEffective = "";
+                }
+            }
+        }
+    }
+
+    Process {
+        id: primaryDisplaySaveProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.applyPrimaryDisplayState(JSON.parse(this.text || "{}")); } catch (e) {}
+            }
+        }
+        onRunningChanged: {
+            root.primaryDisplaySaveBusy = running;
+            if (!running) {
+                root.notify("Display", root.primaryDisplayName === ""
+                    ? "Hoofdscherm volgt de gefocuste monitor"
+                    : "Hoofdscherm ingesteld op " + root.primaryDisplayName);
+                primaryDisplayLoadProc.running = true;
             }
         }
     }
@@ -3529,6 +3587,66 @@ Item {
                         SettingsInfoCard { title: "Touch & tablet"; icon: "󰗧"; accent: root.sapphire; value: root.displayTouchText }
                         SettingsInfoCard { title: "Helderheid"; icon: "󰃠"; accent: root.yellow; value: root.displayBrightnessText }
                         SettingsInfoCard { title: "Workspace monitors"; icon: "󰧨"; accent: root.sapphire; value: root.workspaceMonitorText }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: primaryDisplayColumn.implicitHeight + root.s(24)
+                            radius: root.s(10)
+                            color: Qt.alpha(root.surface0, 0.46)
+                            border.width: 1
+                            border.color: Qt.alpha(root.blue, 0.58)
+
+                            ColumnLayout {
+                                id: primaryDisplayColumn
+                                anchors.fill: parent
+                                anchors.margins: root.s(12)
+                                spacing: root.s(8)
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(8)
+                                    Text { text: "󰍹"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(17); color: root.blue }
+                                    Text { text: "Hoofdscherm"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text; Layout.fillWidth: true }
+                                    Text {
+                                        text: root.primaryDisplayName === "" ? "automatisch" : "vast"
+                                        font.family: root.monoFontFamily
+                                        font.pixelSize: root.s(10)
+                                        color: root.primaryDisplayName === "" ? root.subtext0 : root.blue
+                                    }
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: "Dit scherm draagt de volledige schermomlijsting. De andere schermen houden alleen de compacte rail, zodat er geen kapotte framehoeken kunnen ontstaan."
+                                    font.family: root.uiFontFamily
+                                    font.pixelSize: root.s(11)
+                                    color: root.subtext0
+                                    wrapMode: Text.WordWrap
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(10)
+                                    Text { text: "Volledige chrome"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.text }
+                                    ThemedComboBox {
+                                        id: primaryDisplayCombo
+                                        Layout.fillWidth: true
+                                        model: root.primaryDisplayOptions
+                                        currentIndex: Math.max(0, root.primaryDisplayOptions.indexOf(root.primaryDisplayName === "" ? "Automatisch (gefocusd)" : root.primaryDisplayName))
+                                        enabled: !root.primaryDisplaySaveBusy
+                                        onActivated: root.setPrimaryDisplay(currentText)
+                                    }
+                                }
+
+                                Text {
+                                    visible: root.primaryDisplayEffective !== ""
+                                    text: "Nu actief: " + root.primaryDisplayEffective
+                                    font.family: root.monoFontFamily
+                                    font.pixelSize: root.s(10)
+                                    color: root.blue
+                                }
+                            }
+                        }
 
                         Flow {
                             Layout.fillWidth: true
