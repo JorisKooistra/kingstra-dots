@@ -87,6 +87,14 @@ exec(mod .. " + CTRL + M", scripts .. "/qs_manager.sh toggle mode")
 exec(mod .. " + CTRL + G", "quickshell-game")
 exec(mod .. " + F1", scripts .. "/qs_manager.sh toggle help")
 
+-- Screenshots
+-- Print is bewust als gewone sleutel gebonden: de helper verzorgt selectie,
+-- opslag, klembord en optionele Satty-annotatie.
+exec("Print", scripts .. "/screenshot.sh")
+exec(mod .. " + Print", scripts .. "/screenshot.sh --clipboard")
+exec("SHIFT + Print", scripts .. "/screenshot.sh --annotate")
+exec(mod .. " + SHIFT + P", scripts .. "/screenshot.sh --full")
+
 -- Media and brightness keys remain available while locked.
 local repeat_locked = { locked = true, repeating = true }
 exec("XF86AudioRaiseVolume", "swayosd-client --output-volume raise", repeat_locked)

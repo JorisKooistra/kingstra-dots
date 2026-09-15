@@ -11,7 +11,10 @@
 # =============================================================================
 
 SCREENSHOT_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
-mkdir -p "$SCREENSHOT_DIR"
+if ! mkdir -p "$SCREENSHOT_DIR"; then
+    notify-send -u critical -i dialog-error "Screenshot" "Map kan niet worden aangemaakt: $SCREENSHOT_DIR"
+    exit 1
+fi
 
 TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
 OUTPUT_FILE="$SCREENSHOT_DIR/screenshot_${TIMESTAMP}.png"
@@ -30,13 +33,35 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+missing_tool() {
+    notify-send -u critical -i dialog-error "Screenshot" "$1 ontbreekt; installeer het pakket en probeer opnieuw."
+    exit 127
+}
+
+command -v grim >/dev/null 2>&1 || missing_tool "grim"
+
+copy_image() {
+    if command -v wl-copy >/dev/null 2>&1; then
+        wl-copy < "$OUTPUT_FILE"
+        return 0
+    fi
+    return 1
+}
+
 # Capture
 if [[ "$MODE" == "full" ]]; then
-    grim "$OUTPUT_FILE"
+    if ! grim "$OUTPUT_FILE"; then
+        notify-send -u critical -i dialog-error "Screenshot" "Volledig scherm vastleggen is mislukt"
+        exit 1
+    fi
 else
     # Gebied-selectie via slurp
-    SELECTION="$(slurp -d 2>/dev/null)" || exit 0
-    grim -g "$SELECTION" "$OUTPUT_FILE"
+    command -v slurp >/dev/null 2>&1 || missing_tool "slurp"
+    SELECTION="$(slurp -d 2>/dev/null)" || exit 0 # bewust stil bij annuleren
+    if [[ -z "$SELECTION" ]] || ! grim -g "$SELECTION" "$OUTPUT_FILE"; then
+        notify-send -u critical -i dialog-error "Screenshot" "Geselecteerd gebied vastleggen is mislukt"
+        exit 1
+    fi
 fi
 
 [[ -f "$OUTPUT_FILE" ]] || exit 1
@@ -44,8 +69,11 @@ fi
 # Bestemming
 case "$DEST" in
     clipboard)
-        wl-copy < "$OUTPUT_FILE"
-        notify-send -i camera-photo "Screenshot" "Gekopieerd naar klembord" -t 2000
+        if copy_image; then
+            notify-send -i camera-photo "Screenshot" "Gekopieerd naar klembord" -t 2000
+        else
+            notify-send -u normal -i camera-photo "Screenshot" "wl-copy ontbreekt; screenshot is niet gekopieerd" -t 3000
+        fi
         rm -f "$OUTPUT_FILE"   # Niet opslaan bij clipboard-modus
         ;;
 
@@ -59,13 +87,19 @@ case "$DEST" in
             notify-send -i camera-photo "Screenshot" "Opgeslagen: $OUTPUT_FILE" -t 2000
         else
             # Satty niet gevonden — gewoon opslaan
-            wl-copy < "$OUTPUT_FILE"
-            notify-send -i camera-photo "Screenshot" "Satty niet gevonden, gekopieerd naar klembord" -t 3000
+            if copy_image; then
+                notify-send -i camera-photo "Screenshot" "Satty niet gevonden; opgeslagen en gekopieerd" -t 3000
+            else
+                notify-send -u normal -i camera-photo "Screenshot" "Satty en wl-copy niet gevonden; opgeslagen" -t 3500
+            fi
         fi
         ;;
 
     save|*)
-        wl-copy < "$OUTPUT_FILE"   # Altijd ook kopiëren
-        notify-send -i camera-photo "Screenshot" "Opgeslagen: $(basename "$OUTPUT_FILE")" -t 2000
+        if copy_image; then
+            notify-send -i camera-photo "Screenshot" "Opgeslagen en gekopieerd: $(basename "$OUTPUT_FILE")" -t 2200
+        else
+            notify-send -u normal -i camera-photo "Screenshot" "Opgeslagen: $(basename "$OUTPUT_FILE")" -t 2200
+        fi
         ;;
 esac
