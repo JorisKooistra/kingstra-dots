@@ -72,6 +72,7 @@ exec(mod .. " + ALT + I", "kitty --title=Network nmtui")
 exec(mod .. " + ALT + B", "blueman-manager")
 exec(mod .. " + SHIFT + W", scripts .. "/wallpaper-random-safe.sh")
 exec(mod .. " + CTRL + W", scripts .. "/wallpaper-picker-safe.sh")
+exec(mod .. " + W", scripts .. "/qs_manager.sh toggle windows")
 exec(mod .. " + CTRL + B", "hyprctl reload && notify-send 'Hyprland' 'Config herladen'")
 
 exec(mod .. " + N", "~/.config/quickshell/notifications/notification_control.sh toggle")
