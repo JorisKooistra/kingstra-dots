@@ -79,11 +79,13 @@ FocusScope {
     Keys.onDownPressed: event => {
         if (root.filteredWindows.length > 0)
             root.selectedIndex = Math.min(root.selectedIndex + 1, root.filteredWindows.length - 1);
+        windowList.positionViewAtIndex(root.selectedIndex, ListView.Contain);
         event.accepted = true;
     }
     Keys.onUpPressed: event => {
         if (root.filteredWindows.length > 0)
             root.selectedIndex = Math.max(root.selectedIndex - 1, 0);
+        windowList.positionViewAtIndex(root.selectedIndex, ListView.Contain);
         event.accepted = true;
     }
     Keys.onReturnPressed: event => { root.focusWindow(root.filteredWindows[root.selectedIndex]); event.accepted = true; }

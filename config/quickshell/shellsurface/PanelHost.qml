@@ -88,7 +88,10 @@ Item {
     }
     function edgeFor(entryId) {
         if (entryId === "tophover") return "top";
-        if (entryId === "launcher") return "bottom";
+        // Launcher en klembord zijn beide zoekflows. Ze groeien uit dezelfde
+        // onderrand en vormen zo één herkenbare Quickshell-taal, in plaats van
+        // dat het klembord als een los zijpaneel naast de rail voelt.
+        if (entryId === "launcher" || entryId === "clipboard") return "bottom";
         if (isRailEntry(entryId)) return railOnRight ? "right" : "left";
         if (isStripEntry(entryId)) return stripOnBottom ? "bottom" : "top";
         return "";
@@ -152,7 +155,7 @@ Item {
 
     function panelWidth(entryId) {
         if (entryId === "launcher") return Math.min(680, availableW);
-        if (entryId === "clipboard") return Math.min(560, availableW);
+        if (entryId === "clipboard") return Math.min(680, availableW);
         if (entryId === "windows") return Math.min(620, availableW);
         if (entryId === "tophover") return Math.min(1020, availableW);
         if (entryId === "performance") return Math.min(380, availableW);
@@ -167,7 +170,9 @@ Item {
     function panelHeight(entryId) {
         if (entryId === "launcher") return Math.min(610, availableH);
         if (entryId === "clipboard") return Math.min(570, availableH);
-        if (entryId === "windows") return Math.min(580, availableH);
+        // De atlas heeft vaak maar enkele regels. Een hoge vaste popup liet
+        // dan een betekenisloos donker vlak over; extra vensters scrollen.
+        if (entryId === "windows") return Math.min(372, availableH);
         if (entryId === "tophover") return Math.min(232, availableH);
         // Was volle schermhoogte terwijl er maar een handvol meters in staat.
         if (entryId === "performance") return Math.min(430, availableH);
