@@ -688,7 +688,9 @@ Item {
                                     x: parent.width - root.s(16)
                                     y: root.s(15)
                                     transformOrigin: Item.Top
-                                    rotation: root.musicData.status === "Playing" ? -36 : -10
+                                    // Qt's positive rotation travels from this top pivot
+                                    // into the record (negative sent the stylus outward).
+                                    rotation: root.musicData.status === "Playing" ? 36 : 10
                                     Behavior on rotation { NumberAnimation { duration: 700; easing.type: Easing.OutCubic } }
                                     color: root.overlay2
 

@@ -247,7 +247,10 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     # Surface-native panelen leven in de shell-surface en hebben de legacy
     # qs-master focus-machinerie niet nodig. Die zou hier juist de
     # HyprlandFocusGrab verbreken, waardoor het paneel direct weer sluit.
-    SURFACE_NATIVE=" launcher power notifications mail "
+    # Keep this in lockstep with ShellSurface.qml and Main.qml. Every panel
+    # below is rendered by the per-screen shell surface; routing one through
+    # qs-master would reintroduce duplicate overlays and competing focus.
+    SURFACE_NATIVE=" battery focustime network volume music calendar monitors performance gaming settings power notifications mail launcher "
     if [[ "$SURFACE_NATIVE" == *" $TARGET "* ]]; then
         if [[ "$ACTION" == "toggle" && "$ACTIVE_WIDGET" == "$TARGET" ]]; then
             qs_ipc_close
