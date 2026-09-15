@@ -63,6 +63,7 @@ Scope {
                     anchors.fill: parent
                     anchors.margins: -50
                     visible: chrome.cornersActive
+                    opacity: chrome.chromePresence
                     group: chrome.edgeBlobGroup
                     radius: chrome.cornerR
                     borderLeft: chrome.railWidth - anchors.margins

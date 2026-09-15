@@ -191,6 +191,24 @@ Scope {
                     topMargin: Config.options.position.topMargin
                 }
 
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "WERKRUIMTEN"
+                    color: "#E6FFFFFF"
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 12
+                    font.letterSpacing: 1.8
+                    font.bold: true
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "kies een ruimte of sleep een venster"
+                    color: "#A8FFFFFF"
+                    font.family: "sans-serif"
+                    font.pixelSize: 13
+                }
+
                 Loader {
                     id: overviewLoader
                     active: GlobalStates.overviewOpen && (Config?.options.overview.enable ?? true)

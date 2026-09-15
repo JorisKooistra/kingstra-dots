@@ -147,7 +147,7 @@ Item {
         - stripTopH - stripBotH - borderW - gap * 2
 
     function panelWidth(entryId) {
-        if (entryId === "launcher") return Math.min(620, availableW);
+        if (entryId === "launcher") return Math.min(680, availableW);
         if (entryId === "tophover") return Math.min(1020, availableW);
         if (entryId === "performance") return Math.min(380, availableW);
         if (entryId === "gaming") return Math.min(720, availableW);
@@ -159,7 +159,7 @@ Item {
     }
 
     function panelHeight(entryId) {
-        if (entryId === "launcher") return Math.min(560, availableH);
+        if (entryId === "launcher") return Math.min(610, availableH);
         if (entryId === "tophover") return Math.min(232, availableH);
         // Was volle schermhoogte terwijl er maar een handvol meters in staat.
         if (entryId === "performance") return Math.min(360, availableH);

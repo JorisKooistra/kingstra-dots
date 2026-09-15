@@ -16,6 +16,14 @@ Item {
     required property var shellWindow
     required property var mocha
 
+    // Het scherm waarop gewerkt wordt mag de shell dragen; de andere
+    // schermen blijven aanwezig als ambient context, maar concurreren niet
+    // met de inhoud. Hover herstelt de volledige rail onmiddellijk.
+    readonly property var monitorForScreen: Hyprland.monitorFor(shellWindow.screen)
+    readonly property bool focusedScreen: monitorForScreen !== null
+        && Hyprland.focusedMonitor !== null
+        && monitorForScreen.id === Hyprland.focusedMonitor.id
+
     readonly property bool railEnabled: ThemeConfig.barRailEnabled
     readonly property bool stripEnabled: ThemeConfig.barStatusStripEnabled
     readonly property bool stripControlsEnabled: stripEnabled && !railEnabled
@@ -320,6 +328,12 @@ Item {
     readonly property Item topHoverHitRegion: topHoverHitArea
     readonly property bool topHoverHovered: topHover.hovered
     property string activeMode: "office"
+    readonly property bool ambientScreen: activeMode === "office" && !focusedScreen
+    readonly property bool gamingMinimal: activeMode === "gaming" && !railHover.hovered
+    readonly property real chromePresence: ambientScreen
+        ? (railHover.hovered ? 1.0 : 0.42) : (gamingMinimal ? 0.76 : 1.0)
+    readonly property real railModulePresence: ambientScreen
+        ? (railHover.hovered ? 1.0 : 0.58) : (gamingMinimal ? 0.72 : 1.0)
     property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications", "mail"]
     property bool barAutoHide: false
     property bool autoHideVisible: true
@@ -739,7 +753,7 @@ Item {
             GradientStop { position: 1.0; color: root._diagColor(root.railWidth / 2, root.height) }
         }
         border.width: 0
-        opacity: root.railContentVisible ? 1 : 0.82
+        opacity: (root.railContentVisible ? 1 : 0.82) * root.chromePresence
         transform: Translate {
             id: railSlide
             x: root.railContentVisible ? 0 : (root.railOnRight ? root.railWidth - 7 : -root.railWidth + 7)
@@ -776,6 +790,11 @@ Item {
             anchors.fill: parent
             anchors.margins: 7
             spacing: 7
+            opacity: root.railModulePresence
+
+            Behavior on opacity {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            }
 
             RailButton { tooltip: "Launcher";
                 icon: "󰣇"

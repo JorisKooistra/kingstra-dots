@@ -26,6 +26,13 @@ FocusScope {
     property int maxPinnedApps: 3
     property string query: ""
     property int selectedIndex: 0
+    readonly property var quickActions: [
+        { icon: "󰒓", label: "Instellingen", detail: "Shell en systeem", target: "settings" },
+        { icon: "󰏘", label: "Thema", detail: "Kleur en vorm", target: "theme" },
+        { icon: "󰓃", label: "Media", detail: "Nu afspelen", target: "music" },
+        { icon: "󰍹", label: "Schermen", detail: "Indeling en profielen", target: "monitors" },
+        { icon: "󰊢", label: "Overview", detail: "Werkruimten", target: "overview" }
+    ]
 
     readonly property color surfaceColor: {
         let f = mocha.crust;
@@ -271,6 +278,24 @@ FocusScope {
         closePanel();
     }
 
+    function runQuickAction(action) {
+        if (!action) return;
+        if (action.target === "overview") {
+            Quickshell.execDetached([
+                "bash",
+                Quickshell.env("HOME") + "/.config/hypr/scripts/overview-toggle.sh"
+            ]);
+        } else {
+            Quickshell.execDetached([
+                "bash",
+                Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh",
+                "toggle",
+                action.target
+            ]);
+        }
+        closePanel();
+    }
+
     function move(delta) {
         let n = filtered.length;
         if (n === 0) return;
@@ -329,7 +354,7 @@ FocusScope {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: searchInput.text === ""
-                        text: "Zoek een app…"
+                        text: "Zoek apps of kies een actie…"
                         font: searchInput.font
                         color: mocha.subtext0
                     }
@@ -340,6 +365,71 @@ FocusScope {
                     font.family: ThemeConfig.monoFont
                     font.pixelSize: 12
                     color: mocha.subtext0
+                }
+            }
+        }
+
+        // Een lege zoekopdracht is ook een rustig commandocentrum. De acties
+        // gaan via dezelfde scripts als de railknoppen, dus er ontstaat geen
+        // tweede pad voor shell-state of focusafhandeling.
+        Flow {
+            Layout.fillWidth: true
+            visible: root.query === ""
+            spacing: 8
+
+            Repeater {
+                model: root.quickActions
+
+                delegate: Rectangle {
+                    required property var modelData
+                    width: Math.max(136, Math.min(178, actionContent.implicitWidth + 28))
+                    height: 52
+                    radius: root.rowCornerRadius
+                    color: actionMouse.containsMouse
+                        ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.22)
+                        : Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.10)
+                    border.width: 1
+                    border.color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b,
+                                          actionMouse.containsMouse ? 0.55 : 0.24)
+
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+
+                    RowLayout {
+                        id: actionContent
+                        anchors.centerIn: parent
+                        spacing: 8
+
+                        Text {
+                            text: modelData.icon
+                            color: mocha.primary
+                            font.family: "Iosevka Nerd Font"
+                            font.pixelSize: 17
+                        }
+                        ColumnLayout {
+                            spacing: 0
+                            Text {
+                                text: modelData.label
+                                color: mocha.text
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 12
+                                font.weight: Font.DemiBold
+                            }
+                            Text {
+                                text: modelData.detail
+                                color: mocha.subtext0
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 10
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: actionMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.runQuickAction(modelData)
+                    }
                 }
             }
         }

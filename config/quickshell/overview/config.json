@@ -44,7 +44,7 @@
   "overview": {
     "rows": 2,
     "columns": 5,
-    "scale": 0.16,
+    "scale": 0.19,
     "enable": true,
     "hideEmptyRows": true,
     "useWorkspaceMap": false,
@@ -61,24 +61,24 @@
     "emptyWorkspaceWallpaper": "",
     "specialEmptyWorkspaceWallpaper": "",
     "effects": {
-      "enableBackdrop": false,
-      "backdropOpacity": 0.28,
-      "panelOpacity": 0.92,
-      "workspaceOpacity": 0.86,
+      "enableBackdrop": true,
+      "backdropOpacity": 0.46,
+      "panelOpacity": 0.88,
+      "workspaceOpacity": 0.92,
       "emptyWorkspaceWallpaperOverlayOpacity": 0.18,
       "windowOverlayOpacity": 0.22,
       "enableBlur": false,
-      "glassMode": false,
-      "glassTintStrength": 0.35,
-      "glassBorderOpacity": 0.72,
-      "glassShineOpacity": 0.14
+      "glassMode": true,
+      "glassTintStrength": 0.26,
+      "glassBorderOpacity": 0.54,
+      "glassShineOpacity": 0.09
     },
-    "workspaceSpacing": 5,
-    "backgroundPadding": 10,
-    "workspaceNumberBaseSize": 250
+    "workspaceSpacing": 14,
+    "backgroundPadding": 20,
+    "workspaceNumberBaseSize": 130
   },
   "position": {
-    "topMargin": 100
+    "topMargin": 74
   },
   "windowPreview": {
     "iconToWindowRatio": 0.25,

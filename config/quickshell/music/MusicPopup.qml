@@ -67,6 +67,9 @@ Item {
     // UI State for debouncing the slider and play button
     property bool userIsSeeking: false
     property bool userToggledPlay: false
+    // De tijdlijn blijft altijd de precieze bediening. Vinyl is puur een
+    // sfeervolle, optionele presentatie van het album-artwork.
+    property bool vinylMode: true
     
     // ANTI-JITTER LOCK: Prevents background polling from reverting UI during processing
     property real lastEqUpdate: 0
@@ -546,8 +549,9 @@ Item {
                         Behavior on scale { NumberAnimation { duration: 800; easing.type: Easing.OutElastic; easing.overshoot: 1.2 } }
 
                         Rectangle {
+                            id: recordFace
                             anchors.fill: parent
-                            radius: root.s(110)
+                            radius: root.vinylMode ? width / 2 : root.s(20)
                             color: root.surface1
                             border.width: root.s(4)
                             border.color: root.musicData.status === "Playing" ? root.mauve : root.overlay0
@@ -559,7 +563,7 @@ Item {
                                 anchors.centerIn: parent
                                 width: parent.width + root.s(20)
                                 height: parent.height + root.s(20)
-                                radius: width / 2
+                                radius: root.vinylMode ? width / 2 : root.s(24)
                                 color: root.mauve
                                 opacity: root.musicData.status === "Playing" ? 0.5 : 0.0
                                 Behavior on opacity { NumberAnimation { duration: 500 } }
@@ -584,7 +588,7 @@ Item {
                                 Rectangle {
                                     id: maskRect
                                     anchors.fill: parent
-                                    radius: width / 2
+                                    radius: root.vinylMode ? width / 2 : root.s(18)
                                     visible: false
                                     layer.enabled: true 
                                 }
@@ -600,13 +604,29 @@ Item {
                                 // NEW: Dimmed slightly by tinting with the primary mauve accent, as requested
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: width / 2
+                                    radius: root.vinylMode ? width / 2 : root.s(18)
                                     color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.2)
                                     opacity: artImg.status === Image.Ready ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 800 } }
                                 }
 
+                                Repeater {
+                                    model: 5
+                                    Rectangle {
+                                        required property int index
+                                        visible: root.vinylMode
+                                        anchors.centerIn: parent
+                                        width: Math.max(root.s(48), parent.width - root.s(18 + index * 24))
+                                        height: width
+                                        radius: width / 2
+                                        color: "transparent"
+                                        border.width: 1
+                                        border.color: Qt.rgba(root.overlay2.r, root.overlay2.g, root.overlay2.b, 0.16)
+                                    }
+                                }
+
                                 Rectangle {
+                                    visible: root.vinylMode
                                     width: root.s(40); height: root.s(40)
                                     radius: root.s(20); color: "#000000"
                                     opacity: 0.8; anchors.centerIn: parent
@@ -616,8 +636,45 @@ Item {
                             NumberAnimation on rotation {
                                 from: 0; to: 360; duration: 8000
                                 loops: Animation.Infinite
-                                running: true
+                                running: root.vinylMode
                                 paused: root.musicData.status !== "Playing"
+                            }
+                        }
+
+                        // De arm draait niet met de plaat mee en maakt de
+                        // functie als vinyl direct leesbaar.
+                        Item {
+                            visible: root.vinylMode
+                            anchors.fill: parent
+                            z: 3
+                            Rectangle {
+                                width: root.s(7)
+                                height: root.s(92)
+                                radius: width / 2
+                                x: parent.width - root.s(47)
+                                y: root.s(13)
+                                color: root.yellow
+                                transformOrigin: Item.Top
+                                rotation: root.musicData.status === "Playing" ? 27 : 4
+                                Behavior on rotation { NumberAnimation { duration: 650; easing.type: Easing.OutCubic } }
+                                Rectangle {
+                                    width: root.s(22)
+                                    height: root.s(11)
+                                    radius: root.s(4)
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.bottom: parent.bottom
+                                    color: root.overlay2
+                                }
+                            }
+                            Rectangle {
+                                width: root.s(17)
+                                height: width
+                                radius: width / 2
+                                x: parent.width - root.s(52)
+                                y: root.s(8)
+                                color: root.yellow
+                                border.width: 2
+                                border.color: root.surface0
                             }
                         }
                     }
@@ -735,6 +792,28 @@ Item {
                                     font.pixelSize: root.s(12)
                                     font.bold: true
                                     font.italic: true
+                                }
+                                Rectangle {
+                                    Layout.preferredHeight: root.s(24)
+                                    Layout.preferredWidth: vinylLabel.implicitWidth + root.s(18)
+                                    radius: root.s(4)
+                                    color: vinylToggle.containsMouse ? Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.26) : "#1AFFFFFF"
+                                    Text {
+                                        id: vinylLabel
+                                        anchors.centerIn: parent
+                                        text: root.vinylMode ? "VINYL" : "ART"
+                                        color: root.mauve
+                                        font.family: "JetBrains Mono"
+                                        font.pixelSize: root.s(11)
+                                        font.bold: true
+                                    }
+                                    MouseArea {
+                                        id: vinylToggle
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.vinylMode = !root.vinylMode
+                                    }
                                 }
                             }
                         }
