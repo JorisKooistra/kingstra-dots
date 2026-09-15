@@ -50,7 +50,7 @@ Item {
         stdout: StdioCollector {
             onStreamFinished: {
                 let mode = this.text.trim();
-                if ((mode === "wifi" || mode === "bt") && window.activeMode !== mode) {
+                if ((mode === "wifi" || mode === "bt" || mode === "eth") && window.activeMode !== mode) {
                     window.ignoreNextModeFileUpdate = true;
                     window.activeMode = mode;
                 }
@@ -129,6 +129,15 @@ Item {
     readonly property color activeColor: activeMode === "wifi" ? window.wifiAccent : window.btAccent
     // Calculate a subtle, pure one-color gradient rather than mixing two distinct palette colors
     readonly property color activeGradientSecondary: Qt.darker(window.activeColor, 1.25)
+
+    // Ethernet heeft geen radio-controls. Laat de aparte, rustige statusview
+    // daarom de hele wireless-radar vervangen zodra de shell eth selecteert.
+    Loader {
+        anchors.fill: parent
+        active: window.activeMode === "eth"
+        visible: active
+        source: Qt.resolvedUrl("EthernetView.qml")
+    }
 
     // Dictionary objects to allow multi-device simultaneous connects/disconnects without globally locking
     property var busyTasks: ({})
@@ -617,7 +626,9 @@ Item {
     }
 
     Item {
+        id: wirelessContent
         anchors.fill: parent
+        visible: window.activeMode !== "eth"
 
         Rectangle {
             anchors.fill: parent

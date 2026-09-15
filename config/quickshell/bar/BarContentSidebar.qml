@@ -1119,25 +1119,25 @@ Item {
                 anchors.margins: root.moduleInnerMargin
                 spacing: root.moduleSpacing
                 Text {
-                    text: shell.wifiIcon
+                    text: shell.isEthConnected && !shell.hasWifi ? "󰈀" : shell.wifiIcon
                     Layout.fillWidth: !networkPill.hovered
                     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                     font.family: "Iosevka Nerd Font"
                     font.pixelSize: shell.s(15)
-                    color: shell.isWifiOn ? mocha.blue : mocha.subtext0
+                    color: shell.isEthConnected && !shell.hasWifi ? mocha.green : (shell.isWifiOn ? mocha.blue : mocha.subtext0)
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
                 Text {
                     visible: networkPill.hovered
                     opacity: networkPill.hovered ? 1 : 0
-                    text: shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off"
+                    text: shell.isEthConnected && !shell.hasWifi ? "Bedraad" : (shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off")
                     Layout.fillWidth: true
                     font.family: shell.monoFontFamily
                     font.pixelSize: shell.s(11)
                     font.weight: shell.themeFontWeight
                     font.letterSpacing: shell.themeLetterSpacing
-                    color: shell.isWifiOn ? mocha.text : mocha.subtext0
+                    color: shell.isEthConnected && !shell.hasWifi ? mocha.text : (shell.isWifiOn ? mocha.text : mocha.subtext0)
                     elide: Text.ElideRight
                     Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                 }
@@ -1148,7 +1148,7 @@ Item {
                 hoverEnabled: true
                 onEntered: root.railHoverEnter()
                 onExited: root.railHoverExit()
-                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network wifi"])
+                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network " + (shell.isEthConnected && !shell.hasWifi ? "eth" : "wifi")])
             }
         }
 
