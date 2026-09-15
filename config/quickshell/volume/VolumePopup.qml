@@ -266,26 +266,26 @@ Item {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 25
-                spacing: 20
+                anchors.margins: 18
+                spacing: 12
 
                 // ==========================================
                 // HERO ORB & MASTER SLIDER (TOP SECTION)
                 // ==========================================
                 Item {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 150
+                    Layout.preferredHeight: 108
                     opacity: introHeader
                     transform: Translate { y: 30 * (1.0 - introHeader) }
 
                     RowLayout {
                         anchors.fill: parent
-                        spacing: 25
+                        spacing: 16
 
                         // 1. The Orb
                         Item {
-                            Layout.preferredWidth: 130
-                            Layout.preferredHeight: 130
+                            Layout.preferredWidth: 94
+                            Layout.preferredHeight: 94
                             scale: masterOrbMa.pressed ? 0.95 : (masterOrbMa.containsMouse ? 1.05 : 1.0)
                             Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack } }
 
@@ -435,7 +435,7 @@ Item {
                                     font.family: window.displayFontFamily
                                     font.weight: window.themedFontWeight
                                     font.letterSpacing: window.themedLetterSpacing
-                                    font.pixelSize: 32
+                                    font.pixelSize: 25
                                     color: window.activeMute ? window.red : window.text
                                     text: window.activeMute ? "MUTE" : window.activeVol + "%"
                                     Behavior on color { ColorAnimation { duration: 200 } }
@@ -464,7 +464,7 @@ Item {
                                         font.family: window.displayFontFamily
                                         font.weight: window.themedFontWeight
                                         font.letterSpacing: window.themedLetterSpacing
-                                        font.pixelSize: 32
+                                        font.pixelSize: 25
                                         color: window.crust
                                         text: window.activeMute ? "MUTE" : window.activeVol + "%"
                                     }
@@ -494,7 +494,7 @@ Item {
                                 spacing: 2
                                 Text {
                                     Layout.fillWidth: true; elide: Text.ElideRight
-                                    font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: 20
+                                    font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: 16
                                     color: window.text
                                     text: window.activeName
                                 }
@@ -502,7 +502,7 @@ Item {
                                     Layout.fillWidth: true; elide: Text.ElideRight
                                     font.family: window.uiFontFamily; font.pixelSize: 13; font.letterSpacing: window.themedLetterSpacing
                                     color: window.subtext0
-                                    text: window.activeTab === "apps" ? "Master Output Volume" : window.activeDesc
+                                    text: window.activeTab === "apps" ? "Per-app volume" : window.activeDesc
                                 }
                             }
 
@@ -580,8 +580,8 @@ Item {
                 // ==========================================
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 54
-                    radius: 14
+                    Layout.preferredHeight: 42
+                    radius: window.themedInnerRadius
                     color: "#0dffffff" 
                     border.color: "#1affffff"
                     border.width: 1
@@ -592,7 +592,7 @@ Item {
                         width: (parent.width - 2) / 3 
                         height: parent.height - 2
                         y: 1
-                        radius: 10
+                        radius: Math.max(8, window.themedInnerRadius - 3)
                         x: {
                             if (window.activeTab === "outputs") return 1;
                             if (window.activeTab === "inputs") return width + 1;
@@ -613,9 +613,9 @@ Item {
                         
                         Repeater {
                             model: ListModel {
-                                ListElement { tabId: "outputs"; icon: "󰓃"; label: "Outputs" } 
-                                ListElement { tabId: "inputs"; icon: "󰍬"; label: "Inputs" }   
-                                ListElement { tabId: "apps"; icon: "󰎆"; label: "Streams" } 
+                                ListElement { tabId: "outputs"; icon: "󰓃"; label: "Uitvoer" }
+                                ListElement { tabId: "inputs"; icon: "󰍬"; label: "Invoer" }
+                                ListElement { tabId: "apps"; icon: "󰎆"; label: "Apps" }
                             }
                             
                             delegate: Item {
@@ -626,13 +626,13 @@ Item {
                                     anchors.centerIn: parent
                                     spacing: 8
                                     Text {
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: 18
+                                        font.family: "Iosevka Nerd Font"; font.pixelSize: 15
                                         color: window.activeTab === tabId ? window.crust : (tabMa.containsMouse ? window.text : window.subtext0)
                                         text: icon
                                         Behavior on color { ColorAnimation { duration: 200 } }
                                     }
                                     Text {
-                                        font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: 13
+                                        font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: 11
                                         color: window.activeTab === tabId ? window.crust : (tabMa.containsMouse ? window.text : window.subtext0)
                                         text: label
                                         Behavior on color { ColorAnimation { duration: 200 } }

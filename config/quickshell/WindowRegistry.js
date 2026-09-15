@@ -42,7 +42,9 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
         // Right-aligned: pinned 20px from the right edge dynamically
         // Note on rx: The 500 represents the 480 base width + 20 margin. 
         "battery":   { w: s(480, scale), h: s(760, scale), rx: mw - s(500, scale), ry: s(70, scale), comp: "battery/BatteryPopup.qml" },
-        "volume":    { w: s(480, scale), h: s(760, scale), rx: mw - s(500, scale), ry: s(70, scale), comp: "volume/VolumePopup.qml" },
+        // Audio is a routing/control sheet, not a second media player. Keep it
+        // intentionally short; device/app lists already scroll when needed.
+        "volume":    { w: s(480, scale), h: s(580, scale), rx: mw - s(500, scale), ry: s(70, scale), comp: "volume/VolumePopup.qml" },
         
         // Centered horizontally dynamically based on current screen width
         "calendar":  { w: s(1450, scale), h: s(750, scale), rx: Math.floor((mw/2)-(s(1450, scale)/2)), ry: s(70, scale), comp: "calendar/CalendarPopup.qml" },
