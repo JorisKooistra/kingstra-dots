@@ -29,8 +29,7 @@ old_y="${old_cursor##*,}"
 old_x="${old_x//[[:space:]]/}"
 old_y="${old_y//[[:space:]]/}"
 
-batch="keyword cursor:no_warps true"
-batch+=" ; dispatch movecursor $cursor_x $cursor_y"
+batch="dispatch movecursor $cursor_x $cursor_y"
 batch+=" ; dispatch movetoworkspacesilent special:overview-drop,address:$address"
 batch+=" ; dispatch workspace $target_workspace"
 batch+=" ; dispatch movecursor $cursor_x $cursor_y"
@@ -60,7 +59,5 @@ fi
 if is_int "$old_x" && is_int "$old_y"; then
     batch+=" ; dispatch movecursor $old_x $old_y"
 fi
-
-batch+=" ; keyword cursor:no_warps false"
 
 hyprctl --batch "$batch" >/dev/null 2>&1 || true

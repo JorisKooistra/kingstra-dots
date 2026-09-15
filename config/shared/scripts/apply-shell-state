@@ -506,10 +506,8 @@ fi
 # ---------------------------------------------------------------------------
 # Stap 6 — Apps herladen
 # ---------------------------------------------------------------------------
-# De runner publiceert colors.conf atomair; Hyprland bewaakt sourced configfiles
-# zelf. kingstra-theme-switch schrijft 35-theme.conf eveneens atomair en zet de
-# relevante appearance-keywords direct live. Een extra, late `hyprctl reload`
-# is daardoor dubbel werk en maakte de lange apply-pipeline compositor-kritiek.
+# De runner publiceert Lua-kleuren atomair. kingstra-theme-switch schrijft de
+# Lua-theme-module en past de relevante opties direct live toe.
 _log "Hyprland runtime atomair bijgewerkt (geen extra reload)"
 
 # Quickshell hoeft niet herstart te worden: MatugenColors.qml en ThemeConfig.qml

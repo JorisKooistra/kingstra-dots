@@ -4,7 +4,7 @@
 # =============================================================================
 # Doel:
 #   - Hyprland en kernpakketten installeren
-#   - Modulaire conf.d-structuur deployen
+#   - Modulaire Lua-configuratie deployen
 #   - GTK-instellingen toepassen
 #   - XDG-portalen configureren
 #   - Sessie valideren (Hyprland start, workspaces werken)
@@ -191,10 +191,10 @@ _phase03_validate() {
     validate_cmd hypridle
     validate_cmd grim
     validate_cmd slurp
-    validate_file "$HOME/.config/hypr/hyprland.conf" "~/.config/hypr/hyprland.conf"
-    validate_dir  "$HOME/.config/hypr/conf.d"        "~/.config/hypr/conf.d/"
-    validate_file "$HOME/.config/hypr/conf.d/30-general.conf"    "30-general.conf"
-    validate_file "$HOME/.config/hypr/conf.d/70-autostart.conf"  "70-autostart.conf"
+    validate_file "$HOME/.config/hypr/hyprland.lua" "~/.config/hypr/hyprland.lua"
+    validate_dir  "$HOME/.config/hypr/lua"           "~/.config/hypr/lua/"
+    validate_file "$HOME/.config/hypr/lua/config.lua"    "lua/config.lua"
+    validate_file "$HOME/.config/hypr/lua/autostart.lua"  "lua/autostart.lua"
     validate_file "$HOME/.config/hypr/scripts/fingerprint-first-run.sh" "fingerprint-first-run.sh"
     validate_file "$HOME/.config/hypr/scripts/hardware-switches.sh" "hardware-switches.sh"
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"       "lid-lock.sh"

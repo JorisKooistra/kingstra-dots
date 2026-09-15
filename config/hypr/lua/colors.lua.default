@@ -1,0 +1,9 @@
+-- Fallback palette. kingstra-matugen-run replaces colors.lua atomically.
+local M = {}
+function M.apply()
+    hl.config({ general = { col = {
+        active_border = { colors = { "rgba(98cbffee)", "rgba(a5eb6eee)", "rgba(90d6a8ee)" }, angle = 55 },
+        inactive_border = "rgba(89919d44)",
+    } }, decoration = { shadow = { color = "rgba(000000cc)" } } })
+end
+return M

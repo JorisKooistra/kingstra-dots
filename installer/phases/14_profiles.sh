@@ -3,7 +3,7 @@
 # Fase 14 — Hardware-aanpassing (vroeger: profielen)
 # =============================================================================
 # Doel:
-#   - 72-hardware.conf genereren op basis van gedetecteerde hardware
+#   - lua/hardware.lua genereren op basis van gedetecteerde hardware
 #     (GPU env vars, touchpad/tablet-instellingen)
 #   - Optionele pakketten installeren op basis van detectie
 #     (power-profiles-daemon, fprintd, brightnessctl)
@@ -12,8 +12,8 @@
 # =============================================================================
 
 phase_run() {
-    log_step "Hardware-config genereren (72-hardware.conf)..."
-    _phase14_write_hardware_conf
+    log_step "Hardware-config genereren (lua/hardware.lua)..."
+    _phase14_write_hardware_lua
 
     log_step "GPU-specifieke aanpassingen..."
     _phase14_gpu_setup
@@ -28,7 +28,7 @@ phase_run() {
     _phase14_fingerprint_setup
 
     log_step "Fase 14 valideren..."
-    validate_file "$HOME/.config/hypr/conf.d/72-hardware.conf" "72-hardware.conf"
+    validate_file "$HOME/.config/hypr/lua/hardware.lua" "lua/hardware.lua"
     validate_report
 
     log_ok "Fase 14 voltooid — Hardware-aanpassingen toegepast."
@@ -37,11 +37,11 @@ phase_run() {
 
 # ---------------------------------------------------------------------------
 
-_phase14_write_hardware_conf() {
-    local dest="$HOME/.config/hypr/conf.d/72-hardware.conf"
+_phase14_write_hardware_lua() {
+    local dest="$HOME/.config/hypr/lua/hardware.lua"
 
     if "${DRY_RUN:-false}"; then
-        log_dry "72-hardware.conf zou worden gegenereerd"
+        log_dry "lua/hardware.lua zou worden gegenereerd"
         log_dry "  GPU:     ${DETECT_GPU:-unknown}"
         log_dry "  Laptop:  ${DETECT_IS_LAPTOP:-false}"
         log_dry "  Touchpad:${DETECT_HAS_TOUCHPAD:-false}"
@@ -55,11 +55,14 @@ _phase14_write_hardware_conf() {
     # Bouw de config op
     {
         echo "# ============================================================================="
-        echo "# 72-hardware.conf — Automatisch gegenereerd door fase 14"
+        echo "# hardware.lua — Automatisch gegenereerd door fase 14"
         echo "# Gegenereerd op: $(date '+%Y-%m-%d %H:%M')"
         echo "# GPU: ${DETECT_GPU:-unknown} | Laptop: ${DETECT_IS_LAPTOP:-false} | Touchpad: ${DETECT_HAS_TOUCHPAD:-false} | Touchscreen: ${DETECT_HAS_TOUCHSCREEN:-false} | Tablet mode: ${ENABLE_TABLET_MODE:-false}"
         echo "# ============================================================================="
         echo ""
+
+        echo "return {"
+        echo "    apply = function()"
 
         # GPU-omgevingsvariabelen
         case "${DETECT_GPU:-unknown}" in
@@ -67,31 +70,27 @@ _phase14_write_hardware_conf() {
                 echo "# ---------------------------------------------------------------------------"
                 echo "# Nvidia GPU — vereiste omgevingsvariabelen"
                 echo "# ---------------------------------------------------------------------------"
-                echo "env = LIBVA_DRIVER_NAME,nvidia"
-                echo "env = __GLX_VENDOR_LIBRARY_NAME,nvidia"
-                echo "env = NVD_BACKEND,direct"
-                echo "env = GBM_BACKEND,nvidia-drm"
-                echo "env = __NV_PRIME_RENDER_OFFLOAD,1"
-                echo "env = WLR_NO_HARDWARE_CURSORS,1"
-                echo ""
-                echo "# Nvidia cursor fix"
-                echo "cursor {"
-                echo "    no_hardware_cursors = true"
-                echo "}"
+                echo '        hl.env("LIBVA_DRIVER_NAME", "nvidia")'
+                echo '        hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")'
+                echo '        hl.env("NVD_BACKEND", "direct")'
+                echo '        hl.env("GBM_BACKEND", "nvidia-drm")'
+                echo '        hl.env("__NV_PRIME_RENDER_OFFLOAD", "1")'
+                echo '        hl.env("WLR_NO_HARDWARE_CURSORS", "1")'
+                echo '        hl.config({ cursor = { no_hardware_cursors = true } })'
                 echo ""
                 ;;
             amd)
                 echo "# ---------------------------------------------------------------------------"
                 echo "# AMD GPU — VA-API driver"
                 echo "# ---------------------------------------------------------------------------"
-                echo "env = LIBVA_DRIVER_NAME,radeonsi"
+                echo '        hl.env("LIBVA_DRIVER_NAME", "radeonsi")'
                 echo ""
                 ;;
             intel)
                 echo "# ---------------------------------------------------------------------------"
                 echo "# Intel GPU — VA-API driver"
                 echo "# ---------------------------------------------------------------------------"
-                echo "env = LIBVA_DRIVER_NAME,iHD"
+                echo '        hl.env("LIBVA_DRIVER_NAME", "iHD")'
                 echo ""
                 ;;
             *)
@@ -106,17 +105,7 @@ _phase14_write_hardware_conf() {
             echo "# ---------------------------------------------------------------------------"
             echo "# Touchpad-instellingen (laptop)"
             echo "# ---------------------------------------------------------------------------"
-            echo "input {"
-            echo "    touchpad {"
-            echo "        natural_scroll = $natural"
-            echo "        scroll_factor = 0.45"
-            echo "        tap-to-click = true"
-            echo "        tap-and-drag = true"
-            echo "        disable_while_typing = true"
-            echo "        drag_lock = false"
-            echo "        clickfinger_behavior = false"
-            echo "    }"
-            echo "}"
+            echo "        hl.config({ input = { touchpad = { natural_scroll = $natural, scroll_factor = 0.45, tap_to_click = true, tap_and_drag = true, disable_while_typing = true, drag_lock = false, clickfinger_behavior = false } } })"
             echo ""
         fi
 
@@ -125,12 +114,7 @@ _phase14_write_hardware_conf() {
             echo "# ---------------------------------------------------------------------------"
             echo "# Laptop — lichtere decoraties (batterijbesparing)"
             echo "# ---------------------------------------------------------------------------"
-            echo "decoration {"
-            echo "    blur {"
-            echo "        passes = 2"
-            echo "        size   = 6"
-            echo "    }"
-            echo "}"
+            echo '        hl.config({ decoration = { blur = { passes = 2, size = 6 } } })'
             echo ""
         fi
 
@@ -140,19 +124,21 @@ _phase14_write_hardware_conf() {
             echo "# ---------------------------------------------------------------------------"
             echo "# Automatisch via de hardware tablet-mode switch. De extra keybind is een"
             echo "# fallback voor touch-laptops die geen switch-event aan Hyprland doorgeven."
-            echo "bindl = , switch:on:Tablet Mode Switch, exec, ~/.config/hypr/scripts/tablet-mode.sh on"
-            echo "bindl = , switch:off:Tablet Mode Switch, exec, ~/.config/hypr/scripts/tablet-mode.sh off"
-            echo "bindl = , switch:on:Tablet Mode, exec, ~/.config/hypr/scripts/tablet-mode.sh on"
-            echo "bindl = , switch:off:Tablet Mode, exec, ~/.config/hypr/scripts/tablet-mode.sh off"
-            echo "bindl = , switch:on:Intel HID switches, exec, ~/.config/hypr/scripts/tablet-mode.sh on"
-            echo "bindl = , switch:off:Intel HID switches, exec, ~/.config/hypr/scripts/tablet-mode.sh off"
-            echo "bind = \$mainMod CTRL, F12, exec, ~/.config/hypr/scripts/tablet-mode.sh toggle"
+            echo '        hl.bind("switch:on:Tablet Mode Switch", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh on"), { locked = true })'
+            echo '        hl.bind("switch:off:Tablet Mode Switch", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh off"), { locked = true })'
+            echo '        hl.bind("switch:on:Tablet Mode", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh on"), { locked = true })'
+            echo '        hl.bind("switch:off:Tablet Mode", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh off"), { locked = true })'
+            echo '        hl.bind("switch:on:Intel HID switches", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh on"), { locked = true })'
+            echo '        hl.bind("switch:off:Intel HID switches", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh off"), { locked = true })'
+            echo '        hl.bind("SUPER + CTRL + F12", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh toggle"))'
             echo ""
         fi
 
+        echo "    end,"
+        echo "}"
     } > "$dest"
 
-    log_ok "72-hardware.conf gegenereerd: $dest"
+    log_ok "hardware.lua gegenereerd: $dest"
 }
 
 _phase14_gpu_setup() {
@@ -419,7 +405,7 @@ _phase14_print_summary() {
     log_info " Power profs:  ${ENABLE_POWER_PROFILES:-false}"
     log_info " Brightness:   ${ENABLE_BRIGHTNESS_CONTROL:-false}"
     log_info " Fingerprint:  ${ENABLE_FINGERPRINT:-false}"
-    log_info " Config:       ~/.config/hypr/conf.d/72-hardware.conf"
+    log_info " Config:       ~/.config/hypr/lua/hardware.lua"
     log_info "───────────────────────────────────────────────────"
     log_info "Override-flags instellen: ./install.sh --override mijn-overrides.conf"
 }

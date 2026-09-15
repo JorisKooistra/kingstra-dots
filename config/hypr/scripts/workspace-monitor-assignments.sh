@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/workspaces.conf"
+state_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/workspaces.lua"
 workspace_count=10
 
 notify() {
@@ -29,28 +29,21 @@ monitor_json() {
 }
 
 print_existing_assignments() {
-    [[ -f "$conf_file" ]] || return 0
+    [[ -f "$state_file" ]] || return 0
 
     awk '
         /^[[:space:]]*#/ { next }
-        /^[[:space:]]*workspace[[:space:]]*=/ {
+        /hl\.workspace_rule\(/ {
             line = $0
-            sub(/^[^=]*=[[:space:]]*/, "", line)
-            split(line, parts, ",")
-            ws = parts[1]
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "", ws)
-            mon = ""
-            for (i = 2; i <= length(parts); i++) {
-                field = parts[i]
-                gsub(/^[[:space:]]+|[[:space:]]+$/, "", field)
-                if (field ~ /^monitor:/) {
-                    sub(/^monitor:[[:space:]]*/, "", field)
-                    mon = field
-                }
-            }
+            ws = line
+            sub(/^.*workspace[[:space:]]*=[[:space:]]*"/, "", ws)
+            sub(/".*$/, "", ws)
+            mon = line
+            sub(/^.*monitor[[:space:]]*=[[:space:]]*"/, "", mon)
+            sub(/".*$/, "", mon)
             if (ws ~ /^[0-9]+$/ && mon != "") print ws "\t" mon
         }
-    ' "$conf_file"
+    ' "$state_file"
 }
 
 list_assignments() {
@@ -77,7 +70,7 @@ list_assignments() {
 
 save_assignments() {
     shift
-    mkdir -p "$(dirname "$conf_file")"
+    mkdir -p "$(dirname "$state_file")"
 
     declare -A assignments=()
     local arg ws monitor
@@ -90,33 +83,39 @@ save_assignments() {
     done
 
     local tmp_file
-    tmp_file="$(mktemp "${conf_file}.tmp.XXXXXX")"
+    tmp_file="$(mktemp "${state_file}.tmp.XXXXXX")"
     trap 'rm -f "$tmp_file"' EXIT
 
     {
         printf '# =============================================================================\n'
-        printf '# workspaces.conf - Lokale workspace-monitor toewijzingen\n'
+        printf '# workspaces.lua - Lokale workspace-monitor toewijzingen\n'
         printf '# =============================================================================\n'
         printf '# Gegenereerd door Settings > Display. Dit bestand is user-state en staat in .gitignore.\n'
         printf '# Lege workspaces blijven vrij.\n'
         printf '# =============================================================================\n\n'
+        printf 'return {\n    apply = function()\n'
         for (( ws = 1; ws <= workspace_count; ws++ )); do
             monitor="${assignments[$ws]:-}"
             [[ -n "$monitor" ]] || continue
             monitor="${monitor//$'\r'/}"
             monitor="${monitor//$'\n'/}"
-            printf 'workspace = %s, monitor:%s\n' "$ws" "$monitor"
+            # Monitor names come from Hyprland's own JSON and cannot contain
+            # quote characters. Escape defensively nevertheless.
+            monitor="${monitor//\\/\\\\}"
+            monitor="${monitor//\"/\\\"}"
+            printf '        hl.workspace_rule({ workspace = "%s", monitor = "%s" })\n' "$ws" "$monitor"
         done
+        printf '    end,\n}\n'
     } >> "$tmp_file"
 
-    mv "$tmp_file" "$conf_file"
+    mv "$tmp_file" "$state_file"
     trap - EXIT
 
     if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 2>&1; then
         hyprctl reload >/dev/null 2>&1 || true
     fi
 
-    notify "Display Update" "Workspace-monitor toewijzingen opgeslagen in workspaces.conf"
+    notify "Display Update" "Workspace-monitor toewijzingen opgeslagen in workspaces.lua"
 }
 
 case "${1:-}" in

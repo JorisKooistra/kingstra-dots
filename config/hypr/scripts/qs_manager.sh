@@ -57,7 +57,7 @@ hide_widget_async() {
     if [[ -n "$prev_addr" && "$prev_addr" != "null" ]]; then
         (
             sleep 0.15
-            hyprctl --batch "keyword cursor:no_warps true ; dispatch focuswindow address:$prev_addr ; keyword cursor:no_warps false" >/dev/null 2>&1
+            hyprctl dispatch focuswindow "address:$prev_addr" >/dev/null 2>&1
         ) &
     fi
 }
@@ -67,7 +67,7 @@ restore_focus() {
     if [[ -f "$PREV_FOCUS_FILE" ]]; then
         prev_addr=$(cat "$PREV_FOCUS_FILE")
         if [[ -n "$prev_addr" && "$prev_addr" != "null" ]]; then
-            hyprctl --batch "keyword cursor:no_warps true ; dispatch focuswindow address:$prev_addr ; keyword cursor:no_warps false" >/dev/null 2>&1
+            hyprctl dispatch focuswindow "address:$prev_addr" >/dev/null 2>&1
         fi
         rm -f "$PREV_FOCUS_FILE"
     fi
@@ -124,7 +124,7 @@ dispatch_workspace_target() {
     cursor_dispatches="$(workspace_cursor_dispatches "$target_ws")"
 
     if [[ -n "$target_addr" && "$target_addr" != "null" ]]; then
-        batch_cmd="dispatch $cmd ; keyword cursor:no_warps true ; dispatch focuswindow address:$target_addr ; keyword cursor:no_warps false"
+        batch_cmd="dispatch $cmd ; dispatch focuswindow address:$target_addr"
     else
         batch_cmd="dispatch $cmd"
     fi

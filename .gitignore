@@ -75,6 +75,12 @@ config/hypr/monitors.conf
 config/hypr/workspaces.conf
 config/hypr/monitors.lua
 config/hypr/workspaces.lua
+config/hypr/lua/colors.lua
+config/hypr/lua/theme.lua
+config/hypr/lua/monitors-local.lua
+config/hypr/lua/workspaces.lua
+config/hypr/lua/hardware.lua
+config/hypr/lua/input-overrides.lua
 config/matugen/generated/*
 !config/matugen/generated/.gitkeep
 config/cava/config

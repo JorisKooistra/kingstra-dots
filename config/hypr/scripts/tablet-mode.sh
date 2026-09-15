@@ -94,17 +94,31 @@ monitor_rule() {
     printf '%s, preferred, auto, auto, transform, %s\n' "$monitor" "$transform"
 }
 
+lua_quote() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    printf '"%s"' "$value"
+}
+
 apply_monitor_transform() {
     local monitor="$1"
     local transform="$2"
-    local rule
+    local rule output mode position scale scale_lua
 
     if [[ -z "$monitor" ]] || ! command -v hyprctl >/dev/null 2>&1; then
         return 0
     fi
 
     rule="$(monitor_rule "$monitor" "$transform")"
-    hyprctl keyword monitor "$rule" >/dev/null 2>&1 || true
+    IFS=',' read -r output mode position scale _ <<< "$rule"
+    output="${output#"${output%%[![:space:]]*}"}"; output="${output%"${output##*[![:space:]]}"}"
+    mode="${mode#"${mode%%[![:space:]]*}"}"; mode="${mode%"${mode##*[![:space:]]}"}"
+    position="${position#"${position%%[![:space:]]*}"}"; position="${position%"${position##*[![:space:]]}"}"
+    scale="${scale#"${scale%%[![:space:]]*}"}"; scale="${scale%"${scale##*[![:space:]]}"}"
+    scale_lua="$scale"
+    [[ "$scale" =~ ^[0-9]+([.][0-9]+)?$ ]] || scale_lua="$(lua_quote "$scale")"
+    hyprctl eval "hl.monitor({ output = $(lua_quote "$output"), mode = $(lua_quote "$mode"), position = $(lua_quote "$position"), scale = $scale_lua, transform = $transform })" >/dev/null 2>&1 || true
 }
 
 apply_touch_transform() {
@@ -118,10 +132,13 @@ apply_touch_transform() {
     hyprctl devices -j 2>/dev/null | jq -r '.touch[]?.name // empty' 2>/dev/null |
     while IFS= read -r device; do
         [[ -n "$device" ]] || continue
-        hyprctl keyword "device[$device]:transform" "$transform" >/dev/null 2>&1 || true
+        local device_lua
+        device_lua="hl.device({ name = $(lua_quote "$device"), transform = $transform"
         if [[ -n "$monitor" ]]; then
-            hyprctl keyword "device[$device]:output" "$monitor" >/dev/null 2>&1 || true
+            device_lua+=", output = $(lua_quote "$monitor")"
         fi
+        device_lua+=" })"
+        hyprctl eval "$device_lua" >/dev/null 2>&1 || true
     done
 }
 

@@ -69,9 +69,9 @@ _phase15_validate_commands() {
 
 _phase15_validate_configs() {
     # Hyprland
-    validate_file "$HOME/.config/hypr/hyprland.conf"                   "hyprland.conf"
-    validate_file "$HOME/.config/hypr/colors.conf"                     "hypr/colors.conf"
-    validate_file "$HOME/.config/hypr/conf.d/72-hardware.conf"         "72-hardware.conf"
+    validate_file "$HOME/.config/hypr/hyprland.lua"                    "hyprland.lua"
+    validate_file "$HOME/.config/hypr/lua/config.lua"                  "hypr/lua/config.lua"
+    validate_file "$HOME/.config/hypr/lua/colors.lua"                  "hypr/lua/colors.lua"
     validate_file "$HOME/.config/hypr/scripts/fingerprint-first-run.sh" "hypr/scripts/fingerprint-first-run.sh"
     validate_file "$HOME/.config/hypr/scripts/hardware-switches.sh"    "hypr/scripts/hardware-switches.sh"
     validate_file "$HOME/.config/hypr/scripts/lock.sh"                 "hypr/scripts/lock.sh"

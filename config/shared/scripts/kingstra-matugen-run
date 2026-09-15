@@ -21,7 +21,7 @@ STATE_WALLPAPER_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/wallpaper
 SESSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state/session.json"
 CACHE_WALLPAPER="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
 MATUGEN_STAGE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/matugen-stage"
-HYPR_COLORS_TARGET="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/colors.conf"
+HYPR_COLORS_TARGET="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/colors.lua"
 QUICKSHELL_COLORS_TARGET="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/colors.json"
 
 DEFAULT_SCHEME="scheme-tonal-spot"
@@ -98,7 +98,7 @@ _atomic_publish() {
 }
 
 _publish_runtime_outputs() {
-    local staged_hypr="$MATUGEN_STAGE_DIR/hypr-colors.conf"
+    local staged_hypr="$MATUGEN_STAGE_DIR/hypr-colors.lua"
     local staged_quickshell="$MATUGEN_STAGE_DIR/quickshell-colors.json"
 
     _atomic_publish "$staged_hypr" "$HYPR_COLORS_TARGET" hypr
@@ -469,7 +469,7 @@ mkdir -p "$MATUGEN_STAGE_DIR"
 _set_toml_value "$MATUGEN_CONF" "scheme_type" "\"$SCHEME_TYPE\""
 _set_toml_value "$MATUGEN_CONF" "mode" "\"$MODE\""
 _set_toml_value "$MATUGEN_CONF" "color_index" "$COLOR_INDEX"
-_set_template_output_path "$MATUGEN_CONF" "hyprland" "$MATUGEN_STAGE_DIR/hypr-colors.conf"
+_set_template_output_path "$MATUGEN_CONF" "hyprland" "$MATUGEN_STAGE_DIR/hypr-colors.lua"
 _set_template_output_path "$MATUGEN_CONF" "quickshell" "$MATUGEN_STAGE_DIR/quickshell-colors.json"
 
 # Haal een kleine, bruikbare set echte wallpaper-kleuren op. Matugen maakt een

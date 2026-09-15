@@ -220,15 +220,12 @@ get_kb_layout_config() {
 
     if [ -z "$layout" ]; then
         layout=$(
-            awk -F= '
-                /^[[:space:]]*kb_layout[[:space:]]*=/ {
-                    value = $2
-                    sub(/#.*/, "", value)
-                    gsub(/[[:space:]]/, "", value)
-                    if (value != "") layout = value
+            awk -F'"' '
+                /kb_layout[[:space:]]*=/ {
+                    if ($2 != "") layout = $2
                 }
                 END { print layout }
-            ' "$HOME"/.config/hypr/hyprland.conf "$HOME"/.config/hypr/conf.d/*.conf 2>/dev/null
+            ' "$HOME"/.config/hypr/lua/config.lua "$HOME"/.config/hypr/lua/input-overrides.lua 2>/dev/null
         )
     fi
 

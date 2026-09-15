@@ -1,0 +1,2 @@
+-- Local settings-popup overrides are written by SettingsPopup.qml.
+return { apply = function() end }

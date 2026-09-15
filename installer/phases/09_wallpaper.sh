@@ -114,8 +114,7 @@ _phase09_write_skwd_wall_config() {
         { "name": "spicetify", "template": "spicetify.ini", "output": "~/.config/spicetify/Themes/Matugen/color.ini", "reload": "~/.config/skwd-wall/scripts/reload-spicetify.sh" },
         { "name": "spicetify-css", "template": "spicetify.css", "output": "~/.config/spicetify/Themes/Matugen/user.css" },
         { "name": "qt6ct", "template": "qt6ct-colors.conf", "output": "~/.config/qt6ct/colors/matugen.conf" },
-        { "name": "yazi", "template": "yazi-theme.toml", "output": "~/.config/yazi/theme.toml" },
-        { "name": "omp", "reload": "~/.config/skwd-wall/scripts/reload-omp.sh" }
+        { "name": "yazi", "template": "yazi-theme.toml", "output": "~/.config/yazi/theme.toml" }
     ],
     "components": {
         "wallpaperSelector": {

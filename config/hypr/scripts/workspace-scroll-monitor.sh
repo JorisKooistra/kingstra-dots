@@ -5,7 +5,7 @@ monitor="${1:-}"
 direction="${2:-}"
 workspace_count="${3:-8}"
 repeat_count="${4:-1}"
-conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/workspaces.conf"
+state_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/workspaces.lua"
 
 if [[ -z "$direction" || "$direction" != "next" && "$direction" != "prev" ]]; then
     printf 'Usage: %s <monitor> <next|prev> [workspace-count] [repeat-count]\n' "$0" >&2
@@ -58,29 +58,22 @@ mapfile -t blocked_workspaces < <(
 
 assigned_monitor_for_workspace() {
     local ws="$1"
-    [[ -f "$conf_file" ]] || return 1
+    [[ -f "$state_file" ]] || return 1
 
     awk -v target_ws="$ws" '
         /^[[:space:]]*#/ { next }
-        /^[[:space:]]*workspace[[:space:]]*=/ {
+        /hl\.workspace_rule\(/ {
             line = $0
-            sub(/^[^=]*=[[:space:]]*/, "", line)
-            split(line, parts, ",")
-            ws = parts[1]
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "", ws)
-            mon = ""
-            for (i = 2; i <= length(parts); i++) {
-                field = parts[i]
-                gsub(/^[[:space:]]+|[[:space:]]+$/, "", field)
-                if (field ~ /^monitor:/) {
-                    sub(/^monitor:[[:space:]]*/, "", field)
-                    mon = field
-                }
-            }
+            ws = line
+            sub(/^.*workspace[[:space:]]*=[[:space:]]*"/, "", ws)
+            sub(/".*$/, "", ws)
+            mon = line
+            sub(/^.*monitor[[:space:]]*=[[:space:]]*"/, "", mon)
+            sub(/".*$/, "", mon)
             if (ws == target_ws && mon != "") found = mon
         }
         END { if (found != "") print found }
-    ' "$conf_file"
+    ' "$state_file"
 }
 
 is_blocked_workspace() {
@@ -133,4 +126,4 @@ if [[ "$cursor_pos" =~ ^[[:space:]]*(-?[0-9]+)[[:space:]]*,[[:space:]]*(-?[0-9]+
     restore_cursor_cmd=" ; dispatch movecursor ${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
 fi
 
-hyprctl --batch "${hide_qs_cmd}keyword cursor:no_warps true ; dispatch focusmonitor $monitor_name ; dispatch workspace $target_ws${restore_cursor_cmd} ; keyword cursor:no_warps false" >/dev/null 2>&1
+hyprctl --batch "${hide_qs_cmd}dispatch focusmonitor $monitor_name ; dispatch workspace $target_ws${restore_cursor_cmd}" >/dev/null 2>&1

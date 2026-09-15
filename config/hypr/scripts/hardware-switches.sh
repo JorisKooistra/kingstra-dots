@@ -57,7 +57,12 @@ bind_switch() {
     local cmd="$3"
 
     [[ -n "$name" ]] || return 0
-    hyprctl keyword bindl ", switch:$state:$name, exec, $cmd" >/dev/null 2>&1 || true
+    # Register the dynamic switch binding through the same Lua API as the
+    # static binds.
+    local lua_name lua_cmd
+    lua_name="${name//\\/\\\\}"; lua_name="${lua_name//\"/\\\"}"
+    lua_cmd="${cmd//\\/\\\\}"; lua_cmd="${lua_cmd//\"/\\\"}"
+    hyprctl eval "hl.bind(\"switch:$state:$lua_name\", hl.dsp.exec_cmd(\"$lua_cmd\"), { locked = true })" >/dev/null 2>&1 || true
 }
 
 bind_known_fallbacks() {

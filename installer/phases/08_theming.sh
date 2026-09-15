@@ -182,10 +182,10 @@ _phase08_deploy_mode_scripts() {
 }
 
 _phase08_default_theme_conf() {
-    local theme_conf="$HOME/.config/hypr/conf.d/35-theme.conf"
+    local theme_conf="$HOME/.config/hypr/lua/theme.lua"
 
     if "${DRY_RUN:-false}"; then
-        log_dry "Standaard 35-theme.conf zou worden aangemaakt"
+        log_dry "Standaard theme.lua zou worden aangemaakt"
         return 0
     fi
 
@@ -194,20 +194,20 @@ _phase08_default_theme_conf() {
         ensure_dir "$(dirname "$theme_conf")"
         cat > "$theme_conf" <<'CONF'
 # =============================================================================
-# 35-theme.conf — Automatisch gegenereerd door kingstra-theme-switch
-# Thema: (geen — standaard)
+# Fallback; kingstra-theme-switch vervangt dit bestand atomair.
+return { apply = function() end }
 # =============================================================================
 CONF
-        log_ok "Standaard 35-theme.conf aangemaakt"
+        log_ok "Standaard theme.lua aangemaakt"
     else
-        log_info "35-theme.conf bestaat al — niet overschreven"
+        log_info "theme.lua bestaat al — niet overschreven"
     fi
 }
 
 _phase08_init_generated_theme_files() {
     local matugen_conf="$HOME/.config/matugen/config.toml"
     local qs_colors="$HOME/.config/quickshell/colors.json"
-    local hypr_colors="$HOME/.config/hypr/colors.conf"
+    local hypr_colors="$HOME/.config/hypr/lua/colors.lua"
 
     if "${DRY_RUN:-false}"; then
         log_dry "Theming placeholders zouden worden aangemaakt"
@@ -225,8 +225,8 @@ mode = "dark"
 [config]
 
 [templates.hyprland]
-input_path = "~/.config/matugen/templates/hypr-colors.conf"
-output_path = "~/.config/hypr/colors.conf"
+input_path = "~/.config/matugen/templates/hypr-colors.lua"
+output_path = "~/.config/hypr/lua/colors.lua"
 
 [templates.quickshell]
 input_path = "~/.config/matugen/templates/quickshell-colors.json"

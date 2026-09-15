@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -u
 
-conf_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.conf"
+state_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/monitors-local.lua"
 tablet_state_file="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/kingstra/tablet-mode"
 log_prefix="[kingstra-monitor-hotplug]"
 
@@ -18,35 +18,6 @@ trim() {
     printf '%s' "$value"
 }
 
-saved_rules() {
-    [[ -f "$conf_file" ]] || return 0
-
-    awk '
-        /^[[:space:]]*monitor[[:space:]]*=/ {
-            sub(/^[^=]*=[[:space:]]*/, "")
-            sub(/[[:space:]]*#.*/, "")
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
-            if ($0 != "") print
-        }
-    ' "$conf_file"
-}
-
-connected_monitors() {
-    hyprctl monitors -j 2>/dev/null |
-        jq -r '.[].name // empty' 2>/dev/null
-}
-
-is_connected() {
-    local needle="$1"
-    local monitor
-
-    for monitor in "${connected[@]}"; do
-        [[ "$monitor" == "$needle" ]] && return 0
-    done
-
-    return 1
-}
-
 tablet_mode_active() {
     [[ -f "$tablet_state_file" ]]
 }
@@ -57,33 +28,16 @@ is_internal_monitor() {
 
 apply_saved_layout() {
     command -v hyprctl >/dev/null 2>&1 || return 0
-    command -v jq >/dev/null 2>&1 || return 0
+    [[ -f "$state_file" ]] || return 0
 
-    local -a rules=()
-    local -a connected=()
-    mapfile -t rules < <(saved_rules)
-    mapfile -t connected < <(connected_monitors)
-
-    [[ "${#rules[@]}" -gt 0 && "${#connected[@]}" -gt 0 ]] || return 0
-
-    local rule output
-    for rule in "${rules[@]}"; do
-        output="$(trim "${rule%%,*}")"
-        [[ -n "$output" ]] || continue
-
-        if tablet_mode_active && is_internal_monitor "$output"; then
-            log "Tablet mode actief; monitorregel overgeslagen: $rule"
-            continue
-        fi
-
-        if is_connected "$output"; then
-            if hyprctl keyword monitor "$rule" >/dev/null 2>&1; then
-                log "Toegepast: $rule"
-            else
-                log "Kon monitorregel niet toepassen: $rule"
-            fi
-        fi
-    done
+    # Lua configurations are re-evaluated as a unit. This preserves monitor
+    # rules that are currently disconnected and avoids the removed `keyword`
+    # control path.
+    if hyprctl reload >/dev/null 2>&1; then
+        log "Lokale monitor-layout opnieuw geladen"
+    else
+        log "Lokale monitor-layout kon niet opnieuw worden geladen"
+    fi
 }
 
 reload_wallpaper() {

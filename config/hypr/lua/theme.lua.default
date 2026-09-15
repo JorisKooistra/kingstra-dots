@@ -1,0 +1,2 @@
+-- Fallback runtime theme. kingstra-theme-switch replaces theme.lua atomically.
+return { apply = function() end }

@@ -5,8 +5,8 @@
 # Doel:
 #   - Quickshell en Qt6-afhankelijkheden installeren
 #   - config/quickshell deployen (al via hypr-symlink? nee — eigen map)
-#   - 71-autostart-ui.conf aanmaken (start quickshell)
-#   - Widget-binds in 82-binds-widgets.conf activeren
+#   - Lua-autostart gebruikt voor Quickshell
+#   - Widget-binds uit hypr/lua/binds.lua gebruiken
 # =============================================================================
 
 phase_run() {
@@ -49,45 +49,11 @@ _phase05_install_packages() {
 }
 
 _phase05_write_autostart_ui() {
-    local autostart_ui="$REPO_ROOT/config/hypr/conf.d/71-autostart-ui.conf"
-
-    if "${DRY_RUN:-false}"; then
-        log_dry "71-autostart-ui.conf zou worden bijgewerkt"
-        return 0
-    fi
-
-    cat > "$autostart_ui" <<'EOF'
-# =============================================================================
-# 71-autostart-ui.conf — UI-laag autostart (aangemaakt door fase 5)
-# =============================================================================
-# UI-processen worden gestart door:
-#   ~/.local/bin/kingstra-session-start start-ui
-#
-# Dit bestand blijft bestaan als compatibele include voor hyprland.conf.
-EOF
-    log_ok "71-autostart-ui.conf bijgewerkt"
-
-    # Zorg dat hyprland.conf het bestand ook inlaadt
-    local hyprconf="$REPO_ROOT/config/hypr/hyprland.conf"
-    if ! grep -q "71-autostart-ui" "$hyprconf"; then
-        sed -i '/source.*70-autostart/a source = ~/.config/hypr/conf.d/71-autostart-ui.conf' "$hyprconf"
-        log_ok "71-autostart-ui.conf toegevoegd aan hyprland.conf"
-    fi
+    log_info "Quickshell start via hypr/lua/autostart.lua"
 }
 
 _phase05_activate_widget_binds() {
-    local binds_file="$REPO_ROOT/config/hypr/conf.d/82-binds-widgets.conf"
-
-    if "${DRY_RUN:-false}"; then
-        log_dry "Quickshell widget-binds zouden worden geactiveerd"
-        return 0
-    fi
-
-    # Verwijder de # voor de Quickshell IPC-binds (M=music, C=calendar, O=monitors, X=focustime)
-    sed -i 's/^# bind = \$mainMod, \(M\|C\|O\|X\)/bind = $mainMod, \1/' "$binds_file"
-    # Activeer theme picker bind
-    sed -i 's/^# bind = \$mainMod CTRL, T/bind = $mainMod CTRL, T/' "$binds_file"
-    log_ok "Quickshell widget-binds geactiveerd in 82-binds-widgets.conf"
+    log_info "Quickshell widget-binds staan in hypr/lua/binds.lua"
 }
 
 _phase05_apply_live() {

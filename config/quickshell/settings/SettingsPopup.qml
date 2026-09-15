@@ -1964,8 +1964,7 @@ Item {
         var configRoot = configHome();
         var settingsDir = configRoot + "/quickshell/settings";
         var path = settingsDir + "/settings.json";
-        var scrollPath = configRoot + "/hypr/conf.d/73-scroll-settings.conf";
-        var inputPath = configRoot + "/hypr/conf.d/74-input-settings.conf";
+        var inputOverridesPath = configRoot + "/hypr/lua/input-overrides.lua";
         var touchpadFactor = scrollFactorFromPercent(touchpadScrollPercent, 0.45);
         var mouseFactor = scrollFactorFromPercent(mouseScrollPercent, 1.35);
         var safeKeyboardLayout = normalizeKeyboardLayout(keyboardLayout);
@@ -1990,46 +1989,31 @@ Item {
             idleProfiles: safeIdleProfiles
         };
         var json = JSON.stringify(payload, null, 4);
-        var scrollConf =
+        var inputOverrides =
             "# =============================================================================\n" +
-            "# 73-scroll-settings.conf — Scroll-tuning overrides\n" +
-            "# =============================================================================\n" +
-            "# Aangepast via de Settings-popup.\n" +
-            "# =============================================================================\n\n" +
-            "input {\n" +
-            "    scroll_factor = " + mouseFactor.toFixed(2) + "\n\n" +
-            "    touchpad {\n" +
-            "        scroll_factor = " + touchpadFactor.toFixed(2) + "\n" +
-            "    }\n" +
-            "}\n";
-        var inputConf =
-            "# =============================================================================\n" +
-            "# 74-input-settings.conf — Input overrides\n" +
+            "# input-overrides.lua — Settings-popup overrides\n" +
             "# =============================================================================\n" +
             "# Aangepast via de Settings-popup.\n" +
             "# =============================================================================\n\n" +
-            "input {\n" +
-            "    kb_layout = " + safeKeyboardLayout + "\n" +
-            "    # Leeg = de standaardvariant van de layout; dode toetsen komen hiervandaan.\n" +
-            "    kb_variant = " + safeKeyboardVariant + "\n" +
-            "    kb_options =\n\n" +
-            "    touchpad {\n" +
-            "        # false = button areas (Windows-achtig), true = clickfinger gedrag\n" +
-            "        clickfinger_behavior = " + (useButtonArea ? "false" : "true") + "\n" +
-            "    }\n" +
+            "return {\n" +
+            "    apply = function()\n" +
+            "        hl.config({\n" +
+            "            input = {\n" +
+            "                scroll_factor = " + mouseFactor.toFixed(2) + ",\n" +
+            "                kb_layout = \"" + safeKeyboardLayout + "\",\n" +
+            "                kb_variant = \"" + safeKeyboardVariant + "\",\n" +
+            "                kb_options = \"\",\n" +
+            "                touchpad = { scroll_factor = " + touchpadFactor.toFixed(2) + ", clickfinger_behavior = " + (useButtonArea ? "false" : "true") + " },\n" +
+            "            },\n" +
+            "        })\n" +
+            "    end,\n" +
             "}\n";
         var cmd = [
             "mkdir -p '" + shellSingleQuote(settingsDir) + "'",
-            "mkdir -p '" + shellSingleQuote(configRoot + "/hypr/conf.d") + "'",
+            "mkdir -p '" + shellSingleQuote(configRoot + "/hypr/lua") + "'",
             "printf '%s' '" + shellSingleQuote(json) + "' > '" + shellSingleQuote(path) + "'",
-            "printf '%s' '" + shellSingleQuote(scrollConf) + "' > '" + shellSingleQuote(scrollPath) + "'",
-            "printf '%s' '" + shellSingleQuote(inputConf) + "' > '" + shellSingleQuote(inputPath) + "'",
-            "hyprctl keyword input:scroll_factor '" + mouseFactor.toFixed(2) + "' >/dev/null 2>&1 || true",
-            "hyprctl keyword input:touchpad:scroll_factor '" + touchpadFactor.toFixed(2) + "' >/dev/null 2>&1 || true",
-            "hyprctl keyword input:touchpad:clickfinger_behavior '" + (useButtonArea ? "false" : "true") + "' >/dev/null 2>&1 || true",
-            "hyprctl keyword input:kb_layout '" + shellSingleQuote(safeKeyboardLayout) + "' >/dev/null 2>&1 || true",
-            "hyprctl keyword input:kb_variant '" + shellSingleQuote(safeKeyboardVariant) + "' >/dev/null 2>&1 || true",
-            "hyprctl keyword input:kb_options '' >/dev/null 2>&1 || true",
+            "printf '%s' '" + shellSingleQuote(inputOverrides) + "' > '" + shellSingleQuote(inputOverridesPath) + "'",
+            "hyprctl reload >/dev/null 2>&1 || true",
             "'" + shellSingleQuote(idleApplyScript) + "' >/dev/null 2>&1 || true"
         ].join(" && ");
         root.settingsData = payload;
@@ -3655,7 +3639,7 @@ Item {
                             }
                         }
 
-                        SettingsInfoCard { title: "Opslaan"; icon: "󰆓"; accent: root.peach; value: "De monitor UI bewaart layouts in lokale bestanden: monitors.conf en workspaces.conf. Die blijven buiten Git, terwijl vrije workspaces gewoon overal gebruikt blijven worden." }
+                        SettingsInfoCard { title: "Opslaan"; icon: "󰆓"; accent: root.peach; value: "De monitor UI bewaart layouts in lokale Lua-bestanden. Die blijven buiten Git, terwijl vrije workspaces gewoon overal gebruikt blijven worden." }
                         Item { Layout.preferredHeight: root.s(8) }
                     }
                 }
@@ -5554,7 +5538,7 @@ Item {
                                     { f: "swaync/colors.css", i: "󰂚", c: "pink" },
                                     { f: "walker/colors.css", i: "󰀻", c: "green" },
                                     { f: "zsh/omp-colors.toml", i: "󱆃", c: "blue" },
-                                    { f: "hypr/colors.conf", i: "󰆍", c: "peach" }
+                                    { f: "hypr/lua/colors.lua", i: "󰆍", c: "peach" }
                                 ]
                                 Rectangle {
                                     Layout.fillWidth: true; Layout.preferredHeight: root.s(36); radius: root.s(6)

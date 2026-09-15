@@ -10,7 +10,7 @@ set -euo pipefail
 
 THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes"
 ACTIVE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/active-theme"
-THEME_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/conf.d/35-theme.conf"
+THEME_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/theme.lua"
 THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 MATUGEN_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 SKWD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall/config.json"
@@ -798,39 +798,43 @@ sync_skwd_config "${MATUGEN_SCHEME_JSON}" "${MATUGEN_MODE_JSON}" "$THEME_NAME"
 _prepare_theme_wallpaper "$THEME_NAME"
 
 # ---------------------------------------------------------------------------
-# Step 2 — Generate 35-theme.conf (Hyprland overrides)
+# Step 2 — Generate theme.lua (Hyprland Lua overrides)
 # ---------------------------------------------------------------------------
 mkdir -p "$(dirname "$THEME_CONF")"
 THEME_CONF_TMP="$(mktemp "${THEME_CONF}.XXXXXX")"
+SCREEN_SHADER_LUA="${SCREEN_SHADER//\\/\\\\}"
+SCREEN_SHADER_LUA="${SCREEN_SHADER_LUA//\"/\\\"}"
 if ! cat > "$THEME_CONF_TMP" <<EOF
 # =============================================================================
-# 35-theme.conf — Automatisch gegenereerd door kingstra-theme-switch
+# theme.lua — Automatisch gegenereerd door kingstra-theme-switch
 # Thema: ${META_NAME:-$THEME_NAME}
 # =============================================================================
 
-general {
-    gaps_in = ${APPEARANCE_GAPS_IN:-5}
-    gaps_out = ${APPEARANCE_GAPS_OUT:-10}
-    border_size = ${APPEARANCE_BORDER_WIDTH:-2}
-}
-
-decoration {
-    rounding = ${APPEARANCE_BORDER_RADIUS:-12}
-    screen_shader = ${SCREEN_SHADER}
-    blur {
-        size = ${APPEARANCE_BLUR_SIZE:-8}
-        passes = ${APPEARANCE_BLUR_PASSES:-3}
-    }
-}
+local M = {}
+function M.apply()
+    hl.config({
+        general = {
+            gaps_in = ${APPEARANCE_GAPS_IN:-5},
+            gaps_out = ${APPEARANCE_GAPS_OUT:-10},
+            border_size = ${APPEARANCE_BORDER_WIDTH:-2},
+        },
+        decoration = {
+            rounding = ${APPEARANCE_BORDER_RADIUS:-12},
+            screen_shader = "${SCREEN_SHADER_LUA}",
+            blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3} },
+        },
+    })
+end
+return M
 EOF
 then
     rm -f -- "$THEME_CONF_TMP"
-    _warn "35-theme.conf genereren mislukt"
+    _warn "theme.lua genereren mislukt"
     exit 1
 fi
 chmod 0644 "$THEME_CONF_TMP"
 mv -f -- "$THEME_CONF_TMP" "$THEME_CONF"
-_log "35-theme.conf gegenereerd"
+_log "theme.lua gegenereerd"
 
 # ---------------------------------------------------------------------------
 # Step 3 — Generate theme.json (QuickShell via FileView)
@@ -1053,15 +1057,10 @@ EOF
 _log "Walker/SwayNC theme overrides gegenereerd"
 
 # ---------------------------------------------------------------------------
-# Step 4 — Apply Hyprland changes live (no reload needed for keywords)
+# Step 4 — Apply Hyprland changes live through the Lua API.
 # ---------------------------------------------------------------------------
 if command -v hyprctl &>/dev/null; then
-    hyprctl keyword general:gaps_in "${APPEARANCE_GAPS_IN:-5}" 2>/dev/null || true
-    hyprctl keyword general:gaps_out "${APPEARANCE_GAPS_OUT:-10}" 2>/dev/null || true
-    hyprctl keyword general:border_size "${APPEARANCE_BORDER_WIDTH:-2}" 2>/dev/null || true
-    hyprctl keyword decoration:rounding "${APPEARANCE_BORDER_RADIUS:-12}" 2>/dev/null || true
-    hyprctl keyword decoration:blur:size "${APPEARANCE_BLUR_SIZE:-8}" 2>/dev/null || true
-    hyprctl keyword decoration:blur:passes "${APPEARANCE_BLUR_PASSES:-3}" 2>/dev/null || true
+    hyprctl eval "hl.config({ general = { gaps_in = ${APPEARANCE_GAPS_IN:-5}, gaps_out = ${APPEARANCE_GAPS_OUT:-10}, border_size = ${APPEARANCE_BORDER_WIDTH:-2} }, decoration = { rounding = ${APPEARANCE_BORDER_RADIUS:-12}, blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3} } } })" 2>/dev/null || true
     _log "Hyprland live bijgewerkt"
 fi
 
