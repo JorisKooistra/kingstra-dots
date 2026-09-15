@@ -23,7 +23,7 @@ Item {
             // focus meestal nog van de vorige keer, dus dat signaal blijft uit
             // en zou het zoekveld leeg laten. callLater wacht tot de Loader
             // zijn inhoud heeft geplaatst.
-            if (sourceEntryId === "launcher" || sourceEntryId === "clipboard") Qt.callLater(focusContent);
+            if (sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "windows") Qt.callLater(focusContent);
         } else {
             visualClearTimer.restart();
         }
@@ -64,6 +64,7 @@ Item {
             || entryId === "mail"
             || entryId === "calendar"
             || entryId === "clipboard"
+            || entryId === "windows"
             || entryId === "settings";
     }
     function isRailEntry(entryId) {
@@ -77,6 +78,7 @@ Item {
                 || entryId === "settings"
                 || entryId === "mail"
                 || entryId === "clipboard"
+                || entryId === "windows"
                 || (!ThemeConfig.barRailEnabled
                     && (entryId === "battery"
                         || entryId === "network"
@@ -94,7 +96,7 @@ Item {
     // Alleen panelen met tekstinvoer hebben een focusgrab nodig. Bij de
     // overige panelen zou de grab botsen met de legacy focus-afhandeling
     // in qs_manager.sh en het paneel meteen weer sluiten.
-    readonly property bool needsKeyboard: sourceEntryId === "launcher" || sourceEntryId === "clipboard"
+    readonly property bool needsKeyboard: sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "windows"
     readonly property bool fromStrip: ThemeConfig.barStatusStripEnabled && !stripOnBottom
                                       && anchorY < stripH + 4
     readonly property string visualEdge: edgeFor(visualEntryId)
@@ -151,6 +153,7 @@ Item {
     function panelWidth(entryId) {
         if (entryId === "launcher") return Math.min(680, availableW);
         if (entryId === "clipboard") return Math.min(560, availableW);
+        if (entryId === "windows") return Math.min(620, availableW);
         if (entryId === "tophover") return Math.min(1020, availableW);
         if (entryId === "performance") return Math.min(380, availableW);
         if (entryId === "gaming") return Math.min(720, availableW);
@@ -164,6 +167,7 @@ Item {
     function panelHeight(entryId) {
         if (entryId === "launcher") return Math.min(610, availableH);
         if (entryId === "clipboard") return Math.min(570, availableH);
+        if (entryId === "windows") return Math.min(580, availableH);
         if (entryId === "tophover") return Math.min(232, availableH);
         // Was volle schermhoogte terwijl er maar een handvol meters in staat.
         if (entryId === "performance") return Math.min(430, availableH);
@@ -178,6 +182,7 @@ Item {
     function sourceFor(entryId) {
         if (entryId === "launcher") return Qt.resolvedUrl("LauncherPanel.qml");
         if (entryId === "clipboard") return Qt.resolvedUrl("ClipboardPanel.qml");
+        if (entryId === "windows") return Qt.resolvedUrl("WindowSwitcherPanel.qml");
         if (entryId === "tophover") return Qt.resolvedUrl("TopHoverWidget.qml");
         if (entryId === "battery") return Qt.resolvedUrl("../battery/BatteryPopup.qml");
         if (entryId === "focustime") return Qt.resolvedUrl("../focustime/FocusTimePopup.qml");
