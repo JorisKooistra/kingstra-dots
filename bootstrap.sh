@@ -102,7 +102,7 @@ _detect_install_mode() {
         INSTALL_MODE="new"
     fi
 
-    if [[ -e "$HOME/.config/hypr/hyprland.conf" || -e "$HOME/.config/quickshell/Main.qml" ]]; then
+    if [[ -e "$HOME/.config/hypr/hyprland.lua" || -e "$HOME/.config/quickshell/Main.qml" ]]; then
         DOTFILES_INSTALLED=true
     else
         DOTFILES_INSTALLED=false

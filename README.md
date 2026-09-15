@@ -269,7 +269,7 @@ An AUR helper is no longer a manual prerequisite for the bootstrap flow: when mi
 | Path | Contents |
 |---|---|
 | `~/.config/hypr/` | Hyprland configuration (symlinked from repo) |
-| `~/.config/hypr/conf.d/72-hardware.conf` | Generated hardware config |
+| `~/.config/hypr/lua/hardware.lua` | Generated hardware config |
 | `~/.config/quickshell/` | Quickshell/QML top bar |
 | `~/.config/matugen/` | Matugen templates |
 | `~/.config/kingstra-dots/` | This repo |

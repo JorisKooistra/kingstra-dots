@@ -120,10 +120,10 @@ Item {
 
     // Catalog van bekende acties zonder vaste keybinding — worden als "Niet ingesteld" getoond
     readonly property var keybindCatalog: [
-        { label: "Kleurenkiezer",    cat: "apps",  file: "81-binds-apps.conf",  d: "exec", args: "hyprpicker -r -n -f hex",              t: "bind", ln: 0, mods: "", key: "" },
-        { label: "Schermopname",     cat: "apps",  file: "81-binds-apps.conf",  d: "exec", args: "wf-recorder",                          t: "bind", ln: 0, mods: "", key: "" },
-        { label: "Uitlogmenu",       cat: "core",  file: "80-binds-core.conf",  d: "exec", args: "wlogout",                               t: "bind", ln: 0, mods: "", key: "" },
-        { label: "Emoji-kiezer",     cat: "apps",  file: "81-binds-apps.conf",  d: "exec", args: "walker --modules emojis",               t: "bind", ln: 0, mods: "", key: "" }
+        { label: "Kleurenkiezer",    cat: "apps",  file: "binds.lua",  d: "exec", args: "hyprpicker -r -n -f hex",              t: "bind", ln: 0, mods: "", key: "" },
+        { label: "Schermopname",     cat: "apps",  file: "binds.lua",  d: "exec", args: "wf-recorder",                          t: "bind", ln: 0, mods: "", key: "" },
+        { label: "Uitlogmenu",       cat: "core",  file: "binds.lua",  d: "exec", args: "wlogout",                               t: "bind", ln: 0, mods: "", key: "" },
+        { label: "Emoji-kiezer",     cat: "apps",  file: "binds.lua",  d: "exec", args: "walker --modules emojis",               t: "bind", ln: 0, mods: "", key: "" }
     ]
 
     // Settings file

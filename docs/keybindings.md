@@ -1,7 +1,7 @@
 # Keybindings — kingstra-dots
 
 > **Super** = Windows/Meta key  
-> Binds zijn verdeeld over `config/hypr/conf.d/80–86-binds-*.conf`
+> Binds staan in `config/hypr/lua/binds.lua`.
 
 ---
 

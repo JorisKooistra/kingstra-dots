@@ -119,19 +119,16 @@ Werkt als:
 
 ## Keybinds
 
-Status: basis werkt.
+Status: de editor wacht op een Lua-native implementatie.
 
 Uitwerking:
-- Bestaande Hyprland-bindings lezen uit `~/.config/hypr/conf.d/8*-binds*.conf`.
-- Zoeken/filteren op label, toets, dispatcher en argumenten.
-- Binding bewerken, toevoegen vanuit catalogus, en verwijderen door commentaar te zetten.
-- Conflictscan toevoegen: dezelfde mods+key detecteren.
+- Bestaande Hyprland-bindings staan in `~/.config/hypr/lua/binds.lua`.
+- Een toekomstige editor moet Lua-binds structureel lezen en schrijven, zonder
+  terug te vallen op line-oriented Hyprlang.
 
 Werkt als:
-- Elke wijziging via `write_keybind.sh` loopt.
-- `hyprctl reload` na opslaan uitgevoerd wordt.
-- Niet-ingestelde catalogusacties zichtbaar blijven.
-- Conflicten blokkeren of heel duidelijk waarschuwen.
+- Een bewerking geen verouderde `.conf`-bestanden kan aanmaken.
+- Conflicten door Hyprlands Lua-parser worden gemeld.
 
 ## Input
 
@@ -145,11 +142,11 @@ Uitwerking:
 
 Config:
 - `~/.config/quickshell/settings/settings.json`
-- `~/.config/hypr/conf.d/73-scroll-settings.conf`
-- Later `20-input.conf` of een aparte settings override.
+- `~/.config/hypr/lua/input-overrides.lua`
+- Later eventueel een aparte Lua-settingsmodule.
 
 Werkt als:
-- Waarden direct via `hyprctl keyword` toegepast worden.
+- Waarden via de Hyprland Lua-configuratie toegepast worden.
 - Settings na herstart identiek terugkomen.
 - Grenzen voorkomen dat scroll onbruikbaar snel of traag wordt.
 
