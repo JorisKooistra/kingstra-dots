@@ -549,15 +549,17 @@ Item {
                         Behavior on scale { NumberAnimation { duration: 800; easing.type: Easing.OutElastic; easing.overshoot: 1.2 } }
 
                         Rectangle {
+                            // The plinth is static; only the disc and label rotate.
+                            // That separation makes it read as a turntable instead of
+                            // an album cover with a circular mask.
                             id: recordFace
                             anchors.fill: parent
                             radius: root.vinylMode ? width / 2 : root.s(20)
-                            color: root.surface1
+                            color: root.surface0
                             border.width: root.s(4)
                             border.color: root.musicData.status === "Playing" ? root.mauve : root.overlay0
                             Behavior on border.color { ColorAnimation { duration: 500 } }
 
-                            // Glow Effect surrounding the thumbnail
                             Rectangle {
                                 z: -1
                                 anchors.centerIn: parent
@@ -565,81 +567,130 @@ Item {
                                 height: parent.height + root.s(20)
                                 radius: root.vinylMode ? width / 2 : root.s(24)
                                 color: root.mauve
-                                opacity: root.musicData.status === "Playing" ? 0.5 : 0.0
+                                opacity: root.musicData.status === "Playing" ? 0.34 : 0.0
                                 Behavior on opacity { NumberAnimation { duration: 500 } }
                                 layer.enabled: true
-                                layer.effect: MultiEffect {
-                                    blurEnabled: true
-                                    blurMax: 32
-                                    blur: 1.0
-                                }
+                                layer.effect: MultiEffect { blurEnabled: true; blurMax: 32; blur: 1.0 }
+                            }
+
+                            // Fixed platter lip: it stays put while the disc spins.
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: root.s(6)
+                                radius: width / 2
+                                color: Qt.rgba(root.base.r, root.base.g, root.base.b, 0.92)
+                                border.width: root.s(1)
+                                border.color: Qt.rgba(root.overlay2.r, root.overlay2.g, root.overlay2.b, 0.50)
                             }
 
                             Item {
+                                id: spinningVinyl
                                 anchors.fill: parent
-                                anchors.margins: root.s(4)
-                                Image {
-                                    id: artImg
-                                    anchors.fill: parent
-                                    source: root.musicData.artUrl ? "file://" + root.musicData.artUrl : ""
-                                    fillMode: Image.PreserveAspectCrop
-                                    visible: false 
-                                }
-                                Rectangle {
-                                    id: maskRect
-                                    anchors.fill: parent
-                                    radius: root.vinylMode ? width / 2 : root.s(18)
-                                    visible: false
-                                    layer.enabled: true 
-                                }
-                                MultiEffect {
-                                    anchors.fill: parent
-                                    source: artImg
-                                    maskEnabled: true
-                                    maskSource: maskRect
-                                    opacity: artImg.status === Image.Ready ? 1.0 : 0.0
-                                    Behavior on opacity { NumberAnimation { duration: 800 } }
-                                }
-                                
-                                // The cover stays the visual anchor. The palette only gives
-                                // it a light wash; a heavy mauve veil made every record look
-                                // like the same themed asset.
+                                anchors.margins: root.s(11)
+                                rotation: 0
+
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: root.vinylMode ? width / 2 : root.s(18)
-                                    color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.08)
-                                    opacity: artImg.status === Image.Ready ? 1.0 : 0.0
-                                    Behavior on opacity { NumberAnimation { duration: 800 } }
+                                    radius: width / 2
+                                    color: Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.98)
+                                    border.width: root.s(1)
+                                    border.color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.12)
                                 }
 
+                                // Fine concentric grooves make the disc feel physical even
+                                // when album art is unavailable.
                                 Repeater {
-                                    model: 5
+                                    model: 9
                                     Rectangle {
                                         required property int index
-                                        visible: root.vinylMode
                                         anchors.centerIn: parent
-                                        width: Math.max(root.s(48), parent.width - root.s(18 + index * 24))
+                                        width: Math.max(root.s(44), parent.width - root.s(10 + index * 15))
                                         height: width
                                         radius: width / 2
                                         color: "transparent"
                                         border.width: 1
-                                        border.color: Qt.rgba(root.overlay2.r, root.overlay2.g, root.overlay2.b, 0.16)
+                                        border.color: Qt.rgba(root.overlay2.r, root.overlay2.g, root.overlay2.b,
+                                            index % 2 === 0 ? 0.20 : 0.11)
                                     }
                                 }
 
+                                // A small radial label keeps the track's artwork personal,
+                                // while the surrounding disc remains unmistakably vinyl.
                                 Rectangle {
-                                    visible: root.vinylMode
-                                    width: root.s(40); height: root.s(40)
-                                    radius: root.s(20); color: "#000000"
-                                    opacity: 0.8; anchors.centerIn: parent
+                                    id: recordLabel
+                                    anchors.centerIn: parent
+                                    width: parent.width * 0.34
+                                    height: width
+                                    radius: width / 2
+                                    color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.42)
+                                    border.width: root.s(1)
+                                    border.color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.30)
+
+                                    Image {
+                                        id: labelArt
+                                        anchors.fill: parent
+                                        source: root.musicData.artUrl ? "file://" + root.musicData.artUrl : ""
+                                        fillMode: Image.PreserveAspectCrop
+                                        visible: false
+                                    }
+                                    Rectangle {
+                                        id: labelMask
+                                        anchors.fill: parent
+                                        radius: width / 2
+                                        visible: false
+                                        layer.enabled: true
+                                    }
+                                    MultiEffect {
+                                        anchors.fill: parent
+                                        source: labelArt
+                                        maskEnabled: true
+                                        maskSource: labelMask
+                                        opacity: labelArt.status === Image.Ready ? 0.82 : 0.0
+                                        Behavior on opacity { NumberAnimation { duration: 500 } }
+                                    }
+                                    Text {
+                                        anchors.centerIn: parent
+                                        visible: labelArt.status !== Image.Ready
+                                        text: "SIDE A"
+                                        font.family: "JetBrains Mono"
+                                        font.pixelSize: root.s(8)
+                                        font.bold: true
+                                        color: root.text
+                                    }
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: root.s(11)
+                                        height: width
+                                        radius: width / 2
+                                        color: root.base
+                                        border.width: 1
+                                        border.color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.22)
+                                    }
                                 }
-                            }
-                            
-                            NumberAnimation on rotation {
-                                from: 0; to: 360; duration: 8000
-                                loops: Animation.Infinite
-                                running: root.vinylMode
-                                paused: root.musicData.status !== "Playing"
+
+                                // Subtle moving sheen: enough motion to suggest lacquer,
+                                // not a bright effect competing with the artwork.
+                                Rectangle {
+                                    width: parent.width * 0.16
+                                    height: parent.height * 0.72
+                                    radius: width / 2
+                                    x: parent.width * 0.20
+                                    y: parent.height * 0.10
+                                    rotation: -28
+                                    gradient: Gradient {
+                                        orientation: Gradient.Horizontal
+                                        GradientStop { position: 0.0; color: "transparent" }
+                                        GradientStop { position: 0.5; color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.11) }
+                                        GradientStop { position: 1.0; color: "transparent" }
+                                    }
+                                }
+
+                                NumberAnimation on rotation {
+                                    from: 0; to: 360; duration: 8000
+                                    loops: Animation.Infinite
+                                    running: root.vinylMode
+                                    paused: root.musicData.status !== "Playing"
+                                }
                             }
                         }
 
@@ -656,6 +707,20 @@ Item {
                                 height: root.s(96)
                                 x: parent.width - width - root.s(4)
                                 y: root.s(5)
+
+                                readonly property real trackProgress: {
+                                    let value = Number(root.musicData.percent);
+                                    return isNaN(value) ? 0.0 : Math.max(0.0, Math.min(1.0, value / 100.0));
+                                }
+                                readonly property bool tracking: root.musicData.status !== "Stopped"
+                                    && root.musicData.status !== "Offline"
+                                    && Number(root.musicData.length) > 0
+                                // The geometry is tuned to trace the record from outer to
+                                // inner grooves. A pause preserves the current location;
+                                // only an absent track returns the arm to its rest.
+                                readonly property real trackingAngle: tracking
+                                    ? 14 + trackProgress * 22
+                                    : 7
 
                                 // Small, weighted pivot. It gives the arm a
                                 // believable origin without competing with the art.
@@ -688,10 +753,9 @@ Item {
                                     x: parent.width - root.s(16)
                                     y: root.s(15)
                                     transformOrigin: Item.Top
-                                    // Qt's positive rotation travels from this top pivot
-                                    // into the record (negative sent the stylus outward).
-                                    rotation: root.musicData.status === "Playing" ? 36 : 10
-                                    Behavior on rotation { NumberAnimation { duration: 700; easing.type: Easing.OutCubic } }
+                                    // Positive rotation travels inward over the record.
+                                    rotation: tonearm.trackingAngle
+                                    Behavior on rotation { NumberAnimation { duration: 520; easing.type: Easing.OutCubic } }
                                     color: root.overlay2
 
                                     Rectangle {
