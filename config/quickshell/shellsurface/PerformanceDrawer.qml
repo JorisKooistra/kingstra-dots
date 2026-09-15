@@ -15,10 +15,24 @@ Item {
     property string cpuTemperature: "--"
     property string gpuTemperature: "--"
     property string fps: "--"
+    property string powerProfile: "balanced"
+    property string uptime: "--"
 
     function clampPercent(value) {
         let parsed = parseInt(value);
         return isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
+    }
+
+    function profileLabel(profile) {
+        if (profile === "performance") return "Performance";
+        if (profile === "power-saver") return "Energiezuinig";
+        return "Balanced";
+    }
+
+    function profileAccent(profile) {
+        if (profile === "performance") return mocha.red;
+        if (profile === "power-saver") return mocha.green;
+        return mocha.accent1;
     }
 
     function refresh() {
@@ -50,7 +64,9 @@ Item {
             "if [ -z \"$gput\" ]; then gput=$(cat /sys/class/drm/card*/device/hwmon/hwmon*/temp1_input 2>/dev/null | head -1 | awk 'NF{printf \"%.0f\", $1/1000}'); fi; " +
             "cput=$(sensors 2>/dev/null | awk '/^(Core 0|Tdie|Package id 0|temp1):/ {gsub(/[^0-9.]/,\" \",$2); if($2+0>0){printf \"%.0f\",$2; exit}}'); " +
             "if [ -z \"$cput\" ]; then cput=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null | awk 'NF{printf \"%.0f\", $1/1000}'); fi; " +
-            "printf '%s|%s|%s|%s|%s\\n' \"${cpu:-0}\" \"${ram:-0}\" \"${gpu:-0}\" \"${cput:---}\" \"${gput:---}\""
+            "profile=$(powerprofilesctl get 2>/dev/null || echo balanced); " +
+            "up=$(awk '{h=int($1/3600); m=int(($1%3600)/60); printf \"%dh %02dm\",h,m}' /proc/uptime 2>/dev/null || echo --); " +
+            "printf '%s|%s|%s|%s|%s|%s|%s\\n' \"${cpu:-0}\" \"${ram:-0}\" \"${gpu:-0}\" \"${cput:---}\" \"${gput:---}\" \"${profile:-balanced}\" \"${up:---}\""
         ]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -61,6 +77,8 @@ Item {
                 root.gpuPercent = root.clampPercent(parts[2]);
                 root.cpuTemperature = parts[3] === "" || parts[3] === "--" ? "--" : parts[3] + " C";
                 root.gpuTemperature = parts[4] === "" || parts[4] === "--" ? "--" : parts[4] + " C";
+                root.powerProfile = parts.length > 5 && parts[5] !== "" ? parts[5] : "balanced";
+                root.uptime = parts.length > 6 && parts[6] !== "" ? parts[6] : "--";
             }
         }
     }
@@ -79,6 +97,37 @@ Item {
         anchors.fill: parent
         anchors.margins: 22
         spacing: 14
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 1
+                Text { text: "Systeem"; font.family: ThemeConfig.displayFont; font.pixelSize: 17; font.weight: Font.Black; color: mocha.text }
+                Text { text: "Actief sinds " + root.uptime; font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0 }
+            }
+
+            Rectangle {
+                readonly property color accent: root.profileAccent(root.powerProfile)
+                Layout.preferredHeight: 26
+                Layout.preferredWidth: profileText.implicitWidth + 18
+                radius: height / 2
+                color: Qt.rgba(accent.r, accent.g, accent.b, 0.16)
+                border.width: 1
+                border.color: Qt.rgba(accent.r, accent.g, accent.b, 0.46)
+                Text {
+                    id: profileText
+                    anchors.centerIn: parent
+                    text: root.profileLabel(root.powerProfile)
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                    color: parent.accent
+                }
+            }
+        }
 
         MetricRow { label: "CPU"; value: root.cpuPercent + "%"; detail: root.cpuTemperature; fraction: root.cpuPercent / 100.0; accent: mocha.accent1 }
         MetricRow { label: "RAM"; value: root.ramPercent + "%"; detail: "geheugen"; fraction: root.ramPercent / 100.0; accent: mocha.accent3 }
