@@ -3617,7 +3617,7 @@ Item {
 
                                 Text {
                                     Layout.fillWidth: true
-                                    text: "Dit scherm draagt de volledige schermomlijsting. De andere schermen houden alleen de compacte rail, zodat er geen kapotte framehoeken kunnen ontstaan."
+                                    text: "Dit scherm is het stabiele anker voor de uitgebreide rail. Alle schermen houden dezelfde gesloten, afgeronde omlijsting; zo blijven de hoeken consistent."
                                     font.family: root.uiFontFamily
                                     font.pixelSize: root.s(11)
                                     color: root.subtext0
@@ -3627,7 +3627,7 @@ Item {
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: root.s(10)
-                                    Text { text: "Volledige chrome"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.text }
+                                    Text { text: "Hoofd-rail"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.text }
                                     ThemedComboBox {
                                         id: primaryDisplayCombo
                                         Layout.fillWidth: true

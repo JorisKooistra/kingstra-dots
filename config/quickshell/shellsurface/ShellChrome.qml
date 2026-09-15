@@ -344,10 +344,11 @@ Item {
     property string activeMode: "office"
     readonly property bool secondaryScreen: !primaryScreen
     readonly property bool gamingMinimal: activeMode === "gaming" && !railHover.hovered
-    // Nevenmonitoren krijgen expres géén gedeeltelijk frame: dat liet de SDF
-    // in de hoeken half zichtbaar en gaf precies de kapotte hoekbogen. Alleen
-    // het hoofdscherm bezit de volledige gesloten omlijsting.
-    readonly property bool frameEnabled: cornersActive && primaryScreen
+    // De omlijsting is altijd gesloten. Een frame op nevenmonitoren weghalen
+    // maakte hun buitenhoeken vierkant; hem half transparant maken leverde
+    // juist dubbele/kapotte boogjes op. Daarom krijgt elk scherm dezelfde
+    // complete SDF-contour, zonder opacity-mismatch.
+    readonly property bool frameEnabled: cornersActive
     readonly property real chromePresence: gamingMinimal ? 0.76 : 1.0
     readonly property real railModulePresence: secondaryScreen
         ? (railHover.hovered ? 1.0 : 0.78) : (gamingMinimal ? 0.72 : 1.0)
