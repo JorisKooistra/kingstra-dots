@@ -601,11 +601,13 @@ Item {
                                     Behavior on opacity { NumberAnimation { duration: 800 } }
                                 }
                                 
-                                // NEW: Dimmed slightly by tinting with the primary mauve accent, as requested
+                                // The cover stays the visual anchor. The palette only gives
+                                // it a light wash; a heavy mauve veil made every record look
+                                // like the same themed asset.
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: root.vinylMode ? width / 2 : root.s(18)
-                                    color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.2)
+                                    color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.08)
                                     opacity: artImg.status === Image.Ready ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 800 } }
                                 }
@@ -641,59 +643,84 @@ Item {
                             }
                         }
 
-                        // De arm draait niet met de plaat mee en maakt de
-                        // functie als vinyl direct leesbaar.
+                        // De arm draait niet met de plaat mee. Hij bestaat uit
+                        // losse, schaalbare delen in plaats van één verticaal
+                        // blok: pivot → arm → cartridge → stylus.
                         Item {
                             visible: root.vinylMode
                             anchors.fill: parent
                             z: 3
                             Item {
                                 id: tonearm
-                                width: root.s(82)
-                                height: root.s(98)
-                                x: parent.width - width - root.s(10)
-                                y: root.s(10)
-                                transformOrigin: Item.TopRight
-                                rotation: root.musicData.status === "Playing" ? 24 : 3
-                                Behavior on rotation { NumberAnimation { duration: 700; easing.type: Easing.OutCubic } }
+                                width: root.s(94)
+                                height: root.s(96)
+                                x: parent.width - width - root.s(4)
+                                y: root.s(5)
 
-                                // Slanke, matte arm met één accentrand. De
-                                // oude massieve gele staaf hoorde niet bij de
-                                // rest van het door Matugen afgeleide thema.
+                                // Small, weighted pivot. It gives the arm a
+                                // believable origin without competing with the art.
                                 Rectangle {
-                                    width: root.s(5)
-                                    height: root.s(76)
-                                    radius: width / 2
-                                    x: parent.width - root.s(18)
-                                    y: root.s(13)
-                                    color: root.overlay2
-                                    Rectangle {
-                                        anchors.horizontalCenter: parent.horizontalCenter
-                                        width: root.s(1)
-                                        height: parent.height - root.s(8)
-                                        radius: width / 2
-                                        color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.86)
-                                    }
-                                }
-                                Rectangle {
-                                    width: root.s(19)
-                                    height: root.s(8)
-                                    radius: root.s(3)
-                                    x: parent.width - root.s(25)
-                                    y: root.s(81)
-                                    color: root.surface2
-                                    border.width: 1
-                                    border.color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.64)
-                                }
-                                Rectangle {
-                                    width: root.s(15)
+                                    width: root.s(18)
                                     height: width
                                     radius: width / 2
-                                    x: parent.width - root.s(23)
-                                    y: root.s(5)
+                                    x: parent.width - width - root.s(5)
+                                    y: root.s(4)
                                     color: root.surface0
-                                    border.width: root.s(2)
-                                    border.color: root.mauve
+                                    border.width: root.s(1)
+                                    border.color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.72)
+
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: root.s(6)
+                                        height: width
+                                        radius: width / 2
+                                        color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.92)
+                                    }
+                                }
+
+                                // The arm hinges at its top and lands diagonally
+                                // over the record. Only its angle changes on play.
+                                Rectangle {
+                                    id: arm
+                                    width: root.s(4)
+                                    height: root.s(73)
+                                    radius: width / 2
+                                    x: parent.width - root.s(16)
+                                    y: root.s(15)
+                                    transformOrigin: Item.Top
+                                    rotation: root.musicData.status === "Playing" ? -36 : -10
+                                    Behavior on rotation { NumberAnimation { duration: 700; easing.type: Easing.OutCubic } }
+                                    color: root.overlay2
+
+                                    Rectangle {
+                                        width: root.s(1)
+                                        height: parent.height - root.s(5)
+                                        x: root.s(1)
+                                        y: root.s(2)
+                                        radius: width / 2
+                                        color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.80)
+                                    }
+
+                                    // A restrained cartridge and tiny stylus at the tip.
+                                    Rectangle {
+                                        width: root.s(13)
+                                        height: root.s(7)
+                                        radius: root.s(2)
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        anchors.bottom: parent.bottom
+                                        anchors.bottomMargin: root.s(-2)
+                                        color: root.surface2
+                                        border.width: 1
+                                        border.color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.56)
+
+                                        Rectangle {
+                                            width: root.s(1)
+                                            height: root.s(6)
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                            anchors.top: parent.bottom
+                                            color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.84)
+                                        }
+                                    }
                                 }
                             }
                         }
