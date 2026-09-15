@@ -32,8 +32,11 @@ Item {
         root.isTouchscreen = touch;
         root.touchscreenCount = count;
         root.source = String(data.source || "none");
-        root.uiScale = root.clamp(parseNum(data.ui_scale, touch ? 1.10 : 1.0), 1.0, 1.35);
-        root.windowScale = root.clamp(parseNum(data.window_scale, touch ? 1.08 : 1.0), 1.0, 1.30);
+        // A missing or older touch profile must not silently enlarge text and
+        // windows. Visual density follows the monitor; touch only affects
+        // hit/drag behaviour where appropriate.
+        root.uiScale = root.clamp(parseNum(data.ui_scale, 1.0), 1.0, 1.35);
+        root.windowScale = root.clamp(parseNum(data.window_scale, 1.0), 1.0, 1.30);
         root.hitTargetScale = root.clamp(parseNum(data.hit_target_scale, touch ? 1.22 : 1.0), 1.0, 1.6);
         root.scrollDragScale = root.clamp(parseNum(data.scroll_drag_scale, touch ? 1.20 : 1.0), 1.0, 2.0);
     }
