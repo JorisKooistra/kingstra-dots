@@ -69,9 +69,12 @@ _phase15_validate_commands() {
 
 _phase15_validate_configs() {
     # Hyprland
-    validate_file "$HOME/.config/hypr/hyprland.lua"                    "hyprland.lua"
-    validate_file "$HOME/.config/hypr/lua/config.lua"                  "hypr/lua/config.lua"
-    validate_file "$HOME/.config/hypr/lua/colors.lua"                  "hypr/lua/colors.lua"
+    validate_lua_file "$HOME/.config/hypr/hyprland.lua" "hyprland.lua"
+    local lua_file
+    for lua_file in "$HOME"/.config/hypr/lua/*.lua; do
+        [[ -e "$lua_file" || -L "$lua_file" ]] || continue
+        validate_lua_file "$lua_file" "hypr/lua/${lua_file##*/}"
+    done
     validate_file "$HOME/.config/hypr/scripts/fingerprint-first-run.sh" "hypr/scripts/fingerprint-first-run.sh"
     validate_file "$HOME/.config/hypr/scripts/hardware-switches.sh"    "hypr/scripts/hardware-switches.sh"
     validate_file "$HOME/.config/hypr/scripts/lock.sh"                 "hypr/scripts/lock.sh"

@@ -191,10 +191,10 @@ _phase03_validate() {
     validate_cmd hypridle
     validate_cmd grim
     validate_cmd slurp
-    validate_file "$HOME/.config/hypr/hyprland.lua" "~/.config/hypr/hyprland.lua"
+    validate_lua_file "$HOME/.config/hypr/hyprland.lua" "~/.config/hypr/hyprland.lua"
     validate_dir  "$HOME/.config/hypr/lua"           "~/.config/hypr/lua/"
-    validate_file "$HOME/.config/hypr/lua/config.lua"    "lua/config.lua"
-    validate_file "$HOME/.config/hypr/lua/autostart.lua"  "lua/autostart.lua"
+    validate_lua_file "$HOME/.config/hypr/lua/config.lua"    "lua/config.lua"
+    validate_lua_file "$HOME/.config/hypr/lua/autostart.lua"  "lua/autostart.lua"
     validate_file "$HOME/.config/hypr/scripts/fingerprint-first-run.sh" "fingerprint-first-run.sh"
     validate_file "$HOME/.config/hypr/scripts/hardware-switches.sh" "hardware-switches.sh"
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"       "lid-lock.sh"

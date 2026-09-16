@@ -28,7 +28,7 @@ phase_run() {
     _phase14_fingerprint_setup
 
     log_step "Fase 14 valideren..."
-    validate_file "$HOME/.config/hypr/lua/hardware.lua" "lua/hardware.lua"
+    validate_lua_file "$HOME/.config/hypr/lua/hardware.lua" "lua/hardware.lua"
     validate_report
 
     log_ok "Fase 14 voltooid — Hardware-aanpassingen toegepast."
@@ -38,7 +38,7 @@ phase_run() {
 # ---------------------------------------------------------------------------
 
 _phase14_write_hardware_lua() {
-    local dest="$HOME/.config/hypr/lua/hardware.lua"
+    local dest="${1:-$HOME/.config/hypr/lua/hardware.lua}"
 
     if "${DRY_RUN:-false}"; then
         log_dry "lua/hardware.lua zou worden gegenereerd"
@@ -52,13 +52,19 @@ _phase14_write_hardware_lua() {
 
     ensure_dir "$(dirname "$dest")"
 
+    local tmp_file
+    if ! tmp_file="$(mktemp "${dest}.tmp.XXXXXX")"; then
+        log_error "Kon geen tijdelijk hardware-configbestand aanmaken"
+        return 1
+    fi
+
     # Bouw de config op
-    {
-        echo "# ============================================================================="
-        echo "# hardware.lua — Automatisch gegenereerd door fase 14"
-        echo "# Gegenereerd op: $(date '+%Y-%m-%d %H:%M')"
-        echo "# GPU: ${DETECT_GPU:-unknown} | Laptop: ${DETECT_IS_LAPTOP:-false} | Touchpad: ${DETECT_HAS_TOUCHPAD:-false} | Touchscreen: ${DETECT_HAS_TOUCHSCREEN:-false} | Tablet mode: ${ENABLE_TABLET_MODE:-false}"
-        echo "# ============================================================================="
+    if ! {
+        echo "-- ============================================================================="
+        echo "-- hardware.lua — Automatisch gegenereerd door fase 14"
+        echo "-- Gegenereerd op: $(date '+%Y-%m-%d %H:%M')"
+        echo "-- GPU: ${DETECT_GPU:-unknown} | Laptop: ${DETECT_IS_LAPTOP:-false} | Touchpad: ${DETECT_HAS_TOUCHPAD:-false} | Touchscreen: ${DETECT_HAS_TOUCHSCREEN:-false} | Tablet mode: ${ENABLE_TABLET_MODE:-false}"
+        echo "-- ============================================================================="
         echo ""
 
         echo "return {"
@@ -67,9 +73,9 @@ _phase14_write_hardware_lua() {
         # GPU-omgevingsvariabelen
         case "${DETECT_GPU:-unknown}" in
             nvidia)
-                echo "# ---------------------------------------------------------------------------"
-                echo "# Nvidia GPU — vereiste omgevingsvariabelen"
-                echo "# ---------------------------------------------------------------------------"
+                echo "-- ---------------------------------------------------------------------------"
+                echo "-- Nvidia GPU — vereiste omgevingsvariabelen"
+                echo "-- ---------------------------------------------------------------------------"
                 echo '        hl.env("LIBVA_DRIVER_NAME", "nvidia")'
                 echo '        hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")'
                 echo '        hl.env("NVD_BACKEND", "direct")'
@@ -80,21 +86,21 @@ _phase14_write_hardware_lua() {
                 echo ""
                 ;;
             amd)
-                echo "# ---------------------------------------------------------------------------"
-                echo "# AMD GPU — VA-API driver"
-                echo "# ---------------------------------------------------------------------------"
+                echo "-- ---------------------------------------------------------------------------"
+                echo "-- AMD GPU — VA-API driver"
+                echo "-- ---------------------------------------------------------------------------"
                 echo '        hl.env("LIBVA_DRIVER_NAME", "radeonsi")'
                 echo ""
                 ;;
             intel)
-                echo "# ---------------------------------------------------------------------------"
-                echo "# Intel GPU — VA-API driver"
-                echo "# ---------------------------------------------------------------------------"
+                echo "-- ---------------------------------------------------------------------------"
+                echo "-- Intel GPU — VA-API driver"
+                echo "-- ---------------------------------------------------------------------------"
                 echo '        hl.env("LIBVA_DRIVER_NAME", "iHD")'
                 echo ""
                 ;;
             *)
-                echo "# Geen specifieke GPU-env vars nodig"
+                echo "-- Geen specifieke GPU-env vars nodig"
                 echo ""
                 ;;
         esac
@@ -102,28 +108,28 @@ _phase14_write_hardware_lua() {
         # Touchpad
         if [[ "${DETECT_HAS_TOUCHPAD:-false}" == "true" ]]; then
             local natural="${TOUCHPAD_NATURAL_SCROLL:-true}"
-            echo "# ---------------------------------------------------------------------------"
-            echo "# Touchpad-instellingen (laptop)"
-            echo "# ---------------------------------------------------------------------------"
+            echo "-- ---------------------------------------------------------------------------"
+            echo "-- Touchpad-instellingen (laptop)"
+            echo "-- ---------------------------------------------------------------------------"
             echo "        hl.config({ input = { touchpad = { natural_scroll = $natural, scroll_factor = 0.45, tap_to_click = true, tap_and_drag = true, disable_while_typing = true, drag_lock = false, clickfinger_behavior = false } } })"
             echo ""
         fi
 
         # Laptop: extra animatie-snelheid (batterijbesparing)
         if [[ "${DETECT_IS_LAPTOP:-false}" == "true" ]]; then
-            echo "# ---------------------------------------------------------------------------"
-            echo "# Laptop — lichtere decoraties (batterijbesparing)"
-            echo "# ---------------------------------------------------------------------------"
+            echo "-- ---------------------------------------------------------------------------"
+            echo "-- Laptop — lichtere decoraties (batterijbesparing)"
+            echo "-- ---------------------------------------------------------------------------"
             echo '        hl.config({ decoration = { blur = { passes = 2, size = 6 } } })'
             echo ""
         fi
 
         if [[ "${ENABLE_TABLET_MODE:-false}" == "true" ]]; then
-            echo "# ---------------------------------------------------------------------------"
-            echo "# Tablet mode — 2-in-1 / touchscreen laptop"
-            echo "# ---------------------------------------------------------------------------"
-            echo "# Automatisch via de hardware tablet-mode switch. De extra keybind is een"
-            echo "# fallback voor touch-laptops die geen switch-event aan Hyprland doorgeven."
+            echo "-- ---------------------------------------------------------------------------"
+            echo "-- Tablet mode — 2-in-1 / touchscreen laptop"
+            echo "-- ---------------------------------------------------------------------------"
+            echo "-- Automatisch via de hardware tablet-mode switch. De extra keybind is een"
+            echo "-- fallback voor touch-laptops die geen switch-event aan Hyprland doorgeven."
             echo '        hl.bind("switch:on:Tablet Mode Switch", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh on"), { locked = true })'
             echo '        hl.bind("switch:off:Tablet Mode Switch", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh off"), { locked = true })'
             echo '        hl.bind("switch:on:Tablet Mode", hl.dsp.exec_cmd("~/.config/hypr/scripts/tablet-mode.sh on"), { locked = true })'
@@ -136,7 +142,25 @@ _phase14_write_hardware_lua() {
 
         echo "    end,"
         echo "}"
-    } > "$dest"
+    } > "$tmp_file"; then
+        log_error "Kon tijdelijke hardware-config niet schrijven: $tmp_file"
+        rm -f -- "$tmp_file"
+        return 1
+    fi
+
+    local syntax_error=""
+    if ! syntax_error="$(lua_file_syntax_check "$tmp_file" 2>&1)"; then
+        log_error "Gegenereerde hardware-config bevat ongeldige Lua; actieve config blijft behouden"
+        [[ -n "$syntax_error" ]] && log_error "  $syntax_error"
+        rm -f -- "$tmp_file"
+        return 1
+    fi
+
+    if ! mv -- "$tmp_file" "$dest"; then
+        log_error "Kon gevalideerde hardware-config niet activeren: $dest"
+        rm -f -- "$tmp_file"
+        return 1
+    fi
 
     log_ok "hardware.lua gegenereerd: $dest"
 }

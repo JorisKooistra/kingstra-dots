@@ -36,6 +36,57 @@ validate_file() {
     fi
 }
 
+# Geef alleen de exitstatus en parseruitvoer terug; callers bepalen zelf hoe
+# een fout wordt gelogd of afgehandeld.
+lua_file_syntax_check() {
+    local file="$1"
+
+    if has_cmd luac; then
+        luac -p "$file"
+        return $?
+    elif has_cmd lua; then
+        KINGSTRA_VALIDATE_LUA_FILE="$file" lua -e '
+            local path = os.getenv("KINGSTRA_VALIDATE_LUA_FILE")
+            local chunk, err = loadfile(path)
+            if not chunk then
+                io.stderr:write(err, "\n")
+                os.exit(1)
+            end
+        '
+        return $?
+    fi
+
+    printf 'luac/lua ontbreekt; Lua-syntaxcheck niet mogelijk\n' >&2
+    return 127
+}
+
+# Controleer of een Lua-bestand bestaat en syntactisch geldig is.
+validate_lua_file() {
+    local file="$1"
+    local label="${2:-$file}"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Lua-syntaxcheck overgeslagen (dry-run): $label"
+        return 0
+    fi
+
+    if [[ ! -f "$file" && ! -L "$file" ]]; then
+        log_error "Ontbreekt: $label"
+        (( VALIDATE_ERRORS++ )) || true
+        return 0
+    fi
+
+    local output=""
+    if output="$(lua_file_syntax_check "$file" 2>&1)"; then
+        log_ok "Geldige Lua: $label"
+        return 0
+    fi
+
+    log_error "Ongeldige Lua: $label"
+    [[ -n "$output" ]] && log_error "  $output"
+    (( VALIDATE_ERRORS++ )) || true
+}
+
 # Controleer of een map bestaat (overgeslagen in dry-run)
 validate_dir() {
     local dir="$1"
