@@ -79,6 +79,7 @@ Item {
 
     // Top Orb Active State Links
     property string activeId: ""
+    property string activeMachineName: ""
     property string activeName: "No Device"
     property string activeDesc: ""
     property int activeVol: 0
@@ -107,7 +108,10 @@ Item {
         let total = 0;
         for (let i = 0; i < model.count; i++) {
             let row = model.get(i);
-            total += (activeTab !== "apps" && row.is_default) ? 60 : 100;
+            let ports = [];
+            try { ports = JSON.parse(row.portsJson || "[]"); } catch (e) {}
+            let routeCard = activeTab === "outputs" && row.is_default && ports.length > 0;
+            total += routeCard ? 112 : ((activeTab !== "apps" && row.is_default) ? 60 : 100);
             if (i > 0) total += 12;
         }
         return total;
@@ -156,12 +160,22 @@ Item {
 
     function updateHeroData() {
         let targetModel = (window.activeTab === "inputs") ? inputsModel : outputsModel;
+        if (targetModel.count === 0) {
+            window.activeId = "";
+            window.activeMachineName = "";
+            window.activeName = window.activeTab === "inputs" ? "Geen invoer actief" : "Geen uitvoer actief";
+            window.activeDesc = window.activeTab === "inputs" ? "Sluit een microfoon aan" : "Controleer PipeWire";
+            window.activeVol = 0;
+            window.activeMute = false;
+            return;
+        }
         
         let foundDefault = false;
         for (let i = 0; i < targetModel.count; i++) {
             let d = targetModel.get(i);
             if (d.is_default) {
                 window.activeId = d.id;
+                window.activeMachineName = d.name;
                 window.activeName = d.description;
                 window.activeDesc = d.subtitle;
                 window.activeIcon = d.icon;
@@ -178,6 +192,7 @@ Item {
         if (!foundDefault && targetModel.count > 0) {
             let d = targetModel.get(0);
             window.activeId = d.id;
+            window.activeMachineName = d.name;
             window.activeName = d.description;
             window.activeDesc = d.subtitle;
             window.activeIcon = d.icon;
@@ -208,7 +223,9 @@ Item {
             let obj = {
                 id: d.id, name: d.name, description: d.description,
                 subtitle: d.subtitle || d.name, kind: d.kind || "audio",
-                volume: d.volume, mute: d.mute, is_default: d.is_default, icon: d.icon
+                volume: d.volume, mute: d.mute, is_default: d.is_default, icon: d.icon,
+                state: d.state || "idle", target: d.target || "", corked: !!d.corked,
+                portsJson: JSON.stringify(d.ports || [])
             };
 
             if (foundIdx === -1) {
@@ -534,7 +551,9 @@ Item {
                                     Layout.fillWidth: true; elide: Text.ElideRight
                                     font.family: window.uiFontFamily; font.pixelSize: 13; font.letterSpacing: window.themedLetterSpacing
                                     color: window.subtext0
-                                    text: window.activeTab === "apps" ? "Per-app volume" : window.activeDesc
+                                    text: window.activeTab === "apps"
+                                        ? "Masteruitgang · " + window.activeDesc
+                                        : (window.activeDesc + (window.activeId !== "" ? " · standaard" : ""))
                                 }
                             }
 
@@ -600,6 +619,141 @@ Item {
                                             masterCmdThrottle.targetPct = pct;
                                             if (!masterCmdThrottle.running) masterCmdThrottle.start();
                                         }
+                                    }
+                                }
+
+                                Rectangle {
+                                    Layout.preferredWidth: 30
+                                    Layout.preferredHeight: 24
+                                    radius: 8
+                                    color: masterMuteMa.containsMouse
+                                        ? Qt.rgba(window.tabColor.r, window.tabColor.g, window.tabColor.b, 0.22)
+                                        : window.glassFill
+                                    border.width: 1
+                                    border.color: window.popupBorderColor
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: window.activeMute ? "󰖁" : "󰕾"
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: 14
+                                        color: window.activeMute ? window.red : window.text
+                                    }
+                                    MouseArea {
+                                        id: masterMuteMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            let type = window.activeTab === "inputs" ? "source" : "sink";
+                                            Quickshell.execDetached(["bash", window.scriptsDir + "/audio_control.sh", "toggle-mute", type, window.activeId]);
+                                            audioPoller.running = true;
+                                        }
+                                    }
+                                    Rectangle {
+                                        anchors.bottom: parent.top
+                                        anchors.bottomMargin: 5
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: muteTip.implicitWidth + 12
+                                        height: 20
+                                        radius: 6
+                                        visible: masterMuteMa.containsMouse
+                                        z: 20
+                                        color: window.mantle
+                                        border.width: 1
+                                        border.color: window.popupBorderColor
+                                        Text { id: muteTip; anchors.centerIn: parent; text: window.activeMute ? "Geluid aan" : "Dempen"; font.family: window.uiFontFamily; font.pixelSize: 9; color: window.text }
+                                    }
+                                }
+
+                                Rectangle {
+                                    Layout.preferredWidth: 30
+                                    Layout.preferredHeight: 24
+                                    radius: 8
+                                    visible: window.activeTab !== "inputs" && window.activeMachineName !== ""
+                                    color: testSoundMa.containsMouse
+                                        ? Qt.rgba(window.tabColor.r, window.tabColor.g, window.tabColor.b, 0.22)
+                                        : window.glassFill
+                                    border.width: 1
+                                    border.color: window.popupBorderColor
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "󰋋"
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: 14
+                                        color: window.text
+                                    }
+                                    MouseArea {
+                                        id: testSoundMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: Quickshell.execDetached([
+                                            "bash", window.scriptsDir + "/audio_control.sh", "test-sound",
+                                            "sink", window.activeMachineName
+                                        ])
+                                    }
+                                    Rectangle {
+                                        anchors.bottom: parent.top
+                                        anchors.bottomMargin: 5
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: testTip.implicitWidth + 12
+                                        height: 20
+                                        radius: 6
+                                        visible: testSoundMa.containsMouse
+                                        z: 20
+                                        color: window.mantle
+                                        border.width: 1
+                                        border.color: window.popupBorderColor
+                                        Text { id: testTip; anchors.centerIn: parent; text: "Testtoon"; font.family: window.uiFontFamily; font.pixelSize: 9; color: window.text }
+                                    }
+                                }
+
+                                Rectangle {
+                                    Layout.preferredWidth: 30
+                                    Layout.preferredHeight: 24
+                                    radius: 8
+                                    visible: window.activeTab !== "inputs" && window.activeMachineName !== ""
+                                    color: repairRouteMa.containsMouse
+                                        ? Qt.rgba(window.green.r, window.green.g, window.green.b, 0.22)
+                                        : window.glassFill
+                                    border.width: 1
+                                    border.color: window.popupBorderColor
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "󰓦"
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: 14
+                                        color: window.green
+                                    }
+                                    MouseArea {
+                                        id: repairRouteMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Quickshell.execDetached([
+                                                "bash", window.scriptsDir + "/audio_control.sh", "set-default",
+                                                "sink", window.activeId, window.activeMachineName
+                                            ]);
+                                            audioPoller.running = true;
+                                        }
+                                    }
+                                    Rectangle {
+                                        anchors.bottom: parent.top
+                                        anchors.bottomMargin: 5
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: repairTip.implicitWidth + 12
+                                        height: 20
+                                        radius: 6
+                                        visible: repairRouteMa.containsMouse
+                                        z: 20
+                                        color: window.mantle
+                                        border.width: 1
+                                        border.color: window.popupBorderColor
+                                        Text { id: repairTip; anchors.centerIn: parent; text: "Route herstellen"; font.family: window.uiFontFamily; font.pixelSize: 9; color: window.green }
                                     }
                                 }
                             }
@@ -780,8 +934,8 @@ Item {
                                     font.family: window.monoFontFamily
                                     font.pixelSize: 14
                                     color: window.overlay0
-                                    text: window.activeTab === "outputs" ? "No available outputs"
-                                        : (window.activeTab === "inputs" ? "No available inputs" : "No active streams")
+                                    text: window.activeTab === "outputs" ? "Geen uitvoer gevonden"
+                                        : (window.activeTab === "inputs" ? "Geen invoer actief" : "Geen apps met geluid")
                                 }
                             }
                         }
@@ -789,6 +943,11 @@ Item {
                         delegate: Rectangle {
                             id: delegateRoot
                             width: contentList.width
+                            property string nodeName: model.name
+                            property var routePorts: {
+                                try { return JSON.parse(model.portsJson || "[]"); }
+                                catch (e) { return []; }
+                            }
                             
                             // Staggered Intro Animation Timer
                             property bool isLoaded: false
@@ -806,7 +965,8 @@ Item {
 
                             // Dynamic Height: The active hero element collapses its bottom slider row
                             property bool isActiveNode: model.is_default && window.activeTab !== "apps"
-                            height: isActiveNode ? 60 : 100
+                            property bool showsRoutes: isActiveNode && window.activeTab === "outputs" && routePorts.length > 0
+                            height: showsRoutes ? 112 : (isActiveNode ? 60 : 100)
                             Behavior on height { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
 
                             radius: 14
@@ -828,7 +988,10 @@ Item {
                                 onClicked: {
                                     if (window.activeTab !== "apps" && !model.is_default) {
                                         let type = window.activeTab === "outputs" ? "sink" : "source";
-                                        Quickshell.execDetached(["bash", window.scriptsDir + "/audio_control.sh", "set-default", type, model.name]);
+                                        Quickshell.execDetached([
+                                            "bash", window.scriptsDir + "/audio_control.sh", "set-default",
+                                            type, model.id, model.name
+                                        ]);
                                         audioPoller.running = true;
                                     }
                                 }
@@ -873,7 +1036,63 @@ Item {
                                             Layout.fillWidth: true; elide: Text.ElideRight
                                             font.family: "JetBrains Mono"; font.pixelSize: 11
                                             color: isActiveNode ? Qt.darker(window.crust, 1.5) : window.subtext0
-                                            text: isActiveNode ? "● Active · " + model.subtitle : model.subtitle
+                                            text: isActiveNode
+                                                ? "● Actief · " + model.subtitle
+                                                : (window.activeTab === "apps" && model.target !== ""
+                                                    ? model.target + (model.corked ? " · gepauzeerd" : " · speelt")
+                                                    : model.subtitle)
+                                        }
+                                    }
+                                }
+
+                                Flow {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: visible ? 28 : 0
+                                    spacing: 6
+                                    visible: delegateRoot.showsRoutes
+
+                                    Repeater {
+                                        model: delegateRoot.routePorts
+
+                                        delegate: Rectangle {
+                                            id: portChip
+                                            required property var modelData
+                                            readonly property bool unavailable: String(modelData.availability) === "not available"
+                                            width: portLabel.implicitWidth + 22
+                                            height: 26
+                                            radius: 8
+                                            opacity: unavailable && !modelData.active ? 0.42 : 1.0
+                                            color: modelData.active
+                                                ? Qt.rgba(window.crust.r, window.crust.g, window.crust.b, 0.88)
+                                                : Qt.rgba(window.crust.r, window.crust.g, window.crust.b, portMa.containsMouse ? 0.30 : 0.16)
+                                            border.width: 1
+                                            border.color: Qt.rgba(window.crust.r, window.crust.g, window.crust.b, modelData.active ? 0.92 : 0.38)
+
+                                            Text {
+                                                id: portLabel
+                                                anchors.centerIn: parent
+                                                text: (portChip.modelData.active ? "● " : "")
+                                                    + String(portChip.modelData.description || "Poort")
+                                                font.family: window.monoFontFamily
+                                                font.pixelSize: 10
+                                                font.weight: portChip.modelData.active ? Font.Bold : Font.Medium
+                                                color: window.crust
+                                            }
+
+                                            MouseArea {
+                                                id: portMa
+                                                anchors.fill: parent
+                                                enabled: !portChip.unavailable
+                                                hoverEnabled: enabled
+                                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                                onClicked: {
+                                                    Quickshell.execDetached([
+                                                        "bash", window.scriptsDir + "/audio_control.sh", "set-port",
+                                                        "sink", delegateRoot.nodeName, String(portChip.modelData.name)
+                                                    ]);
+                                                    audioPoller.running = true;
+                                                }
+                                            }
                                         }
                                     }
                                 }

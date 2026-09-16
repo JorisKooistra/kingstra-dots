@@ -1034,8 +1034,8 @@ Item {
         audioRefreshDelay.restart();
     }
 
-    function setDefaultAudioDevice(type, name) {
-        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/volume/audio_control.sh", "set-default", type, String(name)]);
+    function setDefaultAudioDevice(type, id, name) {
+        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/volume/audio_control.sh", "set-default", type, String(id), String(name)]);
         audioRefreshDelay.restart();
     }
 
@@ -3900,7 +3900,7 @@ Item {
                                     audioId: String(modelData.id || "")
                                     allowSetDefault: true
                                     isDefault: !!modelData.is_default
-                                    onSetDefaultRequested: root.setDefaultAudioDevice("sink", modelData.name)
+                                    onSetDefaultRequested: root.setDefaultAudioDevice("sink", modelData.id, modelData.name)
                                 }
                             }
                         }
@@ -3924,7 +3924,7 @@ Item {
                                     audioId: String(modelData.id || "")
                                     allowSetDefault: true
                                     isDefault: !!modelData.is_default
-                                    onSetDefaultRequested: root.setDefaultAudioDevice("source", modelData.name)
+                                    onSetDefaultRequested: root.setDefaultAudioDevice("source", modelData.id, modelData.name)
                                 }
                             }
                         }

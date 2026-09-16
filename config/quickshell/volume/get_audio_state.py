@@ -66,6 +66,38 @@ def active_port(node: dict[str, Any]) -> dict[str, Any]:
     return ports[0] if ports and isinstance(ports[0], dict) else {}
 
 
+def friendly_port_name(value: Any) -> str:
+    name = valid_string(value)
+    translations = {
+        "Line Out": "Lijnuitgang",
+        "Speakers": "Speakers",
+        "Headphones": "Koptelefoon",
+        "HDMI / DisplayPort": "HDMI / DisplayPort",
+    }
+    return translations.get(name, name)
+
+
+def route_ports(node: dict[str, Any]) -> list[dict[str, Any]]:
+    active = node.get("active_port", "")
+    if isinstance(active, dict):
+        active = active.get("name", "")
+    result: list[dict[str, Any]] = []
+    for port in node.get("ports", []):
+        if not isinstance(port, dict):
+            continue
+        availability = valid_string(port.get("availability"), "unknown")
+        result.append(
+            {
+                "name": valid_string(port.get("name")),
+                "description": friendly_port_name(port.get("description")),
+                "type": valid_string(port.get("type")),
+                "availability": availability,
+                "active": valid_string(port.get("name")) == valid_string(active),
+            }
+        )
+    return result
+
+
 def unavailable(node: dict[str, Any]) -> bool:
     ports = [port for port in node.get("ports", []) if isinstance(port, dict)]
     return bool(ports) and all(port.get("availability") == "not available" for port in ports)
@@ -106,11 +138,11 @@ def friendly_device(node: dict[str, Any], node_type: str) -> tuple[str, str, str
     props = node.get("properties", {})
     port = active_port(node)
     kind = device_kind(node, node_type)
-    route = valid_string(
+    route = friendly_port_name(valid_string(
         port.get("description"),
         props.get("device.profile.description"),
         props.get("node.nick"),
-    )
+    ))
     product = valid_string(props.get("device.product.name"), props.get("device.description"))
     raw = valid_string(node.get("description"), product, node.get("name"), "Audio device")
 
@@ -127,10 +159,18 @@ def friendly_device(node: dict[str, Any], node_type: str) -> tuple[str, str, str
     if kind == "display":
         return route or "Display audio", "HDMI / DisplayPort", kind
 
+    if props.get("device.form_factor") == "internal" or "built-in audio" in raw.lower():
+        return "Interne audio", route or "Analoge uitgang", "speaker"
+
     return raw, route or str(node.get("name", "")), kind
 
 
-def format_node(node: dict[str, Any], node_type: str, is_default: bool = False) -> dict[str, Any]:
+def format_node(
+    node: dict[str, Any],
+    node_type: str,
+    is_default: bool = False,
+    sink_names: dict[int, str] | None = None,
+) -> dict[str, Any]:
     props = node.get("properties", {})
     if node_type == "app":
         title = valid_string(
@@ -145,8 +185,10 @@ def format_node(node: dict[str, Any], node_type: str, is_default: bool = False) 
             "Audio stream",
         )
         kind = "application"
+        target = (sink_names or {}).get(int(node.get("sink", -1)), "Onbekende uitgang")
     else:
         title, subtitle, kind = friendly_device(node, node_type)
+        target = ""
 
     return {
         "id": str(node.get("index", "")),
@@ -159,6 +201,10 @@ def format_node(node: dict[str, Any], node_type: str, is_default: bool = False) 
         "is_default": bool(is_default),
         "icon": valid_string(props.get("application.icon_name"), props.get("device.icon_name"), "audio-card"),
         "kind": kind,
+        "state": valid_string(node.get("state"), "idle").lower(),
+        "ports": route_ports(node) if node_type != "app" else [],
+        "target": target,
+        "corked": bool(node.get("corked", False)),
     }
 
 
@@ -220,6 +266,12 @@ def get_data() -> dict[str, Any]:
     default_sink = info.get("default_sink_name", "") if isinstance(info, dict) else ""
     default_source = info.get("default_source_name", "") if isinstance(info, dict) else ""
 
+    sink_names = {
+        int(node.get("index", -1)): friendly_device(node, "sink")[0]
+        for node in sinks
+        if isinstance(node, dict)
+    }
+
     outputs = [
         format_node(node, "sink", node.get("name") == default_sink)
         for node in sinks
@@ -231,7 +283,7 @@ def get_data() -> dict[str, Any]:
         if isinstance(node, dict) and not is_monitor_source(node) and not unavailable(node)
     ]
     apps = [
-        format_node(node, "app")
+        format_node(node, "app", sink_names=sink_names)
         for node in sink_inputs
         if isinstance(node, dict)
         and node.get("properties", {}).get("application.id") != "org.PulseAudio.pavucontrol"
@@ -244,6 +296,8 @@ def get_data() -> dict[str, Any]:
         "outputs": outputs,
         "inputs": inputs,
         "apps": apps,
+        "default_sink": default_sink,
+        "active_streams": sum(1 for node in sink_inputs if isinstance(node, dict) and not node.get("corked", False)),
         "hardware_notice": usb_audio_notice(),
     }
 
