@@ -32,12 +32,12 @@ run_hyprctl() {
     fi
 
     if command -v timeout >/dev/null 2>&1; then
-        output="$(timeout --kill-after=1 4 hyprctl dispatch dpms "$action" 2>&1)" || {
+        output="$(timeout --kill-after=1 4 "$HOME/.config/hypr/scripts/hypr-dispatch.sh" dpms "$action" 2>&1)" || {
             log "DPMS ${action} mislukt: ${output:-geen uitvoer}"
             return 1
         }
     else
-        output="$(hyprctl dispatch dpms "$action" 2>&1)" || {
+        output="$("$HOME/.config/hypr/scripts/hypr-dispatch.sh" dpms "$action" 2>&1)" || {
             log "DPMS ${action} mislukt: ${output:-geen uitvoer}"
             return 1
         }

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -u
 
+DISPATCH="$(dirname "${BASH_SOURCE[0]}")/hypr-dispatch.sh"
+
 RAW_DIR="${1:-}"
 case "$RAW_DIR" in
     l|left)  DIR_SHORT="l"; DIR_LONG="left"  ;;
@@ -14,24 +16,22 @@ esac
 
 # Fast path when JSON helpers are not available.
 if ! command -v jq >/dev/null 2>&1; then
-    hyprctl dispatch movefocus "$DIR_SHORT" >/dev/null 2>&1 || true
-    hyprctl dispatch focusmonitor "$DIR_SHORT" >/dev/null 2>&1 || \
-        hyprctl dispatch focusmonitor "$DIR_LONG" >/dev/null 2>&1 || true
+    "$DISPATCH" movefocus "$DIR_SHORT" >/dev/null 2>&1 || true
+    "$DISPATCH" focusmonitor "$DIR_LONG" >/dev/null 2>&1 || true
     exit 0
 fi
 
 OLD_ADDR="$(hyprctl activewindow -j 2>/dev/null | jq -r '.address // ""')"
 OLD_MON="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused==true) | .name' | head -n1)"
 
-hyprctl dispatch movefocus "$DIR_SHORT" >/dev/null 2>&1 || true
+"$DISPATCH" movefocus "$DIR_SHORT" >/dev/null 2>&1 || true
 
 NEW_ADDR="$(hyprctl activewindow -j 2>/dev/null | jq -r '.address // ""')"
 if [[ -n "$OLD_ADDR" && -n "$NEW_ADDR" && "$NEW_ADDR" != "$OLD_ADDR" ]]; then
     exit 0
 fi
 
-hyprctl dispatch focusmonitor "$DIR_SHORT" >/dev/null 2>&1 || \
-    hyprctl dispatch focusmonitor "$DIR_LONG" >/dev/null 2>&1 || true
+"$DISPATCH" focusmonitor "$DIR_LONG" >/dev/null 2>&1 || true
 
 NEW_MON="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused==true) | .name' | head -n1)"
 
@@ -46,7 +46,7 @@ fi
 
 TARGET_ADDR="$(hyprctl clients -j 2>/dev/null | jq -r --argjson ws "$WS_ID" '.[] | select((.workspace.id == $ws) and (.hidden != true)) | .address' | head -n1)"
 if [[ -n "$TARGET_ADDR" && "$TARGET_ADDR" != "null" ]]; then
-    hyprctl dispatch focuswindow "address:$TARGET_ADDR" >/dev/null 2>&1 || true
+    "$DISPATCH" focuswindow "address:$TARGET_ADDR" >/dev/null 2>&1 || true
 fi
 
 exit 0

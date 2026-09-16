@@ -206,7 +206,7 @@ Item {
                 icon: "󰍃"
                 label: "Uitloggen"
                 accent: mocha.peach
-                onTriggered: root.runAndClose("hyprctl dispatch exit")
+                onTriggered: root.runAndClose("\"$HOME/.config/hypr/scripts/hypr-dispatch.sh\" exit")
             }
             ActionRow {
                 icon: "󰑓"

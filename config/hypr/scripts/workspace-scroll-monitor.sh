@@ -6,6 +6,7 @@ direction="${2:-}"
 workspace_count="${3:-8}"
 repeat_count="${4:-1}"
 state_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/workspaces.lua"
+dispatch_cmd="$(dirname "${BASH_SOURCE[0]}")/hypr-dispatch.sh"
 
 if [[ -z "$direction" || "$direction" != "next" && "$direction" != "prev" ]]; then
     printf 'Usage: %s <monitor> <next|prev> [workspace-count] [repeat-count]\n' "$0" >&2
@@ -115,15 +116,14 @@ done
 printf 'close' > /tmp/qs_widget_state 2>/dev/null || true
 
 qs_addr="$(hyprctl clients -j 2>/dev/null | jq -r '.[] | select(.title == "qs-master") | .address' | head -n 1)"
-hide_qs_cmd=""
 if [[ -n "$qs_addr" && "$qs_addr" != "null" ]]; then
-    hide_qs_cmd="dispatch movetoworkspacesilent special:qs-hidden,address:$qs_addr ; dispatch setfloating address:$qs_addr ; "
+    "$dispatch_cmd" movetoworkspacesilent special:qs-hidden "address:$qs_addr" >/dev/null 2>&1 || true
+    "$dispatch_cmd" setfloating "address:$qs_addr" >/dev/null 2>&1 || true
 fi
 
 cursor_pos="$(hyprctl cursorpos 2>/dev/null || true)"
-restore_cursor_cmd=""
+"$dispatch_cmd" focusmonitor "$monitor_name" >/dev/null 2>&1
+"$dispatch_cmd" workspace "$target_ws" >/dev/null 2>&1
 if [[ "$cursor_pos" =~ ^[[:space:]]*(-?[0-9]+)[[:space:]]*,[[:space:]]*(-?[0-9]+)[[:space:]]*$ ]]; then
-    restore_cursor_cmd=" ; dispatch movecursor ${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
+    "$dispatch_cmd" movecursor "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" >/dev/null 2>&1 || true
 fi
-
-hyprctl --batch "${hide_qs_cmd}dispatch focusmonitor $monitor_name ; dispatch workspace $target_ws${restore_cursor_cmd}" >/dev/null 2>&1

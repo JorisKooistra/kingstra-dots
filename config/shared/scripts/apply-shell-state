@@ -629,10 +629,10 @@ if command -v spicetify &>/dev/null && [[ -f "$SPICETIFY_COLOR_INI" ]]; then
             _spotify_addr="$(hyprctl clients -j 2>/dev/null | jq -r 'first(.[] | select((.class // "" | ascii_downcase) == "spotify") | .address) // empty')"
 
             if [[ -n "$_spotify_addr" ]]; then
-                hyprctl dispatch focuswindow "address:$_spotify_addr" >/dev/null 2>&1 || true
+                "$HOME/.config/hypr/scripts/hypr-dispatch.sh" focuswindow "address:$_spotify_addr" >/dev/null 2>&1 || true
                 wtype -M ctrl -M shift r -m shift -m ctrl >/dev/null 2>&1 || true
                 if [[ -n "$_active_addr" ]]; then
-                    hyprctl dispatch focuswindow "address:$_active_addr" >/dev/null 2>&1 || true
+                    "$HOME/.config/hypr/scripts/hypr-dispatch.sh" focuswindow "address:$_active_addr" >/dev/null 2>&1 || true
                 fi
                 _log "Spotify UI live herladen (Ctrl+Shift+R)"
             fi

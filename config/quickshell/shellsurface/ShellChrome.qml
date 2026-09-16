@@ -334,7 +334,7 @@ Item {
     }
 
     function toggleSpecial(name) {
-        Quickshell.execDetached(["bash", "-lc", "hyprctl dispatch togglespecialworkspace " + name]);
+        Quickshell.execDetached(["bash", "-lc", "\"$HOME/.config/hypr/scripts/hypr-dispatch.sh\" togglespecialworkspace " + name]);
     }
 
     readonly property Item railHitRegion: railHitArea

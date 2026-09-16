@@ -52,7 +52,7 @@ fi
 # 3 — Hyprland DPMS herstellen (scherm kan uit zijn na resume)
 # ---------------------------------------------------------------------------
 if command -v hyprctl &>/dev/null; then
-    _run_timeout 4 hyprctl dispatch dpms on
+    _run_timeout 4 "$HOME/.config/hypr/scripts/hypr-dispatch.sh" dpms on
 fi
 
 # ---------------------------------------------------------------------------

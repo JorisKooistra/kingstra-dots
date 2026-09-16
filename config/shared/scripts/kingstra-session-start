@@ -80,7 +80,9 @@ prepare_wayland_environment() {
 
     export WAYLAND_DISPLAY="$wayland_socket"
     export XDG_SESSION_TYPE="wayland"
-    export QT_QPA_PLATFORM="wayland"
+    # Prefer native Wayland, but let Qt fall back to XWayland when an older
+    # toolkit lacks its Wayland platform plugin (for example PyQt5/Picard).
+    export QT_QPA_PLATFORM="wayland;xcb"
     return 0
 }
 

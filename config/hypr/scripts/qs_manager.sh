@@ -4,6 +4,7 @@
 # CONSTANTS & ARGUMENTS
 # -----------------------------------------------------------------------------
 QS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DISPATCH="$QS_DIR/hypr-dispatch.sh"
 BT_PID_FILE="$HOME/.cache/bt_scan_pid"
 BT_SCAN_LOG="$HOME/.cache/bt_scan.log"
 FOCUSTIME_DAEMON="$HOME/.config/quickshell/focustime/focus_daemon.py"
@@ -57,7 +58,7 @@ hide_widget_async() {
     if [[ -n "$prev_addr" && "$prev_addr" != "null" ]]; then
         (
             sleep 0.15
-            hyprctl dispatch focuswindow "address:$prev_addr" >/dev/null 2>&1
+            "$HOME/.config/hypr/scripts/hypr-dispatch.sh" focuswindow "address:$prev_addr" >/dev/null 2>&1
         ) &
     fi
 }
@@ -67,7 +68,7 @@ restore_focus() {
     if [[ -f "$PREV_FOCUS_FILE" ]]; then
         prev_addr=$(cat "$PREV_FOCUS_FILE")
         if [[ -n "$prev_addr" && "$prev_addr" != "null" ]]; then
-            hyprctl dispatch focuswindow "address:$prev_addr" >/dev/null 2>&1
+            "$HOME/.config/hypr/scripts/hypr-dispatch.sh" focuswindow "address:$prev_addr" >/dev/null 2>&1
         fi
         rm -f "$PREV_FOCUS_FILE"
     fi
@@ -84,7 +85,7 @@ qs_master_visible() {
 
 non_quickshell_client_filter='.title != "qs-master" and .class != "org.quickshell" and .initialClass != "org.quickshell"'
 
-workspace_cursor_dispatches() {
+workspace_cursor_restore() {
     local target_ws="$1"
     local monitor_line monitor_name monitor_x monitor_y monitor_w monitor_h cursor_x cursor_y
 
@@ -109,31 +110,24 @@ workspace_cursor_dispatches() {
     cursor_x=$((monitor_x + monitor_w / 2))
     cursor_y=$((monitor_y + monitor_h / 2))
 
-    printf 'dispatch focusmonitor %s ; dispatch movecursor %s %s' "$monitor_name" "$cursor_x" "$cursor_y"
+    "$DISPATCH" focusmonitor "$monitor_name" >/dev/null 2>&1 || true
+    "$DISPATCH" movecursor "$cursor_x" "$cursor_y" >/dev/null 2>&1 || true
 }
 
 dispatch_workspace_target() {
     local target_ws="$1"
     local move_opt="${2:-}"
-    local cmd target_addr cursor_dispatches batch_cmd
+    local cmd target_addr
 
     cmd="workspace $target_ws"
     [[ "$move_opt" == "move" ]] && cmd="movetoworkspace $target_ws"
 
     target_addr=$(hyprctl clients -j | jq -r ".[] | select(.workspace.id == $target_ws and $non_quickshell_client_filter) | .address" | head -n 1)
-    cursor_dispatches="$(workspace_cursor_dispatches "$target_ws")"
-
+    "$DISPATCH" $cmd >/dev/null 2>&1
     if [[ -n "$target_addr" && "$target_addr" != "null" ]]; then
-        batch_cmd="dispatch $cmd ; dispatch focuswindow address:$target_addr"
-    else
-        batch_cmd="dispatch $cmd"
+        "$DISPATCH" focuswindow "address:$target_addr" >/dev/null 2>&1 || true
     fi
-
-    if [[ -n "$cursor_dispatches" ]]; then
-        batch_cmd="$batch_cmd ; $cursor_dispatches"
-    fi
-
-    hyprctl --batch "$batch_cmd" >/dev/null 2>&1
+    workspace_cursor_restore "$target_ws"
 }
 
 # -----------------------------------------------------------------------------

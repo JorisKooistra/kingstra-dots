@@ -24,8 +24,8 @@ case "${1:-list}" in
         workspace="${3:-}"
         [[ "$address" =~ ^0x[[:xdigit:]]+$ ]] || exit 2
         [[ "$workspace" =~ ^[1-9][0-9]*$ ]] || exit 2
-        hyprctl dispatch workspace "$workspace" >/dev/null
-        hyprctl dispatch focuswindow "address:$address" >/dev/null
+        "$HOME/.config/hypr/scripts/hypr-dispatch.sh" workspace "$workspace" >/dev/null
+        "$HOME/.config/hypr/scripts/hypr-dispatch.sh" focuswindow "address:$address" >/dev/null
         ;;
     *)
         printf 'Gebruik: %s {list|focus ADDRESS WORKSPACE}\n' "${0##*/}" >&2

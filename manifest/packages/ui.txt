@@ -12,6 +12,7 @@ qt6-base
 qt6-declarative
 qt6-multimedia
 qt6-wayland
+qt5-wayland
 qt6-svg
 qt6-shadertools
 

@@ -616,7 +616,7 @@ Item {
                 "# Scherm uitschakelen via DPMS",
                 "listener {",
                 "    timeout   = " + safeScreenOff,
-                "    on-timeout = hyprctl dispatch dpms off",
+                "    on-timeout = bash ~/.config/hypr/scripts/hypr-dispatch.sh dpms off",
                 "    on-resume  = bash ~/.config/hypr/scripts/resume-display.sh --display-only",
                 "}",
                 ""

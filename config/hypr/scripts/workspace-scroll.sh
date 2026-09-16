@@ -4,6 +4,7 @@
 set -euo pipefail
 
 dir="${1:?Usage: workspace-scroll.sh next|prev}"
+dispatch_cmd="$(dirname "${BASH_SOURCE[0]}")/hypr-dispatch.sh"
 
 current="$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // 1')"
 [[ "$current" =~ ^[0-9]+$ ]] || current=1
@@ -19,4 +20,4 @@ else
     (( next < group_start )) && next=$group_end
 fi
 
-hyprctl dispatch workspace "$next"
+"$dispatch_cmd" workspace "$next"

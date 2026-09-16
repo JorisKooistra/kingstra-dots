@@ -121,7 +121,7 @@ write_config() {
             printf '%s\n' '# Scherm uitschakelen via DPMS'
             printf '%s\n' 'listener {'
             printf '    timeout   = %s\n' "$screen_off"
-            printf '%s\n' '    on-timeout = hyprctl dispatch dpms off'
+            printf '%s\n' '    on-timeout = bash ~/.config/hypr/scripts/hypr-dispatch.sh dpms off'
             printf '%s\n' '    on-resume  = bash ~/.config/hypr/scripts/resume-display.sh --display-only'
             printf '%s\n' '}'
             printf '\n'
@@ -155,7 +155,7 @@ main() {
 
     pkill -x hypridle >/dev/null 2>&1 || true
     if [[ -f "$IDLE_INHIBIT_STATE" ]]; then
-        hyprctl dispatch dpms on >/dev/null 2>&1 || true
+        "$HOME/.config/hypr/scripts/hypr-dispatch.sh" dpms on >/dev/null 2>&1 || true
         log "idle blokkering actief; hypridle niet gestart"
         return
     fi

@@ -3,6 +3,7 @@ set -euo pipefail
 
 dispatcher="${1:-}"
 target="${2:-}"
+dispatch_cmd="$(dirname "${BASH_SOURCE[0]}")/hypr-dispatch.sh"
 
 usage() {
     printf 'Usage: %s <dispatcher> <target>\n' "$0" >&2
@@ -14,7 +15,7 @@ if [[ -z "$dispatcher" || -z "$target" || "$dispatcher" == "-h" || "$dispatcher"
 fi
 
 if [[ "$target" == *"+"* || "$target" == *"-"* ]]; then
-    hyprctl dispatch "$dispatcher" "$target"
+    "$dispatch_cmd" "$dispatcher" "$target"
     exit 0
 fi
 
@@ -25,8 +26,8 @@ if [[ "$target" =~ ^[0-9]+$ ]]; then
     fi
 
     target_workspace=$(( ((current_workspace - 1) / 10) * 10 + target ))
-    hyprctl dispatch "$dispatcher" "$target_workspace"
+    "$dispatch_cmd" "$dispatcher" "$target_workspace"
     exit 0
 fi
 
-hyprctl dispatch "$dispatcher" "$target"
+"$dispatch_cmd" "$dispatcher" "$target"

@@ -77,6 +77,7 @@ _phase15_validate_configs() {
     done
     validate_file "$HOME/.config/hypr/scripts/fingerprint-first-run.sh" "hypr/scripts/fingerprint-first-run.sh"
     validate_file "$HOME/.config/hypr/scripts/hardware-switches.sh"    "hypr/scripts/hardware-switches.sh"
+    validate_file "$HOME/.config/hypr/scripts/hypr-dispatch.sh"       "hypr/scripts/hypr-dispatch.sh"
     validate_file "$HOME/.config/hypr/scripts/lock.sh"                 "hypr/scripts/lock.sh"
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"             "hypr/scripts/lid-lock.sh"
     validate_file "$HOME/.config/hypr/scripts/tablet-mode.sh"          "hypr/scripts/tablet-mode.sh"

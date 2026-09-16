@@ -28,11 +28,11 @@ handle_focus() {
 
     if [[ "$class" =~ $CLASS_PATTERN ]]; then
         if ! $guard_active; then
-            hyprctl dispatch submap passthrough >/dev/null 2>&1
+            "$HOME/.config/hypr/scripts/hypr-dispatch.sh" submap passthrough >/dev/null 2>&1
             guard_active=true
         fi
     elif $guard_active; then
-        hyprctl dispatch submap reset >/dev/null 2>&1
+        "$HOME/.config/hypr/scripts/hypr-dispatch.sh" submap reset >/dev/null 2>&1
         guard_active=false
     fi
 }

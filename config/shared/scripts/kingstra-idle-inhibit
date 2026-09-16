@@ -75,7 +75,7 @@ start_hypridle() {
 enable_inhibit() {
     mkdir -p "$RUNTIME_DIR"
     printf 'on\n' > "$STATE_FILE"
-    hyprctl dispatch dpms on >/dev/null 2>&1 || true
+    "$HOME/.config/hypr/scripts/hypr-dispatch.sh" dpms on >/dev/null 2>&1 || true
     pkill -x hypridle >/dev/null 2>&1 || true
     start_inhibitor_process
     printf 'on\n'
@@ -84,7 +84,7 @@ enable_inhibit() {
 disable_inhibit() {
     stop_inhibitor_process
     rm -f "$STATE_FILE"
-    hyprctl dispatch dpms on >/dev/null 2>&1 || true
+    "$HOME/.config/hypr/scripts/hypr-dispatch.sh" dpms on >/dev/null 2>&1 || true
     start_hypridle
     printf 'off\n'
 }

@@ -11,6 +11,7 @@ is_floating="${7:-false}"
 source_workspace="${8:-}"
 target_address="${9:-}"
 drop_side="${10:-}"
+dispatch_cmd="$(dirname "${BASH_SOURCE[0]}")/hypr-dispatch.sh"
 
 is_int() {
     [[ "${1:-}" =~ ^-?[0-9]+$ ]]
@@ -29,10 +30,10 @@ old_y="${old_cursor##*,}"
 old_x="${old_x//[[:space:]]/}"
 old_y="${old_y//[[:space:]]/}"
 
-batch="dispatch movecursor $cursor_x $cursor_y"
-batch+=" ; dispatch movetoworkspacesilent special:overview-drop,address:$address"
-batch+=" ; dispatch workspace $target_workspace"
-batch+=" ; dispatch movecursor $cursor_x $cursor_y"
+"$dispatch_cmd" movecursor "$cursor_x" "$cursor_y" >/dev/null
+"$dispatch_cmd" movetoworkspacesilent special:overview-drop "address:$address" >/dev/null
+"$dispatch_cmd" workspace "$target_workspace" >/dev/null
+"$dispatch_cmd" movecursor "$cursor_x" "$cursor_y" >/dev/null
 
 case "$drop_side" in
     left|right|top|bottom)
@@ -43,21 +44,19 @@ case "$drop_side" in
                 top) preselect_dir="u" ;;
                 bottom) preselect_dir="d" ;;
             esac
-            batch+=" ; dispatch focuswindow address:$target_address"
-            batch+=" ; dispatch layoutmsg preselect $preselect_dir"
+            "$dispatch_cmd" focuswindow "address:$target_address" >/dev/null
+            "$dispatch_cmd" layoutmsg preselect "$preselect_dir" >/dev/null
         fi
         ;;
 esac
 
-batch+=" ; dispatch movetoworkspace $target_workspace,address:$address"
-batch+=" ; dispatch focuswindow address:$address"
+"$dispatch_cmd" movetoworkspace "$target_workspace" "address:$address" >/dev/null
+"$dispatch_cmd" focuswindow "address:$address" >/dev/null
 
 if [[ "$is_floating" == "true" ]] && is_int "$window_x" && is_int "$window_y"; then
-    batch+=" ; dispatch movewindowpixel exact $window_x $window_y,address:$address"
+    "$dispatch_cmd" movewindowpixel "$window_x" "$window_y" "address:$address" >/dev/null
 fi
 
 if is_int "$old_x" && is_int "$old_y"; then
-    batch+=" ; dispatch movecursor $old_x $old_y"
+    "$dispatch_cmd" movecursor "$old_x" "$old_y" >/dev/null
 fi
-
-hyprctl --batch "$batch" >/dev/null 2>&1 || true
