@@ -4,6 +4,7 @@ set -uo pipefail
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/quickshell"
 COUNT_SCRIPT="${HOME}/.config/quickshell/package_updates.sh"
 overall_exit=0
+DOTFILES_REPO=""
 
 section() {
     printf '\n%s\n' "──────────────────────────────────────────────"
@@ -42,6 +43,7 @@ update_dotfiles() {
         echo "Geen geïnstalleerde kingstra-dots git-repo gevonden; overgeslagen."
         return 0
     fi
+    DOTFILES_REPO="$repo"
 
     branch="$(git -C "$repo" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
     if [[ -z "$branch" ]]; then
@@ -85,6 +87,19 @@ update_dotfiles() {
     git -C "$repo" merge --ff-only "$upstream"
 }
 
+run_dotfiles_installer() {
+    local repo="$1"
+    local installer="$repo/install.sh"
+
+    if [[ ! -f "$installer" ]]; then
+        echo "Installer niet gevonden: $installer"
+        return 1
+    fi
+
+    echo "Kingstra installer uitvoeren voor pakketten, gegenereerde config en live reload..."
+    bash "$installer" --yes
+}
+
 echo "=============================================="
 echo " Kingstra Update Runner"
 echo " yay · Flatpak · kingstra-dots"
@@ -107,7 +122,20 @@ else
 fi
 
 section "Dotfiles"
-if ! update_dotfiles; then
+dotfiles_update_exit=0
+update_dotfiles || dotfiles_update_exit=$?
+
+# Een git pull alleen is niet genoeg: nieuwe pakketten, gegenereerde hardware-
+# config en live sessiewijzigingen worden pas door install.sh toegepast. Draai
+# de installer ook als de repo al actueel is, zodat een eerdere half-afgeronde
+# update zichzelf kan herstellen.
+if [[ -n "$DOTFILES_REPO" ]]; then
+    if ! run_dotfiles_installer "$DOTFILES_REPO"; then
+        overall_exit=1
+    fi
+fi
+
+if [[ $dotfiles_update_exit -ne 0 ]]; then
     overall_exit=1
 fi
 

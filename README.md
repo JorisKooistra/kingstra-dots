@@ -182,6 +182,11 @@ The bootstrap:
 - auto-installs `yay-bin` when no AUR helper is present;
 - starts the installer automatically.
 
+Updates started from the Quickshell settings also finish by running the full,
+idempotent installer. A repository pull by itself is not considered a completed
+update: package manifests, generated hardware/display Lua, validation and live
+session reloads are applied by `install.sh --yes` on every update run.
+
 **With options:**
 ```bash
 # Dry-run — see what would happen without installing anything

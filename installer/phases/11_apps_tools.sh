@@ -25,6 +25,8 @@ phase_run() {
     log_step "Media-tools installeren..."
     pacman_install playerctl
     pacman_install mpv                  # videospeler (ook voor yazi preview)
+    pacman_install picard               # MusicBrainz metadata-editor
+    pacman_install qt5-wayland          # Picard/PyQt5 Wayland-platformplugin
 
     log_step "Screenshot-toolchain installeren..."
     pacman_install grim
@@ -59,6 +61,8 @@ phase_run() {
     validate_cmd wl-copy
     validate_cmd wtype
     validate_cmd playerctl
+    validate_cmd picard
+    validate_file "/usr/lib/qt/plugins/platforms/libqwayland-generic.so" "Qt5 Wayland platformplugin"
     validate_cmd grim
     validate_cmd slurp
     validate_cmd yazi

@@ -60,6 +60,7 @@ _phase15_validate_commands() {
     validate_cmd grim
     validate_cmd slurp
     validate_cmd playerctl
+    validate_cmd picard
     validate_cmd btop
     validate_cmd fzf
     # Netwerk

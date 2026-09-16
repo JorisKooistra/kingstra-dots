@@ -43,6 +43,7 @@ wtype
 
 # Media
 playerctl
+picard
 
 # Mail
 thunderbird
