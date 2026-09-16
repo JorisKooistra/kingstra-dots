@@ -126,6 +126,10 @@ Item {
     readonly property color btAccent: window.mauve
 
     property string activeMode: "bt"
+    // Ethernet is statusinformatie; Wi-Fi en Bluetooth zijn de enige vormen
+    // die de brede radar en apparatenlijst nodig hebben.
+    readonly property int preferredPanelWidth: activeMode === "eth" ? window.s(450) : 0
+    readonly property int preferredPanelHeight: activeMode === "eth" ? window.s(380) : 0
     readonly property color activeColor: activeMode === "wifi" ? window.wifiAccent : window.btAccent
     // Calculate a subtle, pure one-color gradient rather than mixing two distinct palette colors
     readonly property color activeGradientSecondary: Qt.darker(window.activeColor, 1.25)

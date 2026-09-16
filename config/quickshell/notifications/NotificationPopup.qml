@@ -15,6 +15,11 @@ FocusScope {
     readonly property color cardColor: mocha.shellRaisedFill
     readonly property color cardHoverColor: mocha.shellHoverFill
     readonly property color subtleBorder: mocha.shellOutline
+    // Een leeg archief is een statuskaart, geen 620px-lange lade. Zodra er
+    // meldingen zijn, groeit de lijst per kaart en blijft hij daarna scrollen.
+    readonly property int preferredPanelHeight: NotificationService.count === 0
+        ? 210
+        : Math.min(620, 125 + NotificationService.count * 125)
 
     function closePanel() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);

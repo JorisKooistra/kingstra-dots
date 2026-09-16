@@ -15,6 +15,9 @@ Item {
     readonly property int panelRadius: Math.max(18, ThemeConfig.styleWidgetRadius + 6)
     readonly property int itemRadius: Math.max(12, Math.round(panelRadius * 0.62))
     readonly property int actionHeight: 48
+    // Vijf acties plus de idle-toggle passen precies in deze hoogte; de oude
+    // generieke 620px liet daaronder een leeg vlak achter.
+    readonly property int preferredPanelHeight: 456
     readonly property bool hasWifi: {
         var devs = Networking.devices.values;
         for (var i = 0; i < devs.length; i++) {

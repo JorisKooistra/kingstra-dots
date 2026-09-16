@@ -153,7 +153,20 @@ Item {
     readonly property int availableH: (hostWindow ? hostWindow.height : 1080)
         - stripTopH - stripBotH - borderW - gap * 2
 
+    // Een popup kan na het laden zelf een compacte maat opgeven. Dit is nodig
+    // voor een widget met twee inhoudsvormen (zoals Network: radar tegenover
+    // vier ethernetregels), zonder de shell aan een tijdelijk statebestand te
+    // koppelen. Ontbreekt zo'n property, dan blijft WindowRegistry de bron.
+    function contentPreferredSize(entryId, propertyName) {
+        let currentEntry = visualEntryId !== "" ? visualEntryId : sourceEntryId;
+        if (entryId !== currentEntry || !contentLoader.item) return 0;
+        let value = Number(contentLoader.item[propertyName]);
+        return isNaN(value) || value <= 0 ? 0 : Math.round(value);
+    }
+
     function panelWidth(entryId) {
+        let contentWidth = contentPreferredSize(entryId, "preferredPanelWidth");
+        if (contentWidth > 0) return Math.min(contentWidth, availableW);
         if (entryId === "launcher") return Math.min(680, availableW);
         if (entryId === "clipboard") return Math.min(680, availableW);
         if (entryId === "windows") return Math.min(620, availableW);
@@ -168,6 +181,8 @@ Item {
     }
 
     function panelHeight(entryId) {
+        let contentHeight = contentPreferredSize(entryId, "preferredPanelHeight");
+        if (contentHeight > 0) return Math.min(contentHeight, availableH);
         if (entryId === "launcher") return Math.min(610, availableH);
         if (entryId === "clipboard") return Math.min(570, availableH);
         // De atlas heeft vaak maar enkele regels. Een hoge vaste popup liet

@@ -91,6 +91,37 @@ Item {
     ListModel { id: outputsModel }
     ListModel { id: inputsModel }
     ListModel { id: appsModel }
+    // Laat de shellmaat opnieuw uitrekenen wanneer de gepollde modellen
+    // veranderen; ListModel.get() zelf geeft geen bruikbare binding door.
+    property int audioStateRevision: 0
+
+    function activeAudioModel() {
+        if (activeTab === "outputs") return outputsModel;
+        if (activeTab === "inputs") return inputsModel;
+        return appsModel;
+    }
+
+    function activeAudioListHeight() {
+        let model = activeAudioModel();
+        if (!model || model.count === 0) return 92;
+        let total = 0;
+        for (let i = 0; i < model.count; i++) {
+            let row = model.get(i);
+            total += (activeTab !== "apps" && row.is_default) ? 60 : 100;
+            if (i > 0) total += 12;
+        }
+        return total;
+    }
+
+    // Een enkel uitvoerapparaat heeft geen 580px-hoge lijst nodig. Meerdere
+    // apparaten of streams laten dit paneel gecontroleerd doorgroeien; boven
+    // de maximumhoogte werkt de bestaande ListView als scrollgebied.
+    readonly property int preferredPanelHeight: {
+        let revision = audioStateRevision;
+        let base = 210 + activeAudioListHeight();
+        if (activeTab === "outputs" && hardwareNoticeTitle !== "") base += 88;
+        return Math.min(580, Math.max(320, base));
+    }
 
     property var draggingNodes: ({})
     property bool draggingMaster: false
@@ -119,6 +150,7 @@ Item {
             window.hardwareNoticeTitle = notice.title || "";
             window.hardwareNoticeText = notice.message || "";
             updateHeroData();
+            window.audioStateRevision += 1;
         } catch(e) {}
     }
 

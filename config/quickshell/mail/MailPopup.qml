@@ -11,6 +11,11 @@ FocusScope {
     readonly property int pad: 16
     readonly property int itemRadius: Math.max(12, ThemeConfig.styleWidgetRadius)
     readonly property color subtleBorder: mocha.shellOutline
+    // De compacte lege-/korte inbox hoort niet de hoogte van vijf berichten
+    // vast te houden. Bij meer mail blijft de bestaande lijst gewoon scrollen.
+    readonly property int preferredPanelHeight: MailService.filteredRecent.length === 0
+        ? 220
+        : Math.min(560, 175 + MailService.filteredRecent.length * 75)
 
     function closePanel() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
