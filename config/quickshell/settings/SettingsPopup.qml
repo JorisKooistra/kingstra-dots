@@ -2048,11 +2048,11 @@ Item {
         };
         var json = JSON.stringify(payload, null, 4);
         var inputOverrides =
-            "# =============================================================================\n" +
-            "# input-overrides.lua — Settings-popup overrides\n" +
-            "# =============================================================================\n" +
-            "# Aangepast via de Settings-popup.\n" +
-            "# =============================================================================\n\n" +
+            "-- =============================================================================\n" +
+            "-- input-overrides.lua — Settings-popup overrides\n" +
+            "-- =============================================================================\n" +
+            "-- Aangepast via de Settings-popup.\n" +
+            "-- =============================================================================\n\n" +
             "return {\n" +
             "    apply = function()\n" +
             "        hl.config({\n" +
@@ -2070,7 +2070,12 @@ Item {
             "mkdir -p '" + shellSingleQuote(settingsDir) + "'",
             "mkdir -p '" + shellSingleQuote(configRoot + "/hypr/lua") + "'",
             "printf '%s' '" + shellSingleQuote(json) + "' > '" + shellSingleQuote(path) + "'",
-            "printf '%s' '" + shellSingleQuote(inputOverrides) + "' > '" + shellSingleQuote(inputOverridesPath) + "'",
+            "input_tmp=\"$(mktemp '" + shellSingleQuote(inputOverridesPath + ".tmp.XXXXXX") + "')\"",
+            "trap 'rm -f -- \"$input_tmp\"' EXIT",
+            "printf '%s' '" + shellSingleQuote(inputOverrides) + "' > \"$input_tmp\"",
+            "luac -p \"$input_tmp\"",
+            "mv -- \"$input_tmp\" '" + shellSingleQuote(inputOverridesPath) + "'",
+            "trap - EXIT",
             "hyprctl reload >/dev/null 2>&1 || true",
             "'" + shellSingleQuote(idleApplyScript) + "' >/dev/null 2>&1 || true"
         ].join(" && ");

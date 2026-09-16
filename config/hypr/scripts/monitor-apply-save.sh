@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-state_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/monitors-local.lua"
+state_file="${KINGSTRA_MONITOR_STATE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/monitors-local.lua}"
 
 notify() {
     if command -v notify-send >/dev/null 2>&1; then
@@ -96,17 +96,22 @@ tmp_file="$(mktemp "${state_file}.tmp.XXXXXX")"
 trap 'rm -f "$tmp_file"' EXIT
 
 {
-    printf '# =============================================================================\n'
-    printf '# monitors-local.lua - Lokale monitor-layout\n'
-    printf '# =============================================================================\n'
-    printf '# Gegenereerd door Super+O Monitor UI. Dit bestand is user-state en staat in .gitignore.\n'
-    printf '# =============================================================================\n\n'
+    printf '%s\n' '-- ============================================================================='
+    printf '%s\n' '-- monitors-local.lua - Lokale monitor-layout'
+    printf '%s\n' '-- ============================================================================='
+    printf '%s\n' '-- Gegenereerd door Super+O Monitor UI. Dit bestand is user-state en staat in .gitignore.'
+    printf '%s\n\n' '-- ============================================================================='
     printf 'return {\n    apply = function()\n'
     for lua_rule in "${lua_rules[@]}"; do
         printf '        %s\n' "$lua_rule"
     done
     printf '    end,\n}\n'
-} >> "$tmp_file"
+} > "$tmp_file"
+
+if ! luac -p "$tmp_file"; then
+    notify "Display Update" "Ongeldige Lua gegenereerd; bestaande monitorconfig blijft behouden"
+    exit 1
+fi
 
 mv "$tmp_file" "$state_file"
 trap - EXIT

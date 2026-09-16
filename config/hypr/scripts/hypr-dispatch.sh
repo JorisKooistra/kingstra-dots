@@ -101,4 +101,9 @@ case "$dispatcher" in
         ;;
 esac
 
+if [[ "${HYPR_DISPATCH_PRINT_ONLY:-false}" == "true" ]]; then
+    printf '%s\n' "$expression"
+    exit 0
+fi
+
 exec "${HYPRCTL_BIN:-hyprctl}" dispatch "$expression"

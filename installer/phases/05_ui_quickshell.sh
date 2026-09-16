@@ -89,6 +89,7 @@ _phase05_shell_running() {
 
 _phase05_validate() {
     validate_cmd quickshell
+    validate_file "/usr/lib/qt/plugins/platforms/libqwayland-generic.so" "Qt5 Wayland platformplugin"
     validate_file "$HOME/.config/quickshell/TopBar.qml"        "TopBar.qml"
     validate_file "$HOME/.config/quickshell/Main.qml"          "Main.qml"
     validate_file "$HOME/.config/quickshell/MatugenColors.qml" "MatugenColors.qml"

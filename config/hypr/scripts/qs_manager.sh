@@ -117,13 +117,14 @@ workspace_cursor_restore() {
 dispatch_workspace_target() {
     local target_ws="$1"
     local move_opt="${2:-}"
-    local cmd target_addr
-
-    cmd="workspace $target_ws"
-    [[ "$move_opt" == "move" ]] && cmd="movetoworkspace $target_ws"
+    local target_addr
 
     target_addr=$(hyprctl clients -j | jq -r ".[] | select(.workspace.id == $target_ws and $non_quickshell_client_filter) | .address" | head -n 1)
-    "$DISPATCH" $cmd >/dev/null 2>&1
+    if [[ "$move_opt" == "move" ]]; then
+        "$DISPATCH" movetoworkspace "$target_ws" >/dev/null 2>&1
+    else
+        "$DISPATCH" workspace "$target_ws" >/dev/null 2>&1
+    fi
     if [[ -n "$target_addr" && "$target_addr" != "null" ]]; then
         "$DISPATCH" focuswindow "address:$target_addr" >/dev/null 2>&1 || true
     fi

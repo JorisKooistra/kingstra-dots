@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-state_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/workspaces.lua"
+state_file="${KINGSTRA_WORKSPACE_STATE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/workspaces.lua}"
 workspace_count=10
 
 notify() {
@@ -87,12 +87,12 @@ save_assignments() {
     trap 'rm -f "$tmp_file"' EXIT
 
     {
-        printf '# =============================================================================\n'
-        printf '# workspaces.lua - Lokale workspace-monitor toewijzingen\n'
-        printf '# =============================================================================\n'
-        printf '# Gegenereerd door Settings > Display. Dit bestand is user-state en staat in .gitignore.\n'
-        printf '# Lege workspaces blijven vrij.\n'
-        printf '# =============================================================================\n\n'
+        printf '%s\n' '-- ============================================================================='
+        printf '%s\n' '-- workspaces.lua - Lokale workspace-monitor toewijzingen'
+        printf '%s\n' '-- ============================================================================='
+        printf '%s\n' '-- Gegenereerd door Settings > Display. Dit bestand is user-state en staat in .gitignore.'
+        printf '%s\n' '-- Lege workspaces blijven vrij.'
+        printf '%s\n\n' '-- ============================================================================='
         printf 'return {\n    apply = function()\n'
         for (( ws = 1; ws <= workspace_count; ws++ )); do
             monitor="${assignments[$ws]:-}"
@@ -106,7 +106,12 @@ save_assignments() {
             printf '        hl.workspace_rule({ workspace = "%s", monitor = "%s" })\n' "$ws" "$monitor"
         done
         printf '    end,\n}\n'
-    } >> "$tmp_file"
+    } > "$tmp_file"
+
+    if ! luac -p "$tmp_file"; then
+        notify "Display Update" "Ongeldige Lua gegenereerd; bestaande workspacetoewijzingen blijven behouden"
+        exit 1
+    fi
 
     mv "$tmp_file" "$state_file"
     trap - EXIT

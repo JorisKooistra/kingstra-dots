@@ -35,6 +35,10 @@ atomic_replace() {
     backup="$(mktemp "$bind_file.backup.XXXXXX")"
     cp -- "$bind_file" "$backup"
     "$@" >"$tmp"
+    if ! luac -p "$tmp"; then
+        rm -f -- "$tmp" "$backup"
+        die "Wijziging geweigerd: gegenereerde bindings zijn geen geldige Lua"
+    fi
     chmod --reference="$bind_file" "$tmp"
     mv "$tmp" "$bind_file"
     if ! hyprctl reload >/dev/null 2>&1; then
