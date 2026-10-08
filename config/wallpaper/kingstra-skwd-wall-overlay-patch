@@ -20,11 +20,21 @@ if [[ ! -f "$SRC_DIR/shell.qml" ]]; then
     exit 0
 fi
 
-rm -rf "$OVERLAY_DIR"
 mkdir -p "$(dirname "$OVERLAY_DIR")"
-cp -a "$SRC_DIR" "$OVERLAY_DIR"
+STAGING_DIR="$(mktemp -d "$(dirname "$OVERLAY_DIR")/.skwd-wall-overlay.XXXXXX")"
+BACKUP_DIR="${STAGING_DIR}.previous"
+_cleanup() {
+    rm -rf "$STAGING_DIR"
+    if [[ -e "$BACKUP_DIR" && ! -e "$OVERLAY_DIR" ]]; then
+        mv "$BACKUP_DIR" "$OVERLAY_DIR" || _warn "backup staat nog op $BACKUP_DIR"
+    elif [[ -e "$BACKUP_DIR" ]]; then
+        rm -rf "$BACKUP_DIR"
+    fi
+}
+trap _cleanup EXIT
+cp -a "$SRC_DIR/." "$STAGING_DIR/"
 
-python3 - "$OVERLAY_DIR" <<'PY'
+python3 - "$STAGING_DIR" <<'PY'
 from pathlib import Path
 import sys
 
@@ -32,7 +42,9 @@ root = Path(sys.argv[1])
 
 def patch(path, replacements):
     file_path = root / path
-    text = file_path.read_text()
+    # Current upstream embeds a literal NUL in a QML string. Escape it so the
+    # generated file remains valid for QML parsers without changing the value.
+    text = file_path.read_text().replace("\x00", r"\u0000")
     original = text
     for old, new in replacements:
         if old not in text:
@@ -43,8 +55,37 @@ def patch(path, replacements):
 
 patch("qml/wallpaper/WallpaperSelectorService.qml", [
     (
-        "  property var filteredModel: ListModel {}\n\n  signal modelUpdated()\n",
-        """  property var filteredModel: ListModel {}\n  property string currentWallpaperPath: \"\"\n  property string currentWallpaperName: \"\"\n\n  property var _currentWallpaperState: FileView {\n    path: service.cacheBaseDir + \"/last-wallpaper.json\"\n    preload: true\n    watchChanges: true\n    onLoaded: service._refreshCurrentWallpaperState()\n    onFileChanged: { reload(); service._refreshCurrentWallpaperState() }\n  }\n\n  function _basename(path) {\n    var value = String(path || \"\")\n    var slash = value.lastIndexOf(\"/\")\n    return slash >= 0 ? value.substring(slash + 1) : value\n  }\n\n  function _refreshCurrentWallpaperState() {\n    var text = \"\"\n    try { text = _currentWallpaperState.text().trim() } catch(e) { text = \"\" }\n    if (!text) return\n    try {\n      var state = JSON.parse(text)\n      currentWallpaperPath = state.path || \"\"\n      currentWallpaperName = state.we_id || state.name || _basename(currentWallpaperPath)\n    } catch(e) {}\n  }\n\n  signal modelUpdated()\n""",
+        "  property var filteredModel: ListModel {}\n  property string lastApplyError: \"\"\n",
+        """  property var filteredModel: ListModel {}
+  property string lastApplyError: ""
+  property string currentWallpaperPath: ""
+  property string currentWallpaperName: ""
+
+  property var _currentWallpaperState: FileView {
+    path: service.cacheBaseDir + "/last-wallpaper.json"
+    preload: true
+    watchChanges: true
+    onLoaded: service._refreshCurrentWallpaperState()
+    onFileChanged: { reload(); service._refreshCurrentWallpaperState() }
+  }
+
+  function _basename(path) {
+    var value = String(path || "")
+    var slash = value.lastIndexOf("/")
+    return slash >= 0 ? value.substring(slash + 1) : value
+  }
+
+  function _refreshCurrentWallpaperState() {
+    var text = ""
+    try { text = _currentWallpaperState.text().trim() } catch(e) { text = "" }
+    if (!text) return
+    try {
+      var state = JSON.parse(text)
+      currentWallpaperPath = state.path || ""
+      currentWallpaperName = state.we_id || state.name || _basename(currentWallpaperPath)
+    } catch(e) {}
+  }
+""",
     ),
     (
         "  function commitFilteredModel() {\n    filteredModel.clear()\n    if (_pendingItems.length > 0) filteredModel.append(_pendingItems)\n    _pendingItems = []\n    modelUpdated()\n  }\n",
@@ -61,10 +102,6 @@ patch("qml/wallpaper/WallpaperSelectorService.qml", [
     (
         "      items.push({\n        name: item.name, type: item.type, thumb: item.thumb, path: item.path,\n        weId: item.weId, videoFile: item.videoFile, mtime: item.mtime,\n        hue: hue, saturation: saturation,\n        richness: (item.richness != null ? item.richness : 0),\n        applyCount: (item.applyCount != null ? item.applyCount : 0),\n        placeholder: !!item.placeholder\n      })\n",
         """      var dedupeKey = item.weId || item.path || item.thumb || item.name\n      if (seenFiltered[dedupeKey]) continue\n      seenFiltered[dedupeKey] = true\n\n      items.push({\n        name: item.name, type: item.type, thumb: item.thumb, path: item.path,\n        weId: item.weId, videoFile: item.videoFile, mtime: item.mtime,\n        hue: hue, saturation: saturation,\n        richness: (item.richness != null ? item.richness : 0),\n        applyCount: (item.applyCount != null ? item.applyCount : 0),\n        placeholder: !!item.placeholder\n      })\n""",
-    ),
-    (
-        "  function applyStatic(path, outputs) {\n    var neighbors = _collectNeighbors(path)\n    var screens = Quickshell.screens.map(function(s) { return s.name })\n    DaemonClient.applyStatic(path, outputs, neighbors, screens)\n    service.wallpaperApplied()\n  }\n",
-        """  function applyStatic(path, outputs) {\n    var neighbors = _collectNeighbors(path)\n    var screens = Quickshell.screens.map(function(s) { return s.name })\n    DaemonClient.applyStatic(path, outputs, neighbors, screens)\n    service.wallpaperApplied()\n    Quickshell.execDetached([service.homeDir + \"/.local/bin/apply-shell-state\", \"--wallpaper\", path])\n  }\n""",
     ),
 ])
 
@@ -433,6 +470,14 @@ patch("qml/wallpaper/WallpaperSelector.qml", [
     ),
 ])
 PY
+
+if [[ -e "$OVERLAY_DIR" ]]; then
+    mv "$OVERLAY_DIR" "$BACKUP_DIR"
+fi
+if ! mv "$STAGING_DIR" "$OVERLAY_DIR"; then
+    if [[ -e "$BACKUP_DIR" ]]; then mv "$BACKUP_DIR" "$OVERLAY_DIR"; fi
+    exit 1
+fi
 
 mkdir -p "$SERVICE_OVERRIDE_DIR"
 cat > "$SERVICE_OVERRIDE" <<EOF
