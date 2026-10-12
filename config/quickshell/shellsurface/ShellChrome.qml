@@ -622,16 +622,23 @@ Item {
     readonly property bool statusShowWifi: moduleEnabled("network") && hasWifi
     readonly property bool statusShowEth: moduleEnabled("network") && !hasWifi && isEthConnected
     readonly property bool statusShowBt: moduleEnabled("bluetooth") && hasBluetooth
-    readonly property bool statusShowVolume: moduleEnabled("volume")
     readonly property bool statusShowBattery: moduleEnabled("battery") && hasBattery
     readonly property bool statusTileVisible: statusShowWifi || statusShowEth || statusShowBt
-        || statusShowVolume || statusShowBattery
+        || statusShowBattery
+    readonly property bool audioTileVisible: moduleEnabled("volume") || mediaVisible
+    readonly property string audioTooltip: {
+        let parts = ["Volume " + (isMuted ? "gedempt" : volPercent)];
+        if (mediaVisible && activePlayer) {
+            let title = String(activePlayer.trackTitle || activePlayer.identity || "").trim();
+            if (title !== "") parts.push((activePlayer.playbackState === MprisPlaybackState.Playing ? "speelt: " : "gepauzeerd: ") + title);
+        }
+        return "Geluid & media · " + parts.join(" · ");
+    }
     readonly property string statusTooltip: {
         let parts = [];
         if (statusShowWifi) parts.push("Wi-Fi " + (isWifiOn ? "aan" : "uit"));
         if (statusShowEth) parts.push("Bedraad verbonden");
         if (statusShowBt) parts.push("Bluetooth " + (isBtOn ? "aan" : "uit"));
-        if (statusShowVolume) parts.push("Volume " + (isMuted ? "gedempt" : volPercent));
         if (statusShowBattery) parts.push("Batterij " + batCap + "%" + (batCharging ? " (laden)" : ""));
         return "Snelle instellingen · " + parts.join(" · ");
     }
@@ -942,14 +949,6 @@ Item {
                 onTriggered: root.togglePanel("mail")
             }
 
-            RailButton {
-                tooltip: "Media"
-                visible: root.mediaVisible
-                icon: "󰎆"
-                accent: root.mocha.accent3
-                onTriggered: root.togglePanel("music")
-            }
-
             ColumnLayout {
                 visible: root.moduleEnabled("workspaces")
                 Layout.fillWidth: true
@@ -1134,15 +1133,22 @@ Item {
                 vertical: true
             }
 
-            // Eén compacte statustegel i.p.v. losse knoppen voor netwerk,
-            // bluetooth, volume en batterij. Klik opent Snelle instellingen
-            // (met doorverwijzing naar elk detailpaneel), scrollen regelt het
-            // volume en middelklik dempt, zoals de oude volumeknop.
+            // Geluid & media: volume met percentage (scrollen = volume,
+            // middelklik = dempen) en, als er iets speelt, een play/pause-knop
+            // eronder. Klik opent het paneel Geluid & media.
+            AudioTile {
+                visible: root.audioTileVisible
+                onTriggered: root.togglePanel("audiomedia")
+                onWheelDelta: (delta) => root.handleVolumeWheel(delta)
+                onMiddleClicked: root.toggleMute()
+            }
+
+            // Compacte statustegel voor netwerk, bluetooth en batterij. Klik
+            // opent Snelle instellingen, met doorverwijzing naar elk
+            // detailpaneel.
             StatusTile {
                 visible: root.statusTileVisible
                 onTriggered: root.togglePanel("quicksettings")
-                onWheelDelta: (delta) => root.handleVolumeWheel(delta)
-                onMiddleClicked: root.toggleMute()
             }
             RailButton { tooltip: "Afsluitmenu";
                 icon: "󰐥"
@@ -1346,12 +1352,19 @@ Item {
                     vertical: false
                 }
 
-                StripStatus {
+                StripButton { tooltip: root.audioTooltip
                     // Rail bezit de systeemcontrols; strip toont ze alleen zonder rail.
+                    visible: !root.railEnabled && root.moduleEnabled("volume")
+                    icon: root.volIcon
+                    text: root.isMuted ? "" : root.volPercent
+                    accent: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
+                    onTriggered: root.togglePanel("audiomedia")
+                    onWheelDelta: (delta) => root.handleVolumeWheel(delta)
+                }
+
+                StripStatus {
                     visible: !root.railEnabled && root.statusTileVisible
                     onTriggered: root.togglePanel("quicksettings")
-                    onWheelDelta: (delta) => root.handleVolumeWheel(delta)
-                    onMiddleClicked: root.toggleMute()
                 }
                 StripButton { tooltip: "Afsluitmenu";
                     visible: !root.railEnabled
@@ -1766,15 +1779,142 @@ Item {
         }
     }
 
-    // --- Statustegel (rail) --------------------------------------------------
-    // Zelfde knoptaal als RailButton (hover-vulling, accentrand, schaal), maar
-    // met een 2x2-raster: netwerk, bluetooth, volume en batterij in de ruimte
-    // van ruim één knop. Volume en batterij houden hun getal zichtbaar.
-    component StatusTile: Rectangle {
-        id: tile
+    // --- Geluid & media-tegel (rail) -----------------------------------------
+    // Bovenin dezelfde inhoud als de oude volumeknop (icoon + percentage).
+    // Speelt er media, dan groeit eronder een play/pause-knop uit, die direct
+    // schakelt zonder het paneel te openen. Dezelfde knoptaal als RailButton.
+    component AudioTile: Rectangle {
+        id: audio
         signal triggered()
         signal middleClicked()
         signal wheelDelta(int delta)
+
+        readonly property bool showMedia: root.mediaVisible
+        readonly property bool playing: root.activePlayer !== null
+            && root.activePlayer.playbackState === MprisPlaybackState.Playing
+
+        property string shownTip: ""
+        function showTip() {
+            shownTip = root.audioTooltip;
+            root.showTooltip(audio, shownTip, true);
+        }
+        readonly property string liveTip: root.audioTooltip
+        onLiveTipChanged: if (audioMouse.containsMouse || mediaMouse.containsMouse) showTip()
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: 40 + (showMedia ? 28 : 0)
+        clip: true
+        radius: Math.min(7, ThemeConfig.styleWidgetRadius)
+        color: audioMouse.containsMouse || mediaMouse.containsMouse ? root.pillHoverColor : "transparent"
+        border.width: 1
+        border.color: audioMouse.containsMouse || mediaMouse.containsMouse
+            ? Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, 0.36) : "transparent"
+        scale: audioMouse.containsMouse ? 1.07 : 1.0
+        Behavior on Layout.preferredHeight {
+            NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+        Behavior on scale {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+
+        MouseArea {
+            id: audioMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+            onEntered: audio.showTip()
+            onExited: if (!mediaMouse.containsMouse) root.hideTooltip(audio.shownTip)
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.MiddleButton) {
+                    audio.middleClicked();
+                    return;
+                }
+                let p = audio.mapToItem(root, audio.width / 2, 20);
+                root.lastTriggerX = p.x;
+                root.lastTriggerY = p.y;
+                audio.triggered();
+            }
+            onWheel: (wheel) => {
+                audio.wheelDelta(wheel.angleDelta.y);
+                wheel.accepted = true;
+            }
+        }
+
+        Column {
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 20 - height / 2
+            spacing: -2
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: root.volIcon
+                font.family: "Iosevka Nerd Font"
+                font.pixelSize: 16
+                color: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                }
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: root.isMuted ? "--" : root.volPercent
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: 8
+                font.weight: Font.Bold
+                color: root.mocha.text
+            }
+        }
+
+        Rectangle {
+            id: mediaButton
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 40
+            width: parent.width - 8
+            height: 24
+            radius: Math.min(6, ThemeConfig.styleWidgetRadius)
+            opacity: audio.showMedia ? 1 : 0
+            visible: opacity > 0.01
+            color: mediaMouse.containsMouse
+                ? Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, 0.28)
+                : Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, audio.playing ? 0.16 : 0.08)
+            Behavior on opacity {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            }
+            Behavior on color {
+                ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            }
+            Text {
+                anchors.centerIn: parent
+                text: audio.playing ? "\udb80\udfe4" : "\udb81\udc0a"
+                font.family: "Iosevka Nerd Font"
+                font.pixelSize: 13
+                color: root.mocha.accent3
+            }
+            MouseArea {
+                id: mediaMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: audio.showTip()
+                onExited: if (!audioMouse.containsMouse) root.hideTooltip(audio.shownTip)
+                onClicked: {
+                    let player = root.activePlayer;
+                    if (!player) return;
+                    if (player.canTogglePlaying) player.togglePlaying();
+                    else if (player.canPlay) player.play();
+                }
+            }
+        }
+    }
+
+    // --- Statustegel (rail) --------------------------------------------------
+    // Zelfde knoptaal als RailButton (hover-vulling, accentrand, schaal), maar
+    // met een raster: netwerk, bluetooth en batterij in de ruimte van één
+    // knop. De batterij houdt haar percentage zichtbaar.
+    component StatusTile: Rectangle {
+        id: tile
+        signal triggered()
 
         // De tooltip toont live waarden; bij scrollen verandert de tekst
         // terwijl je erboven hangt. Onthoud welke tekst er staat, anders
@@ -1829,13 +1969,6 @@ Item {
                 accent: root.isBtOn ? root.mocha.accent3 : root.mocha.subtext0
             }
             StatusGlyph {
-                visible: root.statusShowVolume
-                width: statusGrid.cellW
-                icon: root.volIcon
-                value: root.isMuted ? "--" : String(root._volRaw)
-                accent: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
-            }
-            StatusGlyph {
                 visible: root.statusShowBattery
                 width: statusGrid.cellW
                 icon: root.batIcon
@@ -1848,22 +1981,13 @@ Item {
             id: tileMouse
             anchors.fill: parent
             hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
             onEntered: tile.showTip()
             onExited: root.hideTooltip(tile.shownTip)
             onClicked: (mouse) => {
-                if (mouse.button === Qt.MiddleButton) {
-                    tile.middleClicked();
-                    return;
-                }
                 let p = tile.mapToItem(root, tile.width / 2, tile.height / 2);
                 root.lastTriggerX = p.x;
                 root.lastTriggerY = p.y;
                 tile.triggered();
-            }
-            onWheel: (wheel) => {
-                tile.wheelDelta(wheel.angleDelta.y);
-                wheel.accepted = true;
             }
         }
     }
@@ -1899,8 +2023,6 @@ Item {
     component StripStatus: Rectangle {
         id: pill
         signal triggered()
-        signal middleClicked()
-        signal wheelDelta(int delta)
 
         property string shownTip: ""
         function showTip() {
@@ -1943,12 +2065,6 @@ Item {
                 accent: root.isBtOn ? root.mocha.accent3 : root.mocha.subtext0
             }
             StripGlyph {
-                visible: root.statusShowVolume
-                icon: root.volIcon
-                value: root.isMuted ? "" : root.volPercent
-                accent: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
-            }
-            StripGlyph {
                 visible: root.statusShowBattery
                 icon: root.batIcon
                 value: root.batCap + "%"
@@ -1960,22 +2076,13 @@ Item {
             id: pillMouse
             anchors.fill: parent
             hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
             onEntered: pill.showTip()
             onExited: root.hideTooltip(pill.shownTip)
             onClicked: (mouse) => {
-                if (mouse.button === Qt.MiddleButton) {
-                    pill.middleClicked();
-                    return;
-                }
                 let p = pill.mapToItem(root, pill.width / 2, pill.height / 2);
                 root.lastTriggerX = p.x;
                 root.lastTriggerY = p.y;
                 pill.triggered();
-            }
-            onWheel: (wheel) => {
-                pill.wheelDelta(wheel.angleDelta.y);
-                wheel.accepted = true;
             }
         }
     }

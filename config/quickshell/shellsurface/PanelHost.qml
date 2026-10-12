@@ -59,6 +59,7 @@ Item {
             || entryId === "monitors"
             || entryId === "performance"
             || entryId === "quicksettings"
+            || entryId === "audiomedia"
             || entryId === "gaming"
             || entryId === "power"
             || entryId === "notifications"
@@ -86,6 +87,7 @@ Item {
                         || entryId === "volume"
                         || entryId === "music"
                         || entryId === "quicksettings"
+                        || entryId === "audiomedia"
                         || entryId === "power")));
     }
     function edgeFor(entryId) {
@@ -175,6 +177,7 @@ Item {
         if (entryId === "tophover") return Math.min(1020, availableW);
         if (entryId === "performance") return Math.min(380, availableW);
         if (entryId === "quicksettings") return Math.min(400, availableW);
+        if (entryId === "audiomedia") return Math.min(420, availableW);
         if (entryId === "gaming") return Math.min(720, availableW);
         if (entryId === "notifications") return Math.min(460, availableW);
         if (entryId === "mail") return Math.min(520, availableW);
@@ -195,6 +198,7 @@ Item {
         // Was volle schermhoogte terwijl er maar een handvol meters in staat.
         if (entryId === "performance") return Math.min(430, availableH);
         if (entryId === "quicksettings") return Math.min(420, availableH);
+        if (entryId === "audiomedia") return Math.min(380, availableH);
         if (entryId === "gaming") return Math.min(560, availableH);
         if (entryId === "notifications") return Math.min(620, availableH);
         if (entryId === "mail") return Math.min(560, availableH);
@@ -217,6 +221,7 @@ Item {
         if (entryId === "monitors") return Qt.resolvedUrl("../monitors/MonitorPopup.qml");
         if (entryId === "performance") return Qt.resolvedUrl("PerformanceDrawer.qml");
         if (entryId === "quicksettings") return Qt.resolvedUrl("QuickSettingsPanel.qml");
+        if (entryId === "audiomedia") return Qt.resolvedUrl("AudioMediaPanel.qml");
         if (entryId === "gaming") return Qt.resolvedUrl("../monitors/GamingPopup.qml");
         if (entryId === "settings") return Qt.resolvedUrl("../settings/SettingsPopup.qml");
         if (entryId === "power") return Qt.resolvedUrl("../power/PowerMenu.qml");
@@ -456,7 +461,7 @@ Item {
         }
 
         // Een paneel kan naar een ander paneel doorverwijzen (Snelle
-        // instellingen → detailpaneel). Dat loopt via deze host, zodat de
+        // instellingen of Geluid & media → detailpaneel). Dat loopt via deze host, zodat de
         // wissel dezelfde blob-overgang krijgt als een klik op de rail.
         Connections {
             target: contentLoader.item

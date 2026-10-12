@@ -8,9 +8,10 @@ import Quickshell.Services.UPower
 import ".."
 
 // Snelle instellingen: het control-center-patroon van Caelestia en
-// dotfiles-arch. De rail toont hiervoor één compacte statustegel in plaats van
-// vijf losse knoppen; hier staat alles wat je vaak even omzet. Elke tegel met
-// een pijltje opent het bestaande detailpaneel, zodat er niets wegvalt.
+// dotfiles-arch, geopend vanuit de statustegel (netwerk, bluetooth, batterij).
+// Hier staat wat je vaak even omzet. Elke tegel met een pijltje opent het
+// bestaande detailpaneel, zodat er niets wegvalt. Geluid en media hebben een
+// eigen paneel (AudioMediaPanel); idle staat in het afsluitmenu.
 // De vorm (blob, hoeken, groei-animatie) komt volledig uit PanelHost.
 Item {
     id: root
@@ -69,16 +70,10 @@ Item {
     }
 
     // --- Gepollde state (alleen zolang het paneel geladen is) ---------------
-    property int volume: 0
-    property bool muted: false
-    property bool micMuted: false
-    property bool micKnown: false
     property int brightness: -1
     property string wifiName: ""
     property int kbLayoutCount: 1
     property string kbLayout: ""
-    property bool idleInhibited: false
-    property bool draggingVolume: false
     property bool draggingBrightness: false
 
     function openPanel(entryId, networkMode) {
@@ -114,34 +109,6 @@ Item {
         return root.charging ? "Vol over " + span : "Nog " + span;
     }
 
-    // Zelfde zoekvolgorde als het afsluitmenu, zodat beide schakelaars
-    // dezelfde idle-state lezen en schrijven.
-    function idleInhibitCommand(action) {
-        let safeAction = String(action || "status").replace(/'/g, "'\"'\"'");
-        return "kingstra_idle_action='" + safeAction + "'; " +
-            "if command -v kingstra-idle-inhibit >/dev/null 2>&1; then " +
-            "kingstra-idle-inhibit \"$kingstra_idle_action\"; " +
-            "elif [ -x \"$HOME/.local/bin/kingstra-idle-inhibit\" ]; then " +
-            "\"$HOME/.local/bin/kingstra-idle-inhibit\" \"$kingstra_idle_action\"; " +
-            "elif [ -x \"$HOME/.config/shared/scripts/kingstra-idle-inhibit\" ]; then " +
-            "\"$HOME/.config/shared/scripts/kingstra-idle-inhibit\" \"$kingstra_idle_action\"; " +
-            "else " +
-            "\"$HOME/kingstra-dots/config/shared/scripts/kingstra-idle-inhibit\" \"$kingstra_idle_action\"; " +
-            "fi";
-    }
-
-    function setIdleInhibited(on) {
-        root.idleInhibited = on;
-        Quickshell.execDetached(["bash", "-lc", root.idleInhibitCommand(on ? "on" : "off")]);
-        idleRefreshTimer.restart();
-    }
-
-    function setVolume(percent) {
-        let v = Math.max(0, Math.min(100, Math.round(percent)));
-        root.volume = v;
-        Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", v + "%"]);
-    }
-
     function setBrightness(percent) {
         let v = Math.max(1, Math.min(100, Math.round(percent)));
         root.brightness = v;
@@ -150,7 +117,6 @@ Item {
 
     function refresh() {
         if (!statePoller.running) statePoller.running = true;
-        if (!idleStatusProc.running) idleStatusProc.running = true;
     }
 
     Component.onCompleted: refresh()
@@ -160,8 +126,6 @@ Item {
         // Eén regel per sleutel, zodat een ontbrekend hulpmiddel (geen
         // brightnessctl, geen jq) alleen dat ene veld leeg laat.
         command: ["bash", "-lc",
-            "sink=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | head -n1); " +
-            "src=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | head -n1); " +
             "bri=''; if command -v brightnessctl >/dev/null 2>&1; then bri=$(brightnessctl -m 2>/dev/null | awk -F, 'NR==1{gsub(/%/,\"\",$4); print $4}'); fi; " +
             // Actieve verbinding i.p.v. `dev wifi`: die laatste kan een
             // wifi-scan starten, wat je bij elke poll niet wilt.
@@ -169,7 +133,7 @@ Item {
             "kbn=1; kb=''; if command -v jq >/dev/null 2>&1; then " +
             "kbn=$(hyprctl getoption input:kb_layout -j 2>/dev/null | jq -r '.str // \"us\"' | awk -F, '{n=0; for(i=1;i<=NF;i++) if($i!=\"\") n++; print n}'); " +
             "kb=$(hyprctl devices -j 2>/dev/null | jq -r '[.keyboards[] | select(.main==true) | .active_keymap][0] // \"\"'); fi; " +
-            "printf 'sink=%s\\nsrc=%s\\nbri=%s\\nssid=%s\\nkbn=%s\\nkb=%s\\n' \"$sink\" \"$src\" \"$bri\" \"$ssid\" \"$kbn\" \"$kb\""
+            "printf 'bri=%s\\nssid=%s\\nkbn=%s\\nkb=%s\\n' \"$bri\" \"$ssid\" \"$kbn\" \"$kb\""
         ]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -180,15 +144,6 @@ Item {
                     if (eq > 0) state[lines[i].substring(0, eq)] = lines[i].substring(eq + 1).trim();
                 }
 
-                let sink = state.sink || "";
-                let sinkMatch = sink.match(/Volume:\s+([\d.]+)/);
-                if (sinkMatch && !root.draggingVolume) root.volume = Math.round(parseFloat(sinkMatch[1]) * 100);
-                root.muted = sink.indexOf("[MUTED]") !== -1;
-
-                let source = state.src || "";
-                root.micKnown = /Volume:/.test(source);
-                root.micMuted = source.indexOf("[MUTED]") !== -1;
-
                 let bright = parseInt(state.bri);
                 if (!root.draggingBrightness) root.brightness = isNaN(bright) ? -1 : bright;
 
@@ -198,21 +153,6 @@ Item {
                 root.kbLayout = state.kb || "";
             }
         }
-    }
-
-    Process {
-        id: idleStatusProc
-        command: ["bash", "-lc", root.idleInhibitCommand("status")]
-        stdout: StdioCollector {
-            onStreamFinished: root.idleInhibited = this.text.trim() === "on"
-        }
-    }
-
-    Timer {
-        id: idleRefreshTimer
-        interval: 450
-        repeat: false
-        onTriggered: if (!idleStatusProc.running) idleStatusProc.running = true
     }
 
     // Na een schakelactie de echte state snel teruglezen in plaats van op
@@ -337,25 +277,6 @@ Item {
                 onDetailRequested: root.openPanel("notifications")
             }
             Tile {
-                icon: root.idleInhibited ? "󰅶" : "󰾪"
-                label: "Wakker houden"
-                subtitle: root.idleInhibited ? "Scherm blijft aan" : "Uit"
-                active: root.idleInhibited
-                accent: mocha.yellow
-                onTriggered: root.setIdleInhibited(!root.idleInhibited)
-            }
-            Tile {
-                visible: root.micKnown
-                icon: root.micMuted ? "󰍭" : "󰍬"
-                label: "Microfoon"
-                subtitle: root.micMuted ? "Gedempt" : "Aan"
-                active: !root.micMuted
-                accent: mocha.accent1
-                detailTooltip: "Geluidspaneel"
-                onTriggered: Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"])
-                onDetailRequested: root.openPanel("volume")
-            }
-            Tile {
                 icon: root.powerProfileName === "performance" ? "󰓅"
                     : (root.powerProfileName === "power-saver" ? "󰌪" : "󰾅")
                 label: "Energieprofiel"
@@ -381,19 +302,9 @@ Item {
         }
 
         // --- Schuifregelaars -------------------------------------------------
-        SliderRow {
-            icon: root.muted || root.volume === 0 ? "󰝟" : (root.volume >= 70 ? "󰕾" : (root.volume >= 30 ? "󰖀" : "󰕿"))
-            label: "Volume"
-            value: root.volume
-            dimmed: root.muted
-            accent: mocha.accent3
-            detailTooltip: "Geluidspaneel"
-            onIconClicked: Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"])
-            onDragToggled: (dragging) => root.draggingVolume = dragging
-            onMoved: (percent) => root.setVolume(percent)
-            onDetailRequested: root.openPanel("volume")
-        }
-        SliderRow {
+        PanelSlider {
+            mocha: mocha
+            itemRadius: root.itemRadius
             visible: root.brightness >= 0
             icon: "󰃟"
             label: "Helderheid"
@@ -525,137 +436,6 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: tile.detailRequested()
                 }
-            }
-        }
-    }
-
-    component SliderRow: RowLayout {
-        id: slider
-        property string icon: ""
-        property string label: ""
-        property int value: 0
-        property bool dimmed: false
-        property color accent: mocha.primary
-        property string detailTooltip: ""
-        signal iconClicked()
-        signal moved(real percent)
-        signal dragToggled(bool dragging)
-        signal detailRequested()
-
-        Layout.fillWidth: true
-        spacing: 8
-
-        Rectangle {
-            Layout.preferredWidth: 32
-            Layout.preferredHeight: 32
-            radius: Math.min(root.itemRadius, 16)
-            color: iconMouse.containsMouse
-                ? Qt.rgba(slider.accent.r, slider.accent.g, slider.accent.b, 0.22)
-                : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
-            Behavior on color {
-                ColorAnimation { duration: ThemeConfig.durationToken("fast") }
-            }
-            Text {
-                anchors.centerIn: parent
-                text: slider.icon
-                font.family: "Iosevka Nerd Font"
-                font.pixelSize: 16
-                color: slider.dimmed ? mocha.subtext0 : slider.accent
-            }
-            MouseArea {
-                id: iconMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: slider.iconClicked()
-            }
-        }
-
-        Item {
-            id: track
-            Layout.fillWidth: true
-            Layout.preferredHeight: 32
-
-            Rectangle {
-                id: groove
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                height: 10
-                radius: height / 2
-                color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
-
-                Rectangle {
-                    width: Math.max(groove.height, groove.width * Math.max(0, Math.min(100, slider.value)) / 100)
-                    height: parent.height
-                    radius: parent.radius
-                    color: slider.dimmed
-                        ? Qt.rgba(slider.accent.r, slider.accent.g, slider.accent.b, 0.35)
-                        : slider.accent
-                    Behavior on width {
-                        enabled: !trackMouse.pressed
-                        NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
-                    }
-                    Behavior on color {
-                        ColorAnimation { duration: ThemeConfig.durationToken("fast") }
-                    }
-                }
-            }
-
-            Text {
-                anchors.right: parent.right
-                anchors.rightMargin: 2
-                anchors.bottom: groove.top
-                anchors.bottomMargin: 2
-                text: slider.label + "  " + Math.max(0, slider.value) + "%"
-                font.family: ThemeConfig.monoFont
-                font.pixelSize: 9
-                font.weight: Font.Bold
-                color: mocha.subtext0
-            }
-
-            MouseArea {
-                id: trackMouse
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                function apply(mx) {
-                    slider.moved(Math.max(0, Math.min(1, mx / Math.max(1, width))) * 100);
-                }
-                onPressed: (mouse) => { slider.dragToggled(true); apply(mouse.x); }
-                onPositionChanged: (mouse) => { if (pressed) apply(mouse.x); }
-                onReleased: slider.dragToggled(false)
-                onCanceled: slider.dragToggled(false)
-                onWheel: (wheel) => {
-                    slider.moved(slider.value + (wheel.angleDelta.y > 0 ? 5 : -5));
-                    wheel.accepted = true;
-                }
-            }
-        }
-
-        Rectangle {
-            visible: slider.detailTooltip !== ""
-            Layout.preferredWidth: 24
-            Layout.preferredHeight: 28
-            radius: Math.min(root.itemRadius, 10)
-            color: sliderDetailMouse.containsMouse
-                ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
-                : "transparent"
-            Behavior on color {
-                ColorAnimation { duration: ThemeConfig.durationToken("fast") }
-            }
-            Text {
-                anchors.centerIn: parent
-                text: "󰅂"
-                font.family: "Iosevka Nerd Font"
-                font.pixelSize: 14
-                color: sliderDetailMouse.containsMouse ? mocha.text : mocha.subtext0
-            }
-            MouseArea {
-                id: sliderDetailMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: slider.detailRequested()
             }
         }
     }
