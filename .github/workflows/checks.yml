@@ -1,0 +1,49 @@
+name: Checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Smoke tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends lua5.4 ripgrep jq
+      - run: tests/scripts/check.sh smoke
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: tests/scripts/check.sh shellcheck
+      - name: Warnings (non-blocking)
+        if: always()
+        continue-on-error: true
+        run: tests/scripts/check.sh shellcheck-warnings
+
+  qmllint:
+    name: qmllint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install qmllint
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends qt6-declarative-dev-tools
+      - run: tests/scripts/check.sh qmllint
+        env:
+          QMLLINT: /usr/lib/qt6/bin/qmllint

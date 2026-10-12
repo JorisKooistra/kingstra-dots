@@ -176,14 +176,24 @@ get_volume_icon() {
 }
 
 ## BATTERY
+# Print the first existing /sys/class/power_supply/BAT*/<attr> path; fails when there is none.
+get_battery_file() {
+    local f
+    for f in /sys/class/power_supply/BAT*/"$1"; do
+        [ -f "$f" ] && { echo "$f"; return 0; }
+    done
+    return 1
+}
 get_battery_percent() {
-    if [ -f /sys/class/power_supply/BAT*/capacity ]; then 
-        local bat=$(cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1)
+    local file bat
+    if file=$(get_battery_file capacity); then
+        bat=$(head -n1 "$file" 2>/dev/null)
         echo "${bat:-100}"
     else echo "100"; fi
 }
 get_battery_status() {
-    if [ -f /sys/class/power_supply/BAT*/status ]; then cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1
+    local file
+    if file=$(get_battery_file status); then head -n1 "$file" 2>/dev/null
     else echo "Full"; fi
 }
 get_battery_icon() {
@@ -276,7 +286,7 @@ case $1 in
         kb_layouts="$(get_kb_layout_config)"
         kb_count="$(get_kb_layout_count "$kb_layouts")"
         # If no arguments are passed, output the full state as JSON
-        local _eth_iface; _eth_iface=$(get_eth_interface)
+        _eth_iface=$(get_eth_interface)
         jq -n -c \
           --arg wifi_status "$(get_wifi_status)" \
           --arg wifi_ssid "$(get_wifi_ssid)" \
