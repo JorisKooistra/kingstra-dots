@@ -366,10 +366,12 @@ Doel: het eindbeeld bouwen: één per-screen shell-surface met primary rail, hor
 
 ## Fase 10 — Theme picker en live hardwaremeters herstellen
 
-- [ ] **10.1 — Theme picker zonder zelfonderbreking laten wisselen**
+- [x] **10.1 — Theme picker zonder zelfonderbreking laten wisselen**
   - Aanleiding: de theme-switch startte tijdens een actieve picker een volledige Quickshell-restart. Daarmee verdween de picker voordat die de uitkomst kon afhandelen, wat de wissel als kapot liet voelen.
   - Actie: de picker geeft een expliciete runtimevlag mee; `kingstra-theme-switch` slaat alleen in dat geval de legacy-sessierestart over. De reactive `theme.json`-state blijft de actieve shell direct bijwerken.
+  - Status 2026-10-12: afgevinkt, met een strakkere oplossing dan de runtimevlag. Oorzaak was `reload_topbar_runtime()` in `kingstra-theme-switch`, die na `apply-shell-state` `kingstra-session-start restart-shell` startte en zo de picker (in `Main.qml`) mee afbrak. Commit `3180238` heeft die herstart voor álle switches verwijderd; `ThemeConfig`/`MatugenColors` pakken `theme.json`/`colors.json` live op. Er bleef niets over dat de vlag las, dus `KINGSTRA_THEME_PICKER_ACTIVE` is uit `ThemeCarousel.qml` gehaald. Quickshell herlaadt verder alleen bij gewijzigde QML/JS-bestanden; de switch schrijft uitsluitend json in `~/.config/quickshell/`. `tests/smoke/theme-switch-no-restart.sh` bewaakt beide voorwaarden over het hele switchpad. Live check op het apparaat nog te doen: picker openen, thema kiezen, picker blijft staan tot hij zelf sluit.
 
-- [ ] **10.2 — Hardwaremeters terug in de geïntegreerde rail**
+- [x] **10.2 — Hardwaremeters terug in de geïntegreerde rail**
   - Aanleiding: CPU/RAM/GPU/FPS bestonden nog als componenten, maar de nieuwe `ShellChrome` toonde alleen een algemene monitor-knop.
   - Actie: plaats geen samengeperste tekstmeters in de rail. Een rustige performance-entry opent een rail-gebonden drawer met CPU, RAM, GPU en FPS; Office activeert CPU/RAM, Gaming de volledige set.
+  - Status 2026-10-12: afgevinkt. De rail-entry (`ShellChrome.qml`, zichtbaar bij `cpu_temp`/`gpu_temp`/`ram_usage`/`fps`) opent `PerformanceDrawer.qml` via `PanelHost`; `f6f3759` voegde energieprofiel en uptime toe. Ontbrekend stuk was de mode-filter: de drawer toonde altijd alle vier meters. Hij leest nu zelf `state/mode.json` en toont alleen de meters die de mode vraagt (Office: CPU/RAM, Gaming: CPU/RAM/GPU/FPS), krimpt via `preferredPanelHeight` mee en pollt FPS alleen als die zichtbaar is. Live check op het apparaat nog te doen.

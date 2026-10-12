@@ -17,6 +17,41 @@ Item {
     property string fps: "--"
     property string powerProfile: "balanced"
     property string uptime: "--"
+    // Welke meters de drawer toont volgt de actieve mode: Office vraagt
+    // cpu_temp/ram_usage, Gaming de volledige set. Zonder bruikbare
+    // mode-state blijft de rustige Office-set de fallback.
+    property var modeModules: ["cpu_temp", "ram_usage"]
+    readonly property bool showCpu: hasModule("cpu_temp") || !anyMeterEnabled
+    readonly property bool showRam: hasModule("ram_usage") || !anyMeterEnabled
+    readonly property bool showGpu: hasModule("gpu_temp")
+    readonly property bool showFps: hasModule("fps")
+    readonly property bool anyMeterEnabled: hasModule("cpu_temp") || hasModule("ram_usage")
+        || hasModule("gpu_temp") || hasModule("fps")
+    // PanelHost gebruikt deze maat, zodat de drawer krimpt als Office
+    // alleen CPU/RAM toont in plaats van een leeg vlak onder de meters.
+    readonly property int preferredPanelHeight: Math.ceil(content.implicitHeight + content.anchors.margins * 2)
+
+    function hasModule(name) {
+        return Array.isArray(modeModules) && modeModules.indexOf(name) !== -1;
+    }
+
+    function applyModeState(rawText) {
+        let raw = String(rawText || "").trim();
+        if (raw === "") return;
+        try {
+            let m = JSON.parse(raw);
+            let mode = m.name || "office";
+            let modules = Array.isArray(m.modules) && m.modules.length > 0 ? m.modules : null;
+            if (!modules) {
+                modules = mode === "gaming"
+                    ? ["cpu_temp", "gpu_temp", "ram_usage", "fps"]
+                    : ["cpu_temp", "ram_usage"];
+            }
+            root.modeModules = modules;
+        } catch (e) {
+            // mode.json kan tijdens een atomaire herschrijving half zichtbaar zijn.
+        }
+    }
 
     function clampPercent(value) {
         let parsed = parseInt(value);
@@ -36,8 +71,10 @@ Item {
     }
 
     function refresh() {
+        // Poll-fallback naast de watcher, net als ShellChrome.
+        modeFileView.reload();
         metricsPoller.running = true;
-        fpsPoller.running = true;
+        if (root.showFps) fpsPoller.running = true;
     }
 
     function openBtop() {
@@ -45,6 +82,14 @@ Item {
     }
 
     Component.onCompleted: refresh()
+
+    FileView {
+        id: modeFileView
+        path: Quickshell.env("HOME") + "/.config/kingstra/state/mode.json"
+        watchChanges: true
+        preload: true
+        onInternalTextChanged: root.applyModeState(__text)
+    }
 
     Timer {
         interval: 2500
@@ -94,6 +139,7 @@ Item {
     }
 
     ColumnLayout {
+        id: content
         anchors.fill: parent
         anchors.margins: 22
         spacing: 14
@@ -129,10 +175,10 @@ Item {
             }
         }
 
-        MetricRow { label: "CPU"; value: root.cpuPercent + "%"; detail: root.cpuTemperature; fraction: root.cpuPercent / 100.0; accent: mocha.accent1 }
-        MetricRow { label: "RAM"; value: root.ramPercent + "%"; detail: "geheugen"; fraction: root.ramPercent / 100.0; accent: mocha.accent3 }
-        MetricRow { label: "GPU"; value: root.gpuPercent + "%"; detail: root.gpuTemperature; fraction: root.gpuPercent / 100.0; accent: mocha.accent2 }
-        MetricRow { label: "FPS"; value: root.fps; detail: "actief scherm"; fraction: 1.0; accent: mocha.accent1Container; showTrack: false }
+        MetricRow { visible: root.showCpu; label: "CPU"; value: root.cpuPercent + "%"; detail: root.cpuTemperature; fraction: root.cpuPercent / 100.0; accent: mocha.accent1 }
+        MetricRow { visible: root.showRam; label: "RAM"; value: root.ramPercent + "%"; detail: "geheugen"; fraction: root.ramPercent / 100.0; accent: mocha.accent3 }
+        MetricRow { visible: root.showGpu; label: "GPU"; value: root.gpuPercent + "%"; detail: root.gpuTemperature; fraction: root.gpuPercent / 100.0; accent: mocha.accent2 }
+        MetricRow { visible: root.showFps; label: "FPS"; value: root.fps; detail: "actief scherm"; fraction: 1.0; accent: mocha.accent1Container; showTrack: false }
 
         Item { Layout.fillHeight: true }
 
