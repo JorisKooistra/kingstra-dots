@@ -1,12 +1,12 @@
 import QtQuick
 
-// ── BotanicalGlow ─────────────────────────────────────────────────────────────
+// ── OrganicGlow ───────────────────────────────────────────────────────────────
 // Warme gloed over de bar: geel (boven) → perzik (midden) → groen (onder).
 // Aan/uit via OrganicBar.qml:  showWarmGlow: true/false
 // Sterkte via OrganicBar.qml:  warmGlowAlpha: 0.04   (hogere waarde = feller)
 // ─────────────────────────────────────────────────────────────────────────────
 Rectangle {
-    id: botanicalGlow
+    id: organicGlow
     required property var shell    // voor shell.s() schaling
     required property var mocha    // kleurenpalet
     required property var surface  // barSurfaceRoot — heeft skinBool/skinNumber/continuousBarMode
@@ -21,10 +21,10 @@ Rectangle {
 
     gradient: Gradient {
         GradientStop { position: 0.0; color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.0) }
-        GradientStop { position: botanicalGlow.barEnd * 0.24; color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.85) }
-        GradientStop { position: botanicalGlow.barEnd * 0.62; color: Qt.rgba(mocha.peach.r,  mocha.peach.g,  mocha.peach.b,  0.38) }
-        GradientStop { position: botanicalGlow.barEnd; color: Qt.rgba(mocha.green.r,  mocha.green.g,  mocha.green.b,  0.24) }
-        GradientStop { position: botanicalGlow.barEnd + (1.0 - botanicalGlow.barEnd) * 0.46; color: Qt.rgba(mocha.green.r,  mocha.green.g,  mocha.green.b,  0.09) }
+        GradientStop { position: organicGlow.barEnd * 0.24; color: Qt.rgba(mocha.yellow.r, mocha.yellow.g, mocha.yellow.b, 0.85) }
+        GradientStop { position: organicGlow.barEnd * 0.62; color: Qt.rgba(mocha.peach.r,  mocha.peach.g,  mocha.peach.b,  0.38) }
+        GradientStop { position: organicGlow.barEnd; color: Qt.rgba(mocha.green.r,  mocha.green.g,  mocha.green.b,  0.24) }
+        GradientStop { position: organicGlow.barEnd + (1.0 - organicGlow.barEnd) * 0.46; color: Qt.rgba(mocha.green.r,  mocha.green.g,  mocha.green.b,  0.09) }
         GradientStop { position: 1.0; color: Qt.rgba(mocha.green.r,  mocha.green.g,  mocha.green.b,  0.0) }
     }
 }

@@ -11,7 +11,7 @@ import "../.."  // ThemeConfig
 //   particle_speed: snelheid (0.1–2.0, standaard 1.0)
 //
 // BarSurface.qml laadt dit component en geeft `fireflyBoost: 1.25` mee voor
-// het Botanical-theme zodat de vuurvliegjes daar iets groter en helderder zijn.
+// het Organic-theme zodat de vuurvliegjes daar iets groter en helderder zijn.
 //
 // ── Hoe de animaties werken ───────────────────────────────────────────────────
 // Elk deeltje is een `Item` in een Repeater. Voor de zwaardere ambience-types
@@ -38,7 +38,7 @@ Item {
     id: root
     required property var shell
     required property var mocha
-    property real fireflyBoost: 1.0   // >1.0 = grotere/fellere vuurvliegjes (Botanical)
+    property real fireflyBoost: 1.0   // >1.0 = grotere/fellere vuurvliegjes (Organic)
     property real trackY: 0
     property real trackHeight: height
     property bool pointerActive: false

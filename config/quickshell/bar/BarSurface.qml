@@ -32,7 +32,7 @@ import "skins"
 //   mocha   — kleurenpalet
 //   surface — barSurfaceRoot (heeft skinBool/skinNumber/continuousBarMode/...)
 //
-//   BotanicalGlow.qml — warme organische gloed
+//   OrganicGlow.qml   — warme organische gloed
 //   NeonGrid.qml      — scanraster, signaalnodes en sweep-licht
 //   ParticleLayer.qml — bewegende deeltjes
 // ─────────────────────────────────────────────────────────────────────────────
@@ -135,8 +135,7 @@ Item {
                                              && Number(shell.particleCount || 0) > 0
     readonly property bool organicGlowEnabled: ambientEnabled("organic-glow", "organic") && skinBool("showWarmGlow", false)
     readonly property bool neonGridEnabled: skinBool("showNeonGrid", false)
-                                           && (ambientEnabled("neon-grid", "neon")
-                                               || ambientEnabled("cyber-grid", "neon"))
+                                           && ambientEnabled("neon-grid", "neon")
 
     function resetTextureOverlaySource() {
         if (configuredTextureOverlaySource !== "") { activeTextureOverlaySource = configuredTextureOverlaySource; return; }
@@ -184,7 +183,7 @@ Item {
     // Visuele lagen — z-volgorde (laag = verder naar achteren):
     //
     //   z=0.00  ParticleLayer      effects/ParticleLayer.qml
-    //   z=0.10  Organic glow       effects/BotanicalGlow.qml
+    //   z=0.10  Organic glow       effects/OrganicGlow.qml
     //   z=0.25  Continuous rail    inline Rectangle
     //   z=0.35  Textuuroverlay     inline Image
     //   z=0.50  NeonGrid           effects/NeonGrid.qml
@@ -312,7 +311,7 @@ Item {
         }
         Component {
             id: organicGlowComponent
-            BotanicalGlow { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
+            OrganicGlow { shell: barSurfaceRoot.shell; mocha: barSurfaceRoot.mocha; surface: barSurfaceRoot }
         }
         Component {
             id: neonGridComponent

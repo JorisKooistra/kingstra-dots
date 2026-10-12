@@ -40,7 +40,7 @@ Rectangle {
            ? (isHovered ? ctx.neonCenterHoverColor : ctx.neonCenterColor)
            : (isHovered ? surface.panelHoverColor   : surface.panelColor)
 
-    // Afgeronde hoeken — normaal overal gelijk, maar bij botanical-thema
+    // Afgeronde hoeken — normaal overal gelijk, maar bij organic-thema
     // worden de hoeken die aan de schermrand zitten plat gemaakt (= 0).
     radius: ctx.neonCenterFeature ? shell.s(6) : surface.panelRadius
     topLeftRadius:     ctx.panelTopLeftRadius
