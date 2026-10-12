@@ -80,6 +80,7 @@ exec(mod .. " + SHIFT + N", "~/.config/quickshell/notifications/notification_con
 exec(mod .. " + ALT + N", "~/.config/quickshell/notifications/notification_control.sh dnd")
 exec(mod .. " + SHIFT + M", scripts .. "/qs_manager.sh toggle music")
 exec(mod .. " + CTRL + C", scripts .. "/qs_manager.sh toggle calendar")
+exec(mod .. " + A", scripts .. "/qs_manager.sh toggle quicksettings")
 exec(mod .. " + O", scripts .. "/qs_manager.sh toggle monitors")
 exec(mod .. " + X", scripts .. "/qs_manager.sh toggle focustime")
 exec(mod .. " + CTRL + I", scripts .. "/qs_manager.sh toggle settings")

@@ -8,6 +8,7 @@ import Quickshell.Networking
 import Quickshell.Bluetooth
 import Quickshell.Services.UPower
 import Quickshell.Services.Mpris
+import Quickshell.Services.SystemTray
 import Kingstra.Blobs 1.0
 import ".."
 
@@ -523,6 +524,12 @@ Item {
         if (!volPoller.running) volPoller.running = true;
     }
 
+    function toggleMute() {
+        Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]);
+        root.isMuted = !root.isMuted;
+        if (!volPoller.running) volPoller.running = true;
+    }
+
     // FileView kan geen afwezige file watchen. Initialiseer daarom de
     // user-state eenmalig voordat de poll begint; de helper schrijft alleen
     // de onschuldige automatische fallback wanneer er nog niets bestaat.
@@ -595,6 +602,39 @@ Item {
     readonly property bool hasBattery: UPower.displayDevice !== null && UPower.displayDevice.isLaptopBattery
     readonly property int batCap: UPower.displayDevice ? Math.round(UPower.displayDevice.percentage * 100) : 0
     readonly property bool isSoundActive: !isMuted && _volRaw > 0
+    readonly property bool batCharging: UPower.displayDevice !== null
+        && (UPower.displayDevice.state === UPowerDeviceState.Charging
+            || UPower.displayDevice.state === UPowerDeviceState.FullyCharged
+            || UPower.displayDevice.state === UPowerDeviceState.PendingCharge)
+    readonly property string batIcon: {
+        if (batCharging) return "󰂄";
+        if (batCap >= 90) return "󰁹";
+        if (batCap >= 70) return "󰂀";
+        if (batCap >= 50) return "󰁾";
+        if (batCap >= 30) return "󰁼";
+        if (batCap >= 15) return "󰁻";
+        return "󰂃";
+    }
+    readonly property color batAccent: batCharging ? root.mocha.accent3
+        : (batCap < 15 ? root.mocha.red : (batCap < 30 ? root.mocha.yellow : root.mocha.accent2))
+    // Welke statusonderdelen de tegel toont volgt dezelfde moduleList en
+    // hardware-checks als de losse knoppen die hij vervangt.
+    readonly property bool statusShowWifi: moduleEnabled("network") && hasWifi
+    readonly property bool statusShowEth: moduleEnabled("network") && !hasWifi && isEthConnected
+    readonly property bool statusShowBt: moduleEnabled("bluetooth") && hasBluetooth
+    readonly property bool statusShowVolume: moduleEnabled("volume")
+    readonly property bool statusShowBattery: moduleEnabled("battery") && hasBattery
+    readonly property bool statusTileVisible: statusShowWifi || statusShowEth || statusShowBt
+        || statusShowVolume || statusShowBattery
+    readonly property string statusTooltip: {
+        let parts = [];
+        if (statusShowWifi) parts.push("Wi-Fi " + (isWifiOn ? "aan" : "uit"));
+        if (statusShowEth) parts.push("Bedraad verbonden");
+        if (statusShowBt) parts.push("Bluetooth " + (isBtOn ? "aan" : "uit"));
+        if (statusShowVolume) parts.push("Volume " + (isMuted ? "gedempt" : volPercent));
+        if (statusShowBattery) parts.push("Batterij " + batCap + "%" + (batCharging ? " (laden)" : ""));
+        return "Snelle instellingen · " + parts.join(" · ");
+    }
     readonly property string volPercent: _volRaw + "%"
     readonly property string volIcon: {
         if (isMuted || _volRaw === 0) return "󰝟";
@@ -1087,44 +1127,22 @@ Item {
 
             Item { Layout.fillHeight: true }
 
-            RailButton { tooltip: "Netwerk";
-                visible: root.moduleEnabled("network") && root.hasWifi
-                icon: root.isWifiOn ? "󰤨" : "󰤮"
-                accent: root.isWifiOn ? root.mocha.accent3 : root.mocha.subtext0
-                onTriggered: root.togglePanel("network")
+            // Systeemvak: kwam in de oude bar mee, ontbrak sinds de rail.
+            TrayGrid {
+                Layout.fillWidth: true
+                Layout.preferredHeight: implicitHeight
+                vertical: true
             }
-            RailButton { tooltip: "Bedraad netwerk";
-                visible: root.moduleEnabled("network") && !root.hasWifi && root.isEthConnected
-                icon: "󰈀"
-                accent: root.mocha.accent3
-                onTriggered: {
-                    Quickshell.execDetached(["bash", "-lc", "printf eth > /tmp/qs_network_mode"]);
-                    root.togglePanel("network");
-                }
-            }
-            RailButton { tooltip: "Bluetooth";
-                visible: root.moduleEnabled("bluetooth") && root.hasBluetooth
-                icon: root.isBtOn ? "󰂱" : "󰂲"
-                accent: root.isBtOn ? root.mocha.accent3 : root.mocha.subtext0
-                onTriggered: {
-                    Quickshell.execDetached(["bash", "-lc", "printf bt > /tmp/qs_network_mode"]);
-                    root.togglePanel("network");
-                }
-            }
-            RailButton { tooltip: "Volume";
-                visible: root.moduleEnabled("volume")
-                icon: root.volIcon
-                text: root.volPercent
-                accent: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
-                onTriggered: root.togglePanel("volume")
+
+            // Eén compacte statustegel i.p.v. losse knoppen voor netwerk,
+            // bluetooth, volume en batterij. Klik opent Snelle instellingen
+            // (met doorverwijzing naar elk detailpaneel), scrollen regelt het
+            // volume en middelklik dempt, zoals de oude volumeknop.
+            StatusTile {
+                visible: root.statusTileVisible
+                onTriggered: root.togglePanel("quicksettings")
                 onWheelDelta: (delta) => root.handleVolumeWheel(delta)
-            }
-            RailButton { tooltip: "Batterij";
-                visible: root.moduleEnabled("battery") && root.hasBattery
-                icon: "󰁹"
-                text: root.batCap + "%"
-                accent: root.mocha.accent2
-                onTriggered: root.togglePanel("battery")
+                onMiddleClicked: root.toggleMute()
             }
             RailButton { tooltip: "Afsluitmenu";
                 icon: "󰐥"
@@ -1320,34 +1338,20 @@ Item {
 
                 MediaPill {}
 
-                StripButton { tooltip: "Netwerk";
-                    visible: !root.railEnabled && root.moduleEnabled("network") && root.hasWifi
-                    icon: root.isWifiOn ? "󰤨" : "󰤮"
-                    accent: root.isWifiOn ? root.mocha.accent3 : root.mocha.subtext0
-                    onTriggered: root.togglePanel("network")
+                TrayGrid {
+                    visible: !root.railEnabled && root.trayShownCount > 0
+                    Layout.preferredWidth: implicitWidth
+                    Layout.preferredHeight: implicitHeight
+                    Layout.alignment: Qt.AlignVCenter
+                    vertical: false
                 }
-                StripButton { tooltip: "Bedraad netwerk";
-                    visible: !root.railEnabled && root.moduleEnabled("network") && !root.hasWifi && root.isEthConnected
-                    icon: "󰈀"
-                    accent: root.mocha.accent3
-                    onTriggered: {
-                        Quickshell.execDetached(["bash", "-lc", "printf eth > /tmp/qs_network_mode"]);
-                        root.togglePanel("network");
-                    }
-                }
-                StripButton { tooltip: "Volume";
+
+                StripStatus {
                     // Rail bezit de systeemcontrols; strip toont ze alleen zonder rail.
-                    visible: !root.railEnabled && root.moduleEnabled("volume")
-                    icon: root.volIcon
-                    accent: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
-                    onTriggered: root.togglePanel("volume")
+                    visible: !root.railEnabled && root.statusTileVisible
+                    onTriggered: root.togglePanel("quicksettings")
                     onWheelDelta: (delta) => root.handleVolumeWheel(delta)
-                }
-                StripButton { tooltip: "Batterij";
-                    visible: !root.railEnabled && root.moduleEnabled("battery") && root.hasBattery
-                    icon: "󰁹"
-                    accent: root.mocha.accent2
-                    onTriggered: root.togglePanel("battery")
+                    onMiddleClicked: root.toggleMute()
                 }
                 StripButton { tooltip: "Afsluitmenu";
                     visible: !root.railEnabled
@@ -1758,6 +1762,348 @@ Item {
             onWheel: (wheel) => {
                 btn.wheelDelta(wheel.angleDelta.y);
                 wheel.accepted = true;
+            }
+        }
+    }
+
+    // --- Statustegel (rail) --------------------------------------------------
+    // Zelfde knoptaal als RailButton (hover-vulling, accentrand, schaal), maar
+    // met een 2x2-raster: netwerk, bluetooth, volume en batterij in de ruimte
+    // van ruim één knop. Volume en batterij houden hun getal zichtbaar.
+    component StatusTile: Rectangle {
+        id: tile
+        signal triggered()
+        signal middleClicked()
+        signal wheelDelta(int delta)
+
+        // De tooltip toont live waarden; bij scrollen verandert de tekst
+        // terwijl je erboven hangt. Onthoud welke tekst er staat, anders
+        // matcht hideTooltip niet meer en blijft hij hangen.
+        property string shownTip: ""
+        function showTip() {
+            shownTip = root.statusTooltip;
+            root.showTooltip(tile, shownTip, true);
+        }
+        readonly property string liveTip: root.statusTooltip
+        onLiveTipChanged: if (tileMouse.containsMouse) showTip()
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: statusGrid.implicitHeight + 12
+        radius: Math.min(7, ThemeConfig.styleWidgetRadius)
+        color: tileMouse.containsMouse ? root.pillHoverColor : "transparent"
+        border.width: 1
+        border.color: tileMouse.containsMouse
+            ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.36) : "transparent"
+        scale: tileMouse.containsMouse ? 1.07 : 1.0
+        Behavior on scale {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+
+        Grid {
+            id: statusGrid
+            anchors.centerIn: parent
+            columns: tile.width >= 40 ? 2 : 1
+            columnSpacing: 0
+            rowSpacing: 3
+            readonly property real cellW: Math.floor((tile.width - 4) / columns)
+
+            StatusGlyph {
+                visible: root.statusShowWifi
+                width: statusGrid.cellW
+                icon: root.isWifiOn ? "󰤨" : "󰤮"
+                accent: root.isWifiOn ? root.mocha.accent3 : root.mocha.subtext0
+            }
+            StatusGlyph {
+                visible: root.statusShowEth
+                width: statusGrid.cellW
+                icon: "󰈀"
+                accent: root.mocha.accent3
+            }
+            StatusGlyph {
+                visible: root.statusShowBt
+                width: statusGrid.cellW
+                icon: root.isBtOn ? "󰂱" : "󰂲"
+                accent: root.isBtOn ? root.mocha.accent3 : root.mocha.subtext0
+            }
+            StatusGlyph {
+                visible: root.statusShowVolume
+                width: statusGrid.cellW
+                icon: root.volIcon
+                value: root.isMuted ? "--" : String(root._volRaw)
+                accent: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
+            }
+            StatusGlyph {
+                visible: root.statusShowBattery
+                width: statusGrid.cellW
+                icon: root.batIcon
+                value: String(root.batCap)
+                accent: root.batAccent
+            }
+        }
+
+        MouseArea {
+            id: tileMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+            onEntered: tile.showTip()
+            onExited: root.hideTooltip(tile.shownTip)
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.MiddleButton) {
+                    tile.middleClicked();
+                    return;
+                }
+                let p = tile.mapToItem(root, tile.width / 2, tile.height / 2);
+                root.lastTriggerX = p.x;
+                root.lastTriggerY = p.y;
+                tile.triggered();
+            }
+            onWheel: (wheel) => {
+                tile.wheelDelta(wheel.angleDelta.y);
+                wheel.accepted = true;
+            }
+        }
+    }
+
+    component StatusGlyph: Column {
+        id: glyph
+        property string icon: ""
+        property string value: ""
+        property color accent: root.hotColor
+        spacing: -2
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: glyph.icon
+            font.family: "Iosevka Nerd Font"
+            font.pixelSize: 14
+            color: glyph.accent
+            Behavior on color {
+                ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            }
+        }
+        Text {
+            visible: glyph.value !== ""
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: glyph.value
+            font.family: ThemeConfig.monoFont
+            font.pixelSize: 8
+            font.weight: Font.Bold
+            color: root.mocha.text
+        }
+    }
+
+    // --- Statuspil (strip, voor thema's zonder rail) -------------------------
+    component StripStatus: Rectangle {
+        id: pill
+        signal triggered()
+        signal middleClicked()
+        signal wheelDelta(int delta)
+
+        property string shownTip: ""
+        function showTip() {
+            shownTip = root.statusTooltip;
+            root.showTooltip(pill, shownTip, false);
+        }
+        readonly property string liveTip: root.statusTooltip
+        onLiveTipChanged: if (pillMouse.containsMouse) showTip()
+
+        Layout.preferredWidth: pillRow.implicitWidth + 16
+        Layout.preferredHeight: 28
+        radius: Math.min(6, ThemeConfig.styleWidgetRadius)
+        color: pillMouse.containsMouse ? root.pillHoverColor : "transparent"
+        scale: pillMouse.containsMouse ? 1.07 : 1.0
+        Behavior on scale {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+
+        Row {
+            id: pillRow
+            anchors.centerIn: parent
+            spacing: 8
+
+            StripGlyph {
+                visible: root.statusShowWifi
+                icon: root.isWifiOn ? "󰤨" : "󰤮"
+                accent: root.isWifiOn ? root.mocha.accent3 : root.mocha.subtext0
+            }
+            StripGlyph {
+                visible: root.statusShowEth
+                icon: "󰈀"
+                accent: root.mocha.accent3
+            }
+            StripGlyph {
+                visible: root.statusShowBt
+                icon: root.isBtOn ? "󰂱" : "󰂲"
+                accent: root.isBtOn ? root.mocha.accent3 : root.mocha.subtext0
+            }
+            StripGlyph {
+                visible: root.statusShowVolume
+                icon: root.volIcon
+                value: root.isMuted ? "" : root.volPercent
+                accent: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
+            }
+            StripGlyph {
+                visible: root.statusShowBattery
+                icon: root.batIcon
+                value: root.batCap + "%"
+                accent: root.batAccent
+            }
+        }
+
+        MouseArea {
+            id: pillMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+            onEntered: pill.showTip()
+            onExited: root.hideTooltip(pill.shownTip)
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.MiddleButton) {
+                    pill.middleClicked();
+                    return;
+                }
+                let p = pill.mapToItem(root, pill.width / 2, pill.height / 2);
+                root.lastTriggerX = p.x;
+                root.lastTriggerY = p.y;
+                pill.triggered();
+            }
+            onWheel: (wheel) => {
+                pill.wheelDelta(wheel.angleDelta.y);
+                wheel.accepted = true;
+            }
+        }
+    }
+
+    component StripGlyph: Row {
+        id: sglyph
+        property string icon: ""
+        property string value: ""
+        property color accent: root.hotColor
+        spacing: 3
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: sglyph.icon
+            font.family: "Iosevka Nerd Font"
+            font.pixelSize: 15
+            color: sglyph.accent
+            Behavior on color {
+                ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            }
+        }
+        Text {
+            visible: sglyph.value !== ""
+            anchors.verticalCenter: parent.verticalCenter
+            text: sglyph.value
+            font.family: ThemeConfig.monoFont
+            font.pixelSize: 9
+            font.weight: Font.Bold
+            color: root.mocha.text
+        }
+    }
+
+    // --- Systeemvak ----------------------------------------------------------
+    // Links: activeren, midden: secundaire actie, rechts: het menu van de app.
+    // nm-applet blijft verborgen; netwerk zit al in de statustegel.
+    function trayField(item, key) {
+        if (!item) return "";
+        try {
+            let value = item[key];
+            return value === undefined || value === null ? "" : String(value);
+        } catch (e) {
+            return "";
+        }
+    }
+    function isHiddenTrayItem(item) {
+        let haystack = [trayField(item, "id"), trayField(item, "title"),
+                        trayField(item, "tooltipTitle"), trayField(item, "icon")].join(" ").toLowerCase();
+        return haystack.indexOf("nm-applet") !== -1
+            || haystack.indexOf("networkmanager") !== -1
+            || haystack.indexOf("nm-signal") !== -1
+            || haystack.indexOf("network-wireless-signal") !== -1;
+    }
+    readonly property int trayShownCount: {
+        let list = SystemTray.items.values;
+        let n = 0;
+        for (let i = 0; i < list.length; i++) {
+            if (!isHiddenTrayItem(list[i])) n++;
+        }
+        return n;
+    }
+
+    component TrayGrid: Grid {
+        id: tray
+        property bool vertical: true
+        readonly property int cell: 24
+        visible: root.trayShownCount > 0
+        columns: vertical ? Math.max(1, Math.floor((width + spacing) / (cell + spacing))) : Math.max(1, root.trayShownCount)
+        spacing: vertical ? 2 : 4
+        horizontalItemAlignment: Grid.AlignHCenter
+
+        Repeater {
+            model: SystemTray.items
+            delegate: Rectangle {
+                id: trayCell
+                required property var modelData
+                readonly property string label: String(modelData.tooltipTitle || modelData.title || modelData.id || "")
+                visible: !root.isHiddenTrayItem(modelData)
+                width: tray.cell
+                height: tray.cell
+                radius: Math.min(6, ThemeConfig.styleWidgetRadius)
+                color: trayMouse.containsMouse ? root.pillHoverColor : "transparent"
+                scale: trayMouse.containsMouse ? 1.07 : 1.0
+                Behavior on scale {
+                    NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+                }
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                }
+
+                Image {
+                    anchors.centerIn: parent
+                    source: trayCell.modelData.icon || ""
+                    width: 16
+                    height: 16
+                    sourceSize: Qt.size(32, 32)
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    asynchronous: true
+                }
+
+                QsMenuAnchor {
+                    id: trayMenu
+                    anchor.window: root.shellWindow
+                    anchor.item: trayCell
+                    menu: trayCell.modelData.menu
+                }
+
+                MouseArea {
+                    id: trayMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                    onEntered: root.showTooltip(trayCell, trayCell.label, tray.vertical)
+                    onExited: root.hideTooltip(trayCell.label)
+                    onClicked: (mouse) => {
+                        let item = trayCell.modelData;
+                        if (mouse.button === Qt.MiddleButton) {
+                            item.secondaryActivate();
+                        } else if (mouse.button === Qt.RightButton || item.onlyMenu) {
+                            if (item.hasMenu) trayMenu.open();
+                        } else {
+                            item.activate();
+                        }
+                    }
+                    onWheel: (wheel) => {
+                        trayCell.modelData.scroll(wheel.angleDelta.y, false);
+                        wheel.accepted = true;
+                    }
+                }
             }
         }
     }
