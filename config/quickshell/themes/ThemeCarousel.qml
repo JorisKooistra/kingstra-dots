@@ -280,10 +280,11 @@ Item {
     Process {
         id: applyProc
         property string themeName: ""
-        // The active picker must survive this switch so it can report success
-        // and close deliberately. A regular shortcut switch still restarts the
-        // legacy surfaces after applying the new runtime state.
-        command: ["env", "KINGSTRA_THEME_PICKER_ACTIVE=1", root.themeSwitchSafeCmd, themeName]
+        // The switch never restarts Quickshell: ThemeConfig/MatugenColors pick
+        // up theme.json/colors.json live, so this picker survives the switch
+        // and reports the result itself. tests/smoke/theme-switch-no-restart.sh
+        // guards that contract.
+        command: [root.themeSwitchSafeCmd, themeName]
         stdout: StdioCollector {
             onStreamFinished: {
                 // handled in onExited to avoid false-positive "applied" feedback
