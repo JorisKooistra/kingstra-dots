@@ -81,6 +81,97 @@ Item {
         }
     }
 
+    // --- Weer en eerstvolgende afspraak --------------------------------------
+    // Het weer stond in de oude bar en ontbrak sinds de rail; de afspraak komt
+    // uit dezelfde bronnen als het agendapaneel (lokaal + Thunderbird).
+    property string weatherIcon: ""
+    property string weatherTemp: ""
+    property var localEvents: []
+    property var thunderbirdEvents: []
+    readonly property var nextEvent: {
+        let all = localEvents.concat(thunderbirdEvents);
+        let todayKey = Qt.formatDate(now, "yyyy-MM-dd");
+        let nowTime = Qt.formatTime(now, "HH:mm");
+        let best = null;
+        for (let i = 0; i < all.length; i++) {
+            let ev = all[i];
+            if (!ev || !ev.dateKey) continue;
+            let timeKey = ev.allDay ? "00:00" : String(ev.timeRaw || ev.time || "00:00");
+            if (ev.dateKey < todayKey) continue;
+            if (ev.dateKey === todayKey && !ev.allDay && timeKey < nowTime) continue;
+            let sortKey = ev.dateKey + " " + timeKey;
+            if (!best || sortKey < best.sortKey) best = { sortKey: sortKey, ev: ev };
+        }
+        return best ? best.ev : null;
+    }
+    readonly property string nextEventText: {
+        let ev = nextEvent;
+        if (!ev) return "Geen afspraken gepland";
+        let todayKey = Qt.formatDate(now, "yyyy-MM-dd");
+        let tomorrowKey = Qt.formatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), "yyyy-MM-dd");
+        let when = ev.dateKey === todayKey ? "" : (ev.dateKey === tomorrowKey ? "Morgen " : String(ev.day || ev.dateKey) + " ");
+        let time = ev.allDay ? "hele dag" : String(ev.time || "");
+        return when + time + " · " + String(ev.title || "");
+    }
+
+    function parseEvents(raw) {
+        try {
+            let data = JSON.parse(String(raw || "{}"));
+            return Array.isArray(data.events) ? data.events : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    Process {
+        id: weatherPoller
+        command: ["bash", Quickshell.env("HOME") + "/.config/quickshell/calendar/weather.sh", "--current-summary"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let lines = this.text.trim().split("\n");
+                if (lines.length < 2) return;
+                let temp = lines[1].trim();
+                // Zonder API-sleutel levert weather.sh dummydata met 0.0°;
+                // dan tonen we liever niets dan een verzonnen temperatuur.
+                if (/^0\.0\D*$/.test(temp)) {
+                    root.weatherIcon = "";
+                    root.weatherTemp = "";
+                    return;
+                }
+                root.weatherIcon = lines[0].trim();
+                root.weatherTemp = temp.replace(/\.\d+/, "");
+            }
+        }
+    }
+
+    Process {
+        id: localAgendaPoller
+        command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/calendar/agenda_events.py", "list"]
+        stdout: StdioCollector {
+            onStreamFinished: root.localEvents = root.parseEvents(this.text)
+        }
+    }
+
+    Process {
+        id: thunderbirdPoller
+        command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/calendar/thunderbird_calendar_status.py"]
+        stdout: StdioCollector {
+            onStreamFinished: root.thunderbirdEvents = root.parseEvents(this.text)
+        }
+    }
+
+    Timer {
+        interval: 300000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: {
+            if (!weatherPoller.running) weatherPoller.running = true;
+            if (!localAgendaPoller.running) localAgendaPoller.running = true;
+            if (!thunderbirdPoller.running) thunderbirdPoller.running = true;
+        }
+    }
+
     function clampPercent(value) {
         let parsed = parseInt(value);
         return isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
@@ -123,6 +214,37 @@ Item {
                     font.family: ThemeConfig.uiFont
                     font.pixelSize: 11
                     color: mocha.subtext0
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 8
+                    Layout.bottomMargin: 6
+                    Layout.preferredHeight: 1
+                    color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    visible: root.weatherTemp !== ""
+                    text: root.weatherIcon + "  " + root.weatherTemp
+                    font.family: "Iosevka Nerd Font"
+                    font.pixelSize: 13
+                    font.weight: Font.Bold
+                    color: mocha.text
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 2
+                    text: root.nextEventText
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 10
+                    color: root.nextEvent ? mocha.primary : mocha.subtext0
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
+                    maximumLineCount: 2
+                    wrapMode: Text.Wrap
                 }
             }
         }
