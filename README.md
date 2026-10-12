@@ -4,169 +4,182 @@ Personal Hyprland rice for Arch Linux. Modular, reproducible, fully automated in
 
 ---
 
-## Features
+## Overview
 
-### Compositor — Hyprland
+| Layer | Tool |
+|---|---|
+| Compositor | Hyprland 0.55+ with a Lua config (`config/hypr/hyprland.lua`) |
+| Shell UI | Quickshell (QML): bar, shell frame, panels, launcher, notifications, lockscreen |
+| Colors | Matugen (Material You palette from the wallpaper) |
+| Themes | `organic`, `paper`, `neon`, `mono`, `mono-accent` |
+| Wallpaper | skwd-wall (static), mpvpaper (optional video) |
+| Terminal / shell | kitty, zsh + oh-my-posh |
+| Login / lock | SDDM (Kingstra greeter), Quickshell lock with hyprlock fallback, hypridle |
+| OSD | SwayOSD |
 
-Hyprland with a 16-file `conf.d` modular config. Every concern lives in its own file:
-colors, theme, decoration, animations, window rules, autostart, keybindings, and hardware overrides.
-The file `99-custom.conf` is never touched by the installer — user tweaks survive updates.
+Config folders are deployed as symlinks: `~/.config/<name>` points to `config/<name>` in this repo.
 
-### Bar — Quickshell (QML)
+---
 
-~24k lines of QML across 64 files. The bar separates position from content templates:
-`top`, `bottom`, `left`, and `right` choose the screen edge, while `horizontal`, `sidebar`, and
-`compact-sidebar` templates keep the module layout consistent when switching themes.
+## Hyprland — Lua config
 
-Modules: workspaces, active window title, system stats (CPU/RAM/network/battery),
-media controls, notifications button, clock, tray icons, and more.
-Each activity mode (see **Modes** below) activates a different module set.
+Hyprland loads a single entrypoint, `config/hypr/hyprland.lua`, which requires the modules in
+`config/hypr/lua/`. The old `hyprland.conf` is no longer used; the first Lua session removes it.
 
-### Theming — Material You via Matugen
+| Module | Contents |
+|---|---|
+| `config.lua` | General, decoration, blur, layouts, input, animations |
+| `monitors.lua` | Universal fallback monitor rule (`preferred`, scale 1.0) |
+| `rules.lua` | Window and layer rules |
+| `binds.lua` | All keybindings, including the `passthrough` submap |
+| `autostart.lua` | Runs `~/.local/bin/kingstra-session-start` on `hyprland.start` |
 
-Every wallpaper change triggers a full color pipeline:
+Machine-specific and generated modules are loaded optionally (each returns `{ apply = function() ... end }`)
+and are kept out of git. A tracked `*.lua.default` exists for each one as a fallback:
 
-1. Matugen generates a Material You palette from the wallpaper image.
-2. The active theme applies a hue/saturation/lightness transform on top.
-3. Colors propagate to Hyprland, Quickshell, kitty, oh-my-posh, GTK 3/4, Qt6, SwayNC, Walker, and SDDM.
+| Generated module | Written by |
+|---|---|
+| `colors.lua` | Matugen (`templates/hypr-colors.lua`) |
+| `theme.lua` | `kingstra-theme-switch` |
+| `hardware.lua` | Installer phase 14 (GPU env vars, touchpad, tablet mode) |
+| `monitors-local.lua` | Display settings (`monitor-apply-save.sh`, Settings panel) |
+| `workspaces.lua` | Workspace/monitor assignments |
+| `input-overrides.lua` | Settings panel input overrides |
 
-The pipeline is centralized in `apply-shell-state` and `kingstra-matugen-run` — no per-app tweaking needed.
+Helper scripts live in `config/hypr/scripts/` (workspace actions, overview, screenshots,
+monitor hotplug restore, resume fixes, lid lock, tablet mode, Citrix guard, and more).
+`hypr-dispatch.sh` wraps dispatch calls so scripts keep working with the Lua config.
 
-### Themes
+---
 
-Six distinct visual personalities. Each theme defines its own Matugen scheme type, blur, opacity,
-corner radius, fonts, color transforms, bar/widget shapes, ornaments, particle effects, and terminal style.
+## Quickshell
 
-| Theme | Description | Scheme |
-|---|---|---|
-| `botanical` | Temperate rainforest — moss, wood, filtered light | scheme-content |
-| `rocky` | Granite — angular, solid, no-nonsense | scheme-monochrome |
-| `ocean` | Deep sea — cool, calm, fluid | scheme-fidelity |
-| `space` | Cosmic — deep, dark, floating panels | scheme-expressive |
-| `cyber` | Neon — high contrast, sharp, electric | scheme-rainbow |
-| `animated` | Vibrant — colourful, dynamic, expressive | scheme-fruit-salad |
+Quickshell is the primary UI layer (about 40k lines of QML across ~90 files). Three Quickshell
+processes are started by `kingstra-session-start`:
 
-Switch from the terminal or with `Super + Ctrl + T` to open the visual theme carousel.
+- **`TopBar.qml`** — the bar (`bar/BarShell.qml`) and the shell surface (`shellsurface/ShellSurface.qml`):
+  rail, status strip, screen frame and the panels that grow out of it (launcher, clipboard,
+  window switcher, performance drawer).
+- **`Main.qml`** — popups such as calendar, music, battery, network, volume, monitors,
+  settings, theme and mode pickers, FocusTime and help. Toggled through `config/hypr/scripts/qs_manager.sh`.
+- **`overview/shell.qml`** — the workspace overview (`Super + Tab`).
 
-```bash
-kingstra-theme-switch botanical
-```
+The screen frame and edge panels are drawn as one shared SDF "blob" by a small Qt plugin in
+`plugin/` (`Kingstra.Blobs`), built and installed by phase 05.
+
+Bar layout comes from the active theme: `bar_position` (top/bottom), an optional side rail, a
+status strip, the bar template, and the bar/widget shapes. Bar skins live in `bar/skins/` and
+theme effects (particles, neon grid, botanical glow) in `bar/effects/`.
+
+Notifications, the app launcher, the clipboard history and the lockscreen are all Quickshell
+components. SwayNC is no longer used; phase 06 stops it if it is still running.
 
 ### Modes
 
-Modes reconfigure the bar module set and autohide behaviour for the current activity.
-Theme identity (shape, ornaments, particles) stays fixed — only content and behaviour change.
+Modes change the bar module set and autohide behaviour for the current activity. Theme identity
+stays the same. Definitions live in `config/kingstra/modes/*.toml`.
 
 | Mode | Bar | Modules |
 |---|---|---|
-| `office` (default) | Always visible | Workspaces, window title, clock, CPU/RAM monitor, network, battery, volume, bluetooth, notifications |
-| `gaming` | Always visible | Workspaces, CPU/GPU/RAM temps, audio device, mic mute, game launcher, clock |
-| `media` | Auto-hide (3 s) | Volume, brightness, media controls, clock |
+| `office` (default) | Always visible | Workspaces, clock, updates, CPU temp, RAM, network, battery, volume, Bluetooth, notifications, mail |
+| `gaming` | Always visible | Workspaces, CPU/GPU temps, RAM, FPS, battery, volume, game launcher, clock |
+| `media` | Auto-hide | Volume, brightness, media controls, battery, clock |
 
-Switch with `Super + Ctrl + M` or from the terminal:
+Switch with `Super + Ctrl + M` or `kingstra-mode-switch <mode>`.
+
+---
+
+## Theming — Matugen
+
+Every wallpaper or theme change runs one pipeline, `apply-shell-state`:
+
+1. `kingstra-matugen-run` resolves the current wallpaper and the active theme's `[matugen]`
+   settings (scheme type, color index, contrast, light/dark) and runs Matugen.
+2. The wallpaper stays the single source of truth for the palette; themes change styling, not
+   the colors themselves.
+3. Matugen writes the generated files and the affected apps are reloaded.
+
+Templates live in `config/matugen/templates/`. Phase 08 creates `~/.config/matugen/config.toml`
+with these targets:
+
+Hyprland (`lua/colors.lua`), Quickshell (`colors.json`), kitty, btop, cava, Walker, Qt6 (qt6ct),
+GTK 3/4, yazi, hyprlock, oh-my-posh, Firefox (website CSS), VS Code, SDDM, Spicetify, and a
+palette inspector JSON (`~/.config/kingstra/state/matugen-palette.json`) shown in the
+wallpaper picker overlay.
+
+Firefox has two layers: the Matugen website CSS above, and browser chrome styling from
+`config/firefox/chrome/userChrome.css`, installed into each profile by `kingstra-firefox-optimize`.
+
+---
+
+## Themes
+
+Five themes, defined in `config/kingstra/themes/*.toml`. Each theme sets its Matugen scheme,
+radius, gaps, blur, opacity, fonts, icon theme, bar layout and shape, widget style, motion,
+particles and terminal look.
+
+| Theme | Character | Scheme | Bar | Extras |
+|---|---|---|---|---|
+| `organic` (default) | Dark, warm, tactile; soft shapes | `scheme-content`, dark | Top + left rail | Fireflies, organic glow |
+| `paper` | Warm e-reader; light matte paper, minimal motion | `scheme-fidelity`, light | Top | Sketch wallpaper effect |
+| `neon` | Futuristic cockpit; black glass, cyan/magenta | `scheme-rainbow`, dark | Top + left rail | Neon grid, specks, glass-tint wallpaper |
+| `mono` | Monochrome, flat, angular, compact | `scheme-monochrome`, dark | Bottom | Grayscale wallpaper |
+| `mono-accent` | Mono with a single wallpaper accent hue | `scheme-fidelity`, dark | Bottom | Color-splash wallpaper |
+
+For `paper`, `neon`, `mono` and `mono-accent`, `kingstra-wallpaper` generates the themed wallpaper
+variant in the cache before skwd switches to it, so there is no flash of the unfiltered image.
 
 ```bash
-kingstra-mode-switch gaming
+kingstra-theme-switch organic
+kingstra-theme-switch --list
+kingstra-theme-switch --current
 ```
 
-### Shell — zsh + oh-my-posh
+`Super + Ctrl + T` opens the theme picker; `Super + Shift + T` cycles to the next theme.
 
-Modular zsh config with a `conf.d/` pattern. The prompt theme (`kingstra.omp.toml`) uses the
-active Material You palette, so it automatically matches the wallpaper.
+---
 
-### Terminal — kitty
+## Wallpaper
 
-Configured with JetBrains Mono and Matugen-generated colors. Background, foreground, and accent
-colors update automatically on every wallpaper or theme change.
-
-### Wallpaper
-
-Supports both static images (`awww`) and video backgrounds (`mpvpaper`). All picks flow through
-the same `apply-shell-state` pipeline to keep colors in sync.
+skwd-wall is the only wallpaper renderer (`skwd-daemon.service`). Video wallpapers use mpvpaper
+when `ENABLE_VIDEO_WALLPAPER=true`. Everything goes through `kingstra-wallpaper`, which calls the
+same `apply-shell-state` pipeline so colors stay in sync.
 
 ```bash
 kingstra-wallpaper set ~/Pictures/photo.png    # static
 kingstra-wallpaper video ~/Videos/bg.mp4       # video (mpvpaper)
-kingstra-wallpaper random                      # random from collection
-kingstra-wallpaper pick                        # interactive fzf picker with preview
-kingstra-wallpaper status                      # show active wallpaper
+kingstra-wallpaper random [--video]            # random from ~/Pictures/Wallpapers
+kingstra-wallpaper pick                        # interactive fzf picker
+kingstra-wallpaper reload                      # re-apply the last wallpaper
+kingstra-wallpaper stop-video                  # stop video, restore static
+kingstra-wallpaper status                      # show the active wallpaper
 ```
 
 Keybinds: `Super + Shift + W` (random) and `Super + Ctrl + W` (visual picker).
 
-### Launcher — Walker
+---
 
-Walker app launcher with sub-modes for SSH hosts, calculator, and more.
-Opens with `Super + Ctrl + Return`. Colors follow the active theme.
+## Other components
 
-### Notifications — SwayNC
-
-SwayNC as notification daemon and control center. Supports MPRIS media controls inline,
-do-not-disturb, and is styled with Matugen colors. Toggle with `Super + N`.
-
-### OSD — SwayOSD
-
-On-screen display for volume and brightness changes. Appears on hardware key presses.
-
-### Lockscreen — hyprlock
-
-Styled with Material You colors. Supports fingerprint unlock via PAM (see **Hardware detection**).
-
-### Game launcher
-
-[quickshell-games-launchers](https://github.com/Eaquo/quickshell-games-launchers) integrated
-into the bar: Steam, Epic, GOG, and Heroic with cover art. Accessible via `Super + Alt + G`
-or automatically visible in gaming mode.
-
-### File management
-
-- **Nautilus** — GUI file manager (`Super + E`)
-- **Yazi** — Terminal file manager with image previews (`Super + Shift + E`)
-
-### Monitoring
-
-StatsPopup widget and btop for system monitoring. Office mode shows a compact CPU/RAM monitor that opens btop; gaming mode shows the full CPU/GPU/RAM set with temperatures.
-lm_sensors provides hardware sensor data.
-
-### Clipboard — cliphist
-
-Clipboard history with `Super + V`. Stores text and images.
-
-### Passthrough — Citrix, VMs & remote desktops
-
-`Super + Escape` toggles a passthrough submap in which Hyprland consumes no Super
-shortcuts — every key goes straight to the focused window. For Citrix windows
-(`wfica`) this happens automatically via `citrix-guard.sh`: focus in → passthrough,
-focus out → all binds restored. This prevents the known wfica crash on the Super key.
-
-### WiFi & Bluetooth stability
-
-Phase 12 deploys system-level fixes for flaky laptop wireless: WiFi power saving off
-(NetworkManager + `iwlwifi`/`rtw88` module options), Bluetooth USB autosuspend off,
-and a systemd sleep hook that reloads `btusb` and unblocks radios after resume.
-
-### Touchscreen support
-
-Auto-detects touchscreen hardware and applies a touch profile: larger UI scale, bigger bar hit
-targets, touch-friendly scrolling. Tablet mode switch (rotate display + on-screen keyboard) is
-also handled automatically.
-
-Override: `KINGSTRA_FORCE_TOUCH=1` / `KINGSTRA_FORCE_TOUCH=0`.
-
-### Hardware detection
-
-The installer auto-detects and configures:
-
-| Hardware | Variable | Action |
-|---|---|---|
-| Nvidia GPU | `DETECT_GPU=nvidia` | env vars, cursor fix, nvidia-utils |
-| AMD GPU | `DETECT_GPU=amd` | VA-API driver (radeonsi) |
-| Laptop/battery | `DETECT_IS_LAPTOP=true` | power-profiles, short idle timeouts |
-| Backlight | `DETECT_HAS_BACKLIGHT=true` | brightnessctl, hypridle dim |
-| Touchpad | `DETECT_HAS_TOUCHPAD=true` | natural scroll, tap-to-click |
-| Touchscreen | `DETECT_HAS_TOUCHSCREEN=true` | touch profile, tablet mode on laptops |
-| Tablet mode switch | `DETECT_HAS_TABLET_MODE_SWITCH=true` | rotate internal display + OSK on tablet switch |
-| Fingerprint | `DETECT_HAS_FINGERPRINT=true` | fprintd, PAM for sudo + SDDM |
+- **Launcher** — Quickshell launcher panel (`Super + Ctrl + Return`) with usage-based ordering
+  and up to three pinned apps. Walker + Elephant are also installed and run as a service.
+- **Notifications** — Quickshell popup and center (`Super + N`), clear (`Super + Shift + N`),
+  do-not-disturb (`Super + Alt + N`).
+- **Clipboard** — cliphist with a Quickshell panel (`Super + V`), text and images.
+- **Lockscreen** — `lock.sh` starts the Quickshell lock (`Lock.qml`) and falls back to hyprlock,
+  then `loginctl lock-session`. Fingerprint works through PAM when detected.
+- **Game launcher** — [quickshell-games-launchers](https://github.com/Eaquo/quickshell-games-launchers)
+  (`Super + Ctrl + G`).
+- **Files** — Nautilus (`Super + E`) and yazi (`Super + Shift + E`).
+- **Monitoring** — btop, lm_sensors, and the performance drawer and HUD telemetry in the shell.
+- **Mail and calendar** — read-only Thunderbird helpers for the unread badge, recent mail and agenda.
+- **Passthrough** — `Super + Escape` toggles a submap where Hyprland consumes no Super shortcuts.
+  `citrix-guard.sh` does this automatically for Citrix (`wfica`) windows to avoid the Super-key crash.
+- **WiFi/Bluetooth stability** — phase 12 turns off WiFi power saving and Bluetooth USB autosuspend,
+  and installs resume and lid-lock user services.
+- **Touch and tablet mode** — touchscreens get a touch profile (larger targets, touch scrolling);
+  convertibles rotate the internal display and show an on-screen keyboard in tablet mode.
+  Override detection with `KINGSTRA_FORCE_TOUCH=1` / `KINGSTRA_FORCE_TOUCH=0`.
 
 ---
 
@@ -198,16 +211,74 @@ KINGSTRA_DIR=~/.config/kingstra-dots bash <(curl -fsSL https://raw.githubusercon
 
 **Manual (after cloning):**
 ```bash
-# Run a single phase
-bash install.sh --phase 09_wallpaper
-
-# Continue from a specific phase
-bash install.sh --from-phase 10_session
-
-# Override feature flags
-echo "ENABLE_FINGERPRINT=false" > my-overrides.conf
-bash install.sh --override my-overrides.conf
+./install.sh                              # all phases
+./install.sh --dry-run                    # show what would happen
+./install.sh --phase 09_wallpaper         # a single phase
+./install.sh --from-phase 10_session      # continue from a phase
+./install.sh --override my-overrides.conf # override detected feature flags
+./install.sh --yes                        # skip confirmation prompts
 ```
+
+### Requirements
+
+- Arch Linux (pacman)
+- bash 4.4+
+- git
+
+An AUR helper is not a manual prerequisite: `bootstrap.sh` installs `yay-bin` when none is found.
+
+### Installation phases
+
+| # | Phase | What it does |
+|---|---|---|
+| 01 | `01_project_base` | Validate repo structure, logging, backups, base requirements |
+| 02 | `02_shell_terminal` | zsh, oh-my-posh, zsh plugins, kitty, fastfetch, cava, btop |
+| 03 | `03_hypr_core` | Hyprland and core packages, Lua config, GTK, XDG portals |
+| 04 | `04_bindings` | Validate `lua/binds.lua` and check for duplicate binds |
+| 05 | `05_ui_quickshell` | Quickshell, Qt6 dependencies, build the `Kingstra.Blobs` plugin |
+| 06 | `06_notifications` | Quickshell notifications (stops legacy SwayNC) |
+| 07 | `07_launcher` | Walker + Elephant providers, weather API setup |
+| 08 | `08_theming` | Matugen, templates, themes/modes/state, `kingstra-*` scripts, game launcher, first color run |
+| 09 | `09_wallpaper` | skwd-wall + Kingstra overlay, optional mpvpaper, `kingstra-wallpaper` |
+| 10 | `10_session` | Lockscreen, hypridle, SDDM and the Kingstra greeter |
+| 11 | `11_apps_tools` | Nautilus, yazi, cliphist, playerctl, screenshot tools, polkit, optional apps |
+| 12 | `12_network_resume_fixes` | NetworkManager, Bluetooth, resume and lid-lock services |
+| 13 | `13_monitoring` | lm_sensors, btop validation, bar system data |
+| 14 | `14_profiles` | Hardware detection → `lua/hardware.lua`, GPU, laptop, tablet, fingerprint setup |
+| 15 | `15_finalize` | Final validation, services check, install-complete marker |
+
+Smoke tests for the installer and Lua generators live in `tests/smoke/`.
+
+### Hardware detection and profiles
+
+There is no profile to pick. `installer/lib/detect.sh` detects each feature on its own, so a
+laptop with an Nvidia GPU gets both sets of tweaks. Phase 14 turns the result into
+`~/.config/hypr/lua/hardware.lua` and installs the matching packages.
+
+| Hardware | Detected as | Action |
+|---|---|---|
+| Nvidia GPU | `DETECT_GPU=nvidia` | Wayland env vars, cursor fix, Nvidia packages |
+| AMD GPU | `DETECT_GPU=amd` | VA-API driver (radeonsi) |
+| Laptop/battery | `DETECT_IS_LAPTOP=true` | power-profiles-daemon |
+| Backlight | `DETECT_HAS_BACKLIGHT=true` | brightnessctl |
+| Touchpad | `DETECT_HAS_TOUCHPAD=true` | natural scroll, tap-to-click |
+| Touchscreen | `DETECT_HAS_TOUCHSCREEN=true` | touch profile; tablet mode on laptops |
+| Tablet mode switch | `DETECT_HAS_TABLET_MODE_SWITCH=true` | rotate internal display + OSK |
+| Fingerprint | `DETECT_HAS_FINGERPRINT=true` | fprintd, PAM for sudo, lock and SDDM |
+
+Feature flags derived from detection can be overridden with `--override`:
+
+```bash
+# my-overrides.conf
+ENABLE_FINGERPRINT=false
+ENABLE_VIDEO_WALLPAPER=false
+ENABLE_SPICETIFY=true
+ENABLE_VESKTOP=true
+```
+
+Spicetify, Vesktop and the optional Office, Heroic and VLC apps are never enabled automatically.
+`installer/profiles/` (`default`, `laptop`, `nvidia`) holds older preset files; they can still
+be passed with `--override`, but only their `ENABLE_*` flags have an effect.
 
 ### Uninstall
 
@@ -233,39 +304,8 @@ It restores backed-up user files, restores backed-up `/etc` files such as PAM/SD
 available, disables Kingstra user services, and removes Kingstra-owned paths listed in
 `manifest/owned-paths.txt`.
 
-The uninstaller still does not remove packages. Use `--no-restore` if you only want to remove
+The uninstaller does not remove packages. Use `--no-restore` if you only want to remove
 Kingstra-managed files without restoring the captured backup.
-
-### Requirements
-
-- Arch Linux (pacman)
-- bash 4.4+
-- git
-
-An AUR helper is no longer a manual prerequisite for the bootstrap flow: when missing,
-`bootstrap.sh` installs `yay-bin` automatically.
-
----
-
-## Installation phases
-
-| # | Phase | Description |
-|---|---|---|
-| 01 | Project base | Directory structure, installer validation |
-| 02 | Shell/terminal | zsh, oh-my-posh, kitty, fastfetch, cava |
-| 03 | Hyprland core | Modular config, screenshots, GTK, portals |
-| 04 | Bindings | 5 bind files, duplicate checking |
-| 05 | Quickshell UI | Top bar, workspaces, clock, stats, media, power |
-| 06 | Notifications | SwayNC: control center, mpris, DND |
-| 07 | Launcher | Walker: app launcher, ssh, calculator |
-| 08 | Theming | Matugen: colors from wallpaper for all apps |
-| 09 | Wallpaper | awww + mpvpaper, orchestrator, fzf picker |
-| 10 | Session | hyprlock, hypridle, SDDM |
-| 11 | Apps | Nautilus, yazi, cliphist, playerctl, screenshots |
-| 12 | Network/resume | NetworkManager, Bluetooth, post-suspend fixes |
-| 13 | Monitoring | StatsPopup, lm_sensors, btop |
-| 14 | Hardware | Automatic GPU/laptop/touchpad/fingerprint detection |
-| 15 | Validation | Final check of all components |
 
 ---
 
@@ -273,40 +313,45 @@ An AUR helper is no longer a manual prerequisite for the bootstrap flow: when mi
 
 | Path | Contents |
 |---|---|
-| `~/.config/hypr/` | Hyprland configuration (symlinked from repo) |
-| `~/.config/hypr/lua/hardware.lua` | Generated hardware config |
-| `~/.config/quickshell/` | Quickshell/QML top bar |
-| `~/.config/matugen/` | Matugen templates |
-| `~/.config/kingstra-dots/` | This repo |
-| `~/.local/bin/kingstra-*` | Installer scripts |
-| `~/.local/bin/kingstra-session-start` | Kingstra session autostart entrypoint |
-| `~/.local/share/kingstra/` | Logs, backups, markers |
+| `~/.config/hypr/hyprland.lua` | Hyprland entrypoint (symlinked from repo) |
+| `~/.config/hypr/lua/` | Lua modules, plus generated `colors`, `theme`, `hardware`, `monitors-local`, `workspaces` |
+| `~/.config/quickshell/` | Quickshell UI |
+| `~/.config/matugen/` | Matugen templates and generated `config.toml` |
+| `~/.config/kingstra/` | Themes, modes, active theme and runtime state |
+| `~/kingstra-dots/` | This repo (default bootstrap location) |
+| `~/.local/bin/kingstra-*` | Kingstra scripts |
+| `~/.local/bin/kingstra-session-start` | Session autostart entrypoint |
+| `~/.local/share/kingstra/` | Install logs, backups, markers |
+| `~/.local/state/kingstra/session.log` | Session start log |
 | `~/Pictures/Wallpapers/` | Wallpapers |
 
 ---
 
 ## Keybindings
 
-See [docs/keybindings.md](docs/keybindings.md) for the full list.
-
-Quick overview:
+All binds live in `config/hypr/lua/binds.lua`. See [docs/keybindings.md](docs/keybindings.md)
+for the full list.
 
 | Keybinding | Action |
 |---|---|
-| `Super + Return` | Kitty |
-| `Super + Ctrl + Return` | Walker launcher |
-| `Super + E` | Nautilus |
-| `Super + Shift + E` | Yazi (terminal file manager) |
-| `Super + N` | SwayNC control center |
+| `Super + Return` | kitty |
+| `Super + Ctrl + Return` | App launcher |
+| `Super + Tab` | Workspace overview |
+| `Super + W` | Window switcher |
+| `Super + E` / `Super + Shift + E` | Nautilus / yazi |
 | `Super + V` | Clipboard history |
-| `Super + X` | Power menu |
-| `Super + Alt + G` | Game launcher |
-| `Super + Alt + N` | nmtui (network) |
-| `Super + Ctrl + T` | Theme picker |
-| `Super + Ctrl + W` | Wallpaper picker |
+| `Super + N` | Notifications |
+| `Super + X` | FocusTime |
+| `Super + O` | Monitors |
+| `Super + Ctrl + I` | Settings |
+| `Super + Ctrl + T` / `Super + Shift + T` | Theme picker / next theme |
 | `Super + Ctrl + M` | Mode picker |
-| `Super + Shift + W` | Random wallpaper |
-| `Print` | Screenshot |
+| `Super + Ctrl + W` / `Super + Shift + W` | Wallpaper picker / random wallpaper |
+| `Super + Ctrl + G` | Game launcher |
+| `Super + Ctrl + L` | Lock |
+| `Super + Escape` | Passthrough submap |
+| `Super + F1` | Help |
+| `Print` | Screenshot (`Super + Print` to clipboard, `Shift + Print` annotate) |
 
 ---
 
@@ -317,17 +362,6 @@ Quick overview:
 The Kingstra greeter starts an empty PAM login once and shows a fingerprint status card while
 waiting for the scanner. If SDDM or PAM misses that first attempt, press `Enter` on an empty
 password field to trigger fingerprint auth again; typing a password remains the fallback.
-
-### Overriding detected hardware values
-
-```bash
-# my-overrides.conf
-ENABLE_FINGERPRINT=false
-ENABLE_VIDEO_WALLPAPER=false
-ENABLE_SPICETIFY=true
-```
-
-Pass with `bash install.sh --override my-overrides.conf`.
 
 ---
 
