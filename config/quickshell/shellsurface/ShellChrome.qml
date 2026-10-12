@@ -310,9 +310,9 @@ Item {
         for (let i = 0; i < list.length; i++) {
             let n = String(list[i].name || "");
             if (n.indexOf("special:") !== 0) continue;
-            let short = n.substring(8);
-            if (short === "qs-master" || short === "") continue;
-            out.push({ wsName: short, windows: list[i].toplevels.values.length });
+            let shortName = n.substring(8);
+            if (shortName === "qs-master" || shortName === "") continue;
+            out.push({ wsName: shortName, windows: list[i].toplevels.values.length });
         }
         out.sort((a, b) => a.wsName < b.wsName ? -1 : 1);
         return out;
