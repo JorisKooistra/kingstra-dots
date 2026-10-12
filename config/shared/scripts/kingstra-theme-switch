@@ -672,7 +672,7 @@ PARTICLE_TYPE_JSON=$(pick_enum "${EFFECTS_PARTICLES:-none}" "none" "effects.part
 PARTICLE_COUNT_JSON=$(sanitize_int "${EFFECTS_PARTICLE_COUNT:-0}" "0" "0" "50" "effects.particle_count")
 PARTICLE_SPEED_JSON=$(sanitize_float "${EFFECTS_PARTICLE_SPEED:-0.0}" "0.0" "0.0" "2.0" "effects.particle_speed")
 AMBIENT_EFFECT_JSON=$(pick_enum "${EFFECTS_AMBIENT_EFFECT:-theme-default}" "theme-default" "effects.ambient_effect" \
-    theme-default none organic-glow neon-grid cyber-grid)
+    theme-default none organic-glow neon-grid)
 EFFECT_INTENSITY_JSON=$(sanitize_float "${EFFECTS_EFFECT_INTENSITY:-1.0}" "1.0" "0.0" "2.0" "effects.effect_intensity")
 EFFECT_CYCLE_MS_JSON=$(sanitize_int "${EFFECTS_EFFECT_CYCLE_MS:-0}" "0" "0" "30000" "effects.effect_cycle_ms")
 EFFECT_HOVER_REACTIVITY_JSON=$(sanitize_float "${EFFECTS_HOVER_REACTIVITY:-0.4}" "0.4" "0.0" "1.0" "effects.hover_reactivity")

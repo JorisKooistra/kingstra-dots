@@ -159,6 +159,7 @@ Item {
     function canonicalTheme(value) {
         let normalized = String(value || "organic").toLowerCase();
         if (normalized === "paper" || normalized === "organic" || normalized === "neon" || normalized === "mono" || normalized === "mono-accent") return normalized;
+        // Oude themanamen uit bestaande state omzetten naar de huidige thema's.
         if (normalized === "botanical" || normalized === "animated") return "organic";
         if (normalized === "modern" || normalized === "cyber" || normalized === "space" || normalized === "ocean") return "neon";
         if (normalized === "rocky") return "mono";

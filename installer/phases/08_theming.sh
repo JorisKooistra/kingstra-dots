@@ -537,7 +537,7 @@ _phase08_seed_default_wallpaper() {
         > "$state_dir/wallpaper.json"
 
     if [[ ! -f "$state_dir/theme.json" ]]; then
-        jq -n --arg name "botanical" '{"name":$name}' > "$state_dir/theme.json"
+        jq -n --arg name "organic" '{"name":$name}' > "$state_dir/theme.json"
     fi
 
     echo "$wallpaper"

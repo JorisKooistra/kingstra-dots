@@ -24,7 +24,7 @@ Item {
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
     height: surface.continuousBarMode ? surface.continuousRailHeight : parent.height
     z: 0.5
-    visible: (surface.ambientEnabled("neon-grid", "neon") || surface.ambientEnabled("cyber-grid", "neon"))
+    visible: surface.ambientEnabled("neon-grid", "neon")
              && surface.skinBool("showNeonGrid", false)
     clip: true
 
