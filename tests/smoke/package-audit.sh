@@ -16,9 +16,9 @@ printf 'Repo:        %s\n' "$REPO_ROOT" > "$TEST_HOME/.local/share/kingstra/inst
 cat > "$FAKE_BIN/pacman" <<'EOS'
 #!/usr/bin/env bash
 case "$1" in
-    -Qq) printf '%s\n' hyprland linux gimp oude-tool libfoo foo-git ;;
+    -Qq) printf '%s\n' hyprland linux gimp oude-tool libfoo foo-git walker-debug file-roller bibata-cursor-theme-bin ;;
     -Qeq) printf '%s\n' hyprland linux gimp oude-tool foo-git ;;
-    -Qetq) printf '%s\n' hyprland linux gimp oude-tool ;;
+    -Qetq) printf '%s\n' bibata-cursor-theme-bin file-roller gimp hyprland linux oude-tool ;;
     -Qmq) printf '%s\n' foo-git ;;
     -Qdtq) printf '%s\n' libfoo ;;
     -Qgq) exit 1 ;;
@@ -44,7 +44,8 @@ out="$(run </dev/null)"
 grep -q 'gimp' <<< "$out"
 grep -q 'oude-tool' <<< "$out"
 grep -q 'foo-git' <<< "$out"
-! grep -qE '^  (hyprland|linux) ' <<< "$out"
+! grep -qE '^  (hyprland|linux|file-roller|bibata-cursor-theme-bin) ' <<< "$out"
+grep -q '1 debugpakketten' <<< "$out"
 
 summary="$(run --summary)"
 grep -q '^2 kandidaten' <<< "$summary"

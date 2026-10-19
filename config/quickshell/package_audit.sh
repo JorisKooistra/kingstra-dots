@@ -69,6 +69,24 @@ manifest_packages() {
     [[ -n "$repo" ]] || return 0
     sed -nE 's/^#?[[:space:]]*(aur:)?([a-z0-9][a-z0-9@._+-]*)[[:space:]]*$/\2/p' \
         "$repo"/manifest/packages/*.txt 2>/dev/null
+    # Pakketten die de installerfases los installeren.
+    grep -rhoE '^[[:space:]]*(pacman_install|aur_install)[[:space:]]+[^#$]*' \
+        "$repo"/installer/phases 2>/dev/null \
+        | sed -E 's/^[[:space:]]*(pacman_install|aur_install)//' | tr -s ' \t' '\n' \
+        | grep -E '^[a-z][a-z0-9@._+-]*$'
+}
+
+# Een -bin/-git/-appimage-variant telt als het manifestpakket zelf.
+drop_known_variants() {
+    local known_list="$1" pkg base
+    while IFS= read -r pkg; do
+        [[ -n "$pkg" ]] || continue
+        base="$(sed -E 's/-(bin|git|appimage)$//' <<< "$pkg")"
+        if [[ "$base" != "$pkg" ]] && grep -qxF -- "$base" <<< "$known_list"; then
+            continue
+        fi
+        printf '%s\n' "$pkg"
+    done
 }
 
 # Basis van het systeem: nooit als kandidaat tonen.
@@ -128,7 +146,8 @@ orphans="$(pacman -Qdtq 2>/dev/null || true)"
 # kingstra-dots en niet van de basis.
 known="$( { manifest_packages; protected_packages; } | sort -u)"
 leaves="$(pacman -Qetq 2>/dev/null | sort -u)"
-candidates="$(comm -23 <(printf '%s\n' "$leaves") <(printf '%s\n' "$known") | grep . || true)"
+candidates="$(comm -23 <(printf '%s\n' "$leaves") <(printf '%s\n' "$known") \
+    | drop_known_variants "$known" || true)"
 
 declare -a rows=()
 if [[ -n "$candidates" ]]; then
@@ -177,6 +196,14 @@ if [[ -n "$git_pkgs" ]]; then
     printf '%s\n' "$git_pkgs" | sed 's/^/  /'
 fi
 
+debug_pkgs="$(pacman -Qq 2>/dev/null | grep -E -- '-debug$' || true)"
+if [[ -n "$debug_pkgs" ]]; then
+    echo
+    printf '%s debugpakketten van AUR-builds; die zijn alleen voor ontwikkelaars.\n' \
+        "$(printf '%s\n' "$debug_pkgs" | grep -c .)"
+    echo "De installer zet OPTIONS+=(!debug) in ~/.config/pacman/makepkg.conf zodat er geen nieuwe bij komen."
+fi
+
 if [[ -n "$orphans" ]]; then
     echo
     echo "Verweesde pakketten (niemand gebruikt ze nog; de updater ruimt ze op bij 'j'):"
@@ -196,7 +223,7 @@ mapfile -t rows < <(printf '%s\n' "${rows[@]}" | sort -t$'\t' -k1,1nr)
 for row in "${rows[@]}"; do
     IFS=$'\t' read -r size name installed days <<< "$row"
     if [[ "$days" -lt 0 ]]; then
-        used="geen programma"
+        used="onbekend (geen /usr/bin)"
     elif [[ "$days" -eq 0 ]]; then
         used="vandaag"
     else

@@ -23,10 +23,31 @@ phase_run() {
     log_step "Testdeploy uitvoeren..."
     _phase01_test_deploy
 
+    log_step "AUR-builds zonder debugpakketten..."
+    _phase01_makepkg_no_debug
+
     log_ok "Fase 01 voltooid — projectfundering staat."
 }
 
 # ---------------------------------------------------------------------------
+
+# Arch zet OPTIONS=(debug) standaard aan, waardoor elke AUR-build ook een
+# <pakket>-debug installeert dat bij elke update mee moet. De gebruikersconfig
+# van makepkg wordt na /etc/makepkg.conf ingelezen, dus dit wint.
+_phase01_makepkg_no_debug() {
+    local conf="${XDG_CONFIG_HOME:-$HOME/.config}/pacman/makepkg.conf"
+    if [[ -f "$conf" ]] && grep -q '!debug' "$conf"; then
+        log_info "makepkg bouwt al zonder debugpakketten"
+        return 0
+    fi
+    if "${DRY_RUN:-false}"; then
+        log_dry "OPTIONS+=(!debug) toevoegen aan $conf"
+        return 0
+    fi
+    mkdir -p "$(dirname "$conf")"
+    printf '\n# kingstra-dots: geen losse -debug-pakketten bij AUR-builds\nOPTIONS+=(!debug)\n' >> "$conf"
+    log_ok "makepkg bouwt voortaan zonder debugpakketten ($conf)"
+}
 
 _phase01_check_requirements() {
     # Verplicht: Arch Linux
