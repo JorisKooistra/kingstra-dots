@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import "modules"
-import "../mail"
 
 // Horizontal bar layout: left modules | center clock/weather | right status pills.
 // All shared theme colors/flags live here and are passed to modules via ctx: root.
@@ -20,7 +19,7 @@ import "../mail"
 //
 // De drie modi en hun standaard moduleList (zie BarShell._defaultModules):
 //
-//   office  → workspaces · clock · updates · cpu_temp · network · bluetooth · volume · notifications · mail · battery
+//   office  → workspaces · clock · updates · cpu_temp · network · bluetooth · volume · notifications · battery
 //   gaming  → workspaces · clock · cpu_temp · gpu_temp · ram_usage · volume · game_launcher · battery
 //   media   → clock · volume · brightness · media_controls · battery
 //
@@ -170,9 +169,6 @@ Item {
 
         // Zichtbaar als "notifications" in de lijst staat → office
         NotificationsButton { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
-
-        // Zichtbaar als "mail" in de lijst staat → office
-        MailButton          { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }
 
         // Zichtbaar als "workspaces" in de lijst staat → office + gaming
         WorkspacesModule    { shell: root.shell; surface: root.surface; mocha: root.mocha; ctx: root }

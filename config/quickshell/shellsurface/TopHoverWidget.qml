@@ -10,8 +10,8 @@ import ".."
 // dash-tab: informatie die je in één oogopslag wilt zien (tijd, maand,
 // systeembelasting, wat er speelt) in plaats van knoppen die alleen andere
 // panelen openen — die staan al in de rail, dus die waren hier dubbelop.
-// Drie tabbladen (hover of klik): Overzicht, Vandaag (agenda, meldingen,
-// post, updates) en Systeem (processen, netwerk, sessie). Pijltjes in een
+// Twee tabbladen (hover of klik): Overzicht en Systeem (processen,
+// netwerk, sessie). Pijltjes in een
 // kaart openen het volledige paneel via de PanelHost.
 Item {
     id: root
@@ -182,65 +182,6 @@ Item {
     // paneel opent met dezelfde blob-overgang als een railklik.
     signal panelSwitchRequested(string entryId)
 
-    // --- Vandaag: agenda, meldingen, post en updates -------------------------
-    readonly property var upcomingEvents: {
-        let all = localEvents.concat(thunderbirdEvents);
-        let todayKey = Qt.formatDate(now, "yyyy-MM-dd");
-        let nowTime = Qt.formatTime(now, "HH:mm");
-        let out = [];
-        for (let i = 0; i < all.length; i++) {
-            let ev = all[i];
-            if (!ev || !ev.dateKey) continue;
-            let timeKey = ev.allDay ? "00:00" : String(ev.timeRaw || ev.time || "00:00");
-            if (ev.dateKey < todayKey) continue;
-            if (ev.dateKey === todayKey && !ev.allDay && timeKey < nowTime) continue;
-            out.push({ sortKey: ev.dateKey + " " + timeKey, ev: ev });
-        }
-        out.sort((x, y) => x.sortKey < y.sortKey ? -1 : (x.sortKey > y.sortKey ? 1 : 0));
-        return out.slice(0, 5).map(item => item.ev);
-    }
-    function eventWhen(ev) {
-        let todayKey = Qt.formatDate(now, "yyyy-MM-dd");
-        let tomorrowKey = Qt.formatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), "yyyy-MM-dd");
-        let day = ev.dateKey === todayKey ? "Vandaag" : (ev.dateKey === tomorrowKey ? "Morgen" : String(ev.day || ev.dateKey));
-        return day + " · " + (ev.allDay ? "hele dag" : String(ev.time || ""));
-    }
-    readonly property var latestNotifications: {
-        let list = NotificationService.notifications ? NotificationService.notifications.values : [];
-        let out = [];
-        for (let i = list.length - 1; i >= 0 && out.length < 3; i--) out.push(list[i]);
-        return out;
-    }
-
-    property int updateCount: -1
-    property int packageUpdateCount: 0
-    property int flatpakUpdateCount: 0
-    property int dotfilesCommitCount: 0
-
-    Process {
-        id: updatesPoller
-        command: ["bash", Quickshell.env("HOME") + "/.config/quickshell/package_updates.sh", "--json"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    let state = JSON.parse(this.text.trim());
-                    root.updateCount = Math.max(0, parseInt(state.total) || 0);
-                    root.packageUpdateCount = Math.max(0, parseInt(state.packages) || 0);
-                    root.flatpakUpdateCount = Math.max(0, parseInt(state.flatpak) || 0);
-                    root.dotfilesCommitCount = Math.max(0, parseInt(state.dotfiles_commits) || 0);
-                } catch (e) {
-                    let total = parseInt(this.text);
-                    if (!isNaN(total)) root.updateCount = Math.max(0, total);
-                }
-            }
-        }
-    }
-
-    function openUpdatesTerminal() {
-        let script = Quickshell.env("HOME") + "/.config/quickshell/package_upgrade.sh";
-        Quickshell.execDetached(["kitty", "--hold", "bash", script]);
-    }
-
     // --- Systeem: processen, netwerk, sessie ---------------------------------
     property var topProcesses: []
     property real netRxRate: 0
@@ -325,17 +266,10 @@ Item {
     // Alleen pollen voor het tabblad dat je ziet.
     Timer {
         interval: 2000
-        running: root.tab === 2
+        running: root.tab === 1
         repeat: true
         triggeredOnStart: true
         onTriggered: if (!systemPoller.running) systemPoller.running = true
-    }
-
-    onTabChanged: {
-        if (tab === 1) {
-            if (!updatesPoller.running) updatesPoller.running = true;
-            MailService.refresh();
-        }
     }
 
     function clampPercent(value) {
@@ -356,8 +290,7 @@ Item {
             spacing: 6
 
             TabButton { index: 0; icon: "󰕮"; label: "Overzicht" }
-            TabButton { index: 1; icon: "󰃭"; label: "Vandaag" }
-            TabButton { index: 2; icon: "󰍛"; label: "Systeem" }
+            TabButton { index: 1; icon: "󰍛"; label: "Systeem" }
             Item { Layout.fillHeight: true }
         }
 
@@ -641,206 +574,11 @@ Item {
                 }
             }
 
-            // --- Tab 1: Vandaag ----------------------------------------------
+            // --- Tab 1: Systeem ----------------------------------------------
             RowLayout {
                 anchors.fill: parent
                 spacing: 10
                 opacity: root.tab === 1 ? 1 : 0
-                visible: opacity > 0.01
-                Behavior on opacity {
-                    NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
-                }
-
-                Card {
-                    Layout.preferredWidth: 330
-                    Layout.fillHeight: true
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 6
-
-                        CardHeader { title: "Agenda"; target: "calendar" }
-
-                        Repeater {
-                            model: root.upcomingEvents
-                            delegate: ColumnLayout {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                spacing: 0
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: String(modelData.title || "")
-                                    font.family: ThemeConfig.uiFont
-                                    font.pixelSize: 11
-                                    font.weight: Font.DemiBold
-                                    color: mocha.text
-                                    elide: Text.ElideRight
-                                }
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: root.eventWhen(modelData)
-                                    font.family: ThemeConfig.monoFont
-                                    font.pixelSize: 9
-                                    color: mocha.primary
-                                    elide: Text.ElideRight
-                                }
-                            }
-                        }
-
-                        EmptyText { visible: root.upcomingEvents.length === 0; text: "Geen afspraken gepland" }
-                        Item { Layout.fillHeight: true }
-                    }
-                }
-
-                Card {
-                    Layout.preferredWidth: 300
-                    Layout.fillHeight: true
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 6
-
-                        CardHeader {
-                            title: NotificationService.count > 0 ? "Meldingen (" + NotificationService.count + ")" : "Meldingen"
-                            target: "notifications"
-                        }
-
-                        Repeater {
-                            model: root.latestNotifications
-                            delegate: ColumnLayout {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                spacing: 0
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: String(modelData.summary || modelData.appName || "Melding")
-                                    font.family: ThemeConfig.uiFont
-                                    font.pixelSize: 11
-                                    font.weight: Font.DemiBold
-                                    color: mocha.text
-                                    elide: Text.ElideRight
-                                }
-                                Text {
-                                    Layout.fillWidth: true
-                                    visible: text !== ""
-                                    text: String(modelData.appName || "")
-                                    font.family: ThemeConfig.uiFont
-                                    font.pixelSize: 9
-                                    color: mocha.subtext0
-                                    elide: Text.ElideRight
-                                }
-                            }
-                        }
-
-                        EmptyText { visible: NotificationService.count === 0; text: "Geen meldingen" }
-                        Item { Layout.fillHeight: true }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 6
-                            ChipButton {
-                                icon: NotificationService.dnd ? "󰂛" : "󰂚"
-                                label: "Niet storen"
-                                active: NotificationService.dnd
-                                onTriggered: NotificationService.toggleDnd()
-                            }
-                            Item { Layout.fillWidth: true }
-                            ChipButton {
-                                visible: NotificationService.count > 0
-                                icon: "󰎟"
-                                label: "Wissen"
-                                onTriggered: NotificationService.clearAll()
-                            }
-                        }
-                    }
-                }
-
-                Card {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 6
-
-                        CardHeader { title: "Post"; target: "mail" }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: MailService.statusText
-                            font.family: ThemeConfig.uiFont
-                            font.pixelSize: 11
-                            color: MailService.unreadKnown && MailService.unreadCount > 0 ? mocha.primary : mocha.subtext0
-                            elide: Text.ElideRight
-                        }
-
-                        Repeater {
-                            model: MailService.recent.slice(0, 2)
-                            delegate: Text {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                text: String(modelData.title || "Bericht")
-                                    + (String(modelData.sender || "") !== "" ? "  ·  " + String(modelData.sender) : "")
-                                font.family: ThemeConfig.uiFont
-                                font.pixelSize: 10
-                                color: mocha.text
-                                elide: Text.ElideRight
-                            }
-                        }
-
-                        Item { Layout.fillHeight: true }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 1
-                            color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 6
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 0
-                                Text {
-                                    text: "Updates"
-                                    font.family: ThemeConfig.uiFont
-                                    font.pixelSize: 11
-                                    font.weight: Font.Bold
-                                    color: mocha.text
-                                }
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: root.updateCount < 0 ? "Controleren…"
-                                        : (root.updateCount === 0 ? "Alles is bijgewerkt"
-                                            : "Arch/AUR " + root.packageUpdateCount + " · Flatpak " + root.flatpakUpdateCount
-                                              + (root.dotfilesCommitCount > 0 ? " · dotfiles " + root.dotfilesCommitCount : ""))
-                                    font.family: ThemeConfig.uiFont
-                                    font.pixelSize: 9
-                                    color: mocha.subtext0
-                                    elide: Text.ElideRight
-                                }
-                            }
-                            ChipButton {
-                                visible: root.updateCount > 0
-                                icon: "󰚰"
-                                label: "Bijwerken (" + root.updateCount + ")"
-                                active: true
-                                onTriggered: root.openUpdatesTerminal()
-                            }
-                        }
-                    }
-                }
-            }
-
-            // --- Tab 2: Systeem ----------------------------------------------
-            RowLayout {
-                anchors.fill: parent
-                spacing: 10
-                opacity: root.tab === 2 ? 1 : 0
                 visible: opacity > 0.01
                 Behavior on opacity {
                     NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }

@@ -353,7 +353,7 @@ Item {
     readonly property real chromePresence: gamingMinimal ? 0.76 : 1.0
     readonly property real railModulePresence: secondaryScreen
         ? (railHover.hovered ? 1.0 : 0.78) : (gamingMinimal ? 0.72 : 1.0)
-    property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications", "mail"]
+    property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications"]
     property bool barAutoHide: false
     property bool autoHideVisible: true
     property string timeText: Qt.formatDateTime(new Date(), "HH:mm")
@@ -379,14 +379,13 @@ Item {
     function _defaultModules(mode) {
         if (mode === "gaming") return ["workspaces", "cpu_temp", "gpu_temp", "ram_usage", "fps", "battery", "volume", "game_launcher", "clock"];
         if (mode === "media")  return ["volume", "brightness", "media_controls", "battery", "clock"];
-        return ["workspaces", "clock", "updates", "cpu_temp", "ram_usage", "network", "battery", "volume", "bluetooth", "notifications", "mail"];
+        return ["workspaces", "clock", "updates", "cpu_temp", "ram_usage", "network", "battery", "volume", "bluetooth", "notifications"];
     }
 
     function _normalizeModules(mode, modules) {
         let normalized = Array.isArray(modules) ? modules.slice() : [];
         if (mode === "office" && normalized.indexOf("updates") === -1) normalized.push("updates");
         if (mode === "office" && normalized.indexOf("cpu_temp") === -1) normalized.push("cpu_temp");
-        if (mode === "office" && normalized.indexOf("mail") === -1) normalized.push("mail");
         if ((mode === "office" || mode === "gaming" || mode === "media")
                 && normalized.indexOf("battery") === -1) {
             normalized.push("battery");
@@ -940,15 +939,6 @@ Item {
                 onTriggered: root.togglePanel("notifications")
             }
 
-            RailButton {
-                tooltip: MailService.statusText
-                visible: root.moduleEnabled("mail")
-                icon: "󰇮"
-                text: MailService.badgeText
-                accent: MailService.unreadKnown && MailService.unreadCount > 0 ? root.mocha.accent2 : root.mocha.accent1
-                onTriggered: root.togglePanel("mail")
-            }
-
             ColumnLayout {
                 visible: root.moduleEnabled("workspaces")
                 Layout.fillWidth: true
@@ -1301,7 +1291,6 @@ Item {
                     }
                 }
                 StripButton { tooltip: "Meldingen"; visible: root.moduleEnabled("notifications"); icon: "󰍜"; accent: root.mocha.accent2; onTriggered: root.togglePanel("notifications") }
-                StripButton { tooltip: MailService.statusText; visible: root.moduleEnabled("mail"); icon: "󰇮"; accent: MailService.unreadKnown && MailService.unreadCount > 0 ? root.mocha.accent2 : root.mocha.accent1; onTriggered: root.togglePanel("mail") }
                 StripButton { tooltip: "Agenda"; visible: root.moduleEnabled("clock"); icon: "󰃰"; accent: root.mocha.accent1; onTriggered: root.togglePanel("calendar") }
                 StripButton { tooltip: root.updateTooltip(); visible: root.moduleEnabled("updates"); icon: "󰚰"; text: root.updateCount.toString(); accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0; onTriggered: root.openUpdatesTerminal() }
                 StripButton { tooltip: "Monitoren"; visible: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"]); icon: "󰍹"; accent: root.mocha.accent3; onTriggered: root.togglePanel("monitors") }

@@ -81,7 +81,7 @@ stays the same. Definitions live in `config/kingstra/modes/*.toml`.
 
 | Mode | Bar | Modules |
 |---|---|---|
-| `office` (default) | Always visible | Workspaces, clock, updates, CPU temp, RAM, network, battery, volume, Bluetooth, notifications, mail |
+| `office` (default) | Always visible | Workspaces, clock, updates, CPU temp, RAM, network, battery, volume, Bluetooth, notifications |
 | `gaming` | Always visible | Workspaces, CPU/GPU temps, RAM, FPS, battery, volume, game launcher, clock |
 | `media` | Auto-hide | Volume, brightness, media controls, battery, clock |
 
@@ -172,7 +172,7 @@ Keybinds: `Super + Shift + W` (random) and `Super + Ctrl + W` (visual picker).
   (`Super + Ctrl + G`).
 - **Files** — Nautilus (`Super + E`) and yazi (`Super + Shift + E`).
 - **Monitoring** — btop, lm_sensors, and the performance drawer and HUD telemetry in the shell.
-- **Mail and calendar** — read-only Thunderbird helpers for the unread badge, recent mail and agenda.
+- **Calendar** — read-only Thunderbird helper for the agenda.
 - **Passthrough** — `Super + Escape` toggles a submap where Hyprland consumes no Super shortcuts.
   `citrix-guard.sh` does this automatically for Citrix (`wfica`) windows to avoid the Super-key crash.
 - **WiFi/Bluetooth stability** — phase 12 turns off WiFi power saving and Bluetooth USB autosuspend,
