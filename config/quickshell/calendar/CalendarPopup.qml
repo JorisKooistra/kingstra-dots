@@ -760,8 +760,14 @@ Item {
                 spacing: 14
 
                 // Dagkeuze
+                // Vaste breedte: de dagknoppen vullen deze kolom, en zonder
+                // vaste maat erft de kolom hun fillWidth en duwt hij de
+                // uurverwachting rechts weg tot alles over elkaar staat.
                 ColumnLayout {
-                    Layout.preferredWidth: 300
+                    Layout.fillWidth: false
+                    Layout.preferredWidth: 330
+                    Layout.minimumWidth: 330
+                    Layout.maximumWidth: 330
                     Layout.fillHeight: true
                     spacing: 8
 
@@ -776,6 +782,7 @@ Item {
                                 readonly property var entry: window.forecast[index]
                                 readonly property bool active: index === window.pendingWeatherDay
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 1
                                 Layout.preferredHeight: 76
                                 radius: 26
                                 color: active ? Qt.alpha(window.weatherColor(entry), 0.18)
@@ -835,6 +842,7 @@ Item {
                 // Details en uurverwachting van de gekozen dag
                 ColumnLayout {
                     Layout.fillWidth: true
+                    Layout.minimumWidth: 420
                     Layout.fillHeight: true
                     spacing: 8
                     opacity: window.weatherOpacity
@@ -861,6 +869,7 @@ Item {
                                 readonly property bool isNow: window.weatherDay === 0
                                     && parseInt(String(modelData.time || "0").split(":")[0]) === window.currentTime.getHours()
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 1
                                 Layout.fillHeight: true
                                 radius: width / 2 > 22 ? 22 : width / 2
                                 color: isNow ? window.timeAccent : Qt.alpha(mocha.text, 0.05)
