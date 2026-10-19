@@ -80,3 +80,7 @@ config/cava/config
 # ~/.config/quickshell/game-launcher; alleen onze config.toml hoort in git.
 config/quickshell/game-launcher/*
 !config/quickshell/game-launcher/config.toml
+
+# Eigen keuzes van package_audit.sh --keep (~/.config/kingstra is een
+# symlink naar config/kingstra); persoonlijk, hoort niet in git.
+config/kingstra/package-keep.txt

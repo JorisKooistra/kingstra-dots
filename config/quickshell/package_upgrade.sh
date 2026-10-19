@@ -267,8 +267,13 @@ update_dotfiles() {
         return 0
     fi
 
-    if [[ -n "$(git -C "$repo" status --porcelain --untracked-files=normal)" ]]; then
-        echo "Er staan lokale wijzigingen in $repo."
+    # Alleen gewijzigde bestanden die git bijhoudt blokkeren de update. Losse
+    # nieuwe bestanden (zoals een eigen keep-lijst) kunnen gewoon blijven
+    # staan: merge --ff-only weigert zelf als zo'n bestand overschreven zou
+    # worden, dus er gaat niets verloren.
+    if [[ -n "$(git -C "$repo" status --porcelain --untracked-files=no)" ]]; then
+        echo "Er staan lokale wijzigingen in $repo:"
+        git -C "$repo" status --short --untracked-files=no
         echo "Dotfiles-update veilig overgeslagen; commit of stash ze eerst."
         return 0
     fi
@@ -279,7 +284,10 @@ update_dotfiles() {
     fi
 
     echo "$behind nieuwe dotfiles-commit(s) gevonden."
-    git -C "$repo" merge --ff-only "$upstream"
+    if ! git -C "$repo" merge --ff-only "$upstream"; then
+        echo "Bijwerken mislukt; waarschijnlijk staat er een los bestand in de weg (zie hierboven)."
+        return 1
+    fi
 }
 
 run_dotfiles_installer() {
