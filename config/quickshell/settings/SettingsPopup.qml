@@ -22,8 +22,8 @@ Item {
         else { closeSequence.start(); }
         event.accepted = true;
     }
-    Keys.onTabPressed: { currentTab = (currentTab + 1) % tabNames.length; event.accepted = true; }
-    Keys.onBacktabPressed: { currentTab = (currentTab - 1 + tabNames.length) % tabNames.length; event.accepted = true; }
+    Keys.onTabPressed: { openTab((currentTab + 1) % tabs.length); event.accepted = true; }
+    Keys.onBacktabPressed: { openTab((currentTab - 1 + tabs.length) % tabs.length); event.accepted = true; }
 
     MatugenColors { id: _theme }
 
@@ -72,12 +72,76 @@ Item {
     // -------------------------------------------------------------------------
     // STATE
     // -------------------------------------------------------------------------
+    // Acht tabbladen; een tabblad kan meerdere pagina's hebben, die dan als
+    // ronde knoppen bovenin staan. Paginanummers zijn de oude tabnummers:
+    // 1 Thema, 2 Bar, 4 Sneltoetsen, 5 Invoer, 6 Beeldschermen, 7 Netwerk,
+    // 8 Geluid, 9 Agenda & weer, 10 Sessie, 11 Updates, 12 Geavanceerd, 13 Over.
+    // De oude tabbladen Quick en Widgets bestonden alleen uit knoppen en
+    // keuzes die ook in Thema, Bar, Sessie of Snelle instellingen staan.
+    property var tabs: [
+        { label: "Uiterlijk", icon: "󰏘", pages: [1, 2], pageLabels: ["Thema", "Bar"],
+          keywords: "thema kleur kleurschema matugen font lettertype icoon bar topbar positie vorm hoogte breedte rand rondheid blur effecten" },
+        { label: "Beeldschermen", icon: "󰍹", pages: [6], pageLabels: ["Beeldschermen"],
+          keywords: "monitor monitoren scherm display resolutie indeling layout hoofdscherm helderheid tablet touch werkruimte workspace" },
+        { label: "Invoer", icon: "󰍽", pages: [5], pageLabels: ["Invoer"],
+          keywords: "toetsenbord indeling layout touchpad muis scroll scrollen rechtsklik dead keys" },
+        { label: "Sneltoetsen", icon: "󰌌", pages: [4], pageLabels: ["Sneltoetsen"],
+          keywords: "keybind keybinds sneltoets toets binding" },
+        { label: "Geluid", icon: "󰕾", pages: [8], pageLabels: ["Geluid"],
+          keywords: "audio volume geluid uitvoer invoer microfoon speaker mixer dempen" },
+        { label: "Tijd & weer", icon: "󰖐", pages: [9], pageLabels: ["Tijd & weer"],
+          keywords: "weer tijd datum klok notatie formaat api openweather locatie" },
+        { label: "Sessie", icon: "󰒲", pages: [10], pageLabels: ["Sessie"],
+          keywords: "sessie modus office gaming media idle vergrendelen lock slaap suspend energie power profiel uitloggen" },
+        { label: "Systeem", icon: "󰒓", pages: [11, 7, 12, 13], pageLabels: ["Updates", "Netwerk", "Geavanceerd", "Over"],
+          keywords: "updates update pakketten netwerk wifi bluetooth geavanceerd herstart herladen matugen verwijderen over versie" }
+    ]
     property int currentTab: 0
-    property var tabNames: ["Quick", "Theme", "Bar", "Widgets", "Keybinds", "Input", "Display", "Network", "Audio", "Weather & Time", "Session", "Updates", "Advanced", "About"]
-    property var tabIcons: ["󰐊", "󰏘", "󰓡", "󰀻", "󰌌", "󰍽", "󰍹", "󰤨", "󰕾", "󰖐", "󰒲", "󰚰", "󰒓", ""]
-    onCurrentTabChanged: {
-        if (currentTab === 6) refreshDisplayStatus();
-        if (currentTab === 8) refreshAudioState();
+    property int currentPage: tabs[0].pages[0]
+    property string settingsQuery: ""
+    readonly property var visibleTabIndexes: {
+        let q = settingsQuery.trim().toLowerCase();
+        let out = [];
+        for (let i = 0; i < tabs.length; i++) {
+            let hay = (tabs[i].label + " " + tabs[i].pageLabels.join(" ") + " " + tabs[i].keywords).toLowerCase();
+            if (q === "" || hay.indexOf(q) !== -1) out.push(i);
+        }
+        return out;
+    }
+
+    function openTab(index) {
+        if (index < 0 || index >= tabs.length) return;
+        currentTab = index;
+        currentPage = tabs[index].pages[0];
+    }
+
+    function openPage(page) {
+        for (let i = 0; i < tabs.length; i++) {
+            if (tabs[i].pages.indexOf(page) !== -1) {
+                currentTab = i;
+                currentPage = page;
+                return;
+            }
+        }
+    }
+
+    // Enter in het zoekveld: eerste passend tabblad, en anders zoeken in de
+    // sneltoetsen.
+    function acceptSettingsQuery() {
+        let q = settingsQuery.trim();
+        if (q === "") return;
+        if (visibleTabIndexes.length > 0) openTab(visibleTabIndexes[0]);
+        else searchKeybinds(q);
+    }
+
+    function searchKeybinds(q) {
+        openPage(4);
+        filterInput.text = q;
+    }
+
+    onCurrentPageChanged: {
+        if (currentPage === 6) refreshDisplayStatus();
+        if (currentPage === 8) refreshAudioState();
     }
 
     property real introBase: 0.0
@@ -1821,7 +1885,7 @@ Item {
         id: audioAutoRefreshTimer
         interval: 3000
         repeat: true
-        running: root.currentTab === 8
+        running: root.currentPage === 8
         onTriggered: root.refreshAudioState()
     }
 
@@ -2279,6 +2343,31 @@ Item {
 
                 Rectangle { Layout.fillWidth: true; height: 1; color: Qt.alpha(root.surface1, 0.5); Layout.bottomMargin: root.s(10) }
 
+                // Zoeken: filtert de tabbladen; Enter opent het eerste.
+                Rectangle {
+                    Layout.fillWidth: true; Layout.preferredHeight: root.s(38); radius: root.s(19)
+                    color: root.surface0; border.color: settingsSearchInput.activeFocus ? root.ambientPurple : root.surface2; border.width: 1
+                    Behavior on border.color { ColorAnimation { duration: 150 } }
+                    RowLayout {
+                        anchors.fill: parent; anchors.leftMargin: root.s(12); anchors.rightMargin: root.s(12); spacing: root.s(8)
+                        Text { text: "󰍉"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(15); color: root.subtext0 }
+                        TextInput {
+                            id: settingsSearchInput
+                            Layout.fillWidth: true; Layout.fillHeight: true
+                            verticalAlignment: TextInput.AlignVCenter
+                            font.family: root.uiFontFamily; font.pixelSize: root.s(12); color: root.text
+                            clip: true; selectByMouse: true
+                            onTextChanged: root.settingsQuery = text
+                            onAccepted: root.acceptSettingsQuery()
+                            Keys.onEscapePressed: (event) => {
+                                if (text !== "") { text = ""; event.accepted = true; }
+                                else event.accepted = false;
+                            }
+                            Text { text: "Zoeken…"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
+                        }
+                    }
+                }
+
                 ScrollView {
                     id: sidebarTabsView
                     Layout.fillWidth: true
@@ -2291,12 +2380,15 @@ Item {
                         width: sidebarTabsView.availableWidth
                         spacing: root.s(8)
 
-                        // Tab buttons
+                        // Tabbladen (gefilterd door het zoekveld)
                         Repeater {
-                            model: root.tabNames.length
+                            model: root.visibleTabIndexes
                             Rectangle {
+                                id: tabButton
+                                required property int modelData
+                                readonly property var tab: root.tabs[modelData]
                                 Layout.fillWidth: true; Layout.preferredHeight: root.s(44); radius: root.s(8)
-                                property bool isActive: root.currentTab === index
+                                property bool isActive: root.currentTab === modelData
                                 color: isActive ? root.popupPanelHoverFill : (tabMa.containsMouse ? root.popupPanelFill : "transparent")
                                 Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -2304,20 +2396,35 @@ Item {
                                     anchors.fill: parent; anchors.leftMargin: root.s(15); spacing: root.s(12)
                                     Item {
                                         Layout.preferredWidth: root.s(24); Layout.alignment: Qt.AlignVCenter
-                                        Text { anchors.centerIn: parent; text: root.tabIcons[index]; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: parent.parent.parent.isActive ? root.ambientPurple : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                                        Text { anchors.centerIn: parent; text: tabButton.tab.icon; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: tabButton.isActive ? root.ambientPurple : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
                                     }
-                                    Text { text: root.tabNames[index]; font.family: root.uiFontFamily; font.weight: parent.parent.isActive ? root.themedFontWeight : Font.Medium; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(13); color: parent.parent.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: 150 } } }
+                                    Text { text: tabButton.tab.label; font.family: root.uiFontFamily; font.weight: tabButton.isActive ? root.themedFontWeight : Font.Medium; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(13); color: tabButton.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: 150 } } }
                                 }
 
                                 Rectangle {
                                     anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
-                                    width: root.s(3); height: parent.isActive ? root.s(20) : 0; radius: root.s(2)
+                                    width: root.s(3); height: tabButton.isActive ? root.s(20) : 0; radius: root.s(2)
                                     color: root.ambientPurple
                                     Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
                                 }
 
-                                MouseArea { id: tabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.currentTab = index }
+                                MouseArea { id: tabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openTab(tabButton.modelData) }
                             }
+                        }
+
+                        // Geen tabblad gevonden: zoek dan in de sneltoetsen.
+                        Rectangle {
+                            visible: root.settingsQuery.trim() !== "" && root.visibleTabIndexes.length === 0
+                            Layout.fillWidth: true; Layout.preferredHeight: root.s(44); radius: root.s(8)
+                            color: keybindSearchMa.containsMouse ? root.popupPanelFill : "transparent"
+                            border.color: root.surface1; border.width: 1
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                            RowLayout {
+                                anchors.fill: parent; anchors.leftMargin: root.s(15); anchors.rightMargin: root.s(10); spacing: root.s(12)
+                                Text { text: "󰌌"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: root.subtext0 }
+                                Text { text: "Zoek in sneltoetsen"; font.family: root.uiFontFamily; font.pixelSize: root.s(12); color: root.subtext0; Layout.fillWidth: true; elide: Text.ElideRight }
+                            }
+                            MouseArea { id: keybindSearchMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.searchKeybinds(root.settingsQuery.trim()) }
                         }
                     }
                 }
@@ -2366,225 +2473,66 @@ Item {
             opacity: introContent; scale: 0.95 + (0.05 * introContent)
             transform: Translate { y: root.s(20) * (1.0 - introContent) }
 
-            // =================================================================
-            // TAB 0: QUICK
-            // =================================================================
-            Item {
-                anchors.fill: parent
-                visible: root.currentTab === 0
-                opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+            // Pagina's binnen het tabblad (bijv. Thema | Bar), als ronde
+            // knoppen. Bij één pagina klapt de rij in tot niets.
+            Row {
+                id: subPageRow
+                readonly property var tab: root.tabs[root.currentTab]
+                readonly property bool shown: tab && tab.pages.length > 1
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.leftMargin: root.s(20)
+                anchors.topMargin: shown ? root.s(14) : 0
+                height: shown ? root.s(32) : 0
+                spacing: root.s(8)
+                opacity: shown ? 1 : 0
+                visible: opacity > 0.01
+                Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                Behavior on anchors.topMargin { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: 180 } }
 
-                ScrollView {
-                    id: quickScroll
-                    anchors.fill: parent
-                    anchors.margins: root.s(20)
-                    clip: true
-                    contentWidth: availableWidth
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
-
-                    ColumnLayout {
-                        id: quickColumn
-                        width: quickScroll.availableWidth
-                        spacing: root.s(14)
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: root.s(12)
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: root.s(4)
-                                Text {
-                                    text: "Quick Settings"
-                                    font.family: root.displayFontFamily
-                                    font.weight: root.themedFontWeight
-                                    font.letterSpacing: root.themedLetterSpacing
-                                    font.pixelSize: root.s(28)
-                                    color: root.text
-                                }
-                                Text {
-                                    text: "Dagelijkse controls op een plek: thema, bar, widgets, modus en sessie."
-                                    font.family: root.uiFontFamily
-                                    font.pixelSize: root.s(11)
-                                    color: root.subtext0
-                                    Layout.fillWidth: true
-                                    wrapMode: Text.WordWrap
-                                }
-                            }
-
-                            Rectangle {
-                                Layout.preferredWidth: root.s(190)
-                                Layout.preferredHeight: root.s(42)
-                                Layout.alignment: Qt.AlignLeft
-                                radius: root.s(8)
-                                color: quickThemeMa.containsMouse ? Qt.alpha(root.mauve, 0.20) : Qt.alpha(root.surface0, 0.62)
-                                border.color: quickThemeMa.containsMouse ? root.mauve : root.surface2
-                                border.width: 1
-                                RowLayout {
-                                    anchors.centerIn: parent
-                                    spacing: root.s(7)
-                                    Text { text: "󰏘"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(15); color: root.mauve }
-                                    Text {
-                                        text: "Theme-editor"
-                                        font.family: root.uiFontFamily
-                                        font.weight: Font.Bold
-                                        font.pixelSize: root.s(11)
-                                        color: root.text
-                                    }
-                                }
-                                MouseArea {
-                                    id: quickThemeMa
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.currentTab = 1
-                                }
-                            }
+                Repeater {
+                    model: subPageRow.tab ? subPageRow.tab.pages.length : 0
+                    Rectangle {
+                        id: subPageButton
+                        required property int index
+                        readonly property int page: subPageRow.tab.pages[index]
+                        readonly property bool isActive: root.currentPage === page
+                        height: root.s(32)
+                        width: subPageLabel.implicitWidth + root.s(28)
+                        radius: height / 2
+                        color: isActive ? Qt.alpha(root.ambientPurple, 0.18) : (subPageMa.containsMouse ? root.popupPanelFill : "transparent")
+                        border.width: 1
+                        border.color: isActive ? Qt.alpha(root.ambientPurple, 0.55) : root.surface1
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Text {
+                            id: subPageLabel
+                            anchors.centerIn: parent
+                            text: subPageRow.tab.pageLabels[subPageButton.index]
+                            font.family: root.uiFontFamily
+                            font.pixelSize: root.s(12)
+                            font.weight: subPageButton.isActive ? root.themedFontWeight : Font.Medium
+                            color: subPageButton.isActive ? root.text : root.subtext0
                         }
-
-                        GridLayout {
-                            Layout.fillWidth: true
-                            columns: 1
-                            rowSpacing: root.s(10)
-                            columnSpacing: root.s(10)
-
-                            SettingsInfoCard {
-                                title: "Actief thema"
-                                icon: root.activeThemeIcon || "󰏘"
-                                accent: root.mauve
-                                value: (root.activeThemeName || "Onbekend") +
-                                       "\nID: " + (root.activeThemeId || "geen") +
-                                       "\nMatugen: " + root.formatSchemeLabel(root.editSchemeType) + " / " + root.editMode
-                            }
-
-                            SettingsInfoCard {
-                                title: "Bar"
-                                icon: "󰓡"
-                                accent: root.blue
-                                value: "Positie: " + root.editBarPosition +
-                                       "\nLayout: " + root.derivedBarTemplate(root.editBarPosition, root.editBarTemplate) +
-                                       "\nVorm: " + root.editBarShape + ", hoogte " + root.editBarHeight + "px"
-                            }
-
-                            SettingsInfoCard {
-                                title: "Sessie"
-                                icon: "󰒲"
-                                accent: root.green
-                                value: "Mode: " + root.sessionModeText +
-                                       "\nPower: " + root.powerProfileLabel(root.currentPowerProfileText) +
-                                       "\n" + root.sessionIdleSummary()
-                            }
-
-                            SettingsInfoCard {
-                                title: "Status"
-                                icon: root.themeDirty ? "󰐖" : "󰄬"
-                                accent: root.themeDirty ? root.yellow : root.green
-                                value: root.themeDirty
-                                       ? "Onopgeslagen theme-wijzigingen in " + root.themeEditThemeId + "."
-                                       : "Geen openstaande theme-wijzigingen."
-                            }
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            implicitHeight: quickThemeControls.implicitHeight + root.s(24)
-                            radius: root.s(10)
-                            color: Qt.alpha(root.surface0, 0.46)
-                            border.color: Qt.alpha(root.surface2, 0.82)
-                            border.width: 1
-
-                            ColumnLayout {
-                                id: quickThemeControls
-                                anchors.fill: parent
-                                anchors.margins: root.s(12)
-                                spacing: root.s(10)
-
-                                Text { text: "Thema & kleur"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text }
-
-                                GridLayout {
-                                    Layout.fillWidth: true
-                                    columns: 1
-                                    rowSpacing: root.s(9)
-                                    columnSpacing: root.s(12)
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Kleurschema"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                        ThemedComboBox {
-                                            model: root.schemeOptions
-                                            currentIndex: Math.max(0, model.indexOf(root.editSchemeType))
-                                            onActivated: root.editSchemeType = currentText
-                                        }
-                                    }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Modus"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                        ThemedComboBox {
-                                            model: root.modeOptions
-                                            currentIndex: Math.max(0, model.indexOf(root.editMode))
-                                            onActivated: root.editMode = currentText
-                                        }
-                                    }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Barpositie"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                        ThemedComboBox {
-                                            model: root.barPositionOptions
-                                            currentIndex: Math.max(0, model.indexOf(root.editBarPosition))
-                                            onActivated: root.setEditBarPosition(currentText)
-                                        }
-                                    }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Barvorm"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                        ThemedComboBox {
-                                            model: root.barShapeOptions
-                                            currentIndex: Math.max(0, model.indexOf(root.editBarShape))
-                                            onActivated: root.editBarShape = currentText
-                                        }
-                                    }
-                                }
-
-                                Flow {
-                                    width: Math.max(0, quickColumn.width - root.s(24))
-                                    Layout.fillWidth: true
-                                    Layout.preferredWidth: Math.max(0, quickColumn.width - root.s(24))
-                                    spacing: root.s(10)
-                                    SettingsActionButton { label: root.themeDirty ? "Opslaan" : "Geen wijzigingen"; icon: root.themeDirty ? "󰆓" : "󰄬"; accent: root.green; primary: root.themeDirty; onTriggered: root.saveThemeEdits() }
-                                    SettingsActionButton { label: "Bar toepassen"; icon: "󰑓"; accent: root.blue; onTriggered: root.applyTopbarEdits() }
-                                    SettingsActionButton { label: "Thema kiezen"; icon: "󰏘"; accent: root.mauve; onTriggered: root.currentTab = 1 }
-                                }
-                            }
-                        }
-
-                        Text { text: "Snelle acties"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(15); color: root.text }
-
-                        Flow {
-                            width: Math.max(0, quickColumn.width)
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: Math.max(0, quickColumn.width)
-                            spacing: root.s(10)
-                            SettingsActionButton { label: "Netwerk"; icon: "󰤨"; accent: root.blue; onTriggered: root.openShellWidget("network", "wifi") }
-                            SettingsActionButton { label: "Volume"; icon: "󰕾"; accent: root.green; onTriggered: root.openShellWidget("volume", "") }
-                            SettingsActionButton { label: "Monitoren"; icon: "󰍹"; accent: root.peach; onTriggered: root.openShellWidget("monitors", "") }
-                            SettingsActionButton { label: "Keybinds"; icon: "󰌌"; accent: root.sapphire; onTriggered: root.currentTab = 4 }
-                            SettingsActionButton { label: "Office mode"; icon: "󰈙"; accent: root.blue; onTriggered: root.switchSessionMode("office") }
-                            SettingsActionButton { label: "Gaming mode"; icon: "󰊴"; accent: root.red; onTriggered: root.switchSessionMode("gaming") }
-                            SettingsActionButton { label: "Media mode"; icon: "󰝚"; accent: root.pink; onTriggered: root.switchSessionMode("media") }
-                            SettingsActionButton { label: "Lock"; icon: "󰌾"; accent: root.yellow; onTriggered: root.lockSession() }
-                        }
+                        MouseArea { id: subPageMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.currentPage = subPageButton.page }
                     }
                 }
             }
+
+            Item {
+                id: pageArea
+                anchors.top: subPageRow.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
 
             // =================================================================
             // TAB 13: ABOUT
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 13
+                visible: root.currentPage === 13
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -2621,7 +2569,7 @@ Item {
                             }
                             ColumnLayout {
                                 Layout.alignment: Qt.AlignVCenter; spacing: root.s(2)
-                                Text { text: "Created by"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; font.weight: Font.Medium }
+                                Text { text: "Gemaakt door"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; font.weight: Font.Medium }
                                 Row {
                                     spacing: root.s(1)
                                     Repeater {
@@ -2660,7 +2608,7 @@ Item {
                         MouseArea { id: authorMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Quickshell.execDetached(["xdg-open", "https://github.com/JorisKooistra/kingstra-dots"]) }
                     }
 
-                    Text { text: "System Components"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text; Layout.topMargin: root.s(5) }
+                    Text { text: "Systeemonderdelen"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text; Layout.topMargin: root.s(5) }
 
                     GridLayout {
                         Layout.fillWidth: true; columns: 2; rowSpacing: root.s(15); columnSpacing: root.s(15)
@@ -2747,7 +2695,7 @@ Item {
             Item {
                 id: keybindTab
                 anchors.fill: parent
-                visible: root.currentTab === 4
+                visible: root.currentPage === 4
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -2756,7 +2704,7 @@ Item {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Keybindings"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text; Layout.fillWidth: true }
+                        Text { text: "Sneltoetsen"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text; Layout.fillWidth: true }
                         Rectangle {
                             Layout.preferredWidth: root.s(36); Layout.preferredHeight: root.s(36); radius: root.s(8)
                             color: reloadMa.containsMouse ? root.surface1 : Qt.alpha(root.surface0, 0.6)
@@ -2781,7 +2729,7 @@ Item {
                                 verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text
                                 clip: true; selectByMouse: true
                                 onTextChanged: root.keybindFilter = text.toLowerCase()
-                                Text { text: "Filter keybindings..."; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: "Sneltoetsen filteren…"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
                             }
                         }
                     }
@@ -2997,14 +2945,14 @@ Item {
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 9
+                visible: root.currentPage === 9
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
 
-                    Text { text: "Weather & Time"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+                    Text { text: "Tijd & weer"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
 
                     // ---- DATE & TIME FORMAT ----
                     Rectangle {
@@ -3017,10 +2965,10 @@ Item {
                             RowLayout {
                                 spacing: root.s(8)
                                 Text { text: "󰥔"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.blue }
-                                Text { text: "Date & Time Format"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
+                                Text { text: "Tijd- en datumnotatie"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
                             }
 
-                            Text { text: "Qt format strings — e.g. HH:mm (24h), hh:mm AP (12h), dddd d MMMM (Monday 7 April)"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                            Text { text: "Qt-notatie, bijv. HH:mm (24 uur), hh:mm AP (12 uur), dddd d MMMM (maandag 7 april)"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
 
                             RowLayout {
                                 Layout.fillWidth: true; spacing: root.s(15)
@@ -3028,7 +2976,7 @@ Item {
                                 // Time format
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(4)
-                                    Text { text: "Time format"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Tijdnotatie"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
                                     Rectangle {
                                         Layout.fillWidth: true; Layout.preferredHeight: root.s(38); radius: root.s(6)
                                         color: root.surface0; border.color: timeFmtInput.activeFocus ? root.blue : root.surface2; border.width: 1
@@ -3044,7 +2992,7 @@ Item {
                                 // Date format
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(4)
-                                    Text { text: "Date format"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Datumnotatie"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
                                     Rectangle {
                                         Layout.fillWidth: true; Layout.preferredHeight: root.s(38); radius: root.s(6)
                                         color: root.surface0; border.color: dateFmtInput.activeFocus ? root.blue : root.surface2; border.width: 1
@@ -3061,7 +3009,7 @@ Item {
                             // Preview
                             RowLayout {
                                 Layout.fillWidth: true; spacing: root.s(10)
-                                Text { text: "Preview:"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                Text { text: "Voorbeeld:"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
                                 Text {
                                     property string preview: Qt.formatDateTime(new Date(), timeFmtInput.text) + "  ·  " + Qt.formatDateTime(new Date(), dateFmtInput.text)
                                     text: preview; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.peach
@@ -3073,7 +3021,7 @@ Item {
                                     color: dtSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
                                     scale: dtSaveMa.pressed ? 0.95 : 1.0
                                     Behavior on scale { NumberAnimation { duration: 150 } }
-                                    Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
+                                    Text { anchors.centerIn: parent; text: "Opslaan"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
                                     MouseArea {
                                         id: dtSaveMa
                                         anchors.fill: parent
@@ -3101,10 +3049,10 @@ Item {
                     RowLayout {
                         spacing: root.s(8)
                         Text { text: "󰖐"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.yellow }
-                        Text { text: "Weather API"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
+                        Text { text: "Weer-API"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
                     }
 
-                    Text { text: "Enter your OpenWeatherMap API key and coordinates."; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                    Text { text: "Vul je OpenWeatherMap-sleutel en coördinaten in."; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
 
                     // API Key
                     Rectangle {
@@ -3118,7 +3066,7 @@ Item {
                                 id: apiKeyInput; Layout.fillWidth: true; Layout.fillHeight: true
                                 verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text
                                 clip: true; selectByMouse: true; echoMode: TextInput.Password
-                                Text { text: "OpenWeather API Key..."; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: "OpenWeather API-sleutel…"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
                             }
                         }
                     }
@@ -3133,7 +3081,7 @@ Item {
                             TextInput {
                                 id: latInput; anchors.fill: parent; anchors.margins: root.s(10)
                                 verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text; clip: true; selectByMouse: true
-                                Text { text: "Latitude (e.g. 52.3676)"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: "Breedtegraad (bijv. 52.3676)"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
                             }
                         }
                         Rectangle {
@@ -3143,7 +3091,7 @@ Item {
                             TextInput {
                                 id: lonInput; anchors.fill: parent; anchors.margins: root.s(10)
                                 verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text; clip: true; selectByMouse: true
-                                Text { text: "Longitude (e.g. 4.9041)"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: "Lengtegraad (bijv. 4.9041)"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
                             }
                         }
                     }
@@ -3151,7 +3099,7 @@ Item {
                     // Units
                     RowLayout {
                         Layout.fillWidth: true; spacing: root.s(15)
-                        Text { text: "Units:"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                        Text { text: "Eenheden:"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
                         Repeater {
                             model: ["metric", "imperial", "standard"]
                             Rectangle {
@@ -3180,7 +3128,7 @@ Item {
                             RowLayout {
                                 anchors.centerIn: parent; spacing: root.s(8)
                                 Text { text: "󰆓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: root.base }
-                                Text { text: "Save Weather"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(14); color: root.base }
+                                Text { text: "Weer opslaan"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(14); color: root.base }
                             }
                             MouseArea { id: wSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveWeatherConfig() }
                         }
@@ -3193,14 +3141,14 @@ Item {
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 5
+                visible: root.currentPage === 5
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
 
-                    Text { text: "Input"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+                    Text { text: "Invoer"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
 
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: root.s(340); radius: root.s(12)
@@ -3212,11 +3160,11 @@ Item {
                             RowLayout {
                                 spacing: root.s(8)
                                 Text { text: "󰍽"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.peach }
-                                Text { text: "Scroll Tuning"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
+                                Text { text: "Scrollsnelheid"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
                             }
 
                             Text {
-                                text: "Touchpad scrolls a bit calmer by default, while the mouse gets a stronger wheel response. Values are percentages of Hyprland's default speed."
+                                text: "Het touchpad scrolt standaard iets rustiger, de muis reageert sterker. Waarden zijn percentages van de standaardsnelheid van Hyprland."
                                 font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0
                                 wrapMode: Text.WordWrap; Layout.fillWidth: true
                             }
@@ -3240,7 +3188,7 @@ Item {
 
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Mouse"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Muis"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
                                     ThemedSpinBox {
                                         id: mouseScrollSpin
                                         from: 20; to: 300; stepSize: 5
@@ -3264,7 +3212,7 @@ Item {
 
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Keyboard layout"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Toetsenbordindeling"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
                                     ThemedComboBox {
                                         id: keyboardLayoutCombo
                                         model: root.keyboardLayoutLabels
@@ -3284,7 +3232,7 @@ Item {
                                         }
                                     }
                                     Text {
-                                        text: "Chooses the active Hyprland keyboard language/layout."
+                                        text: "Kiest de actieve toetsenbordtaal en -indeling in Hyprland."
                                         font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.blue
                                         wrapMode: Text.WordWrap; Layout.fillWidth: true
                                     }
@@ -3292,7 +3240,7 @@ Item {
 
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Touchpad right click"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Rechtsklik op touchpad"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
                                     ThemedComboBox {
                                         id: touchpadRightClickCombo
                                         model: ["On", "Off"]
@@ -3342,14 +3290,14 @@ Item {
 
                             RowLayout {
                                 Layout.fillWidth: true; spacing: root.s(10)
-                                Text { text: "Saved instantly and applied live in Hyprland."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                                Text { text: "Wordt direct opgeslagen en live toegepast in Hyprland."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
                                 Item { Layout.fillWidth: true }
                                 Rectangle {
                                     Layout.preferredWidth: root.s(80); Layout.preferredHeight: root.s(30); radius: root.s(6)
                                     color: scrollSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
                                     scale: scrollSaveMa.pressed ? 0.95 : 1.0
                                     Behavior on scale { NumberAnimation { duration: 150 } }
-                                    Text { anchors.centerIn: parent; text: "Save"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
+                                    Text { anchors.centerIn: parent; text: "Opslaan"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
                                     MouseArea {
                                         id: scrollSaveMa
                                         anchors.fill: parent
@@ -3379,7 +3327,7 @@ Item {
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 2
+                visible: root.currentPage === 2
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3508,7 +3456,7 @@ Item {
                             spacing: root.s(10)
                             SettingsActionButton { label: root.themeDirty ? "Opslaan" : "Geen wijzigingen"; icon: root.themeDirty ? "󰆓" : "󰄬"; accent: root.green; primary: root.themeDirty; onTriggered: root.saveThemeEdits() }
                             SettingsActionButton { label: "Topbar toepassen"; icon: "󰑓"; accent: root.blue; onTriggered: root.applyTopbarEdits() }
-                            SettingsActionButton { label: "Open Theme-editor"; icon: "󰏘"; accent: root.mauve; onTriggered: { root.themeEditorTab = "bar"; root.currentTab = 1; } }
+                            SettingsActionButton { label: "Open Theme-editor"; icon: "󰏘"; accent: root.mauve; onTriggered: { root.themeEditorTab = "bar"; root.openPage(1); } }
                             Item { Layout.fillWidth: true }
                         }
 
@@ -3523,53 +3471,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 3: WIDGETS
-            // =================================================================
-            Item {
-                anchors.fill: parent
-                visible: root.currentTab === 3
-                opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: root.s(20)
-                    spacing: root.s(14)
-
-                    Text { text: "Widgets"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
-                    Text { text: "Voor nu is dit een werkende widget-hub: je opent bestaande popups vanuit dezelfde settings-shell. Module toggles volgen zodra de bar die config daadwerkelijk leest."; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
-
-                    GridLayout {
-                        Layout.fillWidth: true
-                        columns: width >= root.s(760) ? 2 : 1
-                        rowSpacing: root.s(10)
-                        columnSpacing: root.s(10)
-
-                        SettingsInfoCard { title: "Systeemwidgets"; icon: "󰀻"; accent: root.blue; value: "Netwerk, volume, notificaties en monitoren openen via de bestaande qs_manager-routes." }
-                        SettingsInfoCard { title: "Mode-aware modules"; icon: "󰒲"; accent: root.mauve; value: "Office, gaming en media kiezen nu al andere modulelijsten in BarShell.qml." }
-                    }
-
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: root.s(10)
-
-                        SettingsActionButton { label: "Netwerk"; icon: "󰤨"; accent: root.blue; onTriggered: root.openShellWidget("network", "wifi") }
-                        SettingsActionButton { label: "Bluetooth"; icon: "󰂯"; accent: root.sapphire; onTriggered: root.openShellWidget("network", "bt") }
-                        SettingsActionButton { label: "Volume"; icon: "󰕾"; accent: root.green; onTriggered: root.openShellWidget("volume", "") }
-                        SettingsActionButton { label: "Monitoren"; icon: "󰍹"; accent: root.peach; onTriggered: root.openShellWidget("monitors", "") }
-                        SettingsActionButton { label: "Notificaties"; icon: "󰂚"; accent: root.pink; onTriggered: root.openShellWidget("notifications", "") }
-                    }
-
-                    Item { Layout.fillHeight: true }
-                }
-            }
-
-            // =================================================================
             // TAB 6: DISPLAY
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 6
+                visible: root.currentPage === 6
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3583,7 +3489,7 @@ Item {
                         width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
                         spacing: root.s(14)
 
-                        Text { text: "Display"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                        Text { text: "Beeldschermen"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
                         SettingsInfoCard { title: "Monitorstatus"; icon: "󰍹"; accent: root.blue; value: root.displayStatusText }
                         SettingsInfoCard { title: "Actieve layout"; icon: "󰹑"; accent: root.mauve; value: root.displayLayoutText }
                         SettingsInfoCard { title: "Touch & tablet"; icon: "󰗧"; accent: root.sapphire; value: root.displayTouchText }
@@ -3653,7 +3559,7 @@ Item {
                         Flow {
                             Layout.fillWidth: true
                             spacing: root.s(10)
-                            SettingsActionButton { label: "Monitor UI openen"; icon: "󰍹"; accent: root.blue; primary: true; onTriggered: root.openShellWidget("monitors", "") }
+                            SettingsActionButton { label: "Schermindeling openen"; icon: "󰍹"; accent: root.blue; primary: true; onTriggered: root.openShellWidget("monitors", "") }
                             SettingsActionButton { label: "Layout herstellen"; icon: "󰁯"; accent: root.green; onTriggered: root.restoreDisplayLayout() }
                             SettingsActionButton { label: "Tabletmodus"; icon: "󰓶"; accent: root.peach; onTriggered: root.toggleTabletMode() }
                             SettingsActionButton { label: "Helderheid -"; icon: "󰃞"; accent: root.yellow; onTriggered: root.adjustBrightness(-5) }
@@ -3770,7 +3676,7 @@ Item {
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 7
+                visible: root.currentPage === 7
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3779,7 +3685,7 @@ Item {
                     anchors.margins: root.s(20)
                     spacing: root.s(14)
 
-                    Text { text: "Network"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                    Text { text: "Netwerk"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
                     SettingsInfoCard { title: "Wifi"; icon: "󰤨"; accent: root.blue; value: root.networkStatusText }
 
                     Flow {
@@ -3800,7 +3706,7 @@ Item {
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 8
+                visible: root.currentPage === 8
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3814,7 +3720,7 @@ Item {
                         width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
                         spacing: root.s(14)
 
-                        Text { text: "Audio"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                        Text { text: "Geluid"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
                         Text {
                             text: "Snelle mixer voor output, input en actieve streams. Het volumepaneel (Geluid & media) heeft daarnaast apparaatkeuze, poorten, per-app volume en de speler."
                             font.family: root.uiFontFamily
@@ -3972,7 +3878,7 @@ Item {
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 10
+                visible: root.currentPage === 10
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -3986,7 +3892,7 @@ Item {
                         width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
                         spacing: root.s(14)
 
-                        Text { text: "Session"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                        Text { text: "Sessie"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
 
                         GridLayout {
                             Layout.fillWidth: true
@@ -4256,7 +4162,7 @@ Item {
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 11
+                visible: root.currentPage === 11
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -4286,7 +4192,7 @@ Item {
             // =================================================================
             Item {
                 anchors.fill: parent
-                visible: root.currentTab === 12
+                visible: root.currentPage === 12
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -4295,7 +4201,7 @@ Item {
                     anchors.margins: root.s(20)
                     spacing: root.s(14)
 
-                    Text { text: "Advanced"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                    Text { text: "Geavanceerd"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
                     SettingsInfoCard { title: "Status"; icon: "󰋼"; accent: root.blue; value: root.advancedStatusText }
 
                     Flow {
@@ -4350,7 +4256,7 @@ Item {
             Item {
                 id: themeTab
                 anchors.fill: parent
-                visible: root.currentTab === 1
+                visible: root.currentPage === 1
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -4378,7 +4284,7 @@ Item {
                         width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
                         spacing: root.s(15)
 
-                        Text { text: "Theming Engine"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+                        Text { text: "Thema"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
                         Text { text: "Kies een thema, bekijk direct fonts, icons en Matugen-scene, en pas het daarna expliciet toe."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
 
                         RowLayout {
@@ -5699,6 +5605,7 @@ Item {
                     }
                 }
             }
+            } // pageArea
         }
     }
 }
