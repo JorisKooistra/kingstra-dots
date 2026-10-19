@@ -287,6 +287,18 @@ Item {
                 onTriggered: root.cycleProfile()
                 onDetailRequested: root.openPanel("battery")
             }
+            // Beeldschermen: stond als Monitoren-knop in de rail. Opent de
+            // schermindeling (resolutie, positie, hoofdscherm), ook via Super+O.
+            Tile {
+                icon: "󰍹"
+                label: "Beeldschermen"
+                subtitle: Quickshell.screens.length === 1 ? "1 scherm" : Quickshell.screens.length + " schermen"
+                active: false
+                accent: mocha.accent3
+                detailTooltip: "Schermindeling"
+                onTriggered: root.openPanel("monitors")
+                onDetailRequested: root.openPanel("monitors")
+            }
             Tile {
                 visible: root.kbLayoutCount > 1
                 icon: "󰌌"
@@ -310,7 +322,7 @@ Item {
             label: "Helderheid"
             value: root.brightness
             accent: mocha.yellow
-            detailTooltip: "Monitoren"
+            detailTooltip: "Beeldschermen"
             onDragToggled: (dragging) => root.draggingBrightness = dragging
             onMoved: (percent) => root.setBrightness(percent)
             onDetailRequested: root.openPanel("monitors")

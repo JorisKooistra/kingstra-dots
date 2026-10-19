@@ -1081,13 +1081,8 @@ Item {
                 }
             }
 
-            RailButton { tooltip: "Focus";
-                visible: root.activeMode === "office" || root.moduleEnabled("focus")
-                icon: "󰥔"
-                accent: root.mocha.accent1
-                onTriggered: root.togglePanel("focustime")
-            }
-
+            // Focus (schermtijd) staat nu als kaart in het dashboard en
+            // Monitoren als tegel Beeldschermen in Snelle instellingen.
             RailButton { tooltip: "Systeem";
                 visible: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps"])
                 icon: "󰍛"
@@ -1102,14 +1097,6 @@ Item {
                 text: root.updateCount.toString()
                 accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0
                 onTriggered: root.openUpdatesTerminal()
-            }
-
-            RailButton {
-                tooltip: "Monitoren"
-                visible: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"])
-                icon: "󰍹"
-                accent: root.mocha.accent3
-                onTriggered: root.togglePanel("monitors")
             }
 
             RailButton {
@@ -1299,7 +1286,6 @@ Item {
                 StripButton { tooltip: root.notificationTooltip; visible: root.moduleEnabled("notifications"); icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜"); badge: NotificationService.dnd ? 0 : NotificationService.count; accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2; onTriggered: root.togglePanel("notifications"); onMiddleClicked: NotificationService.toggleDnd() }
                 StripButton { tooltip: "Agenda"; visible: root.moduleEnabled("clock"); icon: "󰃰"; accent: root.mocha.accent1; onTriggered: root.togglePanel("calendar") }
                 StripButton { tooltip: root.updateTooltip(); visible: root.moduleEnabled("updates"); icon: "󰚰"; text: root.updateCount.toString(); accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0; onTriggered: root.openUpdatesTerminal() }
-                StripButton { tooltip: "Monitoren"; visible: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"]); icon: "󰍹"; accent: root.mocha.accent3; onTriggered: root.togglePanel("monitors") }
                 StripButton { tooltip: "Games"; visible: root.moduleEnabled("game_launcher"); icon: "󰊴"; accent: root.mocha.accent2; onTriggered: root.togglePanel("gaming") }
             }
 

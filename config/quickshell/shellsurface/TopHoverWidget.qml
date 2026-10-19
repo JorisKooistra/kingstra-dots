@@ -176,6 +176,49 @@ Item {
         }
     }
 
+    // --- Schermtijd (Focus-daemon) ------------------------------------------
+    // De daemon schrijft de stand van vandaag naar een state-file; die lezen
+    // we hier alleen, net als het Focus-paneel.
+    property int screenTimeTotal: 0
+    property var screenTimeApps: []
+
+    function formatDuration(seconds) {
+        let s = Math.max(0, Math.round(Number(seconds) || 0));
+        let h = Math.floor(s / 3600);
+        let m = Math.floor((s % 3600) / 60);
+        if (h > 0) return h + "u " + (m < 10 ? "0" : "") + m + "m";
+        return m + "m";
+    }
+
+    Process {
+        id: screenTimePoller
+        command: ["sh", "-c", "cat \"${XDG_RUNTIME_DIR:-/tmp}/focustime_state.json\" 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let data = JSON.parse(this.text.trim() || "{}");
+                    if (data.selected_date !== Qt.formatDate(new Date(), "yyyy-MM-dd")) {
+                        root.screenTimeTotal = 0;
+                        root.screenTimeApps = [];
+                        return;
+                    }
+                    root.screenTimeTotal = Number(data.total || 0);
+                    let apps = Array.isArray(data.apps) ? data.apps : [];
+                    let hidden = ["Desktop", "Locked", "Quickshell", "Unknown"];
+                    root.screenTimeApps = apps.filter(a => hidden.indexOf(String(a["class"] || "")) === -1).slice(0, 3);
+                } catch (e) {}
+            }
+        }
+    }
+
+    Timer {
+        interval: 30000
+        running: root.tab === 0
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: if (!screenTimePoller.running) screenTimePoller.running = true
+    }
+
     // --- Tabbladen ------------------------------------------------------------
     property int tab: 0
     // PanelHost luistert hiernaar, zodat een pijltje hier het volledige
@@ -487,87 +530,176 @@ Item {
                     }
                 }
 
-                // --- Media -----------------------------------------------------------
-                Card {
+                // Rechterkolom: media bovenaan, schermtijd (Focus) eronder.
+                ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    spacing: 10
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 12
+                    // --- Media -----------------------------------------------------------
+                    Card {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
 
-                        Rectangle {
-                            Layout.preferredWidth: 56
-                            Layout.preferredHeight: 56
-                            radius: 14
-                            color: Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.14)
-                            clip: true
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 12
+                            spacing: 12
 
-                            Image {
-                                id: cover
-                                anchors.fill: parent
-                                source: root.activePlayer && root.activePlayer.trackArtUrl
-                                    ? root.activePlayer.trackArtUrl : ""
-                                fillMode: Image.PreserveAspectCrop
-                                visible: status === Image.Ready
-                                asynchronous: true
+                            Rectangle {
+                                Layout.preferredWidth: 56
+                                Layout.preferredHeight: 56
+                                radius: 14
+                                color: Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.14)
+                                clip: true
+
+                                Image {
+                                    id: cover
+                                    anchors.fill: parent
+                                    source: root.activePlayer && root.activePlayer.trackArtUrl
+                                        ? root.activePlayer.trackArtUrl : ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    visible: status === Image.Ready
+                                    asynchronous: true
+                                }
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: cover.status !== Image.Ready
+                                    text: "󰎆"
+                                    font.family: "Iosevka Nerd Font"
+                                    font.pixelSize: 24
+                                    color: mocha.green
+                                }
                             }
-                            Text {
-                                anchors.centerIn: parent
-                                visible: cover.status !== Image.Ready
-                                text: "󰎆"
-                                font.family: "Iosevka Nerd Font"
-                                font.pixelSize: 24
-                                color: mocha.green
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.hasMedia ? root.activePlayer.trackTitle : "Geen media actief"
+                                    font.family: ThemeConfig.displayFont
+                                    font.pixelSize: 15
+                                    font.weight: Font.Bold
+                                    color: mocha.text
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.hasMedia ? String(root.activePlayer.trackArtist || "") : ""
+                                    visible: text !== ""
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 11
+                                    color: mocha.subtext0
+                                    elide: Text.ElideRight
+                                }
+
+                                RowLayout {
+                                    Layout.topMargin: 4
+                                    spacing: 6
+                                    visible: root.hasMedia
+
+                                    MediaButton {
+                                        icon: "󰒮"
+                                        onTriggered: if (root.activePlayer && root.activePlayer.canGoPrevious)
+                                            root.activePlayer.previous()
+                                    }
+                                    MediaButton {
+                                        icon: root.activePlayer
+                                            && root.activePlayer.playbackState === MprisPlaybackState.Playing
+                                            ? "󰏤" : "󰐊"
+                                        onTriggered: if (root.activePlayer && root.activePlayer.canTogglePlaying)
+                                            root.activePlayer.togglePlaying()
+                                    }
+                                    MediaButton {
+                                        icon: "󰒭"
+                                        onTriggered: if (root.activePlayer && root.activePlayer.canGoNext)
+                                            root.activePlayer.next()
+                                    }
+                                }
                             }
                         }
+                    }
+
+                    // --- Schermtijd (Focus) ---------------------------------------------
+                    // Stond als knop in de rail; hier zie je het in één oogopslag.
+                    // Het pijltje opent het volledige Focus-paneel (Super+X).
+                    Card {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 74
 
                         ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
+                            anchors.fill: parent
+                            anchors.margins: 10
+                            spacing: 6
 
-                            Text {
+                            RowLayout {
                                 Layout.fillWidth: true
-                                text: root.hasMedia ? root.activePlayer.trackTitle : "Geen media actief"
-                                font.family: ThemeConfig.displayFont
-                                font.pixelSize: 15
-                                font.weight: Font.Bold
-                                color: mocha.text
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.hasMedia ? String(root.activePlayer.trackArtist || "") : ""
-                                visible: text !== ""
-                                font.family: ThemeConfig.uiFont
-                                font.pixelSize: 11
-                                color: mocha.subtext0
-                                elide: Text.ElideRight
+                                spacing: 6
+                                Text {
+                                    text: "󰥔"
+                                    font.family: "Iosevka Nerd Font"
+                                    font.pixelSize: 13
+                                    color: mocha.primary
+                                }
+                                CardHeader {
+                                    title: "Schermtijd vandaag  ·  " + root.formatDuration(root.screenTimeTotal)
+                                    target: "focustime"
+                                }
                             }
 
                             RowLayout {
-                                Layout.topMargin: 4
+                                Layout.fillWidth: true
                                 spacing: 6
-                                visible: root.hasMedia
 
-                                MediaButton {
-                                    icon: "󰒮"
-                                    onTriggered: if (root.activePlayer && root.activePlayer.canGoPrevious)
-                                        root.activePlayer.previous()
+                                EmptyText {
+                                    visible: root.screenTimeApps.length === 0
+                                    text: "Nog geen gegevens van vandaag"
                                 }
-                                MediaButton {
-                                    icon: root.activePlayer
-                                        && root.activePlayer.playbackState === MprisPlaybackState.Playing
-                                        ? "󰏤" : "󰐊"
-                                    onTriggered: if (root.activePlayer && root.activePlayer.canTogglePlaying)
-                                        root.activePlayer.togglePlaying()
+
+                                Repeater {
+                                    model: root.screenTimeApps
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        Layout.preferredHeight: 24
+                                        Layout.fillWidth: true
+                                        Layout.maximumWidth: 150
+                                        radius: 12
+                                        color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 6
+                                            anchors.rightMargin: 9
+                                            spacing: 5
+                                            Image {
+                                                Layout.preferredWidth: 14
+                                                Layout.preferredHeight: 14
+                                                sourceSize.width: 28
+                                                sourceSize.height: 28
+                                                source: modelData.icon ? (String(modelData.icon).startsWith("/")
+                                                    ? "file://" + modelData.icon : Quickshell.iconPath(modelData.icon, true)) : ""
+                                                visible: status === Image.Ready
+                                            }
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: String(modelData.name || modelData["class"] || "")
+                                                font.family: ThemeConfig.uiFont
+                                                font.pixelSize: 10
+                                                color: mocha.text
+                                                elide: Text.ElideRight
+                                            }
+                                            Text {
+                                                text: root.formatDuration(modelData.seconds || 0)
+                                                font.family: ThemeConfig.monoFont
+                                                font.pixelSize: 9
+                                                color: mocha.subtext0
+                                            }
+                                        }
+                                    }
                                 }
-                                MediaButton {
-                                    icon: "󰒭"
-                                    onTriggered: if (root.activePlayer && root.activePlayer.canGoNext)
-                                        root.activePlayer.next()
-                                }
+                                Item { Layout.fillWidth: true; visible: root.screenTimeApps.length > 0 && root.screenTimeApps.length < 3 }
                             }
                         }
                     }

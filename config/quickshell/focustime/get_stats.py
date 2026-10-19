@@ -13,6 +13,8 @@ DESKTOP_CACHE_NAME = {}
 DESKTOP_CACHE_ICON = {}
 CACHE_BUILT = False
 
+MONTHS_NL = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
+
 SYSTEM_STATES = {"Desktop", "Locked", "Quickshell", "Unknown"}
 
 def get_xdg_search_dirs():
@@ -122,7 +124,7 @@ def main():
     # Calculate Weekly Average and Dates
     monday = target_date - timedelta(days=target_date.weekday())
     sunday = monday + timedelta(days=6)
-    week_range_str = f"{monday.strftime('%b')} {monday.day} - {sunday.strftime('%b')} {sunday.day}"
+    week_range_str = f"{monday.day} {MONTHS_NL[monday.month - 1]} - {sunday.day} {MONTHS_NL[sunday.month - 1]}"
 
     params_avg = (monday.isoformat(), sunday.isoformat(), app_filter) if app_filter else (monday.isoformat(), sunday.isoformat())
     c.execute(f'''
@@ -179,7 +181,7 @@ def main():
         })
 
     monday_iter = target_date - timedelta(days=target_date.weekday())
-    days_str = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    days_str = ["ma", "di", "wo", "do", "vr", "za", "zo"]
     week_data = []
     
     for i in range(7):

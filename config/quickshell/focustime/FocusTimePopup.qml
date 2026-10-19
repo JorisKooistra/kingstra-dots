@@ -44,7 +44,7 @@ Item {
     readonly property color sapphire: _theme.sapphire
     readonly property color blue: _theme.blue
 
-    readonly property var monthNames: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    readonly property var monthNames: ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"]
 
     // -------------------------------------------------------------------------
     // STATE & POLLING PATHS
@@ -76,7 +76,7 @@ Item {
     property var weekAppsData: []
     property var weekHeatmapData: [[],[],[],[],[],[],[]]
     property real maxWeekHour: 1
-    property string peakUsageHours: "N/A"
+    property string peakUsageHours: "n.v.t."
 
     // 48 blocks for 30-minute intervals (2 bars per hour)
     property var hourlyData: new Array(48).fill(0)
@@ -224,16 +224,14 @@ Item {
         }
         
         function formatAMPM(hour) {
-            let ampm = hour >= 12 ? 'PM' : 'AM';
-            let h12 = hour % 12;
-            h12 = h12 ? h12 : 12;
-            return h12 + ' ' + ampm;
+            let h = hour % 24;
+            return (h < 10 ? "0" : "") + h + ":00";
         }
         
         if (max2HourVal > 0) {
             window.peakUsageHours = formatAMPM(peakStart) + " - " + formatAMPM(peakStart + 2);
         } else {
-            window.peakUsageHours = "N/A";
+            window.peakUsageHours = "n.v.t.";
         }
 
         let parsedWeek = data.week || [];
@@ -337,7 +335,7 @@ Item {
         let monthName = window.monthNames[d.getMonth()];
         let dateNum = d.getDate();
         let isToday = getIsoDate(d) === getIsoDate(new Date());
-        return isToday ? "Today" : `${monthName} ${dateNum}`;
+        return isToday ? "Vandaag" : `${dateNum} ${monthName}`;
     }
 
     function changeDay(offsetDays) {
@@ -480,14 +478,14 @@ Item {
     function formatTimeLarge(secs) {
         let h = Math.floor(secs / 3600);
         let m = Math.floor((secs % 3600) / 60);
-        if (h > 0) return h + "h " + m + "m";
+        if (h > 0) return h + "u " + m + "m";
         return m + "m";
     }
 
     function formatTimeList(secs) {
         let h = Math.floor(secs / 3600);
         let m = Math.floor((secs % 3600) / 60);
-        if (h > 0) return h + "h " + m.toString().padStart(2, '0') + "m";
+        if (h > 0) return h + "u " + m.toString().padStart(2, '0') + "m";
         return m + "m";
     }
 
@@ -659,7 +657,7 @@ Item {
                             font.weight: Font.DemiBold
                             font.pixelSize: window.s(18)
                             color: window.text
-                            text: window.isWeekView ? (window.weekRangeStr !== "" ? window.weekRangeStr : "Week Overview") : (window.selectedAppClass !== "" ? `${window.selectedAppName} - ${window.getFancyDate(window.activeDate)}` : window.getFancyDate(window.activeDate))
+                            text: window.isWeekView ? (window.weekRangeStr !== "" ? window.weekRangeStr : "Weekoverzicht") : (window.selectedAppClass !== "" ? `${window.selectedAppName} - ${window.getFancyDate(window.activeDate)}` : window.getFancyDate(window.activeDate))
                         }
 
                         Item { Layout.fillWidth: true } // Right Spacer
@@ -730,7 +728,7 @@ Item {
                                         font.weight: Font.DemiBold
                                         font.pixelSize: window.s(14)
                                         color: window.subtext0
-                                        text: "Daily average"
+                                        text: "Daggemiddelde"
                                     }
                                     Text {
                                         Layout.alignment: Qt.AlignHCenter
@@ -829,7 +827,7 @@ Item {
                                         font.weight: Font.DemiBold
                                         font.pixelSize: window.s(15)
                                         color: window.overlay0
-                                        text: (window.totalSeconds === 0 && window.yesterdaySeconds === 0) ? "No data" : "Same time"
+                                        text: (window.totalSeconds === 0 && window.yesterdaySeconds === 0) ? "Geen gegevens" : "Even lang als gisteren"
                                         visible: (window.totalSeconds === 0 && window.yesterdaySeconds === 0) || window.totalSeconds === window.yesterdaySeconds
                                     }
                                 }
@@ -1157,7 +1155,7 @@ Item {
                                         font.weight: Font.DemiBold
                                         font.pixelSize: window.s(14)
                                         color: window.text
-                                        text: "Daily usage"
+                                        text: "Gebruik per dag"
                                     }
 
                                     RowLayout {
@@ -1271,7 +1269,7 @@ Item {
                                                 transform: Translate { x: window.s(-20) * (1 - introMidLeft) + (dayIndex * window.s(5) * (1 - introMidLeft)) }
 
                                                 Text {
-                                                    text: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][dayIndex]
+                                                    text: ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"][dayIndex]
                                                     font.family: "JetBrains Mono"
                                                     font.weight: Font.Normal
                                                     font.pixelSize: window.s(12)
@@ -1369,7 +1367,7 @@ Item {
                                                 font.weight: Font.Medium
                                                 font.pixelSize: window.s(12)
                                                 color: window.subtext0
-                                                text: "Daily average"
+                                                text: "Daggemiddelde"
                                             }
                                             Text {
                                                 Layout.alignment: Qt.AlignHCenter
@@ -1398,7 +1396,7 @@ Item {
                                                 font.weight: Font.Medium
                                                 font.pixelSize: window.s(12)
                                                 color: window.subtext0
-                                                text: "Peak hours"
+                                                text: "Drukste uren"
                                             }
                                             Text {
                                                 Layout.alignment: Qt.AlignHCenter

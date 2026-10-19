@@ -25,6 +25,8 @@ DESKTOP_CACHE_ICON = {}
 CACHE_BUILT = False
 
 # Explicitly bypass cache lookups for these internal systemic states
+MONTHS_NL = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
+
 SYSTEM_STATES = {"Desktop", "Locked", "Quickshell", "Unknown"}
 
 def get_xdg_search_dirs():
@@ -244,7 +246,7 @@ def dump_state_to_json(c):
     # Weekly Average and string formatting
     monday = target_date - timedelta(days=target_date.weekday())
     sunday = monday + timedelta(days=6)
-    week_range_str = f"{monday.strftime('%b')} {monday.day} - {sunday.strftime('%b')} {sunday.day}"
+    week_range_str = f"{monday.day} {MONTHS_NL[monday.month - 1]} - {sunday.day} {MONTHS_NL[sunday.month - 1]}"
 
     # Calculate average ONLY over days in current week that have non-zero usage
     c.execute('''
@@ -301,7 +303,7 @@ def dump_state_to_json(c):
         })
 
     monday_iter = target_date - timedelta(days=target_date.weekday())
-    days_str = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    days_str = ["ma", "di", "wo", "do", "vr", "za", "zo"]
     week_data = []
     for i in range(7):
         d = monday_iter + timedelta(days=i)
