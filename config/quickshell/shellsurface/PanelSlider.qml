@@ -14,6 +14,9 @@ RowLayout {
     property bool dimmed: false
     property color accent: slider.mocha.primary
     property string detailTooltip: ""
+    // Klapt het pijltje een kwartslag om wanneer het een uitklapbare lijst
+    // bedient (Geluid & media) in plaats van naar een ander paneel te gaan.
+    property bool detailExpanded: false
     property string valueText: label + "  " + Math.max(0, value) + "%"
     // Zonder icoon (bijv. een voortgangsbalk) valt het knopje links weg.
     property bool showIcon: true
@@ -129,7 +132,14 @@ RowLayout {
             text: "󰅂"
             font.family: "Iosevka Nerd Font"
             font.pixelSize: 14
-            color: sliderDetailMouse.containsMouse ? slider.mocha.text : slider.mocha.subtext0
+            color: sliderDetailMouse.containsMouse || slider.detailExpanded ? slider.mocha.text : slider.mocha.subtext0
+            rotation: slider.detailExpanded ? 90 : 0
+            Behavior on rotation {
+                NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+            }
+            Behavior on color {
+                ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+            }
         }
         MouseArea {
             id: sliderDetailMouse

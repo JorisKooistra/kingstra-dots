@@ -3816,7 +3816,7 @@ Item {
 
                         Text { text: "Audio"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
                         Text {
-                            text: "Snelle mixer voor output, input en actieve streams. De losse VolumePopup blijft beschikbaar voor de volledige audioweergave."
+                            text: "Snelle mixer voor output, input en actieve streams. Het volumepaneel (Geluid & media) heeft daarnaast apparaatkeuze, poorten, per-app volume en de speler."
                             font.family: root.uiFontFamily
                             font.pixelSize: root.s(11)
                             color: root.subtext0
