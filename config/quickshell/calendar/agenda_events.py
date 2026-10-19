@@ -55,13 +55,21 @@ def valid_time(value: str) -> str:
     return dt.strftime("%H:%M")
 
 
+DAYS_NL = ["ma", "di", "wo", "do", "vr", "za", "zo"]
+MONTHS_NL = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
+
+
 def day_label(date_key: str) -> str:
-    return datetime.strptime(date_key, "%Y-%m-%d").strftime("%a %d %b")
+    dt = datetime.strptime(date_key, "%Y-%m-%d")
+    return f"{DAYS_NL[dt.weekday()]} {dt.day} {MONTHS_NL[dt.month - 1]}"
 
 
 def normalize_event(event: dict) -> dict:
     date_key = valid_date(str(event.get("dateKey") or event.get("date") or ""))
-    time_text = valid_time(str(event.get("timeRaw") or event.get("time") or ""))
+    # Een hele-dag-afspraak heeft timeRaw "" en time "Hele dag"; dan niet
+    # terugvallen op time, anders valt hij bij de volgende save weg.
+    raw_time = event.get("timeRaw") if "timeRaw" in event else event.get("time")
+    time_text = valid_time(str(raw_time or ""))
     title = " ".join(str(event.get("title") or "").split()).strip()
     if not title:
         title = "(Geen titel)"
@@ -135,6 +143,32 @@ def main() -> int:
         except ValueError:
             return 2
         events.append(event)
+        save_events(filtered_events(events))
+        print_payload(events)
+        return 0
+
+    if action == "update":
+        if len(sys.argv) < 6:
+            return 2
+        _, _, event_id, date_key, time_text, title = sys.argv[:6]
+        found = False
+        for index, event in enumerate(events):
+            if str(event.get("id") or "") != event_id:
+                continue
+            try:
+                events[index] = normalize_event({
+                    "id": event_id,
+                    "dateKey": date_key,
+                    "timeRaw": time_text,
+                    "title": title,
+                    "createdAt": event.get("createdAt") or int(time.time()),
+                })
+            except ValueError:
+                return 2
+            found = True
+            break
+        if not found:
+            return 2
         save_events(filtered_events(events))
         print_payload(events)
         return 0

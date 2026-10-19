@@ -87,13 +87,12 @@ Item {
 
     // --- Weer en eerstvolgende afspraak --------------------------------------
     // Het weer stond in de oude bar en ontbrak sinds de rail; de afspraak komt
-    // uit dezelfde bronnen als het agendapaneel (lokaal + Thunderbird).
+    // uit de lokale agenda, net als het agendapaneel.
     property string weatherIcon: ""
     property string weatherTemp: ""
     property var localEvents: []
-    property var thunderbirdEvents: []
     readonly property var nextEvent: {
-        let all = localEvents.concat(thunderbirdEvents);
+        let all = localEvents;
         let todayKey = Qt.formatDate(now, "yyyy-MM-dd");
         let nowTime = Qt.formatTime(now, "HH:mm");
         let best = null;
@@ -156,14 +155,6 @@ Item {
         }
     }
 
-    Process {
-        id: thunderbirdPoller
-        command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/calendar/thunderbird_calendar_status.py"]
-        stdout: StdioCollector {
-            onStreamFinished: root.thunderbirdEvents = root.parseEvents(this.text)
-        }
-    }
-
     Timer {
         interval: 300000
         running: true
@@ -172,7 +163,6 @@ Item {
         onTriggered: {
             if (!weatherPoller.running) weatherPoller.running = true;
             if (!localAgendaPoller.running) localAgendaPoller.running = true;
-            if (!thunderbirdPoller.running) thunderbirdPoller.running = true;
         }
     }
 

@@ -163,8 +163,9 @@ Keybinds: `Super + Shift + W` (random) and `Super + Ctrl + W` (visual picker).
 
 - **Launcher** — Quickshell launcher panel (`Super + Ctrl + Return`) with usage-based ordering
   and up to three pinned apps. Walker + Elephant are also installed and run as a service.
-- **Notifications** — Quickshell popup and center (`Super + N`), clear (`Super + Shift + N`),
-  do-not-disturb (`Super + Alt + N`).
+- **Notifications** — Quickshell pop-ups next to the rail and a center grouped per app
+  (`Super + N`), clear (`Super + Shift + N`), do-not-disturb (`Super + Alt + N`, or middle-click
+  the rail bell). Do-not-disturb keeps notifications silently and survives a restart.
 - **Clipboard** — cliphist with a Quickshell panel (`Super + V`), text and images.
 - **Lockscreen** — `lock.sh` starts the Quickshell lock (`Lock.qml`) and falls back to hyprlock,
   then `loginctl lock-session`. Fingerprint works through PAM when detected.
@@ -172,7 +173,8 @@ Keybinds: `Super + Shift + W` (random) and `Super + Ctrl + W` (visual picker).
   (`Super + Ctrl + G`).
 - **Files** — Nautilus (`Super + E`) and yazi (`Super + Shift + E`).
 - **Monitoring** — btop, lm_sensors, and the performance drawer and HUD telemetry in the shell.
-- **Calendar** — read-only Thunderbird helper for the agenda.
+- **Calendar** — compact agenda panel (`Super + Ctrl + C`) with local events you can add, edit
+  and delete (`calendar/agenda_events.py`), plus the weather per day and hour.
 - **Passthrough** — `Super + Escape` toggles a submap where Hyprland consumes no Super shortcuts.
   `citrix-guard.sh` does this automatically for Citrix (`wfica`) windows to avoid the Super-key crash.
 - **WiFi/Bluetooth stability** — phase 12 turns off WiFi power saving and Bluetooth USB autosuspend,
