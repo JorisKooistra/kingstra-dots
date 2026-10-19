@@ -454,14 +454,14 @@ _phase08_install_game_launcher() {
         return 0
     fi
 
+    # Afhankelijkheden eerst los: python-vdf (AUR) heeft python-nose als
+    # checkdepend, en dat bouwt niet meer op de huidige Python. Zonder check
+    # installeert het gewoon, en daarna kan de launcher zelf bijwerken.
+    pacman_install python-evdev python-tomlkit
+    AUR_NOCHECK=true aur_install python-vdf
+
     # Installeer AUR package (levert /usr/bin/quickshell-game)
     aur_install quickshell-games-launchers-git
-
-    # Python dependencies
-    if command -v pip &>/dev/null; then
-        pip install --quiet --user vdf toml 2>/dev/null || \
-            log_warn "pip install vdf/toml mislukt — installeer handmatig"
-    fi
 
     # Zorg dat de config directory bestaat (symlink via deploy_config "quickshell")
     local cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/game-launcher"

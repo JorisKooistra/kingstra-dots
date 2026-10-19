@@ -75,3 +75,8 @@ config/hypr/hyprland.conf
 config/matugen/generated/*
 !config/matugen/generated/.gitkeep
 config/cava/config
+
+# quickshell-game kopieert zijn eigen bestanden naar
+# ~/.config/quickshell/game-launcher; alleen onze config.toml hoort in git.
+config/quickshell/game-launcher/*
+!config/quickshell/game-launcher/config.toml

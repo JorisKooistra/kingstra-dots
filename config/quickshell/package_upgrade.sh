@@ -103,7 +103,7 @@ preview_updates() {
 # Nieuws vraagt soms handwerk vóór een update, dus bij nieuwe berichten wacht
 # het script op een bevestiging.
 check_arch_news() {
-    local feed="" last_run=0 shown=0 title="" pub="" ts=0
+    local feed="" last_run=0 shown=0 title="" pub="" ts=0 latest=""
 
     command -v curl >/dev/null 2>&1 || {
         log "curl ontbreekt; Arch-nieuws overgeslagen."
@@ -120,6 +120,7 @@ check_arch_news() {
 
     while IFS=$'\t' read -r title pub; do
         [[ -n "$title" ]] || continue
+        [[ -n "$latest" ]] || latest="$(date -d "$pub" +%Y-%m-%d 2>/dev/null || echo '?')  $title"
         ts="$(date -d "$pub" +%s 2>/dev/null || echo 0)"
         if [[ "$last_run" -eq 0 && "$shown" -ge 3 ]] || [[ "$last_run" -gt 0 && "$ts" -le "$last_run" ]]; then
             break
@@ -132,6 +133,7 @@ check_arch_news() {
 
     if [[ "$shown" -eq 0 ]]; then
         log "Geen nieuw Arch-nieuws sinds de vorige update."
+        [[ -n "$latest" ]] && log "Laatste bericht: $latest"
         return 0
     fi
     log "Lees ze op https://archlinux.org/news/ als er handwerk bij staat."

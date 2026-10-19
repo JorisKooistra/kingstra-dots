@@ -90,6 +90,15 @@ aur_install() {
             ;;
     esac
 
+    # AUR_NOCHECK=true slaat check() over; sommige AUR-pakketten testen met
+    # tools die op de huidige Python niet meer bestaan (python-nose).
+    if "${AUR_NOCHECK:-false}"; then
+        case "${AUR_HELPER##*/}" in
+            paru) aur_flags+=(--nocheck) ;;
+            yay) aur_flags+=(--mflags --nocheck) ;;
+        esac
+    fi
+
     if ! _package_refresh_sudo; then
         _package_install_hint "sudo"
         return 1
