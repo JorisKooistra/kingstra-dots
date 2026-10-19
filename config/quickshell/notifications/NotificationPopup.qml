@@ -19,7 +19,21 @@ FocusScope {
     // meldingen zijn, groeit de lijst per kaart en blijft hij daarna scrollen.
     readonly property int preferredPanelHeight: NotificationService.count === 0
         ? 210
-        : Math.min(620, 125 + NotificationService.count * 125)
+        : Math.min(620, 100 + groupColumn.implicitHeight)
+
+    // Herberekend bij elke nieuwe of verdwenen melding.
+    readonly property var groupList: {
+        NotificationService.count;
+        NotificationService.arrivedAt;
+        return NotificationService.groups();
+    }
+    property var collapsedApps: ({})
+
+    function toggleCollapsed(app) {
+        let next = Object.assign({}, collapsedApps);
+        next[app] = !next[app];
+        collapsedApps = next;
+    }
 
     function closePanel() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
@@ -93,9 +107,8 @@ FocusScope {
 
                 Text {
                     Layout.fillWidth: true
-                    text: NotificationService.dnd
-                        ? "Niet storen actief"
-                        : (NotificationService.count === 1
+                    text: (NotificationService.dnd ? "Niet storen · " : "")
+                        + (NotificationService.count === 1
                             ? "1 melding"
                             : NotificationService.count + " meldingen")
                     font.family: ThemeConfig.uiFont
@@ -159,7 +172,7 @@ FocusScope {
                 Text {
                     Layout.fillWidth: true
                     text: NotificationService.dnd
-                        ? "Kritieke meldingen komen nog door."
+                        ? "Meldingen komen stil binnen. Alleen kritieke krijgen nog een pop-up."
                         : "Nieuwe meldingen verschijnen hier."
                     font.family: ThemeConfig.uiFont
                     font.pixelSize: 11
@@ -169,136 +182,323 @@ FocusScope {
                 }
             }
 
-            ListView {
+            // Per app gegroepeerd, nieuwste groep bovenaan. Een groep met
+            // meerdere meldingen klapt in tot de nieuwste.
+            Flickable {
                 id: notificationList
                 anchors.fill: parent
                 visible: NotificationService.count > 0
                 clip: true
-                spacing: 8
-                model: NotificationService.notifications
+                contentWidth: width
+                contentHeight: groupColumn.implicitHeight
                 boundsBehavior: Flickable.StopAtBounds
 
-                delegate: Rectangle {
-                    id: notificationCard
-                    required property var modelData
-
+                ColumnLayout {
+                    id: groupColumn
                     width: notificationList.width
-                    height: contentColumn.implicitHeight + 18
-                    radius: root.itemRadius
-                    color: cardHover.hovered ? root.cardHoverColor : root.cardColor
-                    border.width: 1
-                    border.color: root.subtleBorder
+                    spacing: 12
 
-                    Behavior on color {
-                        ColorAnimation { duration: ThemeConfig.durationToken("fast") }
-                    }
+                    Repeater {
+                        model: root.groupList
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 9
-                        spacing: 10
+                        delegate: ColumnLayout {
+                            id: group
+                            required property var modelData
+                            readonly property bool collapsed: !!root.collapsedApps[modelData.app]
+                            readonly property var shownItems: collapsed ? modelData.items.slice(0, 1) : modelData.items
+                            readonly property string groupIcon: NotificationService.iconSource(modelData.items[0])
 
-                        Rectangle {
-                            Layout.preferredWidth: 34
-                            Layout.preferredHeight: 34
-                            Layout.alignment: Qt.AlignTop
-                            radius: 9
-                            color: Qt.rgba(root.urgencyColor(notificationCard.modelData).r,
-                                           root.urgencyColor(notificationCard.modelData).g,
-                                           root.urgencyColor(notificationCard.modelData).b,
-                                           0.18)
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: root.appInitial(notificationCard.modelData)
-                                font.family: ThemeConfig.displayFont
-                                font.pixelSize: 14
-                                font.weight: Font.Black
-                                color: root.urgencyColor(notificationCard.modelData)
-                            }
-                        }
-
-                        ColumnLayout {
-                            id: contentColumn
                             Layout.fillWidth: true
-                            spacing: 5
+                            spacing: 6
 
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: 8
+                                Layout.leftMargin: 2
+                                spacing: 7
 
+                                Item {
+                                    Layout.preferredWidth: 16
+                                    Layout.preferredHeight: 16
+                                    Image {
+                                        id: groupIconImage
+                                        anchors.fill: parent
+                                        source: group.groupIcon
+                                        sourceSize.width: 32
+                                        sourceSize.height: 32
+                                        visible: status === Image.Ready
+                                    }
+                                    Text {
+                                        anchors.centerIn: parent
+                                        visible: !groupIconImage.visible
+                                        text: "󰍡"
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: 13
+                                        color: mocha.subtext0
+                                    }
+                                }
                                 Text {
-                                    Layout.fillWidth: true
-                                    text: String(notificationCard.modelData.summary || notificationCard.modelData.appName || "Melding")
+                                    text: group.modelData.app
                                     font.family: ThemeConfig.displayFont
-                                    font.pixelSize: 13
+                                    font.pixelSize: 12
                                     font.weight: Font.Bold
-                                    color: mocha.text
+                                    color: mocha.subtext1
                                     elide: Text.ElideRight
+                                    Layout.maximumWidth: 220
                                 }
-
-                                Text {
-                                    visible: String(notificationCard.modelData.appName || "") !== ""
-                                    text: String(notificationCard.modelData.appName || "")
-                                    font.family: ThemeConfig.uiFont
-                                    font.pixelSize: 10
-                                    color: mocha.subtext0
-                                    elide: Text.ElideRight
-                                    Layout.maximumWidth: 110
+                                Rectangle {
+                                    visible: group.modelData.items.length > 1
+                                    Layout.preferredHeight: 16
+                                    Layout.preferredWidth: Math.max(16, countText.implicitWidth + 9)
+                                    radius: 8
+                                    color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
+                                    Text {
+                                        id: countText
+                                        anchors.centerIn: parent
+                                        text: group.modelData.items.length
+                                        font.family: ThemeConfig.monoFont
+                                        font.pixelSize: 9
+                                        font.weight: Font.Bold
+                                        color: mocha.subtext0
+                                    }
                                 }
-
+                                Item { Layout.fillWidth: true }
                                 IconButton {
-                                    icon: "󰅖"
+                                    visible: group.modelData.items.length > 1
+                                    icon: group.collapsed ? "󰅀" : "󰅃"
                                     accent: mocha.subtext0
-                                    onTriggered: NotificationService.dismiss(notificationCard.modelData)
+                                    onTriggered: root.toggleCollapsed(group.modelData.app)
+                                }
+                                IconButton {
+                                    icon: "󰆴"
+                                    accent: mocha.subtext0
+                                    onTriggered: NotificationService.dismissApp(group.modelData.app)
+                                }
+                            }
+
+                            Repeater {
+                                model: group.shownItems
+                                delegate: NotificationCard {
+                                    required property var modelData
+                                    notification: modelData
+                                    Layout.fillWidth: true
                                 }
                             }
 
                             Text {
-                                Layout.fillWidth: true
-                                visible: text.length > 0
-                                text: root.cleanText(notificationCard.modelData.body)
+                                visible: group.collapsed && group.modelData.items.length > 1
+                                Layout.leftMargin: 4
+                                text: "+ " + (group.modelData.items.length - 1) + " oudere"
                                 font.family: ThemeConfig.uiFont
-                                font.pixelSize: 11
-                                lineHeight: 1.1
-                                color: mocha.subtext1
-                                wrapMode: Text.WordWrap
-                                maximumLineCount: 4
-                                elide: Text.ElideRight
-                            }
-
-                            Flow {
-                                Layout.fillWidth: true
-                                visible: notificationCard.modelData.actions.length > 0
-                                spacing: 6
-
-                                Repeater {
-                                    model: notificationCard.modelData.actions
-
-                                    delegate: ActionButton {
-                                        required property var modelData
-                                        label: String(modelData.text || "")
-                                        accent: root.urgencyColor(notificationCard.modelData)
-                                        onTriggered: {
-                                            modelData.invoke();
-                                            NotificationService.dismiss(notificationCard.modelData);
-                                        }
-                                    }
+                                font.pixelSize: 10
+                                color: mocha.subtext0
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.toggleCollapsed(group.modelData.app)
                                 }
                             }
                         }
                     }
+                }
+            }
+        }
+    }
 
-                    HoverHandler {
-                        id: cardHover
+    // Eén melding. Wegklikken (kruisje of rechtermuisknop) schuift de kaart
+    // eerst opzij en sluit hem daarna pas.
+    component NotificationCard: Rectangle {
+        id: card
+        property var notification: null
+        property bool leaving: false
+        readonly property color accent: root.urgencyColor(notification)
+        readonly property string iconSource: NotificationService.iconSource(notification)
+        readonly property var visibleActions: {
+            let out = [];
+            let actions = notification ? (notification.actions || []) : [];
+            for (let i = 0; i < actions.length; i++) {
+                if (String(actions[i].identifier || "") !== "default") out.push(actions[i]);
+            }
+            return out;
+        }
+        readonly property bool hasDefault: {
+            let actions = notification ? (notification.actions || []) : [];
+            for (let i = 0; i < actions.length; i++) {
+                if (String(actions[i].identifier || "") === "default") return true;
+            }
+            return false;
+        }
+
+        function leave() {
+            if (leaving) return;
+            leaving = true;
+            leaveAnim.start();
+        }
+
+        implicitHeight: contentRow.implicitHeight + 18
+        radius: root.itemRadius
+        color: cardHover.hovered ? root.cardHoverColor : root.cardColor
+        border.width: 1
+        border.color: root.subtleBorder
+        transform: Translate { id: leaveShift; x: 0 }
+
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+        }
+
+        SequentialAnimation {
+            id: leaveAnim
+            ParallelAnimation {
+                NumberAnimation { target: leaveShift; property: "x"; to: card.width * 0.35; duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                NumberAnimation { target: card; property: "opacity"; to: 0; duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            }
+            ScriptAction { script: NotificationService.dismiss(card.notification) }
+        }
+
+        RowLayout {
+            id: contentRow
+            anchors.fill: parent
+            anchors.margins: 9
+            spacing: 10
+
+            Rectangle {
+                Layout.preferredWidth: 34
+                Layout.preferredHeight: 34
+                Layout.alignment: Qt.AlignTop
+                radius: 10
+                color: Qt.rgba(card.accent.r, card.accent.g, card.accent.b, 0.18)
+
+                Image {
+                    id: cardIcon
+                    anchors.centerIn: parent
+                    width: 20
+                    height: 20
+                    sourceSize.width: 40
+                    sourceSize.height: 40
+                    source: card.iconSource
+                    visible: status === Image.Ready
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: !cardIcon.visible
+                    text: root.appInitial(card.notification)
+                    font.family: ThemeConfig.displayFont
+                    font.pixelSize: 14
+                    font.weight: Font.Black
+                    color: card.accent
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 5
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: card.notification ? String(card.notification.summary || card.notification.appName || "Melding") : ""
+                        font.family: ThemeConfig.displayFont
+                        font.pixelSize: 13
+                        font.weight: Font.Bold
+                        color: mocha.text
+                        elide: Text.ElideRight
                     }
 
-                    TapHandler {
-                        acceptedButtons: Qt.RightButton
-                        onTapped: NotificationService.dismiss(notificationCard.modelData)
+                    Text {
+                        text: NotificationService.relativeTime(card.notification)
+                        visible: text !== ""
+                        font.family: ThemeConfig.uiFont
+                        font.pixelSize: 10
+                        color: mocha.subtext0
+                    }
+
+                    IconButton {
+                        icon: "󰅖"
+                        accent: mocha.subtext0
+                        onTriggered: card.leave()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Text {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+                        visible: text.length > 0
+                        text: card.notification ? root.cleanText(card.notification.body) : ""
+                        font.family: ThemeConfig.uiFont
+                        font.pixelSize: 11
+                        lineHeight: 1.1
+                        color: mocha.subtext1
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 4
+                        elide: Text.ElideRight
+                    }
+
+                    // Afbeelding uit de melding (screenshot, albumhoes...).
+                    Rectangle {
+                        Layout.preferredWidth: 56
+                        Layout.preferredHeight: 56
+                        Layout.alignment: Qt.AlignTop
+                        visible: cardImage.status === Image.Ready
+                        radius: 9
+                        clip: true
+                        color: "transparent"
+                        Image {
+                            id: cardImage
+                            anchors.fill: parent
+                            source: card.notification ? String(card.notification.image || "") : ""
+                            fillMode: Image.PreserveAspectCrop
+                            sourceSize.width: 112
+                            sourceSize.height: 112
+                            asynchronous: true
+                        }
+                    }
+                }
+
+                Flow {
+                    Layout.fillWidth: true
+                    visible: card.visibleActions.length > 0
+                    spacing: 6
+
+                    Repeater {
+                        model: card.visibleActions
+                        delegate: ActionButton {
+                            required property var modelData
+                            label: String(modelData.text || "")
+                            accent: card.accent
+                            onTriggered: {
+                                modelData.invoke();
+                                card.leave();
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        HoverHandler {
+            id: cardHover
+            cursorShape: card.hasDefault ? Qt.PointingHandCursor : Qt.ArrowCursor
+        }
+
+        // Klik op de kaart = de standaardactie van de app (meestal: openen).
+        TapHandler {
+            acceptedButtons: Qt.LeftButton
+            enabled: card.hasDefault
+            onTapped: {
+                NotificationService.invokeDefault(card.notification);
+                card.leave();
+            }
+        }
+
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            onTapped: card.leave()
         }
     }
 

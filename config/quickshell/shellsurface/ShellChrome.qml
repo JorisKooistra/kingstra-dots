@@ -343,6 +343,10 @@ Item {
     readonly property Item topHoverHitRegion: topHoverHitArea
     readonly property bool topHoverHovered: topHover.hovered
     property string activeMode: "office"
+    readonly property string notificationTooltip: NotificationService.dnd
+        ? "Niet storen staat aan · middelklik om uit te zetten"
+        : (NotificationService.count === 0 ? "Geen meldingen"
+            : (NotificationService.count === 1 ? "1 melding" : NotificationService.count + " meldingen"))
     readonly property bool secondaryScreen: !primaryScreen
     readonly property bool gamingMinimal: activeMode === "gaming" && !railHover.hovered
     // De omlijsting is altijd gesloten. Een frame op nevenmonitoren weghalen
@@ -931,12 +935,16 @@ Item {
                 onTriggered: root.togglePanel("calendar")
             }
 
+            // Meldingen: teller als er iets ligt, ander icoon bij Niet storen.
+            // Middelklik zet Niet storen aan of uit.
             RailButton {
-                tooltip: "Meldingen"
+                tooltip: root.notificationTooltip
                 visible: root.moduleEnabled("notifications")
-                icon: "󰍜"
-                accent: root.mocha.accent2
+                icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜")
+                badge: NotificationService.dnd ? 0 : NotificationService.count
+                accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2
                 onTriggered: root.togglePanel("notifications")
+                onMiddleClicked: NotificationService.toggleDnd()
             }
 
             ColumnLayout {
@@ -1290,7 +1298,7 @@ Item {
                         }
                     }
                 }
-                StripButton { tooltip: "Meldingen"; visible: root.moduleEnabled("notifications"); icon: "󰍜"; accent: root.mocha.accent2; onTriggered: root.togglePanel("notifications") }
+                StripButton { tooltip: root.notificationTooltip; visible: root.moduleEnabled("notifications"); icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜"); badge: NotificationService.dnd ? 0 : NotificationService.count; accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2; onTriggered: root.togglePanel("notifications"); onMiddleClicked: NotificationService.toggleDnd() }
                 StripButton { tooltip: "Agenda"; visible: root.moduleEnabled("clock"); icon: "󰃰"; accent: root.mocha.accent1; onTriggered: root.togglePanel("calendar") }
                 StripButton { tooltip: root.updateTooltip(); visible: root.moduleEnabled("updates"); icon: "󰚰"; text: root.updateCount.toString(); accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0; onTriggered: root.openUpdatesTerminal() }
                 StripButton { tooltip: "Monitoren"; visible: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps", "brightness"]); icon: "󰍹"; accent: root.mocha.accent3; onTriggered: root.togglePanel("monitors") }
@@ -1652,7 +1660,9 @@ Item {
         property string text: ""
         property color accent: root.hotColor
         property string tooltip: ""
+        property int badge: 0
         signal triggered()
+        signal middleClicked()
         signal wheelDelta(int delta)
 
         Layout.fillWidth: true
@@ -1690,13 +1700,45 @@ Item {
             }
         }
 
+        // Rond tellerbolletje rechtsboven (bijv. aantal meldingen); 0 = weg.
+        Rectangle {
+            readonly property bool shown: btn.badge > 0
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 1
+            anchors.rightMargin: 1
+            width: Math.max(height, badgeText.implicitWidth + 7)
+            height: 13
+            radius: height / 2
+            color: btn.accent
+            opacity: shown ? 1 : 0
+            scale: shown ? 1 : 0.4
+            visible: opacity > 0.01
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") } }
+            Text {
+                id: badgeText
+                anchors.centerIn: parent
+                text: btn.badge > 99 ? "99+" : String(btn.badge)
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: 8
+                font.weight: Font.Black
+                color: root.mocha.base
+            }
+        }
+
         MouseArea {
             id: mouse
             anchors.fill: parent
             hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
             onEntered: root.showTooltip(btn, btn.tooltip, true)
             onExited: root.hideTooltip(btn.tooltip)
-            onClicked: {
+            onClicked: (mouseEvent) => {
+                if (mouseEvent.button === Qt.MiddleButton) {
+                    btn.middleClicked();
+                    return;
+                }
                 let p = btn.mapToItem(root, btn.width / 2, btn.height / 2);
                 root.lastTriggerX = p.x;
                 root.lastTriggerY = p.y;
@@ -1715,7 +1757,9 @@ Item {
         property string text: ""
         property color accent: root.hotColor
         property string tooltip: ""
+        property int badge: 0
         signal triggered()
+        signal middleClicked()
         signal wheelDelta(int delta)
 
         Layout.preferredWidth: text === "" ? 30 : 43
@@ -1749,13 +1793,45 @@ Item {
                 color: root.mocha.text
             }
         }
+        // Rond tellerbolletje rechtsboven (bijv. aantal meldingen); 0 = weg.
+        Rectangle {
+            readonly property bool shown: btn.badge > 0
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: -2
+            anchors.rightMargin: -3
+            width: Math.max(height, badgeText.implicitWidth + 7)
+            height: 13
+            radius: height / 2
+            color: btn.accent
+            opacity: shown ? 1 : 0
+            scale: shown ? 1 : 0.4
+            visible: opacity > 0.01
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") } }
+            Text {
+                id: badgeText
+                anchors.centerIn: parent
+                text: btn.badge > 99 ? "99+" : String(btn.badge)
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: 8
+                font.weight: Font.Black
+                color: root.mocha.base
+            }
+        }
+
         MouseArea {
             id: mouse
             anchors.fill: parent
             hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
             onEntered: root.showTooltip(btn, btn.tooltip, false)
             onExited: root.hideTooltip(btn.tooltip)
-            onClicked: {
+            onClicked: (mouseEvent) => {
+                if (mouseEvent.button === Qt.MiddleButton) {
+                    btn.middleClicked();
+                    return;
+                }
                 let p = btn.mapToItem(root, btn.width / 2, btn.height / 2);
                 root.lastTriggerX = p.x;
                 root.lastTriggerY = p.y;

@@ -122,6 +122,18 @@ Scope {
                     rightInset: chrome.shellBorderWidth
                 }
 
+                // Pop-ups voor nieuwe meldingen, naast de rail.
+                NotificationToasts {
+                    id: notificationToasts
+                    shellWindow: surfaceWindow
+                    mocha: mocha
+                    activeMode: chrome.activeMode
+                    leftInset: chrome.railWidth
+                    rightInset: ThemeConfig.barRailEnabled && ThemeConfig.barRailEdge === "right"
+                        ? chrome.railWidth : chrome.shellBorderWidth
+                    topInset: chrome.stripHeight
+                }
+
                 // Klik-buiten-om-te-sluiten. De geometrie is bewust aan de
                 // open-state gekoppeld i.p.v. alleen `visible`: de mask-Region
                 // hieronder volgt de item-geometrie en niet de zichtbaarheid,
@@ -254,6 +266,7 @@ Scope {
                     Region { item: chrome.topHoverHitRegion }
                     Region { item: closeDismissLayer }
                     Region { item: panelHost }
+                    Region { item: notificationToasts }
                 }
 
                 // Reservation windows intentionally carry no content or input.
