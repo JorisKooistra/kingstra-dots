@@ -688,6 +688,24 @@ Item {
 
         return players.length > 0 ? players[0] : null;
     }
+    // Voortgang van de lopende track voor de ring in de rail en het lijntje
+    // in de media-pill. Mpris werkt `position` niet zelf bij, dus tikken.
+    readonly property real mediaLength: activePlayer && activePlayer.lengthSupported ? Number(activePlayer.length || 0) : 0
+    property real mediaPosition: 0
+    readonly property real mediaProgress: mediaLength > 0 ? Math.max(0, Math.min(1, mediaPosition / mediaLength)) : 0
+    Timer {
+        interval: 1000
+        repeat: true
+        triggeredOnStart: true
+        running: root.mediaVisible && root.mediaLength > 0
+        onTriggered: {
+            let player = root.activePlayer;
+            if (!player || !player.positionSupported) { root.mediaPosition = 0; return; }
+            player.positionChanged();
+            root.mediaPosition = Number(player.position || 0);
+        }
+    }
+
     readonly property bool mediaVisible: activePlayer !== null
         && (activePlayer.playbackState !== MprisPlaybackState.Stopped
             || ((activePlayer.canTogglePlaying || activePlayer.canPlay)
@@ -1522,9 +1540,9 @@ Item {
         }
     }
 
-    // Media-pill: toont de lopende track en groeit op hover uit tot
-    // transportcontrols (caelestia-patroon). Klik opent het volledige
-    // muziekpaneel.
+    // Media-pill: hoesje en lopende track, met een dun voortgangslijntje
+    // langs de onderrand. Op hover groeit hij uit tot transportcontrols
+    // (caelestia-patroon). Klik opent Geluid & media, met de kaart Nu speelt.
     component MediaPill: Rectangle {
         id: mp
         readonly property var player: root.activePlayer
@@ -1535,10 +1553,14 @@ Item {
                 : (String(player.identity || "").trim() !== "" ? String(player.identity || "") : "Media"))
             : ""
         readonly property string artist: player ? String(player.trackArtist || "") : ""
-        readonly property bool expanded: mpMouse.containsMouse
+        readonly property string artUrl: player && player.trackArtUrl ? String(player.trackArtUrl) : ""
+        // HoverHandler i.p.v. de MouseArea: die ligt onder de knoppen, zodat
+        // vorige/afspelen/volgende hun eigen klik krijgen en het paneel niet
+        // openen.
+        readonly property bool expanded: mpHover.hovered
 
         visible: root.mediaVisible
-        Layout.preferredWidth: expanded ? 300 : 168
+        Layout.preferredWidth: expanded ? 300 : 176
         Layout.preferredHeight: 26
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: expanded ? root.pillHoverColor : root.pillColor
@@ -1556,15 +1578,38 @@ Item {
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 8
+            anchors.leftMargin: 4
             anchors.rightMargin: 6
             spacing: 6
 
-            Text {
-                text: mp.playing ? "\udb81\udf5a" : "\udb81\udf5a"
-                font.family: "Iosevka Nerd Font"
-                font.pixelSize: 13
-                color: root.mocha.accent3
+            // Hoesje; zonder hoes het muzieknootje van voorheen.
+            Rectangle {
+                Layout.preferredWidth: 18
+                Layout.preferredHeight: 18
+                radius: Math.min(5, ThemeConfig.styleWidgetRadius)
+                color: Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, 0.16)
+                clip: true
+                Image {
+                    id: mpArt
+                    anchors.fill: parent
+                    source: mp.artUrl
+                    asynchronous: true
+                    fillMode: Image.PreserveAspectCrop
+                    sourceSize.width: 36
+                    sourceSize.height: 36
+                    opacity: status === Image.Ready ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+                    }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: mpArt.status !== Image.Ready
+                    text: "\udb81\udf5a"
+                    font.family: "Iosevka Nerd Font"
+                    font.pixelSize: 12
+                    color: root.mocha.accent3
+                }
             }
 
             Text {
@@ -1574,7 +1619,10 @@ Item {
                 font.family: ThemeConfig.uiFont
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
-                color: root.mocha.text
+                color: mp.playing ? root.mocha.text : root.mocha.subtext0
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
             }
 
             Row {
@@ -1598,16 +1646,38 @@ Item {
             }
         }
 
+        // Voortgang: afgeronde lijn binnen de hoeken van de pill.
+        Rectangle {
+            visible: root.mediaLength > 0
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: 6
+            anchors.bottomMargin: 2
+            width: Math.max(height, (parent.width - 12) * root.mediaProgress)
+            height: 2
+            radius: 1
+            color: root.mocha.accent3
+            opacity: mp.playing ? 0.85 : 0.40
+            Behavior on width {
+                NumberAnimation { duration: 900; easing.type: Easing.Linear }
+            }
+            Behavior on opacity {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+            }
+        }
+
+        HoverHandler { id: mpHover }
+
         MouseArea {
             id: mpMouse
             anchors.fill: parent
-            hoverEnabled: true
+            z: -1
             acceptedButtons: Qt.LeftButton
             onClicked: {
                 let p = mp.mapToItem(root, mp.width / 2, mp.height / 2);
                 root.lastTriggerX = p.x;
                 root.lastTriggerY = p.y;
-                root.togglePanel("music");
+                root.togglePanel("audiomedia");
             }
         }
     }
@@ -1915,8 +1985,9 @@ Item {
 
     // --- Geluid & media-tegel (rail) -----------------------------------------
     // Bovenin dezelfde inhoud als de oude volumeknop (icoon + percentage).
-    // Speelt er media, dan groeit eronder een play/pause-knop uit, die direct
-    // schakelt zonder het paneel te openen. Dezelfde knoptaal als RailButton.
+    // Speelt er media, dan groeit eronder een ronde play/pause-knop met
+    // voortgangsring uit, die direct schakelt zonder het paneel te openen.
+    // Dezelfde knoptaal als RailButton.
     component AudioTile: Rectangle {
         id: audio
         signal triggered()
@@ -1936,7 +2007,7 @@ Item {
         onLiveTipChanged: if (audioMouse.containsMouse || mediaMouse.containsMouse) showTip()
 
         Layout.fillWidth: true
-        Layout.preferredHeight: 40 + (showMedia ? 28 : 0)
+        Layout.preferredHeight: 40 + (showMedia ? 32 : 0)
         clip: true
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: audioMouse.containsMouse || mediaMouse.containsMouse ? root.pillHoverColor : "transparent"
@@ -2001,42 +2072,98 @@ Item {
             }
         }
 
-        Rectangle {
+        // Ronde afspeelknop met een voortgangsring: de ring loopt rond met
+        // de track. Linksklik = afspelen/pauzeren, rechtsklik = volgende,
+        // scrollen = volume (zoals de rest van de tegel).
+        Item {
             id: mediaButton
             anchors.horizontalCenter: parent.horizontalCenter
             y: 40
-            width: parent.width - 8
-            height: 24
-            radius: Math.min(6, ThemeConfig.styleWidgetRadius)
+            width: 28
+            height: 28
             opacity: audio.showMedia ? 1 : 0
+            scale: audio.showMedia ? (mediaMouse.pressed ? 0.90 : (mediaMouse.containsMouse ? 1.08 : 1.0)) : 0.6
             visible: opacity > 0.01
-            color: mediaMouse.containsMouse
-                ? Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, 0.28)
-                : Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, audio.playing ? 0.16 : 0.08)
             Behavior on opacity {
                 NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
             }
-            Behavior on color {
-                ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            Behavior on scale {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
             }
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: 22
+                height: 22
+                radius: width / 2
+                color: mediaMouse.containsMouse
+                    ? Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, 0.30)
+                    : Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, audio.playing ? 0.18 : 0.08)
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                }
+            }
+
+            Shape {
+                id: ring
+                anchors.fill: parent
+                preferredRendererType: Shape.CurveRenderer
+                property real shownProgress: root.mediaProgress
+                Behavior on shownProgress {
+                    NumberAnimation { duration: 900; easing.type: Easing.Linear }
+                }
+                // Spoor
+                ShapePath {
+                    strokeWidth: 2
+                    strokeColor: Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, 0.16)
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathAngleArc { centerX: 14; centerY: 14; radiusX: 13; radiusY: 13; startAngle: 0; sweepAngle: 360 }
+                }
+                // Voortgang
+                ShapePath {
+                    strokeWidth: 2
+                    strokeColor: root.mocha.accent3
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathAngleArc {
+                        centerX: 14; centerY: 14; radiusX: 13; radiusY: 13
+                        startAngle: -90
+                        sweepAngle: Math.max(0.5, 360 * ring.shownProgress)
+                    }
+                }
+                visible: root.mediaLength > 0
+            }
+
             Text {
                 anchors.centerIn: parent
+                anchors.horizontalCenterOffset: audio.playing ? 0 : 1
                 text: audio.playing ? "\udb80\udfe4" : "\udb81\udc0a"
                 font.family: "Iosevka Nerd Font"
-                font.pixelSize: 13
+                font.pixelSize: 12
                 color: root.mocha.accent3
             }
+
             MouseArea {
                 id: mediaMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onEntered: audio.showTip()
                 onExited: if (!audioMouse.containsMouse) root.hideTooltip(audio.shownTip)
-                onClicked: {
+                onClicked: (mouse) => {
                     let player = root.activePlayer;
                     if (!player) return;
+                    if (mouse.button === Qt.RightButton) {
+                        if (player.canGoNext) player.next();
+                        return;
+                    }
                     if (player.canTogglePlaying) player.togglePlaying();
                     else if (player.canPlay) player.play();
+                }
+                onWheel: (wheel) => {
+                    audio.wheelDelta(wheel.angleDelta.y);
+                    wheel.accepted = true;
                 }
             }
         }

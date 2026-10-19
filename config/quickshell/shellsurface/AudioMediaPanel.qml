@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import QtQuick.Effects
 import ".."
 
 // Geluid & media: volume, microfoon en de lopende speler in één paneel, zoals
@@ -11,7 +12,9 @@ import ".."
 // Dit is ook het volumepaneel: de oude VolumePopup (uitvoer, invoer, apps)
 // zit hier compact in, als uitklapbare lijsten onder de schuifregelaars.
 // Het "volume"-doel van rail, sneltoetsen en qs_manager opent dit paneel.
-// Het volledige muziekpaneel blijft bereikbaar via het pijltje in de kaart.
+// Ook de oude muziekpopup is hierin opgegaan: draaitafel, tijdlijn, shuffle
+// en herhalen in de kaart "Nu speelt", de tien EQ-banden onder Equalizer.
+// Het "music"-doel (Super+Shift+M, launcher) opent daarom ook dit paneel.
 // De vorm (blob, hoeken, groei-animatie) komt volledig uit PanelHost.
 Item {
     id: root
@@ -62,6 +65,43 @@ Item {
     readonly property bool canSeek: hasPlayer && player.canSeek && player.positionSupported && trackLength > 0
     property real trackPosition: 0
     property bool draggingSeek: false
+    readonly property string trackAlbum: hasPlayer ? String(player.trackAlbum || "") : ""
+    readonly property string artUrl: hasPlayer && player.trackArtUrl ? String(player.trackArtUrl) : ""
+    readonly property real trackProgress: trackLength > 0 ? Math.max(0, Math.min(1, trackPosition / trackLength)) : 0
+    readonly property bool canShuffle: hasPlayer && player.canControl && player.shuffleSupported
+    readonly property bool canLoop: hasPlayer && player.canControl && player.loopSupported
+
+    function togglePlay() {
+        if (!root.hasPlayer) return;
+        if (root.player.canTogglePlaying) root.player.togglePlaying();
+        else if (root.player.canPlay) root.player.play();
+    }
+
+    // Geen herhaling → hele lijst → één nummer → geen, zoals de meeste spelers.
+    function cycleLoop() {
+        if (!root.canLoop) return;
+        let state = root.player.loopState;
+        if (state === MprisLoopState.None) root.player.loopState = MprisLoopState.Playlist;
+        else if (state === MprisLoopState.Playlist) root.player.loopState = MprisLoopState.Track;
+        else root.player.loopState = MprisLoopState.None;
+    }
+
+    // Plaat of hoes: blijft bewaard tussen het openen van het paneel door.
+    readonly property string mediaViewFile: Quickshell.env("HOME") + "/.local/state/kingstra/media-view"
+    property bool vinylMode: true
+    function setVinylMode(on) {
+        root.vinylMode = on;
+        Quickshell.execDetached(["sh", "-c",
+            "mkdir -p \"$(dirname \"$1\")\" && printf '%s\\n' \"$2\" > \"$1\"",
+            "sh", root.mediaViewFile, on ? "vinyl" : "cover"]);
+    }
+    Process {
+        running: true
+        command: ["cat", root.mediaViewFile]
+        stdout: StdioCollector {
+            onStreamFinished: if (this.text.trim() === "cover") root.vinylMode = false
+        }
+    }
 
     function cyclePlayer() {
         let list = players;
@@ -176,7 +216,53 @@ Item {
 
     function setEqPreset(preset) {
         root.eqPreset = preset;
+        root.eqPending = false;
+        root.eqLockUntil = 0;
         Quickshell.execDetached(["bash", root.eqScript, "preset", preset]);
+        root.sweepEq();
+        refreshSoon.restart();
+    }
+
+    // Tien banden uit de oude muziekpopup: schuiven zet ze klaar ("eigen
+    // instelling"), Toepassen stuurt ze naar EasyEffects. Presets gelden direct.
+    readonly property var eqBandLabels: ["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]
+    property var eqBands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    property bool eqPending: false
+    // Na een eigen wijziging laat de poll de banden even met rust, anders
+    // springt een schuif terug naar de oude waarde voordat het script schreef.
+    property real eqLockUntil: 0
+
+    function setEqBand(index, value) {
+        let v = Math.max(-12, Math.min(12, Math.round(value)));
+        let bands = root.eqBands.slice();
+        if (bands[index] === v) return;
+        bands[index] = v;
+        root.eqBands = bands;
+        root.eqPreset = "Custom";
+        root.eqPending = true;
+        root.eqLockUntil = Date.now() + 2000;
+        Quickshell.execDetached(["bash", root.eqScript, "set_band", String(index + 1), String(v)]);
+    }
+
+    function applyEq() {
+        root.eqPending = false;
+        root.eqLockUntil = Date.now() + 2000;
+        Quickshell.execDetached(["bash", root.eqScript, "apply"]);
+        root.sweepEq();
+    }
+
+    // Rustige opvolger van het bliksemeffect: een lichtgolf die over de
+    // banden loopt zodra een instelling wordt toegepast.
+    property real eqSweep: -1
+    function sweepEq() { eqSweepAnim.restart(); }
+    NumberAnimation {
+        id: eqSweepAnim
+        target: root
+        property: "eqSweep"
+        from: -1.5
+        to: 11.5
+        duration: 900
+        easing.type: Easing.InOutSine
     }
 
     // Tab wisselde in de oude popup tussen Uitvoer, Invoer en Apps; hier
@@ -295,7 +381,17 @@ Item {
                 let raw = this.text.trim();
                 root.eqAvailable = raw !== "" && raw !== "none";
                 if (!root.eqAvailable) return;
-                try { root.eqPreset = String(JSON.parse(raw).preset || ""); } catch (e) {}
+                let data = null;
+                try { data = JSON.parse(raw); } catch (e) { return; }
+                if (Date.now() < root.eqLockUntil) return;
+                root.eqPreset = String(data.preset || "");
+                root.eqPending = data.pending === true || data.pending === "true";
+                let bands = [];
+                for (let i = 1; i <= 10; i++) {
+                    let v = Number(data["b" + i]);
+                    bands.push(isNaN(v) ? 0 : Math.max(-12, Math.min(12, Math.round(v))));
+                }
+                if (JSON.stringify(bands) !== JSON.stringify(root.eqBands)) root.eqBands = bands;
             }
         }
     }
@@ -463,112 +559,194 @@ Item {
                 }
             }
 
-            // --- Mediakaart ------------------------------------------------------
+            // --- Nu speelt -------------------------------------------------------
+            // Opvolger van de losse muziekpopup: draaitafel (of hoes), titel
+            // die doorloopt als hij te lang is, tijdlijn en de volledige
+            // bediening. De achtergrond is de hoes zelf, wazig, zodat de kaart
+            // de kleur van de muziek aanneemt.
             Rectangle {
+                id: mediaCard
                 Layout.fillWidth: true
-                Layout.preferredHeight: mediaColumn.implicitHeight + 20
+                Layout.preferredHeight: mediaColumn.implicitHeight + 24
                 radius: root.itemRadius
                 color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.26)
                 border.width: 1
-                border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                border.color: root.playing
+                    ? Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.30)
+                    : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                Behavior on border.color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
+                }
+
+                Rectangle {
+                    id: mediaCardMask
+                    anchors.fill: parent
+                    radius: mediaCard.radius
+                    visible: false
+                    layer.enabled: true
+                }
+                Item {
+                    id: backdropSource
+                    anchors.fill: parent
+                    visible: false
+                    layer.enabled: true
+                    Image {
+                        id: backdropArt
+                        anchors.fill: parent
+                        source: root.artUrl
+                        asynchronous: true
+                        fillMode: Image.PreserveAspectCrop
+                        sourceSize.width: 128
+                        sourceSize.height: 128
+                    }
+                }
+                MultiEffect {
+                    anchors.fill: parent
+                    source: backdropSource
+                    blurEnabled: true
+                    blurMax: 64
+                    blur: 1.0
+                    saturation: 0.15
+                    maskEnabled: true
+                    maskSource: mediaCardMask
+                    opacity: backdropArt.status === Image.Ready ? (root.playing ? 0.42 : 0.26) : 0
+                    Behavior on opacity {
+                        NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("standard") }
+                    }
+                }
+                // Leesbaarheid boven de wazige hoes.
+                Rectangle {
+                    anchors.fill: parent
+                    radius: mediaCard.radius
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.10) }
+                        GradientStop { position: 1.0; color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.42) }
+                    }
+                }
 
                 ColumnLayout {
                     id: mediaColumn
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    anchors.margins: 10
-                    spacing: 8
+                    anchors.margins: 12
+                    spacing: 10
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 12
+                        spacing: 14
 
-                        Rectangle {
-                            Layout.preferredWidth: 64
-                            Layout.preferredHeight: 64
-                            radius: Math.min(root.itemRadius, 14)
-                            color: Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.14)
-                            clip: true
-
-                            Image {
-                                id: cover
-                                anchors.fill: parent
-                                source: root.hasPlayer && root.player.trackArtUrl ? root.player.trackArtUrl : ""
-                                fillMode: Image.PreserveAspectCrop
-                                visible: status === Image.Ready
-                                asynchronous: true
-                            }
-                            Text {
-                                anchors.centerIn: parent
-                                visible: cover.status !== Image.Ready
-                                text: "󰎆"
-                                font.family: "Iosevka Nerd Font"
-                                font.pixelSize: 26
-                                color: mocha.accent3
-                            }
+                        MediaVinyl {
+                            Layout.preferredWidth: 124
+                            Layout.preferredHeight: 124
+                            mocha: root.mochaPalette
+                            artUrl: root.artUrl
+                            playing: root.playing
+                            progress: root.trackProgress
+                            tracking: root.hasPlayer && root.trackLength > 0
+                            vinylMode: root.vinylMode
+                            coverRadius: Math.min(root.itemRadius, 14)
                         }
 
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 1
+                            Layout.alignment: Qt.AlignVCenter
+                            spacing: 2
 
-                            Text {
+                            // Status en de wissel tussen plaat en hoes.
+                            RowLayout {
                                 Layout.fillWidth: true
+                                spacing: 6
+
+                                Rectangle {
+                                    Layout.preferredWidth: stateRow.implicitWidth + 14
+                                    Layout.preferredHeight: 20
+                                    radius: height / 2
+                                    color: Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, root.playing ? 0.22 : 0.10)
+                                    Behavior on color {
+                                        ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                                    }
+                                    Row {
+                                        id: stateRow
+                                        anchors.centerIn: parent
+                                        spacing: 5
+                                        // Drie balkjes die meebewegen tijdens afspelen.
+                                        Row {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            spacing: 2
+                                            Repeater {
+                                                model: 3
+                                                Rectangle {
+                                                    id: bar
+                                                    required property int index
+                                                    width: 2
+                                                    radius: 1
+                                                    anchors.bottom: parent.bottom
+                                                    color: mocha.accent3
+                                                    property real level: 0.4
+                                                    height: 3 + 6 * level
+                                                    SequentialAnimation on level {
+                                                        running: root.playing
+                                                        loops: Animation.Infinite
+                                                        NumberAnimation { to: 1.0; duration: 260 + bar.index * 90; easing.type: Easing.InOutSine }
+                                                        NumberAnimation { to: 0.2; duration: 320 + bar.index * 70; easing.type: Easing.InOutSine }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: !root.hasPlayer ? "Stil" : (root.playing ? "Speelt" : "Gepauzeerd")
+                                            font.family: ThemeConfig.uiFont
+                                            font.pixelSize: 9
+                                            font.weight: Font.Bold
+                                            font.capitalization: Font.AllUppercase
+                                            font.letterSpacing: 0.6
+                                            color: mocha.accent3
+                                        }
+                                    }
+                                }
+                                Item { Layout.fillWidth: true }
+                                CtlButton {
+                                    icon: root.vinylMode ? "󰋩" : "󰀥"
+                                    tooltip: root.vinylMode ? "Toon hoes" : "Toon plaat"
+                                    onTriggered: root.setVinylMode(!root.vinylMode)
+                                }
+                            }
+
+                            Marquee {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 4
                                 text: root.hasPlayer ? root.trackTitle : "Geen media actief"
-                                font.family: ThemeConfig.displayFont
-                                font.pixelSize: 14
-                                font.weight: Font.Bold
-                                color: mocha.text
-                                elide: Text.ElideRight
                             }
                             Text {
                                 Layout.fillWidth: true
                                 visible: text !== ""
                                 text: root.trackArtist
                                 font.family: ThemeConfig.uiFont
-                                font.pixelSize: 11
+                                font.pixelSize: 12
+                                color: mocha.subtext1
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                visible: text !== ""
+                                text: root.trackAlbum
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 10
                                 color: mocha.subtext0
                                 elide: Text.ElideRight
                             }
 
-                            RowLayout {
-                                Layout.topMargin: 4
-                                spacing: 6
-
-                                CtlButton {
-                                    visible: root.hasPlayer
-                                    icon: "󰒮"
-                                    enabled: root.hasPlayer && root.player.canGoPrevious
-                                    onTriggered: root.player.previous()
-                                }
-                                CtlButton {
-                                    visible: root.hasPlayer
-                                    primary: true
-                                    icon: root.playing ? "󰏤" : "󰐊"
-                                    enabled: root.hasPlayer && (root.player.canTogglePlaying || root.player.canPlay)
-                                    onTriggered: {
-                                        if (root.player.canTogglePlaying) root.player.togglePlaying();
-                                        else root.player.play();
-                                    }
-                                }
-                                CtlButton {
-                                    visible: root.hasPlayer
-                                    icon: "󰒭"
-                                    enabled: root.hasPlayer && root.player.canGoNext
-                                    onTriggered: root.player.next()
-                                }
-                                Item { Layout.fillWidth: true }
-                                CtlButton {
-                                    visible: root.players.length > 1
-                                    icon: "󰓃"
-                                    label: root.hasPlayer ? String(root.player.identity || "") : ""
-                                    onTriggered: root.cyclePlayer()
-                                }
-                                CtlButton {
-                                    icon: "󰅂"
-                                    onTriggered: root.panelSwitchRequested("music")
-                                }
+                            // Welke speler; klik wisselt bij meerdere spelers.
+                            CtlButton {
+                                Layout.topMargin: 6
+                                visible: root.hasPlayer
+                                icon: "󰓃"
+                                label: (root.hasPlayer ? String(root.player.identity || "Speler") : "")
+                                    + (root.players.length > 1 ? "  ·  " + root.players.length : "")
+                                tooltip: root.players.length > 1 ? "Volgende speler" : ""
+                                onTriggered: root.cyclePlayer()
                             }
                         }
                     }
@@ -578,7 +756,7 @@ Item {
                         itemRadius: root.itemRadius
                         visible: root.canSeek
                         showIcon: false
-                        value: root.trackLength > 0 ? Math.round(root.trackPosition / root.trackLength * 100) : 0
+                        value: Math.round(root.trackProgress * 100)
                         valueText: root.formatTime(root.trackPosition) + " / " + root.formatTime(root.trackLength)
                         accent: mocha.accent3
                         onDragToggled: (dragging) => root.draggingSeek = dragging
@@ -587,6 +765,46 @@ Item {
                             root.trackPosition = target;
                             if (root.canSeek) root.player.position = target;
                         }
+                    }
+
+                    // Bediening: shuffle, vorige, afspelen, volgende, herhalen.
+                    RowLayout {
+                        Layout.fillWidth: true
+                        visible: root.hasPlayer
+                        spacing: 10
+
+                        Item { Layout.fillWidth: true }
+                        CtlButton {
+                            visible: root.canShuffle
+                            icon: root.hasPlayer && root.player.shuffle ? "󰒟" : "󰒞"
+                            active: root.hasPlayer && root.player.shuffle
+                            tooltip: "Willekeurig"
+                            onTriggered: root.player.shuffle = !root.player.shuffle
+                        }
+                        CtlButton {
+                            icon: "󰒮"
+                            iconSize: 17
+                            enabled: root.hasPlayer && root.player.canGoPrevious
+                            onTriggered: root.player.previous()
+                        }
+                        PlayButton {}
+                        CtlButton {
+                            icon: "󰒭"
+                            iconSize: 17
+                            enabled: root.hasPlayer && root.player.canGoNext
+                            onTriggered: root.player.next()
+                        }
+                        CtlButton {
+                            visible: root.canLoop
+                            readonly property int loop: root.hasPlayer ? root.player.loopState : MprisLoopState.None
+                            icon: loop === MprisLoopState.Track ? "󰑘"
+                                : (loop === MprisLoopState.Playlist ? "󰑖" : "󰑗")
+                            active: loop !== MprisLoopState.None
+                            tooltip: loop === MprisLoopState.Track ? "Herhaal nummer"
+                                : (loop === MprisLoopState.Playlist ? "Herhaal lijst" : "Niet herhalen")
+                            onTriggered: root.cycleLoop()
+                        }
+                        Item { Layout.fillWidth: true }
                     }
                 }
             }
@@ -805,6 +1023,61 @@ Item {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: root.setEqPreset(eqChip.modelData)
                                 }
+                            }
+                        }
+                    }
+
+                    // Tien banden; slepen, scrollen of dubbelklikken (terug
+                    // naar 0 dB). Toepassen verschijnt zodra er iets klaarstaat.
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: eqBandsRow.implicitHeight + 20
+                        radius: Math.min(root.itemRadius, 14)
+                        color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.04)
+                        border.width: 1
+                        border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+
+                        RowLayout {
+                            id: eqBandsRow
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 6
+                            anchors.rightMargin: 6
+                            spacing: 0
+
+                            Repeater {
+                                model: root.eqBandLabels
+                                delegate: EqBand {
+                                    required property int index
+                                    required property string modelData
+                                    bandIndex: index
+                                    label: modelData
+                                }
+                            }
+                        }
+                    }
+
+                    Reveal {
+                        shown: root.eqPending
+                        gap: 0
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+                            Text {
+                                Layout.fillWidth: true
+                                text: "Eigen instelling staat klaar"
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 10
+                                color: mocha.subtext0
+                                elide: Text.ElideRight
+                            }
+                            CtlButton {
+                                primary: true
+                                icon: "󰄬"
+                                label: "Toepassen"
+                                onTriggered: root.applyEq()
                             }
                         }
                     }
@@ -1191,14 +1464,18 @@ Item {
         property string icon: ""
         property string label: ""
         property bool primary: false
+        // Aan-stand voor schakelaars (shuffle, herhalen).
+        property bool active: false
+        property int iconSize: 14
+        property string tooltip: ""
         signal triggered()
 
         Layout.preferredWidth: label !== "" ? ctlRow.implicitWidth + 16 : (primary ? 36 : 30)
         Layout.preferredHeight: 28
         radius: Math.min(root.itemRadius, 14)
         opacity: enabled ? 1.0 : 0.4
-        color: primary
-            ? Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, ctlMouse.containsMouse ? 0.40 : 0.26)
+        color: primary || active
+            ? Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, ctlMouse.containsMouse ? 0.40 : 0.24)
             : (ctlMouse.containsMouse
                 ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
                 : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05))
@@ -1209,6 +1486,9 @@ Item {
         Behavior on scale {
             NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
         }
+        Behavior on opacity {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+        }
 
         Row {
             id: ctlRow
@@ -1218,8 +1498,11 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: ctl.icon
                 font.family: "Iosevka Nerd Font"
-                font.pixelSize: 14
-                color: ctl.primary ? mocha.accent3 : mocha.text
+                font.pixelSize: ctl.iconSize
+                color: ctl.primary || ctl.active ? mocha.accent3 : mocha.text
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
             }
             Text {
                 visible: ctl.label !== ""
@@ -1228,9 +1511,45 @@ Item {
                 font.family: ThemeConfig.uiFont
                 font.pixelSize: 10
                 color: mocha.subtext0
-                width: Math.min(implicitWidth, 90)
+                width: Math.min(implicitWidth, 120)
                 elide: Text.ElideRight
             }
+        }
+
+        // Korte hint boven de knop, met een kleine vertraging.
+        Rectangle {
+            id: hint
+            visible: opacity > 0.01
+            opacity: ctl.tooltip !== "" && hintDelay.shown ? 1 : 0
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.top
+            anchors.bottomMargin: 6
+            width: hintText.implicitWidth + 14
+            height: 20
+            radius: height / 2
+            z: 10
+            color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.94)
+            border.width: 1
+            border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+            Behavior on opacity {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            }
+            Text {
+                id: hintText
+                anchors.centerIn: parent
+                text: ctl.tooltip
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 9
+                color: mocha.text
+            }
+        }
+        Timer {
+            id: hintDelay
+            property bool shown: false
+            interval: 450
+            running: ctlMouse.containsMouse && ctl.tooltip !== ""
+            onTriggered: shown = true
+            onRunningChanged: if (!running) shown = false
         }
 
         MouseArea {
@@ -1240,6 +1559,217 @@ Item {
             enabled: ctl.enabled
             cursorShape: Qt.PointingHandCursor
             onClicked: ctl.triggered()
+        }
+    }
+
+    // Grote ronde afspeelknop; een kring golft uit bij elke klik, net als
+    // in de oude muziekpopup.
+    component PlayButton: Item {
+        id: play
+        Layout.preferredWidth: 46
+        Layout.preferredHeight: 46
+        enabled: root.hasPlayer && (root.player.canTogglePlaying || root.player.canPlay)
+        opacity: enabled ? 1.0 : 0.4
+
+        Rectangle {
+            id: pulse
+            anchors.centerIn: parent
+            width: parent.width
+            height: width
+            radius: width / 2
+            color: "transparent"
+            border.width: 2
+            border.color: mocha.accent3
+            opacity: 0
+            scale: 1
+        }
+        ParallelAnimation {
+            id: pulseAnim
+            NumberAnimation { target: pulse; property: "scale"; from: 1.0; to: 1.6; duration: 520; easing.type: Easing.OutCubic }
+            NumberAnimation { target: pulse; property: "opacity"; from: 0.7; to: 0.0; duration: 520; easing.type: Easing.OutCubic }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: width / 2
+            color: Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, playMouse.containsMouse ? 0.42 : (root.playing ? 0.30 : 0.20))
+            border.width: 1
+            border.color: Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.55)
+            scale: playMouse.pressed ? 0.92 : (playMouse.containsMouse ? 1.06 : 1.0)
+            Behavior on color {
+                ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            }
+            Behavior on scale {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+            }
+            Text {
+                anchors.centerIn: parent
+                // Pauze-icoon staat optisch midden; play een tikje naar rechts.
+                anchors.horizontalCenterOffset: root.playing ? 0 : 1
+                text: root.playing ? "󰏤" : "󰐊"
+                font.family: "Iosevka Nerd Font"
+                font.pixelSize: 22
+                color: mocha.accent3
+            }
+        }
+
+        MouseArea {
+            id: playMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            enabled: play.enabled
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                pulseAnim.restart();
+                root.togglePlay();
+            }
+        }
+    }
+
+    // Titel die, als hij niet past, na een pauze rustig doorloopt en weer
+    // terugkeert. Korte titels staan gewoon stil.
+    component Marquee: Item {
+        id: marquee
+        property string text: ""
+        readonly property real overflow: Math.max(0, label.implicitWidth - width)
+        implicitHeight: label.implicitHeight
+        clip: true
+
+        Text {
+            id: label
+            text: marquee.text
+            font.family: ThemeConfig.displayFont
+            font.pixelSize: 15
+            font.weight: Font.Bold
+            color: mocha.text
+        }
+
+        SequentialAnimation {
+            id: scroll
+            running: marquee.overflow > 0 && marquee.visible
+            loops: Animation.Infinite
+            PauseAnimation { duration: 2600 }
+            NumberAnimation { target: label; property: "x"; to: -marquee.overflow; duration: Math.max(800, marquee.overflow * 28); easing.type: Easing.InOutSine }
+            PauseAnimation { duration: 1600 }
+            NumberAnimation { target: label; property: "x"; to: 0; duration: 520; easing.type: Easing.OutCubic }
+        }
+        onTextChanged: {
+            scroll.stop();
+            label.x = 0;
+            if (overflow > 0) scroll.start();
+        }
+    }
+
+    // Eén equalizerband: verticale schuif van -12 tot +12 dB. De vulling
+    // groeit vanuit 0 dB; de lichtgolf (eqSweep) laat hem kort oplichten.
+    component EqBand: Item {
+        id: band
+        property int bandIndex: 0
+        property string label: ""
+        readonly property int value: root.eqBands[bandIndex] !== undefined ? root.eqBands[bandIndex] : 0
+        property real dragValue: value
+        readonly property real shown: area.pressed ? dragValue : value
+        readonly property real glow: Math.max(0, 1 - Math.abs(root.eqSweep - bandIndex) / 1.4)
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: 128
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            text: (band.shown > 0 ? "+" : "") + Math.round(band.shown)
+            font.family: ThemeConfig.monoFont
+            font.pixelSize: 8
+            font.weight: Font.Bold
+            color: band.shown === 0 ? mocha.subtext0 : mocha.text
+            opacity: area.pressed || area.containsMouse || band.glow > 0.1 ? 1 : 0.55
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
+        }
+
+        Rectangle {
+            id: track
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 14
+            width: 8
+            height: parent.height - 32
+            radius: width / 2
+            color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, area.containsMouse ? 0.12 : 0.07)
+            Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+
+            readonly property real zeroY: height / 2
+            readonly property real valueY: height / 2 - (band.shown / 12) * (height / 2)
+
+            // 0 dB-streepje.
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: track.zeroY - 0.5
+                width: 14
+                height: 1
+                color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.18)
+            }
+            Rectangle {
+                width: parent.width
+                radius: width / 2
+                y: Math.min(track.zeroY, track.valueY)
+                height: Math.max(width, Math.abs(track.valueY - track.zeroY))
+                color: Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.55 + 0.45 * band.glow)
+                Behavior on y {
+                    enabled: !area.pressed
+                    NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+                }
+                Behavior on height {
+                    enabled: !area.pressed
+                    NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+                }
+            }
+            Rectangle {
+                id: knob
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: track.valueY - height / 2
+                width: 16
+                height: 16
+                radius: width / 2
+                color: mocha.text
+                border.width: 2
+                border.color: mocha.accent3
+                scale: area.pressed ? 1.15 : (area.containsMouse ? 1.08 : 1.0) + 0.25 * band.glow
+                Behavior on y {
+                    enabled: !area.pressed
+                    NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+                }
+                Behavior on scale {
+                    NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+                }
+            }
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            text: band.label
+            font.family: ThemeConfig.monoFont
+            font.pixelSize: 8
+            color: mocha.subtext0
+        }
+
+        MouseArea {
+            id: area
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            preventStealing: true
+            function valueAt(my) {
+                let rel = (my - track.y) / track.height;
+                return Math.max(-12, Math.min(12, Math.round((0.5 - rel) * 24)));
+            }
+            onPressed: (mouse) => band.dragValue = valueAt(mouse.y)
+            onPositionChanged: (mouse) => { if (pressed) band.dragValue = valueAt(mouse.y); }
+            onReleased: root.setEqBand(band.bandIndex, band.dragValue)
+            onDoubleClicked: root.setEqBand(band.bandIndex, 0)
+            onWheel: (wheel) => {
+                root.setEqBand(band.bandIndex, band.value + (wheel.angleDelta.y > 0 ? 1 : -1));
+                wheel.accepted = true;
+            }
         }
     }
 }

@@ -17,6 +17,7 @@ Item {
     id: root
 
     MatugenColors { id: mocha }
+    readonly property var mochaPalette: mocha
 
     readonly property int pad: 14
     readonly property int cardRadius: Math.max(12, ThemeConfig.styleWidgetRadius)
@@ -46,6 +47,23 @@ Item {
     }
     readonly property bool hasMedia: activePlayer !== null
                                      && String(activePlayer.trackTitle || "").trim() !== ""
+    readonly property bool mediaPlaying: activePlayer !== null
+                                         && activePlayer.playbackState === MprisPlaybackState.Playing
+    readonly property real mediaLength: activePlayer && activePlayer.lengthSupported ? Number(activePlayer.length || 0) : 0
+    property real mediaPosition: 0
+
+    // Mpris werkt `position` niet zelf bij; zonder tik staat de balk stil.
+    Timer {
+        interval: 1000
+        repeat: true
+        triggeredOnStart: true
+        running: root.hasMedia && root.mediaLength > 0
+        onTriggered: {
+            if (!root.activePlayer || !root.activePlayer.positionSupported) return;
+            root.activePlayer.positionChanged();
+            root.mediaPosition = Number(root.activePlayer.position || 0);
+        }
+    }
 
     Timer {
         interval: 1000
@@ -536,44 +554,38 @@ Item {
                             anchors.margins: 12
                             spacing: 12
 
-                            Rectangle {
-                                Layout.preferredWidth: 56
-                                Layout.preferredHeight: 56
-                                radius: 14
-                                color: Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.14)
-                                clip: true
-
-                                Image {
-                                    id: cover
-                                    anchors.fill: parent
-                                    source: root.activePlayer && root.activePlayer.trackArtUrl
-                                        ? root.activePlayer.trackArtUrl : ""
-                                    fillMode: Image.PreserveAspectCrop
-                                    visible: status === Image.Ready
-                                    asynchronous: true
-                                }
-                                Text {
-                                    anchors.centerIn: parent
-                                    visible: cover.status !== Image.Ready
-                                    text: "󰎆"
-                                    font.family: "Iosevka Nerd Font"
-                                    font.pixelSize: 24
-                                    color: mocha.green
-                                }
+                            // Zelfde draaitafel als in Geluid & media, klein en
+                            // zonder arm; hij draait alleen tijdens afspelen.
+                            MediaVinyl {
+                                Layout.preferredWidth: 60
+                                Layout.preferredHeight: 60
+                                mocha: root.mochaPalette
+                                accent: mocha.green
+                                artUrl: root.activePlayer && root.activePlayer.trackArtUrl
+                                    ? String(root.activePlayer.trackArtUrl) : ""
+                                playing: root.mediaPlaying
+                                showArm: false
+                                coverRadius: 14
                             }
 
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 2
 
-                                Text {
+                                RowLayout {
                                     Layout.fillWidth: true
-                                    text: root.hasMedia ? root.activePlayer.trackTitle : "Geen media actief"
-                                    font.family: ThemeConfig.displayFont
-                                    font.pixelSize: 15
-                                    font.weight: Font.Bold
-                                    color: mocha.text
-                                    elide: Text.ElideRight
+                                    spacing: 4
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: root.hasMedia ? root.activePlayer.trackTitle : "Geen media actief"
+                                        font.family: ThemeConfig.displayFont
+                                        font.pixelSize: 15
+                                        font.weight: Font.Bold
+                                        color: mocha.text
+                                        elide: Text.ElideRight
+                                    }
+                                    // Opent Geluid & media met de kaart Nu speelt.
+                                    CardHeader { Layout.fillWidth: false; target: "audiomedia" }
                                 }
                                 Text {
                                     Layout.fillWidth: true
@@ -583,6 +595,30 @@ Item {
                                     font.pixelSize: 11
                                     color: mocha.subtext0
                                     elide: Text.ElideRight
+                                }
+
+                                // Voortgang van de track.
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: 3
+                                    Layout.preferredHeight: 3
+                                    visible: root.hasMedia && root.mediaLength > 0
+                                    radius: 1.5
+                                    color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                                    Rectangle {
+                                        height: parent.height
+                                        radius: parent.radius
+                                        width: Math.max(height, parent.width
+                                            * Math.max(0, Math.min(1, root.mediaPosition / Math.max(1, root.mediaLength))))
+                                        color: mocha.green
+                                        opacity: root.mediaPlaying ? 0.9 : 0.45
+                                        Behavior on width {
+                                            NumberAnimation { duration: 900; easing.type: Easing.Linear }
+                                        }
+                                        Behavior on opacity {
+                                            NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+                                        }
+                                    }
                                 }
 
                                 RowLayout {

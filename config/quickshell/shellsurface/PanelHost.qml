@@ -220,8 +220,9 @@ Item {
         if (entryId === "tophover") return Math.min(1020, availableW);
         if (entryId === "performance") return Math.min(380, availableW);
         if (entryId === "quicksettings") return Math.min(400, availableW);
-        // "volume" is samengevoegd met Geluid & media: zelfde paneel, zelfde maat.
-        if (entryId === "audiomedia" || entryId === "volume") return Math.min(420, availableW);
+        // "volume" en "music" zijn samengevoegd met Geluid & media: zelfde
+        // paneel, zelfde maat.
+        if (entryId === "audiomedia" || entryId === "volume" || entryId === "music") return Math.min(420, availableW);
         if (entryId === "gaming") return Math.min(720, availableW);
         if (entryId === "notifications") return Math.min(460, availableW);
         let reg = registrySize(entryId);
@@ -242,7 +243,7 @@ Item {
         // Was volle schermhoogte terwijl er maar een handvol meters in staat.
         if (entryId === "performance") return Math.min(430, availableH);
         if (entryId === "quicksettings") return Math.min(420, availableH);
-        if (entryId === "audiomedia" || entryId === "volume") return Math.min(380, availableH);
+        if (entryId === "audiomedia" || entryId === "volume" || entryId === "music") return Math.min(380, availableH);
         if (entryId === "gaming") return Math.min(560, availableH);
         if (entryId === "notifications") return Math.min(620, availableH);
         let reg = registrySize(entryId);
@@ -261,7 +262,9 @@ Item {
         // Het oude volumepaneel zit nu in Geluid & media; sneltoetsen,
         // qs_manager en de instellingen-app openen "volume" en komen daar uit.
         if (entryId === "volume") return Qt.resolvedUrl("AudioMediaPanel.qml");
-        if (entryId === "music") return Qt.resolvedUrl("../music/MusicPopup.qml");
+        // Ook de muziekpopup zit nu in Geluid & media (kaart "Nu speelt").
+        // MusicPopup.qml blijft alleen voor de oude bar-fallback.
+        if (entryId === "music") return Qt.resolvedUrl("AudioMediaPanel.qml");
         if (entryId === "calendar") return Qt.resolvedUrl("../calendar/CalendarPopup.qml");
         if (entryId === "monitors") return Qt.resolvedUrl("../monitors/MonitorPopup.qml");
         if (entryId === "performance") return Qt.resolvedUrl("PerformanceDrawer.qml");
