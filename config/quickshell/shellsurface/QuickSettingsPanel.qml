@@ -76,7 +76,12 @@ Item {
     property string kbLayout: ""
     property bool draggingBrightness: false
 
+    // PanelHost leest dit bij de wissel en zet de modus meteen op het
+    // netwerkpaneel, zodat dat direct in de juiste vorm en maat opent.
+    property string requestedNetworkMode: ""
+
     function openPanel(entryId, networkMode) {
+        root.requestedNetworkMode = networkMode ? String(networkMode) : "";
         if (networkMode)
             Quickshell.execDetached(["bash", "-lc", "printf '%s' '" + networkMode + "' > /tmp/qs_network_mode"]);
         root.panelSwitchRequested(entryId);

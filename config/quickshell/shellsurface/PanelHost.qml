@@ -15,6 +15,7 @@ Item {
     property real openProgress: open ? 1.0 : 0.0
     readonly property bool hovered: panelHover.hovered
     onSourceEntryIdChanged: {
+        if (sourceEntryId !== holdEntryId) holdEntryId = "";
         if (sourceEntryId !== "") {
             visualClearTimer.stop();
             visualEntryId = sourceEntryId;
@@ -160,13 +161,37 @@ Item {
     // vier ethernetregels), zonder de shell aan een tijdelijk statebestand te
     // koppelen. Ontbreekt zo'n property, dan blijft WindowRegistry de bron.
     function contentPreferredSize(entryId, propertyName) {
-        let currentEntry = visualEntryId !== "" ? visualEntryId : sourceEntryId;
-        if (entryId !== currentEntry || !contentLoader.item) return 0;
+        if (!contentReady(entryId)) return 0;
         let value = Number(contentLoader.item[propertyName]);
         return isNaN(value) || value <= 0 ? 0 : Math.round(value);
     }
 
+    // Hoort de geladen inhoud echt bij dit paneel? Bij een wissel vanuit een
+    // ander paneel (Snelle instellingen → Netwerk) is sourceEntryId al nieuw
+    // terwijl de Loader nog het oude paneel vasthoudt, of even leeg is. Zonder
+    // deze check las de host dan de maat van het oude paneel of viel hij
+    // terug op de grote registrymaat, wat als een te groot paneel flitste.
+    function contentReady(entryId) {
+        let currentEntry = visualEntryId !== "" ? visualEntryId : sourceEntryId;
+        return entryId === currentEntry
+            && contentLoader.status === Loader.Ready
+            && !!contentLoader.item
+            && String(contentLoader.source) === String(sourceFor(entryId));
+    }
+
+    // Tijdens een wissel tussen panelen houdt de blob de oude maat vast tot
+    // de nieuwe inhoud geladen is; daarna groeit hij in één beweging naar de
+    // juiste maat in plaats van eerst naar een tussenmaat.
+    property string holdEntryId: ""
+    property int holdW: 0
+    property int holdH: 0
+    // Netwerkmodus die het vorige paneel meegaf (wifi/eth/bt). Wordt direct
+    // na het laden op NetworkPopup gezet, zodat die niet eerst in de brede
+    // radarvorm verschijnt en pas na het uitlezen van het modusbestand krimpt.
+    property string pendingNetworkMode: ""
+
     function panelWidth(entryId) {
+        if (entryId === holdEntryId && holdW > 0 && !contentReady(entryId)) return holdW;
         let contentWidth = contentPreferredSize(entryId, "preferredPanelWidth");
         if (contentWidth > 0) return Math.min(contentWidth, availableW);
         if (entryId === "launcher") return Math.min(680, availableW);
@@ -185,6 +210,7 @@ Item {
     }
 
     function panelHeight(entryId) {
+        if (entryId === holdEntryId && holdH > 0 && !contentReady(entryId)) return holdH;
         let contentHeight = contentPreferredSize(entryId, "preferredPanelHeight");
         if (contentHeight > 0) return Math.min(contentHeight, availableH);
         if (entryId === "launcher") return Math.min(610, availableH);
@@ -448,7 +474,14 @@ Item {
             // naar de Loader: die is zelf geen scope en houdt de focus dan vast
             // zonder hem door te geven, waardoor zelfs Escape niet meer aankomt.
             focus: root.open
-            onLoaded: if (root.open && root.needsKeyboard) root.focusContent()
+            onLoaded: {
+                let entry = root.visualEntryId !== "" ? root.visualEntryId : root.sourceEntryId;
+                if (entry === "network" && root.pendingNetworkMode !== "" && item.activeMode !== undefined)
+                    item.activeMode = root.pendingNetworkMode;
+                root.pendingNetworkMode = "";
+                root.holdEntryId = "";
+                if (root.open && root.needsKeyboard) root.focusContent();
+            }
 
             Behavior on opacity {
                 NumberAnimation {
@@ -465,7 +498,16 @@ Item {
             target: contentLoader.item
             ignoreUnknownSignals: true
             function onPanelSwitchRequested(entryId) {
-                root.sourceEntryId = String(entryId || "");
+                let next = String(entryId || "");
+                let current = root.visualEntryId !== "" ? root.visualEntryId : root.sourceEntryId;
+                if (next !== "" && current !== "" && next !== current) {
+                    root.holdW = root.panelWidth(current);
+                    root.holdH = root.panelHeight(current);
+                    root.holdEntryId = next;
+                }
+                let mode = contentLoader.item ? contentLoader.item.requestedNetworkMode : undefined;
+                root.pendingNetworkMode = next === "network" && mode ? String(mode) : "";
+                root.sourceEntryId = next;
             }
         }
 
