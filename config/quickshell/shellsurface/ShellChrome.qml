@@ -362,6 +362,7 @@ Item {
     property bool autoHideVisible: true
     property string timeText: Qt.formatDateTime(new Date(), "HH:mm")
     property string dateText: Qt.formatDateTime(new Date(), "ddd d MMM")
+    property int clockSeconds: new Date().getSeconds()
     property int volumeWheelAccumulator: 0
     property int workspaceWheelAccumulator: 0
     property int _volRaw: 0
@@ -704,6 +705,7 @@ Item {
             let nextDateText = Qt.formatDateTime(now, "ddd d MMM");
             if (nextTimeText !== root.timeText) root.timeText = nextTimeText;
             if (nextDateText !== root.dateText) root.dateText = nextDateText;
+            root.clockSeconds = now.getSeconds();
         }
     }
 
@@ -926,12 +928,8 @@ Item {
                 onTriggered: root.togglePanel("launcher")
             }
 
-            RailButton {
-                tooltip: root.moduleEnabled("clock") ? root.dateText : "Agenda"
+            RailClock {
                 visible: root.moduleEnabled("clock")
-                icon: "󰃰"
-                text: root.timeText
-                accent: root.mocha.accent1
                 onTriggered: root.togglePanel("calendar")
             }
 
@@ -1747,6 +1745,91 @@ Item {
             onWheel: (wheel) => {
                 btn.wheelDelta(wheel.angleDelta.y);
                 wheel.accepted = true;
+            }
+        }
+    }
+
+    // Compacte railklok: uren boven minuten, de seconden lopen als dun
+    // balkje mee. Klik opent de agenda, de datum staat in de tooltip.
+    component RailClock: Rectangle {
+        id: clock
+        readonly property color accent: root.mocha.accent1
+        readonly property string hoursText: root.timeText.split(":")[0] || "--"
+        readonly property string minutesText: root.timeText.split(":")[1] || "--"
+        readonly property string tooltip: root.dateText
+        signal triggered()
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: 42
+        radius: Math.min(7, ThemeConfig.styleWidgetRadius)
+        color: clockMouse.containsMouse ? root.pillHoverColor : "transparent"
+        border.width: 1
+        border.color: clockMouse.containsMouse ? Qt.rgba(accent.r, accent.g, accent.b, 0.36) : "transparent"
+        scale: clockMouse.containsMouse ? 1.07 : 1.0
+        Behavior on scale {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+
+        Column {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: -2
+            spacing: -3
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: clock.hoursText
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: 14
+                font.weight: Font.Black
+                color: clock.accent
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: clock.minutesText
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: 14
+                font.weight: Font.Black
+                color: root.mocha.text
+            }
+        }
+
+        Rectangle {
+            id: secondsTrack
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 4
+            width: parent.width - 12
+            height: 2
+            radius: height / 2
+            color: Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.12)
+
+            Rectangle {
+                height: parent.height
+                radius: height / 2
+                width: parent.width * (root.clockSeconds / 59)
+                color: clock.accent
+                opacity: 0.82
+                // Bij de minuutwissel springt het balkje terug zonder terugveeg.
+                Behavior on width {
+                    enabled: root.clockSeconds > 0
+                    NumberAnimation { duration: 900; easing.type: Easing.Linear }
+                }
+            }
+        }
+
+        MouseArea {
+            id: clockMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            onEntered: root.showTooltip(clock, clock.tooltip, true)
+            onExited: root.hideTooltip(clock.tooltip)
+            onClicked: {
+                let p = clock.mapToItem(root, clock.width / 2, clock.height / 2);
+                root.lastTriggerX = p.x;
+                root.lastTriggerY = p.y;
+                clock.triggered();
             }
         }
     }

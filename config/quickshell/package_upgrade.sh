@@ -3,13 +3,194 @@ set -uo pipefail
 
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/quickshell"
 COUNT_SCRIPT="${HOME}/.config/quickshell/package_updates.sh"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/updates"
+LAST_RUN_FILE="$STATE_DIR/last-run"
+NEWS_URL="https://archlinux.org/feeds/news/"
+LOG_KEEP=10
 overall_exit=0
 DOTFILES_REPO=""
+LOG_FILE=""
 
 section() {
     printf '\n%s\n' "──────────────────────────────────────────────"
     printf '%s\n' "$1"
     printf '%s\n\n' "──────────────────────────────────────────────"
+}
+
+# Het log bevat de samenvatting van elke run, niet de volledige yay-uitvoer:
+# die door tee halen zou pacman zijn tty en voortgangsbalken afnemen.
+init_log() {
+    mkdir -p "$STATE_DIR" 2>/dev/null || return 0
+    LOG_FILE="$STATE_DIR/update-$(date +%Y%m%d-%H%M%S).log"
+    : > "$LOG_FILE" 2>/dev/null || LOG_FILE=""
+
+    local old
+    while IFS= read -r old; do
+        rm -f -- "$old"
+    done < <(find "$STATE_DIR" -maxdepth 1 -name 'update-*.log' -printf '%T@ %p\n' 2>/dev/null \
+        | sort -rn | tail -n +$((LOG_KEEP + 1)) | cut -d' ' -f2-)
+}
+
+log() {
+    printf '%s\n' "$*"
+    [[ -n "$LOG_FILE" ]] && printf '%s\n' "$*" >> "$LOG_FILE"
+    return 0
+}
+
+log_block() {
+    local text="$1"
+    [[ -n "$text" ]] || return 0
+    printf '%s\n' "$text"
+    [[ -n "$LOG_FILE" ]] && printf '%s\n' "$text" >> "$LOG_FILE"
+    return 0
+}
+
+# Ja/nee-vragen. Zonder terminal (of bij EOF) geldt het standaardantwoord,
+# zodat het script nooit blijft hangen en niets ongevraagd verwijdert.
+ask_no() {
+    local reply=""
+    read -r -p "$1 [j/N] " reply || return 1
+    [[ "$reply" =~ ^[jJyY] ]]
+}
+
+ask_yes() {
+    local reply=""
+    read -r -p "$1 [J/n] " reply || return 0
+    [[ ! "$reply" =~ ^[nN] ]]
+}
+
+preview_updates() {
+    local repo_list="" aur_list="" flatpak_list="" helper=""
+
+    if command -v checkupdates >/dev/null 2>&1; then
+        repo_list="$(timeout 90 checkupdates 2>/dev/null || true)"
+    fi
+    if command -v yay >/dev/null 2>&1; then
+        helper="yay"
+    elif command -v paru >/dev/null 2>&1; then
+        helper="paru"
+    fi
+    if [[ -n "$helper" ]]; then
+        aur_list="$(timeout 90 "$helper" -Qua 2>/dev/null || true)"
+    fi
+    if command -v flatpak >/dev/null 2>&1; then
+        flatpak_list="$(timeout 90 flatpak remote-ls --updates --columns=application,version 2>/dev/null || true)"
+    fi
+
+    if [[ -z "$repo_list$aur_list$flatpak_list" ]]; then
+        log "Geen pakket- of Flatpak-updates gevonden (of de check kon niet draaien)."
+        return 0
+    fi
+    if [[ -n "$repo_list" ]]; then
+        log "Arch ($(printf '%s\n' "$repo_list" | grep -c .)):"
+        log_block "$(printf '%s\n' "$repo_list" | sed 's/^/  /')"
+    fi
+    if [[ -n "$aur_list" ]]; then
+        log "AUR ($(printf '%s\n' "$aur_list" | grep -c .)):"
+        log_block "$(printf '%s\n' "$aur_list" | sed 's/^/  /')"
+    fi
+    if [[ -n "$flatpak_list" ]]; then
+        log "Flatpak ($(printf '%s\n' "$flatpak_list" | grep -c .)):"
+        log_block "$(printf '%s\n' "$flatpak_list" | sed 's/^/  /')"
+    fi
+    if printf '%s\n' "$repo_list" | grep -qE '^linux(-lts|-zen|-hardened)? '; then
+        log "Let op: er zit een kernel-update bij; na afloop is een herstart nodig."
+    fi
+}
+
+# Toont Arch-nieuws sinds de vorige run (eerste keer: de drie nieuwste).
+# Nieuws vraagt soms handwerk vóór een update, dus bij nieuwe berichten wacht
+# het script op een bevestiging.
+check_arch_news() {
+    local feed="" last_run=0 shown=0 title="" pub="" ts=0
+
+    command -v curl >/dev/null 2>&1 || {
+        log "curl ontbreekt; Arch-nieuws overgeslagen."
+        return 0
+    }
+    feed="$(curl -fsSL --max-time 8 "$NEWS_URL" 2>/dev/null || true)"
+    if [[ -z "$feed" ]]; then
+        log "Arch-nieuws kon niet worden opgehaald; overgeslagen."
+        return 0
+    fi
+
+    [[ -f "$LAST_RUN_FILE" ]] && read -r last_run < "$LAST_RUN_FILE"
+    [[ "$last_run" =~ ^[0-9]+$ ]] || last_run=0
+
+    while IFS=$'\t' read -r title pub; do
+        [[ -n "$title" ]] || continue
+        ts="$(date -d "$pub" +%s 2>/dev/null || echo 0)"
+        if [[ "$last_run" -eq 0 && "$shown" -ge 3 ]] || [[ "$last_run" -gt 0 && "$ts" -le "$last_run" ]]; then
+            break
+        fi
+        log "  $(date -d "$pub" +%Y-%m-%d 2>/dev/null || echo '?')  $title"
+        shown=$((shown + 1))
+    done < <(printf '%s' "$feed" | tr -d '\n' | sed 's/<item>/\n/g' | tail -n +2 \
+        | sed -nE 's|.*<title>([^<]*)</title>.*<pubDate>([^<]*)</pubDate>.*|\1\t\2|p' \
+        | sed 's/&amp;/\&/g; s/&lt;/</g; s/&gt;/>/g; s/&quot;/"/g; s/&#39;/'"'"'/g')
+
+    if [[ "$shown" -eq 0 ]]; then
+        log "Geen nieuw Arch-nieuws sinds de vorige update."
+        return 0
+    fi
+    log "Lees ze op https://archlinux.org/news/ als er handwerk bij staat."
+    if ! ask_yes "Doorgaan met updaten?"; then
+        log "Update op verzoek gestopt na het nieuws."
+        return 1
+    fi
+}
+
+report_pacnew() {
+    local files=""
+    command -v pacman >/dev/null 2>&1 || return 0
+    files="$(find /etc -xdev \( -name '*.pacnew' -o -name '*.pacsave' \) 2>/dev/null | sort)"
+    if [[ -z "$files" ]]; then
+        log "Geen .pacnew- of .pacsave-bestanden in /etc."
+        return 0
+    fi
+    log "Deze configbestanden wachten op een vergelijking (sudo pacdiff):"
+    log_block "$(printf '%s\n' "$files" | sed 's/^/  /')"
+}
+
+report_reboot() {
+    command -v pacman >/dev/null 2>&1 || return 0
+    if [[ -d "/usr/lib/modules/$(uname -r)" ]]; then
+        log "Geen herstart nodig; de draaiende kernel is nog geïnstalleerd."
+    else
+        log "Herstart nodig: de draaiende kernel $(uname -r) is vervangen."
+    fi
+}
+
+cleanup_system() {
+    local orphans=""
+
+    if command -v pacman >/dev/null 2>&1; then
+        orphans="$(pacman -Qdtq 2>/dev/null || true)"
+        if [[ -n "$orphans" ]]; then
+            log "Verweesde pakketten ($(printf '%s\n' "$orphans" | grep -c .)):"
+            log_block "$(printf '%s\n' "$orphans" | sed 's/^/  /')"
+            if ask_no "Deze pakketten verwijderen?"; then
+                # shellcheck disable=SC2086
+                sudo pacman -Rns -- $orphans && log "Verweesde pakketten verwijderd."
+            else
+                log "Verweesde pakketten blijven staan."
+            fi
+        else
+            log "Geen verweesde pakketten."
+        fi
+    fi
+
+    if command -v paccache >/dev/null 2>&1; then
+        if ask_no "Oude pakketcache opruimen (houdt de laatste 2 versies)?"; then
+            sudo paccache -rk2 && sudo paccache -ruk0 && log "Pakketcache opgeruimd."
+        fi
+    fi
+
+    if command -v flatpak >/dev/null 2>&1; then
+        if ask_no "Ongebruikte Flatpak-runtimes verwijderen?"; then
+            flatpak uninstall --unused -y && log "Ongebruikte Flatpak-runtimes verwijderd."
+        fi
+    fi
 }
 
 resolve_dotfiles_repo() {
@@ -100,26 +281,45 @@ run_dotfiles_installer() {
     bash "$installer" --yes
 }
 
+init_log
+
 echo "=============================================="
 echo " Kingstra Update Runner"
 echo " yay · Flatpak · kingstra-dots"
 echo "=============================================="
+log "Gestart: $(date '+%Y-%m-%d %H:%M:%S')"
+
+section "Arch-nieuws"
+if ! check_arch_news; then
+    [[ -n "$LOG_FILE" ]] && echo "Log: $LOG_FILE"
+    read -r -p "Druk Enter om te sluiten..." _
+    exit 0
+fi
+
+section "Wat er bijwerkt"
+preview_updates
 
 section "Arch/AUR"
+arch_exit=0
 if command -v yay >/dev/null 2>&1; then
-    yay -Syu || overall_exit=$?
+    yay -Syu || arch_exit=$?
 elif command -v paru >/dev/null 2>&1; then
-    paru -Syu || overall_exit=$?
+    paru -Syu || arch_exit=$?
 else
-    echo "Geen yay of paru gevonden; Arch/AUR-update overgeslagen."
+    log "Geen yay of paru gevonden; Arch/AUR-update overgeslagen."
 fi
+[[ $arch_exit -eq 0 ]] || overall_exit=$arch_exit
+log "Arch/AUR: exitcode $arch_exit"
 
 section "Flatpak"
+flatpak_exit=0
 if command -v flatpak >/dev/null 2>&1; then
-    flatpak update || overall_exit=$?
+    flatpak update || flatpak_exit=$?
 else
-    echo "Flatpak is niet geïnstalleerd; overgeslagen."
+    log "Flatpak is niet geïnstalleerd; overgeslagen."
 fi
+[[ $flatpak_exit -eq 0 ]] || overall_exit=$flatpak_exit
+log "Flatpak: exitcode $flatpak_exit"
 
 section "Dotfiles"
 dotfiles_update_exit=0
@@ -139,16 +339,30 @@ if [[ $dotfiles_update_exit -ne 0 ]]; then
     overall_exit=1
 fi
 
+log "Dotfiles: exitcode $dotfiles_update_exit"
+
+section "Na de update"
+report_pacnew
+report_reboot
+
+section "Opruimen"
+cleanup_system
+
+if [[ $arch_exit -eq 0 ]]; then
+    mkdir -p "$STATE_DIR" 2>/dev/null && date +%s > "$LAST_RUN_FILE"
+fi
+
 mkdir -p "$CACHE_DIR"
 rm -f "$CACHE_DIR/package_updates_status" "$CACHE_DIR/package_updates_count"
 "$COUNT_SCRIPT" --refresh >/dev/null 2>&1 || true
 
 section "Klaar"
 if [[ $overall_exit -eq 0 ]]; then
-    echo "Alle beschikbare updatebronnen zijn verwerkt."
+    log "Alle beschikbare updatebronnen zijn verwerkt."
 else
-    echo "Minstens één updatebron eindigde met een fout (code $overall_exit)."
+    log "Minstens één updatebron eindigde met een fout (code $overall_exit)."
 fi
+[[ -n "$LOG_FILE" ]] && echo "Log: $LOG_FILE"
 echo
 read -r -p "Druk Enter om te sluiten..." _
 exit "$overall_exit"
