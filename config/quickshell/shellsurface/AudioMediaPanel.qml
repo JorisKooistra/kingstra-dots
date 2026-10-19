@@ -126,6 +126,7 @@ Item {
     function refresh() {
         if (!audioPoller.running) audioPoller.running = true;
         if (!devicePoller.running) devicePoller.running = true;
+        if (!eqPoller.running) eqPoller.running = true;
     }
 
     Component.onCompleted: refresh()
@@ -138,6 +139,12 @@ Item {
     property bool outputsExpanded: false
     property bool inputsExpanded: false
     property bool appsExpanded: false
+    property bool eqExpanded: false
+    // Equalizer-presets via EasyEffects, dezelfde als in de muziekpopup.
+    readonly property string eqScript: Quickshell.env("HOME") + "/.config/quickshell/music/equalizer.sh"
+    readonly property var eqPresets: ["Flat", "Bass", "Treble", "Vocal", "Pop", "Rock", "Jazz", "Classic"]
+    property bool eqAvailable: false
+    property string eqPreset: ""
     property string hardwareNoticeTitle: ""
     property string hardwareNoticeText: ""
     // ListModel.get() geeft geen binding door; deze teller laat afgeleide
@@ -163,7 +170,13 @@ Item {
     function toggleSection(section) {
         if (section === "outputs") root.outputsExpanded = !root.outputsExpanded;
         else if (section === "inputs") root.inputsExpanded = !root.inputsExpanded;
+        else if (section === "eq") root.eqExpanded = !root.eqExpanded;
         else root.appsExpanded = !root.appsExpanded;
+    }
+
+    function setEqPreset(preset) {
+        root.eqPreset = preset;
+        Quickshell.execDetached(["bash", root.eqScript, "preset", preset]);
     }
 
     // Tab wisselde in de oude popup tussen Uitvoer, Invoer en Apps; hier
@@ -269,6 +282,20 @@ Item {
                     if (key === "volume" && root.draggingNodes[obj.id]) continue;
                     if (listModel.get(i)[key] !== obj[key]) listModel.setProperty(i, key, obj[key]);
                 }
+            }
+        }
+    }
+
+    Process {
+        id: eqPoller
+        command: ["bash", "-lc",
+            "command -v easyeffects >/dev/null 2>&1 || { echo none; exit 0; }; bash \"$1\" get", "eq", root.eqScript]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let raw = this.text.trim();
+                root.eqAvailable = raw !== "" && raw !== "none";
+                if (!root.eqAvailable) return;
+                try { root.eqPreset = String(JSON.parse(raw).preset || ""); } catch (e) {}
             }
         }
     }
@@ -708,6 +735,78 @@ Item {
                     EmptyNote {
                         visible: appsModel.count === 0
                         text: "Geen apps met geluid"
+                    }
+                }
+            }
+
+            // --- Equalizer ---------------------------------------------------
+            // Alleen met EasyEffects; een preset geldt direct voor alle uitvoer.
+            ColumnLayout {
+                visible: root.eqAvailable
+                Layout.fillWidth: true
+                spacing: 0
+
+                SectionToggle {
+                    icon: ""
+                    label: "Equalizer"
+                    detail: root.eqPreset === "Custom" ? "eigen instelling" : root.eqPreset
+                    expanded: root.eqExpanded
+                    onTriggered: root.toggleSection("eq")
+                }
+
+                Reveal {
+                    shown: root.eqExpanded
+                    gap: 8
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Repeater {
+                            model: root.eqPresets
+                            delegate: Rectangle {
+                                id: eqChip
+                                required property string modelData
+                                readonly property bool active: root.eqPreset === modelData
+                                width: eqChipText.implicitWidth + 22
+                                height: 28
+                                radius: height / 2
+                                color: active
+                                    ? Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.26)
+                                    : (eqChipMouse.containsMouse
+                                        ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+                                        : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05))
+                                border.width: 1
+                                border.color: active
+                                    ? Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.62)
+                                    : "transparent"
+                                scale: eqChipMouse.pressed ? 0.94 : (eqChipMouse.containsMouse ? 1.05 : 1.0)
+                                Behavior on color {
+                                    ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                                }
+                                Behavior on scale {
+                                    NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+                                }
+
+                                Text {
+                                    id: eqChipText
+                                    anchors.centerIn: parent
+                                    text: eqChip.modelData
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 11
+                                    font.weight: eqChip.active ? Font.Bold : Font.Normal
+                                    color: eqChip.active ? mocha.accent3 : mocha.text
+                                }
+
+                                MouseArea {
+                                    id: eqChipMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.setEqPreset(eqChip.modelData)
+                                }
+                            }
+                        }
                     }
                 }
             }
