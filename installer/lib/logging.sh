@@ -11,6 +11,35 @@ INSTALL_CURRENT_PHASE=0
 INSTALL_LAST_TASK_MSG=""
 INSTALL_KERNEL_PRINTK_OLD=""
 
+# Compacte weergave: in een terminal tonen we per fase één regel plus een
+# live voortgangsregel onderaan. Alles staat volledig in het logbestand;
+# waarschuwingen en fouten blijven altijd zichtbaar.
+INSTALL_UI_QUIET=false
+UI_LIVE_SHOWN=false
+UI_SPIN_IDX=0
+UI_PHASES_DONE=0
+UI_PHASE_ID=""
+UI_PHASE_NUM=""
+UI_PHASE_TITLE=""
+UI_PHASE_START=0
+UI_PHASE_WARNS=0
+UI_PHASE_ERRS=0
+UI_PHASE_PKGS=0
+UI_PHASE_DRY=0
+UI_PHASE_HEADER_SHOWN=false
+UI_TOTAL_WARNS=0
+UI_TOTAL_ERRS=0
+UI_TOTAL_PKGS=0
+UI_TOTAL_DRY=0
+UI_GLYPH_OK="OK"
+UI_GLYPH_WARN="!"
+UI_GLYPH_FAIL="X"
+UI_GLYPH_STEP=">"
+UI_GLYPH_DOT="-"
+UI_BAR_FULL="#"
+UI_BAR_EMPTY="-"
+UI_SPIN=('-' '\\' '|' '/')
+
 # ANSI kleuren
 _RESET='\033[0m'
 _BOLD='\033[1m'
@@ -34,7 +63,11 @@ log_init() {
     if [[ "$INSTALL_UI_MODE" == "true" ]]; then
         trap '_install_log_cleanup' EXIT
     fi
-    export INSTALL_UI_MODE
+    if [[ "$INSTALL_UI_MODE" == "true" && "${INSTALL_VERBOSE_COMMANDS:-false}" != "true" ]]; then
+        INSTALL_UI_QUIET=true
+    fi
+    _ui_init_glyphs
+    export INSTALL_UI_MODE INSTALL_UI_QUIET
     _log_raw "=== kingstra-dots installatie gestart: $(date '+%Y-%m-%d %H:%M:%S') ==="
 }
 
@@ -49,6 +82,31 @@ _log_print() {
     local msg="$*"
     local timestamp
     timestamp="$(date '+%H:%M:%S')"
+    if [[ "$INSTALL_UI_QUIET" == "true" ]]; then
+        _log_raw "[$timestamp] $prefix $msg"
+        case "$prefix" in
+            "WARN ")
+                UI_PHASE_WARNS=$((UI_PHASE_WARNS + 1))
+                _ui_persist "$_YELLOW" "$UI_GLYPH_WARN" "$msg"
+                ;;
+            "FOUT ")
+                UI_PHASE_ERRS=$((UI_PHASE_ERRS + 1))
+                _ui_persist "$_RED" "$UI_GLYPH_FAIL" "$msg"
+                ;;
+            "[DRY]")
+                # Dry-run acties staan in het log; --verbose toont ze hier.
+                UI_PHASE_DRY=$((UI_PHASE_DRY + 1))
+                INSTALL_LAST_TASK_MSG="$msg"
+                _ui_live_draw "$msg"
+                ;;
+            *)
+                INSTALL_LAST_TASK_MSG="$msg"
+                UI_SPIN_IDX=$((UI_SPIN_IDX + 1))
+                _ui_live_draw "$msg"
+                ;;
+        esac
+        return 0
+    fi
     printf "${color}${_BOLD}[%s]${_RESET} ${color}%s${_RESET} %s\n" "$timestamp" "$prefix" "$msg"
     _log_raw "[$timestamp] $prefix $msg"
 }
@@ -67,6 +125,186 @@ log_warn() {
 
 log_error() {
     _log_print "$_RED" "FOUT " "$@" >&2
+}
+
+# Belangrijke mededeling die ook in de compacte weergave zichtbaar blijft.
+log_note() {
+    if [[ "$INSTALL_UI_QUIET" == "true" ]]; then
+        _log_raw "[$(date '+%H:%M:%S')] NOTE  $*"
+        _ui_persist "$_BLUE" "$UI_GLYPH_DOT" "$*"
+        return 0
+    fi
+    log_info "$@"
+}
+
+# Witregel, behalve in de compacte weergave.
+log_blank() {
+    [[ "$INSTALL_UI_QUIET" == "true" ]] && return 0
+    echo ""
+}
+
+# Telt geïnstalleerde pakketten mee voor de fase-samenvatting.
+ui_count_packages() {
+    local n="${1:-0}"
+    [[ "$n" =~ ^[0-9]+$ ]] || return 0
+    UI_PHASE_PKGS=$((UI_PHASE_PKGS + n))
+}
+
+# ---------------------------------------------------------------------------
+# Compacte weergave: live voortgangsregel + één regel per fase
+# ---------------------------------------------------------------------------
+_ui_init_glyphs() {
+    local charmap=""
+    charmap="$(locale charmap 2>/dev/null || true)"
+    if [[ "$charmap" == "UTF-8" || "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" =~ [Uu][Tt][Ff]-?8 ]]; then
+        UI_GLYPH_OK="✓"
+        UI_GLYPH_WARN="!"
+        UI_GLYPH_FAIL="✗"
+        UI_GLYPH_STEP="›"
+        UI_GLYPH_DOT="·"
+        UI_BAR_FULL="█"
+        UI_BAR_EMPTY="░"
+        UI_SPIN=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    fi
+}
+
+# Leesbare naam per fase; onbekende fases tonen hun bestandsnaam.
+_ui_phase_title() {
+    case "$1" in
+        01_project_base) echo "Projectbasis" ;;
+        02_shell_terminal) echo "Shell en terminal" ;;
+        03_hypr_core) echo "Hyprland" ;;
+        04_bindings) echo "Sneltoetsen" ;;
+        05_ui_quickshell) echo "Quickshell" ;;
+        06_notifications) echo "Meldingen" ;;
+        07_launcher) echo "Launcher" ;;
+        08_theming) echo "Thema en kleuren" ;;
+        09_wallpaper) echo "Achtergronden" ;;
+        10_session) echo "Sessie en login" ;;
+        11_apps_tools) echo "Apps en tools" ;;
+        12_network_resume_fixes) echo "Netwerk en slaapstand" ;;
+        13_monitoring) echo "Monitoring" ;;
+        14_profiles) echo "Hardwareprofiel" ;;
+        15_finalize) echo "Afronden" ;;
+        *) echo "$1" ;;
+    esac
+}
+
+_ui_duration() {
+    local s="${1:-0}"
+    if (( s >= 60 )); then
+        printf '%dm%02ds' "$((s / 60))" "$((s % 60))"
+    else
+        printf '%ds' "$s"
+    fi
+}
+
+_ui_plural() {
+    local n="$1" one="$2" many="$3"
+    if (( n == 1 )); then
+        printf '%d %s' "$n" "$one"
+    else
+        printf '%d %s' "$n" "$many"
+    fi
+}
+
+_ui_bar() {
+    local total="${1:-0}" current="${2:-0}" width="${3:-24}"
+    local filled=0 i bar=""
+    (( total > 0 )) && filled=$((current * width / total))
+    (( filled > width )) && filled=$width
+    for (( i = 0; i < width; i++ )); do
+        if (( i < filled )); then bar+="$UI_BAR_FULL"; else bar+="$UI_BAR_EMPTY"; fi
+    done
+    printf '%s' "$bar"
+}
+
+# Tekent de voortgangsregel opnieuw op de huidige regel (zonder newline).
+_ui_live_draw() {
+    [[ "$INSTALL_UI_QUIET" == "true" ]] || return 0
+    local msg="${1:-$INSTALL_LAST_TASK_MSG}"
+    local total="${INSTALL_TOTAL_PHASES:-0}"
+    local spin="${UI_SPIN[UI_SPIN_IDX % ${#UI_SPIN[@]}]}"
+    local plain colored percent=0 bar
+
+    if (( total > 0 )); then
+        percent=$((UI_PHASES_DONE * 100 / total))
+        bar="$(_ui_bar "$total" "$UI_PHASES_DONE")"
+        plain="  $spin $bar $(printf '%3d%%' "$percent")  "
+        colored="  ${_CYAN}${spin}${_RESET} ${_GREEN}${bar}${_RESET} ${_BOLD}$(printf '%3d%%' "$percent")${_RESET}  "
+        if [[ -n "$UI_PHASE_TITLE" ]]; then
+            plain+="$UI_PHASE_TITLE $UI_GLYPH_STEP "
+            colored+="${_BOLD}${UI_PHASE_TITLE}${_RESET} ${_DIM}${UI_GLYPH_STEP}${_RESET} "
+        fi
+    else
+        plain="  $spin "
+        colored="  ${_CYAN}${spin}${_RESET} "
+    fi
+
+    printf '\033[?25l\r\033[K%b%b%s%b' "$colored" "$_DIM" "$(_progress_line_message "$plain" "$msg")" "$_RESET"
+    UI_LIVE_SHOWN=true
+}
+
+# Haalt de voortgangsregel weg en geeft de cursor terug, zodat een vraag of
+# interactief commando een schone regel heeft.
+ui_release_terminal() {
+    [[ "$INSTALL_UI_QUIET" == "true" ]] || return 0
+    if [[ "$UI_LIVE_SHOWN" == "true" ]]; then
+        printf '\r\033[K'
+        UI_LIVE_SHOWN=false
+    fi
+    printf '\033[?25h'
+}
+
+_ui_phase_header() {
+    [[ -n "$UI_PHASE_ID" && "$UI_PHASE_HEADER_SHOWN" != "true" ]] || return 0
+    printf "  ${_CYAN}%s${_RESET} %s  ${_BOLD}%s${_RESET}\n" "$UI_GLYPH_STEP" "$UI_PHASE_NUM" "$UI_PHASE_TITLE"
+    UI_PHASE_HEADER_SHOWN=true
+}
+
+# Blijvende regel (waarschuwing, fout, notitie) boven de voortgangsregel.
+_ui_persist() {
+    local color="$1" glyph="$2" msg="$3"
+    ui_release_terminal
+    _ui_phase_header
+    printf "     ${color}%s${_RESET} %s\n" "$glyph" "$msg"
+    [[ -n "$UI_PHASE_ID" ]] && _ui_live_draw
+    return 0
+}
+
+# Sluit de lopende fase af met één samenvattingsregel.
+_ui_phase_finish() {
+    [[ "$INSTALL_UI_QUIET" == "true" && -n "$UI_PHASE_ID" ]] || return 0
+    local elapsed=$((SECONDS - UI_PHASE_START))
+    local glyph="$UI_GLYPH_OK" color="$_GREEN" details=""
+
+    if (( UI_PHASE_ERRS > 0 )); then
+        glyph="$UI_GLYPH_FAIL"; color="$_RED"
+    elif (( UI_PHASE_WARNS > 0 )); then
+        glyph="$UI_GLYPH_WARN"; color="$_YELLOW"
+    fi
+    (( UI_PHASE_PKGS > 0 )) && details+="$(_ui_plural "$UI_PHASE_PKGS" "pakket" "pakketten") $UI_GLYPH_DOT "
+    (( UI_PHASE_DRY > 0 )) && details+="$(_ui_plural "$UI_PHASE_DRY" "actie" "acties") (dry-run) $UI_GLYPH_DOT "
+    (( UI_PHASE_WARNS > 0 )) && details+="$(_ui_plural "$UI_PHASE_WARNS" "waarschuwing" "waarschuwingen") $UI_GLYPH_DOT "
+    (( UI_PHASE_ERRS > 0 )) && details+="$(_ui_plural "$UI_PHASE_ERRS" "fout" "fouten") $UI_GLYPH_DOT "
+    details+="$(_ui_duration "$elapsed")"
+
+    ui_release_terminal
+    printf "  ${color}%s${_RESET} %s  %-24s ${_DIM}%s${_RESET}\n" "$glyph" "$UI_PHASE_NUM" "$UI_PHASE_TITLE" "$details"
+
+    UI_TOTAL_WARNS=$((UI_TOTAL_WARNS + UI_PHASE_WARNS))
+    UI_TOTAL_ERRS=$((UI_TOTAL_ERRS + UI_PHASE_ERRS))
+    UI_TOTAL_PKGS=$((UI_TOTAL_PKGS + UI_PHASE_PKGS))
+    UI_TOTAL_DRY=$((UI_TOTAL_DRY + UI_PHASE_DRY))
+    UI_PHASES_DONE=$((UI_PHASES_DONE + 1))
+    UI_PHASE_ID=""
+    UI_PHASE_TITLE=""
+}
+
+# Aanroepen na phase_run.
+log_phase_done() {
+    _ui_phase_finish
+    _log_raw "=== FASE KLAAR: ${1:-} ==="
 }
 
 set_phase_progress() {
@@ -107,9 +345,14 @@ _restore_kernel_console_loglevel() {
 
 _install_log_cleanup() {
     local rc=$?
+    ui_release_terminal
     _restore_kernel_console_loglevel
     if [[ "${INSTALL_UI_MODE:-false}" == "true" && $rc -ne 0 ]]; then
         printf "\n${_RED}${_BOLD}Installatie mislukt (code %s).${_RESET}\n" "$rc" >&2
+        if [[ "$INSTALL_UI_QUIET" == "true" && -s "$LOG_FILE" ]]; then
+            printf "${_DIM}Laatste regels uit het log:${_RESET}\n" >&2
+            tail -n 12 "$LOG_FILE" | sed 's/^/  /' >&2
+        fi
         printf "${_BOLD}Log: %s${_RESET}\n\n" "$LOG_FILE" >&2
         [[ -t 0 ]] && read -r -p "Druk Enter om te sluiten..." _
     fi
@@ -117,6 +360,7 @@ _install_log_cleanup() {
 
 install_ui_finish_screen() {
     [[ "${INSTALL_UI_MODE:-false}" == "true" ]] || return 0
+    [[ "$INSTALL_UI_QUIET" == "true" ]] && return 0
     _ui_clear
 }
 
@@ -152,25 +396,9 @@ _ui_enable_scroll_region() {
 _render_progress_bar() {
     local total="${1:-0}"
     local current="${2:-0}"
-    local width=30
-    local filled=0
     local percent=0
-
-    if (( total > 0 )); then
-        filled=$(( current * width / total ))
-        percent=$(( current * 100 / total ))
-    fi
-
-    local bar=""
-    local i
-    for (( i=0; i<width; i++ )); do
-        if (( i < filled )); then
-            bar+="#"
-        else
-            bar+="-"
-        fi
-    done
-    printf "[%s] %3d%%" "$bar" "$percent"
+    (( total > 0 )) && percent=$(( current * 100 / total ))
+    printf "[%s] %3d%%" "$(_ui_bar "$total" "$current" 30)" "$percent"
 }
 
 _render_detect_summary() {
@@ -220,7 +448,24 @@ log_phase() {
     local current="${2:-$INSTALL_CURRENT_PHASE}"
     local total="${3:-$INSTALL_TOTAL_PHASES}"
 
-    if [[ "$INSTALL_UI_MODE" == "true" ]]; then
+    if [[ "$INSTALL_UI_QUIET" == "true" ]]; then
+        _ui_phase_finish
+        if (( UI_PHASES_DONE == 0 )); then
+            printf "  ${_BOLD}Installatie${_RESET} ${_DIM}%s${_RESET}\n\n" "$(_ui_plural "$total" "fase" "fases")"
+        fi
+        UI_PHASE_ID="$name"
+        UI_PHASE_NUM="${name%%_*}"
+        [[ "$UI_PHASE_NUM" =~ ^[0-9]+$ ]] || UI_PHASE_NUM="$(printf '%02d' "$current")"
+        UI_PHASE_TITLE="$(_ui_phase_title "$name")"
+        UI_PHASE_START=$SECONDS
+        UI_PHASE_WARNS=0
+        UI_PHASE_ERRS=0
+        UI_PHASE_PKGS=0
+        UI_PHASE_DRY=0
+        UI_PHASE_HEADER_SHOWN=false
+        INSTALL_LAST_TASK_MSG="starten..."
+        _ui_live_draw
+    elif [[ "$INSTALL_UI_MODE" == "true" ]]; then
         _ui_clear
         print_banner
         if (( total > 0 )); then
@@ -254,6 +499,10 @@ _progress_task_start() {
     local msg="${1:-bezig}"
     INSTALL_LAST_TASK_MSG="$msg"
     _log_raw "TASK START: $msg"
+    if [[ "$INSTALL_UI_QUIET" == "true" ]]; then
+        _ui_live_draw "$msg"
+        return 0
+    fi
     if [[ "$INSTALL_UI_MODE" != "true" || "${INSTALL_VERBOSE_COMMANDS:-false}" == "true" ]]; then
         log_step "$msg"
         return 0
@@ -264,6 +513,11 @@ _progress_task_start() {
 _progress_task_tick() {
     local spinner="${1:-.}"
     local msg="${2:-$INSTALL_LAST_TASK_MSG}"
+    if [[ "$INSTALL_UI_QUIET" == "true" ]]; then
+        UI_SPIN_IDX=$((UI_SPIN_IDX + 1))
+        _ui_live_draw "$msg"
+        return 0
+    fi
     if [[ "$INSTALL_UI_MODE" != "true" || "${INSTALL_VERBOSE_COMMANDS:-false}" == "true" ]]; then
         return 0
     fi
@@ -273,6 +527,16 @@ _progress_task_tick() {
 _progress_task_end() {
     local rc="${1:-0}"
     local msg="${2:-$INSTALL_LAST_TASK_MSG}"
+    if [[ "$INSTALL_UI_QUIET" == "true" ]]; then
+        if [[ "$rc" -eq 0 ]]; then
+            _log_raw "TASK OK: $msg"
+        else
+            _log_raw "TASK FAIL($rc): $msg"
+            UI_PHASE_ERRS=$((UI_PHASE_ERRS + 1))
+            _ui_persist "$_RED" "$UI_GLYPH_FAIL" "$msg"
+        fi
+        return 0
+    fi
     if [[ "$INSTALL_UI_MODE" != "true" || "${INSTALL_VERBOSE_COMMANDS:-false}" == "true" ]]; then
         if [[ "$rc" -eq 0 ]]; then
             log_ok "$msg"
@@ -294,6 +558,9 @@ _progress_task_end() {
 }
 
 print_banner() {
+    ui_release_terminal
+    # Vanuit de Update Runner: geen banner, die heeft al een kop.
+    [[ "$INSTALL_UI_QUIET" == "true" && "${KINGSTRA_UI_EMBEDDED:-false}" == "true" ]] && return 0
     cat <<'EOF'
 
    ██╗  ██╗██╗███╗   ██╗ ██████╗ ███████╗████████╗██████╗  █████╗
@@ -308,6 +575,31 @@ EOF
 }
 
 print_system_info() {
+    ui_release_terminal
+    if [[ "$INSTALL_UI_QUIET" == "true" ]]; then
+        [[ "${KINGSTRA_UI_EMBEDDED:-false}" == "true" ]] && return 0
+        local hw=() extras=()
+        [[ "${DETECT_IS_LAPTOP:-false}" == "true" ]] && hw+=("laptop")
+        [[ "${DETECT_HAS_TOUCHPAD:-false}" == "true" ]] && hw+=("touchpad")
+        [[ "${DETECT_HAS_TOUCHSCREEN:-false}" == "true" ]] && hw+=("touchscreen")
+        [[ "${ENABLE_TABLET_MODE:-false}" == "true" ]] && hw+=("tabletmodus")
+        [[ "${DETECT_HAS_FINGERPRINT:-false}" == "true" ]] && hw+=("vingerafdruk")
+        "${DRY_RUN:-false}" && extras+=("dry-run")
+        extras+=("AUR: ${AUR_HELPER:-geen}")
+
+        local sep=" $UI_GLYPH_DOT "
+        local hw_text="${DETECTED_DISTRO:-onbekend}${sep}GPU ${DETECT_GPU:-onbekend}"
+        local item
+        for item in "${hw[@]+"${hw[@]}"}"; do hw_text+="$sep$item"; done
+        local extra_text="${extras[0]}"
+        for item in "${extras[@]:1}"; do extra_text+="$sep$item"; done
+
+        printf "  ${_BOLD}Systeem${_RESET}  %s\n" "$hw_text"
+        printf "  ${_BOLD}Opties${_RESET}   %s\n" "$extra_text"
+        printf "  ${_BOLD}Back-up${_RESET}  ${_DIM}%s${_RESET}\n" "${BACKUP_DIR:-wordt aangemaakt}"
+        printf "  ${_BOLD}Log${_RESET}      ${_DIM}%s${_RESET}\n\n" "$LOG_FILE"
+        return 0
+    fi
     echo ""
     printf "  ${_BOLD}Distro:${_RESET}     %s\n" "${DETECTED_DISTRO:-onbekend}"
     printf "  ${_BOLD}GPU:${_RESET}        %s\n" "${DETECT_GPU:-onbekend}"
@@ -324,6 +616,32 @@ print_system_info() {
 }
 
 print_summary() {
+    if [[ "$INSTALL_UI_QUIET" == "true" ]]; then
+        _ui_phase_finish
+        ui_release_terminal
+        local total="${INSTALL_TOTAL_PHASES:-0}"
+        (( total > 0 )) || total=1
+        local status="${_GREEN}${_BOLD}Installatie voltooid${_RESET}"
+        (( UI_TOTAL_ERRS > 0 )) && status="${_YELLOW}${_BOLD}Installatie klaar met fouten${_RESET}"
+        local details
+        details="$(_ui_duration "$SECONDS")"
+        (( UI_TOTAL_PKGS > 0 )) && details+=" $UI_GLYPH_DOT $(_ui_plural "$UI_TOTAL_PKGS" "pakket" "pakketten") geïnstalleerd"
+        (( UI_TOTAL_WARNS > 0 )) && details+=" $UI_GLYPH_DOT $(_ui_plural "$UI_TOTAL_WARNS" "waarschuwing" "waarschuwingen")"
+        (( UI_TOTAL_ERRS > 0 )) && details+=" $UI_GLYPH_DOT $(_ui_plural "$UI_TOTAL_ERRS" "fout" "fouten")"
+        if (( UI_TOTAL_DRY > 0 )); then
+            status="${_BOLD}Dry-run klaar${_RESET}"
+            details+=" $UI_GLYPH_DOT $(_ui_plural "$UI_TOTAL_DRY" "actie" "acties") in het log (of draai met --verbose)"
+        fi
+        printf "\n  ${_GREEN}%s${_RESET} ${_BOLD}%3d%%${_RESET}\n" "$(_ui_bar "$total" "$total")" 100
+        printf "  %b  ${_DIM}%s${_RESET}\n" "$status" "$details"
+        printf "  ${_DIM}Volledige uitvoer: %s${_RESET}\n\n" "$LOG_FILE"
+        # Wat hierna komt (instructies, herstartvraag) gewoon tonen.
+        INSTALL_UI_QUIET=false
+        if [[ -n "${INSTALL_AFTER_SUMMARY:-}" ]] && declare -f "$INSTALL_AFTER_SUMMARY" >/dev/null; then
+            "$INSTALL_AFTER_SUMMARY"
+        fi
+        return 0
+    fi
     echo ""
     printf "${_GREEN}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
     printf "${_GREEN}${_BOLD}  Installatie voltooid.${_RESET}\n"

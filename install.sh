@@ -68,6 +68,10 @@ parse_args() {
                 OVERRIDE_FILE="$2"
                 shift 2
                 ;;
+            --verbose|-v)
+                INSTALL_VERBOSE_COMMANDS=true
+                shift
+                ;;
             --yes|-y)
                 SKIP_CONFIRM=true
                 shift
@@ -98,6 +102,8 @@ Opties:
   --from-phase FASE    Start vanaf een specifieke fase
   --override BESTAND   Overschrijf gedetecteerde feature-flags met een bestand
   --yes, -y            Bevestigingsvragen overslaan
+  --verbose, -v        Alle stappen en commando-uitvoer in de terminal tonen
+                       (standaard: compacte weergave, alles staat in het log)
   --help, -h           Dit helpbericht tonen
 
 Voorbeelden:
@@ -166,6 +172,7 @@ run_phases() {
         if declare -f "phase_run" > /dev/null; then
             phase_run
             unset -f phase_run
+            log_phase_done "$phase"
         else
             log_warn "Fase '$phase' heeft geen phase_run() functie."
         fi
@@ -200,9 +207,15 @@ main() {
         log_warn "DRY-RUN modus actief — geen wijzigingen worden doorgevoerd."
     elif command -v sudo &>/dev/null && [[ -t 0 ]]; then
         log_step "Sudo-sessie valideren..."
+        ui_release_terminal
         sudo -v || { log_error "Sudo-validatie mislukt."; exit 1; }
         suppress_kernel_console_messages
     fi
+
+    # Bestond er al een installatie? Dan is dit een update.
+    INSTALL_WAS_PRESENT=false
+    [[ -f "$HOME/.local/share/kingstra/install-complete" ]] && INSTALL_WAS_PRESENT=true
+    export INSTALL_WAS_PRESENT
 
     # Pre-flight: back-up alle bestaande dotfiles vóór de eerste fase
     backup_preflight

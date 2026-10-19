@@ -66,7 +66,7 @@ _phase13_sensors_detect() {
     fi
 
     log_info "sensors-detect uitvoeren in automatische modus (geen interactie)..."
-    sudo sensors-detect --auto 2>/dev/null && \
+    sudo sensors-detect --auto >>"$LOG_FILE" 2>&1 && \
         log_ok "sensors-detect voltooid" || \
         log_warn "sensors-detect mislukt — temperatuur wordt gelezen via /sys/class/thermal (kernel)"
 

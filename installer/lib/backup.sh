@@ -79,16 +79,16 @@ backup_preflight() {
     # Zorg dat BACKUP_DIR al gezet is (backup_init moet al zijn aangeroepen)
     log_info "Bestaande dotfiles gevonden — back-up maken naar:"
     log_info "  $BACKUP_DIR"
-    echo ""
+    log_blank
 
     for path in "${found[@]}"; do
         backup_path "$path"
     done
 
-    echo ""
-    log_ok "${#found[@]} locatie(s) geback-upt naar: $BACKUP_DIR"
+    log_blank
+    log_note "${#found[@]} locatie(s) geback-upt naar: $BACKUP_DIR"
     log_info "Herstellen: cp -r \"$BACKUP_DIR/<pad>\" ~/<pad>"
-    echo ""
+    log_blank
 }
 
 # Back-up van één bestand of map maken

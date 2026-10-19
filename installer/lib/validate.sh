@@ -135,7 +135,7 @@ validate_link() {
 
 # Rapporteer totaal van validatiefouten
 validate_report() {
-    echo ""
+    log_blank
     if "${DRY_RUN:-false}"; then
         log_info "Dry-run: validatierapport overgeslagen (geen echte wijzigingen gemaakt)."
         return 0

@@ -8,16 +8,17 @@ pacman_install() {
     local -a pkgs=("$@")
     [[ ${#pkgs[@]} -eq 0 ]] && return 0
 
-    local -a to_install=()
+    local -a to_install=() present=()
     for pkg in "${pkgs[@]}"; do
         # Lege regels en commentaarregels overslaan
         [[ -z "$pkg" || "$pkg" == \#* ]] && continue
         if ! pacman -Qi "$pkg" &>/dev/null; then
             to_install+=("$pkg")
         else
-            log_info "Al geïnstalleerd: $pkg"
+            present+=("$pkg")
         fi
     done
+    _package_report_present "pacman" "${present[@]+"${present[@]}"}"
 
     [[ ${#to_install[@]} -eq 0 ]] && return 0
 
@@ -27,6 +28,16 @@ pacman_install() {
         _package_install_hint "pacman"
         return 1
     fi
+    "${DRY_RUN:-false}" || ui_count_packages "${#to_install[@]}"
+}
+
+# Eén regel in plaats van een regel per al aanwezig pakket; de namen staan in het log.
+_package_report_present() {
+    local source="$1"
+    shift
+    [[ $# -gt 0 ]] || return 0
+    _log_raw "Al geïnstalleerd ($source): $*"
+    log_info "$# pakket(ten) al geïnstalleerd ($source)"
 }
 
 _package_refresh_sudo() {
@@ -36,6 +47,7 @@ _package_refresh_sudo() {
 
     if [[ -t 0 ]]; then
         log_step "sudo-sessie verversen voor pakketinstallatie..."
+        ui_release_terminal
         sudo -v
         return $?
     fi
@@ -53,15 +65,16 @@ aur_install() {
         return 0
     fi
 
-    local -a to_install=()
+    local -a to_install=() present=()
     for pkg in "${pkgs[@]}"; do
         [[ -z "$pkg" || "$pkg" == \#* ]] && continue
         if ! "$AUR_HELPER" -Qi "$pkg" &>/dev/null 2>&1; then
             to_install+=("$pkg")
         else
-            log_info "Al geïnstalleerd (AUR): $pkg"
+            present+=("$pkg")
         fi
     done
+    _package_report_present "AUR" "${present[@]+"${present[@]}"}"
 
     [[ ${#to_install[@]} -eq 0 ]] && return 0
 
@@ -116,6 +129,7 @@ aur_install() {
         stty sane 2>/dev/null || true
         printf '\033[?1049l\033[?1000l\033[?1002l\033[?1003l\033[?1006l' 2>/dev/null || true
     fi
+    "${DRY_RUN:-false}" || ui_count_packages "${#to_install[@]}"
 }
 
 _package_install_hint() {

@@ -28,6 +28,12 @@ phase_run() {
     validate_report
 
     log_ok "Fase 15 voltooid — Kingstra-dots is volledig geïnstalleerd."
+    if [[ "${INSTALL_UI_QUIET:-false}" == "true" ]]; then
+        # De compacte weergave toont dit pas na de eindsamenvatting.
+        # shellcheck disable=SC2034  # gelezen door print_summary
+        INSTALL_AFTER_SUMMARY=_phase15_after_summary
+        return 0
+    fi
     install_ui_finish_screen
     _phase15_print_next_steps
     _phase15_prompt_reboot
@@ -171,6 +177,12 @@ _phase15_write_marker() {
     } > "$marker_file"
 
     log_ok "Installatie-marker geschreven: $marker_file"
+}
+
+# Bij een update (marker bestond al) zijn de eerste-keer-instructies ruis.
+_phase15_after_summary() {
+    [[ "${INSTALL_WAS_PRESENT:-false}" == "true" ]] || _phase15_print_next_steps
+    _phase15_prompt_reboot
 }
 
 _phase15_print_next_steps() {

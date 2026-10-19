@@ -13,6 +13,7 @@ prompt_confirm() {
         return 0
     fi
 
+    ui_release_terminal
     printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s ${_DIM}[J/n]${_RESET} " "$question"
     local answer
     read -r answer
@@ -39,6 +40,7 @@ prompt_choice() {
         return 0
     fi
 
+    ui_release_terminal
     printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s\n" "$label"
     local i=1
     for opt in "${options[@]}"; do
@@ -73,6 +75,7 @@ prompt_input() {
         return 0
     fi
 
+    ui_release_terminal
     if [[ -n "$default" ]]; then
         printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s ${_DIM}[%s]${_RESET}: " "$question" "$default"
     else

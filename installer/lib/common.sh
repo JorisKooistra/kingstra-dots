@@ -87,7 +87,13 @@ run_cmd() {
     fi
 
     # Fallback: normale uitvoer (bijv. sudo prompt, AUR helper interactie)
-    log_step "$task_msg"
+    if [[ "${INSTALL_UI_QUIET:-false}" == "true" ]]; then
+        _log_raw "TASK START: $task_msg"
+        _ui_persist "$_CYAN" "$UI_GLYPH_STEP" "$task_msg"
+        ui_release_terminal
+    else
+        log_step "$task_msg"
+    fi
     _log_raw "COMMAND: $cmd_pretty"
     "$@"
 }
