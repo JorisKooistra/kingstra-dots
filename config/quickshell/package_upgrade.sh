@@ -3,6 +3,7 @@ set -uo pipefail
 
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/quickshell"
 COUNT_SCRIPT="${HOME}/.config/quickshell/package_updates.sh"
+AUDIT_SCRIPT="${HOME}/.config/quickshell/package_audit.sh"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/updates"
 LAST_RUN_FILE="$STATE_DIR/last-run"
 NEWS_URL="https://archlinux.org/feeds/news/"
@@ -189,6 +190,17 @@ cleanup_system() {
     if command -v flatpak >/dev/null 2>&1; then
         if ask_no "Ongebruikte Flatpak-runtimes verwijderen?"; then
             flatpak uninstall --unused -y && log "Ongebruikte Flatpak-runtimes verwijderd."
+        fi
+    fi
+
+    # Elk extra pakket brengt zijn eigen updates mee; laat zien wat er
+    # waarschijnlijk weg kan. Verwijderen gebeurt alleen per pakket na "j".
+    if [[ -x "$AUDIT_SCRIPT" ]]; then
+        log_block "$("$AUDIT_SCRIPT" --summary 2>/dev/null || true)"
+        if ask_no "Kandidaten nu een voor een bekijken?"; then
+            "$AUDIT_SCRIPT" --review
+        else
+            log "Later bekijken: $AUDIT_SCRIPT"
         fi
     fi
 }

@@ -46,6 +46,18 @@ _phase05_install_packages() {
     install_from_manifest "$REPO_ROOT/manifest/packages/ui.txt"
     # Supplementair icon-font uit de officiële repo; Nerd Fonts komen in fase 8.
     pacman_install ttf-material-icons
+    _phase05_enable_paccache_timer
+}
+
+# paccache.timer (pacman-contrib) ruimt wekelijks oude pakketversies uit de
+# cache op en houdt er drie per pakket, zodat de cache niet ongemerkt groeit.
+_phase05_enable_paccache_timer() {
+    if ! "${DRY_RUN:-false}" && systemctl is-enabled --quiet paccache.timer 2>/dev/null; then
+        log_info "paccache.timer staat al aan"
+        return 0
+    fi
+    run_cmd sudo systemctl enable --now paccache.timer \
+        || log_warn "paccache.timer kon niet worden ingeschakeld"
 }
 
 _phase05_write_autostart_ui() {
