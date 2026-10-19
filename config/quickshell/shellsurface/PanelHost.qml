@@ -119,6 +119,26 @@ Item {
         ? _clamp((visualEdgeBlobProgress - 0.10) / 0.90, 0, 1)
         : 1
     function _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    // Een railpaneel dat vlak boven de onderrand eindigt, lag net
+    // binnen de SDF-blend van de omlijsting: de vormen smolten half samen en
+    // de accentrand maakte daar een knikje (rechtsonder bij Snelle
+    // instellingen). Komt het paneel binnen die afstand, dan landt het nu
+    // vlak op de rand; de blend maakt er dan één nette holle boog van, net
+    // als aan de railkant.
+    readonly property int frameSnapDistance: 28
+    function _sidePanelY(H) {
+        let top = stripTopH + gap;
+        return _clamp(anchorY - H / 2, top, Math.max(top, (hostWindow ? hostWindow.height : 1080) - H - stripBotH - borderW - gap));
+    }
+    readonly property string frameSnapSide: {
+        if (!visualHorizontalEdge || !hostWindow || !anchorItem || !anchorItem.edgeBlobGroup) return "";
+        let H = panelHeight(visualEntryId);
+        let top = stripTopH + gap;
+        let bot = Math.max(top, hostWindow.height - H - stripBotH - borderW - gap);
+        let y = _sidePanelY(H);
+        return y >= bot - frameSnapDistance ? "bottom" : "";
+    }
     function syncActiveWidgetState() {
         Quickshell.execDetached([
             "sh",
@@ -292,8 +312,10 @@ Item {
         if (visualEdge === "top") return stripTopH;
         if (sourceEntryId === "settings")
             return Math.max(stripTopH + gap, Math.round((hostWindow.height - borderW - H) / 2));
-        if (visualEdge === "left" || visualEdge === "right")
-            return _clamp(anchorY - H / 2, stripTopH + gap, Math.max(stripTopH + gap, hostWindow.height - H - stripBotH - borderW - gap));
+        if (visualEdge === "left" || visualEdge === "right") {
+            if (frameSnapSide === "bottom") return hostWindow.height - H - stripBotH - borderW;
+            return _sidePanelY(H);
+        }
         if (fromStrip) return stripTopH + gap;
         let top = stripTopH + gap;
         let bot = hostWindow.height - H - gap - stripBotH - borderW;
@@ -398,6 +420,7 @@ Item {
         squareCorners: false
         flushBottom: root.visualFromBottom
         edge: root.visualEdge
+        frameSnap: root.frameSnapSide
         sideConnectorOverlap: root.visualHorizontalEdge ? root.gap + root.borderW / 4 : 0
         blobGroup: root.visualFromEdge && anchorItem ? anchorItem.edgeBlobGroup : null
         // Vulling en rand komen bij een native blob uit de shader, die één

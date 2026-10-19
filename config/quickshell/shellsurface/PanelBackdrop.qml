@@ -20,6 +20,10 @@ Rectangle {
     property int bottomConnectorRadius: Math.max(14, ThemeConfig.styleWidgetRadius + 8)
     property int bottomConnectorLift: 0
     property int sideConnectorOverlap: 0
+    // "top"/"bottom": een railpaneel ligt vlak op de boven- of onderrand.
+    // Die hoeken worden vierkant, zodat de blob er met de omlijsting tot één
+    // holle boog samensmelt in plaats van een half samengesmolten knik.
+    property string frameSnap: ""
     property var blobGroup: null
     readonly property string _styleFamily: String(ThemeConfig.styleFamily || "").toLowerCase()
     readonly property bool _paperStyle: _styleFamily === "paper"
@@ -69,8 +73,8 @@ Rectangle {
     // de zijkanten, en sluit hij aan op de bogen in de omlijning.
     anchors.leftMargin: edge === "left" ? -edgeOverlap : 0
     anchors.rightMargin: edge === "right" ? -edgeOverlap : 0
-    anchors.topMargin: edge === "top" ? -edgeOverlap : 0
-    anchors.bottomMargin: (edge === "bottom" || flushBottom) ? -edgeOverlap : 0
+    anchors.topMargin: edge === "top" || (nativeBlob && frameSnap === "top") ? -edgeOverlap : 0
+    anchors.bottomMargin: (edge === "bottom" || flushBottom || (nativeBlob && frameSnap === "bottom")) ? -edgeOverlap : 0
     radius: squareCorners || _monoStyle ? 0
         : (_paperStyle ? Math.max(8, ThemeConfig.styleWidgetRadius + 2)
             : Math.max(14, ThemeConfig.styleWidgetRadius + 8))
@@ -96,10 +100,10 @@ Rectangle {
         visible: root.nativeBlob
         group: root.blobGroup
         radius: root.radius
-        topLeftRadius: root.edge === "top" || root.edge === "left" ? 0 : -1
-        topRightRadius: root.edge === "top" || root.edge === "right" ? 0 : -1
-        bottomLeftRadius: root.edge === "bottom" || root.edge === "left" ? 0 : -1
-        bottomRightRadius: root.edge === "bottom" || root.edge === "right" ? 0 : -1
+        topLeftRadius: root.edge === "top" || root.edge === "left" || root.frameSnap === "top" ? 0 : -1
+        topRightRadius: root.edge === "top" || root.edge === "right" || root.frameSnap === "top" ? 0 : -1
+        bottomLeftRadius: root.edge === "bottom" || root.edge === "left" || root.frameSnap === "bottom" ? 0 : -1
+        bottomRightRadius: root.edge === "bottom" || root.edge === "right" || root.frameSnap === "bottom" ? 0 : -1
         deformScale: 0.00001
     }
 
