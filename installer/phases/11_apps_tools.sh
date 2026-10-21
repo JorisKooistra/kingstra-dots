@@ -40,6 +40,9 @@ phase_run() {
     pacman_install network-manager-applet
     pacman_install blueman
 
+    log_step "Logitech-muisknoppen (logiops)..."
+    _phase11_setup_logiops
+
     log_step "Yazi bestandsbeheerder installeren..."
     pacman_install yazi
     pacman_install p7zip                # uitpakken vanuit yazi (7z, xz, bzip2...)
@@ -133,6 +136,50 @@ _phase11_optional_apps() {
         log_info "VSCode niet geïnstalleerd. Installeren via: aur_install visual-studio-code-bin"
         log_info "Of via pacman: pacman -S code (open-source build)"
     fi
+}
+
+# Logitech HID++-muizen (M720): logid laat de duimknop BTN_TASK (mouse:279)
+# sturen zodat Hyprland er vensters mee kan slepen. Alleen als er een
+# Logitech-apparaat (vendor 046D, USB-receiver of Bluetooth) gevonden wordt,
+# of als ENABLE_LOGIOPS=true.
+_phase11_setup_logiops() {
+    local cfg_src="$REPO_ROOT/config/system/logid.cfg"
+    local cfg_dest="/etc/logid.cfg"
+    local -a logitech_devices=()
+
+    if [[ "${ENABLE_LOGIOPS:-auto}" == "auto" ]]; then
+        shopt -s nullglob
+        logitech_devices=(/sys/bus/hid/devices/*:046D:*)
+        shopt -u nullglob
+        if (( ${#logitech_devices[@]} == 0 )); then
+            log_info "Geen Logitech-apparaat gevonden — logiops overgeslagen (forceer met ENABLE_LOGIOPS=true)"
+            return 0
+        fi
+    elif [[ "${ENABLE_LOGIOPS}" != "true" ]]; then
+        log_info "logiops overgeslagen (ENABLE_LOGIOPS=${ENABLE_LOGIOPS})"
+        return 0
+    fi
+
+    aur_install logiops
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "logid-config zou worden geplaatst: $cfg_dest (vereist sudo)"
+        return 0
+    fi
+
+    if [[ ! -f "$cfg_src" ]]; then
+        log_warn "Bron niet gevonden: $cfg_src"
+        return 0
+    fi
+
+    if ! sudo cmp -s "$cfg_src" "$cfg_dest" 2>/dev/null; then
+        backup_system_path "$cfg_dest"
+        sudo install -m 0644 "$cfg_src" "$cfg_dest"
+        log_ok "logid-config geplaatst: $cfg_dest"
+    fi
+    service_enable logid
+    sudo systemctl restart logid 2>/dev/null || true
+    log_info "Duimknop M720:   venster slepen (mouse:279) — test met: sudo libinput debug-events"
 }
 
 _phase11_init_yazi_theme_file() {

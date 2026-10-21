@@ -10,6 +10,7 @@
   "keybinds_hint_docs": "Full list: docs/keybindings.md",
   "keybinds_mouse_left": "Mouse left",
   "keybinds_mouse_right": "Mouse right",
+  "keybinds_mouse_thumb": "Thumb button",
   "keybinds_scroll_down": "Scroll ↓",
   "keybinds_scroll_up": "Scroll ↑",
   "keybinds_search": "Search… (e.g. “screenshot”)",

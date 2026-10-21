@@ -40,6 +40,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Ctrl + ←↓↑→` | Venster aanpassen (60px per druk) |
 | `Super + LMB slepen` | Venster verslepen (muis) |
 | `Super + RMB slepen` | Venster aanpassen (muis) |
+| `Duimknop slepen` | Venster verslepen (Logitech M720, via logiops) |
 
 ---
 

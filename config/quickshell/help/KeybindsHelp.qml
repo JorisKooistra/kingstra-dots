@@ -55,6 +55,7 @@ Item {
             "Escape": "Esc", "Return": "Enter", "Backspace": "⌫",
             "mouse:272": I18n.t("keybinds_mouse_left", "Muis-links"),
             "mouse:273": I18n.t("keybinds_mouse_right", "Muis-rechts"),
+            "mouse:279": I18n.t("keybinds_mouse_thumb", "Duimknop"),
             "mouse_down": I18n.t("keybinds_scroll_down", "Scroll ↓"),
             "mouse_up": I18n.t("keybinds_scroll_up", "Scroll ↑"),
             "XF86AudioRaiseVolume": "Vol +", "XF86AudioLowerVolume": "Vol −",
