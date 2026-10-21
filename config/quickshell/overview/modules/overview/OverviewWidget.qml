@@ -183,6 +183,19 @@ Item {
         return Config.options.overview.orderRightLeft ? (Config.options.overview.columns - normalCol - 1) : normalCol;
     }
 
+    // Zichtbare rij-positie: verborgen lege rijen (hideEmptyRows) tellen niet
+    // mee, anders zouden vensters een rij te laag getekend worden.
+    function visibleRowIndex(rowIndex) {
+        if (!Config.options.overview.hideEmptyRows || !root.rowsWithContent)
+            return rowIndex;
+        let visibleBefore = 0;
+        for (let r = 0; r < rowIndex; r++) {
+            if (root.rowsWithContent.has(r))
+                visibleBefore++;
+        }
+        return visibleBefore;
+    }
+
     function getWorkspaceInCell(rowIndex, colIndex) {
         const mappedRow = Config.options.overview.orderBottomUp ? (Config.options.overview.rows - rowIndex - 1) : rowIndex;
         const mappedCol = Config.options.overview.orderRightLeft ? (Config.options.overview.columns - colIndex - 1) : colIndex;
@@ -1123,7 +1136,7 @@ Item {
                     property bool atInitPosition: (initX == x && initY == y)
 
                     property int workspaceColIndex: root.getWorkspaceColumn(windowData?.workspace.id)
-                    property int workspaceRowIndex: root.getWorkspaceRow(windowData?.workspace.id)
+                    property int workspaceRowIndex: root.visibleRowIndex(root.getWorkspaceRow(windowData?.workspace.id))
                     xOffset: (root.workspaceImplicitWidth + workspaceSpacing) * workspaceColIndex
                     yOffset: (root.workspaceImplicitHeight + workspaceSpacing) * workspaceRowIndex
 

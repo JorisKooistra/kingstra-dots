@@ -22,12 +22,24 @@ Scope {
             property bool blurEnabled: Config.options.overview.effects.enableBlur
             property bool backdropEnabled: Config.options.overview.effects.enableBackdrop
             property real backdropOpacity: Math.max(0, Math.min(1, Config.options.overview.effects.backdropOpacity))
+            // Alleen op het scherm dat de focus had bij het openen.
+            readonly property bool isTargetScreen: GlobalStates.overviewScreenName === ""
+                || GlobalStates.overviewScreenName === (monitor?.name ?? "")
+            // 0 → 1 bij openen, 1 → 0 bij sluiten; het venster blijft zichtbaar
+            // tot de uitfade klaar is.
+            property real reveal: GlobalStates.overviewOpen && isTargetScreen ? 1 : 0
+            Behavior on reveal {
+                NumberAnimation {
+                    duration: Appearance.animation.elementMoveFast.duration
+                    easing.type: Easing.OutCubic
+                }
+            }
             screen: modelData
-            visible: GlobalStates.overviewOpen
+            visible: isTargetScreen && (GlobalStates.overviewOpen || reveal > 0)
 
             WlrLayershell.namespace: blurEnabled ? "quickshell:overview-blur" : "quickshell:overview"
             WlrLayershell.layer: WlrLayer.Overlay
-            WlrLayershell.keyboardFocus: GlobalStates.overviewOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+            WlrLayershell.keyboardFocus: GlobalStates.overviewOpen && isTargetScreen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
             color: "transparent"
 
             anchors {
@@ -51,7 +63,7 @@ Scope {
             Connections {
                 target: GlobalStates
                 function onOverviewOpenChanged() {
-                    if (GlobalStates.overviewOpen) {
+                    if (GlobalStates.overviewOpen && root.isTargetScreen) {
                         delayedGrabTimer.start();
                     }
                 }
@@ -75,7 +87,6 @@ Scope {
             Item {
                 id: keyHandler
                 anchors.fill: parent
-                visible: GlobalStates.overviewOpen
                 focus: GlobalStates.overviewOpen
                 z: 0
 
@@ -84,7 +95,7 @@ Scope {
                     anchors.fill: parent
                     visible: root.backdropEnabled
                     color: "#000000"
-                    opacity: root.backdropOpacity
+                    opacity: root.backdropOpacity * root.reveal
                     z: 0
                 }
 
@@ -96,6 +107,7 @@ Scope {
                     anchors.fill: parent
                     acceptedButtons: Qt.AllButtons
                     z: 0
+                    enabled: GlobalStates.overviewOpen
                     onClicked: GlobalStates.overviewOpen = false
                 }
 
@@ -194,13 +206,14 @@ Scope {
 
             ColumnLayout {
                 id: columnLayout
-                visible: GlobalStates.overviewOpen
                 z: 1
-                anchors {
-                    horizontalCenter: parent.horizontalCenter
-                    top: parent.top
-                    topMargin: Config.options.position.topMargin
-                }
+                spacing: 6
+                // Midden op het scherm: de grid staat altijd op dezelfde plek,
+                // los van hoeveel ruimte de bar inneemt.
+                anchors.centerIn: parent
+                opacity: root.reveal
+                scale: 0.96 + 0.04 * root.reveal
+                transformOrigin: Item.Center
 
                 Text {
                     Layout.alignment: Qt.AlignHCenter
@@ -214,7 +227,8 @@ Scope {
 
                 Text {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "kies een ruimte of sleep een venster"
+                    Layout.bottomMargin: 4
+                    text: "klik om te kiezen · sleep een venster · rechtsklik of Esc sluit"
                     color: "#A8FFFFFF"
                     font.family: "sans-serif"
                     font.pixelSize: 13
@@ -222,7 +236,7 @@ Scope {
 
                 Loader {
                     id: overviewLoader
-                    active: GlobalStates.overviewOpen && (Config?.options.overview.enable ?? true)
+                    active: root.visible && (Config?.options.overview.enable ?? true)
                     sourceComponent: OverviewWidget {
                         panelWindow: root
                         visible: true
@@ -235,13 +249,19 @@ Scope {
     IpcHandler {
         target: "overview"
 
+        function rememberScreen() {
+            GlobalStates.overviewScreenName = Hyprland.focusedMonitor?.name ?? "";
+        }
         function toggle() {
+            if (!GlobalStates.overviewOpen)
+                rememberScreen();
             GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
         }
         function close() {
             GlobalStates.overviewOpen = false;
         }
         function open() {
+            rememberScreen();
             GlobalStates.overviewOpen = true;
         }
     }

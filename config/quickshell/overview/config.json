@@ -46,7 +46,7 @@
     "columns": 5,
     "scale": 0.19,
     "enable": true,
-    "hideEmptyRows": true,
+    "hideEmptyRows": false,
     "useWorkspaceMap": false,
     "workspaceMap": [0, 10],
     "orderRightLeft": false,
