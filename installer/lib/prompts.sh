@@ -14,7 +14,7 @@ prompt_confirm() {
     fi
 
     ui_release_terminal
-    printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s ${_DIM}[J/n]${_RESET} " "$question"
+    printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s ${_DIM}[J/n]${_RESET} " "$question" >&3
     local answer
     read -r answer
     answer="${answer,,}"  # lowercase
@@ -41,13 +41,13 @@ prompt_choice() {
     fi
 
     ui_release_terminal
-    printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s\n" "$label"
+    printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s\n" "$label" >&3
     local i=1
     for opt in "${options[@]}"; do
-        printf "     %d) %s\n" "$i" "$opt"
+        printf "     %d) %s\n" "$i" "$opt" >&3
         (( i++ ))
     done
-    printf "  Keuze [1-%d]: " "${#options[@]}"
+    printf "  Keuze [1-%d]: " "${#options[@]}" >&3
     local answer
     read -r answer
 
@@ -77,9 +77,9 @@ prompt_input() {
 
     ui_release_terminal
     if [[ -n "$default" ]]; then
-        printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s ${_DIM}[%s]${_RESET}: " "$question" "$default"
+        printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s ${_DIM}[%s]${_RESET}: " "$question" "$default" >&3
     else
-        printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s: " "$question"
+        printf "\n  ${_CYAN}${_BOLD}?${_RESET}  %s: " "$question" >&3
     fi
 
     local answer

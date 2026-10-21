@@ -39,6 +39,10 @@ UI_GLYPH_DOT="-"
 UI_BAR_FULL="#"
 UI_BAR_EMPTY="-"
 UI_SPIN=('-' '\\' '|' '/')
+# Vaste kop bovenaan (banner + voortgang); de rest scrollt eronder.
+UI_HEADER=false
+UI_HEADER_ROWS=0
+UI_PROGRESS_ROW=0
 
 # ANSI kleuren
 _RESET='\033[0m'
@@ -67,6 +71,9 @@ log_init() {
         INSTALL_UI_QUIET=true
     fi
     _ui_init_glyphs
+    # fd 3/4 wijzen altijd naar de terminal. In de compacte weergave gaat de
+    # uitvoer van de fases zelf naar het log; de UI schrijft via fd 3/4.
+    exec 3>&1 4>&2
     export INSTALL_UI_MODE INSTALL_UI_QUIET
     _log_raw "=== kingstra-dots installatie gestart: $(date '+%Y-%m-%d %H:%M:%S') ==="
 }
@@ -226,6 +233,7 @@ _ui_live_draw() {
     local total="${INSTALL_TOTAL_PHASES:-0}"
     local spin="${UI_SPIN[UI_SPIN_IDX % ${#UI_SPIN[@]}]}"
     local plain colored percent=0 bar
+    (( total > 0 && UI_PHASES_DONE >= total )) && spin="$UI_GLYPH_OK"
 
     if (( total > 0 )); then
         percent=$((UI_PHASES_DONE * 100 / total))
@@ -241,8 +249,49 @@ _ui_live_draw() {
         colored="  ${_CYAN}${spin}${_RESET} "
     fi
 
-    printf '\033[?25l\r\033[K%b%b%s%b' "$colored" "$_DIM" "$(_progress_line_message "$plain" "$msg")" "$_RESET"
+    if [[ "$UI_HEADER" == "true" ]]; then
+        # Opslaan, naar de voortgangsregel in de kop, terug naar de scrollregio.
+        printf '\0337\033[%d;1H\033[2K%b%b%s%b\0338' "$UI_PROGRESS_ROW" \
+            "$colored" "$_DIM" "$(_progress_line_message "$plain" "$msg")" "$_RESET" >&3
+        return 0
+    fi
+    printf '\033[?25l\r\033[K%b%b%s%b' "$colored" "$_DIM" "$(_progress_line_message "$plain" "$msg")" "$_RESET" >&3
     UI_LIVE_SHOWN=true
+}
+
+# Zet de banner en voortgangsregel vast bovenaan via een scrollregio.
+# Te kleine terminals houden de voortgangsregel onderaan.
+_ui_header_setup() {
+    [[ "$INSTALL_UI_QUIET" == "true" && "${KINGSTRA_UI_EMBEDDED:-false}" != "true" ]] || return 1
+    [[ "${INSTALL_FIXED_HEADER:-true}" == "true" ]] || return 1
+    local rows
+    rows="$(_ui_term_size rows)"
+    [[ "$rows" =~ ^[0-9]+$ ]] || return 1
+
+    if (( rows >= 32 )); then
+        printf '\033[H\033[2J\033[3J' >&3
+        _print_banner_art >&3
+        UI_PROGRESS_ROW=10
+    elif (( rows >= 14 )); then
+        printf '\033[H\033[2J\033[3J' >&3
+        printf "\n  ${_BOLD}KINGSTRA${_RESET} ${_DIM}dots %s Arch Linux %s Hyprland %s Quickshell${_RESET}\n" \
+            "$UI_GLYPH_DOT" "$UI_GLYPH_DOT" "$UI_GLYPH_DOT" >&3
+        UI_PROGRESS_ROW=4
+    else
+        return 1
+    fi
+    UI_HEADER_ROWS=$((UI_PROGRESS_ROW + 1))
+    UI_HEADER=true
+    printf '\033[%d;%dr\033[%d;1H' "$((UI_HEADER_ROWS + 1))" "$rows" "$((UI_HEADER_ROWS + 1))" >&3
+    _ui_live_draw "voorbereiden..."
+    return 0
+}
+
+# Heft de scrollregio op; de cursor blijft waar hij was.
+_ui_header_teardown() {
+    [[ "$UI_HEADER" == "true" ]] || return 0
+    UI_HEADER=false
+    printf '\0337\033[r\0338\033[?25h' >&3
 }
 
 # Haalt de voortgangsregel weg en geeft de cursor terug, zodat een vraag of
@@ -250,15 +299,15 @@ _ui_live_draw() {
 ui_release_terminal() {
     [[ "$INSTALL_UI_QUIET" == "true" ]] || return 0
     if [[ "$UI_LIVE_SHOWN" == "true" ]]; then
-        printf '\r\033[K'
+        printf '\r\033[K' >&3
         UI_LIVE_SHOWN=false
     fi
-    printf '\033[?25h'
+    printf '\033[?25h' >&3
 }
 
 _ui_phase_header() {
     [[ -n "$UI_PHASE_ID" && "$UI_PHASE_HEADER_SHOWN" != "true" ]] || return 0
-    printf "  ${_CYAN}%s${_RESET} %s  ${_BOLD}%s${_RESET}\n" "$UI_GLYPH_STEP" "$UI_PHASE_NUM" "$UI_PHASE_TITLE"
+    printf "  ${_CYAN}%s${_RESET} %s  ${_BOLD}%s${_RESET}\n" "$UI_GLYPH_STEP" "$UI_PHASE_NUM" "$UI_PHASE_TITLE" >&3
     UI_PHASE_HEADER_SHOWN=true
 }
 
@@ -267,7 +316,7 @@ _ui_persist() {
     local color="$1" glyph="$2" msg="$3"
     ui_release_terminal
     _ui_phase_header
-    printf "     ${color}%s${_RESET} %s\n" "$glyph" "$msg"
+    printf "     ${color}%s${_RESET} %s\n" "$glyph" "$msg" >&3
     [[ -n "$UI_PHASE_ID" ]] && _ui_live_draw
     return 0
 }
@@ -290,7 +339,7 @@ _ui_phase_finish() {
     details+="$(_ui_duration "$elapsed")"
 
     ui_release_terminal
-    printf "  ${color}%s${_RESET} %s  %-24s ${_DIM}%s${_RESET}\n" "$glyph" "$UI_PHASE_NUM" "$UI_PHASE_TITLE" "$details"
+    printf "  ${color}%s${_RESET} %s  %-24s ${_DIM}%s${_RESET}\n" "$glyph" "$UI_PHASE_NUM" "$UI_PHASE_TITLE" "$details" >&3
 
     UI_TOTAL_WARNS=$((UI_TOTAL_WARNS + UI_PHASE_WARNS))
     UI_TOTAL_ERRS=$((UI_TOTAL_ERRS + UI_PHASE_ERRS))
@@ -346,15 +395,16 @@ _restore_kernel_console_loglevel() {
 _install_log_cleanup() {
     local rc=$?
     ui_release_terminal
+    _ui_header_teardown
     _restore_kernel_console_loglevel
     if [[ "${INSTALL_UI_MODE:-false}" == "true" && $rc -ne 0 ]]; then
-        printf "\n${_RED}${_BOLD}Installatie mislukt (code %s).${_RESET}\n" "$rc" >&2
+        printf "\n${_RED}${_BOLD}Installatie mislukt (code %s).${_RESET}\n" "$rc" >&4
         if [[ "$INSTALL_UI_QUIET" == "true" && -s "$LOG_FILE" ]]; then
-            printf "${_DIM}Laatste regels uit het log:${_RESET}\n" >&2
-            tail -n 12 "$LOG_FILE" | sed 's/^/  /' >&2
+            printf "${_DIM}Laatste regels uit het log:${_RESET}\n" >&4
+            tail -n 12 "$LOG_FILE" | sed 's/^/  /' >&4
         fi
-        printf "${_BOLD}Log: %s${_RESET}\n\n" "$LOG_FILE" >&2
-        [[ -t 0 ]] && read -r -p "Druk Enter om te sluiten..." _
+        printf "${_BOLD}Log: %s${_RESET}\n\n" "$LOG_FILE" >&4
+        [[ -t 0 ]] && read -r -p "Druk Enter om te sluiten..." _ 2>&4
     fi
 }
 
@@ -410,9 +460,23 @@ _render_detect_summary() {
         "${DETECT_HAS_FINGERPRINT:-false}"
 }
 
+# Terminalgrootte via fd 3: in $(...) is stdout een pipe en geeft tput 80x24.
+_ui_term_size() {
+    local size rows="" cols=""
+    size="$(stty size <&3 2>/dev/null || true)"
+    read -r rows cols <<< "$size"
+    if [[ "$1" == "rows" ]]; then
+        [[ "$rows" =~ ^[0-9]+$ ]] || rows="$(_tput_safe lines)"
+        printf '%s' "$rows"
+    else
+        [[ "$cols" =~ ^[0-9]+$ ]] || cols="$(_tput_safe cols)"
+        printf '%s' "$cols"
+    fi
+}
+
 _progress_line_columns() {
     local cols
-    cols="$(_tput_safe cols)"
+    cols="$(_ui_term_size cols)"
     [[ "$cols" =~ ^[0-9]+$ ]] || cols="${COLUMNS:-80}"
     [[ "$cols" =~ ^[0-9]+$ ]] || cols=80
     (( cols >= 20 )) || cols=20
@@ -450,8 +514,9 @@ log_phase() {
 
     if [[ "$INSTALL_UI_QUIET" == "true" ]]; then
         _ui_phase_finish
+        ui_release_terminal
         if (( UI_PHASES_DONE == 0 )); then
-            printf "  ${_BOLD}Installatie${_RESET} ${_DIM}%s${_RESET}\n\n" "$(_ui_plural "$total" "fase" "fases")"
+            printf "\n  ${_BOLD}Installatie${_RESET} ${_DIM}%s${_RESET}\n\n" "$(_ui_plural "$total" "fase" "fases")" >&3
         fi
         UI_PHASE_ID="$name"
         UI_PHASE_NUM="${name%%_*}"
@@ -561,6 +626,14 @@ print_banner() {
     ui_release_terminal
     # Vanuit de Update Runner: geen banner, die heeft al een kop.
     [[ "$INSTALL_UI_QUIET" == "true" && "${KINGSTRA_UI_EMBEDDED:-false}" == "true" ]] && return 0
+    # Vaste kop: banner staat bovenaan het scherm, ook na bootstrap.sh.
+    _ui_header_setup && return 0
+    # bootstrap.sh heeft de banner al getoond.
+    [[ "${KINGSTRA_BANNER_SHOWN:-false}" == "true" ]] && return 0
+    _print_banner_art
+}
+
+_print_banner_art() {
     cat <<'EOF'
 
    ██╗  ██╗██╗███╗   ██╗ ██████╗ ███████╗████████╗██████╗  █████╗
@@ -594,10 +667,10 @@ print_system_info() {
         local extra_text="${extras[0]}"
         for item in "${extras[@]:1}"; do extra_text+="$sep$item"; done
 
-        printf "  ${_BOLD}Systeem${_RESET}  %s\n" "$hw_text"
-        printf "  ${_BOLD}Opties${_RESET}   %s\n" "$extra_text"
-        printf "  ${_BOLD}Back-up${_RESET}  ${_DIM}%s${_RESET}\n" "${BACKUP_DIR:-wordt aangemaakt}"
-        printf "  ${_BOLD}Log${_RESET}      ${_DIM}%s${_RESET}\n\n" "$LOG_FILE"
+        printf "  ${_BOLD}Systeem${_RESET}  %s\n" "$hw_text" >&3
+        printf "  ${_BOLD}Opties${_RESET}   %s\n" "$extra_text" >&3
+        printf "  ${_BOLD}Back-up${_RESET}  ${_DIM}%s${_RESET}\n" "${BACKUP_DIR:-wordt aangemaakt}" >&3
+        printf "  ${_BOLD}Log${_RESET}      ${_DIM}%s${_RESET}\n\n" "$LOG_FILE" >&3
         return 0
     fi
     echo ""
@@ -632,9 +705,14 @@ print_summary() {
             status="${_BOLD}Dry-run klaar${_RESET}"
             details+=" $UI_GLYPH_DOT $(_ui_plural "$UI_TOTAL_DRY" "actie" "acties") in het log (of draai met --verbose)"
         fi
-        printf "\n  ${_GREEN}%s${_RESET} ${_BOLD}%3d%%${_RESET}\n" "$(_ui_bar "$total" "$total")" 100
-        printf "  %b  ${_DIM}%s${_RESET}\n" "$status" "$details"
-        printf "  ${_DIM}Volledige uitvoer: %s${_RESET}\n\n" "$LOG_FILE"
+        if [[ "$UI_HEADER" == "true" ]]; then
+            # De kop blijft staan; _install_log_cleanup heft de regio op.
+            _ui_live_draw "klaar"
+        else
+            printf "\n  ${_GREEN}%s${_RESET} ${_BOLD}%3d%%${_RESET}\n" "$(_ui_bar "$total" "$total")" 100 >&3
+        fi
+        printf "\n  %b  ${_DIM}%s${_RESET}\n" "$status" "$details" >&3
+        printf "  ${_DIM}Volledige uitvoer: %s${_RESET}\n\n" "$LOG_FILE" >&3
         # Wat hierna komt (instructies, herstartvraag) gewoon tonen.
         INSTALL_UI_QUIET=false
         if [[ -n "${INSTALL_AFTER_SUMMARY:-}" ]] && declare -f "$INSTALL_AFTER_SUMMARY" >/dev/null; then

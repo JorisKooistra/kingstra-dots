@@ -170,7 +170,12 @@ run_phases() {
         source "$phase_file"
 
         if declare -f "phase_run" > /dev/null; then
-            phase_run
+            if [[ "${INSTALL_UI_QUIET:-false}" == "true" ]]; then
+                # Losse uitvoer van scripts naar het log, niet door de weergave heen.
+                phase_run >>"$LOG_FILE" 2>&1
+            else
+                phase_run
+            fi
             unset -f phase_run
             log_phase_done "$phase"
         else

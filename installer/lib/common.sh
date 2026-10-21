@@ -75,7 +75,7 @@ run_cmd() {
             log_error "Commando mislukt (exit $rc): $cmd_pretty"
             if [[ -s "$tmp_out" ]]; then
                 log_error "Laatste uitvoer:"
-                tail -n 20 "$tmp_out" >&2
+                tail -n 20 "$tmp_out" >&4
             else
                 log_error "Geen uitvoer ontvangen. Volledige context: $LOG_FILE"
             fi
@@ -91,9 +91,12 @@ run_cmd() {
         _log_raw "TASK START: $task_msg"
         _ui_persist "$_CYAN" "$UI_GLYPH_STEP" "$task_msg"
         ui_release_terminal
-    else
-        log_step "$task_msg"
+        _log_raw "COMMAND: $cmd_pretty"
+        # Interactief (wachtwoord, chsh): rechtstreeks naar de terminal.
+        "$@" >&3 2>&4
+        return
     fi
+    log_step "$task_msg"
     _log_raw "COMMAND: $cmd_pretty"
     "$@"
 }

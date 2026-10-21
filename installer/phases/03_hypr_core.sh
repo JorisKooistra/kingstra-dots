@@ -66,7 +66,6 @@ _phase03_deploy_configs() {
 
 _phase03_prepare_hypr_scripts() {
     local -a scripts=(
-        "$REPO_ROOT/config/hypr/scripts/cliphist.sh"
         "$REPO_ROOT/config/hypr/scripts/fingerprint-first-run.sh"
         "$REPO_ROOT/config/hypr/scripts/hardware-switches.sh"
         "$REPO_ROOT/config/hypr/scripts/hypr-dispatch.sh"

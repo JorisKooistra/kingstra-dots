@@ -372,4 +372,5 @@ if [[ -n "$BOOTSTRAP_OVERRIDE_FILE" ]]; then
     INSTALL_ARGS+=("--override" "$BOOTSTRAP_OVERRIDE_FILE")
 fi
 
-exec bash "$REPO_DIR/install.sh" "${INSTALL_ARGS[@]}"
+# De banner staat al bovenaan; de installer hoeft hem niet te herhalen.
+KINGSTRA_BANNER_SHOWN=true exec bash "$REPO_DIR/install.sh" "${INSTALL_ARGS[@]}"
