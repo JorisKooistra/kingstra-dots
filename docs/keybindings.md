@@ -41,6 +41,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + LMB slepen` | Venster verslepen (muis) |
 | `Super + RMB slepen` | Venster aanpassen (muis) |
 | `Duimknop slepen` | Venster verslepen (Logitech M720, via logiops) |
+| `Duimknop dubbelklik` | Overzicht openen (zelfde als Super + Tab) |
 
 ---
 
@@ -76,7 +77,8 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | Toetsen | Actie |
 |---|---|
 | `Super + 1–0` | Naar werkruimte 1–10 |
-| `Super + Tab` | Vorige werkruimte |
+| `Super + Tab` | Werkruimte-overzicht |
+| `Alt + Tab` | Vorige werkruimte |
 | `Super + Scroll` | Door werkruimten bladeren |
 | `Super + Shift + 1–0` | Venster naar werkruimte 1–10 verplaatsen |
 | `Super + Alt + 1–0` | Venster stil verplaatsen (focus blijft hier) |

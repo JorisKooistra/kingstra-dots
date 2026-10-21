@@ -25,8 +25,10 @@ end
 bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 -- Duimknop van de Logitech M720: logid (config/system/logid.cfg) laat hem
--- BTN_TASK sturen, zodat vensters zonder Super te slepen zijn.
+-- BTN_TASK sturen, zodat vensters zonder Super te slepen zijn. Dubbelklikken
+-- opent het overzicht (zelfde als Super+Tab).
 bind("mouse:279", hl.dsp.window.drag(), { mouse = true })
+exec("mouse:279", scripts .. "/thumb-double-click.sh")
 bind(mod .. " + CTRL + right", hl.dsp.window.resize({ x = 60, y = 0 }), { repeating = true })
 bind(mod .. " + CTRL + left", hl.dsp.window.resize({ x = -60, y = 0 }), { repeating = true })
 bind(mod .. " + CTRL + up", hl.dsp.window.resize({ x = 0, y = -60 }), { repeating = true })
