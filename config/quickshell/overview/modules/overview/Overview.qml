@@ -88,6 +88,17 @@ Scope {
                     z: 0
                 }
 
+                // Sluiten zonder toetsenbord: klik op een lege plek, rechtsklik of
+                // een extra muisknop (bv. de M720-duimknop) sluit het overzicht.
+                // Werkruimtes en vensters accepteren alleen links/midden, dus
+                // andere knoppen vallen hier altijd doorheen.
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.AllButtons
+                    z: 0
+                    onClicked: GlobalStates.overviewOpen = false
+                }
+
                 Keys.onPressed: event => {
                     // close: Escape or Enter
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return) {
