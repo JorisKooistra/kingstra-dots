@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Super+T: toggle floating and remember the choice per app class, so the next
-# window of that app opens the same way. The list is read by lua/rules.lua.
+# window of that app opens the same way. The list is read by lua/rules.lua;
+# float-memory-watch.sh adds the size and position a float closed with.
+# Line format: class<TAB>width height<TAB>x% y% (geometry optional).
 set -u
 
 DISPATCH="$(dirname "${BASH_SOURCE[0]}")/hypr-dispatch.sh"
@@ -39,10 +41,11 @@ rule_name="remember-float-$(printf '%s' "$win_class" | sed 's/[^[:alnum:]]/-/g')
 mkdir -p "$(dirname "$FLOAT_STATE")" 2>/dev/null || exit 0
 touch "$FLOAT_STATE" 2>/dev/null || exit 0
 was_remembered=false
-grep -Fxq -- "$win_class" "$FLOAT_STATE" && was_remembered=true
+awk -F '\t' -v c="$win_class" '$1 == c { found = 1 } END { exit !found }' "$FLOAT_STATE" \
+    && was_remembered=true
 
 tmp_file="$(mktemp "${FLOAT_STATE}.tmp.XXXXXX")" || exit 0
-grep -Fxv -- "$win_class" "$FLOAT_STATE" > "$tmp_file" || true
+awk -F '\t' -v c="$win_class" '$1 != c' "$FLOAT_STATE" > "$tmp_file"
 if [[ "$win_floating" != "true" ]]; then
     printf '%s\n' "$win_class" >> "$tmp_file"
     now_float=true

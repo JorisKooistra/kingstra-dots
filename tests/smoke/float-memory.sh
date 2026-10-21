@@ -13,6 +13,8 @@ cat > "$work/bin/hyprctl" <<'FAKE'
 #!/usr/bin/env bash
 case "$1" in
     activewindow) cat "$FAKE_WINDOW" ;;
+    clients) cat "$FAKE_CLIENTS" ;;
+    monitors) cat "$FAKE_MONITORS" ;;
     *) printf '%s\n' "$*" >> "$FAKE_LOG" ;;
 esac
 FAKE
@@ -43,5 +45,32 @@ bash "$SCRIPT"
 printf '{"class":"org.quickshell","title":"x","floating":true}' > "$FAKE_WINDOW"
 bash "$SCRIPT"
 [[ ! -s "$KINGSTRA_FLOAT_STATE" ]] || fail 'Quickshell mag niet onthouden worden'
+
+# Geometry on close: size plus position as a percentage of its monitor.
+WATCH="$REPO_ROOT/config/hypr/scripts/float-memory-watch.sh"
+printf 'kitty\nfirefox\n' > "$KINGSTRA_FLOAT_STATE"
+export FAKE_CLIENTS="$work/clients.json" FAKE_MONITORS="$work/monitors.json"
+cat > "$FAKE_MONITORS" <<'JSON'
+[{"id":0,"x":0,"y":0,"width":1920,"height":1080,"scale":1,"transform":0},
+ {"id":1,"x":1920,"y":0,"width":2880,"height":1800,"scale":1.5,"transform":0}]
+JSON
+cat > "$FAKE_CLIENTS" <<'JSON'
+[{"address":"0xabc","class":"kitty","floating":true,"mapped":true,"monitor":1,"at":[2400,270],"size":[900,600]},
+ {"address":"0xdef","class":"firefox","floating":false,"mapped":true,"monitor":0,"at":[0,0],"size":[1900,1060]},
+ {"address":"0x123","class":"other","floating":true,"mapped":true,"monitor":0,"at":[10,10],"size":[300,300]}]
+JSON
+: > "$FAKE_LOG"
+# shellcheck disable=SC1090,SC2154
+( source <(sed '$d' "$WATCH"); refresh_cache; [[ ${#cache[@]} -eq 1 ]] || exit 1; handle_close abc ) \
+    || fail 'cache bevat verkeerde vensters'
+grep -Fxq $'kitty\t900 600\t25% 23%' "$KINGSTRA_FLOAT_STATE" \
+    || fail "geometrie niet onthouden: $(cat -A "$KINGSTRA_FLOAT_STATE")"
+grep -Fxq 'firefox' "$KINGSTRA_FLOAT_STATE" || fail 'andere apps aangetast'
+grep -Fq 'size = "900 600", move = "25% 23%"' "$FAKE_LOG" || fail "geen live-regel: $(cat "$FAKE_LOG")"
+
+# Toggling to tiled forgets the app including its geometry.
+printf '{"class":"kitty","title":"x","floating":true}' > "$FAKE_WINDOW"
+bash "$SCRIPT"
+! grep -q '^kitty' "$KINGSTRA_FLOAT_STATE" || fail 'kitty met geometrie niet vergeten'
 
 printf 'Float memory smoke test: OK\n'

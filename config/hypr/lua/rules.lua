@@ -38,9 +38,14 @@ local state_home = os.getenv("XDG_STATE_HOME") or ((os.getenv("HOME") or "") .. 
 local ok_file, float_file = pcall(io.open, state_home .. "/kingstra/floating-apps", "r")
 if ok_file and float_file then
     for line in float_file:lines() do
-        local class = line:match("^%s*(.-)%s*$")
+        -- class<TAB>width height<TAB>x% y%; the geometry is optional.
+        local class, size, move = line:match("^([^\t]*)\t?([^\t]*)\t?([^\t]*)")
+        class = class and class:match("^%s*(.-)%s*$") or ""
         if class ~= "" and not class:match("^#") then
-            rule("remember-float-" .. rule_slug(class), { class = "^" .. regex_escape(class) .. "$" }, { float = true })
+            local props = { float = true }
+            if size and size:match("^%d+ %d+$") then props.size = size end
+            if move and move:match("^%d+%% %d+%%$") then props.move = move end
+            rule("remember-float-" .. rule_slug(class), { class = "^" .. regex_escape(class) .. "$" }, props)
         end
     end
     float_file:close()
