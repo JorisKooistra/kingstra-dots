@@ -50,7 +50,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Q` | Venster sluiten |
 | `Super + F` | Volledig scherm |
 | `Super + M` | Maximaliseren (balk + gaps blijven zichtbaar) |
-| `Super + T` | Zwevend/geplaatst wisselen |
+| `Super + T` | Zwevend/geplaatst wisselen; onthouden per app (`~/.local/state/kingstra/floating-apps`) |
 | `Super + Alt + T` | Vastzetten op alle werkruimten (pin) |
 | `Super + Shift + Space` | Zwevend venster centreren |
 | `Super + P` | Pseudo-tiling (dwindle) |

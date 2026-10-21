@@ -23,6 +23,35 @@ rule("discord", { class = "^(discord|vesktop)$" }, { workspace = "special:discor
 rule("quickshell", { class = "^org\\.quickshell$" }, { float = true, no_blur = true, no_shadow = true, border_size = 0, no_initial_focus = true })
 rule("qs-master", { title = "^qs-master$" }, { float = true, no_blur = true, no_shadow = true, border_size = 0, no_initial_focus = true, workspace = "special:qs-master" })
 
+-- Super+T remembers per app class whether it floats (togglefloating-safe.sh
+-- keeps the list). Registered after the static rules, so a remembered choice
+-- wins on the next launch.
+local function regex_escape(text)
+    return (text:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?%{%}|\\]", "\\%0"))
+end
+
+local function rule_slug(class)
+    return (class:gsub("[^%w]", "-"))
+end
+
+local state_home = os.getenv("XDG_STATE_HOME") or ((os.getenv("HOME") or "") .. "/.local/state")
+local ok_file, float_file = pcall(io.open, state_home .. "/kingstra/floating-apps", "r")
+if ok_file and float_file then
+    for line in float_file:lines() do
+        local class = line:match("^%s*(.-)%s*$")
+        if class ~= "" and not class:match("^#") then
+            rule("remember-float-" .. rule_slug(class), { class = "^" .. regex_escape(class) .. "$" }, { float = true })
+        end
+    end
+    float_file:close()
+end
+
+-- Subtle border cue for every floating window; colors follow Matugen.
+local ok_colors, colors = pcall(require, "lua.colors")
+local floating_border = (ok_colors and type(colors) == "table" and colors.floating_border)
+    or "rgba(90d6a8ee) rgba(98cbff77)"
+rule("floating-border", { float = true }, { border_color = floating_border })
+
 local function layer(name, namespace, properties)
     properties.name = name
     properties.match = { namespace = "^" .. namespace .. "$" }
