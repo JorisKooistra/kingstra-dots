@@ -57,6 +57,10 @@ mv -f -- "$tmp_file" "$FLOAT_STATE"
 # Apply to new windows in this session too. A later rule with the same match
 # overrides an earlier one, so float = false undoes a remembered float.
 if [[ "$now_float" == "true" || "$was_remembered" == "true" ]]; then
-    hyprctl eval "hl.window_rule({ name = $(lua_quote "$rule_name"), match = { class = $(lua_quote "$class_regex") }, float = $now_float })" \
+    # Without a remembered size a new float opens at a calm default size,
+    # not at the (near fullscreen) size the app asks for after tiling.
+    props="float = $now_float"
+    [[ "$now_float" == "true" ]] && props+=", size = \"60% 65%\", center = true"
+    hyprctl eval "hl.window_rule({ name = $(lua_quote "$rule_name"), match = { class = $(lua_quote "$class_regex") }, $props })" \
         >/dev/null 2>&1 || true
 fi

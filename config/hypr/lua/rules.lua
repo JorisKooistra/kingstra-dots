@@ -43,8 +43,15 @@ if ok_file and float_file then
         class = class and class:match("^%s*(.-)%s*$") or ""
         if class ~= "" and not class:match("^#") then
             local props = { float = true }
-            if size and size:match("^%d+ %d+$") then props.size = size end
-            if move and move:match("^%d+%% %d+%%$") then props.move = move end
+            if size and size:match("^%d+ %d+$") then
+                props.size = size
+                if move and move:match("^%d+%% %d+%%$") then props.move = move end
+            else
+                -- No remembered size: a calm default instead of the size the
+                -- app asks for itself (kitty asks for its last tiled size).
+                props.size = "60% 65%"
+                props.center = true
+            end
             rule("remember-float-" .. rule_slug(class), { class = "^" .. regex_escape(class) .. "$" }, props)
         end
     end

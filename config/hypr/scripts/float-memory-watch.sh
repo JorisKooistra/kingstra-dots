@@ -9,6 +9,8 @@ set -u
 
 FLOAT_STATE="${KINGSTRA_FLOAT_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/floating-apps}"
 POLL_SECONDS=2
+# Keep in sync with rules.lua and togglefloating-safe.sh.
+DEFAULT_SIZE="60% 65%"
 
 lua_quote() {
     local value="${1:-}"
@@ -25,19 +27,29 @@ rule_name() {
     printf 'remember-float-%s' "$(printf '%s' "$1" | sed 's/[^[:alnum:]]/-/g')"
 }
 
-# remember_geometry CLASS W H XPCT YPCT: store and apply live, only for apps
-# that are still on the floating list.
+# remember_geometry CLASS [W H XPCT YPCT]: store and apply live, only for apps
+# that are still on the floating list. Without geometry the entry is reset to
+# the default float size (a window that closed nearly fullscreen).
 remember_geometry() {
-    local class="$1" size="$2 $3" move="$4% $5%" tmp_file
+    local class="$1" size="" move="" tmp_file props
+    if [[ -n "${2:-}" ]]; then
+        size="$2 $3"
+        move="$4% $5%"
+    fi
     [[ -f "$FLOAT_STATE" ]] || return 0
     awk -F '\t' -v c="$class" '$1 == c { found = 1 } END { exit !found }' "$FLOAT_STATE" || return 0
 
     tmp_file="$(mktemp "${FLOAT_STATE}.tmp.XXXXXX")" || return 0
     awk -F '\t' -v OFS='\t' -v c="$class" -v s="$size" -v m="$move" \
-        '$1 == c { print c, s, m; next } { print }' "$FLOAT_STATE" > "$tmp_file"
+        '$1 == c { if (s == "") print c; else print c, s, m; next } { print }' "$FLOAT_STATE" > "$tmp_file"
     mv -f -- "$tmp_file" "$FLOAT_STATE"
 
-    hyprctl eval "hl.window_rule({ name = $(lua_quote "$(rule_name "$class")"), match = { class = $(lua_quote "$(class_regex "$class")") }, float = true, size = $(lua_quote "$size"), move = $(lua_quote "$move") })" \
+    if [[ -n "$size" ]]; then
+        props="size = $(lua_quote "$size"), move = $(lua_quote "$move")"
+    else
+        props="size = $(lua_quote "$DEFAULT_SIZE"), center = true"
+    fi
+    hyprctl eval "hl.window_rule({ name = $(lua_quote "$(rule_name "$class")"), match = { class = $(lua_quote "$(class_regex "$class")") }, float = true, $props })" \
         >/dev/null 2>&1 || true
 }
 
@@ -61,10 +73,15 @@ refresh_cache() {
         | select($m != null)
         | (if ($m.transform % 2) == 1 then [$m.height, $m.width] else [$m.width, $m.height] end
            | map(. / $m.scale)) as $mon
-        | select($w.size[0] < $mon[0] and $w.size[1] < $mon[1])
-        | [$w.address, $w.class, $w.size[0], $w.size[1],
-           ((($w.at[0] - $m.x) / $mon[0] * 100) | round | if . < 0 then 0 elif . > 99 then 99 else . end),
-           ((($w.at[1] - $m.y) / $mon[1] * 100) | round | if . < 0 then 0 elif . > 99 then 99 else . end)]
+        # A float that still has its tiled (near fullscreen) size is not a
+        # size worth keeping; it resets to the default float size instead.
+        | if $w.size[0] >= $mon[0] * 0.9 or $w.size[1] >= $mon[1] * 0.9 then
+            [$w.address, $w.class]
+          else
+            [$w.address, $w.class, $w.size[0], $w.size[1],
+             ((($w.at[0] - $m.x) / $mon[0] * 100) | round | if . < 0 then 0 elif . > 99 then 99 else . end),
+             ((($w.at[1] - $m.y) / $mon[1] * 100) | round | if . < 0 then 0 elif . > 99 then 99 else . end)]
+          end
         | @tsv' <<< "$clients" 2>/dev/null)
 }
 

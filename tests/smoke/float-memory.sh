@@ -27,7 +27,7 @@ fail() { printf 'float-memory: %s\n' "$*" >&2; exit 1; }
 printf '{"class":"org.gnome.Nautilus","title":"x","floating":false}' > "$FAKE_WINDOW"
 bash "$SCRIPT"
 grep -Fxq 'org.gnome.Nautilus' "$KINGSTRA_FLOAT_STATE" || fail 'class niet onthouden'
-grep -Fq 'eval hl.window_rule({ name = "remember-float-org-gnome-Nautilus", match = { class = "^org\\.gnome\\.Nautilus$" }, float = true })' "$FAKE_LOG" \
+grep -Fq 'eval hl.window_rule({ name = "remember-float-org-gnome-Nautilus", match = { class = "^org\\.gnome\\.Nautilus$" }, float = true, size = "60% 65%", center = true })' "$FAKE_LOG" \
     || fail "verkeerde live-regel: $(cat "$FAKE_LOG")"
 
 printf '{"class":"org.gnome.Nautilus","title":"x","floating":true}' > "$FAKE_WINDOW"
@@ -67,6 +67,16 @@ grep -Fxq $'kitty\t900 600\t25% 23%' "$KINGSTRA_FLOAT_STATE" \
     || fail "geometrie niet onthouden: $(cat -A "$KINGSTRA_FLOAT_STATE")"
 grep -Fxq 'firefox' "$KINGSTRA_FLOAT_STATE" || fail 'andere apps aangetast'
 grep -Fq 'size = "900 600", move = "25% 23%"' "$FAKE_LOG" || fail "geen live-regel: $(cat "$FAKE_LOG")"
+
+# A float that closes nearly fullscreen resets to the default size.
+cat > "$FAKE_CLIENTS" <<'JSON'
+[{"address":"0xabc","class":"kitty","floating":true,"mapped":true,"monitor":0,"at":[10,10],"size":[1900,1040]}]
+JSON
+: > "$FAKE_LOG"
+# shellcheck disable=SC1090
+( source <(sed '$d' "$WATCH"); refresh_cache; handle_close abc ) || fail 'reset mislukt'
+grep -Fxq 'kitty' "$KINGSTRA_FLOAT_STATE" || fail "bijna schermvullende maat niet gereset: $(cat -A "$KINGSTRA_FLOAT_STATE")"
+grep -Fq 'size = "60% 65%", center = true' "$FAKE_LOG" || fail "geen standaardmaat: $(cat "$FAKE_LOG")"
 
 # Toggling to tiled forgets the app including its geometry.
 printf '{"class":"kitty","title":"x","floating":true}' > "$FAKE_WINDOW"
