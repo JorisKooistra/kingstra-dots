@@ -11,7 +11,7 @@ rule("polkit", { class = "^polkit-gnome-authentication-agent-1$" }, { float = tr
 rule("portal-gtk", { class = "^xdg-desktop-portal-gtk$" }, { float = true })
 rule("nautilus-properties", { class = "^org\\.gnome\\.Nautilus$", title = "(Bestandseigenschappen|File Properties)" }, { float = true })
 rule("file-dialogs", { title = "^(Open File|Open Folder|Save File|Save As|Confirm)$" }, { float = true })
-rule("picture-in-picture", { title = "^Picture-in-Picture$" }, { float = true, pin = true, move = "69% 4%", size = "25% 25%", keep_aspect_ratio = true })
+rule("picture-in-picture", { title = "^Picture-in-Picture$" }, { float = true, pin = true, move = "monitor_w*0.69 monitor_h*0.04", size = "monitor_w*0.25 monitor_h*0.25", keep_aspect_ratio = true })
 rule("media-viewer", { title = "^Media viewer$" }, { float = true })
 rule("kitty-opacity", { class = "^kitty$" }, { opacity = "0.95 0.88" })
 rule("hyprland-opacity", { class = "^Hyprland$" }, { opacity = "1.0 1.0" })
@@ -43,16 +43,21 @@ if ok_file and float_file then
         class = class and class:match("^%s*(.-)%s*$") or ""
         if class ~= "" and not class:match("^#") then
             local props = { float = true }
+            -- Hyprland takes no percentages here: size and move are pixels or
+            -- expressions, and move is relative to the monitor it opens on.
             if size and size:match("^%d+ %d+$") then
                 props.size = size
-                if move and move:match("^%d+%% %d+%%$") then props.move = move end
+                local x, y = (move or ""):match("^(%d+)%% (%d+)%%$")
+                if x then
+                    props.move = string.format("monitor_w*%.2f monitor_h*%.2f", tonumber(x) / 100, tonumber(y) / 100)
+                end
             else
-                -- No remembered size: a calm default instead of the size the
-                -- app asks for itself (kitty asks for its last tiled size).
-                props.size = "60% 65%"
+                -- No remembered size yet: a calm default instead of the size
+                -- the app asks for itself.
+                props.size = "monitor_w*0.6 monitor_h*0.65"
                 props.center = true
             end
-            rule("remember-float-" .. rule_slug(class), { class = "^" .. regex_escape(class) .. "$" }, props)
+            pcall(rule, "remember-float-" .. rule_slug(class), { class = "^" .. regex_escape(class) .. "$" }, props)
         end
     end
     float_file:close()

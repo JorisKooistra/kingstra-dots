@@ -39,7 +39,10 @@ remember_geometry() {
         '$1 == c { print c, s, m; next } { print }' "$FLOAT_STATE" > "$tmp_file"
     mv -f -- "$tmp_file" "$FLOAT_STATE"
 
-    hyprctl eval "hl.window_rule({ name = $(lua_quote "$(rule_name "$class")"), match = { class = $(lua_quote "$(class_regex "$class")") }, float = true, size = $(lua_quote "$size"), move = $(lua_quote "$move") })" \
+    # The rule takes expressions, not percentages (same as rules.lua).
+    local move_expr
+    move_expr="$(printf 'monitor_w*%d.%02d monitor_h*%d.%02d' $(($4 / 100)) $(($4 % 100)) $(($5 / 100)) $(($5 % 100)))"
+    hyprctl eval "hl.window_rule({ name = $(lua_quote "$(rule_name "$class")"), match = { class = $(lua_quote "$(class_regex "$class")") }, float = true, size = $(lua_quote "$size"), move = $(lua_quote "$move_expr") })" \
         >/dev/null 2>&1 || true
 }
 

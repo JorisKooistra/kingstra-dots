@@ -27,7 +27,7 @@ fail() { printf 'float-memory: %s\n' "$*" >&2; exit 1; }
 printf '{"class":"org.gnome.Nautilus","title":"x","floating":false}' > "$FAKE_WINDOW"
 bash "$SCRIPT"
 grep -Fxq 'org.gnome.Nautilus' "$KINGSTRA_FLOAT_STATE" || fail 'class niet onthouden'
-grep -Fq 'eval hl.window_rule({ name = "remember-float-org-gnome-Nautilus", match = { class = "^org\\.gnome\\.Nautilus$" }, float = true, size = "60% 65%", center = true })' "$FAKE_LOG" \
+grep -Fq 'eval hl.window_rule({ name = "remember-float-org-gnome-Nautilus", match = { class = "^org\\.gnome\\.Nautilus$" }, float = true, size = "monitor_w*0.6 monitor_h*0.65", center = true })' "$FAKE_LOG" \
     || fail "verkeerde live-regel: $(cat "$FAKE_LOG")"
 
 printf '{"class":"org.gnome.Nautilus","title":"x","floating":true}' > "$FAKE_WINDOW"
@@ -66,7 +66,7 @@ JSON
 grep -Fxq $'kitty\t900 600\t25% 23%' "$KINGSTRA_FLOAT_STATE" \
     || fail "geometrie niet onthouden: $(cat -A "$KINGSTRA_FLOAT_STATE")"
 grep -Fxq 'firefox' "$KINGSTRA_FLOAT_STATE" || fail 'andere apps aangetast'
-grep -Fq 'size = "900 600", move = "25% 23%"' "$FAKE_LOG" || fail "geen live-regel: $(cat "$FAKE_LOG")"
+grep -Fq 'size = "900 600", move = "monitor_w*0.25 monitor_h*0.23"' "$FAKE_LOG" || fail "geen live-regel: $(cat "$FAKE_LOG")"
 
 # A large float keeps its size, it is stored as soon as it is seen (no close
 # needed) and a window larger than its monitor is clamped to it.

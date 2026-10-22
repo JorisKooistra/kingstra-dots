@@ -60,7 +60,7 @@ if [[ "$now_float" == "true" || "$was_remembered" == "true" ]]; then
     # Without a remembered size a new float opens at a calm default size,
     # not at the (near fullscreen) size the app asks for after tiling.
     props="float = $now_float"
-    [[ "$now_float" == "true" ]] && props+=", size = \"60% 65%\", center = true"
+    [[ "$now_float" == "true" ]] && props+=", size = \"monitor_w*0.6 monitor_h*0.65\", center = true"
     hyprctl eval "hl.window_rule({ name = $(lua_quote "$rule_name"), match = { class = $(lua_quote "$class_regex") }, $props })" \
         >/dev/null 2>&1 || true
 fi
