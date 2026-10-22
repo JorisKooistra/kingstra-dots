@@ -68,15 +68,23 @@ grep -Fxq $'kitty\t900 600\t25% 23%' "$KINGSTRA_FLOAT_STATE" \
 grep -Fxq 'firefox' "$KINGSTRA_FLOAT_STATE" || fail 'andere apps aangetast'
 grep -Fq 'size = "900 600", move = "25% 23%"' "$FAKE_LOG" || fail "geen live-regel: $(cat "$FAKE_LOG")"
 
-# A float that closes nearly fullscreen resets to the default size.
+# A large float keeps its size, it is stored as soon as it is seen (no close
+# needed) and a window larger than its monitor is clamped to it.
 cat > "$FAKE_CLIENTS" <<'JSON'
-[{"address":"0xabc","class":"kitty","floating":true,"mapped":true,"monitor":0,"at":[10,10],"size":[1900,1040]}]
+[{"address":"0xabc","class":"kitty","floating":true,"mapped":true,"monitor":0,"at":[10,10],"size":[1900,1040]},
+ {"address":"0xdef","class":"firefox","floating":true,"mapped":true,"monitor":0,"at":[0,0],"size":[2500,1200]}]
 JSON
 : > "$FAKE_LOG"
 # shellcheck disable=SC1090
-( source <(sed '$d' "$WATCH"); refresh_cache; handle_close abc ) || fail 'reset mislukt'
-grep -Fxq 'kitty' "$KINGSTRA_FLOAT_STATE" || fail "bijna schermvullende maat niet gereset: $(cat -A "$KINGSTRA_FLOAT_STATE")"
-grep -Fq 'size = "60% 65%", center = true' "$FAKE_LOG" || fail "geen standaardmaat: $(cat "$FAKE_LOG")"
+( source <(sed '$d' "$WATCH"); refresh_cache ) || fail 'verversen mislukt'
+grep -Fxq $'kitty\t1900 1040\t1% 1%' "$KINGSTRA_FLOAT_STATE" \
+    || fail "grote maat niet onthouden: $(cat -A "$KINGSTRA_FLOAT_STATE")"
+grep -Fxq $'firefox\t1920 1080\t0% 0%' "$KINGSTRA_FLOAT_STATE" \
+    || fail "te grote maat niet begrensd: $(cat -A "$KINGSTRA_FLOAT_STATE")"
+: > "$FAKE_LOG"
+# shellcheck disable=SC1090
+( source <(sed '$d' "$WATCH"); refresh_cache ) || fail 'verversen mislukt'
+[[ ! -s "$FAKE_LOG" ]] || fail "ongewijzigde maat opnieuw toegepast: $(cat "$FAKE_LOG")"
 
 # Toggling to tiled forgets the app including its geometry.
 printf '{"class":"kitty","title":"x","floating":true}' > "$FAKE_WINDOW"
