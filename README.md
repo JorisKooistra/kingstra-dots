@@ -371,6 +371,10 @@ password field to trigger fingerprint auth again; typing a password remains the 
 
 Inspired by [imperative-dots](https://github.com/ilyamiro/imperative-dots) by ilyamiro.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). The installed version is in `VERSION`.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
