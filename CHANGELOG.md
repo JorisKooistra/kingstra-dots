@@ -28,6 +28,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - `installer/profiles/` replaced by `installer/overrides.example.conf`; `~/.config/kingstra/overrides.conf` is read on every install and update.
 
 ### Styling
+- Opening animations of Battery, Focus time, Monitors and Settings shortened from 1–1.8 s to about half a second, without the springy overshoot; they now follow the animation speed setting.
+- Motion profiles "snappy" (neon) and "calm" (paper) now actually change the tempo.
+- A panel that fails to load shows a clear message with `kingstra doctor` instead of a placeholder.
 - Panels and popups use the theme's mono font (`ThemeConfig.textFont`, ~430 places) instead of a fixed font name, with JetBrains Mono as fallback when the theme font is not installed. Nerd icons use `ThemeConfig.iconFont`.
 - About 450 hover and state animations in panels follow the theme's motion speed (`ThemeConfig.duration`), like the rail already did.
 - `ttf-ibm-plex` is installed for the paper theme.

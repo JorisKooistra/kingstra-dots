@@ -85,7 +85,7 @@ Item {
     // Animation properties
     property real animatedTotalSeconds: 0
     Behavior on animatedTotalSeconds {
-        NumberAnimation { duration: 850; easing.type: Easing.OutQuint }
+        NumberAnimation { duration: ThemeConfig.duration(520); easing.type: Easing.OutQuint }
     }
     onTotalSecondsChanged: {
         animatedTotalSeconds = totalSeconds;
@@ -118,45 +118,47 @@ Item {
     property real introBottom: 0.0
     property real introAppBars: 0.0
 
+    // Ingekort zoals bij Batterij: de golf blijft, maar staat binnen een
+    // halve seconde en volgt animatiesnelheid en bewegingsprofiel.
     ParallelAnimation {
         running: true
 
         // Base window fades, scales slightly
-        NumberAnimation { target: window; property: "introMain"; from: 0; to: 1.0; duration: 900; easing.type: Easing.OutQuart }
+        NumberAnimation { target: window; property: "introMain"; from: 0; to: 1.0; duration: ThemeConfig.duration(340); easing.type: Easing.OutQuart }
 
         // Header drops down
         SequentialAnimation {
-            PauseAnimation { duration: 100 }
-            NumberAnimation { target: window; property: "introHeader"; from: 0; to: 1.0; duration: 800; easing.type: Easing.OutBack; easing.overshoot: 1.0 }
+            PauseAnimation { duration: ThemeConfig.duration(30) }
+            NumberAnimation { target: window; property: "introHeader"; from: 0; to: 1.0; duration: ThemeConfig.duration(320); easing.type: Easing.OutQuint }
         }
 
         // Stats Row scales and springs up
         SequentialAnimation {
-            PauseAnimation { duration: 250 }
-            NumberAnimation { target: window; property: "introStats"; from: 0; to: 1.0; duration: 900; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
+            PauseAnimation { duration: ThemeConfig.duration(70) }
+            NumberAnimation { target: window; property: "introStats"; from: 0; to: 1.0; duration: ThemeConfig.duration(360); easing.type: Easing.OutQuint }
         }
 
         // Mid Charts slide in from opposite sides
         SequentialAnimation {
-            PauseAnimation { duration: 350 }
-            NumberAnimation { target: window; property: "introMidLeft"; from: 0; to: 1.0; duration: 850; easing.type: Easing.OutQuart }
+            PauseAnimation { duration: ThemeConfig.duration(100) }
+            NumberAnimation { target: window; property: "introMidLeft"; from: 0; to: 1.0; duration: ThemeConfig.duration(340); easing.type: Easing.OutQuart }
         }
         
         // Universal Bar Fill starts early, runs slow and smooth
         SequentialAnimation {
-            PauseAnimation { duration: 300 } // Starts slightly before the charts finish entering
-            NumberAnimation { target: window; property: "introAppBars"; from: 0; to: 1.0; duration: 1300; easing.type: Easing.OutQuart }
+            PauseAnimation { duration: ThemeConfig.duration(90) } // Starts slightly before the charts finish entering
+            NumberAnimation { target: window; property: "introAppBars"; from: 0; to: 1.0; duration: ThemeConfig.duration(520); easing.type: Easing.OutQuart }
         }
         
         SequentialAnimation {
-            PauseAnimation { duration: 450 }
-            NumberAnimation { target: window; property: "introMidRight"; from: 0; to: 1.0; duration: 850; easing.type: Easing.OutQuart }
+            PauseAnimation { duration: ThemeConfig.duration(130) }
+            NumberAnimation { target: window; property: "introMidRight"; from: 0; to: 1.0; duration: ThemeConfig.duration(340); easing.type: Easing.OutQuart }
         }
 
         // Bottom List / Chart sweeps up with internal cascading
         SequentialAnimation {
-            PauseAnimation { duration: 550 }
-            NumberAnimation { target: window; property: "introBottom"; from: 0; to: 1.0; duration: 1000; easing.type: Easing.OutExpo }
+            PauseAnimation { duration: ThemeConfig.duration(160) }
+            NumberAnimation { target: window; property: "introBottom"; from: 0; to: 1.0; duration: ThemeConfig.duration(400); easing.type: Easing.OutExpo }
         }
     }
 
@@ -167,13 +169,13 @@ Item {
     // Clean, unified exit animation for when an action is clicked
     ParallelAnimation {
         id: exitAnim
-        NumberAnimation { target: window; property: "introMain"; to: 0; duration: 400; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introHeader"; to: 0; duration: 300; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introStats"; to: 0; duration: 350; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introMidLeft"; to: 0; duration: 250; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introMidRight"; to: 0; duration: 200; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introBottom"; to: 0; duration: 150; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introAppBars"; to: 0; duration: 250; easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introMain"; to: 0; duration: ThemeConfig.duration(240); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introHeader"; to: 0; duration: ThemeConfig.duration(200); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introStats"; to: 0; duration: ThemeConfig.duration(220); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introMidLeft"; to: 0; duration: ThemeConfig.duration(180); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introMidRight"; to: 0; duration: ThemeConfig.duration(160); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introBottom"; to: 0; duration: ThemeConfig.duration(140); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introAppBars"; to: 0; duration: ThemeConfig.duration(180); easing.type: Easing.InQuart }
     }
 
     property real globalOrbitAngle: 0

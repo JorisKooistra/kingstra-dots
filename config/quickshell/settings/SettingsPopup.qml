@@ -2063,10 +2063,12 @@ Item {
 
     SequentialAnimation {
         id: startupSequence
-        PauseAnimation { duration: 50 }
-        NumberAnimation { target: root; property: "introBase"; to: 1.0; duration: 350; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
-        NumberAnimation { target: root; property: "introSidebar"; to: 1.0; duration: 300; easing.type: Easing.OutBack; easing.overshoot: 1.5 }
-        NumberAnimation { target: root; property: "introContent"; to: 1.0; duration: 350; easing.type: Easing.OutBack; easing.overshoot: 1.3 }
+        PauseAnimation { duration: ThemeConfig.duration(30) }
+        // Geen terugverende overshoot meer: die las als trillen naast de
+        // strakke paneelgroei. Volgt nu ook de animatiesnelheid.
+        NumberAnimation { target: root; property: "introBase"; to: 1.0; duration: ThemeConfig.duration(240); easing.type: Easing.OutQuint }
+        NumberAnimation { target: root; property: "introSidebar"; to: 1.0; duration: ThemeConfig.duration(200); easing.type: Easing.OutQuint }
+        NumberAnimation { target: root; property: "introContent"; to: 1.0; duration: ThemeConfig.duration(240); easing.type: Easing.OutQuint }
     }
 
     SequentialAnimation {

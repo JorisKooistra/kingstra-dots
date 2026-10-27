@@ -178,52 +178,56 @@ Item {
     property real introActions: 0
     property real introProfiles: 0
 
+    // De golf blijft, maar is ingekort: het paneel zelf staat na ~260 ms,
+    // en een inhoud die daarna nog anderhalve seconde naloopt voelt traag.
+    // Alles loopt via ThemeConfig.duration(), zodat animatiesnelheid en het
+    // bewegingsprofiel van het thema ook hier gelden.
     ParallelAnimation {
         running: true
 
         // Base window fades, scales, and lifts
-        NumberAnimation { target: window; property: "introMain"; from: 0; to: 1.0; duration: 800; easing.type: Easing.OutQuart }
+        NumberAnimation { target: window; property: "introMain"; from: 0; to: 1.0; duration: ThemeConfig.duration(320); easing.type: Easing.OutQuart }
 
         // Top bar drops in
         SequentialAnimation {
-            PauseAnimation { duration: 100 }
-            NumberAnimation { target: window; property: "introTop"; from: 0; to: 1.0; duration: 800; easing.type: Easing.OutBack; easing.overshoot: 1.0 }
+            PauseAnimation { duration: ThemeConfig.duration(30) }
+            NumberAnimation { target: window; property: "introTop"; from: 0; to: 1.0; duration: ThemeConfig.duration(320); easing.type: Easing.OutQuint }
         }
 
         // Central core pops out and breathes
         SequentialAnimation {
-            PauseAnimation { duration: 250 }
-            NumberAnimation { target: window; property: "introCore"; from: 0; to: 1.0; duration: 900; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
+            PauseAnimation { duration: ThemeConfig.duration(70) }
+            NumberAnimation { target: window; property: "introCore"; from: 0; to: 1.0; duration: ThemeConfig.duration(360); easing.type: Easing.OutQuint }
         }
 
         // Hardware sliders slide up
         SequentialAnimation {
-            PauseAnimation { duration: 350 }
-            NumberAnimation { target: window; property: "introSliders"; from: 0; to: 1.0; duration: 800; easing.type: Easing.OutQuart }
+            PauseAnimation { duration: ThemeConfig.duration(100) }
+            NumberAnimation { target: window; property: "introSliders"; from: 0; to: 1.0; duration: ThemeConfig.duration(320); easing.type: Easing.OutQuart }
         }
 
         // Actions waterfall
         SequentialAnimation {
-            PauseAnimation { duration: 450 }
-            NumberAnimation { target: window; property: "introActions"; from: 0; to: 1.0; duration: 800; easing.type: Easing.OutExpo }
+            PauseAnimation { duration: ThemeConfig.duration(130) }
+            NumberAnimation { target: window; property: "introActions"; from: 0; to: 1.0; duration: ThemeConfig.duration(320); easing.type: Easing.OutExpo }
         }
 
         // Power profiles finish the wave
         SequentialAnimation {
-            PauseAnimation { duration: 550 }
-            NumberAnimation { target: window; property: "introProfiles"; from: 0; to: 1.0; duration: 850; easing.type: Easing.OutBack; easing.overshoot: 0.8 }
+            PauseAnimation { duration: ThemeConfig.duration(160) }
+            NumberAnimation { target: window; property: "introProfiles"; from: 0; to: 1.0; duration: ThemeConfig.duration(340); easing.type: Easing.OutQuint }
         }
     }
 
     // Clean, unified exit animation for when an action is clicked
     ParallelAnimation {
         id: exitAnim
-        NumberAnimation { target: window; property: "introMain"; to: 0; duration: 400; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introTop"; to: 0; duration: 300; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introCore"; to: 0; duration: 350; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introSliders"; to: 0; duration: 250; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introActions"; to: 0; duration: 200; easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introProfiles"; to: 0; duration: 150; easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introMain"; to: 0; duration: ThemeConfig.duration(240); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introTop"; to: 0; duration: ThemeConfig.duration(200); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introCore"; to: 0; duration: ThemeConfig.duration(220); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introSliders"; to: 0; duration: ThemeConfig.duration(180); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introActions"; to: 0; duration: ThemeConfig.duration(160); easing.type: Easing.InQuart }
+        NumberAnimation { target: window; property: "introProfiles"; to: 0; duration: ThemeConfig.duration(140); easing.type: Easing.InQuart }
     }
 
     // -------------------------------------------------------------------------

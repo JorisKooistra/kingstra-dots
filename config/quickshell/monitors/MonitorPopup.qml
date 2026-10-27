@@ -85,12 +85,14 @@ Item {
 
     Component.onCompleted: startupAnim.start()
 
+    // Ingekort (was tot 1,8 s): het paneel staat na ~260 ms, de inhoud volgt
+    // nu binnen een halve seconde en respecteert de animatiesnelheid.
     ParallelAnimation {
         id: startupAnim
-        NumberAnimation { target: window; property: "introProgress"; from: 0.0; to: 1.0; duration: 900; easing.type: Easing.OutQuint }
-        NumberAnimation { target: window; property: "monitorScale"; from: 0.85; to: 1.0; duration: 1200; easing.type: Easing.OutQuint }
-        NumberAnimation { target: window; property: "uiYOffset"; from: window.s(25); to: 0; duration: 1800; easing.type: Easing.OutQuint }
-        NumberAnimation { target: window; property: "screenLight"; from: 0.0; to: 1.0; duration: 1500; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: window; property: "introProgress"; from: 0.0; to: 1.0; duration: ThemeConfig.duration(360); easing.type: Easing.OutQuint }
+        NumberAnimation { target: window; property: "monitorScale"; from: 0.85; to: 1.0; duration: ThemeConfig.duration(440); easing.type: Easing.OutQuint }
+        NumberAnimation { target: window; property: "uiYOffset"; from: window.s(25); to: 0; duration: ThemeConfig.duration(480); easing.type: Easing.OutQuint }
+        NumberAnimation { target: window; property: "screenLight"; from: 0.0; to: 1.0; duration: ThemeConfig.duration(520); easing.type: Easing.InOutQuad }
     }
     property bool applyHovered: false
     property bool applyPressed: false

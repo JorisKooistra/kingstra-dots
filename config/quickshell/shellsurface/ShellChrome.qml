@@ -997,7 +997,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.horizontalCenterOffset: active ? 2 : 0
                             text: wsId
-                            font.family: ThemeConfig.monoFont
+                            font.family: ThemeConfig.textFont
                             font.pixelSize: 12
                             font.weight: active ? Font.Black : Font.Bold
                             color: active ? root.hotColor : root.mocha.text
@@ -1270,7 +1270,7 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: wsId
-                            font.family: ThemeConfig.monoFont
+                            font.family: ThemeConfig.textFont
                             font.pixelSize: 11
                             font.weight: active ? Font.Black : Font.Bold
                             color: active ? root.hotColor : root.mocha.text
@@ -1743,7 +1743,7 @@ Item {
                 visible: btn.text !== ""
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: btn.text
-                font.family: ThemeConfig.monoFont
+                font.family: ThemeConfig.textFont
                 font.pixelSize: 8
                 font.weight: Font.Bold
                 color: root.mocha.text
@@ -1770,7 +1770,7 @@ Item {
                 id: badgeText
                 anchors.centerIn: parent
                 text: btn.badge > 99 ? "99+" : String(btn.badge)
-                font.family: ThemeConfig.monoFont
+                font.family: ThemeConfig.textFont
                 font.pixelSize: 8
                 font.weight: Font.Black
                 color: root.mocha.base
@@ -1832,7 +1832,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: clock.hoursText
-                font.family: ThemeConfig.monoFont
+                font.family: ThemeConfig.textFont
                 font.pixelSize: 14
                 font.weight: Font.Black
                 color: clock.accent
@@ -1840,7 +1840,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: clock.minutesText
-                font.family: ThemeConfig.monoFont
+                font.family: ThemeConfig.textFont
                 font.pixelSize: 14
                 font.weight: Font.Black
                 color: root.mocha.text
@@ -1922,7 +1922,7 @@ Item {
                 visible: btn.text !== ""
                 anchors.verticalCenter: parent.verticalCenter
                 text: btn.text
-                font.family: ThemeConfig.monoFont
+                font.family: ThemeConfig.textFont
                 font.pixelSize: 9
                 font.weight: Font.Bold
                 color: root.mocha.text
@@ -1948,7 +1948,7 @@ Item {
                 id: badgeText
                 anchors.centerIn: parent
                 text: btn.badge > 99 ? "99+" : String(btn.badge)
-                font.family: ThemeConfig.monoFont
+                font.family: ThemeConfig.textFont
                 font.pixelSize: 8
                 font.weight: Font.Black
                 color: root.mocha.base
@@ -2061,7 +2061,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: root.isMuted ? "--" : root.volPercent
-                font.family: ThemeConfig.monoFont
+                font.family: ThemeConfig.textFont
                 font.pixelSize: 8
                 font.weight: Font.Bold
                 color: root.mocha.text
@@ -2269,7 +2269,7 @@ Item {
             visible: glyph.value !== ""
             anchors.horizontalCenter: parent.horizontalCenter
             text: glyph.value
-            font.family: ThemeConfig.monoFont
+            font.family: ThemeConfig.textFont
             font.pixelSize: 8
             font.weight: Font.Bold
             color: root.mocha.text
@@ -2364,7 +2364,7 @@ Item {
             visible: sglyph.value !== ""
             anchors.verticalCenter: parent.verticalCenter
             text: sglyph.value
-            font.family: ThemeConfig.monoFont
+            font.family: ThemeConfig.textFont
             font.pixelSize: 9
             font.weight: Font.Bold
             color: root.mocha.text

@@ -547,17 +547,19 @@ Item {
                 anchors.margins: 18
                 spacing: 8
                 Text {
-                    text: root.sourceEntryId === "" ? "" : root.sourceEntryId
+                    text: "Dit paneel kon niet laden"
                     font.family: ThemeConfig.displayFont
                     font.pixelSize: 16
                     color: mocha.text
+                    wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                 }
                 Text {
-                    text: "Panelhost actief"
+                    text: "Draai 'kingstra doctor' of 'kingstra restart' in een terminal. Onderdeel: " + root.sourceEntryId
                     font.family: ThemeConfig.uiFont
                     font.pixelSize: 12
                     color: mocha.subtext1
+                    wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                 }
                 Item { Layout.fillHeight: true }

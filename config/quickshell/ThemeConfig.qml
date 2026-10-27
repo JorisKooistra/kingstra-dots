@@ -118,6 +118,9 @@ Item {
         if (motion === "firm") motionModifier = 0.78;
         if (motion === "gentle") motionModifier = 1.08;
         if (motion === "minimal") motionModifier = 0.60;
+        // De profielen die de thema's en Instellingen echt gebruiken.
+        if (motion === "snappy") motionModifier = 0.88;
+        if (motion === "calm") motionModifier = 1.15;
         return motionModifier / speed;
     }
 
