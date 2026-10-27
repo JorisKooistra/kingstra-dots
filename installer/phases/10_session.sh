@@ -279,19 +279,45 @@ _phase10_enable_sddm() {
         return 0
     fi
 
-    # Controleer welke display manager actief is
-    # '|| true' voorkomt dat grep exit 1 (geen match) de installer stopt via set -eo pipefail
-    local current_dm
-    current_dm="$(systemctl list-units --type=service --state=enabled 2>/dev/null \
-        | grep -E 'gdm|lightdm|ly|greetd|sddm' | awk '{print $1}' | head -1 || true)"
+    # Actieve display manager bepalen via de display-manager.service alias.
+    # (systemctl list-units --state=enabled werkt niet: 'enabled' is geen
+    # unit-status, dus een andere DM werd nooit gevonden en 'enable sddm'
+    # liep vast op de bestaande display-manager.service-link.)
+    local dm_link current_dm=""
+    dm_link="$(readlink -f /etc/systemd/system/display-manager.service 2>/dev/null || true)"
+    [[ -n "$dm_link" ]] && current_dm="$(basename "$dm_link")"
 
     if [[ -n "$current_dm" ]] && [[ "$current_dm" != "sddm.service" ]]; then
-        log_warn "Andere display manager actief: $current_dm"
-        log_warn "  Schakel handmatig over: sudo systemctl disable $current_dm && sudo systemctl enable sddm"
-        return 0
+        log_info "Andere display manager actief: $current_dm — overschakelen naar SDDM"
+        sudo systemctl disable "$current_dm" 2>&1 | sed 's/^/    /' || true
     fi
 
-    sudo systemctl enable sddm 2>/dev/null && \
-        log_ok "SDDM-service ingeschakeld" || \
-        log_warn "SDDM inschakelen mislukt — controleer de logs"
+    local out
+    if out="$(sudo systemctl enable --force sddm 2>&1)"; then
+        log_ok "SDDM-service ingeschakeld (display-manager.service → sddm)"
+    else
+        log_warn "SDDM inschakelen mislukt:"
+        printf '%s\n' "$out" | sed 's/^/    /'
+        log_warn "  Handmatig: sudo systemctl enable --force sddm"
+    fi
+
+    _phase10_check_autologin
+}
+
+# Waarschuw voor autologin die de wachtwoordprompt bij opstarten overslaat.
+_phase10_check_autologin() {
+    local f
+    for f in /etc/sddm.conf /etc/sddm.conf.d/*.conf; do
+        [[ -f "$f" ]] || continue
+        if awk '/^\[/{sec=$0} sec=="[Autologin]" && /^[[:space:]]*User=[^[:space:]]+/{found=1} END{exit !found}' "$f"; then
+            log_warn "SDDM-autologin staat aan in $f — verwijder het [Autologin]-blok voor een wachtwoordprompt"
+        fi
+    done
+    for f in /etc/systemd/system/getty@*.service.d/*.conf; do
+        [[ -f "$f" ]] || continue
+        if grep -q -- '--autologin' "$f"; then
+            log_warn "TTY-autologin gevonden: $f"
+            log_warn "  Uitzetten: sudo rm $f && sudo systemctl daemon-reload"
+        fi
+    done
 }
