@@ -475,16 +475,6 @@ update_dotfiles() {
         return 0
     fi
 
-    # Alleen gewijzigde bestanden die git bijhoudt blokkeren de update. Losse
-    # nieuwe bestanden (zoals een eigen keep-lijst) kunnen gewoon blijven
-    # staan: merge --ff-only weigert zelf als zo'n bestand overschreven zou
-    # worden, dus er gaat niets verloren.
-    if [[ -n "$(git -C "$repo" status --porcelain --untracked-files=no)" ]]; then
-        log "Er staan lokale wijzigingen in $repo:"
-        log_block "$(git -C "$repo" status --short --untracked-files=no)"
-        log "Dotfiles-update veilig overgeslagen; commit of stash ze eerst."
-        return 0
-    fi
     if [[ "$ahead" -gt 0 ]]; then
         log "De lokale branch loopt ook $ahead commit(s) voor op upstream."
         log "Automatisch samenvoegen is overgeslagen."
@@ -492,9 +482,44 @@ update_dotfiles() {
     fi
 
     log "$behind nieuwe dotfiles-commit(s) gevonden."
+
+    # Eigen wijzigingen in bijgehouden bestanden (bv. sneltoetsen of thema's
+    # aangepast via Instellingen) gaan tijdelijk opzij en komen na de update
+    # terug. Botsen ze met de update, dan blijft alles zoals het was. Losse
+    # nieuwe bestanden laat git zelf met rust: merge --ff-only weigert als
+    # zo'n bestand overschreven zou worden.
+    local old_head stashed=false
+    old_head="$(git -C "$repo" rev-parse HEAD)"
+    if [[ -n "$(git -C "$repo" status --porcelain --untracked-files=no)" ]]; then
+        log "Eigen wijzigingen gaan tijdelijk opzij:"
+        log_block "$(git -C "$repo" status --short --untracked-files=no)"
+        # Eigen naam voor de stash-commit: werkt ook zonder ingestelde git-identiteit.
+        if ! git -C "$repo" -c user.name=kingstra -c user.email=kingstra@localhost stash push --quiet -m "kingstra-update $(date '+%Y-%m-%d %H:%M')"; then
+            log "Opzij zetten mislukt; dotfiles-update veilig overgeslagen."
+            return 0
+        fi
+        stashed=true
+    fi
+
     if ! git -C "$repo" merge --ff-only --quiet "$upstream"; then
         log "Bijwerken mislukt; waarschijnlijk staat er een los bestand in de weg (zie hierboven)."
+        $stashed && git -C "$repo" stash pop --quiet
         return 1
+    fi
+
+    if $stashed; then
+        if git -C "$repo" stash apply --quiet 2>/dev/null; then
+            git -C "$repo" stash drop --quiet
+            log "Eigen wijzigingen teruggezet."
+        else
+            # Terug naar de stand van vóór de update, met de eigen wijzigingen.
+            git -C "$repo" reset --quiet --hard HEAD
+            git -C "$repo" reset --quiet --keep "$old_head"
+            git -C "$repo" stash pop --quiet
+            log "Eigen wijzigingen botsen met de update; dotfiles blijven op de oude stand."
+            log "Bekijk met: git -C $repo diff"
+            return 1
+        fi
     fi
 }
 

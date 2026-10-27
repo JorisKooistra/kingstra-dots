@@ -1,0 +1,19 @@
+-- Personal Hyprland additions. Copy this file to user.lua (same folder) and
+-- edit it there: user.lua is not tracked by git, so updates never touch it.
+-- It loads after all Kingstra modules, so whatever you set here wins.
+-- A mistake in user.lua is caught; the rest of the config keeps working.
+--
+-- Check your changes with: luac -p ~/.config/hypr/lua/user.lua
+
+return {
+    apply = function()
+        -- Extra keybinding:
+        -- hl.bind("SUPER + B", hl.dsp.exec_cmd("firefox"))
+
+        -- Override a setting:
+        -- hl.config({ general = { gaps_out = 12 } })
+
+        -- Window rule:
+        -- hl.window_rule({ name = "my-calc", match = { class = "^org.gnome.Calculator$" }, float = true })
+    end,
+}

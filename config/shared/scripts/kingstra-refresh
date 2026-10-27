@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-refresh — Eén config terug naar de standaard uit de repo
+# =============================================================================
+# Gebruik:
+#   kingstra-refresh --list            onderdelen tonen
+#   kingstra-refresh <onderdeel> [-y]  bv. kingstra-refresh kitty
+#
+# Wat het doet, met eerst een back-up in ~/.local/share/kingstra/backups/:
+#   - staat ~/.config/<onderdeel> niet meer gekoppeld aan de repo, dan wordt
+#     de map verplaatst naar de back-up en opnieuw gekoppeld;
+#   - zijn er in de repo lokale wijzigingen onder config/<onderdeel>, dan
+#     gaan die als patch naar de back-up en wordt de map teruggezet.
+# Bestanden die git negeert (gegenereerde kleuren, user.lua, lokale
+# schermconfig) blijven altijd staan.
+# =============================================================================
+set -uo pipefail
+
+ASSUME_YES=false
+args=()
+for a in "$@"; do
+    case "$a" in
+        -y|--yes) ASSUME_YES=true ;;
+        *) args+=("$a") ;;
+    esac
+done
+set -- "${args[@]+"${args[@]}"}"
+
+_die() { printf 'Fout: %s\n' "$*" >&2; exit 1; }
+
+resolve_repo() {
+    local marker="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/install-complete" repo="" self=""
+    [[ -n "${KINGSTRA_REPO:-}" ]] && repo="$KINGSTRA_REPO"
+    if [[ -z "$repo" && -f "$marker" ]]; then
+        repo="$(sed -n 's/^Repo:[[:space:]]*//p' "$marker" | head -n 1)"
+    fi
+    if [[ -z "$repo" ]]; then
+        self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
+        [[ -n "$self" ]] && repo="$(cd "$(dirname "$self")/../../.." 2>/dev/null && pwd -P || true)"
+    fi
+    [[ -n "$repo" && -d "$repo/.git" ]] || return 1
+    printf '%s\n' "$repo"
+}
+
+REPO="$(resolve_repo)" || _die "geen kingstra-dots git-repo gevonden."
+FILES="$REPO/manifest/files.txt"
+[[ -f "$FILES" ]] || _die "manifest/files.txt ontbreekt."
+
+# onderdeel|bron|doel uit manifest/files.txt (alleen config/<naam>-mappen).
+components() {
+    while IFS='|' read -r src dest; do
+        [[ -z "$src" || "$src" == \#* ]] && continue
+        [[ "$src" == config/* && "$src" != */*/* ]] || continue
+        printf '%s|%s|%s\n' "${src#config/}" "$src" "$dest"
+    done < "$FILES"
+}
+
+if [[ "${1:-}" == "--list" || -z "${1:-}" ]]; then
+    echo "Onderdelen:"
+    components | cut -d'|' -f1 | sed 's/^/  /'
+    [[ -z "${1:-}" ]] && echo "" && echo "Gebruik: kingstra-refresh <onderdeel>"
+    exit 0
+fi
+
+NAME="$1"
+line="$(components | awk -F'|' -v n="$NAME" '$1 == n')"
+[[ -n "$line" ]] || _die "onbekend onderdeel '$NAME' (kingstra-refresh --list)."
+IFS='|' read -r _ SRC DEST <<< "$line"
+DEST="${DEST/#\~/$HOME}"
+SRC_ABS="$REPO/$SRC"
+
+relink=false
+if [[ -L "$DEST" && "$(readlink -f "$DEST")" == "$(readlink -f "$SRC_ABS")" ]]; then
+    :
+elif [[ -e "$DEST" || -L "$DEST" ]]; then
+    relink=true
+else
+    relink=true
+fi
+changes="$(git -C "$REPO" status --porcelain --untracked-files=no -- "$SRC")"
+
+if ! $relink && [[ -z "$changes" ]]; then
+    echo "$NAME staat al op de standaard uit de repo; niets te doen."
+    exit 0
+fi
+
+echo "Onderdeel: $NAME"
+$relink && echo "  - ${DEST/#$HOME/\~} wordt opnieuw gekoppeld aan de repo"
+[[ -n "$changes" ]] && { echo "  - lokale wijzigingen worden teruggezet:"; sed 's/^/      /' <<< "$changes"; }
+
+if ! $ASSUME_YES; then
+    [[ -t 0 ]] || _die "bevestig met -y als er geen terminal is."
+    read -r -p "Doorgaan? Er komt eerst een back-up. [j/N] " answer
+    [[ "$answer" =~ ^[jJyY]$ ]] || { echo "Afgebroken."; exit 0; }
+fi
+
+BACKUP="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/backups/refresh-$NAME-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$BACKUP"
+
+if [[ -n "$changes" ]]; then
+    git -C "$REPO" diff -- "$SRC" > "$BACKUP/$NAME.patch"
+    git -C "$REPO" checkout -- "$SRC" || _die "terugzetten mislukt."
+    echo "Wijzigingen bewaard in $BACKUP/$NAME.patch"
+fi
+
+if $relink; then
+    if [[ -e "$DEST" || -L "$DEST" ]]; then
+        mv "$DEST" "$BACKUP/" || _die "back-up maken van $DEST mislukt."
+        echo "Oude map bewaard in $BACKUP/$(basename "$DEST")"
+    fi
+    mkdir -p "$(dirname "$DEST")"
+    ln -s "$SRC_ABS" "$DEST" || _die "koppelen mislukt."
+fi
+
+echo "Klaar. $NAME staat weer op de standaard."
+case "$NAME" in
+    hypr) echo "Hyprland laadt de config vanzelf opnieuw." ;;
+    quickshell) echo "Herstart de shell: kingstra restart" ;;
+    matugen|kingstra) echo "Kleuren opnieuw toepassen: apply-shell-state" ;;
+esac

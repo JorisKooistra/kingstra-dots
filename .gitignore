@@ -70,6 +70,7 @@ config/hypr/lua/monitors-local.lua
 config/hypr/lua/workspaces.lua
 config/hypr/lua/hardware.lua
 config/hypr/lua/input-overrides.lua
+config/hypr/lua/user.lua
 # Tijdelijk alleen aanwezig zolang een al draaiende legacy-sessie leeft.
 config/hypr/hyprland.conf
 config/matugen/generated/*

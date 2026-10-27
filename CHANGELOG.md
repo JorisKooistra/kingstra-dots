@@ -10,6 +10,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - One-time migrations in `installer/migrations/` replace cleanup that ran on every update.
 - `kingstra-doctor` checks the installation (programs, links, Lua, colors, Quickshell, services, disk, .pacnew) and says how to fix problems.
 - The install marker records the installed version.
+- Your own edits to tracked files are set aside during an update and put back; on a clash the dotfiles stay on the old version.
+
+### Ease of use
+- `kingstra` command: theme, mode, wallpaper, update, doctor, snapshot, rollback, refresh, restart, settings, keys, version.
+- `kingstra refresh <part>` puts one config back to the repo default, with a backup first.
+- `config/hypr/lua/user.lua` for personal binds, rules and settings: not tracked, loads last, errors are caught.
 
 ## 2026.10.0 — 2026-10-27
 

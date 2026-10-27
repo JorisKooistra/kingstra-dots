@@ -21,6 +21,42 @@ Config folders are deployed as symlinks: `~/.config/<name>` points to `config/<n
 
 ---
 
+## The `kingstra` command
+
+One entry point for everyday tasks. The separate `kingstra-*` scripts keep working.
+
+```bash
+kingstra theme organic        # switch theme (no name: picker)
+kingstra mode gaming          # switch mode
+kingstra update               # update system, Flatpak and dotfiles
+kingstra doctor               # check the installation, with fixes
+kingstra rollback             # dotfiles back to the restore point before the last update
+kingstra refresh kitty        # one config back to the repo default (backup first)
+kingstra restart              # restart the shell
+kingstra version
+kingstra help
+```
+
+### Updates and restore points
+
+Every update first makes a restore point: a local git tag of the dotfiles and, when `/` is on
+btrfs with snapper set up, a system snapshot. `kingstra rollback` returns the dotfiles to that
+point and holds them there; `kingstra rollback --release` follows updates again.
+`kingstra snapshot list` shows the restore points.
+
+Your own edits to tracked files (for example keybindings changed in Settings) are set aside
+during an update and put back afterwards. If they clash with the update, the dotfiles stay on
+the old version and nothing is lost.
+
+One-time migrations between versions live in `installer/migrations/` and run once per machine.
+
+### Personal additions
+
+Copy `config/hypr/lua/user.lua.default` to `config/hypr/lua/user.lua` for your own binds, rules and
+settings. It is ignored by git, loads last, and an error in it never breaks the rest of the config.
+
+---
+
 ## Hyprland — Lua config
 
 Hyprland loads a single entrypoint, `config/hypr/hyprland.lua`, which requires the modules in

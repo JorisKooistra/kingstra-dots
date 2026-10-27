@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra — Eén commando voor alles van kingstra-dots
+# =============================================================================
+# De losse kingstra-*-scripts blijven bestaan; dit is alleen een ingang met
+# korte, Nederlandse subcommando's. Zie: kingstra help
+# =============================================================================
+set -uo pipefail
+
+BIN="$HOME/.local/bin"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+QS_MANAGER="$CONFIG_HOME/hypr/scripts/qs_manager.sh"
+
+resolve_repo() {
+    local marker="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/install-complete" repo="" self=""
+    [[ -n "${KINGSTRA_REPO:-}" ]] && repo="$KINGSTRA_REPO"
+    if [[ -z "$repo" && -f "$marker" ]]; then
+        repo="$(sed -n 's/^Repo:[[:space:]]*//p' "$marker" | head -n 1)"
+    fi
+    if [[ -z "$repo" ]]; then
+        self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
+        [[ -n "$self" ]] && repo="$(cd "$(dirname "$self")/../../.." 2>/dev/null && pwd -P || true)"
+    fi
+    [[ -n "$repo" && -d "$repo" ]] || return 1
+    printf '%s\n' "$repo"
+}
+
+run() {
+    local cmd="$1"; shift
+    if [[ -x "$BIN/$cmd" ]]; then
+        exec "$BIN/$cmd" "$@"
+    elif command -v "$cmd" >/dev/null 2>&1; then
+        exec "$cmd" "$@"
+    fi
+    printf 'kingstra: %s niet gevonden; draai install.sh --yes\n' "$cmd" >&2
+    exit 127
+}
+
+panel() {
+    [[ -x "$QS_MANAGER" ]] || { echo "kingstra: qs_manager.sh niet gevonden" >&2; exit 127; }
+    exec "$QS_MANAGER" toggle "$1"
+}
+
+usage() {
+    cat <<'TXT'
+Gebruik: kingstra <commando> [opties]
+
+Uiterlijk
+  theme [naam|--list]      thema wisselen of tonen (zonder naam: kiezer)
+  mode [office|gaming|media]  modus wisselen (zonder naam: kiezer)
+  wallpaper <set|random|pick|...>  achtergrond (zie kingstra wallpaper --help)
+
+Onderhoud
+  update                   alles bijwerken (systeem, Flatpak, dotfiles)
+  doctor                   installatie controleren, met hersteladvies
+  snapshot [list|create]   terugzetpunten tonen of maken
+  rollback [--list|--release|<tag>]  dotfiles terug naar een terugzetpunt
+  refresh <onderdeel>      één config terug naar de standaard (bv. kitty)
+  restart                  shell herstarten (bar, panelen, overzicht)
+  install [opties]         installer draaien (zie install.sh --help)
+
+Openen
+  settings | keys | launcher | quick   instellingen, sneltoetsen, launcher, snelle instellingen
+
+Overig
+  version                  geïnstalleerde versie
+  help                     dit overzicht
+TXT
+}
+
+cmd="${1:-help}"
+[[ $# -gt 0 ]] && shift
+
+case "$cmd" in
+    theme|thema)
+        if [[ $# -eq 0 ]]; then panel theme; fi
+        run kingstra-theme-switch "$@" ;;
+    mode|modus)
+        if [[ $# -eq 0 ]]; then panel mode; fi
+        run kingstra-mode-switch "$@" ;;
+    wallpaper|achtergrond) run kingstra-wallpaper "$@" ;;
+    update|bijwerken)
+        exec "$CONFIG_HOME/quickshell/package_upgrade.sh" "$@" ;;
+    doctor|check)  run kingstra-doctor "$@" ;;
+    snapshot)      run kingstra-snapshot "$@" ;;
+    rollback|terug) run kingstra-rollback "$@" ;;
+    refresh|herstel) run kingstra-refresh "$@" ;;
+    restart|herstart) run kingstra-session-start restart-shell ;;
+    install)
+        repo="$(resolve_repo)" || { echo "kingstra: repo niet gevonden" >&2; exit 1; }
+        exec bash "$repo/install.sh" "$@" ;;
+    settings|instellingen) panel settings ;;
+    keys|toetsen|sneltoetsen) panel help ;;
+    launcher) panel launcher ;;
+    quick|snel) panel quicksettings ;;
+    version|versie|--version|-v)
+        repo="$(resolve_repo)" || { echo "onbekend"; exit 0; }
+        printf 'kingstra-dots %s (%s)\n' "$(tr -d '[:space:]' < "$repo/VERSION" 2>/dev/null || echo onbekend)" \
+            "$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo '?')" ;;
+    help|-h|--help) usage ;;
+    *)
+        printf 'kingstra: onbekend commando "%s"\n\n' "$cmd" >&2
+        usage >&2
+        exit 2 ;;
+esac
