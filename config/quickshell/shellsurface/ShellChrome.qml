@@ -942,23 +942,6 @@ Item {
                 onTriggered: root.togglePanel("launcher")
             }
 
-            RailClock {
-                visible: root.moduleEnabled("clock")
-                onTriggered: root.togglePanel("calendar")
-            }
-
-            // Meldingen: teller als er iets ligt, ander icoon bij Niet storen.
-            // Middelklik zet Niet storen aan of uit.
-            RailButton {
-                tooltip: root.notificationTooltip
-                visible: root.moduleEnabled("notifications")
-                icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜")
-                badge: NotificationService.dnd ? 0 : NotificationService.count
-                accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2
-                onTriggered: root.togglePanel("notifications")
-                onMiddleClicked: NotificationService.toggleDnd()
-            }
-
             ColumnLayout {
                 visible: root.moduleEnabled("workspaces")
                 Layout.fillWidth: true
@@ -1095,6 +1078,23 @@ Item {
                 }
             }
 
+            // Kleine adem tussen navigatie en de statusgroep.
+            Item { Layout.fillWidth: true; Layout.preferredHeight: 6 }
+
+            // Midden: wat aandacht vraagt. Meldingen staan nu bij de andere
+            // statusknoppen in plaats van tussen launcher en werkruimtes.
+            // Meldingen: teller als er iets ligt, ander icoon bij Niet storen.
+            // Middelklik zet Niet storen aan of uit.
+            RailButton {
+                tooltip: root.notificationTooltip
+                visible: root.moduleEnabled("notifications")
+                icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜")
+                badge: NotificationService.dnd ? 0 : NotificationService.count
+                accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2
+                onTriggered: root.togglePanel("notifications")
+                onMiddleClicked: NotificationService.toggleDnd()
+            }
+
             // Focus (schermtijd) staat nu als kaart in het dashboard en
             // Monitoren als tegel Beeldschermen in Snelle instellingen.
             RailButton { tooltip: "Systeem";
@@ -1104,9 +1104,11 @@ Item {
                 onTriggered: root.togglePanel("performance")
             }
 
+            // Alleen zichtbaar als er iets bij te werken valt; bijwerken kan
+            // altijd via `kingstra update` of Instellingen.
             RailButton {
                 tooltip: root.updateTooltip()
-                visible: root.moduleEnabled("updates")
+                visible: root.moduleEnabled("updates") && root.updateCount > 0
                 icon: "󰚰"
                 text: root.updateCount.toString()
                 accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0
@@ -1147,6 +1149,13 @@ Item {
                 visible: root.statusTileVisible
                 onTriggered: root.togglePanel("quicksettings")
             }
+            // Klok onderaan bij de systeemknoppen, zoals in de meeste
+            // verticale balken; bovenaan staat alleen navigatie.
+            RailClock {
+                visible: root.moduleEnabled("clock")
+                onTriggered: root.togglePanel("calendar")
+            }
+
             RailButton { tooltip: "Afsluitmenu";
                 icon: "󰐥"
                 accent: root.mocha.red
@@ -1298,12 +1307,43 @@ Item {
                     }
                 }
                 StripButton { tooltip: root.notificationTooltip; visible: root.moduleEnabled("notifications"); icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜"); badge: NotificationService.dnd ? 0 : NotificationService.count; accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2; onTriggered: root.togglePanel("notifications"); onMiddleClicked: NotificationService.toggleDnd() }
-                StripButton { tooltip: "Agenda"; visible: root.moduleEnabled("clock"); icon: "󰃰"; accent: root.mocha.accent1; onTriggered: root.togglePanel("calendar") }
-                StripButton { tooltip: root.updateTooltip(); visible: root.moduleEnabled("updates"); icon: "󰚰"; text: root.updateCount.toString(); accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0; onTriggered: root.openUpdatesTerminal() }
+                StripButton { tooltip: root.updateTooltip(); visible: root.moduleEnabled("updates") && root.updateCount > 0; icon: "󰚰"; text: root.updateCount.toString(); accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0; onTriggered: root.openUpdatesTerminal() }
                 StripButton { tooltip: "Games"; visible: root.moduleEnabled("game_launcher"); icon: "󰊴"; accent: root.mocha.accent2; onTriggered: root.togglePanel("gaming") }
             }
 
+            // De klok is de agendaknop: klik opent de agenda. Hover geeft
+            // dezelfde zachte vulling als de andere stripknoppen.
+            Rectangle {
+                anchors.fill: stripClock
+                anchors.leftMargin: -10
+                anchors.rightMargin: -10
+                anchors.topMargin: -5
+                anchors.bottomMargin: -5
+                visible: stripClock.visible
+                radius: Math.min(7, ThemeConfig.styleWidgetRadius)
+                color: stripClockMouse.containsMouse ? root.pillHoverColor : "transparent"
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                }
+
+                MouseArea {
+                    id: stripClockMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: root.showTooltip(parent, "Agenda", false)
+                    onExited: root.hideTooltip("Agenda")
+                    onClicked: {
+                        let p = parent.mapToItem(root, parent.width / 2, parent.height / 2);
+                        root.lastTriggerX = p.x;
+                        root.lastTriggerY = p.y;
+                        root.togglePanel("calendar");
+                    }
+                }
+            }
+
             RowLayout {
+                id: stripClock
                 anchors.centerIn: parent
                 visible: root.stripControlsEnabled && root.moduleEnabled("clock")
                 spacing: 10
