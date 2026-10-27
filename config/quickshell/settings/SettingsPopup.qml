@@ -2540,9 +2540,9 @@ Item {
                     id: systemModel
                     ListElement { pkg: "Hyprland";    role: "Wayland Compositor";     icon: "";  clr: "blue";   link: "https://hyprland.org/" }
                     ListElement { pkg: "Quickshell";  role: "Desktop Shell (QML)";    icon: "󰣆"; clr: "mauve";  link: "https://git.outfoxxed.me/outfoxxed/quickshell" }
-                    ListElement { pkg: "Walker";      role: "App Launcher";           icon: "";  clr: "green";  link: "https://github.com/abenz1267/walker" }
+                    ListElement { pkg: "skwd-wall";   role: "Wallpaper Daemon";       icon: "󰸉"; clr: "green";  link: "https://aur.archlinux.org/packages/skwd-wall" }
                     ListElement { pkg: "Kitty";       role: "Terminal Emulator";       icon: "󰄛"; clr: "yellow"; link: "https://sw.kovidgoyal.net/kitty/" }
-                    ListElement { pkg: "SwayNC";      role: "Notification Center";     icon: "󰂚"; clr: "pink";   link: "https://github.com/ErikReider/SwayNotificationCenter" }
+                    ListElement { pkg: "SwayOSD";     role: "On-screen Display";       icon: "󰕾"; clr: "pink";   link: "https://github.com/ErikReider/SwayOSD" }
                     ListElement { pkg: "Matugen";     role: "Material You Theming";    icon: "󰏘"; clr: "peach";  link: "https://github.com/InioX/matugen" }
                 }
 
