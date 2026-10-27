@@ -733,11 +733,18 @@ Item {
                                 clip: true
                                 spacing: 4
                                 boundsBehavior: Flickable.StopAtBounds
+                                // Per app gegroepeerd, nieuwste app bovenaan: een kopregel
+                                // per app (kruisje wist de hele groep), daaronder de meldingen.
                                 model: {
-                                    let list = NotificationService.notifications.values.slice();
-                                    list.sort((a, b) => NotificationService.arrivalTime(b) - NotificationService.arrivalTime(a)
-                                        || Number(b.id) - Number(a.id));
-                                    return list;
+                                    let dep = NotificationService.count;
+                                    let rows = [];
+                                    let groups = NotificationService.groups();
+                                    for (let g = 0; g < groups.length; g++) {
+                                        rows.push({ header: true, app: groups[g].app, count: groups[g].items.length });
+                                        for (let i = 0; i < groups[g].items.length; i++)
+                                            rows.push({ header: false, app: groups[g].app, n: groups[g].items[i] });
+                                    }
+                                    return rows;
                                 }
 
                                 add: Transition {
@@ -750,28 +757,64 @@ Item {
                                 delegate: Rectangle {
                                     id: notifRow
                                     required property var modelData
+                                    readonly property bool isHeader: !!modelData.header
+                                    readonly property var n: modelData.n || null
                                     width: notifList.width
-                                    height: 46
+                                    height: isHeader ? 24 : 46
                                     radius: Math.min(root.cardRadius, 14)
-                                    color: notifMouse.containsMouse
+                                    color: isHeader ? "transparent" : notifMouse.containsMouse
                                         ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
                                         : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.04)
                                     Behavior on color {
                                         ColorAnimation { duration: ThemeConfig.durationToken("fast") }
                                     }
 
+                                    // Kopregel van een app-groep.
+                                    RowLayout {
+                                        visible: notifRow.isHeader
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 6
+                                        anchors.rightMargin: 6
+                                        spacing: 6
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: String(notifRow.modelData.app || "") + (notifRow.modelData.count > 1 ? "  ·  " + notifRow.modelData.count : "")
+                                            font.family: ThemeConfig.uiFont
+                                            font.pixelSize: 10
+                                            font.weight: Font.Bold
+                                            color: mocha.subtext1
+                                            elide: Text.ElideRight
+                                        }
+                                        Text {
+                                            text: "󰅖"
+                                            font.family: ThemeConfig.iconFont
+                                            font.pixelSize: 11
+                                            color: groupCloseMouse.containsMouse ? mocha.red : mocha.subtext0
+                                            MouseArea {
+                                                id: groupCloseMouse
+                                                anchors.fill: parent
+                                                anchors.margins: -4
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: NotificationService.dismissApp(notifRow.modelData.app)
+                                            }
+                                        }
+                                    }
+
                                     MouseArea {
                                         id: notifMouse
+                                        visible: !notifRow.isHeader
                                         anchors.fill: parent
                                         hoverEnabled: true
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: {
-                                            NotificationService.invokeDefault(notifRow.modelData);
-                                            NotificationService.dismiss(notifRow.modelData);
+                                            NotificationService.invokeDefault(notifRow.n);
+                                            NotificationService.dismiss(notifRow.n);
                                         }
                                     }
 
                                     RowLayout {
+                                        visible: !notifRow.isHeader
                                         anchors.fill: parent
                                         anchors.leftMargin: 8
                                         anchors.rightMargin: 6
@@ -785,7 +828,7 @@ Item {
                                                 anchors.fill: parent
                                                 sourceSize.width: 48
                                                 sourceSize.height: 48
-                                                source: NotificationService.iconSource(notifRow.modelData)
+                                                source: NotificationService.iconSource(notifRow.n)
                                                 visible: status === Image.Ready
                                             }
                                             Text {
@@ -806,7 +849,7 @@ Item {
                                                 spacing: 6
                                                 Text {
                                                     Layout.fillWidth: true
-                                                    text: String(notifRow.modelData.summary || notifRow.modelData.appName || "")
+                                                    text: notifRow.n ? String(notifRow.n.summary || notifRow.n.appName || "") : ""
                                                     font.family: ThemeConfig.uiFont
                                                     font.pixelSize: 11
                                                     font.weight: Font.DemiBold
@@ -814,7 +857,7 @@ Item {
                                                     elide: Text.ElideRight
                                                 }
                                                 Text {
-                                                    text: NotificationService.relativeTime(notifRow.modelData)
+                                                    text: NotificationService.relativeTime(notifRow.n)
                                                     visible: text !== ""
                                                     font.family: ThemeConfig.uiFont
                                                     font.pixelSize: 9
@@ -823,7 +866,7 @@ Item {
                                             }
                                             Text {
                                                 Layout.fillWidth: true
-                                                text: String(notifRow.modelData.body || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ")
+                                                text: String(notifRow.n ? notifRow.n.body || "" : "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ")
                                                 visible: text !== ""
                                                 font.family: ThemeConfig.uiFont
                                                 font.pixelSize: 10
@@ -854,7 +897,7 @@ Item {
                                                 anchors.fill: parent
                                                 hoverEnabled: true
                                                 cursorShape: Qt.PointingHandCursor
-                                                onClicked: NotificationService.dismiss(notifRow.modelData)
+                                                onClicked: NotificationService.dismiss(notifRow.n)
                                             }
                                         }
                                     }

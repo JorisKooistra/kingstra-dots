@@ -478,6 +478,79 @@ FocusScope {
                         }
                     }
                 }
+
+                // Direct antwoorden, zoals bij GNOME en macOS: alleen als de
+                // app daarom vraagt (chat-apps). Enter verstuurt.
+                Rectangle {
+                    id: replyBox
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 32
+                    visible: !!(card.notification && card.notification.hasInlineReply)
+                    radius: 16
+                    color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.40)
+                    border.width: 1
+                    border.color: replyInput.activeFocus
+                        ? Qt.rgba(card.accent.r, card.accent.g, card.accent.b, 0.70)
+                        : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
+                    Behavior on border.color {
+                        ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                    }
+
+                    function send() {
+                        let text = replyInput.text.trim();
+                        if (text === "" || !card.notification) return;
+                        card.notification.sendInlineReply(text);
+                        replyInput.text = "";
+                        card.leave();
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 4
+                        spacing: 6
+                        TextInput {
+                            id: replyInput
+                            Layout.fillWidth: true
+                            verticalAlignment: TextInput.AlignVCenter
+                            font.family: ThemeConfig.uiFont
+                            font.pixelSize: 11
+                            color: mocha.text
+                            clip: true
+                            selectByMouse: true
+                            onAccepted: replyBox.send()
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: replyInput.text === "" && !replyInput.activeFocus
+                                text: card.notification && card.notification.inlineReplyPlaceholder
+                                    ? String(card.notification.inlineReplyPlaceholder) : "Antwoorden…"
+                                font: replyInput.font
+                                color: mocha.subtext0
+                            }
+                        }
+                        Rectangle {
+                            Layout.preferredWidth: 24
+                            Layout.preferredHeight: 24
+                            radius: 12
+                            color: sendMouse.containsMouse
+                                ? Qt.rgba(card.accent.r, card.accent.g, card.accent.b, 0.25) : "transparent"
+                            Text {
+                                anchors.centerIn: parent
+                                text: "󰒊"
+                                font.family: ThemeConfig.iconFont
+                                font.pixelSize: 13
+                                color: card.accent
+                            }
+                            MouseArea {
+                                id: sendMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: replyBox.send()
+                            }
+                        }
+                    }
+                }
             }
         }
 

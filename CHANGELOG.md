@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell: notifications
+- The control center groups notifications per app, newest app first; the cross on an app's row clears that app.
+- Notifications that support it (chat apps) get an answer field in the notifications panel; Enter sends the reply.
+
 ### Shell: launcher prefixes
 - The launcher understands a first character, like Caelestia and DMS: `=` calculator (Enter copies), `>` shell command (terminal or background), `:` emoji search (Enter copies, Dutch words like `:hart` work), `/` jump to a setting, `?` search DuckDuckGo, Arch Wiki or Wikipedia, `@` switch to an open window.
 - An empty launcher shows the prefixes as chips; click one to start.
