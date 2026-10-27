@@ -36,6 +36,7 @@ FocusScope {
     // dichtdoen).
     readonly property var tree: [
         { icon: "󱓞", label: "Apps", hint: "Launcher", cmd: qs("launcher"), panel: true },
+        { icon: "󰊢", label: "Werkruimte-overzicht", hint: "Super+Tab", cmd: ["bash", scripts + "/overview-toggle.sh"] },
         { icon: "󰏘", label: "Uiterlijk", children: [
             { icon: "󰏘", label: "Thema", children: [
                 { icon: "󰝤", label: "Mono", cmd: kingstra("theme mono") },
