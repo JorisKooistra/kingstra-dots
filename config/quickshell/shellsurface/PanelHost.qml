@@ -263,7 +263,6 @@ Item {
         // qs_manager en de instellingen-app openen "volume" en komen daar uit.
         if (entryId === "volume") return Qt.resolvedUrl("AudioMediaPanel.qml");
         // Ook de muziekpopup zit nu in Geluid & media (kaart "Nu speelt").
-        // MusicPopup.qml blijft alleen voor de oude bar-fallback.
         if (entryId === "music") return Qt.resolvedUrl("AudioMediaPanel.qml");
         if (entryId === "calendar") return Qt.resolvedUrl("../calendar/CalendarPopup.qml");
         if (entryId === "monitors") return Qt.resolvedUrl("../monitors/MonitorPopup.qml");

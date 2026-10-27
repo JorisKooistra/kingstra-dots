@@ -11,7 +11,7 @@ ShellRoot {
     property var notificationService: NotificationService
 
     // QSettings (QML Settings-type) vereist een organisatienaam; zonder deze
-    // faalt de init en persisteert o.a. de audio-cache in VolumePopup niet.
+    // faalt de init en persisteert o.a. de audio-cache niet.
     Component.onCompleted: {
         Qt.application.organization = "kingstra-shell";
     }

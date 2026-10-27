@@ -96,8 +96,9 @@ processes are started by `kingstra-session-start`:
 - **`TopBar.qml`** — the bar (`bar/BarShell.qml`) and the shell surface (`shellsurface/ShellSurface.qml`):
   rail, status strip, screen frame and the panels that grow out of it (launcher, clipboard,
   window switcher, performance drawer).
-- **`Main.qml`** — popups such as calendar, music, battery, network, volume, monitors,
-  settings, theme and mode pickers, FocusTime and help. Toggled through `config/hypr/scripts/qs_manager.sh`.
+- **`Main.qml`** — the theme and mode pickers and the shortcut help. Every other panel (calendar,
+  sound & media, battery, network, monitors, settings, FocusTime) grows out of the shell surface.
+  All are toggled through `config/hypr/scripts/qs_manager.sh`.
 - **`overview/shell.qml`** — the workspace overview (`Super + Tab`).
 
 The screen frame and edge panels are drawn as one shared SDF "blob" by a small Qt plugin in

@@ -24,6 +24,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ### Simpler
 - SwayNC leftovers removed (config, color template, theme CSS, stop calls); migrations stop it and clean the Matugen config once.
 - One launcher: the search buttons open the Quickshell launcher; Walker and Elephant no longer run as background services.
+- The old music and volume popups (about 2,900 lines) are gone; every route already opened Sound & media.
 - `installer/profiles/` replaced by `installer/overrides.example.conf`; `~/.config/kingstra/overrides.conf` is read on every install and update.
 
 ### Styling
