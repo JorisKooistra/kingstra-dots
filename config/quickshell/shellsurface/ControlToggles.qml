@@ -355,6 +355,7 @@ Item {
                 visible: root.hasWifi
                 icon: root.wifiOn ? "󰤨" : "󰤮"
                 label: "Wi-Fi"
+                pinId: "wifi"
                 subtitle: !root.wifiOn ? "Uit" : (root.wifiName !== "" ? root.wifiName : "Aan")
                 active: root.wifiOn
                 accent: mocha.accent3
@@ -379,6 +380,7 @@ Item {
                 visible: root.hasBluetooth
                 icon: root.bluetoothOn ? "󰂱" : "󰂲"
                 label: "Bluetooth"
+                pinId: "bt"
                 subtitle: !root.bluetoothOn ? "Uit"
                     : (root.bluetoothConnected > 0 ? root.bluetoothConnected + " verbonden" : "Aan")
                 active: root.bluetoothOn
@@ -394,6 +396,7 @@ Item {
             Pill {
                 icon: NotificationService.dnd ? "󰂛" : "󰂚"
                 label: "Niet storen"
+                pinId: "dnd"
                 subtitle: NotificationService.dnd ? "Aan" : "Uit"
                 active: NotificationService.dnd
                 accent: mocha.accent2
@@ -403,6 +406,7 @@ Item {
                 icon: root.powerProfileName === "performance" ? "󰓅"
                     : (root.powerProfileName === "power-saver" ? "󰌪" : "󰾅")
                 label: "Energie"
+                pinId: "power"
                 subtitle: root.profileLabel(root.powerProfileName)
                 active: root.powerProfileName !== "balanced"
                 accent: root.powerProfileName === "performance" ? mocha.accent2 : mocha.accent3
@@ -429,6 +433,16 @@ Item {
                     refreshSoon.restart();
                 }
             }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            Layout.topMargin: -4
+            text: "Rechtsklik op een pil: vastpinnen in de rail"
+            font.family: ThemeConfig.uiFont
+            font.pixelSize: 9
+            color: Qt.rgba(mocha.subtext0.r, mocha.subtext0.g, mocha.subtext0.b, 0.75)
+            horizontalAlignment: Text.AlignHCenter
         }
 
         // --- Uitklap onder de pillen ------------------------------------------
@@ -591,6 +605,9 @@ Item {
         property bool expandable: false
         property bool isExpanded: false
         property color accent: mocha.primary
+        // Rechtsklik pint deze pil als mini-tegel in de rail (RailPins).
+        property string pinId: ""
+        readonly property bool pinned: pinId !== "" && RailPins.isPinned(pinId)
         signal triggered()
         signal expandRequested()
 
@@ -624,7 +641,30 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: pill.triggered()
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.RightButton) {
+                    if (pill.pinId !== "") RailPins.toggle(pill.pinId);
+                    return;
+                }
+                pill.triggered();
+            }
+        }
+
+        // Speldje: deze pil staat ook in de rail.
+        Text {
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 2
+            anchors.rightMargin: pill.expandable ? 40 : 14
+            text: "󰐃"
+            font.family: ThemeConfig.iconFont
+            font.pixelSize: 10
+            color: pill.accent
+            opacity: pill.pinned ? 0.9 : 0
+            Behavior on opacity {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+            }
         }
 
         RowLayout {

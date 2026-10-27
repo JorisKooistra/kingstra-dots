@@ -591,6 +591,27 @@ Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 104
 
+                        // Rechtsklik: play/pauze als mini-tegel in de rail.
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.RightButton
+                            onClicked: RailPins.toggle("media")
+                        }
+                        Text {
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.margins: 6
+                            z: 2
+                            text: "󰐃"
+                            font.family: ThemeConfig.iconFont
+                            font.pixelSize: 10
+                            color: mocha.green
+                            opacity: RailPins.isPinned("media") ? 0.9 : 0
+                            Behavior on opacity {
+                                NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+                            }
+                        }
+
                         RowLayout {
                             anchors.fill: parent
                             anchors.margins: 12

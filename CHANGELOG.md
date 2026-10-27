@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell: pinned rail modules
+- Right-click a pill in the control center (Wi-Fi, Bluetooth, Niet storen, Energie) or the media card to pin it to the rail as a mini tile, like modules in the macOS menu bar. One click toggles it there; middle-click unpins. Stored in `~/.local/state/kingstra/rail-pins`.
+
 ### Shell: keyboard menu
 - Super+Alt+Space (or `kingstra menu`) opens one keyboard menu for everything, like Omarchy's: apps, appearance (theme, wallpaper), mode, quick toggles, screens, capture, system (update, doctor, restore point, restart) and session. Arrows or 1-9 choose, Enter or → opens, ← goes back, typing filters.
 

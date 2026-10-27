@@ -533,6 +533,55 @@ Item {
         if (!volPoller.running) volPoller.running = true;
     }
 
+    // --- Vastgepinde modules (RailPins) -----------------------------------
+    readonly property string powerProfileName: {
+        let p = PowerProfiles.profile;
+        if (p === PowerProfile.Performance) return "performance";
+        if (p === PowerProfile.PowerSaver) return "power-saver";
+        return "balanced";
+    }
+    function pinIcon(id) {
+        if (id === "wifi") return isWifiOn ? "󰤨" : "󰤮";
+        if (id === "bt") return isBtOn ? "󰂱" : "󰂲";
+        if (id === "dnd") return NotificationService.dnd ? "󰂛" : "󰂚";
+        if (id === "power") return powerProfileName === "performance" ? "󰓅" : (powerProfileName === "power-saver" ? "󰌪" : "󰾅");
+        if (id === "media") return activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing ? "󰏤" : "󰐊";
+        return "";
+    }
+    function pinActive(id) {
+        if (id === "wifi") return isWifiOn;
+        if (id === "bt") return isBtOn;
+        if (id === "dnd") return NotificationService.dnd;
+        if (id === "power") return powerProfileName !== "balanced";
+        if (id === "media") return activePlayer !== null && activePlayer.playbackState === MprisPlaybackState.Playing;
+        return false;
+    }
+    function pinTooltip(id) {
+        let label = id === "wifi" ? "Wi-Fi " + (isWifiOn ? "aan" : "uit")
+            : id === "bt" ? "Bluetooth " + (isBtOn ? "aan" : "uit")
+            : id === "dnd" ? "Niet storen " + (NotificationService.dnd ? "aan" : "uit")
+            : id === "power" ? "Energieprofiel wisselen"
+            : (activePlayer ? String(activePlayer.trackTitle || activePlayer.identity || "Media") : "Media");
+        return label + " · middelklik: losmaken";
+    }
+    function pinTrigger(id) {
+        if (id === "wifi") {
+            Quickshell.execDetached(["nmcli", "radio", "wifi", isWifiOn ? "off" : "on"]);
+        } else if (id === "bt") {
+            Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/network/bluetooth_panel_logic.sh", "--toggle"]);
+        } else if (id === "dnd") {
+            NotificationService.toggleDnd();
+        } else if (id === "power") {
+            let order = PowerProfiles.hasPerformanceProfile ? ["power-saver", "balanced", "performance"] : ["power-saver", "balanced"];
+            let next = order[(order.indexOf(powerProfileName) + 1) % order.length];
+            PowerProfiles.profile = next === "performance" ? PowerProfile.Performance
+                : (next === "power-saver" ? PowerProfile.PowerSaver : PowerProfile.Balanced);
+        } else if (id === "media") {
+            if (activePlayer && activePlayer.canTogglePlaying) activePlayer.togglePlaying();
+            else togglePanel("audiomedia");
+        }
+    }
+
     function toggleMute() {
         Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]);
         root.isMuted = !root.isMuted;
@@ -1132,6 +1181,20 @@ Item {
                 icon: "󰊴"
                 accent: root.mocha.accent2
                 onTriggered: root.togglePanel("gaming")
+            }
+
+            // Vastgepinde modules uit het controlecentrum: één klik schakelt,
+            // middelklik maakt los (rechtsklik op de pil pint weer vast).
+            Repeater {
+                model: RailPins.pins
+                delegate: RailButton {
+                    required property string modelData
+                    tooltip: root.pinTooltip(modelData)
+                    icon: root.pinIcon(modelData)
+                    accent: root.pinActive(modelData) ? root.mocha.accent3 : root.mocha.subtext0
+                    onTriggered: root.pinTrigger(modelData)
+                    onMiddleClicked: RailPins.toggle(modelData)
+                }
             }
 
             Item { Layout.fillHeight: true }
