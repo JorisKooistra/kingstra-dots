@@ -28,7 +28,7 @@ FocusScope {
     property int selectedIndex: 0
     readonly property var quickActions: [
         { icon: "󰒓", label: "Instellingen", detail: "Shell en systeem", target: "settings" },
-        { icon: "󰏘", label: "Thema", detail: "Kleur en vorm · instellingen", target: "settings" },
+        { icon: "󰏘", label: "Thema", detail: "Kleur en vorm · instellingen", target: "settings", page: "thema" },
         { icon: "󰓃", label: "Media", detail: "Nu afspelen", target: "music" },
         { icon: "󰍹", label: "Schermen", detail: "Indeling en profielen", target: "monitors" },
         { icon: "󰊢", label: "Overview", detail: "Werkruimten", target: "overview" },
@@ -317,8 +317,9 @@ FocusScope {
             Quickshell.execDetached([
                 "bash",
                 Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh",
-                "toggle",
-                action.target
+                action.target === "settings" ? "open" : "toggle",
+                action.target,
+                action.page || ""
             ]);
         }
         closePanel();

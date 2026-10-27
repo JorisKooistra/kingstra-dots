@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell: settings as a real app
+- Settings opens as its own floating window instead of a drawer beside the rail: move it, tile it next to an app, open it on any screen, and it stays open when you click elsewhere. Super+, (new) and Super+Ctrl+I toggle it.
+- Search finds individual settings (blur, scroll speed, idle lock, ...) and jumps to the right page and theme-editor tab.
+- Deep links: `kingstra settings <page>` or `qs_manager.sh open settings <page>` (thema, bar, sneltoetsen, invoer, beeldschermen, netwerk, geluid, tijd, sessie, updates, geavanceerd, over). The launcher's Thema action opens the Thema page.
+
 ### Safety net
 - Every update first makes a restore point: a local git tag of the dotfiles and, on btrfs with snapper, a system snapshot (`kingstra-snapshot`).
 - `kingstra-rollback` puts the dotfiles back to the last restore point and holds them there until `kingstra-rollback --release`.

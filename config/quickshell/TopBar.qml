@@ -19,4 +19,11 @@ ShellRoot {
     BarShell {}
     ShellSurface {}
     VolumeBarPopup {}
+
+    // Instellingen als eigen venster. Via LazyLoader met een bron-URL: een
+    // fout in dat venster laat de bar en de surface gewoon starten.
+    LazyLoader {
+        active: true
+        source: "settings/SettingsWindow.qml"
+    }
 }

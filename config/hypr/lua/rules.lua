@@ -21,6 +21,10 @@ rule("youtube-no-blur", { title = "YouTube" }, { no_blur = true })
 rule("spotify", { class = "^(Spotify|spotify)$" }, { workspace = "special:spotify" })
 rule("discord", { class = "^(discord|vesktop)$" }, { workspace = "special:discord" })
 rule("quickshell", { class = "^org\\.quickshell$" }, { float = true, no_blur = true, no_shadow = true, border_size = 0, no_initial_focus = true })
+-- Instellingen is een echt Quickshell-venster: zwevend, gecentreerd en wel
+-- focus, schaduw en rand, anders dan de overige quickshell-oppervlakken.
+-- Komt na de algemene quickshell-regel, zodat deze waarden winnen.
+pcall(rule, "kingstra-settings", { class = "^org\\.quickshell$", title = "^Kingstra Instellingen$" }, { float = true, size = "1120 740", center = true, no_initial_focus = false, no_shadow = false, no_blur = false })
 rule("qs-master", { title = "^qs-master$" }, { float = true, no_blur = true, no_shadow = true, border_size = 0, no_initial_focus = true, workspace = "special:qs-master" })
 
 -- Super+T remembers per app class whether it floats (togglefloating-safe.sh

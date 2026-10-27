@@ -436,6 +436,11 @@ Item {
     }
 
     function togglePanel(target) {
+        // Instellingen is een eigen venster, geen paneel uit de rand.
+        if (target === "settings") {
+            Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "settings"]);
+            return;
+        }
         panelRequested(target, lastTriggerX, lastTriggerY);
     }
 

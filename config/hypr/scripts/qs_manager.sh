@@ -236,6 +236,14 @@ if [[ "$ACTION" == "close" ]]; then
     exit 0
 fi
 
+# Instellingen is een eigen venster (quickshell/settings/SettingsWindow.qml)
+# en geen paneel meer: dat venster leest zijn eigen request-file en beslist
+# zelf over toggelen. Optioneel derde argument = pagina (thema, geluid, ...).
+if [[ "$TARGET" == "settings" && ( "$ACTION" == "open" || "$ACTION" == "toggle" ) ]]; then
+    printf '%s:%s:%s\n' "$ACTION" "${SUBTARGET//:/}" "$RANDOM$RANDOM" > /tmp/kingstra-settings-request
+    exit 0
+fi
+
 if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     ACTIVE_WIDGET=$(cat /tmp/qs_active_widget 2>/dev/null)
     CURRENT_MODE=$(cat "$NETWORK_MODE_FILE" 2>/dev/null)
@@ -246,7 +254,7 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     # Keep this in lockstep with ShellSurface.qml and Main.qml. Every panel
     # below is rendered by the per-screen shell surface; routing one through
     # qs-master would reintroduce duplicate overlays and competing focus.
-    SURFACE_NATIVE=" battery focustime network volume music calendar monitors performance quicksettings audiomedia gaming settings power notifications launcher clipboard windows "
+    SURFACE_NATIVE=" battery focustime network volume music calendar monitors performance quicksettings audiomedia gaming power notifications launcher clipboard windows "
     if [[ "$SURFACE_NATIVE" == *" $TARGET "* ]]; then
         if [[ "$ACTION" == "toggle" && "$ACTIVE_WIDGET" == "$TARGET" ]]; then
             qs_ipc_close

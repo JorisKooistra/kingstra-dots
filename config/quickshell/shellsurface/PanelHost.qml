@@ -524,6 +524,15 @@ Item {
             ignoreUnknownSignals: true
             function onPanelSwitchRequested(entryId) {
                 let next = String(entryId || "");
+                // Instellingen opent als eigen venster; dit paneel sluit.
+                if (next === "settings" || next.indexOf("settings:") === 0) {
+                    let page = next.indexOf(":") > 0 ? next.split(":")[1] : "";
+                    let args = ["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "open", "settings"];
+                    if (page !== "") args.push(page);
+                    Quickshell.execDetached(args);
+                    root.sourceEntryId = "";
+                    return;
+                }
                 let current = root.visualEntryId !== "" ? root.visualEntryId : root.sourceEntryId;
                 if (next !== "" && current !== "" && next !== current) {
                     root.holdW = root.panelWidth(current);

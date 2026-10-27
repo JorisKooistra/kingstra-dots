@@ -217,7 +217,7 @@ Scope {
                         panelHost.sourceEntryId = "";
                         return;
                     }
-                    let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "quicksettings", "audiomedia", "gaming", "settings", "power", "notifications", "launcher", "clipboard", "windows", "tophover"];
+                    let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "quicksettings", "audiomedia", "gaming", "power", "notifications", "launcher", "clipboard", "windows", "tophover"];
                     if (!ThemeConfig.barZoneSchemaLoaded || surfaceTargets.indexOf(target) === -1) return;
                     if (Hyprland.monitorFor(surfaceWindow.screen) === Hyprland.focusedMonitor)
                         panelHost.sourceEntryId = target;

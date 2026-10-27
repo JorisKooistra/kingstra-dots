@@ -22,6 +22,20 @@ Item {
         else { closeSequence.start(); }
         event.accepted = true;
     }
+    // In een eigen venster (SettingsWindow.qml) sluit de app zichzelf;
+    // als paneel in de shell-surface loopt sluiten via qs_manager.
+    property bool windowed: false
+    signal closeRequested()
+
+    function finishClose() {
+        if (windowed) closeRequested();
+        else Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
+    }
+
+    function animateClose() {
+        closeSequence.start();
+    }
+
     Keys.onTabPressed: { openTab((currentTab + 1) % tabs.length); event.accepted = true; }
     Keys.onBacktabPressed: { openTab((currentTab - 1 + tabs.length) % tabs.length); event.accepted = true; }
 
@@ -125,18 +139,104 @@ Item {
         }
     }
 
-    // Enter in het zoekveld: eerste passend tabblad, en anders zoeken in de
-    // sneltoetsen.
+    // Enter in het zoekveld: eerste losse instelling, dan het eerste passende
+    // tabblad, en anders zoeken in de sneltoetsen.
     function acceptSettingsQuery() {
         let q = settingsQuery.trim();
         if (q === "") return;
-        if (visibleTabIndexes.length > 0) openTab(visibleTabIndexes[0]);
+        if (settingResults.length > 0) openSetting(settingResults[0]);
+        else if (visibleTabIndexes.length > 0) openTab(visibleTabIndexes[0]);
         else searchKeybinds(q);
     }
 
     function searchKeybinds(q) {
         openPage(4);
         filterInput.text = q;
+    }
+
+    // Zoeken op losse instelling, zoals in GNOME en KDE: een treffer springt
+    // naar de pagina (en het tabblad van de thema-editor) waar hij staat.
+    // Labels zijn de koppen zoals ze op de pagina staan.
+    readonly property var settingIndex: [
+        { label: "Thema kiezen", page: 1, where: "Uiterlijk › Thema", keywords: "theme carousel actief thema toepassen preview" },
+        { label: "Hoekrondheid", page: 1, editor: "appearance", where: "Thema-editor › Uiterlijk", keywords: "radius rond rounding hoeken" },
+        { label: "Randdikte", page: 1, editor: "appearance", where: "Thema-editor › Uiterlijk", keywords: "border rand dikte" },
+        { label: "Binnen- en buitenmarge", page: 1, editor: "appearance", where: "Thema-editor › Uiterlijk", keywords: "gaps marge padding ruimte" },
+        { label: "Blur", page: 1, editor: "appearance", where: "Thema-editor › Uiterlijk", keywords: "blur wazig vervagen passes size" },
+        { label: "Lettertypes", page: 1, editor: "fonts", where: "Thema-editor › Fonts", keywords: "font lettertype ui mono display grootte gewicht letter spacing" },
+        { label: "Icoonthema", page: 1, editor: "colors", where: "Thema-editor › Kleuren", keywords: "icon icons iconen gtk qt" },
+        { label: "Matugen-kleuren", page: 1, editor: "colors", where: "Thema-editor › Kleuren", keywords: "matugen scene mode donker licht dark light contrast kleur color index" },
+        { label: "Barhoogte, -breedte en vorm", page: 1, editor: "bar", where: "Thema-editor › Bar", keywords: "bar height width shape positie position rand edge klokstijl clock" },
+        { label: "Transparantie", page: 1, editor: "bar", where: "Thema-editor › Bar", keywords: "opacity doorzichtig transparant popup bar" },
+        { label: "Animatiesnelheid", page: 1, editor: "bar", where: "Thema-editor › Bar", keywords: "animatie snelheid motion duration traag snel" },
+        { label: "Deeltjes en glow", page: 1, editor: "effects", where: "Thema-editor › Effecten", keywords: "particles deeltjes glow gloed materiaal overlay ambient" },
+        { label: "Stijlprofiel", page: 1, editor: "character", where: "Thema-editor › Karakter", keywords: "family density surface shadow outline glass karakter stijl" },
+        { label: "Rail en drawer", page: 1, editor: "character", where: "Thema-editor › Karakter", keywords: "rail accent drawer modules workspace preview" },
+        { label: "Barpositie en vorm", page: 2, where: "Uiterlijk › Bar", keywords: "bar positie vorm hoogte breedte boven onder topbar" },
+        { label: "Klok in de bar", page: 2, where: "Uiterlijk › Bar", keywords: "klok clock stijl" },
+        { label: "Sneltoetsen bewerken", page: 4, where: "Sneltoetsen", keywords: "keybind toets sneltoets binding super" },
+        { label: "Scrollsnelheid", page: 5, where: "Invoer", keywords: "scroll touchpad muis snelheid" },
+        { label: "Toetsenbordindeling", page: 5, where: "Invoer", keywords: "keyboard layout taal us intl qwerty" },
+        { label: "Rechtsklik op touchpad", page: 5, where: "Invoer", keywords: "rechtsklik touchpad klikgebied tweevinger" },
+        { label: "Dead keys", page: 5, where: "Invoer", keywords: "dead keys accenten aanhalingstekens" },
+        { label: "Schermindeling", page: 6, where: "Beeldschermen", keywords: "monitor layout indeling resolutie scherm" },
+        { label: "Hoofdscherm", page: 6, where: "Beeldschermen", keywords: "primary hoofd rail anker monitor" },
+        { label: "Helderheid", page: 6, where: "Beeldschermen", keywords: "brightness helderheid licht" },
+        { label: "Tabletmodus", page: 6, where: "Beeldschermen", keywords: "tablet touch aanraak" },
+        { label: "Workspaces per scherm", page: 6, where: "Beeldschermen", keywords: "workspace werkruimte monitor vastzetten toewijzen" },
+        { label: "Wifi en bluetooth", page: 7, where: "Systeem › Netwerk", keywords: "wifi netwerk bluetooth draadloos" },
+        { label: "Uitvoer en invoer", page: 8, where: "Geluid", keywords: "speaker koptelefoon microfoon output input audio standaard" },
+        { label: "Volume per app", page: 8, where: "Geluid", keywords: "app streams mixer volume" },
+        { label: "Tijd- en datumnotatie", page: 9, where: "Tijd & weer", keywords: "tijd datum notatie formaat 24 uur klok" },
+        { label: "Weer-API en locatie", page: 9, where: "Tijd & weer", keywords: "weer openweather api sleutel locatie eenheden celsius" },
+        { label: "Modus (office, gaming, media)", page: 10, where: "Sessie", keywords: "mode modus office gaming media" },
+        { label: "Automatisch vergrendelen", page: 10, where: "Sessie", keywords: "idle lock vergrendelen scherm uit dpms slaapstand suspend timeout" },
+        { label: "Energieprofiel", page: 10, where: "Sessie", keywords: "power profile performance balanced saver batterij" },
+        { label: "Updates", page: 11, where: "Systeem › Updates", keywords: "update pakketten dotfiles upgrade" },
+        { label: "Shell herstarten", page: 12, where: "Systeem › Geavanceerd", keywords: "quickshell herstart topbar herladen matugen render" },
+        { label: "Verwijderen", page: 12, where: "Systeem › Geavanceerd", keywords: "uninstall verwijderen restore" },
+        { label: "Over Kingstra", page: 13, where: "Systeem › Over", keywords: "versie over github onderdelen" }
+    ]
+    readonly property var settingResults: {
+        let q = settingsQuery.trim().toLowerCase();
+        if (q.length < 2) return [];
+        let words = q.split(/\s+/);
+        let out = [];
+        for (let i = 0; i < settingIndex.length; i++) {
+            let e = settingIndex[i];
+            let hay = (e.label + " " + e.where + " " + e.keywords).toLowerCase();
+            let ok = true;
+            for (let w = 0; w < words.length; w++) {
+                if (hay.indexOf(words[w]) === -1) { ok = false; break; }
+            }
+            if (ok) out.push(e);
+            if (out.length >= 8) break;
+        }
+        return out;
+    }
+
+    function openSetting(entry) {
+        if (!entry) return;
+        if (entry.editor) themeEditorTab = entry.editor;
+        openPage(entry.page);
+    }
+
+    // Diepe links (qs_manager.sh open settings <naam>): elke pagina heeft een
+    // vaste naam, zodat panelen Instellingen op de juiste plek kunnen openen.
+    readonly property var pageNames: ({
+        "thema": 1, "theme": 1, "bar": 2, "sneltoetsen": 4, "keybinds": 4,
+        "invoer": 5, "input": 5, "beeldschermen": 6, "monitors": 6,
+        "netwerk": 7, "network": 7, "geluid": 8, "audio": 8,
+        "tijd": 9, "weer": 9, "sessie": 10, "session": 10, "updates": 11,
+        "geavanceerd": 12, "advanced": 12, "over": 13, "about": 13
+    })
+
+    function openNamedPage(name) {
+        let key = String(name || "").trim().toLowerCase();
+        if (key === "") return;
+        let page = pageNames[key];
+        if (page === undefined && /^[0-9]+$/.test(key)) page = parseInt(key);
+        if (page !== undefined) openPage(page);
     }
 
     onCurrentPageChanged: {
@@ -2078,7 +2178,7 @@ Item {
             NumberAnimation { target: root; property: "introSidebar"; to: 0.0; duration: 150; easing.type: Easing.InExpo }
         }
         NumberAnimation { target: root; property: "introBase"; to: 0.0; duration: 200; easing.type: Easing.InQuart }
-        ScriptAction { script: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]) }
+        ScriptAction { script: root.finishClose() }
     }
 
     // -------------------------------------------------------------------------
@@ -2247,7 +2347,7 @@ Item {
         introContent = 0.0;
         introSidebar = 0.0;
         introBase = 0.0;
-        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
+        root.finishClose();
     }
 
     function runUninstallFlow(noRestore) {
@@ -2266,7 +2366,7 @@ Item {
         introContent = 0.0;
         introSidebar = 0.0;
         introBase = 0.0;
-        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
+        root.finishClose();
     }
 
     // -------------------------------------------------------------------------
@@ -2382,6 +2482,41 @@ Item {
                         width: sidebarTabsView.availableWidth
                         spacing: root.s(8)
 
+                        // Losse instellingen die bij de zoekterm passen.
+                        Text {
+                            visible: root.settingResults.length > 0
+                            text: "Instellingen"
+                            Layout.leftMargin: root.s(6)
+                            font.family: root.uiFontFamily; font.pixelSize: root.s(10); font.weight: Font.Bold
+                            font.letterSpacing: root.themedLetterSpacing; color: root.subtext0
+                        }
+                        Repeater {
+                            model: root.settingResults
+                            Rectangle {
+                                id: resultRow
+                                required property var modelData
+                                required property int index
+                                Layout.fillWidth: true; Layout.preferredHeight: root.s(46); radius: root.s(8)
+                                color: resultMa.containsMouse || (index === 0 && settingsSearchInput.activeFocus)
+                                    ? root.popupPanelFill : "transparent"
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                ColumnLayout {
+                                    anchors.fill: parent; anchors.leftMargin: root.s(15); anchors.rightMargin: root.s(10)
+                                    spacing: 0
+                                    Item { Layout.fillHeight: true }
+                                    Text { text: resultRow.modelData.label; Layout.fillWidth: true; elide: Text.ElideRight; font.family: root.uiFontFamily; font.pixelSize: root.s(12); font.weight: Font.Medium; color: root.text }
+                                    Text { text: resultRow.modelData.where; Layout.fillWidth: true; elide: Text.ElideRight; font.family: root.uiFontFamily; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    Item { Layout.fillHeight: true }
+                                }
+                                MouseArea { id: resultMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openSetting(resultRow.modelData) }
+                            }
+                        }
+                        Rectangle {
+                            visible: root.settingResults.length > 0 && root.visibleTabIndexes.length > 0
+                            Layout.fillWidth: true; height: 1; color: Qt.alpha(root.surface1, 0.5)
+                            Layout.topMargin: root.s(2); Layout.bottomMargin: root.s(2)
+                        }
+
                         // Tabbladen (gefilterd door het zoekveld)
                         Repeater {
                             model: root.visibleTabIndexes
@@ -2416,7 +2551,7 @@ Item {
 
                         // Geen tabblad gevonden: zoek dan in de sneltoetsen.
                         Rectangle {
-                            visible: root.settingsQuery.trim() !== "" && root.visibleTabIndexes.length === 0
+                            visible: root.settingsQuery.trim() !== "" && root.visibleTabIndexes.length === 0 && root.settingResults.length === 0
                             Layout.fillWidth: true; Layout.preferredHeight: root.s(44); radius: root.s(8)
                             color: keybindSearchMa.containsMouse ? root.popupPanelFill : "transparent"
                             border.color: root.surface1; border.width: 1

@@ -60,7 +60,8 @@ Onderhoud
   install [opties]         installer draaien (zie install.sh --help)
 
 Openen
-  settings | keys | launcher | quick   instellingen, sneltoetsen, launcher, snelle instellingen
+  settings [pagina]        instellingen, optioneel op een pagina (thema, geluid, sessie, ...)
+  keys | launcher | quick  sneltoetsen, launcher, snelle instellingen
 
 Overig
   welcome                  welkomstmelding en sneltoetsen opnieuw tonen
@@ -90,7 +91,9 @@ case "$cmd" in
     install)
         repo="$(resolve_repo)" || { echo "kingstra: repo niet gevonden" >&2; exit 1; }
         exec bash "$repo/install.sh" "$@" ;;
-    settings|instellingen) panel settings ;;
+    settings|instellingen)
+        [[ -x "$QS_MANAGER" ]] || { echo "kingstra: qs_manager.sh niet gevonden" >&2; exit 127; }
+        exec "$QS_MANAGER" open settings "${1:-}" ;;
     keys|toetsen|sneltoetsen) panel help ;;
     launcher) panel launcher ;;
     quick|snel) panel quicksettings ;;
