@@ -63,6 +63,7 @@ Openen
   settings | keys | launcher | quick   instellingen, sneltoetsen, launcher, snelle instellingen
 
 Overig
+  welcome                  welkomstmelding en sneltoetsen opnieuw tonen
   version                  geïnstalleerde versie
   help                     dit overzicht
 TXT
@@ -93,6 +94,7 @@ case "$cmd" in
     keys|toetsen|sneltoetsen) panel help ;;
     launcher) panel launcher ;;
     quick|snel) panel quicksettings ;;
+    welcome|welkom) run kingstra-welcome --force ;;
     version|versie|--version|-v)
         repo="$(resolve_repo)" || { echo "onbekend"; exit 0; }
         printf 'kingstra-dots %s (%s)\n' "$(tr -d '[:space:]' < "$repo/VERSION" 2>/dev/null || echo onbekend)" \

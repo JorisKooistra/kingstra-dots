@@ -17,6 +17,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - `kingstra refresh <part>` puts one config back to the repo default, with a backup first.
 - `config/hypr/lua/user.lua` for personal binds, rules and settings: not tracked, loads last, errors are caught.
 
+- `kingstra-shell-watch` restarts the bar, popups or overview after a crash (at most 3 times per 10 minutes, then a notification instead of a restart loop).
+- The update badge stays off while the dotfiles are held after a rollback.
+- A one-time welcome after a fresh install: the five key shortcuts and the shortcut overview (`kingstra welcome` shows it again).
+
 ### Simpler
 - SwayNC leftovers removed (config, color template, theme CSS, stop calls); migrations stop it and clean the Matugen config once.
 - One launcher: the search buttons open the Quickshell launcher; Walker and Elephant no longer run as background services.

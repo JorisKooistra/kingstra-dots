@@ -159,6 +159,8 @@ _phase08_deploy_state_scripts() {
         ["kingstra-doctor"]="kingstra-doctor"
         ["kingstra-refresh"]="kingstra-refresh"
         ["kingstra"]="kingstra"
+        ["kingstra-shell-watch"]="kingstra-shell-watch"
+        ["kingstra-welcome"]="kingstra-welcome"
     )
 
     for src_name in "${!state_scripts[@]}"; do

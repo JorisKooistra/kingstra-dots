@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-shell-watch — Quickshell herstarten na een crash
+# =============================================================================
+# Draait op de achtergrond zolang Hyprland draait (gestart door
+# kingstra-session-start). Elke 5 seconden wordt gekeken of de bar, de popups
+# en het overzicht draaien. Ontbreekt er één twee checks achter elkaar
+# (dus ~10 s), dan wordt die opnieuw gestart: een bewuste herstart vanuit
+# Instellingen of een themawissel is dan allang klaar.
+#
+# Maximaal 3 herstarts per onderdeel per 10 minuten. Daarna een melding en
+# geen nieuwe pogingen meer tot de volgende sessie, zodat een fout in de
+# QML geen herstart-lus wordt. Elke herstart komt in
+# ~/.local/state/kingstra/shell-crashes (kingstra-doctor toont het aantal).
+#
+# Pauzeren: touch "$XDG_RUNTIME_DIR/kingstra-shell-watch.pause" (geldt 2 min).
+# =============================================================================
+set -uo pipefail
+
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra"
+CRASH_LOG="$STATE_DIR/shell-crashes"
+SESSION_LOG="$STATE_DIR/session.log"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+PAUSE_FILE="$RUNTIME_DIR/kingstra-shell-watch.pause"
+INTERVAL="${KINGSTRA_WATCH_INTERVAL:-5}"
+MAX_RESTARTS=3
+WINDOW=600
+
+export QML_IMPORT_PATH="$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+mkdir -p "$STATE_DIR"
+
+# naam|pgrep-patroon|commando
+COMPONENTS=(
+    "bar|quickshell.*TopBar.qml|quickshell --no-duplicate -p $CONFIG_HOME/quickshell/TopBar.qml"
+    "popups|quickshell.*Main.qml|quickshell --no-duplicate -p $CONFIG_HOME/quickshell/Main.qml"
+    "overzicht|qs.*overview/shell.qml|qs --no-duplicate -p $CONFIG_HOME/quickshell/overview/shell.qml"
+)
+
+declare -A missing_since=() restarts=() given_up=()
+
+log() {
+    printf '[%s] shell-watch: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$SESSION_LOG" 2>/dev/null || true
+}
+
+hyprland_alive() {
+    pgrep -x Hyprland >/dev/null 2>&1 || pgrep -x Hyprland-bin >/dev/null 2>&1 || pgrep -f "/usr/bin/Hyprland" >/dev/null 2>&1
+}
+
+paused() {
+    [[ -f "$PAUSE_FILE" ]] || return 1
+    local age=$(( $(date +%s) - $(stat -c %Y "$PAUSE_FILE" 2>/dev/null || echo 0) ))
+    (( age < 120 ))
+}
+
+# Herstarts binnen het venster tellen; oude tijdstempels vergeten.
+recent_restarts() {
+    local name="$1" now cutoff kept="" t count=0
+    now="$(date +%s)"; cutoff=$((now - WINDOW))
+    for t in ${restarts[$name]:-}; do
+        if (( t >= cutoff )); then kept+="$t "; count=$((count + 1)); fi
+    done
+    restarts[$name]="$kept"
+    printf '%s\n' "$count"
+}
+
+restart_component() {
+    local name="$1" cmd="$2"
+    log "$name ontbreekt; opnieuw starten"
+    printf '%s|%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$name" >> "$CRASH_LOG"
+    # shellcheck disable=SC2086 # cmd is bewust woord-gesplitst
+    setsid -f $cmd >> "$SESSION_LOG" 2>&1 || log "starten van $name mislukt"
+    restarts[$name]="${restarts[$name]:-}$(date +%s) "
+}
+
+give_up() {
+    local name="$1"
+    given_up[$name]=1
+    log "$name crasht steeds; geen nieuwe pogingen deze sessie"
+    command -v notify-send >/dev/null 2>&1 && notify-send -u critical "Kingstra-shell" \
+        "Het onderdeel '$name' crasht steeds en wordt niet meer herstart. Kijk in ~/.local/state/kingstra/session.log of draai: kingstra doctor" \
+        >/dev/null 2>&1 || true
+}
+
+# Crashlog kort houden.
+if [[ -f "$CRASH_LOG" ]] && (( $(wc -l < "$CRASH_LOG") > 200 )); then
+    tail -n 100 "$CRASH_LOG" > "$CRASH_LOG.tmp" && mv "$CRASH_LOG.tmp" "$CRASH_LOG"
+fi
+
+log "gestart"
+while hyprland_alive; do
+    sleep "$INTERVAL"
+    paused && { missing_since=(); continue; }
+    for entry in "${COMPONENTS[@]}"; do
+        IFS='|' read -r name pattern cmd <<< "$entry"
+        [[ -n "${given_up[$name]:-}" ]] && continue
+        if pgrep -f "$pattern" >/dev/null 2>&1; then
+            unset 'missing_since[$name]'
+            continue
+        fi
+        if [[ -z "${missing_since[$name]:-}" ]]; then
+            missing_since[$name]=1
+            continue
+        fi
+        unset 'missing_since[$name]'
+        if (( $(recent_restarts "$name") >= MAX_RESTARTS )); then
+            give_up "$name"
+        else
+            restart_component "$name" "$cmd"
+        fi
+    done
+done
+log "Hyprland is weg; gestopt"

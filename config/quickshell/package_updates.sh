@@ -226,6 +226,12 @@ count_dotfiles_updates() {
         return 0
     fi
 
+    # Na kingstra-rollback staan de dotfiles bewust vast: geen badge.
+    if [[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/update-hold" ]]; then
+        printf '0\n'
+        return 0
+    fi
+
     branch="$(git -C "$repo" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
     [[ -n "$branch" ]] || {
         printf '0\n'

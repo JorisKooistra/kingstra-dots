@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-welcome — Welkom bij de eerste sessie na een installatie
+# =============================================================================
+# Gebruik:
+#   kingstra-welcome           alleen de eerste keer (kingstra-session-start)
+#   kingstra-welcome --force   altijd tonen (kingstra welcome)
+#
+# Toont een melding met de vijf belangrijkste sneltoetsen en opent daarna het
+# sneltoetsenoverzicht. Daarna komt het niet meer vanzelf terug.
+# =============================================================================
+set -uo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra"
+MARKER="$STATE_DIR/welcome-shown"
+INSTALLED="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/install-complete"
+QS_MANAGER="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/qs_manager.sh"
+
+if [[ "${1:-}" != "--force" ]]; then
+    [[ -f "$INSTALLED" ]] || exit 0
+    [[ -f "$MARKER" ]] && exit 0
+    # Geef de shell even de tijd om op te starten.
+    sleep 6
+fi
+
+mkdir -p "$STATE_DIR"
+date '+%Y-%m-%d %H:%M:%S' > "$MARKER"
+
+body="Super + Ctrl + Enter   apps zoeken
+Super + Tab           werkruimte-overzicht
+Super + A             snelle instellingen
+Super + Ctrl + T      thema kiezen
+Super + F1            alle sneltoetsen
+
+In een terminal: kingstra help"
+
+if command -v notify-send >/dev/null 2>&1; then
+    notify-send -a Kingstra -i preferences-desktop-theme "Welkom bij Kingstra" "$body" >/dev/null 2>&1 || true
+fi
+if [[ -x "$QS_MANAGER" ]]; then
+    "$QS_MANAGER" toggle help >/dev/null 2>&1 || true
+fi

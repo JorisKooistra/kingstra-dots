@@ -206,6 +206,7 @@ stop_session() {
 
     local pattern
     for pattern in \
+        "kingstra-shell-watch" \
         "quickshell.*$HOME/.config/quickshell/TopBar.qml" \
         "quickshell.*$HOME/.config/quickshell/Main.qml" \
         "qs.*$HOME/.config/quickshell/overview/shell.qml" \

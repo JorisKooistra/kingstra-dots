@@ -147,6 +147,29 @@ start_ui() {
     # Walker en Elephant draaien niet meer als dienst: de Quickshell-launcher
     # is de enige launcher. `walker` werkt nog als los commando.
     run_bg_once "swayosd-server$" "SwayOSD" swayosd-server
+    start_shell_watch
+
+    # Eenmalig welkom na een verse installatie.
+    if [[ -x "$HOME/.local/bin/kingstra-welcome" && ! -f "$LOG_DIR/welcome-shown" ]]; then
+        run_bg_once "kingstra-welcome" "welcome" "$HOME/.local/bin/kingstra-welcome"
+    fi
+}
+
+# Herstart Quickshell als het crasht (met een maximum; zie het script).
+start_shell_watch() {
+    local watch="$HOME/.local/bin/kingstra-shell-watch"
+    [[ -x "$watch" ]] || watch="$CONFIG_HOME/shared/scripts/kingstra-shell-watch"
+    [[ -x "$watch" ]] || return 0
+    run_bg_once "kingstra-shell-watch" "Quickshell crash watcher" "$watch"
+}
+
+# Een bewuste stop of herstart moet de watcher niet laten ingrijpen.
+pause_shell_watch() {
+    touch "${XDG_RUNTIME_DIR:-/run/user/${UID:-$(id -u)}}/kingstra-shell-watch.pause" 2>/dev/null || true
+}
+
+resume_shell_watch() {
+    rm -f "${XDG_RUNTIME_DIR:-/run/user/${UID:-$(id -u)}}/kingstra-shell-watch.pause" 2>/dev/null || true
 }
 
 # Alleen de Quickshell-shellprocessen (geen wallpaper-daemons, geen core).
@@ -193,6 +216,7 @@ stop_session() {
     [[ -x "$CONFIG_HOME/shared/scripts/kingstra-idle-inhibit" ]] \
         && "$CONFIG_HOME/shared/scripts/kingstra-idle-inhibit" off >/dev/null 2>&1 || true
 
+    stop_pattern "kingstra-shell-watch" "Quickshell crash watcher"
     stop_pattern "quickshell.*$CONFIG_HOME/quickshell/TopBar.qml" "Quickshell topbar"
     stop_pattern "quickshell.*$CONFIG_HOME/quickshell/Main.qml" "Quickshell popups"
     stop_pattern "qs.*$CONFIG_HOME/quickshell/overview/shell.qml" "Quickshell overview"
@@ -218,6 +242,7 @@ status_session() {
         "quickshell.*Main.qml"
         "qs.*overview/shell.qml"
         "focus_daemon.py"
+        "kingstra-shell-watch"
         "hypridle( |$)"
     )
 
@@ -256,12 +281,15 @@ case "${1:-start}" in
             log "restart shell aborted before stop: Wayland environment unavailable"
             exit 1
         fi
+        pause_shell_watch
         stop_shell
         for _ in 1 2 3 4 5 6 7 8 9 10; do
             pgrep -f "quickshell.*$CONFIG_HOME/quickshell/TopBar.qml" >/dev/null 2>&1 || break
             sleep 0.2
         done
         start_shell
+        resume_shell_watch
+        start_shell_watch
         ;;
     status)
         status_session
