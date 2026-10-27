@@ -50,6 +50,16 @@ FocusScope {
                 { icon: "󰋩", label: "Kiezer", hint: "Super+Ctrl+W", cmd: ["bash", scripts + "/wallpaper-picker-safe.sh"] },
                 { icon: "󰒝", label: "Willekeurig", hint: "Super+Shift+W", cmd: ["bash", scripts + "/wallpaper-random-safe.sh"] }
             ] },
+            { icon: "󰥔", label: "Bureaubladwidgets", children: [
+                { icon: "󰔡", label: "Aan of uit", cmd: kingstra("widgets wissel") },
+                { icon: "󰁜", label: "Klok linksboven", cmd: kingstra("widgets klok linksboven") },
+                { icon: "󰁝", label: "Klok rechtsboven", cmd: kingstra("widgets klok rechtsboven") },
+                { icon: "󰘞", label: "Klok in het midden", cmd: kingstra("widgets klok midden") },
+                { icon: "󰁆", label: "Klok linksonder", cmd: kingstra("widgets klok linksonder") },
+                { icon: "󰁅", label: "Klok rechtsonder", cmd: kingstra("widgets klok rechtsonder") },
+                { icon: "󰝚", label: "Mediakaart aan", cmd: kingstra("widgets media aan") },
+                { icon: "󰝛", label: "Mediakaart uit", cmd: kingstra("widgets media uit") }
+            ] },
             { icon: "󰒓", label: "Thema-instellingen", cmd: ["bash", scripts + "/qs_manager.sh", "open", "settings", "thema"] }
         ] },
         { icon: "󰾅", label: "Modus", children: [

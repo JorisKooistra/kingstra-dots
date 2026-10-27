@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell: desktop widgets
+- A large clock with the date and, when something plays or is paused, a media card sit on the wallpaper (above the wallpaper, below windows), in the theme's fonts and colors. Click the clock for the agenda.
+- `kingstra widgets aan|uit|klok <plek>|media aan|uit` and the keyboard menu (Uiterlijk › Bureaubladwidgets) switch them and move the clock (linksboven, rechtsboven, midden, linksonder, rechtsonder).
+
 ### Shell: control center edit mode
 - The pencil in the control center header switches to edit mode, like DMS and Windows 11: move pills left or right, make them wide or narrow, hide or show them. Saved in `~/.local/state/kingstra/control-center.json`; hidden pills stay reachable in edit mode.
 

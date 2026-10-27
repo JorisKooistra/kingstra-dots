@@ -26,4 +26,10 @@ ShellRoot {
         active: true
         source: "settings/SettingsWindow.qml"
     }
+
+    // Klok en media op het bureaublad; zelfde isolatie als hierboven.
+    LazyLoader {
+        active: true
+        source: "desktop/DesktopWidgets.qml"
+    }
 }

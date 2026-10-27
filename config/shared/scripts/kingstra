@@ -63,6 +63,7 @@ Openen
   settings [pagina]        instellingen, optioneel op een pagina (thema, geluid, sessie, ...)
   keys | launcher | quick  sneltoetsen, launcher, controlecentrum
   menu                     toetsenbordmenu voor alles (Super+Alt+Spatie)
+  widgets aan|uit|klok <plek>  bureaubladklok en media (plek: linksboven, rechtsboven, midden, linksonder, rechtsonder)
 
 Overig
   welcome                  welkomstmelding en sneltoetsen opnieuw tonen
@@ -98,6 +99,37 @@ case "$cmd" in
     keys|toetsen|sneltoetsen) panel help ;;
     launcher) panel launcher ;;
     menu) panel menu ;;
+    widgets|bureaublad)
+        # Bureaubladwidgets (klok en media): aan, uit, of de plek van de klok.
+        file="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/desktop-widgets.json"
+        mkdir -p "$(dirname "$file")"
+        python3 - "$file" "${1:-toggle}" "${2:-}" <<'PY'
+import json, sys
+path, action, arg = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    data = json.load(open(path))
+except Exception:
+    data = {}
+spots = {"linksboven": "top-left", "rechtsboven": "top-right", "midden": "center",
+         "linksonder": "bottom-left", "rechtsonder": "bottom-right"}
+if action in ("aan", "on"):
+    data["enabled"] = True
+elif action in ("uit", "off"):
+    data["enabled"] = False
+elif action in ("toggle", "wissel"):
+    data["enabled"] = not data.get("enabled", True)
+elif action in ("klok", "clock"):
+    spot = spots.get(arg, arg)
+    if spot not in spots.values():
+        sys.exit("plek: " + ", ".join(spots))
+    data["clock"] = spot
+elif action == "media":
+    data["media"] = arg not in ("uit", "off")
+else:
+    sys.exit("gebruik: kingstra widgets aan|uit|klok <plek>|media aan|uit")
+json.dump(data, open(path, "w"))
+PY
+        ;;
     quick|snel) panel tophover ;;
     welcome|welkom) run kingstra-welcome --force ;;
     version|versie|--version|-v)
