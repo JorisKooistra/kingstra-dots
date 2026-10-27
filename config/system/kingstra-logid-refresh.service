@@ -1,0 +1,13 @@
+# /etc/systemd/system/kingstra-logid-refresh.service — geplaatst door kingstra-dots
+# Herstart logid kort nadat een Logitech-apparaat (opnieuw) verschijnt, zodat de
+# duimknop weer BTN_TASK stuurt. Een receiver of Bluetooth-muis meldt meerdere
+# hidraw-nodes tegelijk; omdat dit een oneshot met wachttijd is, voegt systemd
+# die starts samen tot één herstart.
+[Unit]
+Description=logid herstarten na (her)verbinden van een Logitech-apparaat
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/sleep 2
+ExecStart=/usr/bin/systemctl restart logid.service

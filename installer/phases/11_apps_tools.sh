@@ -177,9 +177,40 @@ _phase11_setup_logiops() {
         sudo install -m 0644 "$cfg_src" "$cfg_dest"
         log_ok "logid-config geplaatst: $cfg_dest"
     fi
+    _phase11_install_logid_recovery
     service_enable logid
     sudo systemctl restart logid 2>/dev/null || true
     log_info "Duimknop M720:   venster slepen (mouse:279) — test met: sudo libinput debug-events"
+}
+
+# logid raakt de muis kwijt na boot, slaap of een Bluetooth-herverbinding.
+# Systemd-override, udev-regel en slaap-hook laten hem dan opnieuw koppelen.
+_phase11_install_logid_recovery() {
+    local src="$REPO_ROOT/config/system"
+    local -a pairs=(
+        "logid-override.conf|/etc/systemd/system/logid.service.d/kingstra.conf|0644"
+        "kingstra-logid-refresh.service|/etc/systemd/system/kingstra-logid-refresh.service|0644"
+        "90-kingstra-logid.rules|/etc/udev/rules.d/90-kingstra-logid.rules|0644"
+        "system-sleep-logid.sh|/usr/lib/systemd/system-sleep/kingstra-logid|0755"
+    )
+    local pair file dest mode
+
+    for pair in "${pairs[@]}"; do
+        IFS='|' read -r file dest mode <<< "$pair"
+        if [[ ! -f "$src/$file" ]]; then
+            log_warn "Bron niet gevonden: $src/$file"
+            continue
+        fi
+        sudo cmp -s "$src/$file" "$dest" 2>/dev/null && continue
+        backup_system_path "$dest"
+        sudo mkdir -p "$(dirname "$dest")"
+        sudo install -m "$mode" "$src/$file" "$dest"
+        log_ok "logid-herstel geplaatst: $dest"
+    done
+
+    sudo systemctl daemon-reload 2>/dev/null || true
+    sudo udevadm control --reload 2>/dev/null || true
+    sudo systemctl reset-failed logid.service 2>/dev/null || true
 }
 
 _phase11_init_yazi_theme_file() {

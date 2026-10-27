@@ -1,0 +1,4 @@
+# /etc/udev/rules.d/90-kingstra-logid.rules — geplaatst door kingstra-dots
+# Logitech-apparaat (vendor 046D, USB-receiver of Bluetooth) verschijnt → logid
+# opnieuw laten koppelen via kingstra-logid-refresh.service.
+ACTION=="add", SUBSYSTEM=="hidraw", KERNELS=="*:046D:*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="kingstra-logid-refresh.service"
