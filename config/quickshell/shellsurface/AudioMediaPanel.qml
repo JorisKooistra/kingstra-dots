@@ -527,7 +527,7 @@ Item {
 
                             Text {
                                 text: "󰌪"
-                                font.family: "Iosevka Nerd Font"
+                                font.family: ThemeConfig.iconFont
                                 font.pixelSize: 20
                                 color: mocha.peach
                             }
@@ -1170,7 +1170,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: toggle.icon
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: 16
                     color: mocha.green
                 }
@@ -1195,7 +1195,7 @@ Item {
                 Layout.preferredWidth: 24
                 horizontalAlignment: Text.AlignHCenter
                 text: "󰅂"
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 14
                 color: toggleMouse.containsMouse || toggle.expanded ? mocha.text : mocha.subtext0
                 rotation: toggle.expanded ? 90 : 0
@@ -1309,7 +1309,7 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: root.kindIcon(row.node ? String(row.node.kind || "") : "")
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: 15
                             color: row.accent
                         }
@@ -1497,7 +1497,7 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: ctl.icon
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: ctl.iconSize
                 color: ctl.primary || ctl.active ? mocha.accent3 : mocha.text
                 Behavior on color {
@@ -1607,7 +1607,7 @@ Item {
                 // Pauze-icoon staat optisch midden; play een tikje naar rechts.
                 anchors.horizontalCenterOffset: root.playing ? 0 : 1
                 text: root.playing ? "󰏤" : "󰐊"
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 22
                 color: mocha.accent3
             }

@@ -118,8 +118,8 @@ Item {
         anchors.top: parent.top
         anchors.topMargin: window.isReady ? window.s(40) : window.s(-80)
         opacity: window.isReady ? 1.0 : 0.0
-        Behavior on anchors.topMargin { NumberAnimation { duration: 600; easing.type: Easing.OutExpo } }
-        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+        Behavior on anchors.topMargin { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutExpo } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutCubic } }
         anchors.horizontalCenter: parent.horizontalCenter
         z: 20
         height: window.sf(58, 58)
@@ -137,7 +137,7 @@ Item {
             Text {
                 text: "\uf085"
                 font.pixelSize: window.sf(20, 20)
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 color: _theme.blue
                 anchors.verticalCenter: parent.verticalCenter
             }
@@ -157,7 +157,7 @@ Item {
         anchors.verticalCenterOffset: window.s(-10)
         spacing: window.cardSpacing
         opacity: window.isReady ? 1.0 : 0.0
-        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutCubic } }
 
         Repeater {
             model: window.modeModel
@@ -184,11 +184,11 @@ Item {
                         : Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.4)
                 border.width: (isActive || isSelected) ? 2 : 1
 
-                Behavior on color { ColorAnimation { duration: 200 } }
-                Behavior on border.color { ColorAnimation { duration: 200 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
                 scale: hoverArea.containsMouse ? 1.04 : 1.0
-                Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150); easing.type: Easing.OutBack } }
 
                 Column {
                     anchors.centerIn: parent
@@ -198,10 +198,10 @@ Item {
                     Text {
                         text: modelData.icon
                         font.pixelSize: window.sf(46, 42)
-                        font.family: "Iosevka Nerd Font"
+                        font.family: ThemeConfig.iconFont
                         color: (isActive || isSelected) ? _theme.blue : _theme.subtext1
                         anchors.horizontalCenter: parent.horizontalCenter
-                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                     }
 
                     Text {
@@ -210,7 +210,7 @@ Item {
                         font.bold: true
                         color: (isActive || isSelected) ? _theme.text : _theme.subtext0
                         anchors.horizontalCenter: parent.horizontalCenter
-                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                     }
 
                     Text {
@@ -243,8 +243,8 @@ Item {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: window.isReady ? window.s(30) : window.s(-60)
         opacity: window.isReady ? 1.0 : 0.0
-        Behavior on anchors.bottomMargin { NumberAnimation { duration: 600; easing.type: Easing.OutExpo } }
-        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+        Behavior on anchors.bottomMargin { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutExpo } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutCubic } }
         anchors.horizontalCenter: parent.horizontalCenter
         z: 20
         height: window.sf(52, 52)
@@ -317,7 +317,7 @@ Item {
             Text {
                 text: "\uf110"
                 font.pixelSize: window.sf(34, 30)
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 color: _theme.blue
                 anchors.horizontalCenter: parent.horizontalCenter
 

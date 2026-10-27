@@ -405,7 +405,7 @@ Item {
                             Layout.alignment: Qt.AlignHCenter
                             visible: root.weatherTemp !== ""
                             text: root.weatherIcon + "  " + root.weatherTemp
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: 13
                             font.weight: Font.Bold
                             color: mocha.text
@@ -665,7 +665,7 @@ Item {
                                 spacing: 6
                                 Text {
                                     text: "󰥔"
-                                    font.family: "Iosevka Nerd Font"
+                                    font.family: ThemeConfig.iconFont
                                     font.pixelSize: 13
                                     color: mocha.primary
                                 }
@@ -870,7 +870,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: tabBtn.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 16
             color: tabBtn.active ? mocha.primary : mocha.subtext0
         }
@@ -923,7 +923,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 text: "󰅂"
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 13
                 color: headerMouse.containsMouse ? mocha.text : mocha.subtext0
             }
@@ -955,7 +955,7 @@ Item {
         spacing: 8
         Text {
             text: stat.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 13
             color: stat.accent
         }
@@ -1003,7 +1003,7 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: chip.icon
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 12
                 color: chip.active ? mocha.primary : mocha.subtext1
             }
@@ -1107,7 +1107,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: btn.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 13
             color: mocha.text
         }

@@ -18,7 +18,7 @@ Rectangle {
     height: pillHeight
     clip: true
 
-    Behavior on color { ColorAnimation { duration: 200 } }
+    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
     property string fpsStr: "--"
     property color fpsColor: mocha.lavender
@@ -63,7 +63,7 @@ Rectangle {
 
     property real targetWidth: fpsRow.width + 24
     width: targetWidth
-    Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
+    Behavior on width { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
 
     Row {
         id: fpsRow
@@ -72,17 +72,17 @@ Rectangle {
 
         Text {
             text: "FPS"
-            font.family: "JetBrains Mono"; font.pixelSize: 11; font.weight: Font.Black
+            font.family: ThemeConfig.textFont; font.pixelSize: 11; font.weight: Font.Black
             color: root.fpsColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
         Text {
             text: root.fpsStr
-            font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
+            font.family: ThemeConfig.textFont; font.pixelSize: 13; font.weight: Font.Black
             color: root.fpsColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
     }
 

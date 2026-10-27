@@ -1334,7 +1334,7 @@ Item {
             x: combo.width - width - root.s(10)
             y: (combo.height - height) / 2
             text: "󰅀"
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: root.s(13)
             color: combo.hovered || combo.visualFocus ? root.blue : root.subtext0
         }
@@ -1344,7 +1344,7 @@ Item {
             color: Qt.alpha(root.surface0, 0.78)
             border.width: 1
             border.color: combo.visualFocus ? root.blue : (combo.hovered ? Qt.alpha(root.surface2, 0.95) : Qt.alpha(root.surface2, 0.78))
-            Behavior on border.color { ColorAnimation { duration: 120 } }
+            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(120) } }
         }
 
         delegate: ItemDelegate {
@@ -1439,7 +1439,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 text: "+"
-                font.family: "JetBrains Mono"
+                font.family: ThemeConfig.textFont
                 font.weight: Font.Bold
                 font.pixelSize: root.s(11)
                 color: upMa.containsMouse ? root.blue : root.subtext0
@@ -1466,7 +1466,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 text: "−"
-                font.family: "JetBrains Mono"
+                font.family: ThemeConfig.textFont
                 font.weight: Font.Bold
                 font.pixelSize: root.s(11)
                 color: downMa.containsMouse ? root.blue : root.subtext0
@@ -1485,7 +1485,7 @@ Item {
             color: Qt.alpha(root.surface0, 0.78)
             border.width: 1
             border.color: spin.visualFocus ? root.blue : (spin.hovered ? Qt.alpha(root.surface2, 0.95) : Qt.alpha(root.surface2, 0.78))
-            Behavior on border.color { ColorAnimation { duration: 120 } }
+            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(120) } }
         }
     }
 
@@ -1509,16 +1509,16 @@ Item {
         border.color: buttonMa.containsMouse ? accent : root.surface2
         scale: buttonMa.pressed ? 0.97 : (buttonMa.containsMouse ? 1.01 : 1.0)
 
-        Behavior on color { ColorAnimation { duration: 150 } }
-        Behavior on border.color { ColorAnimation { duration: 150 } }
-        Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutQuart } }
+        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutQuart } }
 
         RowLayout {
             anchors.centerIn: parent
             spacing: root.s(7)
             Text {
                 text: actionButton.icon
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: root.s(15)
                 color: actionButton.primary ? root.base : actionButton.accent
             }
@@ -1564,7 +1564,7 @@ Item {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: root.s(8)
-                Text { text: infoCard.icon; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(17); color: infoCard.accent }
+                Text { text: infoCard.icon; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17); color: infoCard.accent }
                 Text { text: infoCard.title; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text; Layout.fillWidth: true }
             }
 
@@ -1611,7 +1611,7 @@ Item {
                 Layout.fillWidth: true
                 spacing: root.s(8)
 
-                Text { text: volumeCard.icon; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: volumeCard.accent }
+                Text { text: volumeCard.icon; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: volumeCard.accent }
 
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -2331,7 +2331,7 @@ Item {
                             Layout.alignment: Qt.AlignVCenter
                             width: root.s(36); height: root.s(36); radius: root.s(10)
                             color: root.ambientPurple
-                            Text { anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.base }
+                            Text { anchors.centerIn: parent; text: ""; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(20); color: root.base }
                         }
                         ColumnLayout {
                             Layout.alignment: Qt.AlignVCenter; spacing: root.s(2)
@@ -2347,10 +2347,10 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true; Layout.preferredHeight: root.s(38); radius: root.s(19)
                     color: root.surface0; border.color: settingsSearchInput.activeFocus ? root.ambientPurple : root.surface2; border.width: 1
-                    Behavior on border.color { ColorAnimation { duration: 150 } }
+                    Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                     RowLayout {
                         anchors.fill: parent; anchors.leftMargin: root.s(12); anchors.rightMargin: root.s(12); spacing: root.s(8)
-                        Text { text: "󰍉"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(15); color: root.subtext0 }
+                        Text { text: "󰍉"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(15); color: root.subtext0 }
                         TextInput {
                             id: settingsSearchInput
                             Layout.fillWidth: true; Layout.fillHeight: true
@@ -2390,22 +2390,22 @@ Item {
                                 Layout.fillWidth: true; Layout.preferredHeight: root.s(44); radius: root.s(8)
                                 property bool isActive: root.currentTab === modelData
                                 color: isActive ? root.popupPanelHoverFill : (tabMa.containsMouse ? root.popupPanelFill : "transparent")
-                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
 
                                 RowLayout {
                                     anchors.fill: parent; anchors.leftMargin: root.s(15); spacing: root.s(12)
                                     Item {
                                         Layout.preferredWidth: root.s(24); Layout.alignment: Qt.AlignVCenter
-                                        Text { anchors.centerIn: parent; text: tabButton.tab.icon; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: tabButton.isActive ? root.ambientPurple : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                                        Text { anchors.centerIn: parent; text: tabButton.tab.icon; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: tabButton.isActive ? root.ambientPurple : root.subtext0; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } } }
                                     }
-                                    Text { text: tabButton.tab.label; font.family: root.uiFontFamily; font.weight: tabButton.isActive ? root.themedFontWeight : Font.Medium; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(13); color: tabButton.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: 150 } } }
+                                    Text { text: tabButton.tab.label; font.family: root.uiFontFamily; font.weight: tabButton.isActive ? root.themedFontWeight : Font.Medium; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(13); color: tabButton.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } } }
                                 }
 
                                 Rectangle {
                                     anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
                                     width: root.s(3); height: tabButton.isActive ? root.s(20) : 0; radius: root.s(2)
                                     color: root.ambientPurple
-                                    Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+                                    Behavior on height { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutBack } }
                                 }
 
                                 MouseArea { id: tabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openTab(tabButton.modelData) }
@@ -2418,10 +2418,10 @@ Item {
                             Layout.fillWidth: true; Layout.preferredHeight: root.s(44); radius: root.s(8)
                             color: keybindSearchMa.containsMouse ? root.popupPanelFill : "transparent"
                             border.color: root.surface1; border.width: 1
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: root.s(15); anchors.rightMargin: root.s(10); spacing: root.s(12)
-                                Text { text: "󰌌"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: root.subtext0 }
+                                Text { text: "󰌌"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: root.subtext0 }
                                 Text { text: "Zoek in sneltoetsen"; font.family: root.uiFontFamily; font.pixelSize: root.s(12); color: root.subtext0; Layout.fillWidth: true; elide: Text.ElideRight }
                             }
                             MouseArea { id: keybindSearchMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.searchKeybinds(root.settingsQuery.trim()) }
@@ -2435,9 +2435,9 @@ Item {
                     color: closeHover.containsMouse ? Qt.alpha(root.red, 0.1) : "transparent"
                     border.color: closeHover.containsMouse ? root.red : root.surface1; border.width: 1
                     scale: closeHover.pressed ? 0.95 : (closeHover.containsMouse ? 1.02 : 1.0)
-                    Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
-                    Behavior on color { ColorAnimation { duration: 150 } }
-                    Behavior on border.color { ColorAnimation { duration: 150 } }
+                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutBack } }
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                    Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
 
                     RowLayout {
                         anchors.centerIn: parent
@@ -2445,10 +2445,10 @@ Item {
 
                         Text {
                             text: "󰅖"
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: root.s(16)
                             color: closeHover.containsMouse ? root.red : root.subtext0
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                         }
                         Text {
                             text: "Sluiten"
@@ -2457,7 +2457,7 @@ Item {
                             font.letterSpacing: root.themedLetterSpacing
                             font.pixelSize: root.s(12)
                             color: closeHover.containsMouse ? root.red : root.subtext0
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                         }
                     }
                     MouseArea { id: closeHover; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: closeSequence.start() }
@@ -2487,9 +2487,9 @@ Item {
                 spacing: root.s(8)
                 opacity: shown ? 1 : 0
                 visible: opacity > 0.01
-                Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-                Behavior on anchors.topMargin { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-                Behavior on opacity { NumberAnimation { duration: 180 } }
+                Behavior on height { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+                Behavior on anchors.topMargin { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(180) } }
 
                 Repeater {
                     model: subPageRow.tab ? subPageRow.tab.pages.length : 0
@@ -2504,8 +2504,8 @@ Item {
                         color: isActive ? Qt.alpha(root.ambientPurple, 0.18) : (subPageMa.containsMouse ? root.popupPanelFill : "transparent")
                         border.width: 1
                         border.color: isActive ? Qt.alpha(root.ambientPurple, 0.55) : root.surface1
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                         Text {
                             id: subPageLabel
                             anchors.centerIn: parent
@@ -2534,7 +2534,7 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 13
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ListModel {
                     id: systemModel
@@ -2555,9 +2555,9 @@ Item {
                         color: authorMa.containsMouse ? Qt.alpha(root.surface1, 0.6) : Qt.alpha(root.surface0, 0.4)
                         border.color: authorMa.containsMouse ? root.mauve : root.surface1; border.width: 1
                         scale: authorMa.pressed ? 0.98 : (authorMa.containsMouse ? 1.01 : 1.0)
-                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                        Behavior on border.color { ColorAnimation { duration: 200 } }
+                        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutBack } }
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
                         RowLayout {
                             anchors.fill: parent; anchors.margins: root.s(15); spacing: root.s(15)
@@ -2565,11 +2565,11 @@ Item {
                                 Layout.alignment: Qt.AlignVCenter
                                 width: root.s(48); height: root.s(48); radius: root.s(10)
                                 color: root.surface0; border.color: root.surface2; border.width: 1
-                                Text { anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(28); color: root.text }
+                                Text { anchors.centerIn: parent; text: ""; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(28); color: root.text }
                             }
                             ColumnLayout {
                                 Layout.alignment: Qt.AlignVCenter; spacing: root.s(2)
-                                Text { text: "Gemaakt door"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; font.weight: Font.Medium }
+                                Text { text: "Gemaakt door"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0; font.weight: Font.Medium }
                                 Row {
                                     spacing: root.s(1)
                                     Repeater {
@@ -2589,10 +2589,10 @@ Item {
                                             { l: "a", c: root.peach }
                                         ]
                                         Text {
-                                            text: modelData.l; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(22); color: modelData.c
+                                            text: modelData.l; font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: root.s(22); color: modelData.c
                                             property real hoverOffset: authorMa.containsMouse ? root.s(-4) : 0
                                             transform: Translate { y: hoverOffset }
-                                            Behavior on hoverOffset { NumberAnimation { duration: 300 + (index * 25); easing.type: Easing.OutBack } }
+                                            Behavior on hoverOffset { NumberAnimation { duration: ThemeConfig.duration(300) + (index * 25); easing.type: Easing.OutBack } }
                                         }
                                     }
                                 }
@@ -2602,7 +2602,7 @@ Item {
                                 Layout.alignment: Qt.AlignVCenter
                                 width: root.s(32); height: root.s(32); radius: root.s(8)
                                 color: authorMa.containsMouse ? root.surface1 : "transparent"
-                                Text { anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: authorMa.containsMouse ? root.mauve : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                                Text { anchors.centerIn: parent; text: ""; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: authorMa.containsMouse ? root.mauve : root.subtext0; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } } }
                             }
                         }
                         MouseArea { id: authorMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Quickshell.execDetached(["xdg-open", "https://github.com/JorisKooistra/kingstra-dots"]) }
@@ -2619,16 +2619,16 @@ Item {
                                 color: sysCardMa.containsMouse ? Qt.alpha(root[model.clr], 0.14) : root.popupPanelFill
                                 border.color: sysCardMa.containsMouse ? root[model.clr] : root.surface1; border.width: 1
                                 scale: sysCardMa.pressed ? 0.98 : 1.0
-                                Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutQuart } }
-                                Behavior on color { ColorAnimation { duration: 200 } }
-                                Behavior on border.color { ColorAnimation { duration: 200 } }
+                                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150); easing.type: Easing.OutQuart } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+                                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
                                 Item {
                                     anchors.fill: parent; anchors.margins: root.s(15)
                                     Item {
                                         id: sysIconBox; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
                                         width: root.s(40); height: root.s(40)
-                                        Text { anchors.centerIn: parent; text: model.icon; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(24); color: root[model.clr] }
+                                        Text { anchors.centerIn: parent; text: model.icon; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(24); color: root[model.clr] }
                                     }
                                     Column {
                                         anchors.left: sysIconBox.right; anchors.leftMargin: root.s(15); anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: root.s(2)
@@ -2650,9 +2650,9 @@ Item {
                         border.color: updateMa.containsMouse ? root.green : root.surface1
                         border.width: 1
                         scale: updateMa.pressed ? 0.98 : (updateMa.containsMouse ? 1.01 : 1.0)
-                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutQuart } }
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.OutQuart } }
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
 
                         RowLayout {
                             anchors.fill: parent
@@ -2661,7 +2661,7 @@ Item {
 
                             Text {
                                 text: "󰚰"
-                                font.family: "Iosevka Nerd Font"
+                                font.family: ThemeConfig.iconFont
                                 font.pixelSize: root.s(18)
                                 color: updateMa.containsMouse ? root.green : root.subtext0
                             }
@@ -2697,21 +2697,21 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 4
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Sneltoetsen"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text; Layout.fillWidth: true }
+                        Text { text: "Sneltoetsen"; font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text; Layout.fillWidth: true }
                         Rectangle {
                             Layout.preferredWidth: root.s(36); Layout.preferredHeight: root.s(36); radius: root.s(8)
                             color: reloadMa.containsMouse ? root.surface1 : Qt.alpha(root.surface0, 0.6)
                             border.color: reloadMa.containsMouse ? root.blue : root.surface1; border.width: 1
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                            Behavior on border.color { ColorAnimation { duration: 150 } }
-                            Text { anchors.centerIn: parent; text: "󰑓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(16); color: reloadMa.containsMouse ? root.blue : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                            Text { anchors.centerIn: parent; text: "󰑓"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(16); color: reloadMa.containsMouse ? root.blue : root.subtext0; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } } }
                             MouseArea { id: reloadMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { keybindsModel.clear(); loadKeybindsProc.running = true; } }
                         }
                     }
@@ -2720,13 +2720,13 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: root.s(40); radius: root.s(8)
                         color: root.surface0; border.color: filterInput.activeFocus ? root.blue : root.surface2; border.width: 1
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                         RowLayout {
                             anchors.fill: parent; anchors.margins: root.s(8); spacing: root.s(8)
-                            Text { text: "󰍉"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(16); color: root.subtext0 }
+                            Text { text: "󰍉"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(16); color: root.subtext0 }
                             TextInput {
                                 id: filterInput; Layout.fillWidth: true; Layout.fillHeight: true
-                                verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text
+                                verticalAlignment: TextInput.AlignVCenter; font.family: ThemeConfig.textFont; font.pixelSize: root.s(13); color: root.text
                                 clip: true; selectByMouse: true
                                 onTextChanged: root.keybindFilter = text.toLowerCase()
                                 Text { text: "Sneltoetsen filteren…"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
@@ -2765,9 +2765,9 @@ Item {
 
                                     color: isEditing ? Qt.alpha(root.blue, 0.08) : (bindMa.containsMouse ? root.surface1 : Qt.alpha(root.surface0, 0.4))
                                     border.color: isEditing ? root.blue : (bindMa.containsMouse ? root.peach : "transparent"); border.width: 1
-                                    Behavior on color { ColorAnimation { duration: 150 } }
-                                    Behavior on border.color { ColorAnimation { duration: 150 } }
-                                    Behavior on Layout.preferredHeight { NumberAnimation { duration: 200; easing.type: Easing.OutQuart } }
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                    Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                    Behavior on Layout.preferredHeight { NumberAnimation { duration: ThemeConfig.duration(200); easing.type: Easing.OutQuart } }
 
                                     ColumnLayout {
                                         anchors.fill: parent; anchors.margins: root.s(10); spacing: root.s(6)
@@ -2787,7 +2787,7 @@ Item {
                                                     visible: !model.bound
                                                     width: unboundTxt.implicitWidth + root.s(16); height: root.s(26); radius: root.s(4)
                                                     color: Qt.alpha(root.overlay0, 0.12); border.color: Qt.alpha(root.overlay0, 0.3); border.width: 1
-                                                    Text { id: unboundTxt; anchors.centerIn: parent; text: "Niet ingesteld"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.overlay0 }
+                                                    Text { id: unboundTxt; anchors.centerIn: parent; text: "Niet ingesteld"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.overlay0 }
                                                 }
 
                                                 // Bound
@@ -2797,14 +2797,14 @@ Item {
                                                     Rectangle {
                                                         width: k1t.implicitWidth + root.s(14); height: root.s(26); radius: root.s(4)
                                                         color: root.surface0; border.color: root.surface2; border.width: 1
-                                                        Text { id: k1t; anchors.centerIn: parent; text: model.mods; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.peach }
+                                                        Text { id: k1t; anchors.centerIn: parent; text: model.mods; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.peach }
                                                     }
-                                                    Text { text: "+"; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); color: root.overlay0; anchors.verticalCenter: parent.verticalCenter; visible: model.key !== "" }
+                                                    Text { text: "+"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(12); color: root.overlay0; anchors.verticalCenter: parent.verticalCenter; visible: model.key !== "" }
                                                     Rectangle {
                                                         visible: model.key !== ""
                                                         width: k2t.implicitWidth + root.s(14); height: root.s(26); radius: root.s(4)
                                                         color: root.surface0; border.color: root.surface2; border.width: 1
-                                                        Text { id: k2t; anchors.centerIn: parent; text: model.key; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.peach }
+                                                        Text { id: k2t; anchors.centerIn: parent; text: model.key; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.peach }
                                                     }
                                                 }
                                             }
@@ -2812,7 +2812,7 @@ Item {
                                             // Action label
                                             Text {
                                                 text: model.label || (model.d + (model.args ? " " + model.args : ""))
-                                                font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text
+                                                font.family: ThemeConfig.textFont; font.pixelSize: root.s(13); color: root.text
                                                 Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter
                                                 elide: Text.ElideRight; clip: true
                                             }
@@ -2826,7 +2826,7 @@ Item {
                                                     color: editBtnMa.containsMouse ? Qt.alpha(root.blue, 0.20) : "transparent"
                                                     border.color: editBtnMa.containsMouse ? root.blue : root.surface1
                                                     border.width: 1
-                                                    Text { anchors.centerIn: parent; text: "Bewerk"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: editBtnMa.containsMouse ? root.blue : root.subtext0 }
+                                                    Text { anchors.centerIn: parent; text: "Bewerk"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: editBtnMa.containsMouse ? root.blue : root.subtext0 }
                                                     MouseArea {
                                                         id: editBtnMa
                                                         anchors.fill: parent
@@ -2846,7 +2846,7 @@ Item {
                                                     color: deleteBtnMa.containsMouse ? Qt.alpha(root.red, 0.15) : "transparent"
                                                     border.color: deleteBtnMa.containsMouse ? root.red : root.surface1
                                                     border.width: 1
-                                                    Text { anchors.centerIn: parent; text: "Verwijder"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: deleteBtnMa.containsMouse ? root.red : root.subtext0 }
+                                                    Text { anchors.centerIn: parent; text: "Verwijder"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: deleteBtnMa.containsMouse ? root.red : root.subtext0 }
                                                     MouseArea {
                                                         id: deleteBtnMa
                                                         anchors.fill: parent
@@ -2863,25 +2863,25 @@ Item {
                                             Layout.fillWidth: true; spacing: root.s(8)
                                             visible: bindRow.isEditing
 
-                                            Text { text: "Mods:"; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); color: root.subtext0 }
+                                            Text { text: "Mods:"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(12); color: root.subtext0 }
                                             Rectangle {
                                                 Layout.preferredWidth: root.s(200); Layout.preferredHeight: root.s(30); radius: root.s(4)
                                                 color: root.surface0; border.color: modsEdit.activeFocus ? root.blue : root.surface2; border.width: 1
                                                 TextInput {
                                                     id: modsEdit; anchors.fill: parent; anchors.margins: root.s(6)
-                                                    verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); color: root.text
+                                                    verticalAlignment: TextInput.AlignVCenter; font.family: ThemeConfig.textFont; font.pixelSize: root.s(12); color: root.text
                                                     text: bindRow.editMods; selectByMouse: true; clip: true
                                                     onTextChanged: bindRow.editMods = text
                                                 }
                                             }
 
-                                            Text { text: "Key:"; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); color: root.subtext0 }
+                                            Text { text: "Key:"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(12); color: root.subtext0 }
                                             Rectangle {
                                                 Layout.preferredWidth: root.s(120); Layout.preferredHeight: root.s(30); radius: root.s(4)
                                                 color: root.surface0; border.color: keyEdit.activeFocus ? root.blue : root.surface2; border.width: 1
                                                 TextInput {
                                                     id: keyEdit; anchors.fill: parent; anchors.margins: root.s(6)
-                                                    verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); color: root.text
+                                                    verticalAlignment: TextInput.AlignVCenter; font.family: ThemeConfig.textFont; font.pixelSize: root.s(12); color: root.text
                                                     text: bindRow.editKey; selectByMouse: true; clip: true
                                                     onTextChanged: bindRow.editKey = text
                                                 }
@@ -2893,7 +2893,7 @@ Item {
                                             Rectangle {
                                                 Layout.preferredWidth: root.s(70); Layout.preferredHeight: root.s(30); radius: root.s(4)
                                                 color: saveBMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
-                                                Text { anchors.centerIn: parent; text: "Opslaan"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.base }
+                                                Text { anchors.centerIn: parent; text: "Opslaan"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.base }
                                                 MouseArea { id: saveBMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveKeybind(index, bindRow.editMods, bindRow.editKey) }
                                             }
                                             // Remove button (alleen bij bestaande bind)
@@ -2902,9 +2902,9 @@ Item {
                                                 visible: model.bound
                                                 color: removeBMa.containsMouse ? Qt.alpha(root.red, 0.15) : "transparent"
                                                 border.color: removeBMa.containsMouse ? root.red : root.surface1; border.width: 1
-                                                Behavior on color { ColorAnimation { duration: 150 } }
-                                                Behavior on border.color { ColorAnimation { duration: 150 } }
-                                                Text { anchors.centerIn: parent; text: "󰆴"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: removeBMa.containsMouse ? root.red : root.subtext0; Behavior on color { ColorAnimation { duration: 150 } } }
+                                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                                Text { anchors.centerIn: parent; text: "󰆴"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(14); color: removeBMa.containsMouse ? root.red : root.subtext0; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } } }
                                                 MouseArea { id: removeBMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.removeKeybind(index) }
                                             }
                                             // Cancel button
@@ -2912,7 +2912,7 @@ Item {
                                                 Layout.preferredWidth: root.s(70); Layout.preferredHeight: root.s(30); radius: root.s(4)
                                                 color: cancelMa.containsMouse ? Qt.alpha(root.red, 0.15) : "transparent"
                                                 border.color: root.surface1; border.width: 1
-                                                Text { anchors.centerIn: parent; text: "Annuleer"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                                Text { anchors.centerIn: parent; text: "Annuleer"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0 }
                                                 MouseArea { id: cancelMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.editingIndex = -1 }
                                             }
                                         }
@@ -2947,12 +2947,12 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 9
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
 
-                    Text { text: "Tijd & weer"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+                    Text { text: "Tijd & weer"; font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
 
                     // ---- DATE & TIME FORMAT ----
                     Rectangle {
@@ -2964,11 +2964,11 @@ Item {
 
                             RowLayout {
                                 spacing: root.s(8)
-                                Text { text: "󰥔"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.blue }
-                                Text { text: "Tijd- en datumnotatie"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
+                                Text { text: "󰥔"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(20); color: root.blue }
+                                Text { text: "Tijd- en datumnotatie"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
                             }
 
-                            Text { text: "Qt-notatie, bijv. HH:mm (24 uur), hh:mm AP (12 uur), dddd d MMMM (maandag 7 april)"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                            Text { text: "Qt-notatie, bijv. HH:mm (24 uur), hh:mm AP (12 uur), dddd d MMMM (maandag 7 april)"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
 
                             RowLayout {
                                 Layout.fillWidth: true; spacing: root.s(15)
@@ -2976,14 +2976,14 @@ Item {
                                 // Time format
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(4)
-                                    Text { text: "Tijdnotatie"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Tijdnotatie"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0 }
                                     Rectangle {
                                         Layout.fillWidth: true; Layout.preferredHeight: root.s(38); radius: root.s(6)
                                         color: root.surface0; border.color: timeFmtInput.activeFocus ? root.blue : root.surface2; border.width: 1
-                                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                                         TextInput {
                                             id: timeFmtInput; anchors.fill: parent; anchors.margins: root.s(8)
-                                            verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text
+                                            verticalAlignment: TextInput.AlignVCenter; font.family: ThemeConfig.textFont; font.pixelSize: root.s(13); color: root.text
                                             text: root.settingsData.timeFormat || "HH:mm:ss"; selectByMouse: true; clip: true
                                         }
                                     }
@@ -2992,14 +2992,14 @@ Item {
                                 // Date format
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(4)
-                                    Text { text: "Datumnotatie"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Datumnotatie"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0 }
                                     Rectangle {
                                         Layout.fillWidth: true; Layout.preferredHeight: root.s(38); radius: root.s(6)
                                         color: root.surface0; border.color: dateFmtInput.activeFocus ? root.blue : root.surface2; border.width: 1
-                                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                                         TextInput {
                                             id: dateFmtInput; anchors.fill: parent; anchors.margins: root.s(8)
-                                            verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text
+                                            verticalAlignment: TextInput.AlignVCenter; font.family: ThemeConfig.textFont; font.pixelSize: root.s(13); color: root.text
                                             text: root.settingsData.dateFormat || "dddd, MMMM dd"; selectByMouse: true; clip: true
                                         }
                                     }
@@ -3009,10 +3009,10 @@ Item {
                             // Preview
                             RowLayout {
                                 Layout.fillWidth: true; spacing: root.s(10)
-                                Text { text: "Voorbeeld:"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                Text { text: "Voorbeeld:"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0 }
                                 Text {
                                     property string preview: Qt.formatDateTime(new Date(), timeFmtInput.text) + "  ·  " + Qt.formatDateTime(new Date(), dateFmtInput.text)
-                                    text: preview; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.peach
+                                    text: preview; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.peach
                                     Timer { interval: 1000; running: true; repeat: true; onTriggered: parent.preview = Qt.formatDateTime(new Date(), timeFmtInput.text) + "  ·  " + Qt.formatDateTime(new Date(), dateFmtInput.text) }
                                 }
                                 Item { Layout.fillWidth: true }
@@ -3020,8 +3020,8 @@ Item {
                                     Layout.preferredWidth: root.s(80); Layout.preferredHeight: root.s(30); radius: root.s(6)
                                     color: dtSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
                                     scale: dtSaveMa.pressed ? 0.95 : 1.0
-                                    Behavior on scale { NumberAnimation { duration: 150 } }
-                                    Text { anchors.centerIn: parent; text: "Opslaan"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
+                                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150) } }
+                                    Text { anchors.centerIn: parent; text: "Opslaan"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
                                     MouseArea {
                                         id: dtSaveMa
                                         anchors.fill: parent
@@ -3048,23 +3048,23 @@ Item {
                     // ---- WEATHER API CONFIG ----
                     RowLayout {
                         spacing: root.s(8)
-                        Text { text: "󰖐"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.yellow }
-                        Text { text: "Weer-API"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
+                        Text { text: "󰖐"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(20); color: root.yellow }
+                        Text { text: "Weer-API"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
                     }
 
-                    Text { text: "Vul je OpenWeatherMap-sleutel en coördinaten in."; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                    Text { text: "Vul je OpenWeatherMap-sleutel en coördinaten in."; font.family: ThemeConfig.textFont; font.pixelSize: root.s(12); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
 
                     // API Key
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: root.s(42); radius: root.s(8)
                         color: root.surface0; border.color: apiKeyInput.activeFocus ? root.blue : root.surface2; border.width: 1
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                         RowLayout {
                             anchors.fill: parent; anchors.margins: root.s(10); spacing: root.s(10)
-                            Text { text: "󰌆"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: root.subtext0 }
+                            Text { text: "󰌆"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: root.subtext0 }
                             TextInput {
                                 id: apiKeyInput; Layout.fillWidth: true; Layout.fillHeight: true
-                                verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text
+                                verticalAlignment: TextInput.AlignVCenter; font.family: ThemeConfig.textFont; font.pixelSize: root.s(13); color: root.text
                                 clip: true; selectByMouse: true; echoMode: TextInput.Password
                                 Text { text: "OpenWeather API-sleutel…"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
                             }
@@ -3077,20 +3077,20 @@ Item {
                         Rectangle {
                             Layout.fillWidth: true; Layout.preferredHeight: root.s(42); radius: root.s(8)
                             color: root.surface0; border.color: latInput.activeFocus ? root.peach : root.surface2; border.width: 1
-                            Behavior on border.color { ColorAnimation { duration: 150 } }
+                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                             TextInput {
                                 id: latInput; anchors.fill: parent; anchors.margins: root.s(10)
-                                verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text; clip: true; selectByMouse: true
+                                verticalAlignment: TextInput.AlignVCenter; font.family: ThemeConfig.textFont; font.pixelSize: root.s(13); color: root.text; clip: true; selectByMouse: true
                                 Text { text: "Breedtegraad (bijv. 52.3676)"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
                             }
                         }
                         Rectangle {
                             Layout.fillWidth: true; Layout.preferredHeight: root.s(42); radius: root.s(8)
                             color: root.surface0; border.color: lonInput.activeFocus ? root.peach : root.surface2; border.width: 1
-                            Behavior on border.color { ColorAnimation { duration: 150 } }
+                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                             TextInput {
                                 id: lonInput; anchors.fill: parent; anchors.margins: root.s(10)
-                                verticalAlignment: TextInput.AlignVCenter; font.family: "JetBrains Mono"; font.pixelSize: root.s(13); color: root.text; clip: true; selectByMouse: true
+                                verticalAlignment: TextInput.AlignVCenter; font.family: ThemeConfig.textFont; font.pixelSize: root.s(13); color: root.text; clip: true; selectByMouse: true
                                 Text { text: "Lengtegraad (bijv. 4.9041)"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
                             }
                         }
@@ -3099,16 +3099,16 @@ Item {
                     // Units
                     RowLayout {
                         Layout.fillWidth: true; spacing: root.s(15)
-                        Text { text: "Eenheden:"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                        Text { text: "Eenheden:"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
                         Repeater {
                             model: ["metric", "imperial", "standard"]
                             Rectangle {
                                 Layout.preferredWidth: root.s(80); Layout.preferredHeight: root.s(32); radius: root.s(6)
                                 color: root.selectedUnit === modelData ? Qt.alpha(root.mauve, 0.2) : "transparent"
                                 border.color: root.selectedUnit === modelData ? root.mauve : root.surface1; border.width: 1
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                                Behavior on border.color { ColorAnimation { duration: 150 } }
-                                Text { anchors.centerIn: parent; text: modelData; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); font.capitalization: Font.Capitalize; color: root.selectedUnit === modelData ? root.mauve : root.subtext0 }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                Text { anchors.centerIn: parent; text: modelData; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); font.capitalization: Font.Capitalize; color: root.selectedUnit === modelData ? root.mauve : root.subtext0 }
                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.selectedUnit = modelData }
                             }
                         }
@@ -3124,11 +3124,11 @@ Item {
                             Layout.preferredWidth: root.s(160); Layout.preferredHeight: root.s(42); radius: root.s(8)
                             color: wSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
                             scale: wSaveMa.pressed ? 0.95 : (wSaveMa.containsMouse ? 1.02 : 1.0)
-                            Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
+                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(200); easing.type: Easing.OutBack } }
                             RowLayout {
                                 anchors.centerIn: parent; spacing: root.s(8)
-                                Text { text: "󰆓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: root.base }
-                                Text { text: "Weer opslaan"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(14); color: root.base }
+                                Text { text: "󰆓"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: root.base }
+                                Text { text: "Weer opslaan"; font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: root.s(14); color: root.base }
                             }
                             MouseArea { id: wSaveMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveWeatherConfig() }
                         }
@@ -3143,12 +3143,12 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 5
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: root.s(20); spacing: root.s(15)
 
-                    Text { text: "Invoer"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+                    Text { text: "Invoer"; font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
 
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: root.s(340); radius: root.s(12)
@@ -3159,13 +3159,13 @@ Item {
 
                             RowLayout {
                                 spacing: root.s(8)
-                                Text { text: "󰍽"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(20); color: root.peach }
-                                Text { text: "Scrollsnelheid"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
+                                Text { text: "󰍽"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(20); color: root.peach }
+                                Text { text: "Scrollsnelheid"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(15); color: root.text }
                             }
 
                             Text {
                                 text: "Het touchpad scrolt standaard iets rustiger, de muis reageert sterker. Waarden zijn percentages van de standaardsnelheid van Hyprland."
-                                font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0
+                                font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0
                                 wrapMode: Text.WordWrap; Layout.fillWidth: true
                             }
 
@@ -3174,7 +3174,7 @@ Item {
 
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Touchpad"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Touchpad"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0 }
                                     ThemedSpinBox {
                                         id: touchpadScrollSpin
                                         from: 20; to: 300; stepSize: 5
@@ -3182,13 +3182,13 @@ Item {
                                     }
                                     Text {
                                         text: touchpadScrollSpin.value + "%  (" + root.scrollFactorFromPercent(touchpadScrollSpin.value, 0.45).toFixed(2) + "x)"
-                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.peach
+                                        font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.peach
                                     }
                                 }
 
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Muis"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Muis"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0 }
                                     ThemedSpinBox {
                                         id: mouseScrollSpin
                                         from: 20; to: 300; stepSize: 5
@@ -3196,7 +3196,7 @@ Item {
                                     }
                                     Text {
                                         text: mouseScrollSpin.value + "%  (" + root.scrollFactorFromPercent(mouseScrollSpin.value, 1.35).toFixed(2) + "x)"
-                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.blue
+                                        font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.blue
                                     }
                                 }
                             }
@@ -3212,7 +3212,7 @@ Item {
 
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Toetsenbordindeling"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Toetsenbordindeling"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0 }
                                     ThemedComboBox {
                                         id: keyboardLayoutCombo
                                         model: root.keyboardLayoutLabels
@@ -3233,14 +3233,14 @@ Item {
                                     }
                                     Text {
                                         text: "Kiest de actieve toetsenbordtaal en -indeling in Hyprland."
-                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.blue
+                                        font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.blue
                                         wrapMode: Text.WordWrap; Layout.fillWidth: true
                                     }
                                 }
 
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Rechtsklik op touchpad"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Rechtsklik op touchpad"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0 }
                                     ThemedComboBox {
                                         id: touchpadRightClickCombo
                                         model: ["On", "Off"]
@@ -3250,7 +3250,7 @@ Item {
                                         text: touchpadRightClickCombo.currentIndex === 0
                                             ? "On uses a Windows-style right button area on the touchpad."
                                             : "Off switches to clickfinger behavior instead of a dedicated right-click zone."
-                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.peach
+                                        font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.peach
                                         wrapMode: Text.WordWrap; Layout.fillWidth: true
                                     }
                                 }
@@ -3265,7 +3265,7 @@ Item {
                                     property bool adjustable: root.keyboardDeadKeysAdjustable(layoutCode)
 
                                     Layout.fillWidth: true; spacing: root.s(6)
-                                    Text { text: "Dead keys"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    Text { text: "Dead keys"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0 }
                                     ThemedComboBox {
                                         id: keyboardDeadKeysCombo
                                         model: ["On", "Off"]
@@ -3280,7 +3280,7 @@ Item {
                                             : (keyboardDeadKeysCombo.currentIndex === 0
                                                 ? "On lets ´ ` ^ ¨ wait for the next key to compose é è ê ë."
                                                 : "Off types accent characters directly instead of composing them.")
-                                        font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.mauve
+                                        font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.mauve
                                         wrapMode: Text.WordWrap; Layout.fillWidth: true
                                     }
                                 }
@@ -3290,14 +3290,14 @@ Item {
 
                             RowLayout {
                                 Layout.fillWidth: true; spacing: root.s(10)
-                                Text { text: "Wordt direct opgeslagen en live toegepast in Hyprland."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                                Text { text: "Wordt direct opgeslagen en live toegepast in Hyprland."; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
                                 Item { Layout.fillWidth: true }
                                 Rectangle {
                                     Layout.preferredWidth: root.s(80); Layout.preferredHeight: root.s(30); radius: root.s(6)
                                     color: scrollSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
                                     scale: scrollSaveMa.pressed ? 0.95 : 1.0
-                                    Behavior on scale { NumberAnimation { duration: 150 } }
-                                    Text { anchors.centerIn: parent; text: "Opslaan"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
+                                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150) } }
+                                    Text { anchors.centerIn: parent; text: "Opslaan"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
                                     MouseArea {
                                         id: scrollSaveMa
                                         anchors.fill: parent
@@ -3329,7 +3329,7 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 2
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
                     anchors.fill: parent
@@ -3477,7 +3477,7 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 6
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
                     anchors.fill: parent
@@ -3513,7 +3513,7 @@ Item {
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: root.s(8)
-                                    Text { text: "󰍹"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(17); color: root.blue }
+                                    Text { text: "󰍹"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17); color: root.blue }
                                     Text { text: "Hoofdscherm"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text; Layout.fillWidth: true }
                                     Text {
                                         text: root.primaryDisplayName === "" ? "automatisch" : "vast"
@@ -3584,7 +3584,7 @@ Item {
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: root.s(8)
-                                    Text { text: "󰧨"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(17); color: root.sapphire }
+                                    Text { text: "󰧨"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17); color: root.sapphire }
                                     Text { text: "Workspaces vastzetten"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text; Layout.fillWidth: true }
                                     Text { text: root.workspaceMonitorDirty ? "gewijzigd" : "opgeslagen"; font.family: root.monoFontFamily; font.pixelSize: root.s(10); color: root.workspaceMonitorDirty ? root.sapphire : root.subtext0 }
                                 }
@@ -3643,7 +3643,7 @@ Item {
                                                             : workspaceMonitorRow.monitor !== ""
                                                                 ? Qt.alpha(root.sapphire, 0.55)
                                                                 : Qt.alpha(root.surface2, 0.78)
-                                                    Behavior on border.color { ColorAnimation { duration: 120 } }
+                                                    Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(120) } }
                                                 }
                                             }
                                         }
@@ -3678,7 +3678,7 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 7
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -3708,7 +3708,7 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 8
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
                     anchors.fill: parent
@@ -3880,7 +3880,7 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 10
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
                     anchors.fill: parent
@@ -4100,7 +4100,7 @@ Item {
                                         radius: root.s(8)
                                         color: sessionSaveMa.containsMouse ? Qt.alpha(root.green, 0.8) : root.green
                                         scale: sessionSaveMa.pressed ? 0.95 : 1.0
-                                        Behavior on scale { NumberAnimation { duration: 150 } }
+                                        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150) } }
 
                                         Text {
                                             anchors.centerIn: parent
@@ -4164,7 +4164,7 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 11
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -4194,7 +4194,7 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 12
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -4258,7 +4258,7 @@ Item {
                 anchors.fill: parent
                 visible: root.currentPage === 1
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 250 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 QtObject {
                     id: themeCarousel
@@ -4284,8 +4284,8 @@ Item {
                         width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
                         spacing: root.s(15)
 
-                        Text { text: "Thema"; font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
-                        Text { text: "Kies een thema, bekijk direct fonts, icons en Matugen-scene, en pas het daarna expliciet toe."; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                        Text { text: "Thema"; font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
+                        Text { text: "Kies een thema, bekijk direct fonts, icons en Matugen-scene, en pas het daarna expliciet toe."; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
 
                         RowLayout {
                             Layout.fillWidth: true
@@ -4310,9 +4310,9 @@ Item {
 
                                     ColumnLayout {
                                         Layout.fillWidth: true; spacing: root.s(2)
-                                        Text { text: "Actief thema"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                        Text { text: root.activeThemeName || "Geen thema actief"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
-                                        Text { text: root.activeThemeId || ""; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.overlay0; visible: text !== "" }
+                                        Text { text: "Actief thema"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0 }
+                                        Text { text: root.activeThemeName || "Geen thema actief"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
+                                        Text { text: root.activeThemeId || ""; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.overlay0; visible: text !== "" }
                                     }
                                 }
                             }
@@ -4336,9 +4336,9 @@ Item {
 
                                     ColumnLayout {
                                         Layout.fillWidth: true; spacing: root.s(2)
-                                        Text { text: "Geselecteerd"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0 }
-                                        Text { text: themeCarousel.selectedThemeData.name || "Selecteer een thema"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
-                                        Text { text: themeCarousel.selectedThemeId || ""; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.overlay0; visible: text !== "" }
+                                        Text { text: "Geselecteerd"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0 }
+                                        Text { text: themeCarousel.selectedThemeData.name || "Selecteer een thema"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
+                                        Text { text: themeCarousel.selectedThemeId || ""; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.overlay0; visible: text !== "" }
                                     }
                                 }
                             }
@@ -4351,11 +4351,11 @@ Item {
                                     color: themeApplyMa.containsMouse ? Qt.alpha(root.green, 0.82) : root.green
                                     opacity: themeCarousel.selectedThemeId === "" || themeCarousel.isApplying ? 0.55 : 1.0
                                     scale: themeApplyMa.pressed ? 0.97 : (themeApplyMa.containsMouse ? 1.02 : 1.0)
-                                    Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
+                                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(200); easing.type: Easing.OutBack } }
                                     RowLayout {
                                         anchors.centerIn: parent; spacing: root.s(6)
-                                        Text { text: themeCarousel.selectedThemeId === root.activeThemeId ? "󰄬" : "󰑐"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(16); color: root.base }
-                                        Text { text: themeCarousel.selectedThemeId === root.activeThemeId ? "Al actief" : "Thema toepassen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
+                                        Text { text: themeCarousel.selectedThemeId === root.activeThemeId ? "󰄬" : "󰑐"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(16); color: root.base }
+                                        Text { text: themeCarousel.selectedThemeId === root.activeThemeId ? "Al actief" : "Thema toepassen"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.base }
                                     }
                                     MouseArea {
                                         id: themeApplyMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -4371,8 +4371,8 @@ Item {
                                     border.width: 1
                                     RowLayout {
                                         anchors.centerIn: parent; spacing: root.s(6)
-                                        Text { text: "󰍹"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: root.text }
-                                        Text { text: "Vol scherm"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.text }
+                                        Text { text: "󰍹"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(14); color: root.text }
+                                        Text { text: "Vol scherm"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.text }
                                     }
                                     MouseArea {
                                         id: themeFullscreenMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -4455,7 +4455,7 @@ Item {
                                 Text {
                                     anchors.centerIn: parent
                                     text: "Theme carousel kon niet geladen worden"
-                                    font.family: "JetBrains Mono"
+                                    font.family: ThemeConfig.textFont
                                     font.pixelSize: root.s(12)
                                     color: root.text
                                 }
@@ -4464,10 +4464,10 @@ Item {
 
                         Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
 
-                        Text { text: "Thema-instellingen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
+                        Text { text: "Thema-instellingen"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
                         Text {
                             text: "Kies een groep, pas waarden aan en sla daarna het thema op."
-                            font.family: "JetBrains Mono"
+                            font.family: ThemeConfig.textFont
                             font.pixelSize: root.s(10)
                             color: root.subtext0
                             Layout.fillWidth: true
@@ -4492,13 +4492,13 @@ Item {
                                     spacing: root.s(8)
                                     Text {
                                         text: root.showAllThemeVariables ? "󰅂" : "󰅀"
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: root.s(14)
                                         color: root.blue
                                     }
                                     Text {
                                         text: root.showAllThemeVariables ? "Verberg alle variabelen" : "Toon alle variabelen"
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.pixelSize: root.s(11)
                                         font.weight: Font.Bold
                                         color: root.text
@@ -4531,7 +4531,7 @@ Item {
                                     spacing: root.s(6)
                                     Text {
                                         text: root.themeSaveBusy ? "󰔟" : (root.themeDirty ? "󰆓" : "󰄬")
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: root.s(14)
                                         color: root.themeDirty ? root.base : root.subtext0
                                     }
@@ -4541,7 +4541,7 @@ Item {
                                               : (root.themeDirty
                                                   ? (root.themeEditThemeId === root.activeThemeId ? "Opslaan & toepassen" : "Opslaan")
                                                   : "Geen wijzigingen")
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.weight: Font.Bold
                                         font.pixelSize: root.s(11)
                                         color: root.themeDirty ? root.base : root.subtext0
@@ -4570,8 +4570,8 @@ Item {
                                 RowLayout {
                                     anchors.centerIn: parent
                                     spacing: root.s(6)
-                                    Text { text: "󰑓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(13); color: root.peach }
-                                    Text { text: "Herstel"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.text }
+                                    Text { text: "󰑓"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(13); color: root.peach }
+                                    Text { text: "Herstel"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.text }
                                 }
 
                                 MouseArea {
@@ -4614,13 +4614,13 @@ Item {
 
                                         Text {
                                             text: modelData.icon
-                                            font.family: "Iosevka Nerd Font"
+                                            font.family: ThemeConfig.iconFont
                                             font.pixelSize: root.s(13)
                                             color: parent.parent.active ? root.blue : root.subtext0
                                         }
                                         Text {
                                             text: modelData.label
-                                            font.family: "JetBrains Mono"
+                                            font.family: ThemeConfig.textFont
                                             font.weight: parent.parent.active ? Font.Bold : Font.Normal
                                             font.pixelSize: root.s(10)
                                             color: parent.parent.active ? root.text : root.subtext0
@@ -4669,7 +4669,7 @@ Item {
 
                                 Text {
                                     text: root.themeDirty ? "󰐖" : (root.themeStatusKind === "error" ? "󰅚" : (root.themeStatusKind === "ok" ? "󰄬" : "󰋼"))
-                                    font.family: "Iosevka Nerd Font"
+                                    font.family: ThemeConfig.iconFont
                                     font.pixelSize: root.s(13)
                                     color: root.themeDirty ? root.yellow : (root.themeStatusKind === "error" ? root.red : (root.themeStatusKind === "ok" ? root.green : root.blue))
                                 }
@@ -4678,7 +4678,7 @@ Item {
                                           ? "Onopgeslagen wijzigingen in " + root.themeEditThemeId + ".toml"
                                           : (root.themeStatusText !== "" ? root.themeStatusText : "Klaar")
                                     Layout.fillWidth: true
-                                    font.family: "JetBrains Mono"
+                                    font.family: ThemeConfig.textFont
                                     font.pixelSize: root.s(10)
                                     color: root.text
                                     wrapMode: Text.WordWrap
@@ -4714,47 +4714,47 @@ Item {
                                     anchors.margins: root.s(12)
                                     spacing: root.s(8)
 
-                                    Text { text: "Uiterlijk"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                                    Text { text: "Uiterlijk"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
 
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Hoekrondheid"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Hoekrondheid"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 64; value: root.editBorderRadius; onValueChanged: root.editBorderRadius = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Randdikte"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Randdikte"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 12; value: root.editBorderWidth; onValueChanged: root.editBorderWidth = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Binnenmarge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Binnenmarge"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 60; value: root.editGapsIn; onValueChanged: root.editGapsIn = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Buitenmarge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Buitenmarge"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 80; value: root.editGapsOut; onValueChanged: root.editGapsOut = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Blur size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Blur size"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 64; value: root.editBlurSize; onValueChanged: root.editBlurSize = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Blur passes"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Blur passes"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 12; value: root.editBlurPasses; onValueChanged: root.editBlurPasses = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -4779,12 +4779,12 @@ Item {
                                     anchors.margins: root.s(12)
                                     spacing: root.s(8)
 
-                                    Text { text: "Fonts"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                                    Text { text: "Fonts"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
 
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "UI font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "UI font"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.fontOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editUiFont))
@@ -4797,14 +4797,14 @@ Item {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "UI size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "UI size"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 8; to: 28; value: root.editUiFontSize; onValueChanged: root.editUiFontSize = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Mono font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Mono font"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.fontOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editMonoFont))
@@ -4817,14 +4817,14 @@ Item {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Mono size"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Mono size"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 8; to: 28; value: root.editMonoFontSize; onValueChanged: root.editMonoFontSize = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Display font"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Display font"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.fontOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editDisplayFont))
@@ -4837,7 +4837,7 @@ Item {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Font weight"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Font weight"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.fontWeightOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editFontWeight))
@@ -4850,7 +4850,7 @@ Item {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Letter spacing"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Letter spacing"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox {
                                             from: -300
                                             to: 300
@@ -4889,12 +4889,12 @@ Item {
                                     anchors.margins: root.s(12)
                                     spacing: root.s(8)
 
-                                    Text { text: "Icons & Matugen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                                    Text { text: "Icons & Matugen"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
 
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Icon theme"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Icon theme"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.iconThemeOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editIconTheme))
@@ -4907,7 +4907,7 @@ Item {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Scene"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Scene"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.schemeOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editSchemeType))
@@ -4920,7 +4920,7 @@ Item {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Mode"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Mode"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.modeOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editMode))
@@ -4933,14 +4933,14 @@ Item {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Color index"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Color index"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 12; value: root.editColorIndex; onValueChanged: root.editColorIndex = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Contrast"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Contrast"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox {
                                             from: -100
                                             to: 100
@@ -4961,7 +4961,7 @@ Item {
 
                                     Text {
                                         text: "Scene bepaalt de Matugen-kleurberekening; mode schakelt donker/licht; icon theme wordt toegepast op GTK en Qt6."
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.pixelSize: root.s(10)
                                         color: root.subtext0
                                         Layout.fillWidth: true
@@ -4988,14 +4988,14 @@ Item {
                                     anchors.margins: root.s(12)
                                     spacing: root.s(8)
 
-                                    Text { text: root.themeEditorTab === "effects" ? "Effecten" : (root.themeEditorTab === "character" ? "Karakter" : "Bar"); font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
+                                    Text { text: root.themeEditorTab === "effects" ? "Effecten" : (root.themeEditorTab === "character" ? "Karakter" : "Bar"); font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
                                     Text {
                                         text: root.themeEditorTab === "effects"
                                               ? "Regel transparantie, materiaalgevoel, animaties en deeltjes."
                                               : (root.themeEditorTab === "character"
                                                  ? "Visuele eigenschappen per thema. Modes blijven bepalen welke modules zichtbaar zijn."
                                                  : "Positie kiest de schermrand en bepaalt automatisch of de bar horizontaal of verticaal loopt.")
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.pixelSize: root.s(10)
                                         color: root.subtext0
                                         Layout.fillWidth: true
@@ -5006,7 +5006,7 @@ Item {
                                         visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Bar height"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Bar height"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 30; to: 72; value: root.editBarHeight; onValueChanged: root.editBarHeight = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5014,7 +5014,7 @@ Item {
                                         visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Bar position"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Bar position"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.barPositionOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editBarPosition))
@@ -5028,7 +5028,7 @@ Item {
                                         visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Bar width"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Bar width"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.barWidthModeOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editBarWidthMode))
@@ -5042,7 +5042,7 @@ Item {
                                         visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Bar shape"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Bar shape"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.barShapeOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editBarShape))
@@ -5056,7 +5056,7 @@ Item {
                                         visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Top edge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Top edge"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.barEdgeStyleOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editBarTopEdgeStyle))
@@ -5070,7 +5070,7 @@ Item {
                                         visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Bottom edge"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Bottom edge"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.barEdgeStyleOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editBarBottomEdgeStyle))
@@ -5084,7 +5084,7 @@ Item {
                                         visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Clock style"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Clock style"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.clockStyleOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editClockStyle))
@@ -5098,7 +5098,7 @@ Item {
                                         visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Topbar stijl"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Topbar stijl"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: ["losse blokken", "strakke lijn"]
                                             currentIndex: root.editTopbarLooseBlocks ? 0 : 1
@@ -5110,13 +5110,13 @@ Item {
                                         Item { Layout.fillWidth: true }
                                     }
                                     // ── Transparantie & animatie ──────────────────────────────────────
-                                    Text { visible: root.themeEditorTab === "effects"; text: "Transparantie & animatie"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "effects"; text: "Transparantie & animatie"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Bar opacity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Bar opacity"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox {
                                             from: 10; to: 100; stepSize: 1
                                             value: Math.round(parseFloat(root.editBarOpacity) * 100)
@@ -5131,7 +5131,7 @@ Item {
                                         visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Popup opacity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Popup opacity"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox {
                                             from: 10; to: 100; stepSize: 1
                                             value: Math.round(parseFloat(root.editPopupOpacity) * 100)
@@ -5146,7 +5146,7 @@ Item {
                                         visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Animatiesnelheid"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Animatiesnelheid"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox {
                                             from: 10; to: 300; stepSize: 5
                                             value: Math.round(parseFloat(root.editAnimationSpeed) * 100)
@@ -5159,13 +5159,13 @@ Item {
                                     }
 
                                     // ── Materiaal ────────────────────────────────────────────────────
-                                    Text { visible: root.themeEditorTab === "effects"; text: "Materiaal"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "effects"; text: "Materiaal"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Overlay opacity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Overlay opacity"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox {
                                             from: 0; to: 50; stepSize: 1
                                             value: Math.round(parseFloat(root.editOverlayOpacity) * 100)
@@ -5180,7 +5180,7 @@ Item {
                                         visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Glow intensiteit"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Glow intensiteit"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox {
                                             from: 0; to: 50; stepSize: 1
                                             value: Math.round(parseFloat(root.editGlowIntensity) * 100)
@@ -5193,13 +5193,13 @@ Item {
                                     }
 
                                     // ── Effecten ─────────────────────────────────────────────────────
-                                    Text { visible: root.themeEditorTab === "effects"; text: "Deeltjes"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "effects"; text: "Deeltjes"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Particle type"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Particle type"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox {
                                             model: root.particleTypeOptions
                                             currentIndex: Math.max(0, model.indexOf(root.editParticleType))
@@ -5212,7 +5212,7 @@ Item {
                                         visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Particle count"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Particle count"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox {
                                             from: 0; to: 100; stepSize: 1
                                             value: root.editParticleCount
@@ -5225,7 +5225,7 @@ Item {
                                         visible: root.themeEditorTab === "effects"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Particle speed"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Particle speed"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox {
                                             from: 1; to: 500; stepSize: 1
                                             value: Math.round(parseFloat(root.editParticleSpeed) * 100)
@@ -5238,13 +5238,13 @@ Item {
                                     }
 
                                     // ── Karakter: style profile ──────────────────────────────────────
-                                    Text { visible: root.themeEditorTab === "character"; text: "Style profile"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "character"; text: "Style profile"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Family"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Family"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox { model: root.styleFamilyOptions; currentIndex: Math.max(0, model.indexOf(root.editStyleFamily)); onActivated: root.editStyleFamily = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5252,7 +5252,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Density"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Density"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox { model: root.styleDensityOptions; currentIndex: Math.max(0, model.indexOf(root.editStyleDensity)); onActivated: root.editStyleDensity = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5260,7 +5260,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Surface"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Surface"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox { model: root.surfaceModeOptions; currentIndex: Math.max(0, model.indexOf(root.editSurfaceMode)); onActivated: root.editSurfaceMode = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5268,7 +5268,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Motion"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Motion"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox { model: root.styleMotionOptions; currentIndex: Math.max(0, model.indexOf(root.editStyleMotion)); onActivated: root.editStyleMotion = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5276,7 +5276,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Shadow"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Shadow"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editPanelShadow) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 22 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editPanelShadow", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5284,7 +5284,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Outline"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Outline"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editOutlineStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 18 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editOutlineStrength", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5292,7 +5292,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Glass"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Glass"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editGlassStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 10 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editGlassStrength", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5300,7 +5300,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Radius"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Radius"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 4; to: 48; value: root.editWidgetRadius; onValueChanged: root.editWidgetRadius = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5308,19 +5308,19 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Padding"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Padding"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 6; to: 28; value: root.editPanelPadding; onValueChanged: root.editPanelPadding = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
 
                                     // ── Karakter: effectgedrag ───────────────────────────────────────
-                                    Text { visible: root.themeEditorTab === "character"; text: "Effectgedrag"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "character"; text: "Effectgedrag"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Ambient"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Ambient"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox { model: root.ambientEffectOptions; currentIndex: Math.max(0, model.indexOf(root.editAmbientEffect)); onActivated: root.editAmbientEffect = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5328,7 +5328,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Intensity"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Intensity"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 200; stepSize: 5; value: Math.round(parseFloat(root.editEffectIntensity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 100 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editEffectIntensity", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5336,7 +5336,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Cycle ms"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Cycle ms"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 30000; stepSize: 100; value: root.editEffectCycleMs; onValueChanged: root.editEffectCycleMs = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5344,19 +5344,19 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Hover"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Hover"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedSpinBox { from: 0; to: 100; stepSize: 5; value: Math.round(parseFloat(root.editHoverReactivity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 40 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editHoverReactivity", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
                                         Item { Layout.fillWidth: true }
                                     }
 
                                     // ── Karakter: bar dynamics ───────────────────────────────────────
-                                    Text { visible: root.themeEditorTab === "character"; text: "Bar dynamics"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "character"; text: "Bar dynamics"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Drawer"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Drawer"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox { model: root.drawerStyleOptions; currentIndex: Math.max(0, model.indexOf(root.editDrawerStyle)); onActivated: root.editDrawerStyle = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5364,7 +5364,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Modules"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Modules"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox { model: root.moduleDensityOptions; currentIndex: Math.max(0, model.indexOf(root.editModuleDensity)); onActivated: root.editModuleDensity = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5372,7 +5372,7 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Workspace"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Workspace"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox { model: root.workspacePreviewOptions; currentIndex: Math.max(0, model.indexOf(root.editWorkspacePreview)); onActivated: root.editWorkspacePreview = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
@@ -5380,19 +5380,19 @@ Item {
                                         visible: root.themeEditorTab === "character"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Rail accent"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Rail accent"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         ThemedComboBox { model: root.railAccentOptions; currentIndex: Math.max(0, model.indexOf(root.editRailAccent)); onActivated: root.editRailAccent = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
                                         Item { Layout.fillWidth: true }
                                     }
 
                                     // ── Topbar acties ─────────────────────────────────────────────────
-                                    Text { visible: root.themeEditorTab === "bar"; text: "Acties"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
+                                    Text { visible: root.themeEditorTab === "bar"; text: "Acties"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
 
                                     RowLayout {
                                         visible: root.themeEditorTab === "bar"
                                         Layout.fillWidth: true
                                         spacing: root.s(10)
-                                        Text { text: "Topbar toepassen"; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
+                                        Text { text: "Topbar toepassen"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
                                         Rectangle {
                                             Layout.preferredHeight: root.s(32)
                                             Layout.preferredWidth: themeEditorsGrid.comboWidth
@@ -5404,8 +5404,8 @@ Item {
                                             RowLayout {
                                                 anchors.centerIn: parent
                                                 spacing: root.s(6)
-                                                Text { text: root.topbarReloadBusy || root.themeSaveBusy ? "󰔟" : "󰑓"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(13); color: root.text }
-                                                Text { text: root.topbarReloadBusy || root.themeSaveBusy ? "Toepassen..." : "Topbar toepassen"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.text }
+                                                Text { text: root.topbarReloadBusy || root.themeSaveBusy ? "󰔟" : "󰑓"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(13); color: root.text }
+                                                Text { text: root.topbarReloadBusy || root.themeSaveBusy ? "Toepassen..." : "Topbar toepassen"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.text }
                                             }
                                             MouseArea {
                                                 id: topbarReloadMa
@@ -5423,7 +5423,7 @@ Item {
                                         text: root.themeEditorTab === "effects"
                                               ? "Effecten worden per theme opgeslagen en bewegen mee met theme-switches."
                                               : "Bar-instellingen worden per theme opgeslagen en blijven behouden na herstart of theme-switch."
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.pixelSize: root.s(10)
                                         color: root.subtext0
                                         Layout.fillWidth: true
@@ -5455,7 +5455,7 @@ Item {
                                     Layout.fillWidth: true
                                     Text {
                                         text: "Alle variabelen (" + allVarsPanel.flatEntries.length + ")"
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.weight: Font.Bold
                                         font.pixelSize: root.s(13)
                                         color: root.text
@@ -5463,7 +5463,7 @@ Item {
                                     Item { Layout.fillWidth: true }
                                     Text {
                                         text: themeCarousel.selectedThemeId !== "" ? themeCarousel.selectedThemeId + ".toml" : ""
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.pixelSize: root.s(10)
                                         color: root.overlay0
                                     }
@@ -5471,7 +5471,7 @@ Item {
 
                                 Text {
                                     text: "Volledige key-paths uit het geselecteerde thema. Pas waarden bovenaan aan en klik 'Opslaan in thema'."
-                                    font.family: "JetBrains Mono"
+                                    font.family: ThemeConfig.textFont
                                     font.pixelSize: root.s(10)
                                     color: root.subtext0
                                     Layout.fillWidth: true
@@ -5508,7 +5508,7 @@ Item {
 
                                                 Text {
                                                     text: String(modelData.key || "—")
-                                                    font.family: "JetBrains Mono"
+                                                    font.family: ThemeConfig.textFont
                                                     font.pixelSize: root.s(10)
                                                     color: root.subtext0
                                                     Layout.preferredWidth: root.s(250)
@@ -5517,7 +5517,7 @@ Item {
 
                                                 Text {
                                                     text: String(modelData.value || "—")
-                                                    font.family: "JetBrains Mono"
+                                                    font.family: ThemeConfig.textFont
                                                     font.pixelSize: root.s(10)
                                                     font.weight: Font.Bold
                                                     color: root.text
@@ -5549,11 +5549,11 @@ Item {
 
                         RowLayout {
                             spacing: root.s(8)
-                            Text { text: "󰇚"; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(18); color: root.ambientPurple }
-                            Text { text: "Matugen Pipeline"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: root.s(14); color: root.text }
+                            Text { text: "󰇚"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: root.ambientPurple }
+                            Text { text: "Matugen Pipeline"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(14); color: root.text }
                         }
 
-                        Text { text: "Bij toepassen van een thema worden de huidige wallpaper-kleuren opnieuw door Matugen gerenderd en in deze templates geïnjecteerd:"; font.family: "JetBrains Mono"; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                        Text { text: "Bij toepassen van een thema worden de huidige wallpaper-kleuren opnieuw door Matugen gerenderd en in deze templates geïnjecteerd:"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
 
                         GridLayout {
                             Layout.fillWidth: true; columns: 3; rowSpacing: root.s(6); columnSpacing: root.s(8)
@@ -5569,12 +5569,12 @@ Item {
                                     Layout.fillWidth: true; Layout.preferredHeight: root.s(36); radius: root.s(6)
                                     color: tplMa.containsMouse ? Qt.alpha(root[modelData.c], 0.1) : root.surface0
                                     border.color: tplMa.containsMouse ? root[modelData.c] : "transparent"; border.width: 1
-                                    Behavior on color { ColorAnimation { duration: 150 } }
-                                    Behavior on border.color { ColorAnimation { duration: 150 } }
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                    Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                                     RowLayout {
                                         anchors.fill: parent; anchors.margins: root.s(8); spacing: root.s(8)
-                                        Text { text: modelData.i; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14); color: root[modelData.c] }
-                                        Text { text: modelData.f; font.family: "JetBrains Mono"; font.pixelSize: root.s(10); color: root.text; Layout.fillWidth: true }
+                                        Text { text: modelData.i; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(14); color: root[modelData.c] }
+                                        Text { text: modelData.f; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.text; Layout.fillWidth: true }
                                     }
                                     MouseArea { id: tplMa; anchors.fill: parent; hoverEnabled: true }
                                 }

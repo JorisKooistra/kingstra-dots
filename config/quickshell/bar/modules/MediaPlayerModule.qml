@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import "../.."
 
 // Compacte mediabalk-pill: prev · play/pause · titel · next
 // Data via shell.mediaTitle / shell.mediaStatus (playerctl-polling in BarShell).
@@ -25,8 +26,8 @@ Rectangle {
     visible: _isActive || opacity > 0
     opacity: _isActive ? 1.0 : 0.0
 
-    Behavior on targetWidth { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
-    Behavior on opacity     { NumberAnimation { duration: 300 } }
+    Behavior on targetWidth { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
+    Behavior on opacity     { NumberAnimation { duration: ThemeConfig.duration(300) } }
 
     // ── Styling ───────────────────────────────────────────────────────────────
     color: ctx.neonChrome ? ctx.neonModuleColor : surface.panelColor
@@ -46,7 +47,7 @@ Rectangle {
         height: 1
         color: ctx.neonModuleTickColor
         opacity: root._isActive ? 0.62 : 0.0
-        Behavior on opacity { NumberAnimation { duration: 250 } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
     }
 
     // ── Controls ──────────────────────────────────────────────────────────────
@@ -58,11 +59,11 @@ Rectangle {
             width: shell.s(22); height: shell.s(22)
             Text {
                 anchors.centerIn: parent; text: "󰒮"
-                font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(20)
+                font.family: ThemeConfig.iconFont; font.pixelSize: shell.s(20)
                 color: prevMouse.containsMouse ? mocha.text : mocha.overlay2
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                 scale: prevMouse.containsMouse ? 1.1 : 1.0
-                Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.OutBack } }
             }
             MouseArea {
                 id: prevMouse; anchors.fill: parent; hoverEnabled: true
@@ -75,11 +76,11 @@ Rectangle {
             Text {
                 anchors.centerIn: parent
                 text: root._isPlaying ? "󰏤" : "󰐊"
-                font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(22)
+                font.family: ThemeConfig.iconFont; font.pixelSize: shell.s(22)
                 color: playMouse.containsMouse ? mocha.green : mocha.text
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                 scale: playMouse.containsMouse ? 1.15 : 1.0
-                Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.OutBack } }
             }
             MouseArea {
                 id: playMouse; anchors.fill: parent; hoverEnabled: true
@@ -96,7 +97,7 @@ Rectangle {
                 font.pixelSize: shell.s(11)
                 font.weight: Font.Bold
                 color: titleMouse.containsMouse ? mocha.subtext1 : mocha.text
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                 width: parent.width
                 elide: Text.ElideRight
             }
@@ -110,11 +111,11 @@ Rectangle {
             width: shell.s(22); height: shell.s(22)
             Text {
                 anchors.centerIn: parent; text: "󰒭"
-                font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(20)
+                font.family: ThemeConfig.iconFont; font.pixelSize: shell.s(20)
                 color: nextMouse.containsMouse ? mocha.text : mocha.overlay2
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                 scale: nextMouse.containsMouse ? 1.1 : 1.0
-                Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.OutBack } }
             }
             MouseArea {
                 id: nextMouse; anchors.fill: parent; hoverEnabled: true

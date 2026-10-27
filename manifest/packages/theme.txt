@@ -10,6 +10,7 @@ aur:ttf-jetbrains-mono-nerd
 ttf-iosevka-nerd
 ttf-fira-code
 aur:ttf-fira-sans
+ttf-ibm-plex
 
 # Brede Unicode/symbooldekking voor weer- en fallback-iconen
 noto-fonts

@@ -73,7 +73,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: "󰈀"
-                        font.family: "Iosevka Nerd Font"
+                        font.family: ThemeConfig.iconFont
                         font.pixelSize: root.s(24)
                         color: root.connected ? mocha.green : mocha.overlay0
                     }
@@ -167,7 +167,7 @@ Item {
         spacing: root.s(10)
         Text {
             text: parent.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: root.s(15)
             color: mocha.green
         }

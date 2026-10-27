@@ -108,7 +108,7 @@ FocusScope {
             Rectangle {
                 Layout.preferredWidth: 34; Layout.preferredHeight: 34; radius: 11
                 color: Qt.rgba(mocha.accent1.r, mocha.accent1.g, mocha.accent1.b, 0.18)
-                Text { anchors.centerIn: parent; text: "󰄀"; font.family: "Iosevka Nerd Font"; font.pixelSize: 17; color: mocha.accent1 }
+                Text { anchors.centerIn: parent; text: "󰄀"; font.family: ThemeConfig.iconFont; font.pixelSize: 17; color: mocha.accent1 }
             }
             ColumnLayout {
                 Layout.fillWidth: true; spacing: 1
@@ -118,7 +118,7 @@ FocusScope {
             Rectangle {
                 Layout.preferredWidth: 32; Layout.preferredHeight: 32; radius: 10
                 color: refreshMouse.containsMouse ? Qt.rgba(mocha.accent1.r, mocha.accent1.g, mocha.accent1.b, 0.16) : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.72)
-                Text { anchors.centerIn: parent; text: "󰑓"; font.family: "Iosevka Nerd Font"; font.pixelSize: 15; color: mocha.accent1 }
+                Text { anchors.centerIn: parent; text: "󰑓"; font.family: ThemeConfig.iconFont; font.pixelSize: 15; color: mocha.accent1 }
                 MouseArea { id: refreshMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.refresh() }
             }
         }
@@ -130,7 +130,7 @@ FocusScope {
             border.color: searchInput.activeFocus ? Qt.rgba(mocha.accent1.r, mocha.accent1.g, mocha.accent1.b, 0.62) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 8
-                Text { text: "󰍉"; font.family: "Iosevka Nerd Font"; font.pixelSize: 15; color: mocha.accent1 }
+                Text { text: "󰍉"; font.family: ThemeConfig.iconFont; font.pixelSize: 15; color: mocha.accent1 }
                 TextInput {
                     id: searchInput
                     Layout.fillWidth: true
@@ -159,7 +159,7 @@ FocusScope {
                 border.color: current ? Qt.rgba(mocha.accent1.r, mocha.accent1.g, mocha.accent1.b, 0.48) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
                 RowLayout {
                     anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 10
-                    Text { text: entryRow.image ? "󰋩" : "󰆏"; font.family: "Iosevka Nerd Font"; font.pixelSize: 16; color: entryRow.image ? mocha.accent2 : mocha.accent1 }
+                    Text { text: entryRow.image ? "󰋩" : "󰆏"; font.family: ThemeConfig.iconFont; font.pixelSize: 16; color: entryRow.image ? mocha.accent2 : mocha.accent1 }
                     Text {
                         id: previewText
                         Layout.fillWidth: true
@@ -167,7 +167,7 @@ FocusScope {
                         font.family: ThemeConfig.uiFont; font.pixelSize: 12; color: mocha.text
                         wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
                     }
-                    Text { text: "󰅂"; font.family: "Iosevka Nerd Font"; font.pixelSize: 13; color: current ? mocha.accent1 : mocha.subtext0 }
+                    Text { text: "󰅂"; font.family: ThemeConfig.iconFont; font.pixelSize: 13; color: current ? mocha.accent1 : mocha.subtext0 }
                 }
                 MouseArea {
                     id: entryMouse

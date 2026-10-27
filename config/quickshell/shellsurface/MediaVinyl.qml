@@ -94,7 +94,7 @@ Item {
             anchors.centerIn: parent
             visible: !deck.hasArt
             text: "󰎆"
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: Math.round(deck.width * 0.32)
             color: deck.accent
         }
@@ -266,7 +266,7 @@ Item {
                 y: 15 * tonearm.u
                 transformOrigin: Item.Top
                 rotation: tonearm.trackingAngle
-                Behavior on rotation { NumberAnimation { duration: 520; easing.type: Easing.OutCubic } }
+                Behavior on rotation { NumberAnimation { duration: ThemeConfig.duration(520); easing.type: Easing.OutCubic } }
                 color: deck.mocha.overlay2
 
                 Rectangle {

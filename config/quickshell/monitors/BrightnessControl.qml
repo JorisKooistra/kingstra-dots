@@ -18,7 +18,7 @@ Rectangle {
     height: pillHeight
     clip: true
 
-    Behavior on color { ColorAnimation { duration: 200 } }
+    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
     property int brightness: 100   // 0–100
 
@@ -56,7 +56,7 @@ Rectangle {
 
     property real targetWidth: brightRow.width + 24
     width: targetWidth
-    Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
+    Behavior on width { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
 
     Row {
         id: brightRow
@@ -65,7 +65,7 @@ Rectangle {
 
         Text {
             text: root.brightness >= 70 ? "󰃠" : root.brightness >= 30 ? "󰃟" : "󰃞"
-            font.family: "Iosevka Nerd Font"; font.pixelSize: 16
+            font.family: ThemeConfig.iconFont; font.pixelSize: 16
             color: mocha.yellow
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -82,7 +82,7 @@ Rectangle {
                 height: parent.height
                 radius: parent.radius
                 color: mocha.yellow
-                Behavior on width { NumberAnimation { duration: 200 } }
+                Behavior on width { NumberAnimation { duration: ThemeConfig.duration(200) } }
             }
 
             MouseArea {
@@ -100,7 +100,7 @@ Rectangle {
 
         Text {
             text: root.brightness + "%"
-            font.family: "JetBrains Mono"; font.pixelSize: 12; font.weight: Font.Bold
+            font.family: ThemeConfig.textFont; font.pixelSize: 12; font.weight: Font.Bold
             color: mocha.subtext0
             anchors.verticalCenter: parent.verticalCenter
         }

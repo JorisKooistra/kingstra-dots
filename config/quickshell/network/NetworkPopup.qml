@@ -168,7 +168,7 @@ Item {
     property var coreVisualIndices: [0, 0, 0, 0, 0]
     property int activeCoreCount: 0
     property real smoothedActiveCoreCount: activeCoreCount
-    Behavior on smoothedActiveCoreCount { NumberAnimation { duration: 1000; easing.type: Easing.InOutExpo } }
+    Behavior on smoothedActiveCoreCount { NumberAnimation { duration: ThemeConfig.duration(1000); easing.type: Easing.InOutExpo } }
 
     function syncCores() {
         let list = activeMode === "wifi" ? (isWifiConn && wifiConnected ? [window.wifiConnected] : []) : window.btConnected;
@@ -370,7 +370,7 @@ Item {
     
     // Smooth transition properties. Drops to 0.0 immediately if power is cut.
     property real multiTransitionState: (isLogicMultiState && window.currentPower) ? 1.0 : 0.0
-    Behavior on multiTransitionState { NumberAnimation { duration: 1200; easing.type: Easing.InOutExpo } }
+    Behavior on multiTransitionState { NumberAnimation { duration: ThemeConfig.duration(1200); easing.type: Easing.InOutExpo } }
 
     function updateInfoNodes() {
         let nodes = [];
@@ -609,7 +609,7 @@ Item {
     }
 
     property real introState: 0.0
-    Behavior on introState { NumberAnimation { duration: 1500; easing.type: Easing.OutCubic } }
+    Behavior on introState { NumberAnimation { duration: ThemeConfig.duration(1500); easing.type: Easing.OutCubic } }
 
     component LoadingDots : Row {
         spacing: window.s(5)
@@ -646,8 +646,8 @@ Item {
                 y: (parent.height / 2 - height / 2) + Math.sin(window.globalOrbitAngle * 2) * window.s(100)
                 opacity: window.currentPower ? 0.08 : 0.02
                 color: window.currentConn ? window.activeColor : window.surface2
-                Behavior on color { ColorAnimation { duration: 1000 } }
-                Behavior on opacity { NumberAnimation { duration: 1000 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(1000) } }
             }
             
             Rectangle {
@@ -656,8 +656,8 @@ Item {
                 y: (parent.height / 2 - height / 2) + Math.cos(window.globalOrbitAngle * 1.5) * window.s(-100)
                 opacity: window.currentPower ? 0.06 : 0.01
                 color: window.currentConn ? window.activeGradientSecondary : window.surface1
-                Behavior on color { ColorAnimation { duration: 1000 } }
-                Behavior on opacity { NumberAnimation { duration: 1000 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(1000) } }
             }
 
             Item {
@@ -666,8 +666,8 @@ Item {
                 anchors.bottomMargin: window.s(80) 
                 opacity: window.currentPower ? 1.0 : 0.0
                 scale: window.currentPower ? 1.0 : 1.05
-                Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.InOutQuad } }
-                Behavior on scale { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.InOutQuad } }
+                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutCubic } }
                 
                 Repeater {
                     model: 3
@@ -681,11 +681,11 @@ Item {
                         border.color: Object.keys(window.disconnectingDevices).length > 0 ? window.red : window.activeColor
                         border.width: Object.keys(window.disconnectingDevices).length > 0 ? window.s(2) : 1
                         
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
-                        Behavior on border.width { NumberAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                        Behavior on border.width { NumberAnimation { duration: ThemeConfig.duration(150) } }
 
                         opacity: Object.keys(window.disconnectingDevices).length > 0 ? 0.2 : (window.currentConn ? 0.08 - (index * 0.02) : 0.03)
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(150) } }
                     }
                 }
             }
@@ -696,7 +696,7 @@ Item {
                 anchors.bottomMargin: window.s(80)
                 z: 0 
                 opacity: (window.currentConn && window.showInfoView && window.currentPower) ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 500 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500) } }
                 
                 property real scaleTrigger: window.s(1)
                 onScaleTriggerChanged: requestPaint()
@@ -854,7 +854,7 @@ Item {
                         
                         property real myBaseAngle: (window.coreVisualIndices[index] / Math.max(1, window.activeCoreCount)) * Math.PI * 2
                         property real animatedBaseAngle: myBaseAngle
-                        Behavior on animatedBaseAngle { NumberAnimation { duration: 1000; easing.type: Easing.InOutExpo } }
+                        Behavior on animatedBaseAngle { NumberAnimation { duration: ThemeConfig.duration(1000); easing.type: Easing.InOutExpo } }
                         
                         property real coreOrbitAngle: window.globalOrbitAngle * 1.5 + animatedBaseAngle
                         
@@ -880,7 +880,7 @@ Item {
                             shadowBlur: 1.2
                             shadowVerticalOffset: window.s(6)
                             z: -1
-                            Behavior on shadowOpacity { NumberAnimation { duration: 600 } }
+                            Behavior on shadowOpacity { NumberAnimation { duration: ThemeConfig.duration(600) } }
                         }
 
                         Rectangle {
@@ -914,7 +914,7 @@ Item {
                                         if (centralCore.isDangerState && window.currentConn) return Qt.lighter(window.red, 1.15);
                                         return window.currentConn ? Qt.lighter(window.activeColor, 1.15) : window.surface0;
                                     }
-                                    Behavior on color { ColorAnimation { duration: 300 } }
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
                                 }
                                 GradientStop {
                                     position: 1.0
@@ -924,7 +924,7 @@ Item {
                                         if (centralCore.isDangerState && window.currentConn) return window.red;
                                         return window.currentConn ? window.activeColor : window.base;
                                     }
-                                    Behavior on color { ColorAnimation { duration: 300 } }
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
                                 }
                             }
 
@@ -935,7 +935,7 @@ Item {
                                 return window.currentConn ? Qt.lighter(window.activeColor, 1.1) : window.surface1;
                             }
                             border.width: window.s(2)
-                            Behavior on border.color { ColorAnimation { duration: 300 } }
+                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(300) } }
                             
                             Rectangle {
                                 anchors.fill: parent
@@ -1011,8 +1011,8 @@ Item {
                                 color: centralCore.isDangerState && window.currentConn ? window.red : window.activeColor
                                 opacity: window.currentConn && !isMyDisconnecting ? (centralCore.isDangerState ? 0.3 : 0.15) : 0.0
                                 z: -1
-                                Behavior on color { ColorAnimation { duration: 200 } }
-                                Behavior on opacity { NumberAnimation { duration: 300 } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                                 
                                 SequentialAnimation on scale {
                                     loops: Animation.Infinite; running: window.currentConn
@@ -1054,11 +1054,11 @@ Item {
                                 spacing: window.s(10)
                                 visible: !window.currentConn || !window.currentPower
                                 opacity: visible ? 1.0 : 0.0
-                                Behavior on opacity { NumberAnimation { duration: 300 } }
+                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
 
                                 Text {
                                     Layout.alignment: Qt.AlignHCenter
-                                    font.family: "Iosevka Nerd Font"
+                                    font.family: ThemeConfig.iconFont
                                     font.pixelSize: window.s(48) - (window.s(16) * coreContainer.multiShift)
                                     color: window.currentPower ? window.overlay0 : window.surface2
                                     text: window.activeMode === "wifi" ? "󰤮" : "󰂲"
@@ -1079,7 +1079,7 @@ Item {
                                 anchors.fill: parent
                                 visible: window.currentConn && window.currentPower
                                 opacity: visible ? 1.0 : 0.0
-                                Behavior on opacity { NumberAnimation { duration: 300 } }
+                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
 
                                 // 1. Base Uncovered Text
                                 ColumnLayout {
@@ -1089,11 +1089,11 @@ Item {
 
                                     Text {
                                         Layout.alignment: Qt.AlignHCenter
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: window.s(48) - (window.s(16) * coreContainer.multiShift)
                                         color: isMyDisconnecting ? window.overlay1 : window.crust
                                         text: isMyDisconnecting ? "" : (coreMa.containsMouse ? (window.activeMode === "wifi" ? "󰖪" : "󰂲") : (coreContainer.myDevice ? coreContainer.myDevice.icon : ""))
-                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                     }
                                     LoadingDots { Layout.alignment: Qt.AlignHCenter; visible: isMyDisconnecting; dotCol: window.overlay1 }
                                     Text {
@@ -1105,14 +1105,14 @@ Item {
                                         color: isMyDisconnecting ? window.overlay1 : window.crust
                                         text: coreContainer.myDevice ? (window.activeMode === "wifi" ? coreContainer.myDevice.ssid : coreContainer.myDevice.name) : ""
                                         elide: Text.ElideRight
-                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                     }
                                     Text {
                                         Layout.alignment: Qt.AlignHCenter
                                         font.family: window.uiFontFamily; font.weight: Font.DemiBold; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(11)
                                         color: isMyDisconnecting ? window.overlay1 : (coreMa.containsMouse ? window.crust : "#99000000")
                                         text: isMyDisconnecting ? "Disconnecting..." : (centralCore.disconnectFill > 0.01 ? "Hold..." : "Connected")
-                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                     }
                                 }
 
@@ -1133,7 +1133,7 @@ Item {
 
                                         Text {
                                             Layout.alignment: Qt.AlignHCenter
-                                            font.family: "Iosevka Nerd Font"
+                                            font.family: ThemeConfig.iconFont
                                             font.pixelSize: window.s(48) - (window.s(16) * coreContainer.multiShift)
                                             color: window.text
                                             text: isMyDisconnecting ? "" : (coreMa.containsMouse ? (window.activeMode === "wifi" ? "󰖪" : "󰂲") : (coreContainer.myDevice ? coreContainer.myDevice.icon : ""))
@@ -1248,7 +1248,7 @@ Item {
                 Item {
                     anchors.fill: parent
                     opacity: window.currentPower ? 1.0 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.InOutQuad } }
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.InOutQuad } }
 
                     Repeater {
                         id: orbitRepeater
@@ -1260,10 +1260,10 @@ Item {
 
                             property bool isLoaded: false
                             opacity: isLoaded ? 1.0 : 0.0
-                            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
+                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
 
                             property real entryAnim: isLoaded ? 1.0 : 0.0
-                            Behavior on entryAnim { NumberAnimation { duration: 600; easing.type: Easing.OutBack } }
+                            Behavior on entryAnim { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutBack } }
 
                             Timer {
                                 running: true
@@ -1312,14 +1312,14 @@ Item {
                             // To prevent list updating "jumps", we smoothly interpolate the layout properties while leaving the global rotation constant
                             property real targetSingleBaseAngle: (index / Math.max(1, orbitRepeater.count)) * Math.PI * 2
                             property real singleBaseAngle: targetSingleBaseAngle
-                            Behavior on singleBaseAngle { NumberAnimation { duration: 800; easing.type: Easing.OutExpo } }
+                            Behavior on singleBaseAngle { NumberAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.OutExpo } }
 
                             property real singleLiveAngle: (window.globalOrbitAngle * 1.5) + singleBaseAngle
                             
                             property real arcSpread: Math.PI * 0.8 
                             property real targetNodeOffset: (siblingsCount > 1) ? ((localIndex / (siblingsCount - 1)) - 0.5) * arcSpread : 0
                             property real nodeOffset: targetNodeOffset
-                            Behavior on nodeOffset { NumberAnimation { duration: 800; easing.type: Easing.OutExpo } }
+                            Behavior on nodeOffset { NumberAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.OutExpo } }
 
                             property real parentCoreAngle: (window.globalOrbitAngle * 1.5) + parentBaseAngle
                             property real multiLiveAngle: myParentIdx === -1 ? singleLiveAngle : (parentCoreAngle + nodeOffset)
@@ -1327,7 +1327,7 @@ Item {
                             property int ringIndex: isInfoNode ? 0 : index % 2
                             property real targetRingOffset: ringIndex * window.s(40)
                             property real ringOffset: targetRingOffset
-                            Behavior on ringOffset { NumberAnimation { duration: 800; easing.type: Easing.OutExpo } }
+                            Behavior on ringOffset { NumberAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.OutExpo } }
 
                             property real singleRadX: isInfoNode ? window.s(280) : window.s(320) + ringOffset
                             property real singleRadY: isInfoNode ? window.s(180) : window.s(200) + ringOffset
@@ -1341,7 +1341,7 @@ Item {
                             property real currentAngle: (singleLiveAngle * (1 - unifiedRatio)) + (multiLiveAngle * unifiedRatio)
                             
                             property real pwrDrift: window.currentPower ? 0 : window.s(40)
-                            Behavior on pwrDrift { NumberAnimation { duration: 600; easing.type: Easing.OutQuint } }
+                            Behavior on pwrDrift { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutQuint } }
 
                             // Make the pop out start from 25% of the radius (outside the core) so it floats nicely
                             property real animRadX: (currentRadX + pwrDrift) * (0.25 + 0.75 * entryAnim)
@@ -1363,7 +1363,7 @@ Item {
                             y: targetY + liveBob
 
                             scale: (!isLoaded ? 0.0 : (floatMa.pressed ? dynamicScale * 0.95 : (floatCard.locksList ? dynamicScale * 1.08 : dynamicScale))) * floatCard.bumpScale
-                            Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutQuart } }
+                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuart } }
                             z: floatCard.locksList ? 10 : index
 
                             MultiEffect {
@@ -1451,7 +1451,7 @@ Item {
                                 }
 
                                 color: locksList ? "#2affffff" : "#0effffff"
-                                Behavior on color { ColorAnimation { duration: 200 } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
                                 Rectangle {
                                     anchors.fill: parent
@@ -1468,7 +1468,7 @@ Item {
                                     opacity: locksList || isHighlighted ? 1.0 : 0.0
                                     color: "transparent"
                                     border.width: isHighlighted && !locksList ? 1 : window.s(2)
-                                    Behavior on opacity { NumberAnimation { duration: 250 } }
+                                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
                                     
                                     Rectangle {
                                         anchors.fill: parent
@@ -1593,11 +1593,11 @@ Item {
                                     spacing: window.s(10)
                                     
                                     Text {
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: window.s(20)
                                         color: floatCard.isMyBusy ? window.text : window.activeColor
                                         text: icon
-                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                     }
                                     
                                     ColumnLayout {
@@ -1616,7 +1616,7 @@ Item {
                                                 anchors.leftMargin: floatCard.textOffset
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 text: floatCard.itemName
-                                                font.family: "JetBrains Mono"
+                                                font.family: ThemeConfig.textFont
                                                 font.weight: Font.Bold
                                                 font.pixelSize: window.s(13)
                                                 color: floatCard.isHighlighted ? window.activeColor : window.text
@@ -1627,7 +1627,7 @@ Item {
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 visible: floatCard.doMarquee
                                                 text: floatCard.itemName
-                                                font.family: "JetBrains Mono"
+                                                font.family: ThemeConfig.textFont
                                                 font.weight: Font.Bold
                                                 font.pixelSize: window.s(13)
                                                 color: floatCard.isHighlighted ? window.activeColor : window.text
@@ -1635,11 +1635,11 @@ Item {
                                         }
                                         
                                         Text {
-                                            font.family: "JetBrains Mono"
+                                            font.family: ThemeConfig.textFont
                                             font.pixelSize: window.s(10)
                                             color: floatCard.isMyBusy ? window.activeColor : window.overlay0
                                             text: floatCard.isMyBusy ? "Connecting..." : (floatCard.renderFill > 0.1 && floatCard.renderFill < 1.0 ? floatCard.holdLabel : action)
-                                            Behavior on color { ColorAnimation { duration: 200 } }
+                                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                         }
                                     }
                                 }
@@ -1656,7 +1656,7 @@ Item {
                                         width: baseTextRow.width; height: baseTextRow.height
                                         spacing: window.s(10)
                                         
-                                        Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(20); color: window.crust; text: icon }
+                                        Text { font.family: ThemeConfig.iconFont; font.pixelSize: window.s(20); color: window.crust; text: icon }
                                         
                                         ColumnLayout {
                                             Layout.fillWidth: true
@@ -1673,7 +1673,7 @@ Item {
                                                     anchors.leftMargin: floatCard.textOffset
                                                     anchors.verticalCenter: parent.verticalCenter
                                                     text: floatCard.itemName
-                                                    font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: window.s(13); color: window.crust 
+                                                    font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: window.s(13); color: window.crust 
                                                 }
                                                 Text { 
                                                     anchors.left: filledNameText.right
@@ -1681,11 +1681,11 @@ Item {
                                                     anchors.verticalCenter: parent.verticalCenter
                                                     visible: floatCard.doMarquee
                                                     text: floatCard.itemName
-                                                    font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: window.s(13); color: window.crust 
+                                                    font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: window.s(13); color: window.crust 
                                                 }
                                             }
                                             Text {
-                                                font.family: "JetBrains Mono"; font.pixelSize: window.s(10); color: window.crust
+                                                font.family: ThemeConfig.textFont; font.pixelSize: window.s(10); color: window.crust
                                                 text: floatCard.isMyBusy ? "Connecting..." : (floatCard.renderFill > 0.1 && floatCard.renderFill < 1.0 ? floatCard.holdLabel : action)
                                             }
                                         }
@@ -1811,7 +1811,7 @@ Item {
                 color: Qt.rgba(window.red.r, window.red.g, window.red.b, 0.85)
                 visible: window.btConnectError !== "" && window.activeMode === "bt"
                 opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 300 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                 Text {
                     anchors.centerIn: parent
                     text: window.btConnectError
@@ -1848,13 +1848,13 @@ Item {
                         radius: window.themedInnerRadius
                         
                         color: window.activeMode === "wifi" ? "transparent" : (wifiTabMa.containsMouse ? window.surface1 : "transparent")
-                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
                         Rectangle {
                             anchors.fill: parent
                             radius: window.themedInnerRadius
                             opacity: window.activeMode === "wifi" ? 1.0 : 0.0
-                            Behavior on opacity { NumberAnimation { duration: 300 } }
+                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                             gradient: Gradient {
                                 orientation: Gradient.Horizontal
                                 GradientStop { position: 0.0; color: Qt.lighter(window.wifiAccent, 1.15) }
@@ -1865,8 +1865,8 @@ Item {
                         RowLayout {
                             anchors.centerIn: parent
                             spacing: window.s(8)
-                            Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.activeMode === "wifi" ? window.crust : window.text; text: "󰤨"; Behavior on color { ColorAnimation{duration:200} } }
-                            Text { font.family: window.uiFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(13); color: window.activeMode === "wifi" ? window.crust : window.text; text: "Wi-Fi"; Behavior on color { ColorAnimation{duration:200} } }
+                            Text { font.family: ThemeConfig.iconFont; font.pixelSize: window.s(18); color: window.activeMode === "wifi" ? window.crust : window.text; text: "󰤨"; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(200)} } }
+                            Text { font.family: window.uiFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(13); color: window.activeMode === "wifi" ? window.crust : window.text; text: "Wi-Fi"; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(200)} } }
                         }
                         MouseArea {
                             id: wifiTabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -1885,13 +1885,13 @@ Item {
                         Layout.fillHeight: true
                         radius: window.themedInnerRadius
                         color: window.activeMode === "bt" ? "transparent" : (btTabMa.containsMouse ? window.surface1 : "transparent")
-                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
                         Rectangle {
                             anchors.fill: parent
                             radius: window.themedInnerRadius
                             opacity: window.activeMode === "bt" ? 1.0 : 0.0
-                            Behavior on opacity { NumberAnimation { duration: 300 } }
+                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                             gradient: Gradient {
                                 orientation: Gradient.Horizontal
                                 GradientStop { position: 0.0; color: Qt.lighter(window.btAccent, 1.15) }
@@ -1902,8 +1902,8 @@ Item {
                         RowLayout {
                             anchors.centerIn: parent
                             spacing: window.s(8)
-                            Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.activeMode === "bt" ? window.crust : window.text; text: "󰂯"; Behavior on color { ColorAnimation{duration:200} } }
-                            Text { font.family: window.uiFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(13); color: window.activeMode === "bt" ? window.crust : window.text; text: "Bluetooth"; Behavior on color { ColorAnimation{duration:200} } }
+                            Text { font.family: ThemeConfig.iconFont; font.pixelSize: window.s(18); color: window.activeMode === "bt" ? window.crust : window.text; text: "󰂯"; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(200)} } }
+                            Text { font.family: window.uiFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(13); color: window.activeMode === "bt" ? window.crust : window.text; text: "Bluetooth"; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(200)} } }
                         }
                         MouseArea {
                             id: btTabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -1926,31 +1926,31 @@ Item {
                 color: "transparent"
                 border.color: window.currentPowerPending ? window.activeColor : (window.currentPower ? "transparent" : window.surface2)
                 border.width: window.s(2)
-                Behavior on border.color { ColorAnimation { duration: 300 } }
+                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(300) } }
 
                 Rectangle {
                     anchors.fill: parent
                     radius: window.s(24)
                     opacity: window.currentPower ? 1.0 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: 300 } }
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Qt.lighter(window.activeColor, 1.15); Behavior on color { ColorAnimation {duration: 300} } }
-                        GradientStop { position: 1.0; color: window.activeColor; Behavior on color { ColorAnimation {duration: 300} } }
+                        GradientStop { position: 0.0; color: Qt.lighter(window.activeColor, 1.15); Behavior on color { ColorAnimation {duration: ThemeConfig.duration(300)} } }
+                        GradientStop { position: 1.0; color: window.activeColor; Behavior on color { ColorAnimation {duration: ThemeConfig.duration(300)} } }
                     }
                 }
                 
                 scale: pwrMa.pressed ? 0.9 : (pwrMa.containsMouse ? 1.1 : 1.0)
-                Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
+                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(200); easing.type: Easing.OutBack } }
 
                 Text {
                     id: pwrIcon
                     anchors.centerIn: parent
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: window.s(22)
                     color: window.currentPower ? window.crust : window.text
                     text: window.currentPowerPending ? "󰑮" : "" 
-                    Behavior on color { ColorAnimation { duration: 300 } }
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
 
                     RotationAnimation {
                         target: pwrIcon

@@ -292,7 +292,7 @@ Item {
                     spacing: shell.s(4)
                     Text {
                         text: shell.weatherIcon
-                        font.family: "Iosevka Nerd Font"
+                        font.family: ThemeConfig.iconFont
                         font.pixelSize: shell.s(root.compactRailOnly ? 13 : 15)
                         color: Qt.tint(shell.weatherHex, Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.4))
                     }
@@ -348,7 +348,7 @@ Item {
                         spacing: shell.s(8)
                         Text {
                             text: "󰍉"
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: shell.s(15)
                             color: searchPill.hovered ? mocha.blue : mocha.text
                         }
@@ -408,7 +408,7 @@ Item {
                         spacing: shell.s(8)
                         Text {
                             text: "\uf0f3"
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: shell.s(14)
                             color: notifPill.hovered ? mocha.yellow : mocha.text
                         }
@@ -560,7 +560,7 @@ Item {
                                 font.weight: wsPill.stateLabel === "active" ? Font.Black : Font.Bold
                                 font.letterSpacing: shell.themeLetterSpacing
                                 color: wsPill.stateLabel === "active" ? mocha.text : mocha.text
-                                Behavior on opacity { NumberAnimation { duration: 120 } }
+                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(120) } }
                             }
 
                             Grid {
@@ -570,7 +570,7 @@ Item {
                                 columnSpacing: shell.s(wsPill.useIconGrid ? 3 : 4)
                                 opacity: wsPill.showAppIcons ? 1 : 0
                                 visible: opacity > 0
-                                Behavior on opacity { NumberAnimation { duration: 140 } }
+                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(140) } }
 
                                 Repeater {
                                     model: wsPill.visibleAppIcons
@@ -683,7 +683,7 @@ Item {
                     Item { Layout.fillWidth: true }
                     Text {
                         text: "󰒮"
-                        font.family: "Iosevka Nerd Font"
+                        font.family: ThemeConfig.iconFont
                         font.pixelSize: shell.s(18)
                         color: mocha.overlay2
                         MouseArea {
@@ -694,7 +694,7 @@ Item {
                     }
                     Text {
                         text: shell.musicData.status === "Playing" ? "󰏤" : "󰐊"
-                        font.family: "Iosevka Nerd Font"
+                        font.family: ThemeConfig.iconFont
                         font.pixelSize: shell.s(20)
                         color: mocha.green
                         MouseArea {
@@ -705,7 +705,7 @@ Item {
                     }
                     Text {
                         text: "󰒭"
-                        font.family: "Iosevka Nerd Font"
+                        font.family: ThemeConfig.iconFont
                         font.pixelSize: shell.s(18)
                         color: mocha.overlay2
                         MouseArea {
@@ -953,7 +953,7 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                 Text {
                     text: "\uf701"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: shell.s(15)
                     color: shell.updateCount > 0 ? mocha.yellow : mocha.subtext0
                 }
@@ -977,7 +977,7 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "\uf701"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: shell.s(13)
                     color: shell.updateCount > 0 ? mocha.yellow : mocha.subtext0
                 }
@@ -1026,7 +1026,7 @@ Item {
                     text: shell.isEthConnected && !shell.hasWifi ? "󰈀" : shell.wifiIcon
                     Layout.fillWidth: !networkPill.hovered
                     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: shell.s(15)
                     color: shell.isEthConnected && !shell.hasWifi ? mocha.green : (shell.isWifiOn ? mocha.blue : mocha.subtext0)
                     horizontalAlignment: Text.AlignHCenter
@@ -1081,7 +1081,7 @@ Item {
                     text: shell.btIcon
                     Layout.fillWidth: !bluetoothPill.hovered
                     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: shell.s(15)
                     color: shell.isBtOn ? mocha.mauve : mocha.subtext0
                     horizontalAlignment: Text.AlignHCenter
@@ -1137,7 +1137,7 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                 Text {
                     text: shell.volIcon
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: shell.s(15)
                     color: shell.isSoundActive ? mocha.peach : mocha.subtext0
                 }
@@ -1161,7 +1161,7 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.volIcon
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: shell.s(13)
                     color: shell.isSoundActive ? mocha.peach : mocha.subtext0
                 }
@@ -1215,7 +1215,7 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(160) } }
                 Text {
                     text: shell.batIcon
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: shell.s(15)
                     color: shell.batDynamicColor
                 }
@@ -1239,7 +1239,7 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.batIcon
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: shell.s(13)
                     color: shell.batDynamicColor
                 }
@@ -1290,7 +1290,7 @@ Item {
                     text: "󰐥"
                     Layout.fillWidth: !powerPill.hovered
                     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: shell.s(15)
                     color: mocha.red
                     horizontalAlignment: Text.AlignHCenter

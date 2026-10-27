@@ -33,18 +33,18 @@ Rectangle {
                   : (isHovered ? ctx.themeAccentBorderHoverColor : ctx.themeAccentBorderColor)
 
     scale: isHovered ? 1.05 : 1.0
-    Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-    Behavior on color { ColorAnimation { duration: 200 } }
+    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
     Text {
         anchors.centerIn: parent
         text: ""
-        font.family: "Iosevka Nerd Font"
+        font.family: ThemeConfig.iconFont
         font.pixelSize: shell.s(18)
         color: ctx.neonChrome
                ? (root.isHovered ? ctx.neonTextHotColor : ctx.neonTextColor)
                : (root.isHovered ? mocha.yellow : mocha.text)
-        Behavior on color { ColorAnimation { duration: 200 } }
+        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
     }
 
     // Neon bottom tick line
@@ -56,7 +56,7 @@ Rectangle {
         width: root.isHovered ? shell.s(18) : shell.s(10)
         height: 1
         color: ctx.neonModuleTickColor
-        Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+        Behavior on width { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.OutCubic } }
     }
 
     MouseArea {

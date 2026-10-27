@@ -1078,7 +1078,7 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: root.specialIcon(spPill.modelData.wsName)
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: 14
                             color: spPill.active ? root.mocha.base : root.mocha.text
                         }
@@ -1602,7 +1602,7 @@ Item {
                     anchors.centerIn: parent
                     visible: mpArt.status !== Image.Ready
                     text: "\udb81\udf5a"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: 12
                     color: root.mocha.accent3
                 }
@@ -1692,7 +1692,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: mc.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 13
             color: root.mocha.text
         }
@@ -1735,7 +1735,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: btn.icon
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 16
                 color: btn.accent
             }
@@ -1914,7 +1914,7 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: btn.icon
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 15
                 color: btn.accent
             }
@@ -2051,7 +2051,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: root.volIcon
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 16
                 color: root.isSoundActive ? root.mocha.accent3 : root.mocha.subtext0
                 Behavior on color {
@@ -2135,7 +2135,7 @@ Item {
                 anchors.centerIn: parent
                 anchors.horizontalCenterOffset: audio.playing ? 0 : 1
                 text: audio.playing ? "\udb80\udfe4" : "\udb81\udc0a"
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 12
                 color: root.mocha.accent3
             }
@@ -2258,7 +2258,7 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: glyph.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 14
             color: glyph.accent
             Behavior on color {
@@ -2353,7 +2353,7 @@ Item {
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: sglyph.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 15
             color: sglyph.accent
             Behavior on color {

@@ -42,7 +42,7 @@ RowLayout {
         Text {
             anchors.centerIn: parent
             text: slider.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 16
             color: slider.dimmed ? slider.mocha.subtext0 : slider.accent
         }
@@ -130,7 +130,7 @@ RowLayout {
         Text {
             anchors.centerIn: parent
             text: "󰅂"
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 14
             color: sliderDetailMouse.containsMouse || slider.detailExpanded ? slider.mocha.text : slider.mocha.subtext0
             rotation: slider.detailExpanded ? 90 : 0

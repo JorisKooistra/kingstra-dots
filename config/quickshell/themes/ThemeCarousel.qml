@@ -330,8 +330,8 @@ Item {
         opacity: root.isReady ? 1.0 : 0.0
         anchors.margins: root.isReady ? 0 : root.s(40)
 
-        Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.OutQuart } }
-        Behavior on anchors.margins { NumberAnimation { duration: 700; easing.type: Easing.OutExpo } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutQuart } }
+        Behavior on anchors.margins { NumberAnimation { duration: ThemeConfig.duration(700); easing.type: Easing.OutExpo } }
 
         spacing: 0
         orientation: ListView.Horizontal
@@ -572,7 +572,7 @@ Item {
                                             id: schemeText
                                             anchors.centerIn: parent
                                             text: root.formatSchemeLabel(delegateRoot.schemeType)
-                                            font.family: "JetBrains Mono"
+                                            font.family: ThemeConfig.textFont
                                             font.pixelSize: root.s(10)
                                             font.bold: true
                                             color: _theme.text
@@ -588,7 +588,7 @@ Item {
                                             id: iconThemeText
                                             anchors.centerIn: parent
                                             text: delegateRoot.iconTheme
-                                            font.family: "JetBrains Mono"
+                                            font.family: ThemeConfig.textFont
                                             font.pixelSize: root.s(10)
                                             color: _theme.text
                                         }
@@ -601,7 +601,7 @@ Item {
                                     color: _theme.subtext0
                                     visible: text !== "" && delegateRoot.isCurrent
                                     opacity: delegateRoot.isCurrent ? 1.0 : 0.0
-                                    Behavior on opacity { NumberAnimation { duration: 300 } }
+                                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                                 }
                             }
                         }
@@ -639,7 +639,7 @@ Item {
                             Qt.rgba(delegateRoot.accentColor.r, delegateRoot.accentColor.g, delegateRoot.accentColor.b, 0.85) :
                             Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.30)
                         border.width: delegateRoot.isCurrent ? root.s(2) : 1
-                        Behavior on border.color { ColorAnimation { duration: 300 } }
+                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(300) } }
                     }
                 }
             }

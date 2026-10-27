@@ -387,7 +387,7 @@ Item {
                     font.pixelSize: 18
                     color: window.timeAccent
                     opacity: window.secondPulse > 1.02 ? 1.0 : 0.6
-                    Behavior on color { ColorAnimation { duration: 1000 } }
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
                 }
             }
 
@@ -419,7 +419,7 @@ Item {
                 spacing: 8
                 Text {
                     text: window.hasWeather ? String(window.forecast[0].icon || "") : ""
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: 26
                     color: window.hasWeather ? window.weatherColor(window.forecast[0]) : mocha.text
                 }
@@ -581,7 +581,7 @@ Item {
                         spacing: 8
                         Text {
                             text: "󰃰"
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: 16
                             color: window.timeAccent
                         }
@@ -805,7 +805,7 @@ Item {
                                     Text {
                                         Layout.alignment: Qt.AlignHCenter
                                         text: String(dayPill.entry.icon || "")
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: 18
                                         color: window.weatherColor(dayPill.entry)
                                     }
@@ -886,7 +886,7 @@ Item {
                                     Text {
                                         Layout.alignment: Qt.AlignHCenter
                                         text: String(hourPill.modelData.icon || "")
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: 14
                                         color: hourPill.isNow ? mocha.base : window.weatherColor(hourPill.modelData)
                                     }
@@ -943,7 +943,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: roundButton.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 14
             color: roundButton.accent
         }
@@ -976,7 +976,7 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: pill.icon
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 12
                 color: pill.accent
             }
@@ -1010,7 +1010,7 @@ Item {
         Row {
             anchors.centerIn: parent
             spacing: 5
-            Text { anchors.verticalCenter: parent.verticalCenter; text: chip.icon; font.family: "Iosevka Nerd Font"; font.pixelSize: 12; color: window.timeAccent }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: chip.icon; font.family: ThemeConfig.iconFont; font.pixelSize: 12; color: window.timeAccent }
             Text { anchors.verticalCenter: parent.verticalCenter; text: chip.label; font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0 }
             Text { anchors.verticalCenter: parent.verticalCenter; text: chip.value; font.family: ThemeConfig.monoFont; font.pixelSize: 10; font.weight: Font.Bold; color: mocha.text }
         }

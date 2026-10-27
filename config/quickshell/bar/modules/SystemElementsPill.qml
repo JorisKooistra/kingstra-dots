@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import "../../monitors"
+import "../.."
 
 // Right-bar grouped pill met alle statusindicatoren.
 // (cpu/gpu/ram/brightness/game-launcher zijn al losse componenten in monitors/)
@@ -79,14 +80,14 @@ Rectangle {
             clip: true
 
             scale: isHovered ? 1.05 : 1.0
-            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
             property bool initAnimTrigger: false
             Timer { running: root.layoutVisible && kbPill.visible && !kbPill.initAnimTrigger; interval: 0; onTriggered: kbPill.initAnimTrigger = true }
             opacity: initAnimTrigger ? 1 : 0
-            transform: Translate { y: kbPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            transform: Translate { y: kbPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
             Text {
                 anchors.centerIn: parent
@@ -124,7 +125,7 @@ Rectangle {
                 anchors.fill: parent
                 radius: surface.innerPillRadius
                 opacity: ctx.neonChrome ? 0.0 : (updatesPill.updates > 0 ? 1.0 : 0.0)
-                Behavior on opacity { NumberAnimation { duration: 300 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: mocha.yellow }
@@ -134,23 +135,23 @@ Rectangle {
 
             property real targetWidth: updatesLayoutRow.width + shell.s(24)
             width: targetWidth
-            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutQuint } }
 
             scale: isHovered ? 1.05 : 1.0
-            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
             property bool initAnimTrigger: false
             Timer { running: root.layoutVisible && !updatesPill.initAnimTrigger; interval: 25; onTriggered: updatesPill.initAnimTrigger = true }
             opacity: initAnimTrigger ? 1 : 0
-            transform: Translate { y: updatesPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            transform: Translate { y: updatesPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
             Row {
                 id: updatesLayoutRow
                 anchors.centerIn: parent
                 spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: "󰚰"; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? ctx.neonTextHotColor : (updatesPill.updates > 0 ? mocha.base : mocha.subtext0) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: "󰚰"; font.family: ThemeConfig.iconFont; font.pixelSize: shell.s(16); color: ctx.neonChrome ? ctx.neonTextHotColor : (updatesPill.updates > 0 ? mocha.base : mocha.subtext0) }
                 Text { anchors.verticalCenter: parent.verticalCenter; text: updatesPill.updates.toString(); font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.neonChrome ? ctx.neonTextColor : (updatesPill.updates > 0 ? mocha.base : mocha.text) }
             }
             MouseArea { id: updatesMouse; hoverEnabled: true; anchors.fill: parent; onClicked: shell.openUpdatesTerminal() }
@@ -207,7 +208,7 @@ Rectangle {
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
                 opacity: ctx.neonChrome ? 0.0 : (shell.isWifiOn ? 1.0 : 0.0)
-                Behavior on opacity { NumberAnimation { duration: 300 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: mocha.blue }
@@ -217,21 +218,21 @@ Rectangle {
 
             property real targetWidth: wifiLayoutRow.width + shell.s(24)
             width: targetWidth
-            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutQuint } }
 
             scale: isHovered ? 1.05 : 1.0
-            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
             property bool initAnimTrigger: false
             Timer { running: root.layoutVisible && !wifiPill.initAnimTrigger; interval: 50; onTriggered: wifiPill.initAnimTrigger = true }
             opacity: initAnimTrigger ? 1 : 0
-            transform: Translate { y: wifiPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            transform: Translate { y: wifiPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
             Row {
                 id: wifiLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.wifiIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? (shell.isWifiOn ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isWifiOn ? mocha.base : mocha.subtext0) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.wifiIcon; font.family: ThemeConfig.iconFont; font.pixelSize: shell.s(16); color: ctx.neonChrome ? (shell.isWifiOn ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isWifiOn ? mocha.base : mocha.subtext0) }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.sysPollerLoaded ? (shell.isWifiOn ? (shell.wifiSsid !== "" ? shell.wifiSsid : "On") : "Off") : ""
@@ -258,7 +259,7 @@ Rectangle {
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
                 opacity: ctx.neonChrome ? 0.0 : 1.0
-                Behavior on opacity { NumberAnimation { duration: 300 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: mocha.green }
@@ -268,21 +269,21 @@ Rectangle {
 
             property real targetWidth: ethLayoutRow.width + shell.s(24)
             width: targetWidth
-            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutQuint } }
 
             scale: isHovered ? 1.05 : 1.0
-            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
             property bool initAnimTrigger: false
             Timer { running: root.layoutVisible && !ethPill.initAnimTrigger; interval: 50; onTriggered: ethPill.initAnimTrigger = true }
             opacity: initAnimTrigger ? 1 : 0
-            transform: Translate { y: ethPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            transform: Translate { y: ethPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
             Row {
                 id: ethLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.ethIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? ctx.neonTextColor : mocha.base }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.ethIcon; font.family: ThemeConfig.iconFont; font.pixelSize: shell.s(16); color: ctx.neonChrome ? ctx.neonTextColor : mocha.base }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.sysPollerLoaded ? (shell.ethSpeed !== "" ? shell.ethSpeed : "LAN") : ""
@@ -308,7 +309,7 @@ Rectangle {
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
                 opacity: ctx.neonChrome ? 0.0 : (shell.isBtOn ? 1.0 : 0.0)
-                Behavior on opacity { NumberAnimation { duration: 300 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: mocha.mauve }
@@ -318,21 +319,21 @@ Rectangle {
 
             property real targetWidth: btLayoutRow.width + shell.s(24)
             width: targetWidth
-            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutQuint } }
 
             scale: isHovered ? 1.05 : 1.0
-            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
             property bool initAnimTrigger: false
             Timer { running: root.layoutVisible && !btPill.initAnimTrigger; interval: 100; onTriggered: btPill.initAnimTrigger = true }
             opacity: initAnimTrigger ? 1 : 0
-            transform: Translate { y: btPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            transform: Translate { y: btPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
             Row {
                 id: btLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.btIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? (shell.isBtOn ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isBtOn ? mocha.base : mocha.subtext0) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.btIcon; font.family: ThemeConfig.iconFont; font.pixelSize: shell.s(16); color: ctx.neonChrome ? (shell.isBtOn ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isBtOn ? mocha.base : mocha.subtext0) }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: shell.sysPollerLoaded ? shell.btDevice : ""
@@ -359,7 +360,7 @@ Rectangle {
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
                 opacity: ctx.neonChrome ? 0.0 : (shell.isSoundActive ? 1.0 : 0.0)
-                Behavior on opacity { NumberAnimation { duration: 300 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: mocha.peach }
@@ -369,21 +370,21 @@ Rectangle {
 
             property real targetWidth: volLayoutRow.width + shell.s(24)
             width: targetWidth
-            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutQuint } }
 
             scale: isHovered ? 1.05 : 1.0
-            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
             property bool initAnimTrigger: false
             Timer { running: root.layoutVisible && !volPill.initAnimTrigger; interval: 150; onTriggered: volPill.initAnimTrigger = true }
             opacity: initAnimTrigger ? 1 : 0
-            transform: Translate { y: volPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            transform: Translate { y: volPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
             Row {
                 id: volLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.volIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? (shell.isSoundActive ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isSoundActive ? mocha.base : mocha.subtext0) }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.volIcon; font.family: ThemeConfig.iconFont; font.pixelSize: shell.s(16); color: ctx.neonChrome ? (shell.isSoundActive ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isSoundActive ? mocha.base : mocha.subtext0) }
                 Text { anchors.verticalCenter: parent.verticalCenter; text: shell.volPercent; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.neonChrome ? (shell.isSoundActive ? ctx.neonTextColor : ctx.neonTextMutedColor) : (shell.isSoundActive ? mocha.base : mocha.text) }
             }
             MouseArea {
@@ -425,32 +426,32 @@ Rectangle {
             Rectangle {
                 anchors.fill: parent; radius: surface.innerPillRadius
                 opacity: ctx.neonChrome ? 0.0 : ((shell.isCharging || shell.batCap <= 20) ? 1.0 : 0.0)
-                Behavior on opacity { NumberAnimation { duration: 300 } }
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: shell.batDynamicColor; Behavior on color { ColorAnimation { duration: 300 } } }
-                    GradientStop { position: 1.0; color: Qt.lighter(shell.batDynamicColor, 1.3); Behavior on color { ColorAnimation { duration: 300 } } }
+                    GradientStop { position: 0.0; color: shell.batDynamicColor; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
+                    GradientStop { position: 1.0; color: Qt.lighter(shell.batDynamicColor, 1.3); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
                 }
             }
 
             property real targetWidth: batLayoutRow.width + shell.s(24)
             width: targetWidth
-            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutQuint } }
 
             scale: isHovered ? 1.05 : 1.0
-            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
             property bool initAnimTrigger: false
             Timer { running: root.layoutVisible && !batPill.initAnimTrigger; interval: 200; onTriggered: batPill.initAnimTrigger = true }
             opacity: initAnimTrigger ? 1 : 0
-            transform: Translate { y: batPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            transform: Translate { y: batPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
             Row {
                 id: batLayoutRow; anchors.centerIn: parent; spacing: shell.s(8)
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.batIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: shell.s(16); color: ctx.neonChrome ? ((shell.isCharging || shell.batCap <= 20) ? ctx.neonTextHotColor : ctx.neonTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor); Behavior on color { ColorAnimation { duration: 300 } } }
-                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.batPercent; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.neonChrome ? ((shell.isCharging || shell.batCap <= 20) ? ctx.neonTextHotColor : ctx.neonTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor); Behavior on color { ColorAnimation { duration: 300 } } }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.batIcon; font.family: ThemeConfig.iconFont; font.pixelSize: shell.s(16); color: ctx.neonChrome ? ((shell.isCharging || shell.batCap <= 20) ? ctx.neonTextHotColor : ctx.neonTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: shell.batPercent; font.family: shell.monoFontFamily; font.pixelSize: shell.s(13); font.weight: shell.themeFontWeight; font.letterSpacing: shell.themeLetterSpacing; color: ctx.neonChrome ? ((shell.isCharging || shell.batCap <= 20) ? ctx.neonTextHotColor : ctx.neonTextColor) : ((shell.isCharging || shell.batCap <= 20) ? mocha.base : shell.batDynamicColor); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
             }
             MouseArea { id: batMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) }
         }
@@ -468,19 +469,19 @@ Rectangle {
             clip: true
 
             scale: isHovered ? 1.05 : 1.0
-            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
             property bool initAnimTrigger: false
             Timer { running: root.layoutVisible && powerPill.visible && !powerPill.initAnimTrigger; interval: 200; onTriggered: powerPill.initAnimTrigger = true }
             opacity: initAnimTrigger ? 1 : 0
-            transform: Translate { y: powerPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            transform: Translate { y: powerPill.initAnimTrigger ? 0 : shell.s(15); Behavior on y { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutBack } } }
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
             Text {
                 anchors.centerIn: parent
                 text: ""
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: shell.s(16)
                 color: ctx.neonChrome ? ctx.neonTextColor : mocha.subtext0
             }

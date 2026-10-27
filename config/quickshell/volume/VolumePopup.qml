@@ -302,7 +302,7 @@ Item {
                 y: (parent.height / 2 - height / 2) + Math.sin(window.globalOrbitAngle * 2) * 100
                 opacity: 0.06
                 color: window.tabColor
-                Behavior on color { ColorAnimation { duration: 800 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800) } }
             }
             Rectangle {
                 width: parent.width * 0.9; height: width; radius: width / 2
@@ -310,7 +310,7 @@ Item {
                 y: (parent.height / 2 - height / 2) + Math.cos(window.globalOrbitAngle * 1.5) * -100
                 opacity: 0.04
                 color: Qt.lighter(window.tabColor, 1.3)
-                Behavior on color { ColorAnimation { duration: 800 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800) } }
             }
 
             ColumnLayout {
@@ -336,7 +336,7 @@ Item {
                             Layout.preferredWidth: 94
                             Layout.preferredHeight: 94
                             scale: masterOrbMa.pressed ? 0.95 : (masterOrbMa.containsMouse ? 1.05 : 1.0)
-                            Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack } }
+                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutBack } }
 
                             // Outermost border pulse ring
                             Rectangle {
@@ -375,7 +375,7 @@ Item {
                                 color: window.activeMute ? window.red : window.tabColor
                                 opacity: window.activeMute ? 0.3 : 0.15
                                 z: -1
-                                Behavior on color { ColorAnimation { duration: 300 } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
 
                                 SequentialAnimation on scale {
                                     loops: Animation.Infinite; running: true
@@ -405,7 +405,7 @@ Item {
                                 border.color: window.activeMute ? window.red : Qt.lighter(window.tabColor, 1.1)
                                 border.width: 2
                                 clip: true
-                                Behavior on border.color { ColorAnimation { duration: 300 } }
+                                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(300) } }
 
                                 // Volume Wave Fill
                                 Canvas {
@@ -487,7 +487,7 @@ Item {
                                     font.pixelSize: 25
                                     color: window.activeMute ? window.red : window.text
                                     text: window.activeMute ? "MUTE" : window.activeVol + "%"
-                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                 }
 
                                 // 2. Clipped Text (Dark text that reveals over the wave fill dynamically)
@@ -594,13 +594,13 @@ Item {
                                             width: parent.width * (Math.min(100, window.activeVol) / 100)
                                             radius: window.themedInnerRadius
                                             opacity: window.activeMute ? 0.3 : (masterSliderMa.containsMouse ? 1.0 : 0.85)
-                                            Behavior on opacity { NumberAnimation { duration: 200 } }
+                                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
                                             Behavior on width { enabled: !window.draggingMaster; NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
 
                                             gradient: Gradient {
                                                 orientation: Gradient.Horizontal
-                                                GradientStop { position: 0.0; color: window.activeMute ? window.surface2 : window.tabColor; Behavior on color { ColorAnimation{duration: 300} } }
-                                                GradientStop { position: 1.0; color: window.activeMute ? Qt.lighter(window.surface2, 1.15) : Qt.lighter(window.tabColor, 1.25); Behavior on color { ColorAnimation{duration: 300} } }
+                                                GradientStop { position: 0.0; color: window.activeMute ? window.surface2 : window.tabColor; Behavior on color { ColorAnimation{duration: ThemeConfig.duration(300)} } }
+                                                GradientStop { position: 1.0; color: window.activeMute ? Qt.lighter(window.surface2, 1.15) : Qt.lighter(window.tabColor, 1.25); Behavior on color { ColorAnimation{duration: ThemeConfig.duration(300)} } }
                                             }
                                         }
                                     }
@@ -635,7 +635,7 @@ Item {
                                     Text {
                                         anchors.centerIn: parent
                                         text: window.activeMute ? "󰖁" : "󰕾"
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: 14
                                         color: window.activeMute ? window.red : window.text
                                     }
@@ -680,7 +680,7 @@ Item {
                                     Text {
                                         anchors.centerIn: parent
                                         text: "󰋋"
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: 14
                                         color: window.text
                                     }
@@ -724,7 +724,7 @@ Item {
                                     Text {
                                         anchors.centerIn: parent
                                         text: "󰓦"
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: 14
                                         color: window.green
                                     }
@@ -784,12 +784,12 @@ Item {
                             if (window.activeTab === "inputs") return width + 1;
                             return (width * 2) + 1;
                         }
-                        Behavior on x { NumberAnimation { duration: 500; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
+                        Behavior on x { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
                         
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: window.tabColor; Behavior on color { ColorAnimation { duration: 400 } } }
-                            GradientStop { position: 1.0; color: Qt.lighter(window.tabColor, 1.15); Behavior on color { ColorAnimation { duration: 400 } } }
+                            GradientStop { position: 0.0; color: window.tabColor; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } } }
+                            GradientStop { position: 1.0; color: Qt.lighter(window.tabColor, 1.15); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } } }
                         }
                     }
 
@@ -812,16 +812,16 @@ Item {
                                     anchors.centerIn: parent
                                     spacing: 8
                                     Text {
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: 15
+                                        font.family: ThemeConfig.iconFont; font.pixelSize: 15
                                         color: window.activeTab === tabId ? window.crust : (tabMa.containsMouse ? window.text : window.subtext0)
                                         text: icon
-                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                     }
                                     Text {
-                                        font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: 11
+                                        font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: 11
                                         color: window.activeTab === tabId ? window.crust : (tabMa.containsMouse ? window.text : window.subtext0)
                                         text: label
-                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                     }
                                 }
                                 
@@ -865,7 +865,7 @@ Item {
                             spacing: 12
 
                             Text {
-                                font.family: "Iosevka Nerd Font"
+                                font.family: ThemeConfig.iconFont
                                 font.pixelSize: 23
                                 color: window.peach
                                 text: "󰌪"
@@ -928,7 +928,7 @@ Item {
                             ColumnLayout {
                                 anchors.centerIn: parent
                                 spacing: 10
-                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "Iosevka Nerd Font"; font.pixelSize: 32; color: window.surface2; text: "󰖁" }
+                                Text { Layout.alignment: Qt.AlignHCenter; font.family: ThemeConfig.iconFont; font.pixelSize: 32; color: window.surface2; text: "󰖁" }
                                 Text {
                                     Layout.alignment: Qt.AlignHCenter
                                     font.family: window.monoFontFamily
@@ -960,14 +960,14 @@ Item {
                             // Intro transforms
                             opacity: isLoaded ? 1.0 : 0.0
                             transform: Translate { y: isLoaded ? 0 : 15 }
-                            Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
-                            Behavior on transform { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutQuint } }
+                            Behavior on transform { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutQuint } }
 
                             // Dynamic Height: The active hero element collapses its bottom slider row
                             property bool isActiveNode: model.is_default && window.activeTab !== "apps"
                             property bool showsRoutes: isActiveNode && window.activeTab === "outputs" && routePorts.length > 0
                             height: showsRoutes ? 112 : (isActiveNode ? 60 : 100)
-                            Behavior on height { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
+                            Behavior on height { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
 
                             radius: 14
                             
@@ -976,8 +976,8 @@ Item {
                             color: isActiveNode ? window.tabColor : (isHovered ? "#0affffff" : "#05ffffff")
                             border.color: isActiveNode ? window.tabColor : "#1affffff"
                             border.width: isActiveNode ? 2 : 1
-                            Behavior on border.color { ColorAnimation { duration: 300 } }
-                            Behavior on color { ColorAnimation { duration: 300 } }
+                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(300) } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
 
                             // Full card selection listener
                             MouseArea {
@@ -1011,9 +1011,9 @@ Item {
                                     spacing: 12
 
                                     Text {
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: 22
+                                        font.family: ThemeConfig.iconFont; font.pixelSize: 22
                                         color: isActiveNode ? window.crust : window.text
-                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                         text: {
                                             if (model.kind === "headset") return "󰋎";
                                             if (model.kind === "display") return "󰍹";
@@ -1028,13 +1028,13 @@ Item {
                                         spacing: 2
                                         Text {
                                             Layout.fillWidth: true; elide: Text.ElideRight
-                                            font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: 14
+                                            font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: 14
                                             color: isActiveNode ? window.crust : window.text
                                             text: model.description
                                         }
                                         Text {
                                             Layout.fillWidth: true; elide: Text.ElideRight
-                                            font.family: "JetBrains Mono"; font.pixelSize: 11
+                                            font.family: ThemeConfig.textFont; font.pixelSize: 11
                                             color: isActiveNode ? Qt.darker(window.crust, 1.5) : window.subtext0
                                             text: isActiveNode
                                                 ? "● Actief · " + model.subtitle
@@ -1103,20 +1103,20 @@ Item {
                                     spacing: 15
                                     visible: !isActiveNode
                                     opacity: isActiveNode ? 0.0 : 1.0
-                                    Behavior on opacity { NumberAnimation { duration: 200 } }
+                                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
 
                                     Rectangle {
                                         Layout.preferredWidth: 32; Layout.preferredHeight: 32; radius: 16
                                         color: muteMa.containsMouse ? "#1affffff" : "transparent"
                                         border.color: muteMa.containsMouse ? (model.mute ? window.overlay0 : window.tabColor) : "transparent"
-                                        Behavior on color { ColorAnimation { duration: 150 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
 
                                         Text {
                                             anchors.centerIn: parent
-                                            font.family: "Iosevka Nerd Font"; font.pixelSize: 18
+                                            font.family: ThemeConfig.iconFont; font.pixelSize: 18
                                             color: model.mute ? window.overlay0 : window.subtext0
                                             text: model.mute || model.volume === 0 ? "󰖁" : (model.volume > 50 ? "󰕾" : "󰖀")
-                                            Behavior on color { ColorAnimation { duration: 200 } }
+                                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                         }
                                         MouseArea {
                                             id: muteMa
@@ -1167,13 +1167,13 @@ Item {
                                                 
                                                 // Heavily dimmed if muted, slightly dimmed if background node
                                                 opacity: model.mute ? 0.3 : (volSliderMa.containsMouse ? 0.7 : 0.4)
-                                                Behavior on opacity { NumberAnimation { duration: 200 } }
+                                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
                                                 Behavior on width { enabled: !window.draggingNodes[model.id]; NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
 
                                                 gradient: Gradient {
                                                     orientation: Gradient.Horizontal
-                                                    GradientStop { position: 0.0; color: model.mute ? window.surface2 : window.tabColor; Behavior on color { ColorAnimation { duration: 300 } } }
-                                                    GradientStop { position: 1.0; color: model.mute ? Qt.lighter(window.surface2, 1.15) : Qt.lighter(window.tabColor, 1.25); Behavior on color { ColorAnimation { duration: 300 } } }
+                                                    GradientStop { position: 0.0; color: model.mute ? window.surface2 : window.tabColor; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
+                                                    GradientStop { position: 1.0; color: model.mute ? Qt.lighter(window.surface2, 1.15) : Qt.lighter(window.tabColor, 1.25); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
                                                 }
                                             }
                                         }
@@ -1204,7 +1204,7 @@ Item {
 
                                     Text {
                                         Layout.preferredWidth: 35
-                                        font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: 12
+                                        font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: 12
                                         color: window.subtext0
                                         text: model.volume + "%"
                                         horizontalAlignment: Text.AlignRight

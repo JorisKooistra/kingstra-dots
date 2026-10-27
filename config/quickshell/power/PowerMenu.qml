@@ -105,7 +105,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "󰐥"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: 19
                     color: mocha.red
                 }
@@ -253,7 +253,7 @@ Item {
 
             Text {
                 text: tile.icon
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 16
                 color: tile.active ? tile.accent : mocha.subtext0
             }
@@ -348,7 +348,7 @@ Item {
 
             Text {
                 text: action.icon
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: 17
                 color: action.accent
             }

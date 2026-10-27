@@ -158,7 +158,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         spacing: window.s(14)
         opacity: window.isReady ? 1.0 : 0.0
-        Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -167,7 +167,7 @@ Item {
             Text {
                 text: ""
                 font.pixelSize: window.sf(22, 22)
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 color: _theme.blue
                 anchors.verticalCenter: parent.verticalCenter
             }
@@ -193,7 +193,7 @@ Item {
 
             Text {
                 text: ""
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: window.sf(14, 14)
                 color: _theme.subtext0
                 anchors.left: parent.left
@@ -246,7 +246,7 @@ Item {
         contentHeight: catFlow.height
         clip: true
         opacity: window.isReady ? 1.0 : 0.0
-        Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
         ScrollBar.vertical: ScrollBar { }
 
@@ -280,7 +280,7 @@ Item {
                             spacing: window.s(8)
                             Text {
                                 text: modelData.icon
-                                font.family: "Iosevka Nerd Font"
+                                font.family: ThemeConfig.iconFont
                                 font.pixelSize: window.sf(15, 15)
                                 color: _theme.blue
                                 anchors.verticalCenter: parent.verticalCenter
@@ -315,7 +315,7 @@ Item {
                                         id: chipLabel
                                         anchors.centerIn: parent
                                         text: window.chipText(modelData)
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.pixelSize: window.sf(11, 11)
                                         font.bold: true
                                         color: _theme.text
@@ -351,7 +351,7 @@ Item {
         border.color: Qt.rgba(_theme.surface2.r, _theme.surface2.g, _theme.surface2.b, 0.6)
         border.width: 1
         opacity: window.isReady ? 1.0 : 0.0
-        Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
 
         Row {
             id: hintRow

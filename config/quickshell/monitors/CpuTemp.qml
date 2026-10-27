@@ -19,7 +19,7 @@ Rectangle {
     height: pillHeight
     clip: false
 
-    Behavior on color { ColorAnimation { duration: 200 } }
+    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
     property string tempStr: "--°C"
     property string usagePct: "--%"
@@ -126,7 +126,7 @@ Rectangle {
 
     property real targetWidth: cpuRow.width + 24
     width: targetWidth
-    Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
+    Behavior on width { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
 
     Row {
         id: cpuRow
@@ -135,43 +135,43 @@ Rectangle {
 
         Text {
             text: root.showTemperature ? "CPU" : "󰍛"
-            font.family: root.showTemperature ? "JetBrains Mono" : "Iosevka Nerd Font"
+            font.family: root.showTemperature ? ThemeConfig.textFont : ThemeConfig.iconFont
             font.pixelSize: root.showTemperature ? 11 : 16
             font.weight: root.showTemperature ? Font.Black : Font.Normal
             color: root.displayColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
         Text {
             text: root.usagePct
-            font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
+            font.family: ThemeConfig.textFont; font.pixelSize: 13; font.weight: Font.Black
             color: root.displayColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
         Text {
             text: root.showTemperature ? root.tempStr : root.ramPct
             visible: root.showTemperature
-            font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
+            font.family: ThemeConfig.textFont; font.pixelSize: 13; font.weight: Font.Black
             color: root.displayColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
         Text {
             text: "󰘚"
             visible: !root.showTemperature
-            font.family: "Iosevka Nerd Font"; font.pixelSize: 15
+            font.family: ThemeConfig.iconFont; font.pixelSize: 15
             color: root.ramColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
         Text {
             text: root.ramPct
             visible: !root.showTemperature
-            font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
+            font.family: ThemeConfig.textFont; font.pixelSize: 13; font.weight: Font.Black
             color: root.ramColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
     }
 
@@ -194,13 +194,13 @@ Rectangle {
             id: hoverText
             anchors.centerIn: parent
             text: root.hoverLabel
-            font.family: "JetBrains Mono"
+            font.family: ThemeConfig.textFont
             font.pixelSize: 10
             font.weight: Font.Black
             color: root.hoverLabel === "RAM" ? root.ramColor : root.displayColor
         }
 
-        Behavior on opacity { NumberAnimation { duration: 120 } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(120) } }
     }
 
     MouseArea {

@@ -268,7 +268,7 @@ Item {
                 y: (parent.height / 2 - height / 2) + Math.sin(window.globalOrbitAngle * 2) * window.s(100)
                 opacity: 0.04
                 color: window.selectedResAccent
-                Behavior on color { ColorAnimation { duration: 1000 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
             }
             Rectangle {
                 width: parent.width * 0.9
@@ -278,7 +278,7 @@ Item {
                 y: (parent.height / 2 - height / 2) + Math.cos(window.globalOrbitAngle * 1.5) * window.s(-100)
                 opacity: 0.04
                 color: window.selectedRateAccent
-                Behavior on color { ColorAnimation { duration: 1000 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
             }
 
             // ==========================================
@@ -308,7 +308,7 @@ Item {
                         property real baseScale: Math.min(1.0, 2200 / window.currentSimW)
                         scale: baseScale * window.monitorScale
                         opacity: window.introProgress
-                        Behavior on baseScale { NumberAnimation { duration: 600; easing.type: Easing.OutQuint } }
+                        Behavior on baseScale { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutQuint } }
 
                         Rectangle {
                             id: deskSurface
@@ -384,8 +384,8 @@ Item {
                             border.color: window.surface2
                             border.width: window.s(2)
                             
-                            Behavior on width { NumberAnimation { duration: 600; easing.type: Easing.OutQuint } }
-                            Behavior on height { NumberAnimation { duration: 600; easing.type: Easing.OutQuint } }
+                            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutQuint } }
+                            Behavior on height { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutQuint } }
 
                             Rectangle {
                                 anchors.fill: parent
@@ -404,12 +404,12 @@ Item {
                                         GradientStop { 
                                             position: 0.0
                                             color: Qt.tint(window.surface0, Qt.alpha(window.selectedResAccent, 0.15))
-                                            Behavior on color { ColorAnimation { duration: 400 } } 
+                                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } } 
                                         }
                                         GradientStop { 
                                             position: 1.0
                                             color: Qt.tint(window.surface0, Qt.alpha(window.selectedRateAccent, 0.1))
-                                            Behavior on color { ColorAnimation { duration: 400 } } 
+                                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } } 
                                         }
                                     }
                                     
@@ -433,15 +433,15 @@ Item {
                                             spacing: window.s(4)
                                             Text { 
                                                 Layout.alignment: Qt.AlignHCenter
-                                                font.family: "Iosevka Nerd Font"
+                                                font.family: ThemeConfig.iconFont
                                                 font.pixelSize: window.s(38)
                                                 color: window.selectedResAccent
                                                 text: "󰍹"
-                                                Behavior on color { ColorAnimation { duration: 400 } } 
+                                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } } 
                                             }
                                             Text { 
                                                 Layout.alignment: Qt.AlignHCenter
-                                                font.family: "JetBrains Mono"
+                                                font.family: ThemeConfig.textFont
                                                 font.weight: Font.Bold
                                                 font.pixelSize: window.s(16)
                                                 color: window.text
@@ -449,7 +449,7 @@ Item {
                                             }
                                             Text { 
                                                 Layout.alignment: Qt.AlignHCenter
-                                                font.family: "JetBrains Mono"
+                                                font.family: ThemeConfig.textFont
                                                 font.pixelSize: window.s(12)
                                                 color: window.subtext0
                                                 text: window.currentSimW + "x" + window.currentSimH + " @ " + (monitorsModel.count > 0 ? monitorsModel.get(0).rate : "60") + "Hz" 
@@ -548,9 +548,9 @@ Item {
                             scale: multiMonitorView.targetScale
                             transformOrigin: Item.TopLeft
 
-                            Behavior on x { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
-                            Behavior on y { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
-                            Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
+                            Behavior on x { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
+                            Behavior on y { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
+                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
 
                             Repeater {
                                 id: monitorRepeater
@@ -575,13 +575,13 @@ Item {
                                         border.width: isActive ? 2 : 1
                                         z: isActive ? 5 : 0
 
-                                        Behavior on x { NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
-                                        Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
+                                        Behavior on x { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.OutQuint } }
+                                        Behavior on y { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.OutQuint } }
                                         
-                                        Behavior on border.color { ColorAnimation { duration: 300 } }
-                                        Behavior on color { ColorAnimation { duration: 300 } }
-                                        Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
-                                        Behavior on height { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
+                                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(300) } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
+                                        Behavior on width { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
+                                        Behavior on height { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
 
                                         Item {
                                             anchors.centerIn: parent
@@ -597,15 +597,15 @@ Item {
                                                 spacing: 2
                                                 Text { 
                                                     Layout.alignment: Qt.AlignHCenter
-                                                    font.family: "Iosevka Nerd Font"
+                                                    font.family: ThemeConfig.iconFont
                                                     font.pixelSize: 32
                                                     color: isActive ? window.selectedResAccent : window.text
                                                     text: "󰍹"
-                                                    Behavior on color { ColorAnimation { duration: 300 } } 
+                                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } 
                                                 }
                                                 Text { 
                                                     Layout.alignment: Qt.AlignHCenter
-                                                    font.family: "JetBrains Mono"
+                                                    font.family: ThemeConfig.textFont
                                                     font.weight: Font.Black
                                                     font.pixelSize: 13
                                                     color: window.text
@@ -613,7 +613,7 @@ Item {
                                                 }
                                                 Text { 
                                                     Layout.alignment: Qt.AlignHCenter
-                                                    font.family: "JetBrains Mono"
+                                                    font.family: ThemeConfig.textFont
                                                     font.pixelSize: 10
                                                     color: window.subtext0
                                                     text: model.resW + "x" + model.resH + " @ " + model.rate + "Hz" 
@@ -797,8 +797,8 @@ Item {
                                 border.color: isSel ? accentColor : (resMa.containsMouse ? window.surface1 : "transparent")
                                 border.width: isSel ? 2 : 1
                                 
-                                Behavior on color { ColorAnimation { duration: 200 } }
-                                Behavior on border.color { ColorAnimation { duration: 200 } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+                                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
                                 RowLayout {
                                     anchors.fill: parent
@@ -806,27 +806,27 @@ Item {
                                     spacing: window.s(8)
                                     
                                     Text { 
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.weight: isSel ? Font.Black : Font.Bold
                                         font.pixelSize: window.s(16)
                                         color: isSel ? accentColor : window.text
                                         text: modelData.label
-                                        Behavior on color { ColorAnimation { duration: 200 } } 
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } } 
                                     }
                                     
                                     Item { Layout.fillWidth: true } 
                                     
                                     Text { 
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.pixelSize: window.s(12)
                                         color: isSel ? window.text : window.overlay0
                                         text: modelData.resW + "x" + modelData.resH
-                                        Behavior on color { ColorAnimation { duration: 200 } } 
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } } 
                                     }
                                 }
 
                                 scale: resMa.pressed ? 0.96 : 1.0
-                                Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutSine } }
+                                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150); easing.type: Easing.OutSine } }
 
                                 MouseArea {
                                     id: resMa
@@ -897,7 +897,7 @@ Item {
                                 height: parent.height
                                 radius: parent.radius
                                 color: window.selectedRateAccent
-                                Behavior on color { ColorAnimation { duration: 200 } } 
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } } 
                             }
                         }
 
@@ -910,11 +910,11 @@ Item {
                                 Text { 
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     text: sliderContainer.rates[index]
-                                    font.family: "JetBrains Mono"
+                                    font.family: ThemeConfig.textFont
                                     font.pixelSize: window.s(13)
                                     font.weight: sliderContainer.currentIndex === index ? Font.Bold : Font.Normal
                                     color: sliderContainer.currentIndex === index ? window.selectedRateAccent : window.overlay0
-                                    Behavior on color { ColorAnimation { duration: 200 } } 
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } } 
                                 }
                             }
                         }
@@ -932,11 +932,11 @@ Item {
                                 enabled: !sliderMa.pressed
                                 NumberAnimation { duration: 250; easing.type: Easing.OutCubic } 
                             }
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                             
                             border.width: sliderMa.containsMouse ? 4 : 0
                             border.color: Qt.alpha(window.selectedRateAccent, 0.3)
-                            Behavior on border.width { NumberAnimation { duration: 150 } }
+                            Behavior on border.width { NumberAnimation { duration: ThemeConfig.duration(150) } }
                         }
 
                         MouseArea {
@@ -996,9 +996,9 @@ Item {
                     shadowOpacity: window.applyHovered ? 0.6 : 0.2
                     shadowVerticalOffset: window.s(4)
                     z: -1
-                    Behavior on shadowBlur { NumberAnimation { duration: 300 } } 
-                    Behavior on shadowOpacity { NumberAnimation { duration: 300 } } 
-                    Behavior on shadowColor { ColorAnimation { duration: 400 } }
+                    Behavior on shadowBlur { NumberAnimation { duration: ThemeConfig.duration(300) } } 
+                    Behavior on shadowOpacity { NumberAnimation { duration: ThemeConfig.duration(300) } } 
+                    Behavior on shadowColor { ColorAnimation { duration: ThemeConfig.duration(400) } }
                 }
 
                 Rectangle {
@@ -1011,17 +1011,17 @@ Item {
                         GradientStop { 
                             position: 0.0
                             color: window.selectedResAccent
-                            Behavior on color { ColorAnimation { duration: 400 } } 
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } } 
                         } 
                         GradientStop { 
                             position: 1.0
                             color: window.selectedRateAccent
-                            Behavior on color { ColorAnimation { duration: 400 } } 
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } } 
                         } 
                     }
                     
                     scale: window.applyPressed ? 0.94 : (window.applyHovered ? 1.04 : 1.0)
-                    Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.OutBack } }
 
                     Rectangle {
                         id: flashRect
@@ -1042,14 +1042,14 @@ Item {
                         spacing: window.s(8)
                         
                         Text { 
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: window.s(20)
                             color: window.crust
                             text: "󰸵" 
                         }
                         
                         Text { 
-                            font.family: "JetBrains Mono"
+                            font.family: ThemeConfig.textFont
                             font.weight: Font.Black
                             font.pixelSize: window.s(14)
                             color: window.crust

@@ -17,18 +17,18 @@ Rectangle {
     height: pillHeight
     width: pillHeight  // vierkant
 
-    Behavior on color { ColorAnimation { duration: 200 } }
+    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
     scale: isHovered ? 1.08 : 1.0
-    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150); easing.type: Easing.OutBack } }
 
     Text {
         anchors.centerIn: parent
         text: "󰊴"   // gamepad icon (Nerd Font)
-        font.family: "Iosevka Nerd Font"
+        font.family: ThemeConfig.iconFont
         font.pixelSize: 18
         color: root.isHovered ? mocha.blue : mocha.subtext1
-        Behavior on color { ColorAnimation { duration: 200 } }
+        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
     }
 
     MouseArea {

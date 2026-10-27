@@ -85,7 +85,7 @@ FocusScope {
                 Text {
                     anchors.centerIn: parent
                     text: NotificationService.dnd ? "󰂛" : "󰍜"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: 19
                     color: mocha.yellow
                 }
@@ -153,7 +153,7 @@ FocusScope {
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text: NotificationService.dnd ? "󰂛" : "󰂚"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: 36
                     color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.28)
                 }
@@ -231,7 +231,7 @@ FocusScope {
                                         anchors.centerIn: parent
                                         visible: !groupIconImage.visible
                                         text: "󰍡"
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: ThemeConfig.iconFont
                                         font.pixelSize: 13
                                         color: mocha.subtext0
                                     }
@@ -524,7 +524,7 @@ FocusScope {
         Text {
             anchors.centerIn: parent
             text: buttonRoot.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 15
             color: buttonRoot.accent
         }
@@ -554,7 +554,7 @@ FocusScope {
         Text {
             anchors.centerIn: parent
             text: buttonRoot.icon
-            font.family: "Iosevka Nerd Font"
+            font.family: ThemeConfig.iconFont
             font.pixelSize: 13
             color: buttonRoot.accent
         }

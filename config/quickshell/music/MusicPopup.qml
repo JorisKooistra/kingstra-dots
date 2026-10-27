@@ -433,10 +433,10 @@ Item {
 
                     gradient: Gradient {
                         // FIXED: Using securely unpacked color bindings
-                        GradientStop { position: 0.0; color: root.bc1; Behavior on color { ColorAnimation { duration: 800; easing.type: Easing.InOutQuad } } }
-                        GradientStop { position: 0.33; color: root.bc2; Behavior on color { ColorAnimation { duration: 800; easing.type: Easing.InOutQuad } } }
-                        GradientStop { position: 0.66; color: root.bc3; Behavior on color { ColorAnimation { duration: 800; easing.type: Easing.InOutQuad } } }
-                        GradientStop { position: 1.0; color: root.bc4; Behavior on color { ColorAnimation { duration: 800; easing.type: Easing.InOutQuad } } }
+                        GradientStop { position: 0.0; color: root.bc1; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.InOutQuad } } }
+                        GradientStop { position: 0.33; color: root.bc2; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.InOutQuad } } }
+                        GradientStop { position: 0.66; color: root.bc3; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.InOutQuad } } }
+                        GradientStop { position: 1.0; color: root.bc4; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.InOutQuad } } }
                     }
                 }
             }
@@ -491,7 +491,7 @@ Item {
                     
                     // Fixed: Ensures blur is completely hidden when stopped so the pure base color matches the calendar
                     opacity: (status === Image.Ready && root.musicData.status !== "Stopped" && root.musicData.status !== "Offline") ? 0.9 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: 800; easing.type: Easing.InOutQuad } }
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.InOutQuad } }
                 }
 
                 // LAYER 1.5: Flowing Orbits
@@ -503,8 +503,8 @@ Item {
                     // Fixed: Hides orbits when stopped
                     opacity: root.musicData.status === "Playing" ? 0.08 : (root.musicData.status === "Paused" ? 0.04 : 0.0)
                     color: root.musicData.status === "Playing" ? root.mauve : root.surface2
-                    Behavior on color { ColorAnimation { duration: 1000 } }
-                    Behavior on opacity { NumberAnimation { duration: 1000 } }
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(1000) } }
                 }
                 
                 Rectangle {
@@ -515,8 +515,8 @@ Item {
                     // Fixed: Hides orbits when stopped
                     opacity: root.musicData.status === "Playing" ? 0.08 : (root.musicData.status === "Paused" ? 0.02 : 0.0)
                     color: root.musicData.status === "Playing" ? root.blue : root.surface1
-                    Behavior on color { ColorAnimation { duration: 1000 } }
-                    Behavior on opacity { NumberAnimation { duration: 1000 } }
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
+                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(1000) } }
                 }
             }
 
@@ -546,7 +546,7 @@ Item {
 
                         // Elastic response to play/pause state
                         scale: root.musicData.status === "Playing" ? 1.0 : 0.90
-                        Behavior on scale { NumberAnimation { duration: 800; easing.type: Easing.OutElastic; easing.overshoot: 1.2 } }
+                        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.OutElastic; easing.overshoot: 1.2 } }
 
                         Rectangle {
                             // The plinth is static; only the disc and label rotate.
@@ -558,7 +558,7 @@ Item {
                             color: root.surface0
                             border.width: root.s(4)
                             border.color: root.musicData.status === "Playing" ? root.mauve : root.overlay0
-                            Behavior on border.color { ColorAnimation { duration: 500 } }
+                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(500) } }
 
                             Rectangle {
                                 z: -1
@@ -568,7 +568,7 @@ Item {
                                 radius: root.vinylMode ? width / 2 : root.s(24)
                                 color: root.mauve
                                 opacity: root.musicData.status === "Playing" ? 0.34 : 0.0
-                                Behavior on opacity { NumberAnimation { duration: 500 } }
+                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500) } }
                                 layer.enabled: true
                                 layer.effect: MultiEffect { blurEnabled: true; blurMax: 32; blur: 1.0 }
                             }
@@ -646,13 +646,13 @@ Item {
                                         maskEnabled: true
                                         maskSource: labelMask
                                         opacity: labelArt.status === Image.Ready ? 0.82 : 0.0
-                                        Behavior on opacity { NumberAnimation { duration: 500 } }
+                                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500) } }
                                     }
                                     Text {
                                         anchors.centerIn: parent
                                         visible: labelArt.status !== Image.Ready
                                         text: "SIDE A"
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.pixelSize: root.s(8)
                                         font.bold: true
                                         color: root.text
@@ -786,7 +786,7 @@ Item {
                                     transformOrigin: Item.Top
                                     // Positive rotation travels inward over the record.
                                     rotation: tonearm.trackingAngle
-                                    Behavior on rotation { NumberAnimation { duration: 520; easing.type: Easing.OutCubic } }
+                                    Behavior on rotation { NumberAnimation { duration: ThemeConfig.duration(520); easing.type: Easing.OutCubic } }
                                     color: root.overlay2
 
                                     // The counterweight sits just behind the pivot and turns
@@ -868,10 +868,10 @@ Item {
                                             id: titleTextMain
                                             text: root.musicData.title
                                             color: root.dynamicTextColor
-                                            font.family: "JetBrains Mono"
+                                            font.family: ThemeConfig.textFont
                                             font.pixelSize: root.s(20)
                                             font.bold: true
-                                            Behavior on color { ColorAnimation { duration: 600 } }
+                                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(600) } }
 
                                             // Only animate if the text is physically wider than our container
                                             onTextChanged: {
@@ -888,7 +888,7 @@ Item {
                                             id: titleTextClone
                                             text: root.musicData.title
                                             color: root.dynamicTextColor
-                                            font.family: "JetBrains Mono"
+                                            font.family: ThemeConfig.textFont
                                             font.pixelSize: root.s(20)
                                             font.bold: true
                                             visible: titleTextMain.implicitWidth > titleClipRect.width
@@ -920,7 +920,7 @@ Item {
                             Text {
                                 text: root.musicData.artist ? "BY " + root.musicData.artist : ""
                                 color: root.subtext0 // Better matugen match
-                                font.family: "JetBrains Mono"
+                                font.family: ThemeConfig.textFont
                                 font.pixelSize: root.s(14)
                                 font.bold: true
                                 elide: Text.ElideRight
@@ -939,14 +939,14 @@ Item {
                                         id: pillContent
                                         anchors.centerIn: parent
                                         spacing: root.s(6)
-                                        Text { text: root.musicData.deviceIcon || "󰓃"; color: root.mauve; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(14) }
-                                        Text { text: root.musicData.deviceName || "Speaker"; color: root.overlay2; font.family: "JetBrains Mono"; font.pixelSize: root.s(12); font.bold: true }
+                                        Text { text: root.musicData.deviceIcon || "󰓃"; color: root.mauve; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(14) }
+                                        Text { text: root.musicData.deviceName || "Speaker"; color: root.overlay2; font.family: ThemeConfig.textFont; font.pixelSize: root.s(12); font.bold: true }
                                     }
                                 }
                                 Text {
                                     text: "VIA " + (root.musicData.source || "Offline")
                                     color: root.overlay2 // Better matugen match
-                                    font.family: "JetBrains Mono"
+                                    font.family: ThemeConfig.textFont
                                     font.pixelSize: root.s(12)
                                     font.bold: true
                                     font.italic: true
@@ -961,7 +961,7 @@ Item {
                                         anchors.centerIn: parent
                                         text: root.vinylMode ? "VINYL" : "ART"
                                         color: root.mauve
-                                        font.family: "JetBrains Mono"
+                                        font.family: ThemeConfig.textFont
                                         font.pixelSize: root.s(11)
                                         font.bold: true
                                     }
@@ -1073,13 +1073,13 @@ Item {
                                             gradient: Gradient {
                                                 orientation: Gradient.Horizontal
                                                 // Mathematically precise loops with lighter, cooler colors & theme change support
-                                                GradientStop { position: 0.0000; color: Qt.lighter(root.blue, 1.2); Behavior on color { ColorAnimation { duration: 800 } } }
-                                                GradientStop { position: 0.1666; color: Qt.lighter(root.sapphire, 1.15); Behavior on color { ColorAnimation { duration: 800 } } }
-                                                GradientStop { position: 0.3333; color: Qt.lighter(root.mauve, 1.15); Behavior on color { ColorAnimation { duration: 800 } } }
-                                                GradientStop { position: 0.5000; color: Qt.lighter(root.blue, 1.2); Behavior on color { ColorAnimation { duration: 800 } } }
-                                                GradientStop { position: 0.6666; color: Qt.lighter(root.sapphire, 1.15); Behavior on color { ColorAnimation { duration: 800 } } }
-                                                GradientStop { position: 0.8333; color: Qt.lighter(root.mauve, 1.15); Behavior on color { ColorAnimation { duration: 800 } } }
-                                                GradientStop { position: 1.0000; color: Qt.lighter(root.blue, 1.2); Behavior on color { ColorAnimation { duration: 800 } } }
+                                                GradientStop { position: 0.0000; color: Qt.lighter(root.blue, 1.2); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800) } } }
+                                                GradientStop { position: 0.1666; color: Qt.lighter(root.sapphire, 1.15); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800) } } }
+                                                GradientStop { position: 0.3333; color: Qt.lighter(root.mauve, 1.15); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800) } } }
+                                                GradientStop { position: 0.5000; color: Qt.lighter(root.blue, 1.2); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800) } } }
+                                                GradientStop { position: 0.6666; color: Qt.lighter(root.sapphire, 1.15); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800) } } }
+                                                GradientStop { position: 0.8333; color: Qt.lighter(root.mauve, 1.15); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800) } } }
+                                                GradientStop { position: 1.0000; color: Qt.lighter(root.blue, 1.2); Behavior on color { ColorAnimation { duration: ThemeConfig.duration(800) } } }
                                             }
                                         }
                                     }
@@ -1093,15 +1093,15 @@ Item {
                                     width: root.s(18); height: root.s(18)
                                     radius: root.s(9); color: root.text
                                     scale: progBar.pressed ? 1.3 : 1.0
-                                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+                                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150); easing.type: Easing.OutBack } }
                                 }
                             }
 
                             RowLayout {
                                 Layout.fillWidth: true
-                                Text { text: root.musicData.positionStr || "00:00"; color: root.overlay2; font.family: "JetBrains Mono"; font.bold: true; font.pixelSize: root.s(13) }
+                                Text { text: root.musicData.positionStr || "00:00"; color: root.overlay2; font.family: ThemeConfig.textFont; font.bold: true; font.pixelSize: root.s(13) }
                                 Item { Layout.fillWidth: true }
-                                Text { text: root.musicData.lengthStr || "00:00"; color: root.overlay2; font.family: "JetBrains Mono"; font.bold: true; font.pixelSize: root.s(13) }
+                                Text { text: root.musicData.lengthStr || "00:00"; color: root.overlay2; font.family: ThemeConfig.textFont; font.bold: true; font.pixelSize: root.s(13) }
                             }
                         }
 
@@ -1116,7 +1116,7 @@ Item {
                                 width: root.s(30); height: root.s(30)
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.execCmd("playerctl previous")
-                                Text { anchors.centerIn: parent; text: ""; color: parent.pressed ? root.text : root.overlay2; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(24) }
+                                Text { anchors.centerIn: parent; text: ""; color: parent.pressed ? root.text : root.overlay2; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(24) }
                             }
                             MouseArea {
                                 id: playPauseBtn
@@ -1169,18 +1169,18 @@ Item {
                                     anchors.centerIn: parent
                                     text: root.musicData.status === "Playing" ? "" : ""
                                     color: parent.pressed ? root.pink : root.mauve
-                                    font.family: "Iosevka Nerd Font"
+                                    font.family: ThemeConfig.iconFont
                                     font.pixelSize: root.s(42) 
                                     scale: parent.pressed ? 0.8 : 1.0
-                                    Behavior on color { ColorAnimation { duration: 150 } }
-                                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150); easing.type: Easing.OutBack } }
                                 }
                             }
                             MouseArea {
                                 width: root.s(30); height: root.s(30)
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.execCmd("playerctl next")
-                                Text { anchors.centerIn: parent; text: ""; color: parent.pressed ? root.text : root.overlay2; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(24) }
+                                Text { anchors.centerIn: parent; text: ""; color: parent.pressed ? root.text : root.overlay2; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(24) }
                             }
                         }
                     }
@@ -1214,7 +1214,7 @@ Item {
                         opacity: root.introEqHeader
                         transform: Translate { y: root.s(15) * (1 - root.introEqHeader) }
 
-                        Text { text: "Equalizer"; color: root.mauve; font.family: "JetBrains Mono"; font.pixelSize: root.s(16); font.bold: true; Layout.fillWidth: true }
+                        Text { text: "Equalizer"; color: root.mauve; font.family: ThemeConfig.textFont; font.pixelSize: root.s(16); font.bold: true; Layout.fillWidth: true }
                         
                         // Redesigned Apply Button
                         Rectangle {
@@ -1225,8 +1225,8 @@ Item {
                             border.color: root.eqData.pending ? root.mauve : root.surface2
                             border.width: 1
                             
-                            Behavior on color { ColorAnimation { duration: 300; easing.type: Easing.OutCubic } }
-                            Behavior on border.color { ColorAnimation { duration: 300; easing.type: Easing.OutCubic } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.OutCubic } }
+                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.OutCubic } }
 
                             layer.enabled: root.eqData.pending
                             layer.effect: MultiEffect {
@@ -1238,10 +1238,10 @@ Item {
                                 anchors.centerIn: parent
                                 text: root.eqData.pending ? "Apply" : "Saved"
                                 color: root.eqData.pending ? root.base : root.subtext0
-                                font.family: "JetBrains Mono"
+                                font.family: ThemeConfig.textFont
                                 font.pixelSize: root.s(12)
                                 font.bold: true
-                                Behavior on color { ColorAnimation { duration: 300 } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -1261,7 +1261,7 @@ Item {
                                 }
                             }
                         }
-                        Text { text: root.eqData.preset || "Flat"; color: root.subtext0; font.family: "JetBrains Mono"; font.pixelSize: root.s(14); font.bold: true; Layout.leftMargin: root.s(15) }
+                        Text { text: root.eqData.preset || "Flat"; color: root.subtext0; font.family: ThemeConfig.textFont; font.pixelSize: root.s(14); font.bold: true; Layout.leftMargin: root.s(15) }
                     }
 
                     // Eq Sliders Container with Canvas Lightning Overlay
@@ -1505,7 +1505,7 @@ Item {
                                         Text {
                                             text: modelData.lbl
                                             color: root.overlay1
-                                            font.family: "JetBrains Mono"
+                                            font.family: ThemeConfig.textFont
                                             font.pixelSize: root.s(10)
                                             font.bold: true
                                             Layout.alignment: Qt.AlignHCenter
@@ -1686,17 +1686,17 @@ Item {
         color: isActivePreset ? root.mauve : (isHovered ? root.surface1 : "#BF1E1E2E")
         scale: isHovered && !isActivePreset ? 1.05 : 1.0
 
-        Behavior on color { ColorAnimation { duration: 200 } }
-        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
+        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(200); easing.type: Easing.OutBack } }
 
         Text {
             anchors.centerIn: parent
             text: parent.name
             color: parent.isActivePreset ? root.base : (parent.isHovered ? root.text : root.subtext0)
-            font.family: "JetBrains Mono"
+            font.family: ThemeConfig.textFont
             font.pixelSize: root.s(12)
             font.bold: true
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
         }
 
         MouseArea {

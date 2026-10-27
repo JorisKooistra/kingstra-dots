@@ -126,7 +126,7 @@ Item {
     }
 
     property real animCapacity: 0
-    Behavior on animCapacity { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
+    Behavior on animCapacity { NumberAnimation { duration: ThemeConfig.duration(1200); easing.type: Easing.OutQuint } }
     onBatCapacityChanged: animCapacity = batCapacity
     Component.onCompleted: animCapacity = batCapacity
 
@@ -250,7 +250,7 @@ Item {
                 y: (parent.height / 2 - height / 2) + Math.sin(window.globalOrbitAngle * 2) * window.s(100)
                 opacity: 0.08
                 color: window.ambientPrimary
-                Behavior on color { ColorAnimation { duration: 1000 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
             }
             
             Rectangle {
@@ -259,7 +259,7 @@ Item {
                 y: (parent.height / 2 - height / 2) + Math.cos(window.globalOrbitAngle * 1.5) * window.s(-100)
                 opacity: 0.06
                 color: window.ambientSecondary
-                Behavior on color { ColorAnimation { duration: 1000 } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
             }
 
             // Radar Rings
@@ -278,7 +278,7 @@ Item {
                         color: "transparent"
                         border.color: window.ambientSecondary
                         border.width: 1
-                        Behavior on border.color { ColorAnimation { duration: 1000 } }
+                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
                         opacity: 0.06 - (index * 0.02)
                     }
                 }
@@ -301,14 +301,14 @@ Item {
                     width: window.s(44); height: window.s(48); radius: window.themedInnerRadius
                     color: window.glassFill; border.color: Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12 + ThemeConfig.materialGlowIntensity); border.width: 1
                     
-                    Rectangle { anchors.fill: parent; radius: window.s(10); color: window.ambientPrimary; opacity: 0.05; Behavior on color { ColorAnimation { duration: 1000 } } }
+                    Rectangle { anchors.fill: parent; radius: window.s(10); color: window.ambientPrimary; opacity: 0.05; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } } }
                     Column {
                         anchors.centerIn: parent
                         Text { 
                             text: window.upHours.toString().padStart(2, '0')
                             font.pixelSize: window.s(18); font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
                             color: window.ambientPrimary
-                            Behavior on color { ColorAnimation { duration: 1000 } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
                             anchors.horizontalCenter: parent.horizontalCenter 
                         }
                         Text { 
@@ -324,7 +324,7 @@ Item {
                     text: ":"
                     font.pixelSize: window.s(22); font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
                     color: window.ambientPrimary
-                    Behavior on color { ColorAnimation { duration: 1000 } }
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
                     
                     opacity: uptimePulse
                     property real uptimePulse: 1.0
@@ -340,14 +340,14 @@ Item {
                     width: window.s(44); height: window.s(48); radius: window.themedInnerRadius
                     color: window.glassFill; border.color: Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12 + ThemeConfig.materialGlowIntensity); border.width: 1
                     
-                    Rectangle { anchors.fill: parent; radius: window.s(10); color: window.ambientSecondary; opacity: 0.05; Behavior on color { ColorAnimation { duration: 1000 } } }
+                    Rectangle { anchors.fill: parent; radius: window.s(10); color: window.ambientSecondary; opacity: 0.05; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } } }
                     Column {
                         anchors.centerIn: parent
                         Text { 
                             text: window.upMins.toString().padStart(2, '0')
                             font.pixelSize: window.s(18); font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
                             color: window.ambientSecondary
-                            Behavior on color { ColorAnimation { duration: 1000 } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
                             anchors.horizontalCenter: parent.horizontalCenter 
                         }
                         Text { 
@@ -372,9 +372,9 @@ Item {
                 transform: Translate { y: window.s(-20) * (1.0 - introTop) }
                 opacity: introTop
 
-                Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
-                Behavior on color { ColorAnimation { duration: 150 } }
-                Behavior on border.color { ColorAnimation { duration: 150 } }
+                Behavior on width { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.OutQuint } }
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
 
                 Row {
                     anchors.right: parent.right
@@ -392,15 +392,15 @@ Item {
                         color: window.text
                         anchors.verticalCenter: parent.verticalCenter
                         opacity: logoutMa.containsMouse ? 1.0 : 0.0
-                        Behavior on opacity { NumberAnimation { duration: 250 } }
+                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
                     }
 
                     Text {
-                        font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18)
+                        font.family: ThemeConfig.iconFont; font.pixelSize: window.s(18)
                         color: logoutMa.containsMouse ? window.red : window.overlay0
                         text: "󰍃"
                         anchors.verticalCenter: parent.verticalCenter
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                     }
                 }
 
@@ -436,7 +436,7 @@ Item {
                     color: centralCore.isDangerState ? window.red : window.ambientPrimary
                     opacity: centralCore.isDangerState ? 0.25 : 0.15
                     z: 0 
-                    Behavior on color { ColorAnimation { duration: 400 } }
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } }
                     SequentialAnimation on scale {
                         loops: Animation.Infinite; running: true
                         NumberAnimation { to: heroMa.containsMouse ? 1.15 : 1.08; duration: heroMa.containsMouse ? 800 : 2000; easing.type: Easing.InOutSine }
@@ -482,7 +482,7 @@ Item {
                         radius: width / 2
                         color: window.maroon
                         opacity: centralCore.isDangerState ? 0.15 : 0.0
-                        Behavior on opacity { NumberAnimation { duration: 1000 } }
+                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(1000) } }
                         SequentialAnimation on opacity {
                             loops: Animation.Infinite; running: centralCore.isDangerState
                             NumberAnimation { to: 0.25; duration: 600; easing.type: Easing.InOutSine }
@@ -618,15 +618,15 @@ Item {
                             spacing: window.s(8)
                             
                             Text {
-                                font.family: "Iosevka Nerd Font"
+                                font.family: ThemeConfig.iconFont
                                 font.pixelSize: window.s(28)
                                 color: window.batColorStart
                                 text: window.isCharging ? "󰂄" : (window.batCapacity > 20 ? "󰁹" : "󰂃")
-                                Behavior on color { ColorAnimation { duration: 400 } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } }
                             }
                             
                             Text {
-                                font.family: "JetBrains Mono"
+                                font.family: ThemeConfig.textFont
                                 font.weight: Font.Black
                                 font.pixelSize: window.s(54)
                                 color: window.text
@@ -636,7 +636,7 @@ Item {
 
                         Text {
                             Layout.alignment: Qt.AlignHCenter
-                            font.family: "JetBrains Mono"
+                            font.family: ThemeConfig.textFont
                             font.weight: Font.Bold
                             font.pixelSize: window.s(13)
                             
@@ -645,7 +645,7 @@ Item {
                                     : (centralCore.isDangerState ? Qt.tint(window.red, Qt.rgba(1, 1, 1, parent.textPulse * 0.3)) : window.subtext0)
                                     
                             text: window.batStatus.toUpperCase()
-                            Behavior on color { ColorAnimation { duration: 300 } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
                         }
                     }
                 }
@@ -698,10 +698,10 @@ Item {
                                 Text {
                                     anchors.centerIn: parent
                                     text: window.sysBrightness > 66 ? "󰃠" : (window.sysBrightness > 33 ? "󰃟" : "󰃞")
-                                    font.family: "Iosevka Nerd Font"
+                                    font.family: ThemeConfig.iconFont
                                     font.pixelSize: window.s(22)
                                     color: window.ambientPrimary
-                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                 }
                             }
 
@@ -734,13 +734,13 @@ Item {
                                         width: parent.width * (window.sysBrightness / 100)
                                         radius: window.s(9)
                                         opacity: briMa.containsMouse ? 1.0 : 0.85
-                                        Behavior on opacity { NumberAnimation { duration: 200 } }
+                                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
                                         Behavior on width { enabled: !window.isDraggingBri; NumberAnimation { duration: 200; easing.type: Easing.OutQuint } }
 
                                         gradient: Gradient {
                                             orientation: Gradient.Horizontal
-                                            GradientStop { position: 0.0; color: window.batColorStart; Behavior on color { ColorAnimation { duration: 300 } } }
-                                            GradientStop { position: 1.0; color: window.batColorEnd; Behavior on color { ColorAnimation { duration: 300 } } }
+                                            GradientStop { position: 0.0; color: window.batColorStart; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
+                                            GradientStop { position: 1.0; color: window.batColorEnd; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
                                         }
                                     }
                                 }
@@ -774,16 +774,16 @@ Item {
                                 radius: window.s(16)
                                 color: volIconMa.containsMouse ? "#1affffff" : "transparent"
                                 border.color: volIconMa.containsMouse ? window.profileStart : "transparent"
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: window.sysMuted || window.sysVolume === 0 ? "󰖁" : (window.sysVolume > 50 ? "󰕾" : "󰖀")
-                                    font.family: "Iosevka Nerd Font"
+                                    font.family: ThemeConfig.iconFont
                                     font.pixelSize: window.s(22)
                                     color: window.sysMuted ? window.overlay0 : window.profileStart
-                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                 }
                                 MouseArea {
                                     id: volIconMa
@@ -828,13 +828,13 @@ Item {
                                         width: parent.width * (window.sysVolume / 100)
                                         radius: window.s(9)
                                         opacity: window.sysMuted ? 0.5 : (volMa.containsMouse ? 1.0 : 0.85)
-                                        Behavior on opacity { NumberAnimation { duration: 200 } }
+                                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
                                         Behavior on width { enabled: !window.isDraggingVol; NumberAnimation { duration: 200; easing.type: Easing.OutQuint } }
 
                                         gradient: Gradient {
                                             orientation: Gradient.Horizontal
-                                            GradientStop { position: 0.0; color: window.sysMuted ? window.surface2 : window.profileStart; Behavior on color { ColorAnimation { duration: 300 } } }
-                                            GradientStop { position: 1.0; color: window.sysMuted ? Qt.lighter(window.surface2, 1.15) : window.profileEnd; Behavior on color { ColorAnimation { duration: 300 } } }
+                                            GradientStop { position: 0.0; color: window.sysMuted ? window.surface2 : window.profileStart; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
+                                            GradientStop { position: 1.0; color: window.sysMuted ? Qt.lighter(window.surface2, 1.15) : window.profileEnd; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
                                         }
                                     }
                                 }
@@ -893,12 +893,12 @@ Item {
                             border.color: actionMa.containsMouse ? c1 : "#1affffff"
                             // Keeping these explicit to 1px/2px prevents ugly half-pixel anti-aliasing glitches
                             border.width: actionMa.containsMouse ? 2 : 1
-                            Behavior on color { ColorAnimation { duration: 200 } }
-                            Behavior on border.color { ColorAnimation { duration: 200 } }
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                             
                             // --- CLEAN STIFF RESISTANCE EFFECT ---
                             scale: actionMa.pressed ? (0.98 - (0.01 * weight)) : (actionMa.containsMouse ? 1.08 : 1.0)
-                            Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutQuart } }
+                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuart } }
                             // -------------------------------------
 
                             property real fillLevel: 0.0
@@ -973,11 +973,11 @@ Item {
                             // Centered Big Icon (Idle State)
                             Text { 
                                 anchors.centerIn: parent
-                                font.family: "Iosevka Nerd Font"
+                                font.family: ThemeConfig.iconFont
                                 font.pixelSize: window.s(24)
                                 color: actionMa.containsMouse ? window.text : window.subtext0
                                 text: icon
-                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                             }
 
                             Item {
@@ -989,7 +989,7 @@ Item {
                                 Text { 
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     y: (actionCapsule.height / 2) - (height / 2) - (actionCapsule.height - parent.height)
-                                    font.family: "Iosevka Nerd Font"
+                                    font.family: ThemeConfig.iconFont
                                     font.pixelSize: window.s(24)
                                     color: window.crust
                                     text: icon 
@@ -1072,12 +1072,12 @@ Item {
                             return (width * 2) + window.s(1);
                         }
                         
-                        Behavior on x { NumberAnimation { duration: 400; easing.type: Easing.OutBack; easing.overshoot: 1.2 } }
+                        Behavior on x { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutBack; easing.overshoot: 1.2 } }
                         
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: window.profileStart; Behavior on color { ColorAnimation{duration:400} } }
-                            GradientStop { position: 1.0; color: window.profileEnd; Behavior on color { ColorAnimation{duration:400} } }
+                            GradientStop { position: 0.0; color: window.profileStart; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(400)} } }
+                            GradientStop { position: 1.0; color: window.profileEnd; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(400)} } }
                         }
                     }
 
@@ -1100,16 +1100,16 @@ Item {
                                     anchors.centerIn: parent
                                     spacing: window.s(8)
                                     Text {
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18)
+                                        font.family: ThemeConfig.iconFont; font.pixelSize: window.s(18)
                                         color: window.powerProfile === name ? window.crust : (profileMa.containsMouse ? window.text : window.subtext0)
                                         text: icon
-                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                     }
                                     Text {
-                                        font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: window.s(13)
+                                        font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: window.s(13)
                                         color: window.powerProfile === name ? window.crust : (profileMa.containsMouse ? window.text : window.subtext0)
                                         text: label
-                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
                                     }
                                 }
                                 

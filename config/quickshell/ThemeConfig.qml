@@ -88,6 +88,28 @@ Item {
     property string rawJson: ""
 
     readonly property int fontWeight: mapFontWeight(fontWeightName)
+
+    // ---- Ontwerptokens voor panelen en popups ------------------------------
+    // Afgeleid van het actieve thema; panelen gebruiken deze in plaats van
+    // vaste waarden, zodat een thema overal doorwerkt. Beweging loopt via
+    // duration()/durationToken()/easingToken() hieronder.
+
+    // Tekst in panelen volgt het mono-lettertype van het thema als dat
+    // geïnstalleerd is; anders JetBrains Mono, zoals het altijd was.
+    readonly property var installedFontFamilies: Qt.fontFamilies()
+    readonly property string textFont: fontInstalled(monoFont) ? monoFont : "JetBrains Mono"
+    // Nerd Font-iconen: vast, want alleen deze familie heeft alle glyphs.
+    readonly property string iconFont: "Iosevka Nerd Font"
+
+    function fontInstalled(name) {
+        if (!name) return false;
+        let list = installedFontFamilies || [];
+        for (let i = 0; i < list.length; i++) {
+            if (list[i] === name) return true;
+        }
+        return false;
+    }
+
     readonly property string effectiveBarTemplate: deriveBarTemplate(barPosition, barTemplate)
     readonly property real motionDurationScale: {
         let speed = clamp(Number(animationSpeed) || 1.0, 0.25, 3.0);

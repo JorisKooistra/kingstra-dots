@@ -442,14 +442,14 @@ Item {
                 anchors.fill: parent
                 anchors.leftMargin: 12
                 anchors.rightMargin: 12
-                Text { text: "󰍛"; font.family: "Iosevka Nerd Font"; font.pixelSize: 17; color: mocha.accent1 }
+                Text { text: "󰍛"; font.family: ThemeConfig.iconFont; font.pixelSize: 17; color: mocha.accent1 }
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
                     Text { text: "Open btop"; font.family: ThemeConfig.uiFont; font.pixelSize: 12; font.weight: Font.DemiBold; color: mocha.text }
                     Text { text: "processen en detailinspectie"; font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0 }
                 }
-                Text { text: "󰅂"; font.family: "Iosevka Nerd Font"; font.pixelSize: 14; color: mocha.subtext0 }
+                Text { text: "󰅂"; font.family: ThemeConfig.iconFont; font.pixelSize: 14; color: mocha.subtext0 }
             }
 
             MouseArea {
@@ -492,7 +492,7 @@ Item {
                 height: parent.height
                 radius: parent.radius
                 color: accent
-                Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                Behavior on width { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
             }
         }
         Sparkline {

@@ -18,7 +18,7 @@ Rectangle {
     height: pillHeight
     clip: true
 
-    Behavior on color { ColorAnimation { duration: 200 } }
+    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
     property string tempStr: ""
     property string usagePct: ""
@@ -78,7 +78,7 @@ Rectangle {
 
     property real targetWidth: gpuRow.width + 24
     width: targetWidth
-    Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
+    Behavior on width { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
 
     Row {
         id: gpuRow
@@ -87,34 +87,34 @@ Rectangle {
 
         Text {
             text: "GPU"
-            font.family: "JetBrains Mono"; font.pixelSize: 11; font.weight: Font.Black
+            font.family: ThemeConfig.textFont; font.pixelSize: 11; font.weight: Font.Black
             color: root.tempColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
         Text {
             text: root.usagePct
             visible: root.usagePct !== ""
-            font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
+            font.family: ThemeConfig.textFont; font.pixelSize: 13; font.weight: Font.Black
             color: root.tempColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
         Text {
             text: root.tempStr
             visible: root.tempStr !== ""
-            font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
+            font.family: ThemeConfig.textFont; font.pixelSize: 13; font.weight: Font.Black
             color: root.tempColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
         Text {
             text: root.gpuName
             visible: root.usagePct === "" && root.tempStr === ""
-            font.family: "JetBrains Mono"; font.pixelSize: 13; font.weight: Font.Black
+            font.family: ThemeConfig.textFont; font.pixelSize: 13; font.weight: Font.Black
             color: root.tempColor
             anchors.verticalCenter: parent.verticalCenter
-            Behavior on color { ColorAnimation { duration: 300 } }
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
         }
     }
 

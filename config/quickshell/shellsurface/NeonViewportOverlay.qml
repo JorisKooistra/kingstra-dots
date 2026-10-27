@@ -1076,7 +1076,7 @@ Item {
                     : 0
                 height: parent.height
                 color: Qt.rgba(accent.r, accent.g, accent.b, 0.88)
-                Behavior on width { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
+                Behavior on width { NumberAnimation { duration: ThemeConfig.duration(420); easing.type: Easing.OutCubic } }
             }
         }
     }

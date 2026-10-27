@@ -362,7 +362,7 @@ FocusScope {
 
                 Text {
                     text: "󱒟"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: 16
                     color: mocha.primary
                 }
@@ -432,7 +432,7 @@ FocusScope {
                         Text {
                             text: modelData.icon
                             color: mocha.primary
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: 17
                         }
                         ColumnLayout {
@@ -514,7 +514,7 @@ FocusScope {
                             anchors.centerIn: parent
                             visible: appIcon.status !== Image.Ready
                             text: "󰄋"
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: 17
                             color: mocha.primary
                         }
@@ -559,7 +559,7 @@ FocusScope {
                         Text {
                             anchors.centerIn: parent
                             text: root.isPinned(row.modelData) ? "󰓎" : "󰐃"
-                            font.family: "Iosevka Nerd Font"
+                            font.family: ThemeConfig.iconFont
                             font.pixelSize: 15
                             color: root.isPinned(row.modelData) ? mocha.primary : mocha.subtext0
                         }

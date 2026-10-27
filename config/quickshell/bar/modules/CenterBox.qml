@@ -2,6 +2,7 @@ import QtQuick        // basisbouwstenen: Rectangle, Text, Item, Timer, ...
 import QtQuick.Layouts // RowLayout, ColumnLayout (zoals flexbox)
 import Quickshell      // execDetached en andere shell-functies
 import "../../clock"   // DigitalClock, AnalogClock, SevenSegmentText
+import "../.."
 
 // ── Wat is dit bestand? ───────────────────────────────────────────────────────
 // Dit is een herbruikbare QML-component: de middelste pill van de bar met
@@ -63,12 +64,12 @@ Rectangle {
     // ── Animaties ─────────────────────────────────────────────────────────────
     // "Behavior on X" betekent: als X verandert, animeer de overgang.
     // Zonder Behavior springt de waarde direct; met Behavior gaat het vloeiend.
-    Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
-    Behavior on color { ColorAnimation  { duration: 250 } }
+    Behavior on width { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutExpo } }
+    Behavior on color { ColorAnimation  { duration: ThemeConfig.duration(250) } }
 
     // Lichte vergrotingsanimatie bij hover (uitgeschakeld voor neon-theme).
     scale: ctx.neonCenterFeature ? 1.0 : (isHovered ? 1.03 : 1.0)
-    Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutExpo } }
+    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.OutExpo } }
 
     // ── Muisgebied ────────────────────────────────────────────────────────────
     // MouseArea vangt muisgebeurtenissen op. Zonder dit reageert een Rectangle
@@ -175,7 +176,7 @@ Rectangle {
             Text {
                 text: shell.weatherIcon   // bijv. "⛅" — wordt opgehaald door BarShell
                 Layout.alignment: Qt.AlignVCenter
-                font.family: "Iosevka Nerd Font"
+                font.family: ThemeConfig.iconFont
                 font.pixelSize: shell.s(20)
                 color: ctx.neonChrome
                        ? ctx.neonTextHotColor

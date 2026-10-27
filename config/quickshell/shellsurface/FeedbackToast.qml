@@ -145,7 +145,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: root.icon
-                    font.family: "Iosevka Nerd Font"
+                    font.family: ThemeConfig.iconFont
                     font.pixelSize: 19
                     color: root.accentForUrgency()
                 }

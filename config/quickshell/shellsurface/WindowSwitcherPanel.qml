@@ -102,7 +102,7 @@ FocusScope {
             Rectangle {
                 Layout.preferredWidth: 34; Layout.preferredHeight: 34; radius: 11
                 color: Qt.rgba(mocha.accent2.r, mocha.accent2.g, mocha.accent2.b, 0.18)
-                Text { anchors.centerIn: parent; text: "󰖯"; font.family: "Iosevka Nerd Font"; font.pixelSize: 17; color: mocha.accent2 }
+                Text { anchors.centerIn: parent; text: "󰖯"; font.family: ThemeConfig.iconFont; font.pixelSize: 17; color: mocha.accent2 }
             }
             ColumnLayout {
                 Layout.fillWidth: true; spacing: 1
@@ -112,7 +112,7 @@ FocusScope {
             Rectangle {
                 Layout.preferredWidth: 32; Layout.preferredHeight: 32; radius: 10
                 color: refreshMouse.containsMouse ? Qt.rgba(mocha.accent2.r, mocha.accent2.g, mocha.accent2.b, 0.16) : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.72)
-                Text { anchors.centerIn: parent; text: "󰑓"; font.family: "Iosevka Nerd Font"; font.pixelSize: 15; color: mocha.accent2 }
+                Text { anchors.centerIn: parent; text: "󰑓"; font.family: ThemeConfig.iconFont; font.pixelSize: 15; color: mocha.accent2 }
                 MouseArea { id: refreshMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.refresh() }
             }
         }
@@ -124,7 +124,7 @@ FocusScope {
             border.color: searchInput.activeFocus ? Qt.rgba(mocha.accent2.r, mocha.accent2.g, mocha.accent2.b, 0.62) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 8
-                Text { text: "󰍉"; font.family: "Iosevka Nerd Font"; font.pixelSize: 15; color: mocha.accent2 }
+                Text { text: "󰍉"; font.family: ThemeConfig.iconFont; font.pixelSize: 15; color: mocha.accent2 }
                 TextInput {
                     id: searchInput
                     Layout.fillWidth: true
@@ -167,7 +167,7 @@ FocusScope {
                         Layout.preferredWidth: 7; Layout.preferredHeight: 7; radius: 4
                         color: mocha.accent2
                     }
-                    Text { text: "󰅂"; font.family: "Iosevka Nerd Font"; font.pixelSize: 13; color: current ? mocha.accent2 : mocha.subtext0 }
+                    Text { text: "󰅂"; font.family: ThemeConfig.iconFont; font.pixelSize: 13; color: current ? mocha.accent2 : mocha.subtext0 }
                 }
                 MouseArea {
                     id: windowMouse

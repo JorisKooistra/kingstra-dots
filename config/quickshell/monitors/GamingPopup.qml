@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "../"
 
 Item {
     id: root
@@ -45,7 +46,7 @@ Item {
         }
     }
 
-    Behavior on opacity { NumberAnimation { duration: 180 } }
+    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(180) } }
 
     Process {
         id: tempPoller
@@ -119,7 +120,7 @@ Item {
 
             Text {
                 text: "Temperaturen"
-                font.family: "JetBrains Mono"
+                font.family: ThemeConfig.textFont
                 font.pixelSize: shell.s(12)
                 font.weight: Font.Black
                 color: mocha.text
@@ -136,14 +137,14 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             text: modelData.label
-                            font.family: "JetBrains Mono"
+                            font.family: ThemeConfig.textFont
                             font.pixelSize: shell.s(11)
                             color: mocha.subtext0
                             elide: Text.ElideRight
                         }
                         Text {
                             text: modelData.value
-                            font.family: "JetBrains Mono"
+                            font.family: ThemeConfig.textFont
                             font.pixelSize: shell.s(11)
                             font.weight: Font.Black
                             color: mocha.text
@@ -160,7 +161,7 @@ Item {
 
             Text {
                 text: "Gebruik"
-                font.family: "JetBrains Mono"
+                font.family: ThemeConfig.textFont
                 font.pixelSize: shell.s(12)
                 font.weight: Font.Black
                 color: mocha.text
@@ -173,7 +174,7 @@ Item {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: shell.s(8)
-                    Text { text: "CPU"; font.family: "JetBrains Mono"; font.pixelSize: shell.s(11); color: mocha.subtext0; Layout.preferredWidth: shell.s(34) }
+                    Text { text: "CPU"; font.family: ThemeConfig.textFont; font.pixelSize: shell.s(11); color: mocha.subtext0; Layout.preferredWidth: shell.s(34) }
                     Rectangle {
                         Layout.fillWidth: true
                         height: shell.s(8)
@@ -184,16 +185,16 @@ Item {
                             height: parent.height
                             radius: parent.radius
                             color: mocha.blue
-                            Behavior on width { NumberAnimation { duration: 180 } }
+                            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(180) } }
                         }
                     }
-                    Text { text: root.cpuPct + "%"; font.family: "JetBrains Mono"; font.pixelSize: shell.s(11); color: mocha.text; Layout.preferredWidth: shell.s(42) }
+                    Text { text: root.cpuPct + "%"; font.family: ThemeConfig.textFont; font.pixelSize: shell.s(11); color: mocha.text; Layout.preferredWidth: shell.s(42) }
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: shell.s(8)
-                    Text { text: "GPU"; font.family: "JetBrains Mono"; font.pixelSize: shell.s(11); color: mocha.subtext0; Layout.preferredWidth: shell.s(34) }
+                    Text { text: "GPU"; font.family: ThemeConfig.textFont; font.pixelSize: shell.s(11); color: mocha.subtext0; Layout.preferredWidth: shell.s(34) }
                     Rectangle {
                         Layout.fillWidth: true
                         height: shell.s(8)
@@ -204,16 +205,16 @@ Item {
                             height: parent.height
                             radius: parent.radius
                             color: mocha.mauve
-                            Behavior on width { NumberAnimation { duration: 180 } }
+                            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(180) } }
                         }
                     }
-                    Text { text: root.gpuPct + "%"; font.family: "JetBrains Mono"; font.pixelSize: shell.s(11); color: mocha.text; Layout.preferredWidth: shell.s(42) }
+                    Text { text: root.gpuPct + "%"; font.family: ThemeConfig.textFont; font.pixelSize: shell.s(11); color: mocha.text; Layout.preferredWidth: shell.s(42) }
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: shell.s(8)
-                    Text { text: "RAM"; font.family: "JetBrains Mono"; font.pixelSize: shell.s(11); color: mocha.subtext0; Layout.preferredWidth: shell.s(34) }
+                    Text { text: "RAM"; font.family: ThemeConfig.textFont; font.pixelSize: shell.s(11); color: mocha.subtext0; Layout.preferredWidth: shell.s(34) }
                     Rectangle {
                         Layout.fillWidth: true
                         height: shell.s(8)
@@ -224,10 +225,10 @@ Item {
                             height: parent.height
                             radius: parent.radius
                             color: mocha.green
-                            Behavior on width { NumberAnimation { duration: 180 } }
+                            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(180) } }
                         }
                     }
-                    Text { text: root.ramPct + "%"; font.family: "JetBrains Mono"; font.pixelSize: shell.s(11); color: mocha.text; Layout.preferredWidth: shell.s(42) }
+                    Text { text: root.ramPct + "%"; font.family: ThemeConfig.textFont; font.pixelSize: shell.s(11); color: mocha.text; Layout.preferredWidth: shell.s(42) }
                 }
             }
         }

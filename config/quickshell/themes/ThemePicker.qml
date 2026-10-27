@@ -158,7 +158,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: "Thema carousel kon niet laden"
-            font.family: "JetBrains Mono"
+            font.family: ThemeConfig.textFont
             font.pixelSize: window.s(14)
             color: _theme.text
         }
@@ -172,8 +172,8 @@ Item {
         anchors.top: parent.top
         anchors.topMargin: window.isReady ? window.s(40) : window.s(-80)
         opacity: window.isReady ? 1.0 : 0.0
-        Behavior on anchors.topMargin { NumberAnimation { duration: 600; easing.type: Easing.OutExpo } }
-        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+        Behavior on anchors.topMargin { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutExpo } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutCubic } }
         anchors.horizontalCenter: parent.horizontalCenter
         z: 20
         height: window.s(48)
@@ -213,8 +213,8 @@ Item {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: window.isReady ? window.s(30) : window.s(-60)
         opacity: window.isReady ? 1.0 : 0.0
-        Behavior on anchors.bottomMargin { NumberAnimation { duration: 600; easing.type: Easing.OutExpo } }
-        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+        Behavior on anchors.bottomMargin { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutExpo } }
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutCubic } }
         anchors.horizontalCenter: parent.horizontalCenter
         z: 20
         height: window.s(40)
