@@ -77,6 +77,15 @@ hl.config({
     cursor = { no_warps = true, inactive_timeout = 10, hide_on_key_press = false },
 })
 
+-- Een getegeld venster slepen (Super+links of de M720-duimknop) laat het
+-- venster standaard naar het midden van de cursor springen. Met dit uit blijft
+-- het grijppunt staan, zoals bij zwevende vensters: pak je het hoekje, dan
+-- blijft de cursor bij het hoekje. De optie bestaat pas na Hyprland 0.56.2;
+-- get_config geeft nil op oudere versies, zodat er geen configfout verschijnt.
+if hl.get_config and hl.get_config("binds:drag_center_window") ~= nil then
+    hl.config({ binds = { drag_center_window = false } })
+end
+
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
 hl.gesture({ fingers = 4, direction = "up", action = "special", workspace_name = "magic" })
 hl.gesture({ fingers = 4, direction = "down", action = "special", workspace_name = "magic" })
