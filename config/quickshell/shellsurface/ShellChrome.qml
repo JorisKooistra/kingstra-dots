@@ -46,6 +46,10 @@ Item {
     readonly property bool topHoverHitEnabled: stripEnabled && !stripControlsEnabled && !stripOnBottom
     readonly property int topHoverHitWidth: Math.min(420, Math.max(0, width - railWidth - shellBorderWidth))
     readonly property int topHoverOpenDelay: 500
+    // Waar tijdens panelRequested("tophover") om gevraagd werd: true bij
+    // hover op de bovenrand, false bij een klik. Hover sluit weer bij
+    // weggaan; een klik zet het controlecentrum vast.
+    property bool hoverRequest: false
     readonly property bool railOnRight: ThemeConfig.barRailEdge === "right"
     readonly property int railWidth: ThemeConfig.barRailWidth
     // Als alle statusstrip-content naar de rail is verhuisd, blijft boven alleen
@@ -867,7 +871,9 @@ Item {
                 if (!topHover.hovered) return;
                 root.lastTriggerX = root.width / 2;
                 root.lastTriggerY = 0;
+                root.hoverRequest = true;
                 root.panelRequested("tophover", root.lastTriggerX, root.lastTriggerY);
+                root.hoverRequest = false;
             }
         }
 
@@ -1149,11 +1155,11 @@ Item {
             }
 
             // Compacte statustegel voor netwerk, bluetooth en batterij. Klik
-            // opent Snelle instellingen, met doorverwijzing naar elk
+            // opent het controlecentrum bovenaan, met doorverwijzing naar elk
             // detailpaneel.
             StatusTile {
                 visible: root.statusTileVisible
-                onTriggered: root.togglePanel("quicksettings")
+                onTriggered: root.togglePanel("tophover")
             }
             // Klok onderaan bij de systeemknoppen, zoals in de meeste
             // verticale balken; bovenaan staat alleen navigatie.
@@ -1405,7 +1411,7 @@ Item {
 
                 StripStatus {
                     visible: !root.railEnabled && root.statusTileVisible
-                    onTriggered: root.togglePanel("quicksettings")
+                    onTriggered: root.togglePanel("tophover")
                 }
                 StripButton { tooltip: "Afsluitmenu";
                     visible: !root.railEnabled

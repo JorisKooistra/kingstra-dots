@@ -15,6 +15,7 @@ Item {
     property real openProgress: open ? 1.0 : 0.0
     readonly property bool hovered: panelHover.hovered
     onSourceEntryIdChanged: {
+        if (sourceEntryId !== "tophover") stickyTopHover = false;
         if (sourceEntryId !== holdEntryId) holdEntryId = "";
         if (sourceEntryId !== "") {
             visualClearTimer.stop();
@@ -30,6 +31,10 @@ Item {
         }
         syncActiveWidgetState();
     }
+    // Het controlecentrum (tophover) sluit bij hover-openen zodra de muis
+    // weggaat. Geopend met een klik of Super+A, of zodra je erin klikt,
+    // blijft het open tot Esc of een klik ernaast.
+    property bool stickyTopHover: false
     readonly property bool isCentered: sourceEntryId === "settings" && !ThemeConfig.barRailEnabled
     readonly property bool railOnRight: ThemeConfig.barRailEdge === "right"
     readonly property bool stripOnBottom: ThemeConfig.barStatusStripEdge === "bottom"
@@ -217,7 +222,7 @@ Item {
         if (entryId === "launcher") return Math.min(680, availableW);
         if (entryId === "clipboard") return Math.min(680, availableW);
         if (entryId === "windows") return Math.min(620, availableW);
-        if (entryId === "tophover") return Math.min(1020, availableW);
+        if (entryId === "tophover") return Math.min(1060, availableW);
         if (entryId === "performance") return Math.min(380, availableW);
         if (entryId === "quicksettings") return Math.min(400, availableW);
         // "volume" en "music" zijn samengevoegd met Geluid & media: zelfde
@@ -239,7 +244,7 @@ Item {
         // De atlas heeft vaak maar enkele regels. Een hoge vaste popup liet
         // dan een betekenisloos donker vlak over; extra vensters scrollen.
         if (entryId === "windows") return Math.min(372, availableH);
-        if (entryId === "tophover") return Math.min(232, availableH);
+        if (entryId === "tophover") return Math.min(560, availableH);
         // Was volle schermhoogte terwijl er maar een handvol meters in staat.
         if (entryId === "performance") return Math.min(430, availableH);
         if (entryId === "quicksettings") return Math.min(420, availableH);
@@ -522,6 +527,9 @@ Item {
         Connections {
             target: contentLoader.item
             ignoreUnknownSignals: true
+            function onInteracted() {
+                if (root.sourceEntryId === "tophover") root.stickyTopHover = true;
+            }
             function onPanelSwitchRequested(entryId) {
                 let next = String(entryId || "");
                 // Instellingen opent als eigen venster; dit paneel sluit.

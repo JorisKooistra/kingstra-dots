@@ -385,7 +385,8 @@ for the full list.
 | `Super + N` | Notifications |
 | `Super + X` | FocusTime |
 | `Super + O` | Monitors |
-| `Super + Ctrl + I` | Settings |
+| `Super + A` | Control center |
+| `Super + ,` / `Super + Ctrl + I` | Settings (own window) |
 | `Super + Ctrl + T` / `Super + Shift + T` | Theme picker / next theme |
 | `Super + Ctrl + M` | Mode picker |
 | `Super + Ctrl + W` / `Super + Shift + W` | Wallpaper picker / random wallpaper |

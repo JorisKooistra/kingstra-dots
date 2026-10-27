@@ -122,7 +122,8 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Ctrl + C` | Kalender popup |
 | `Super + O` | Monitor overzicht |
 | `Super + X` | FocusTime / power menu |
-| `Super + Ctrl + I` | Instellingenpaneel |
+| `Super + A` | Controlecentrum (snelle instellingen, agenda, media, meldingen) |
+| `Super + ,` / `Super + Ctrl + I` | Instellingen (eigen venster) |
 | Klik op CPU/RAM-pil | Systeemstats popup |
 
 ---

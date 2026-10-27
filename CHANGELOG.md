@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell: control center
+- The panel that grows from the top edge is now a control center (Super+A, or click the status tile in the rail): quick toggles, volume and brightness, time, month and next appointment, system load, media, notifications and screen time in one place.
+- Toggles work like GNOME's quick settings: click to switch, the arrow expands the pill in place (Wi-Fi networks, Bluetooth devices, power profiles) with a link to the full panel.
+- Notifications live in the control center: click runs the app's action, the cross dismisses, "Wis alles" clears; the arrow still opens the full notifications panel.
+- Opened by hover on the top edge it closes when you move away; opened by click or Super+A, or once you click inside, it stays open until Esc or a click outside.
+- The old Snelle instellingen panel stays available through `qs_manager.sh toggle quicksettings`; `kingstra quick` now opens the control center.
+
 ### Shell: settings as a real app
 - Settings opens as its own floating window instead of a drawer beside the rail: move it, tile it next to an app, open it on any screen, and it stays open when you click elsewhere. Super+, (new) and Super+Ctrl+I toggle it.
 - Search finds individual settings (blur, scroll speed, idle lock, ...) and jumps to the right page and theme-editor tab.

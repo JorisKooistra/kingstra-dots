@@ -102,9 +102,17 @@ Scope {
                         topHoverCloseTimer.stop();
                         panelHost.anchorX = anchorX;
                         panelHost.anchorY = anchorY;
-                        panelHost.sourceEntryId = sourceEntryId === "tophover"
-                            ? sourceEntryId
-                            : (panelHost.sourceEntryId === sourceEntryId ? "" : sourceEntryId);
+                        if (sourceEntryId === "tophover") {
+                            // Klik op een open, vastgezet controlecentrum = dicht.
+                            if (!chrome.hoverRequest && panelHost.sourceEntryId === "tophover" && panelHost.stickyTopHover) {
+                                panelHost.sourceEntryId = "";
+                                return;
+                            }
+                            if (!chrome.hoverRequest) panelHost.stickyTopHover = true;
+                            panelHost.sourceEntryId = "tophover";
+                            return;
+                        }
+                        panelHost.sourceEntryId = panelHost.sourceEntryId === sourceEntryId ? "" : sourceEntryId;
                     }
                     onPanelCloseRequested: (sourceEntryId) => {
                         if (panelHost.sourceEntryId === sourceEntryId)
@@ -182,7 +190,7 @@ Scope {
                     anchorItem: chrome
                     z: 30
                     onHoveredChanged: {
-                        if (sourceEntryId === "tophover" && !hovered && !chrome.topHoverHovered)
+                        if (sourceEntryId === "tophover" && !stickyTopHover && !hovered && !chrome.topHoverHovered)
                             topHoverCloseTimer.restart();
                     }
                 }
@@ -193,6 +201,7 @@ Scope {
                     repeat: false
                     onTriggered: {
                         if (panelHost.sourceEntryId === "tophover"
+                                && !panelHost.stickyTopHover
                                 && !panelHost.hovered
                                 && !chrome.topHoverHovered)
                             panelHost.sourceEntryId = "";
@@ -219,8 +228,11 @@ Scope {
                     }
                     let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "quicksettings", "audiomedia", "gaming", "power", "notifications", "launcher", "clipboard", "windows", "tophover"];
                     if (!ThemeConfig.barZoneSchemaLoaded || surfaceTargets.indexOf(target) === -1) return;
-                    if (Hyprland.monitorFor(surfaceWindow.screen) === Hyprland.focusedMonitor)
+                    if (Hyprland.monitorFor(surfaceWindow.screen) === Hyprland.focusedMonitor) {
+                        // Via sneltoets of statustegel: blijft open tot Esc of klik ernaast.
+                        if (target === "tophover") panelHost.stickyTopHover = true;
                         panelHost.sourceEntryId = target;
+                    }
                 }
 
                 // Zonder focusgrab levert OnDemand pas toetsenbordfocus ná een

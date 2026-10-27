@@ -229,6 +229,12 @@ Item {
 
     // --- Tabbladen ------------------------------------------------------------
     property int tab: 0
+    // PanelHost leest dit bij een wissel naar het netwerkpaneel.
+    property string requestedNetworkMode: ""
+    // Eerste klik in het paneel: PanelHost zet het dan vast, zodat een
+    // via hover geopend controlecentrum niet dichtklapt zodra je even
+    // buiten beweegt.
+    signal interacted()
     // PanelHost luistert hiernaar, zodat een pijltje hier het volledige
     // paneel opent met dezelfde blob-overgang als een railklik.
     signal panelSwitchRequested(string entryId)
@@ -340,7 +346,7 @@ Item {
             Layout.fillHeight: true
             spacing: 6
 
-            TabButton { index: 0; icon: "󰕮"; label: "Overzicht" }
+            TabButton { index: 0; icon: "󰕮"; label: "Controlecentrum" }
             TabButton { index: 1; icon: "󰍛"; label: "Systeem" }
             Item { Layout.fillHeight: true }
         }
@@ -349,7 +355,10 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            // --- Tab 0: Overzicht --------------------------------------------
+            // --- Tab 0: Controlecentrum --------------------------------------
+            // Drie kolommen, zoals het control center van macOS en de snelle
+            // instellingen van GNOME: links schakelen en schuiven, midden tijd
+            // en agenda, rechts media, meldingen en schermtijd.
             RowLayout {
                 anchors.fill: parent
                 spacing: 10
@@ -359,186 +368,219 @@ Item {
                     NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
                 }
 
-                // --- Tijd en datum ---------------------------------------------------
+                // --- Snelle instellingen -------------------------------------
                 Card {
-                    Layout.preferredWidth: 190
+                    Layout.preferredWidth: 350
                     Layout.fillHeight: true
 
-                    ColumnLayout {
-                        anchors.centerIn: parent
-                        width: parent.width - 20
-                        spacing: 0
-
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: root.timeText
-                            font.family: ThemeConfig.displayFont
-                            font.pixelSize: 46
-                            font.weight: Font.Black
-                            color: mocha.text
-                        }
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: root.dayName
-                            font.family: ThemeConfig.uiFont
-                            font.pixelSize: 14
-                            font.weight: Font.DemiBold
-                            color: mocha.primary
-                        }
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: root.dateText
-                            font.family: ThemeConfig.uiFont
-                            font.pixelSize: 11
-                            color: mocha.subtext0
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.topMargin: 8
-                            Layout.bottomMargin: 6
-                            Layout.preferredHeight: 1
-                            color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
-                        }
-
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            visible: root.weatherTemp !== ""
-                            text: root.weatherIcon + "  " + root.weatherTemp
-                            font.family: ThemeConfig.iconFont
-                            font.pixelSize: 13
-                            font.weight: Font.Bold
-                            color: mocha.text
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            Layout.topMargin: 2
-                            text: root.nextEventText
-                            font.family: ThemeConfig.uiFont
-                            font.pixelSize: 10
-                            color: root.nextEvent ? mocha.primary : mocha.subtext0
-                            horizontalAlignment: Text.AlignHCenter
-                            elide: Text.ElideRight
-                            maximumLineCount: 2
-                            wrapMode: Text.Wrap
-                        }
-                    }
-                }
-
-                // --- Maandkalender ---------------------------------------------------
-                Card {
-                    Layout.preferredWidth: 250
-                    Layout.fillHeight: true
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 10
-                        spacing: 4
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: root.now.toLocaleDateString(root.nl, "MMMM yyyy")
-                            font.family: ThemeConfig.uiFont
-                            font.pixelSize: 12
-                            font.weight: Font.Bold
-                            color: mocha.text
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-
-                        GridLayout {
-                            Layout.fillWidth: true
-                            columns: 7
-                            rowSpacing: 1
-                            columnSpacing: 1
-
-                            Repeater {
-                                model: ["ma", "di", "wo", "do", "vr", "za", "zo"]
-                                delegate: Text {
-                                    required property string modelData
-                                    Layout.fillWidth: true
-                                    text: modelData
-                                    font.family: ThemeConfig.uiFont
-                                    font.pixelSize: 9
-                                    color: mocha.subtext0
-                                    horizontalAlignment: Text.AlignHCenter
-                                }
-                            }
-
-                            // 6 weken * 7 dagen dekt elke maandindeling.
-                            Repeater {
-                                model: 42
-                                delegate: Item {
-                                    required property int index
-
-                                    // Maandag = 0. JS telt zondag als 0, vandaar de shift.
-                                    readonly property int firstDow: {
-                                        let d = new Date(root.now.getFullYear(), root.now.getMonth(), 1).getDay();
-                                        return (d + 6) % 7;
-                                    }
-                                    readonly property int daysInMonth: new Date(
-                                        root.now.getFullYear(), root.now.getMonth() + 1, 0).getDate()
-                                    readonly property int dayNum: index - firstDow + 1
-                                    readonly property bool valid: dayNum >= 1 && dayNum <= daysInMonth
-                                    readonly property bool isToday: valid && dayNum === root.now.getDate()
-
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: 17
-
-                                    Rectangle {
-                                        anchors.centerIn: parent
-                                        width: 18
-                                        height: 16
-                                        radius: 5
-                                        visible: parent.isToday
-                                        color: mocha.primary
-                                    }
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        visible: parent.valid
-                                        text: parent.valid ? parent.dayNum : ""
-                                        font.family: ThemeConfig.monoFont
-                                        font.pixelSize: 10
-                                        font.weight: parent.isToday ? Font.Black : Font.Normal
-                                        color: parent.isToday ? mocha.base : mocha.text
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // --- Systeembelasting ------------------------------------------------
-                Card {
-                    Layout.preferredWidth: 210
-                    Layout.fillHeight: true
-
-                    ColumnLayout {
+                    Flickable {
+                        id: togglesFlick
                         anchors.fill: parent
                         anchors.margins: 12
-                        spacing: 8
+                        clip: true
+                        contentWidth: width
+                        contentHeight: toggles.implicitHeight
+                        boundsBehavior: Flickable.StopAtBounds
 
-                        Meter {
-                            label: "CPU"
-                            value: root.cpuPercent
-                            suffix: root.cpuTemp === "--" ? "" : root.cpuTemp
-                            accent: mocha.peach
-                        }
-                        Meter {
-                            label: "Geheugen"
-                            value: root.ramPercent
-                            accent: mocha.blue
-                        }
-                        Meter {
-                            label: "Schijf"
-                            value: root.diskPercent
-                            accent: mocha.teal
+                        ControlToggles {
+                            id: toggles
+                            width: togglesFlick.width
+                            onPanelSwitchRequested: (entryId) => {
+                                root.requestedNetworkMode = toggles.requestedNetworkMode;
+                                root.panelSwitchRequested(entryId);
+                            }
                         }
                     }
                 }
 
-                // Rechterkolom: media bovenaan, schermtijd (Focus) eronder.
+                // --- Tijd, agenda en belasting ------------------------------
+                ColumnLayout {
+                    Layout.preferredWidth: 270
+                    Layout.fillHeight: true
+                    spacing: 10
+
+                    // --- Tijd en datum ---------------------------------------------------
+                    Card {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 168
+
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            width: parent.width - 20
+                            spacing: 0
+
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: root.timeText
+                                font.family: ThemeConfig.displayFont
+                                font.pixelSize: 46
+                                font.weight: Font.Black
+                                color: mocha.text
+                            }
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: root.dayName
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 14
+                                font.weight: Font.DemiBold
+                                color: mocha.primary
+                            }
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: root.dateText
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 11
+                                color: mocha.subtext0
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 8
+                                Layout.bottomMargin: 6
+                                Layout.preferredHeight: 1
+                                color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
+                            }
+
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                visible: root.weatherTemp !== ""
+                                text: root.weatherIcon + "  " + root.weatherTemp
+                                font.family: ThemeConfig.iconFont
+                                font.pixelSize: 13
+                                font.weight: Font.Bold
+                                color: mocha.text
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 2
+                                text: root.nextEventText
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 10
+                                color: root.nextEvent ? mocha.primary : mocha.subtext0
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
+                                maximumLineCount: 2
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                    }
+
+                    // --- Maandkalender ---------------------------------------------------
+                    Card {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 10
+                            spacing: 4
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.now.toLocaleDateString(root.nl, "MMMM yyyy")
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 12
+                                font.weight: Font.Bold
+                                color: mocha.text
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            GridLayout {
+                                Layout.fillWidth: true
+                                columns: 7
+                                rowSpacing: 1
+                                columnSpacing: 1
+
+                                Repeater {
+                                    model: ["ma", "di", "wo", "do", "vr", "za", "zo"]
+                                    delegate: Text {
+                                        required property string modelData
+                                        Layout.fillWidth: true
+                                        text: modelData
+                                        font.family: ThemeConfig.uiFont
+                                        font.pixelSize: 9
+                                        color: mocha.subtext0
+                                        horizontalAlignment: Text.AlignHCenter
+                                    }
+                                }
+
+                                // 6 weken * 7 dagen dekt elke maandindeling.
+                                Repeater {
+                                    model: 42
+                                    delegate: Item {
+                                        required property int index
+
+                                        // Maandag = 0. JS telt zondag als 0, vandaar de shift.
+                                        readonly property int firstDow: {
+                                            let d = new Date(root.now.getFullYear(), root.now.getMonth(), 1).getDay();
+                                            return (d + 6) % 7;
+                                        }
+                                        readonly property int daysInMonth: new Date(
+                                            root.now.getFullYear(), root.now.getMonth() + 1, 0).getDate()
+                                        readonly property int dayNum: index - firstDow + 1
+                                        readonly property bool valid: dayNum >= 1 && dayNum <= daysInMonth
+                                        readonly property bool isToday: valid && dayNum === root.now.getDate()
+
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 17
+
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 18
+                                            height: 16
+                                            radius: 5
+                                            visible: parent.isToday
+                                            color: mocha.primary
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            visible: parent.valid
+                                            text: parent.valid ? parent.dayNum : ""
+                                            font.family: ThemeConfig.monoFont
+                                            font.pixelSize: 10
+                                            font.weight: parent.isToday ? Font.Black : Font.Normal
+                                            color: parent.isToday ? mocha.base : mocha.text
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // --- Systeembelasting ------------------------------------------------
+                    Card {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 116
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 12
+                            spacing: 8
+
+                            Meter {
+                                label: "CPU"
+                                value: root.cpuPercent
+                                suffix: root.cpuTemp === "--" ? "" : root.cpuTemp
+                                accent: mocha.peach
+                            }
+                            Meter {
+                                label: "Geheugen"
+                                value: root.ramPercent
+                                accent: mocha.blue
+                            }
+                            Meter {
+                                label: "Schijf"
+                                value: root.diskPercent
+                                accent: mocha.teal
+                            }
+                        }
+                    }
+
+                }
+
+                // Rechterkolom: media, meldingen, schermtijd.
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -547,7 +589,7 @@ Item {
                     // --- Media -----------------------------------------------------------
                     Card {
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
+                        Layout.preferredHeight: 104
 
                         RowLayout {
                             anchors.fill: parent
@@ -644,6 +686,202 @@ Item {
                                             root.activePlayer.next()
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    // --- Meldingen ------------------------------------------------------
+                    // Het meldingencentrum zit hier, naast de schakelaars, zoals
+                    // bij GNOME en macOS. Klik = actie van de app, kruisje =
+                    // wegdoen; het pijltje opent het volledige meldingenpaneel.
+                    Card {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 12
+                            spacing: 6
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+                                Text {
+                                    text: NotificationService.dnd ? "󰂛" : "󰂚"
+                                    font.family: ThemeConfig.iconFont
+                                    font.pixelSize: 13
+                                    color: NotificationService.dnd ? mocha.accent2 : mocha.primary
+                                }
+                                CardHeader {
+                                    title: NotificationService.count > 0
+                                        ? "Meldingen  ·  " + NotificationService.count
+                                        : "Meldingen"
+                                    target: "notifications"
+                                }
+                                ChipButton {
+                                    visible: NotificationService.count > 0
+                                    icon: "󰎟"
+                                    label: "Wis alles"
+                                    onTriggered: NotificationService.clearAll()
+                                }
+                            }
+
+                            ListView {
+                                id: notifList
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                clip: true
+                                spacing: 4
+                                boundsBehavior: Flickable.StopAtBounds
+                                model: {
+                                    let list = NotificationService.notifications.values.slice();
+                                    list.sort((a, b) => NotificationService.arrivalTime(b) - NotificationService.arrivalTime(a)
+                                        || Number(b.id) - Number(a.id));
+                                    return list;
+                                }
+
+                                add: Transition {
+                                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: ThemeConfig.durationToken("fast") }
+                                }
+                                remove: Transition {
+                                    NumberAnimation { property: "opacity"; to: 0; duration: ThemeConfig.durationToken("fast") }
+                                }
+
+                                delegate: Rectangle {
+                                    id: notifRow
+                                    required property var modelData
+                                    width: notifList.width
+                                    height: 46
+                                    radius: Math.min(root.cardRadius, 14)
+                                    color: notifMouse.containsMouse
+                                        ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                                        : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.04)
+                                    Behavior on color {
+                                        ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                                    }
+
+                                    MouseArea {
+                                        id: notifMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            NotificationService.invokeDefault(notifRow.modelData);
+                                            NotificationService.dismiss(notifRow.modelData);
+                                        }
+                                    }
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 8
+                                        anchors.rightMargin: 6
+                                        spacing: 8
+
+                                        Item {
+                                            Layout.preferredWidth: 24
+                                            Layout.preferredHeight: 24
+                                            Image {
+                                                id: notifIcon
+                                                anchors.fill: parent
+                                                sourceSize.width: 48
+                                                sourceSize.height: 48
+                                                source: NotificationService.iconSource(notifRow.modelData)
+                                                visible: status === Image.Ready
+                                            }
+                                            Text {
+                                                anchors.centerIn: parent
+                                                visible: !notifIcon.visible
+                                                text: "󰂚"
+                                                font.family: ThemeConfig.iconFont
+                                                font.pixelSize: 14
+                                                color: mocha.subtext0
+                                            }
+                                        }
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 0
+                                            RowLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 6
+                                                Text {
+                                                    Layout.fillWidth: true
+                                                    text: String(notifRow.modelData.summary || notifRow.modelData.appName || "")
+                                                    font.family: ThemeConfig.uiFont
+                                                    font.pixelSize: 11
+                                                    font.weight: Font.DemiBold
+                                                    color: mocha.text
+                                                    elide: Text.ElideRight
+                                                }
+                                                Text {
+                                                    text: NotificationService.relativeTime(notifRow.modelData)
+                                                    visible: text !== ""
+                                                    font.family: ThemeConfig.uiFont
+                                                    font.pixelSize: 9
+                                                    color: mocha.subtext0
+                                                }
+                                            }
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: String(notifRow.modelData.body || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ")
+                                                visible: text !== ""
+                                                font.family: ThemeConfig.uiFont
+                                                font.pixelSize: 10
+                                                color: mocha.subtext0
+                                                elide: Text.ElideRight
+                                                maximumLineCount: 1
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            Layout.preferredWidth: 22
+                                            Layout.preferredHeight: 22
+                                            radius: 11
+                                            color: closeMouse.containsMouse
+                                                ? Qt.rgba(mocha.red.r, mocha.red.g, mocha.red.b, 0.20) : "transparent"
+                                            Behavior on color {
+                                                ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                                            }
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: "󰅖"
+                                                font.family: ThemeConfig.iconFont
+                                                font.pixelSize: 12
+                                                color: closeMouse.containsMouse ? mocha.red : mocha.subtext0
+                                            }
+                                            MouseArea {
+                                                id: closeMouse
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: NotificationService.dismiss(notifRow.modelData)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            ColumnLayout {
+                                visible: NotificationService.count === 0
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                spacing: 2
+                                Item { Layout.fillHeight: true }
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: NotificationService.dnd ? "󰂛" : "󰂜"
+                                    font.family: ThemeConfig.iconFont
+                                    font.pixelSize: 26
+                                    color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.25)
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: NotificationService.dnd ? "Niet storen staat aan" : "Geen meldingen"
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 11
+                                    color: mocha.subtext0
+                                }
+                                Item { Layout.fillHeight: true }
                             }
                         }
                     }
@@ -842,6 +1080,19 @@ Item {
                 }
             }
         }
+    }
+
+    // Ziet elke klik in het paneel, maar laat hem door naar wat eronder
+    // ligt; het wiel gaat ook door, anders scrollt er niets meer.
+    MouseArea {
+        anchors.fill: parent
+        z: 1000
+        acceptedButtons: Qt.AllButtons
+        onPressed: (mouse) => {
+            root.interacted();
+            mouse.accepted = false;
+        }
+        onWheel: (wheel) => wheel.accepted = false
     }
 
     component TabButton: Rectangle {

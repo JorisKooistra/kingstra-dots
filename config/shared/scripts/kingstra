@@ -96,7 +96,7 @@ case "$cmd" in
         exec "$QS_MANAGER" open settings "${1:-}" ;;
     keys|toetsen|sneltoetsen) panel help ;;
     launcher) panel launcher ;;
-    quick|snel) panel quicksettings ;;
+    quick|snel) panel tophover ;;
     welcome|welkom) run kingstra-welcome --force ;;
     version|versie|--version|-v)
         repo="$(resolve_repo)" || { echo "onbekend"; exit 0; }
