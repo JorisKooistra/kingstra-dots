@@ -84,6 +84,145 @@ Item {
     property var btPaired: []
     property string busyId: ""
 
+    // --- Bewerkmodus: volgorde, breedte, verborgen ---------------------------
+    readonly property var pillIds: ["wifi", "eth", "bt", "dnd", "power", "monitors", "keyboard"]
+    property var ccOrder: pillIds
+    property var ccHidden: []
+    property var ccWide: []
+    property bool editMode: false
+    readonly property string layoutFile: Quickshell.env("HOME") + "/.local/state/kingstra/control-center.json"
+
+    // Opgeslagen volgorde, aangevuld met pillen die er later bij kwamen.
+    readonly property var orderedPills: {
+        let out = [];
+        for (let i = 0; i < ccOrder.length; i++)
+            if (pillIds.indexOf(ccOrder[i]) !== -1 && out.indexOf(ccOrder[i]) === -1) out.push(ccOrder[i]);
+        for (let i = 0; i < pillIds.length; i++)
+            if (out.indexOf(pillIds[i]) === -1) out.push(pillIds[i]);
+        return out;
+    }
+
+    function saveLayout() {
+        let data = JSON.stringify({ order: orderedPills, hidden: ccHidden, wide: ccWide });
+        Quickshell.execDetached(["sh", "-c",
+            "mkdir -p \"$(dirname \"$1\")\" && printf '%s\\n' \"$2\" > \"$1\"",
+            "sh", layoutFile, data]);
+    }
+
+    function movePill(id, delta) {
+        let order = orderedPills.slice();
+        let i = order.indexOf(id);
+        // Sla pillen over die op dit apparaat niet bestaan (bijv. bedraad).
+        let j = i + delta;
+        while (j >= 0 && j < order.length && !pillAvailable(order[j])) j += delta;
+        if (i < 0 || j < 0 || j >= order.length) return;
+        order.splice(i, 1);
+        order.splice(j, 0, id);
+        ccOrder = order;
+        saveLayout();
+    }
+
+    function toggleListValue(which, id) {
+        let list = (which === "wide" ? ccWide : ccHidden).slice();
+        let i = list.indexOf(id);
+        if (i >= 0) list.splice(i, 1);
+        else list.push(id);
+        if (which === "wide") ccWide = list;
+        else ccHidden = list;
+        saveLayout();
+    }
+
+    FileView {
+        path: root.layoutFile
+        preload: true
+        onLoaded: {
+            try {
+                let data = JSON.parse(text() || "{}");
+                if (Array.isArray(data.order)) root.ccOrder = data.order;
+                if (Array.isArray(data.hidden)) root.ccHidden = data.hidden;
+                if (Array.isArray(data.wide)) root.ccWide = data.wide;
+            } catch (e) {}
+        }
+    }
+
+    // --- Pil-gegevens per id ---------------------------------------------------
+    function pillAvailable(id) {
+        if (id === "wifi") return hasWifi;
+        if (id === "eth") return !hasWifi && isEthConnected;
+        if (id === "bt") return hasBluetooth;
+        if (id === "keyboard") return kbLayoutCount > 1;
+        return true;
+    }
+    function pillIcon(id) {
+        if (id === "wifi") return wifiOn ? "󰤨" : "󰤮";
+        if (id === "eth") return "󰈀";
+        if (id === "bt") return bluetoothOn ? "󰂱" : "󰂲";
+        if (id === "dnd") return NotificationService.dnd ? "󰂛" : "󰂚";
+        if (id === "power") return powerProfileName === "performance" ? "󰓅" : (powerProfileName === "power-saver" ? "󰌪" : "󰾅");
+        if (id === "monitors") return "󰍹";
+        if (id === "keyboard") return "󰌌";
+        return "";
+    }
+    function pillLabel(id) {
+        return ({ wifi: "Wi-Fi", eth: "Bedraad", bt: "Bluetooth", dnd: "Niet storen", power: "Energie",
+                  monitors: "Beeldschermen", keyboard: "Toetsenbord" })[id] || id;
+    }
+    function pillSubtitle(id) {
+        if (id === "wifi") return !wifiOn ? "Uit" : (wifiName !== "" ? wifiName : "Aan");
+        if (id === "eth") return "Verbonden";
+        if (id === "bt") return !bluetoothOn ? "Uit" : (bluetoothConnected > 0 ? bluetoothConnected + " verbonden" : "Aan");
+        if (id === "dnd") return NotificationService.dnd ? "Aan" : "Uit";
+        if (id === "power") return profileLabel(powerProfileName);
+        if (id === "monitors") return Quickshell.screens.length === 1 ? "1 scherm" : Quickshell.screens.length + " schermen";
+        if (id === "keyboard") return kbLayout !== "" ? kbLayout : "Volgende indeling";
+        return "";
+    }
+    function pillActive(id) {
+        if (id === "wifi") return wifiOn;
+        if (id === "eth") return true;
+        if (id === "bt") return bluetoothOn;
+        if (id === "dnd") return NotificationService.dnd;
+        if (id === "power") return powerProfileName !== "balanced";
+        return false;
+    }
+    function pillAccent(id) {
+        if (id === "bt" || id === "keyboard") return mocha.accent1;
+        if (id === "dnd") return mocha.accent2;
+        if (id === "power") return powerProfileName === "performance" ? mocha.accent2 : mocha.accent3;
+        return mocha.accent3;
+    }
+    function pillExpandKey(id) {
+        if (id === "wifi") return "wifi";
+        if (id === "bt") return "bt";
+        if (id === "power") return "power";
+        return "";
+    }
+    function pillExpandable(id) {
+        if (id === "wifi") return wifiOn;
+        if (id === "bt") return bluetoothOn;
+        return id === "power";
+    }
+    function pillTrigger(id) {
+        if (id === "wifi") {
+            Quickshell.execDetached(["nmcli", "radio", "wifi", wifiOn ? "off" : "on"]);
+            if (wifiOn && expanded === "wifi") expanded = "";
+        } else if (id === "eth") {
+            openPanel("network", "eth");
+        } else if (id === "bt") {
+            Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/network/bluetooth_panel_logic.sh", "--toggle"]);
+            if (bluetoothOn && expanded === "bt") expanded = "";
+        } else if (id === "dnd") {
+            NotificationService.toggleDnd();
+        } else if (id === "power") {
+            toggleExpanded("power");
+        } else if (id === "monitors") {
+            openPanel("monitors");
+        } else if (id === "keyboard") {
+            Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"]);
+            refreshSoon.restart();
+        }
+    }
+
     function openPanel(entryId, networkMode) {
         root.requestedNetworkMode = networkMode ? String(networkMode) : "";
         if (networkMode)
@@ -325,6 +464,15 @@ Item {
             }
 
             RoundButton {
+                icon: root.editMode ? "󰄬" : "󰏫"
+                tooltip: root.editMode ? "Klaar" : "Tegels bewerken"
+                accent: root.editMode ? mocha.green : mocha.subtext1
+                onTriggered: {
+                    root.editMode = !root.editMode;
+                    if (root.editMode) root.expanded = "";
+                }
+            }
+            RoundButton {
                 icon: "󰌾"
                 tooltip: "Vergrendelen"
                 accent: mocha.accent1
@@ -345,92 +493,38 @@ Item {
         }
 
         // --- Pillen ------------------------------------------------------------
+        // Volgorde, breedte en zichtbaarheid komen uit de bewerkmodus
+        // (potloodje in de kop), zoals bij DMS en Windows 11.
         GridLayout {
             Layout.fillWidth: true
             columns: 2
             rowSpacing: 8
             columnSpacing: 8
 
-            Pill {
-                visible: root.hasWifi
-                icon: root.wifiOn ? "󰤨" : "󰤮"
-                label: "Wi-Fi"
-                pinId: "wifi"
-                subtitle: !root.wifiOn ? "Uit" : (root.wifiName !== "" ? root.wifiName : "Aan")
-                active: root.wifiOn
-                accent: mocha.accent3
-                expandable: root.wifiOn
-                isExpanded: root.expanded === "wifi"
-                onTriggered: {
-                    Quickshell.execDetached(["nmcli", "radio", "wifi", root.wifiOn ? "off" : "on"]);
-                    if (root.wifiOn && root.expanded === "wifi") root.expanded = "";
-                }
-                onExpandRequested: root.toggleExpanded("wifi")
-            }
-            Pill {
-                visible: !root.hasWifi && root.isEthConnected
-                icon: "󰈀"
-                label: "Bedraad"
-                subtitle: "Verbonden"
-                active: true
-                accent: mocha.accent3
-                onTriggered: root.openPanel("network", "eth")
-            }
-            Pill {
-                visible: root.hasBluetooth
-                icon: root.bluetoothOn ? "󰂱" : "󰂲"
-                label: "Bluetooth"
-                pinId: "bt"
-                subtitle: !root.bluetoothOn ? "Uit"
-                    : (root.bluetoothConnected > 0 ? root.bluetoothConnected + " verbonden" : "Aan")
-                active: root.bluetoothOn
-                accent: mocha.accent1
-                expandable: root.bluetoothOn
-                isExpanded: root.expanded === "bt"
-                onTriggered: {
-                    Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/network/bluetooth_panel_logic.sh", "--toggle"]);
-                    if (root.bluetoothOn && root.expanded === "bt") root.expanded = "";
-                }
-                onExpandRequested: root.toggleExpanded("bt")
-            }
-            Pill {
-                icon: NotificationService.dnd ? "󰂛" : "󰂚"
-                label: "Niet storen"
-                pinId: "dnd"
-                subtitle: NotificationService.dnd ? "Aan" : "Uit"
-                active: NotificationService.dnd
-                accent: mocha.accent2
-                onTriggered: NotificationService.toggleDnd()
-            }
-            Pill {
-                icon: root.powerProfileName === "performance" ? "󰓅"
-                    : (root.powerProfileName === "power-saver" ? "󰌪" : "󰾅")
-                label: "Energie"
-                pinId: "power"
-                subtitle: root.profileLabel(root.powerProfileName)
-                active: root.powerProfileName !== "balanced"
-                accent: root.powerProfileName === "performance" ? mocha.accent2 : mocha.accent3
-                expandable: true
-                isExpanded: root.expanded === "power"
-                onTriggered: root.toggleExpanded("power")
-                onExpandRequested: root.toggleExpanded("power")
-            }
-            Pill {
-                icon: "󰍹"
-                label: "Beeldschermen"
-                subtitle: Quickshell.screens.length === 1 ? "1 scherm" : Quickshell.screens.length + " schermen"
-                accent: mocha.accent3
-                onTriggered: root.openPanel("monitors")
-            }
-            Pill {
-                visible: root.kbLayoutCount > 1
-                icon: "󰌌"
-                label: "Toetsenbord"
-                subtitle: root.kbLayout !== "" ? root.kbLayout : "Volgende indeling"
-                accent: mocha.accent1
-                onTriggered: {
-                    Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"]);
-                    refreshSoon.restart();
+            Repeater {
+                model: root.orderedPills
+                delegate: Pill {
+                    required property string modelData
+                    required property int index
+                    readonly property string pid: modelData
+                    visible: root.pillAvailable(pid) && (root.editMode || root.ccHidden.indexOf(pid) === -1)
+                    Layout.columnSpan: root.ccWide.indexOf(pid) !== -1 ? 2 : 1
+                    icon: root.pillIcon(pid)
+                    label: root.pillLabel(pid)
+                    subtitle: root.pillSubtitle(pid)
+                    active: root.pillActive(pid)
+                    accent: root.pillAccent(pid)
+                    pinId: ["wifi", "bt", "dnd", "power"].indexOf(pid) !== -1 ? pid : ""
+                    expandable: root.pillExpandable(pid)
+                    isExpanded: root.expanded !== "" && root.expanded === root.pillExpandKey(pid)
+                    editing: root.editMode
+                    hiddenInEdit: root.ccHidden.indexOf(pid) !== -1
+                    wide: root.ccWide.indexOf(pid) !== -1
+                    onTriggered: root.pillTrigger(pid)
+                    onExpandRequested: root.toggleExpanded(root.pillExpandKey(pid))
+                    onMoveRequested: (delta) => root.movePill(pid, delta)
+                    onWideToggled: root.toggleListValue("wide", pid)
+                    onHideToggled: root.toggleListValue("hidden", pid)
                 }
             }
         }
@@ -438,7 +532,9 @@ Item {
         Text {
             Layout.fillWidth: true
             Layout.topMargin: -4
-            text: "Rechtsklik op een pil: vastpinnen in de rail"
+            text: root.editMode
+                ? "Pijltjes verplaatsen · ⇔ breed of smal · oog toont of verbergt"
+                : "Rechtsklik op een pil: vastpinnen in de rail"
             font.family: ThemeConfig.uiFont
             font.pixelSize: 9
             color: Qt.rgba(mocha.subtext0.r, mocha.subtext0.g, mocha.subtext0.b, 0.75)
@@ -608,13 +704,23 @@ Item {
         // Rechtsklik pint deze pil als mini-tegel in de rail (RailPins).
         property string pinId: ""
         readonly property bool pinned: pinId !== "" && RailPins.isPinned(pinId)
+        property bool editing: false
+        property bool hiddenInEdit: false
+        property bool wide: false
         signal triggered()
         signal expandRequested()
+        signal moveRequested(int delta)
+        signal wideToggled()
+        signal hideToggled()
 
         Layout.fillWidth: true
-        Layout.preferredWidth: 1
+        Layout.preferredWidth: wide ? 2 : 1
         Layout.preferredHeight: 50
         radius: height / 2
+        opacity: editing && hiddenInEdit ? 0.55 : 1
+        Behavior on opacity {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+        }
         color: active
             ? Qt.rgba(accent.r, accent.g, accent.b, pillMouse.containsMouse ? 0.32 : 0.24)
             : (pillMouse.containsMouse
@@ -643,11 +749,40 @@ Item {
             cursorShape: Qt.PointingHandCursor
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: (mouse) => {
+                if (pill.editing) return;
                 if (mouse.button === Qt.RightButton) {
                     if (pill.pinId !== "") RailPins.toggle(pill.pinId);
                     return;
                 }
                 pill.triggered();
+            }
+        }
+
+        // Bewerkmodus: bediening over de pil heen, inhoud gedimd erachter.
+        Rectangle {
+            z: 5
+            anchors.fill: parent
+            radius: parent.radius
+            color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.55)
+            opacity: pill.editing ? 1 : 0
+            visible: opacity > 0.01
+            Behavior on opacity {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+            }
+            border.width: 1
+            border.color: Qt.rgba(pill.accent.r, pill.accent.g, pill.accent.b, 0.55)
+
+            // Vangt klikken naast de knoppen, zodat het pijltje eronder niet
+            // meer uitklapt tijdens het bewerken.
+            MouseArea { anchors.fill: parent }
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 6
+                EditButton { icon: "󰁍"; onTriggered: pill.moveRequested(-1) }
+                EditButton { icon: pill.wide ? "󰘕" : "󰘖"; onTriggered: pill.wideToggled() }
+                EditButton { icon: pill.hiddenInEdit ? "󰈉" : "󰈈"; active: !pill.hiddenInEdit; onTriggered: pill.hideToggled() }
+                EditButton { icon: "󰁔"; onTriggered: pill.moveRequested(1) }
             }
         }
 
@@ -745,6 +880,36 @@ Item {
                     onClicked: pill.expandRequested()
                 }
             }
+        }
+    }
+
+    component EditButton: Rectangle {
+        id: eb
+        property string icon: ""
+        property bool active: true
+        signal triggered()
+        width: 26
+        height: 26
+        radius: 13
+        color: ebMouse.containsMouse
+            ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.30)
+            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+        }
+        Text {
+            anchors.centerIn: parent
+            text: eb.icon
+            font.family: ThemeConfig.iconFont
+            font.pixelSize: 13
+            color: eb.active ? mocha.text : mocha.subtext0
+        }
+        MouseArea {
+            id: ebMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: eb.triggered()
         }
     }
 

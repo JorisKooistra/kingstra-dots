@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell: control center edit mode
+- The pencil in the control center header switches to edit mode, like DMS and Windows 11: move pills left or right, make them wide or narrow, hide or show them. Saved in `~/.local/state/kingstra/control-center.json`; hidden pills stay reachable in edit mode.
+
 ### Shell: pinned rail modules
 - Right-click a pill in the control center (Wi-Fi, Bluetooth, Niet storen, Energie) or the media card to pin it to the rail as a mini tile, like modules in the macOS menu bar. One click toggles it there; middle-click unpins. Stored in `~/.local/state/kingstra/rail-pins`.
 
