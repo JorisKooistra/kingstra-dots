@@ -72,6 +72,9 @@ phase_run() {
     validate_file "$HOME/.local/bin/kingstra-idle-apply"          "kingstra-idle-apply"
     validate_file "$HOME/.local/bin/kingstra-idle-inhibit"        "kingstra-idle-inhibit"
     validate_file "$HOME/.local/bin/kingstra-wallhaven-tags"      "kingstra-wallhaven-tags"
+    validate_file "$HOME/.local/bin/kingstra-snapshot"            "kingstra-snapshot"
+    validate_file "$HOME/.local/bin/kingstra-rollback"            "kingstra-rollback"
+    validate_file "$HOME/.local/bin/kingstra-doctor"              "kingstra-doctor"
     validate_dir  "$HOME/.config/kingstra/themes"                 "kingstra/themes/"
     validate_dir  "$HOME/.config/kingstra/modes"                  "kingstra/modes/"
     validate_dir  "$HOME/.config/spicetify/Themes/Matugen"        "spicetify/Themes/Matugen"
@@ -149,6 +152,9 @@ _phase08_deploy_state_scripts() {
         ["kingstra-idle-inhibit"]="kingstra-idle-inhibit"
         ["kingstra-touch-detect"]="kingstra-touch-detect"
         ["kingstra-wallhaven-tags"]="kingstra-wallhaven-tags"
+        ["kingstra-snapshot"]="kingstra-snapshot"
+        ["kingstra-rollback"]="kingstra-rollback"
+        ["kingstra-doctor"]="kingstra-doctor"
     )
 
     for src_name in "${!state_scripts[@]}"; do
@@ -159,7 +165,7 @@ _phase08_deploy_state_scripts() {
         chmod +x "$src"
     done
 
-    log_ok "State-scripts beschikbaar: kingstra-state-read/write, kingstra-session-start/update, apply-shell-state, kingstra-color-transform, kingstra-matugen-run, kingstra-mono-accent, kingstra-idle-apply/inhibit, kingstra-touch-detect, kingstra-wallhaven-tags"
+    log_ok "State-scripts beschikbaar: kingstra-state-read/write, kingstra-session-start/update, apply-shell-state, kingstra-color-transform, kingstra-matugen-run, kingstra-mono-accent, kingstra-idle-apply/inhibit, kingstra-touch-detect, kingstra-wallhaven-tags, kingstra-snapshot, kingstra-rollback, kingstra-doctor"
 }
 
 _phase08_deploy_mode_scripts() {

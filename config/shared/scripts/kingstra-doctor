@@ -1,0 +1,213 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-doctor — Controleer of de Kingstra-installatie gezond is
+# =============================================================================
+# Gebruik: kingstra-doctor [--quiet]
+#
+# Alleen lezen: er wordt niets gewijzigd. Elke regel is OK, LET OP of FOUT,
+# met bij problemen een concrete oplossing. Exitcode 0 als er geen FOUT is,
+# 1 als er minstens één FOUT is. --quiet toont alleen problemen.
+# =============================================================================
+set -uo pipefail
+
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+QUIET=false
+[[ "${1:-}" == "--quiet" || "${1:-}" == "-q" ]] && QUIET=true
+
+N_OK=0 N_WARN=0 N_FAIL=0
+C_RESET="" C_DIM="" C_GREEN="" C_YELLOW="" C_RED="" C_BOLD=""
+G_OK="OK" G_WARN="!" G_FAIL="X"
+if [[ -t 1 && "${TERM:-}" != "dumb" ]]; then
+    C_RESET=$'\033[0m' C_DIM=$'\033[2m' C_BOLD=$'\033[1m'
+    C_GREEN=$'\033[32m' C_YELLOW=$'\033[33m' C_RED=$'\033[31m'
+    if [[ "$(locale charmap 2>/dev/null)" == "UTF-8" ]]; then
+        G_OK="✓" G_WARN="!" G_FAIL="✗"
+    fi
+fi
+
+section() { $QUIET || printf '\n%s%s%s\n' "$C_BOLD" "$1" "$C_RESET"; }
+ok()   { N_OK=$((N_OK + 1));   $QUIET || printf '  %s%s%s %s\n' "$C_GREEN" "$G_OK" "$C_RESET" "$1"; }
+warn() { N_WARN=$((N_WARN + 1)); printf '  %s%s%s %s\n' "$C_YELLOW" "$G_WARN" "$C_RESET" "$1"; [[ -n "${2:-}" ]] && printf '    %s%s%s\n' "$C_DIM" "$2" "$C_RESET"; return 0; }
+fail() { N_FAIL=$((N_FAIL + 1)); printf '  %s%s%s %s\n' "$C_RED" "$G_FAIL" "$C_RESET" "$1"; [[ -n "${2:-}" ]] && printf '    %s%s%s\n' "$C_DIM" "$2" "$C_RESET"; return 0; }
+
+resolve_repo() {
+    local marker="$DATA_HOME/kingstra/install-complete" repo="" self=""
+    [[ -n "${KINGSTRA_REPO:-}" ]] && repo="$KINGSTRA_REPO"
+    if [[ -z "$repo" && -f "$marker" ]]; then
+        repo="$(sed -n 's/^Repo:[[:space:]]*//p' "$marker" | head -n 1)"
+    fi
+    if [[ -z "$repo" ]]; then
+        self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
+        [[ -n "$self" ]] && repo="$(cd "$(dirname "$self")/../../.." 2>/dev/null && pwd -P || true)"
+    fi
+    [[ -n "$repo" && -d "$repo/.git" ]] || return 1
+    printf '%s\n' "$repo"
+}
+
+# ---------------------------------------------------------------------------
+section "Installatie"
+REPO=""
+if REPO="$(resolve_repo)"; then
+    version="onbekend"
+    [[ -f "$REPO/VERSION" ]] && version="$(tr -d '[:space:]' < "$REPO/VERSION")"
+    ok "kingstra-dots $version in $REPO ($(git -C "$REPO" rev-parse --short HEAD 2>/dev/null))"
+    if [[ -n "$(git -C "$REPO" status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
+        warn "Lokale wijzigingen in de repo; de updater slaat dotfiles dan over" \
+             "Bekijk met: git -C $REPO status"
+    fi
+    if [[ -f "$STATE_HOME/kingstra/update-hold" ]]; then
+        warn "Dotfiles staan vast op $(cat "$STATE_HOME/kingstra/update-hold") na een rollback" \
+             "Weer meegaan met updates: kingstra-rollback --release"
+    fi
+else
+    fail "Geen kingstra-dots git-repo gevonden" "Installeer opnieuw met bootstrap.sh"
+fi
+if [[ -f "$DATA_HOME/kingstra/install-complete" ]]; then
+    ok "Installatie afgerond ($(sed -n 's/^Geïnstalleerd op:[[:space:]]*//p' "$DATA_HOME/kingstra/install-complete" | head -n 1))"
+else
+    warn "Geen install-complete marker; de laatste installatie is niet afgemaakt" \
+         "Draai: ${REPO:-~/kingstra-dots}/install.sh --yes"
+fi
+
+# ---------------------------------------------------------------------------
+section "Programma's"
+missing=()
+for cmd in Hyprland quickshell matugen jq git kitty wl-paste cliphist playerctl swayosd-server hypridle; do
+    command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
+done
+if (( ${#missing[@]} == 0 )); then
+    ok "Alle kernprogramma's aanwezig"
+else
+    fail "Ontbreekt: ${missing[*]}" "Draai de installer opnieuw: install.sh --yes"
+fi
+
+# ---------------------------------------------------------------------------
+section "Configuratie"
+owned="${REPO:+$REPO/manifest/owned-paths.txt}"
+broken=() not_linked=()
+if [[ -n "$owned" && -f "$owned" ]]; then
+    while IFS='|' read -r raw mode; do
+        [[ -z "$raw" || "$raw" == \#* || "$mode" != "symlink" ]] && continue
+        path="${raw/#\~/$HOME}"
+        if [[ -L "$path" && ! -e "$path" ]]; then
+            broken+=("$raw")
+        elif [[ -e "$path" && ! -L "$path" ]]; then
+            not_linked+=("$raw")
+        fi
+    done < "$owned"
+fi
+if (( ${#broken[@]} > 0 )); then
+    fail "Kapotte koppelingen: ${broken[*]}" "Herstel met: install.sh --yes"
+elif (( ${#not_linked[@]} > 0 )); then
+    warn "Geen koppeling naar de repo (eigen bestand?): ${not_linked[*]}" \
+         "Bewust zo? Dan is dit prima. Anders: kingstra-refresh <onderdeel>"
+else
+    ok "Config-koppelingen naar de repo kloppen"
+fi
+
+lua_bin="$(command -v luac 2>/dev/null || command -v luac5.4 2>/dev/null || true)"
+if [[ -n "$lua_bin" && -d "$CONFIG_HOME/hypr/lua" ]]; then
+    bad_lua=()
+    for f in "$CONFIG_HOME/hypr/hyprland.lua" "$CONFIG_HOME"/hypr/lua/*.lua; do
+        [[ -f "$f" ]] || continue
+        "$lua_bin" -p "$f" >/dev/null 2>&1 || bad_lua+=("$(basename "$f")")
+    done
+    if (( ${#bad_lua[@]} == 0 )); then
+        ok "Hyprland Lua-config is geldig"
+    else
+        fail "Ongeldige Lua: ${bad_lua[*]}" "Een gegenereerd bestand? Verwijder het; de .default wordt dan gebruikt"
+    fi
+fi
+
+for gen in "$CONFIG_HOME/hypr/lua/colors.lua" "$CONFIG_HOME/quickshell/colors.json"; do
+    if [[ ! -s "$gen" ]]; then
+        warn "Kleurbestand ontbreekt: ${gen/#$HOME/\~}" "Opnieuw genereren: apply-shell-state"
+    fi
+done
+[[ -s "$CONFIG_HOME/hypr/lua/colors.lua" && -s "$CONFIG_HOME/quickshell/colors.json" ]] && ok "Matugen-kleuren gegenereerd"
+
+# ---------------------------------------------------------------------------
+section "Sessie"
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+    down=()
+    pgrep -f "quickshell.*TopBar.qml" >/dev/null 2>&1 || down+=("bar")
+    pgrep -f "quickshell.*Main.qml" >/dev/null 2>&1 || down+=("popups")
+    pgrep -f "qs.*overview/shell.qml" >/dev/null 2>&1 || down+=("overzicht")
+    if (( ${#down[@]} == 0 )); then
+        ok "Quickshell draait (bar, popups, overzicht)"
+    else
+        fail "Quickshell draait niet: ${down[*]}" "Herstart met: kingstra-session-start restart-shell"
+    fi
+    if [[ -f "$STATE_HOME/kingstra/shell-crashes" ]]; then
+        crashes="$(wc -l < "$STATE_HOME/kingstra/shell-crashes")"
+        (( crashes > 0 )) && warn "Quickshell is $crashes keer herstart na een crash" \
+            "Details: $STATE_HOME/kingstra/shell-crashes en ~/.local/state/kingstra/session.log"
+    fi
+else
+    $QUIET || printf '  %s(geen Hyprland-sessie; sessiechecks overgeslagen)%s\n' "$C_DIM" "$C_RESET"
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+    failed_user="$(systemctl --user --failed --no-legend --plain 2>/dev/null | awk '{print $1}' | tr '\n' ' ')"
+    failed_sys="$(systemctl --failed --no-legend --plain 2>/dev/null | awk '{print $1}' | tr '\n' ' ')"
+    if [[ -z "${failed_user// }" && -z "${failed_sys// }" ]]; then
+        ok "Geen mislukte systemd-services"
+    else
+        [[ -n "${failed_user// }" ]] && warn "Mislukte user-services: $failed_user" "Bekijk: journalctl --user -u <naam> -b"
+        [[ -n "${failed_sys// }" ]] && warn "Mislukte systeemservices: $failed_sys" "Bekijk: journalctl -u <naam> -b"
+    fi
+    if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+        for unit in pipewire wireplumber; do
+            systemctl --user is-active --quiet "$unit" 2>/dev/null || warn "$unit draait niet" "Start: systemctl --user restart $unit"
+        done
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+section "Systeem"
+use="$(df -P "$HOME" 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $5}')"
+if [[ -n "$use" ]]; then
+    if (( use >= 95 )); then
+        fail "Schijf bijna vol (${use}%)" "Ruim op: paccache -rk1, yay -Sc, ~/.cache"
+    elif (( use >= 85 )); then
+        warn "Schijf ${use}% vol" "Ruim op: paccache -rk1, yay -Sc"
+    else
+        ok "Schijfruimte (${use}% gebruikt)"
+    fi
+fi
+
+if command -v pacdiff >/dev/null 2>&1; then
+    pacnew="$(pacdiff -o 2>/dev/null | wc -l)"
+    if (( pacnew > 0 )); then
+        warn "$pacnew .pacnew-bestand(en) wachten op samenvoegen" "Bekijk met: sudo DIFFPROG='diff -u' pacdiff"
+    else
+        ok "Geen openstaande .pacnew-bestanden"
+    fi
+fi
+
+fstype="$(findmnt -no FSTYPE / 2>/dev/null || true)"
+if [[ "$fstype" == "btrfs" ]]; then
+    if command -v snapper >/dev/null 2>&1; then
+        ok "btrfs met snapper: updates maken een systeemsnapshot"
+    else
+        warn "btrfs zonder snapper: updates maken alleen een dotfiles-terugzetpunt" \
+             "Systeemsnapshots aanzetten: sudo pacman -S snapper && sudo snapper -c root create-config /"
+    fi
+fi
+
+last_update="$STATE_HOME/kingstra/updates/last-run"
+if [[ -f "$last_update" ]]; then
+    days=$(( ($(date +%s) - $(cat "$last_update")) / 86400 ))
+    if (( days > 30 )); then
+        warn "Laatste update $days dagen geleden" "Bijwerken via de rail of: kingstra update"
+    else
+        ok "Laatste update $days dag(en) geleden"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+printf '\n%s%d OK%s · %s%d let op%s · %s%d fout%s\n' \
+    "$C_GREEN" "$N_OK" "$C_RESET" "$C_YELLOW" "$N_WARN" "$C_RESET" "$C_RED" "$N_FAIL" "$C_RESET"
+(( N_FAIL == 0 ))

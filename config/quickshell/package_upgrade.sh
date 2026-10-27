@@ -8,6 +8,8 @@ set -uo pipefail
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/quickshell"
 COUNT_SCRIPT="${HOME}/.config/quickshell/package_updates.sh"
 AUDIT_SCRIPT="${HOME}/.config/quickshell/package_audit.sh"
+SNAPSHOT_CMD="${KINGSTRA_SNAPSHOT_CMD:-$HOME/.local/bin/kingstra-snapshot}"
+HOLD_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/update-hold"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/updates"
 LAST_RUN_FILE="$STATE_DIR/last-run"
 NEWS_URL="https://archlinux.org/feeds/news/"
@@ -29,7 +31,7 @@ INTERACTIVE=false
 UI=false
 [[ -t 0 && -t 1 && "${TERM:-}" != "dumb" ]] && UI=true
 
-STEPS_TOTAL=7
+STEPS_TOTAL=8
 STEP_NUM=0
 STEP_TITLE=""
 SUMMARY=()
@@ -436,6 +438,13 @@ update_dotfiles() {
     fi
     DOTFILES_REPO="$repo"
 
+    # Na kingstra-rollback staan de dotfiles bewust vast.
+    if [[ -f "$HOLD_FILE" ]]; then
+        log "Dotfiles staan vast op $(cat "$HOLD_FILE") na een rollback; niet opgehaald."
+        log "Weer meegaan met updates: kingstra-rollback --release"
+        return 0
+    fi
+
     branch="$(git -C "$repo" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
     if [[ -z "$branch" ]]; then
         log "Dotfiles-repo staat niet op een branch; overgeslagen."
@@ -486,6 +495,29 @@ update_dotfiles() {
     if ! git -C "$repo" merge --ff-only --quiet "$upstream"; then
         log "Bijwerken mislukt; waarschijnlijk staat er een los bestand in de weg (zie hierboven)."
         return 1
+    fi
+}
+
+# Terugzetpunt vóór er iets verandert: git-tag van de dotfiles en, op btrfs
+# met snapper, een systeemsnapshot. Mislukt dat, dan gaat de update door.
+make_restore_point() {
+    if [[ ! -x "$SNAPSHOT_CMD" ]]; then
+        result warn "kingstra-snapshot niet gevonden; geen terugzetpunt."
+        return 0
+    fi
+    if $UI && [[ "$(findmnt -no FSTYPE / 2>/dev/null)" == "btrfs" ]] \
+        && command -v snapper >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 \
+        && ! sudo -n true 2>/dev/null; then
+        live_clear
+        sudo -v || true
+    fi
+    local out=""
+    if out="$("$SNAPSHOT_CMD" create "kingstra: voor update" 2>&1)"; then
+        to_log "$out"
+        result ok "Terugzetpunt gemaakt (terug met: kingstra-rollback)."
+    else
+        to_log "$out"
+        result warn "Terugzetpunt maken mislukt; update gaat door."
     fi
 }
 
@@ -606,6 +638,9 @@ if $UI && ! $INTERACTIVE && (( REPO_COUNT + AUR_COUNT + FLATPAK_COUNT > 0 )); th
         exit 0
     fi
 fi
+
+section "Terugzetpunt"
+make_restore_point
 
 section "Arch/AUR"
 arch_exit=0

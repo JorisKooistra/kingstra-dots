@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-snapshot — Terugzetpunt vóór een update
+# =============================================================================
+# Gebruik:
+#   kingstra-snapshot create [omschrijving]   terugzetpunt maken
+#   kingstra-snapshot list                     terugzetpunten tonen
+#
+# Een terugzetpunt bestaat uit:
+#   - een lokale git-tag (kingstra/pre-update-YYYYmmdd-HHMMSS) op de huidige
+#     stand van de dotfiles-repo; die wordt nooit gepusht;
+#   - als / op btrfs staat en snapper een "root"-config heeft: een
+#     snapper-snapshot van het systeem. Zonder sudo-sessie of snapper wordt
+#     dat deel overgeslagen, de dotfiles-tag komt er altijd.
+#
+# Alles wordt gelogd in ~/.local/state/kingstra/snapshots.log
+# (datum|tag|commit|snapper-nummer|omschrijving). Alleen de laatste
+# KEEP terugzetpunt-tags blijven bewaard.
+# =============================================================================
+set -uo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra"
+SNAP_LOG="$STATE_DIR/snapshots.log"
+TAG_PREFIX="kingstra/pre-update-"
+KEEP="${KINGSTRA_SNAPSHOT_KEEP:-10}"
+
+_say()  { printf '%s\n' "$*"; }
+_warn() { printf 'Let op: %s\n' "$*" >&2; }
+
+resolve_repo() {
+    local marker="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/install-complete"
+    local repo="" self=""
+    [[ -n "${KINGSTRA_REPO:-}" ]] && repo="$KINGSTRA_REPO"
+    if [[ -z "$repo" && -f "$marker" ]]; then
+        repo="$(sed -n 's/^Repo:[[:space:]]*//p' "$marker" | head -n 1)"
+    fi
+    if [[ -z "$repo" ]]; then
+        self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
+        [[ -n "$self" ]] && repo="$(cd "$(dirname "$self")/../../.." 2>/dev/null && pwd -P || true)"
+    fi
+    [[ -n "$repo" && -d "$repo/.git" ]] || return 1
+    printf '%s\n' "$repo"
+}
+
+# Systeemsnapshot via snapper, alleen op btrfs en zonder wachtwoordvraag.
+system_snapshot() {
+    local desc="$1" fstype="" num=""
+    fstype="$(findmnt -no FSTYPE / 2>/dev/null || true)"
+    [[ "$fstype" == "btrfs" ]] || { _say "Systeem: / staat niet op btrfs; alleen een dotfiles-terugzetpunt."; return 0; }
+    command -v snapper >/dev/null 2>&1 || { _say "Systeem: snapper is niet geïnstalleerd; alleen een dotfiles-terugzetpunt."; return 0; }
+
+    local -a run=(snapper)
+    if [[ $EUID -ne 0 ]]; then
+        if ! sudo -n true 2>/dev/null; then
+            _say "Systeem: geen sudo-sessie; systeemsnapshot overgeslagen."
+            return 0
+        fi
+        run=(sudo -n snapper)
+    fi
+    if ! "${run[@]}" -c root get-config >/dev/null 2>&1; then
+        _say "Systeem: snapper heeft geen config 'root'; systeemsnapshot overgeslagen."
+        return 0
+    fi
+    num="$("${run[@]}" -c root create --description "$desc" --cleanup-algorithm number --print-number 2>/dev/null || true)"
+    if [[ -n "$num" ]]; then
+        _say "Systeem: snapper-snapshot #$num gemaakt."
+        printf '%s\n' "$num" > "$STATE_DIR/.last-snapper"
+    else
+        _warn "snapper-snapshot maken mislukt; de update gaat door."
+    fi
+}
+
+prune_tags() {
+    local repo="$1" tag
+    local -a tags=()
+    mapfile -t tags < <(git -C "$repo" tag --list "${TAG_PREFIX}*" --sort=-refname 2>/dev/null)
+    (( ${#tags[@]} > KEEP )) || return 0
+    for tag in "${tags[@]:KEEP}"; do
+        git -C "$repo" tag -d "$tag" >/dev/null 2>&1 || true
+    done
+}
+
+cmd_create() {
+    local desc="${*:-kingstra: voor update}" repo="" stamp tag commit snap=""
+    mkdir -p "$STATE_DIR"
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    rm -f "$STATE_DIR/.last-snapper"
+
+    if repo="$(resolve_repo)"; then
+        commit="$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo onbekend)"
+        tag="${TAG_PREFIX}${stamp}"
+        if git -C "$repo" tag "$tag" HEAD >/dev/null 2>&1; then
+            _say "Dotfiles: terugzetpunt $tag ($commit)."
+            prune_tags "$repo"
+        else
+            _warn "git-tag maken mislukt in $repo."
+            tag="-"
+        fi
+    else
+        _warn "Geen kingstra-dots git-repo gevonden; alleen een systeemsnapshot."
+        tag="-" commit="-"
+    fi
+
+    system_snapshot "$desc"
+    [[ -f "$STATE_DIR/.last-snapper" ]] && snap="$(cat "$STATE_DIR/.last-snapper")"
+    rm -f "$STATE_DIR/.last-snapper"
+
+    printf '%s|%s|%s|%s|%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$tag" "$commit" "${snap:--}" "$desc" >> "$SNAP_LOG"
+    # Log kort houden.
+    if [[ "$(wc -l < "$SNAP_LOG")" -gt 200 ]]; then
+        tail -n 100 "$SNAP_LOG" > "$SNAP_LOG.tmp" && mv "$SNAP_LOG.tmp" "$SNAP_LOG"
+    fi
+}
+
+cmd_list() {
+    if [[ ! -s "$SNAP_LOG" ]]; then
+        _say "Nog geen terugzetpunten."
+        return 0
+    fi
+    printf '%-19s  %-36s  %-9s  %s\n' "Datum" "Dotfiles-tag" "Snapper" "Omschrijving"
+    tac "$SNAP_LOG" | head -n 15 | while IFS='|' read -r when tag commit snap desc; do
+        printf '%-19s  %-36s  %-9s  %s\n' "$when" "$tag" "$snap" "$desc"
+    done
+}
+
+case "${1:-}" in
+    create) shift; cmd_create "$@" ;;
+    list|"") cmd_list ;;
+    -h|--help|help)
+        sed -n '3,9p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) printf 'Onbekend commando: %s (gebruik create of list)\n' "$1" >&2; exit 2 ;;
+esac

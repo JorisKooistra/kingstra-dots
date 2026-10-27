@@ -172,6 +172,7 @@ _phase15_write_marker() {
         echo "Touchscreen: ${DETECT_HAS_TOUCHSCREEN:-false}"
         echo "Tablet mode: ${ENABLE_TABLET_MODE:-false}"
         echo "Fingerprint: ${DETECT_HAS_FINGERPRINT:-false}"
+        echo "Versie:      $(tr -d '[:space:]' < "$REPO_ROOT/VERSION" 2>/dev/null || echo onbekend)"
         echo "Repo:        $REPO_ROOT"
         echo "Backup:      ${BACKUP_DIR:-}"
     } > "$marker_file"

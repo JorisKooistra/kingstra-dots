@@ -2,6 +2,15 @@
 
 Versions follow `YYYY.MM.N` (year, month, release within that month). The current version is in `VERSION`.
 
+## Unreleased
+
+### Safety net
+- Every update first makes a restore point: a local git tag of the dotfiles and, on btrfs with snapper, a system snapshot (`kingstra-snapshot`).
+- `kingstra-rollback` puts the dotfiles back to the last restore point and holds them there until `kingstra-rollback --release`.
+- One-time migrations in `installer/migrations/` replace cleanup that ran on every update.
+- `kingstra-doctor` checks the installation (programs, links, Lua, colors, Quickshell, services, disk, .pacnew) and says how to fix problems.
+- The install marker records the installed version.
+
 ## 2026.10.0 — 2026-10-27
 
 First versioned release. Highlights since the Lua migration:

@@ -225,6 +225,7 @@ main() {
     # Pre-flight: back-up alle bestaande dotfiles vóór de eerste fase
     backup_preflight
     migration_prepare_existing_setup
+    run_pending_migrations || true
 
     run_phases
 

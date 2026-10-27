@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-rollback — Dotfiles terug naar een eerder terugzetpunt
+# =============================================================================
+# Gebruik:
+#   kingstra-rollback                 terug naar het laatste terugzetpunt
+#   kingstra-rollback <tag>           terug naar een bepaald terugzetpunt
+#   kingstra-rollback --list          terugzetpunten tonen
+#   kingstra-rollback --release       weer meegaan met updates
+#   kingstra-rollback --dry-run [..]  laten zien wat er zou gebeuren
+#
+# Na een rollback staan de dotfiles "vast": de updater haalt geen nieuwe
+# dotfiles op tot je --release draait. Systeempakketten worden niet
+# teruggezet; bij een snapper-snapshot staat erbij hoe dat kan.
+# =============================================================================
+set -uo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra"
+SNAP_LOG="$STATE_DIR/snapshots.log"
+HOLD_FILE="$STATE_DIR/update-hold"
+TAG_PREFIX="kingstra/pre-update-"
+DRY_RUN=false
+
+_say()  { printf '%s\n' "$*"; }
+_die()  { printf 'Fout: %s\n' "$*" >&2; exit 1; }
+
+resolve_repo() {
+    local marker="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/install-complete"
+    local repo="" self=""
+    [[ -n "${KINGSTRA_REPO:-}" ]] && repo="$KINGSTRA_REPO"
+    if [[ -z "$repo" && -f "$marker" ]]; then
+        repo="$(sed -n 's/^Repo:[[:space:]]*//p' "$marker" | head -n 1)"
+    fi
+    if [[ -z "$repo" ]]; then
+        self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
+        [[ -n "$self" ]] && repo="$(cd "$(dirname "$self")/../../.." 2>/dev/null && pwd -P || true)"
+    fi
+    [[ -n "$repo" && -d "$repo/.git" ]] || return 1
+    printf '%s\n' "$repo"
+}
+
+snapper_for_tag() {
+    local tag="$1"
+    [[ -f "$SNAP_LOG" ]] || return 0
+    awk -F'|' -v t="$tag" '$2 == t && $4 != "-" { n = $4 } END { if (n != "") print n }' "$SNAP_LOG"
+}
+
+args=()
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run) DRY_RUN=true ;;
+        *) args+=("$arg") ;;
+    esac
+done
+set -- "${args[@]+"${args[@]}"}"
+
+REPO="$(resolve_repo)" || _die "geen kingstra-dots git-repo gevonden."
+
+case "${1:-}" in
+    --list|list)
+        tags="$(git -C "$REPO" tag --list "${TAG_PREFIX}*" --sort=-refname)"
+        if [[ -z "$tags" ]]; then
+            _say "Nog geen terugzetpunten. Die komen er bij elke update vanzelf bij."
+            exit 0
+        fi
+        while IFS= read -r t; do
+            printf '%s  %s\n' "$t" "$(git -C "$REPO" log -1 --format='%h %s' "$t")"
+        done <<< "$tags"
+        [[ -f "$HOLD_FILE" ]] && _say "" "Dotfiles staan nu vast op: $(cat "$HOLD_FILE")"
+        exit 0
+        ;;
+    --release|release)
+        if [[ -f "$HOLD_FILE" ]]; then
+            $DRY_RUN || rm -f "$HOLD_FILE"
+            _say "Dotfiles gaan weer mee met updates. Draai de updater om bij te werken."
+        else
+            _say "Dotfiles stonden niet vast."
+        fi
+        exit 0
+        ;;
+    -h|--help|help)
+        sed -n '3,14p' "$0" | sed 's/^# \{0,1\}//'
+        exit 0
+        ;;
+esac
+
+TARGET="${1:-}"
+if [[ -z "$TARGET" ]]; then
+    TARGET="$(git -C "$REPO" tag --list "${TAG_PREFIX}*" --sort=-refname | head -n 1)"
+    [[ -n "$TARGET" ]] || _die "geen terugzetpunt gevonden (kingstra-rollback --list)."
+fi
+git -C "$REPO" rev-parse --verify --quiet "$TARGET^{commit}" >/dev/null || _die "onbekend terugzetpunt: $TARGET"
+
+if [[ -n "$(git -C "$REPO" status --porcelain --untracked-files=no)" ]]; then
+    git -C "$REPO" status --short --untracked-files=no
+    _die "er staan lokale wijzigingen in $REPO; commit of stash ze eerst."
+fi
+
+current="$(git -C "$REPO" rev-parse --short HEAD)"
+target_short="$(git -C "$REPO" rev-parse --short "$TARGET^{commit}")"
+_say "Dotfiles: $current -> $target_short ($TARGET)"
+
+if $DRY_RUN; then
+    _say "Dry-run: er is niets gewijzigd."
+    exit 0
+fi
+
+# Eerst de huidige stand vastleggen, zodat ook de rollback terug te draaien is.
+git -C "$REPO" tag "kingstra/pre-rollback-$(date +%Y%m%d-%H%M%S)" HEAD >/dev/null 2>&1 || true
+
+git -C "$REPO" reset --keep "$TARGET" || _die "terugzetten mislukt; er is niets gewijzigd."
+mkdir -p "$STATE_DIR"
+printf '%s\n' "$TARGET" > "$HOLD_FILE"
+
+if [[ -x "$REPO/install.sh" || -f "$REPO/install.sh" ]]; then
+    _say "Installer draaien om de oude stand toe te passen..."
+    bash "$REPO/install.sh" --yes || _say "De installer meldde een fout; zie de log in ~/.local/share/kingstra."
+fi
+
+snap="$(snapper_for_tag "$TARGET")"
+_say ""
+_say "Klaar. De dotfiles staan vast op $TARGET; de updater laat ze met rust."
+_say "Weer meegaan met updates: kingstra-rollback --release"
+if [[ -n "$snap" ]]; then
+    _say ""
+    _say "Bij dit terugzetpunt hoort ook snapper-snapshot #$snap van het systeem."
+    _say "Systeempakketten terugzetten kan via het bootmenu (grub-btrfs of limine)"
+    _say "of met: sudo snapper -c root undochange $snap..0"
+fi

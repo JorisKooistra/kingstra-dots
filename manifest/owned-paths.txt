@@ -44,6 +44,9 @@
 ~/.local/bin/kingstra-idle-inhibit|symlink
 ~/.local/bin/kingstra-touch-detect|symlink
 ~/.local/bin/kingstra-wallhaven-tags|symlink
+~/.local/bin/kingstra-snapshot|symlink
+~/.local/bin/kingstra-rollback|symlink
+~/.local/bin/kingstra-doctor|symlink
 ~/.local/bin/kingstra-firefox-optimize|symlink
 ~/.local/bin/kingstra-wallpaper|symlink
 ~/.local/bin/kingstra-skwd-wallpaper-sync|symlink
