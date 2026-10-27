@@ -1450,7 +1450,7 @@ Item {
                                     if (!isCurrentlyConnected && fillLevel > 0) drainAnim.start();
                                 }
 
-                                color: locksList ? "#2affffff" : "#0effffff"
+                                color: locksList ? Qt.alpha(window.text, 0.165) : Qt.alpha(window.text, 0.055)
                                 Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
                                 Rectangle {
@@ -1877,7 +1877,7 @@ Item {
                         }
                     }
 
-                    Rectangle { width: 1; Layout.fillHeight: true; Layout.margins: window.s(5); color: "#33ffffff" }
+                    Rectangle { width: 1; Layout.fillHeight: true; Layout.margins: window.s(5); color: Qt.alpha(window.text, 0.2) }
 
                     // Bluetooth Mode Button
                     Rectangle {

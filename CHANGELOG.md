@@ -26,6 +26,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Panels and popups use the theme's mono font (`ThemeConfig.textFont`, ~430 places) instead of a fixed font name, with JetBrains Mono as fallback when the theme font is not installed. Nerd icons use `ThemeConfig.iconFont`.
 - About 450 hover and state animations in panels follow the theme's motion speed (`ThemeConfig.duration`), like the rail already did.
 - `ttf-ibm-plex` is installed for the paper theme.
+- Battery and network popups use the theme text color for their glass overlays instead of fixed white, so they show up on the light paper theme too.
 
 ## 2026.10.0 — 2026-10-27
 

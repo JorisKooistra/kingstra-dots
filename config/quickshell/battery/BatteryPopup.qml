@@ -365,8 +365,8 @@ Item {
                 anchors.margins: window.s(25)
                 width: logoutMa.containsMouse ? window.s(44) + usernameText.implicitWidth + window.s(12) : window.s(44)
                 height: window.s(44); radius: window.s(14)
-                color: logoutMa.containsMouse ? "#1affffff" : "transparent"
-                border.color: logoutMa.containsMouse ? "#33ffffff" : "transparent"
+                color: logoutMa.containsMouse ? Qt.alpha(window.text, 0.102) : "transparent"
+                border.color: logoutMa.containsMouse ? Qt.alpha(window.text, 0.2) : "transparent"
                 clip: true
                 
                 transform: Translate { y: window.s(-20) * (1.0 - introTop) }
@@ -675,8 +675,8 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: window.s(96)
                     radius: window.s(14)
-                    color: "#05ffffff"
-                    border.color: "#1affffff"
+                    color: Qt.alpha(window.text, 0.02)
+                    border.color: Qt.alpha(window.text, 0.102)
                     border.width: 1
 
                     opacity: introSliders
@@ -724,8 +724,8 @@ Item {
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: window.s(9)
-                                    color: "#0dffffff"
-                                    border.color: "#1affffff"
+                                    color: Qt.alpha(window.text, 0.051)
+                                    border.color: Qt.alpha(window.text, 0.102)
                                     border.width: 1
                                     clip: true
 
@@ -772,7 +772,7 @@ Item {
                                 Layout.preferredWidth: window.s(32)
                                 Layout.preferredHeight: window.s(32)
                                 radius: window.s(16)
-                                color: volIconMa.containsMouse ? "#1affffff" : "transparent"
+                                color: volIconMa.containsMouse ? Qt.alpha(window.text, 0.102) : "transparent"
                                 border.color: volIconMa.containsMouse ? window.profileStart : "transparent"
                                 Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
                                 Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
@@ -818,8 +818,8 @@ Item {
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: window.s(9)
-                                    color: "#0dffffff"
-                                    border.color: "#1affffff"
+                                    color: Qt.alpha(window.text, 0.051)
+                                    border.color: Qt.alpha(window.text, 0.102)
                                     border.width: 1
                                     clip: true
 
@@ -889,8 +889,8 @@ Item {
                             property string shortPressCmd: "bash ~/.config/hypr/scripts/suspend.sh"
                             property string pendingCmd: cmd
 
-                            color: actionMa.containsMouse ? "#1affffff" : "#0dffffff"
-                            border.color: actionMa.containsMouse ? c1 : "#1affffff"
+                            color: actionMa.containsMouse ? Qt.alpha(window.text, 0.102) : Qt.alpha(window.text, 0.051)
+                            border.color: actionMa.containsMouse ? c1 : Qt.alpha(window.text, 0.102)
                             // Keeping these explicit to 1px/2px prevents ugly half-pixel anti-aliasing glitches
                             border.width: actionMa.containsMouse ? 2 : 1
                             Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
@@ -1053,8 +1053,8 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: window.s(54)
                     radius: window.s(14)
-                    color: "#0dffffff" 
-                    border.color: "#1affffff"
+                    color: Qt.alpha(window.text, 0.051) 
+                    border.color: Qt.alpha(window.text, 0.102)
                     border.width: 1
 
                     opacity: introProfiles
