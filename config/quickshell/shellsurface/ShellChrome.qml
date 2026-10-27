@@ -1127,7 +1127,8 @@ Item {
 
             // Systeemvak: kwam in de oude bar mee, ontbrak sinds de rail.
             TrayGrid {
-                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: implicitWidth
                 Layout.preferredHeight: implicitHeight
                 vertical: true
             }
@@ -2445,7 +2446,14 @@ Item {
         property bool vertical: true
         readonly property int cell: 24
         visible: root.trayShownCount > 0
-        columns: vertical ? Math.max(1, Math.floor((width + spacing) / (cell + spacing))) : Math.max(1, root.trayShownCount)
+        // Kolommen volgen de binnenbreedte van de rail (marge 7 aan elke kant),
+        // niet de eigen breedte: zo is de grid precies zo breed als zijn
+        // iconen en kan de rail hem centreren. Met fillWidth stond één kolom
+        // links in de rail.
+        readonly property real railInnerWidth: root.railWidth - 14
+        columns: vertical
+            ? Math.max(1, Math.min(root.trayShownCount, Math.floor((railInnerWidth + spacing) / (cell + spacing))))
+            : Math.max(1, root.trayShownCount)
         spacing: vertical ? 2 : 4
         horizontalItemAlignment: Grid.AlignHCenter
 
