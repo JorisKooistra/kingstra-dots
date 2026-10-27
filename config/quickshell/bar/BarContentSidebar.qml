@@ -371,7 +371,7 @@ Item {
                         hoverEnabled: true
                         onEntered: root.railHoverEnter()
                         onExited: root.railHoverExit()
-                        onClicked: Quickshell.execDetached(["bash", "-c", "walker"])
+                        onClicked: Quickshell.execDetached(["bash", "-c", "$HOME/.config/hypr/scripts/qs_manager.sh toggle launcher"])
                     }
                 }
             }

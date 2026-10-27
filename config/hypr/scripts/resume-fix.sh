@@ -72,14 +72,6 @@ if ! pgrep -f "python3 .*focustime/focus_daemon\\.py" &>/dev/null; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5 — Legacy SwayNC uit houden; Quickshell beheert notificaties
-# ---------------------------------------------------------------------------
-if pgrep -x swaync &>/dev/null; then
-    _log "SwayNC actief — stoppen zodat Quickshell notificaties beheert..."
-    pkill -x swaync >/dev/null 2>&1 || true
-fi
-
-# ---------------------------------------------------------------------------
 # 6 — Wallpaper-backend herstellen (kan sterven na suspend)
 # ---------------------------------------------------------------------------
 # skwd is de enige wallpaper-renderer (awww is uit de pipeline verwijderd).

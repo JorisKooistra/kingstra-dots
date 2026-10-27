@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 
-// Left-bar button: opens the walker launcher.
+// Left-bar button: opens the Quickshell launcher (same as Super + Ctrl + Return).
 Rectangle {
     id: root
     required property var shell
@@ -60,6 +60,6 @@ Rectangle {
         id: searchMouse
         anchors.fill: parent
         hoverEnabled: true
-        onClicked: Quickshell.execDetached(["bash", "-c", "walker"])
+        onClicked: Quickshell.execDetached(["bash", "-c", "$HOME/.config/hypr/scripts/qs_manager.sh toggle launcher"])
     }
 }

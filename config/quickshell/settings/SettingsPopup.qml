@@ -5561,7 +5561,6 @@ Item {
                                 model: [
                                     { f: "kitty/colors.conf", i: "󰄛", c: "yellow" },
                                     { f: "quickshell/colors.json", i: "󰣆", c: "mauve" },
-                                    { f: "swaync/colors.css", i: "󰂚", c: "pink" },
                                     { f: "walker/colors.css", i: "󰀻", c: "green" },
                                     { f: "zsh/omp-colors.toml", i: "󱆃", c: "blue" },
                                     { f: "hypr/lua/colors.lua", i: "󰆍", c: "peach" }

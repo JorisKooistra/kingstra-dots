@@ -75,8 +75,6 @@ local function layer(name, namespace, properties)
     hl.layer_rule(properties)
 end
 
-layer("swaync-control", "swaync-control-center", { no_anim = true })
-layer("swaync-notifications", "swaync-notification-window", { no_anim = true })
 layer("walker", "walker", { blur = true })
 layer("selection", "selection", { no_anim = true })
 layer("skwd-paper", "skwd-paper", { no_anim = true })

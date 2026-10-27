@@ -455,10 +455,6 @@ Item {
         Quickshell.execDetached(["notify-send", "Updates", "Updateworkflow gestart in terminal"]);
     }
 
-    function launchWalker() {
-        Quickshell.execDetached(["bash", "-lc", "walker"]);
-    }
-
     function switchWorkspace(wsId) {
         Quickshell.execDetached([
             "bash",

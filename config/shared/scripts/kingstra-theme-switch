@@ -941,8 +941,7 @@ trap - EXIT
 _log "theme.json gegenereerd"
 
 WALKER_THEME_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/walker/theme.generated.css"
-SWAYNC_THEME_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/theme.generated.css"
-mkdir -p "$(dirname "$WALKER_THEME_CSS")" "$(dirname "$SWAYNC_THEME_CSS")"
+mkdir -p "$(dirname "$WALKER_THEME_CSS")"
 
 cat > "$WALKER_THEME_CSS" <<EOF
 #window {
@@ -995,66 +994,7 @@ row:hover {
 }
 EOF
 
-# Glasdekking voor het swaync control-center: bijna dekkend zodat de donkere
-# desktop er niet doorheen lekt (dat las als een zwart blok), met net genoeg
-# glas voor diepte. Zelfde lijn als de settings-paneelvulling (panelFillOpacity).
-SWAYNC_GLASS_OPACITY=$(python3 -c "print(min(0.99, max(0.95, ${APPEARANCE_POPUP_OPACITY:-0.92} + ${STYLE_GLASS_STRENGTH} * 0.20)))")
-
-cat > "$SWAYNC_THEME_CSS" <<EOF
-* {
-  font-family: "${FONTS_UI_FONT:-Inter}", "${FONTS_MONO_FONT:-JetBrainsMono Nerd Font}", sans-serif;
-  font-size: ${FONTS_UI_FONT_SIZE:-13}px;
-}
-
-# Zelfde blob-gradient + accentrand als de QML-widgets. De chrome-blob sampelt
-# één diagonaal verloop (linksboven warm accent2-source -> rechtsonder primary)
-# over dark barFloor; zie ShellChrome.barGradStart/barGradEnd. swaync kan de SDF-
-# shader niet draaien, dus we benaderen datzelfde verloop in GTK-CSS. Pure @mantle
-# met een bijna-onzichtbare @outline-rand liet het control-center als enige paneel
-# als een vlakke zwarte doos buiten het thema vallen ("waar is de gradient?").
-.control-center {
-  background-color: alpha(mix(@base, @accent2-source, 0.34), ${SWAYNC_GLASS_OPACITY});
-  background-image: linear-gradient(135deg,
-      alpha(mix(@base, @accent2-source, 0.34), ${SWAYNC_GLASS_OPACITY}),
-      alpha(mix(@base, @accent3-source, 0.33), ${SWAYNC_GLASS_OPACITY}),
-      alpha(mix(@base, @primary, 0.32), ${SWAYNC_GLASS_OPACITY}));
-  border: ${APPEARANCE_BORDER_WIDTH:-1}px solid alpha(@primary, 0.32);
-  border-radius: $((STYLE_WIDGET_RADIUS + 4))px;
-  box-shadow: 0 18px 52px alpha(@crust, ${STYLE_PANEL_SHADOW});
-  padding: ${STYLE_PANEL_PADDING}px;
-}
-
-.widget-title > button,
-.widget-dnd,
-.notification,
-.widget-mpris-player,
-.notification-action {
-  border-radius: ${STYLE_WIDGET_RADIUS}px;
-}
-
-.widget-title > button,
-.widget-dnd,
-.widget-mpris-player,
-.notification {
-  background: alpha(@surface0, $(python3 -c "print(min(0.98, max(0.74, ${APPEARANCE_POPUP_OPACITY:-0.92} + ${STYLE_GLASS_STRENGTH} * 0.15)))"));
-}
-
-.notification {
-  border: ${APPEARANCE_BORDER_WIDTH:-1}px solid alpha(@outline-variant, ${STYLE_OUTLINE_STRENGTH});
-}
-
-.app-name,
-.summary {
-  font-family: "${FONTS_DISPLAY_FONT:-${FONTS_UI_FONT:-Inter}}", sans-serif;
-}
-
-.body,
-.time {
-  font-family: "${FONTS_UI_FONT:-Inter}", sans-serif;
-}
-EOF
-
-_log "Walker/SwayNC theme overrides gegenereerd"
+_log "Walker theme override gegenereerd"
 
 # ---------------------------------------------------------------------------
 # Step 4 — Apply Hyprland changes live through the Lua API.

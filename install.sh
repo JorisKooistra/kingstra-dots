@@ -193,7 +193,12 @@ main() {
     log_init
     detect_system
 
-    # Optioneel: overschrijf gedetecteerde waarden met een gebruikersbestand
+    # Vaste eigen keuzes (niet in git, blijven bij updates staan), daarna een
+    # eventueel los override-bestand van de commandoregel.
+    local user_overrides="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/overrides.conf"
+    if [[ -f "$user_overrides" ]]; then
+        apply_overrides "$user_overrides"
+    fi
     if [[ -n "$OVERRIDE_FILE" ]]; then
         apply_overrides "$OVERRIDE_FILE"
     fi

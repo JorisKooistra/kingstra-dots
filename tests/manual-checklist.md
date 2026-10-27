@@ -16,7 +16,6 @@ Voer deze checks uit na het draaien van fase 1.
 
 - [ ] `installer/lib/` bevat alle 9 bibliotheekbestanden
 - [ ] `installer/phases/` bevat alle 15 fasebestanden
-- [ ] `installer/profiles/` bevat default, nvidia en laptop
 - [ ] `manifest/packages/` bevat 7 pakketlijsten
 - [ ] `manifest/services.txt` aanwezig
 - [ ] `manifest/fonts.txt` aanwezig

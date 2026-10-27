@@ -222,19 +222,3 @@ safe_touch() {
     ensure_dir "$(dirname "$file")"
     run_cmd touch "$file"
 }
-
-# ---------------------------------------------------------------------------
-# Profiel inladen
-# ---------------------------------------------------------------------------
-load_profile() {
-    local profile="${1:-default}"
-    local profile_file="$REPO_ROOT/installer/profiles/${profile}.conf"
-
-    if [[ -f "$profile_file" ]]; then
-        log_info "Profiel ingeladen: $profile"
-        # shellcheck source=/dev/null
-        source "$profile_file"
-    else
-        log_warn "Profielbestand niet gevonden: $profile_file — standaardinstellingen worden gebruikt"
-    fi
-}

@@ -290,10 +290,6 @@ output_path = "~/.config/gtk-4.0/colors.css"
 input_path = "~/.config/matugen/templates/vscode-colors.json"
 output_path = "~/.config/Code/User/matugen-colors.json"
 
-[templates.swaync]
-input_path = "~/.config/matugen/templates/swaync-colors.css"
-output_path = "~/.config/swaync/colors.css"
-
 [templates.sddm]
 input_path = "~/.config/matugen/templates/sddm-colors.qml"
 output_path = "~/.config/matugen/generated/sddm-colors.qml"
@@ -317,7 +313,6 @@ EOF
     # bovenliggende appmappen. Houd een eerste run op een schone installatie
     # daarom onafhankelijk van de installatievolgorde van die apps.
     ensure_dir "$HOME/.config/matugen/generated"
-    ensure_dir "$HOME/.config/swaync"
     ensure_dir "$HOME/.config/gtk-3.0"
     ensure_dir "$HOME/.config/gtk-4.0"
     ensure_dir "$HOME/.config/Code/User"
@@ -340,9 +335,6 @@ EOF
     _phase08_ensure_template "$matugen_conf" vscode \
         "~/.config/matugen/templates/vscode-colors.json" \
         "~/.config/Code/User/matugen-colors.json"
-    _phase08_ensure_template "$matugen_conf" swaync \
-        "~/.config/matugen/templates/swaync-colors.css" \
-        "~/.config/swaync/colors.css"
     _phase08_ensure_template "$matugen_conf" sddm \
         "~/.config/matugen/templates/sddm-colors.qml" \
         "~/.config/matugen/generated/sddm-colors.qml"

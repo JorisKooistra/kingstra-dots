@@ -85,7 +85,6 @@ _phase01_validate_structure() {
     local -a required_dirs=(
         "$REPO_ROOT/installer/lib"
         "$REPO_ROOT/installer/phases"
-        "$REPO_ROOT/installer/profiles"
         "$REPO_ROOT/manifest/packages"
         "$REPO_ROOT/config"
         "$REPO_ROOT/assets"

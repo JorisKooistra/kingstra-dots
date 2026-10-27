@@ -17,6 +17,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - `kingstra refresh <part>` puts one config back to the repo default, with a backup first.
 - `config/hypr/lua/user.lua` for personal binds, rules and settings: not tracked, loads last, errors are caught.
 
+### Simpler
+- SwayNC leftovers removed (config, color template, theme CSS, stop calls); migrations stop it and clean the Matugen config once.
+- One launcher: the search buttons open the Quickshell launcher; Walker and Elephant no longer run as background services.
+- `installer/profiles/` replaced by `installer/overrides.example.conf`; `~/.config/kingstra/overrides.conf` is read on every install and update.
+
 ## 2026.10.0 — 2026-10-27
 
 First versioned release. Highlights since the Lua migration:

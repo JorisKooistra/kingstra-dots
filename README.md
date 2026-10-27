@@ -198,7 +198,8 @@ Keybinds: `Super + Shift + W` (random) and `Super + Ctrl + W` (visual picker).
 ## Other components
 
 - **Launcher** — Quickshell launcher panel (`Super + Ctrl + Return`) with usage-based ordering
-  and up to three pinned apps. Walker + Elephant are also installed and run as a service.
+  and up to three pinned apps; the search buttons open it too. Walker is still installed as a
+  standalone command but no longer runs as a background service.
 - **Notifications** — Quickshell pop-ups next to the rail and a center grouped per app
   (`Super + N`), clear (`Super + Shift + N`), do-not-disturb (`Super + Alt + N`, or middle-click
   the rail bell). Do-not-disturb keeps notifications silently and survives a restart.
@@ -315,8 +316,10 @@ ENABLE_VESKTOP=true
 ```
 
 Spicetify, Vesktop and the optional Office, Heroic and VLC apps are never enabled automatically.
-`installer/profiles/` (`default`, `laptop`, `nvidia`) holds older preset files; they can still
-be passed with `--override`, but only their `ENABLE_*` flags have an effect.
+
+For choices that should stick, copy `installer/overrides.example.conf` to
+`~/.config/kingstra/overrides.conf`. The installer reads it on every run, including updates;
+it is not tracked by git.
 
 ### Uninstall
 

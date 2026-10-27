@@ -92,7 +92,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | Toetsen | Actie |
 |---|---|
 | `Super + Return` | Kitty (terminal) |
-| `Super + Ctrl + Return` | Walker (launcher) |
+| `Super + Ctrl + Return` | App launcher |
 | `Super + B` | Browser (standaard) |
 | `Super + E` | Nautilus (bestandsbeheer) |
 | `Super + Shift + E` | Yazi (terminal bestandsbeheer) |

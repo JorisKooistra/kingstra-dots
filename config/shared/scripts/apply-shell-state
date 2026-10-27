@@ -514,11 +514,6 @@ _log "Hyprland runtime atomair bijgewerkt (geen extra reload)"
 # pollen colors.json en theme.json elke seconde en passen kleuren/instellingen
 # automatisch aan zonder herstart.
 
-if pgrep -x swaync &>/dev/null; then
-    pkill -x swaync 2>/dev/null || true
-    _log "SwayNC gestopt; Quickshell beheert notificaties"
-fi
-
 if pgrep -x kitty &>/dev/null; then
     pkill -USR1 kitty 2>/dev/null || true
     _log "Kitty herladen"
