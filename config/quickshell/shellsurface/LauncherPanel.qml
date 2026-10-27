@@ -4,6 +4,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import ".."
+import "../settings/SettingIndex.js" as SettingIndex
 
 // App-launcher die vanaf de onderkant van het scherm uitgroeit, in dezelfde
 // chrome-taal als de bar. De desktop-entries komen uit list-apps.py; de
@@ -38,6 +39,177 @@ FocusScope {
         { icon: "󰂚", label: "Meldingen", detail: "Inbox en niet storen", target: "notifications" },
         { icon: "󰌾", label: "Vergrendelen", detail: "Huidige sessie", target: "lock" }
     ]
+
+    // --- Voorvoegsels, zoals Caelestia en DMS ---------------------------------
+    // Het eerste teken kiest een modus; de rest is de zoekterm.
+    readonly property var prefixModes: [
+        { key: "=", icon: "󰃬", label: "rekenen" },
+        { key: ">", icon: "󰆍", label: "commando" },
+        { key: ":", icon: "󰞅", label: "emoji" },
+        { key: "/", icon: "󰒓", label: "instelling" },
+        { key: "?", icon: "󰖟", label: "web" },
+        { key: "@", icon: "󰖯", label: "venster" }
+    ]
+    readonly property string prefix: {
+        let c = String(query || "").charAt(0);
+        return c !== "" && "=>:/?@".indexOf(c) !== -1 ? c : "";
+    }
+    readonly property string term: prefix !== "" ? String(query).substring(1).trim() : ""
+    property var emojiResults: []
+    property var windowResults: []
+
+    readonly property var prefixResults: {
+        let t = term;
+        if (prefix === "=") {
+            let v = root.calc(t);
+            if (t === "") return [{ icon: "󰃬", label: "Typ een som", detail: "Bijv. 12*(3+4) of 2^10", kind: "none" }];
+            if (v === "") return [{ icon: "󰃬", label: "Geen geldige som", detail: t, kind: "none" }];
+            return [{ icon: "󰃬", label: "= " + v, detail: "Enter kopieert de uitkomst", kind: "copy", value: v }];
+        }
+        if (prefix === ">") {
+            if (t === "") return [{ icon: "󰆍", label: "Typ een commando", detail: "Bijv. > htop", kind: "none" }];
+            return [
+                { icon: "󰆍", label: t, detail: "Uitvoeren in een terminal", kind: "term", value: t },
+                { icon: "󰐊", label: t, detail: "Op de achtergrond uitvoeren", kind: "run", value: t }
+            ];
+        }
+        if (prefix === ":") {
+            if (t === "") return [{ icon: "󰞅", label: "Typ een woord", detail: "Bijv. :hart of :rocket", kind: "none" }];
+            return emojiResults.map(e => ({ icon: e.char, label: e.name, detail: "Enter kopieert", kind: "copy", value: e.char, emoji: true }));
+        }
+        if (prefix === "/") {
+            let hits = t === "" ? SettingIndex.entries.slice(0, 10) : SettingIndex.search(t, 10);
+            return hits.map(e => ({ icon: "󰒓", label: e.label, detail: e.where, kind: "setting", value: SettingIndex.deepLink(e) }));
+        }
+        if (prefix === "?") {
+            if (t === "") return [{ icon: "󰖟", label: "Typ een zoekterm", detail: "Bijv. ?hyprland gestures", kind: "none" }];
+            let q = encodeURIComponent(t);
+            return [
+                { icon: "󰖟", label: "Zoek op het web: " + t, detail: "DuckDuckGo", kind: "url", value: "https://duckduckgo.com/?q=" + q },
+                { icon: "󰣇", label: "Zoek in de Arch Wiki: " + t, detail: "wiki.archlinux.org", kind: "url", value: "https://wiki.archlinux.org/index.php?search=" + q },
+                { icon: "󰖬", label: "Zoek op Wikipedia: " + t, detail: "nl.wikipedia.org", kind: "url", value: "https://nl.wikipedia.org/w/index.php?search=" + q }
+            ];
+        }
+        if (prefix === "@") {
+            let n = t.toLowerCase();
+            return windowResults
+                .filter(w => n === "" || (String(w.title) + " " + String(w.className)).toLowerCase().indexOf(n) !== -1)
+                .map(w => ({ icon: "󰖯", label: String(w.title), detail: String(w.className) + " · werkruimte " + w.workspace,
+                             kind: "window", value: String(w.address), workspace: String(w.workspace) }));
+        }
+        return [];
+    }
+    onPrefixResultsChanged: if (prefix !== "") selectedIndex = 0
+    onPrefixChanged: if (prefix === "@" && !windowProc.running) windowProc.running = true
+    onTermChanged: if (prefix === ":") emojiDebounce.restart()
+
+    // Kleine rekenmachine zonder eval: + - * / % ^ en haakjes.
+    function calc(text) {
+        let src = String(text || "").replace(/,/g, ".").replace(/×/g, "*").replace(/÷/g, "/").replace(/\s+/g, "");
+        if (src === "" || !/^[0-9.+\-*\/%^()]+$/.test(src)) return "";
+        let pos = 0;
+        function peek() { return src.charAt(pos); }
+        function number() {
+            let start = pos;
+            while (pos < src.length && /[0-9.]/.test(src.charAt(pos))) pos++;
+            if (start === pos) throw "getal";
+            return parseFloat(src.substring(start, pos));
+        }
+        function factor() {
+            if (peek() === "-") { pos++; return -factor(); }
+            if (peek() === "+") { pos++; return factor(); }
+            let v;
+            if (peek() === "(") {
+                pos++;
+                v = expr();
+                if (peek() !== ")") throw "haakje";
+                pos++;
+            } else {
+                v = number();
+            }
+            if (peek() === "^") { pos++; v = Math.pow(v, factor()); }
+            return v;
+        }
+        function termP() {
+            let v = factor();
+            while (peek() === "*" || peek() === "/" || peek() === "%") {
+                let op = src.charAt(pos++);
+                let r = factor();
+                v = op === "*" ? v * r : (op === "/" ? v / r : v % r);
+            }
+            return v;
+        }
+        function expr() {
+            let v = termP();
+            while (peek() === "+" || peek() === "-") {
+                let op = src.charAt(pos++);
+                let r = termP();
+                v = op === "+" ? v + r : v - r;
+            }
+            return v;
+        }
+        try {
+            let v = expr();
+            if (pos !== src.length || !isFinite(v)) return "";
+            return String(Math.round(v * 1e10) / 1e10);
+        } catch (e) {
+            return "";
+        }
+    }
+
+    function runPrefixResult(item) {
+        if (!item || item.kind === "none") return;
+        if (item.kind === "copy") {
+            Quickshell.execDetached(["wl-copy", String(item.value)]);
+            Quickshell.execDetached(["notify-send", "-a", "Kingstra", "Gekopieerd", String(item.value)]);
+        } else if (item.kind === "term") {
+            Quickshell.execDetached(["kitty", "--hold", "bash", "-lc", String(item.value)]);
+        } else if (item.kind === "run") {
+            Quickshell.execDetached(["bash", "-lc", "setsid bash -lc \"$1\" >/dev/null 2>&1 &", "bash", String(item.value)]);
+        } else if (item.kind === "setting") {
+            Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "open", "settings", String(item.value)]);
+        } else if (item.kind === "url") {
+            Quickshell.execDetached(["xdg-open", String(item.value)]);
+        } else if (item.kind === "window") {
+            Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/quickshell/shellsurface/window-switcher.sh",
+                "focus", String(item.value), String(item.workspace)]);
+        }
+        if (item.kind !== "setting") closePanel();
+    }
+
+    function activateSelected() {
+        if (prefix !== "") runPrefixResult(prefixResults[selectedIndex]);
+        else launch(filtered[selectedIndex]);
+    }
+
+    Timer {
+        id: emojiDebounce
+        interval: 140
+        onTriggered: {
+            if (root.prefix !== ":" || root.term === "") { root.emojiResults = []; return; }
+            emojiProc.command = ["python3", Quickshell.env("HOME") + "/.config/quickshell/shellsurface/emoji-search.py", root.term];
+            emojiProc.running = true;
+        }
+    }
+
+    Process {
+        id: emojiProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.emojiResults = JSON.parse(this.text); } catch (e) { root.emojiResults = []; }
+            }
+        }
+    }
+
+    Process {
+        id: windowProc
+        command: ["bash", Quickshell.env("HOME") + "/.config/quickshell/shellsurface/window-switcher.sh", "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.windowResults = JSON.parse(this.text); } catch (e) { root.windowResults = []; }
+            }
+        }
+    }
 
     readonly property color surfaceColor: {
         let f = mocha.crust;
@@ -326,10 +498,11 @@ FocusScope {
     }
 
     function move(delta) {
-        let n = filtered.length;
+        let n = prefix !== "" ? prefixResults.length : filtered.length;
         if (n === 0) return;
         selectedIndex = (selectedIndex + delta + n) % n;
-        appList.positionViewAtIndex(selectedIndex, ListView.Contain);
+        if (prefix !== "") prefixList.positionViewAtIndex(selectedIndex, ListView.Contain);
+        else appList.positionViewAtIndex(selectedIndex, ListView.Contain);
     }
 
     Keys.onEscapePressed: event => {
@@ -338,8 +511,8 @@ FocusScope {
     }
     Keys.onDownPressed: event => { root.move(1); event.accepted = true; }
     Keys.onUpPressed: event => { root.move(-1); event.accepted = true; }
-    Keys.onReturnPressed: event => { root.launch(root.filtered[root.selectedIndex]); event.accepted = true; }
-    Keys.onEnterPressed: event => { root.launch(root.filtered[root.selectedIndex]); event.accepted = true; }
+    Keys.onReturnPressed: event => { root.activateSelected(); event.accepted = true; }
+    Keys.onEnterPressed: event => { root.activateSelected(); event.accepted = true; }
 
     ColumnLayout {
         anchors.fill: parent
@@ -383,14 +556,16 @@ FocusScope {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: searchInput.text === ""
-                        text: "Zoek apps of kies een actie…"
+                        text: "Zoek apps, of begin met = > : / ? @"
                         font: searchInput.font
                         color: mocha.subtext0
                     }
                 }
 
                 Text {
-                    text: (root.filtered.length + root.filteredActions.length) + ""
+                    text: root.prefix !== ""
+                        ? root.prefixResults.filter(r => r.kind !== "none").length + ""
+                        : (root.filtered.length + root.filteredActions.length) + ""
                     font.family: ThemeConfig.monoFont
                     font.pixelSize: 12
                     color: mocha.subtext0
@@ -405,7 +580,7 @@ FocusScope {
             Layout.fillWidth: true
             // Empty query: a calm dashboard. Typed query: only matching
             // commands survive, directly above matching apps.
-            visible: root.query === "" || root.filteredActions.length > 0
+            visible: root.prefix === "" && (root.query === "" || root.filteredActions.length > 0)
             spacing: 8
 
             Repeater {
@@ -465,11 +640,138 @@ FocusScope {
             }
         }
 
+        // Voorvoegsels als kleine chips: klik zet het teken in het zoekveld.
+        Flow {
+            Layout.fillWidth: true
+            visible: root.query === ""
+            spacing: 6
+
+            Repeater {
+                model: root.prefixModes
+                delegate: Rectangle {
+                    required property var modelData
+                    width: chipRow.implicitWidth + 18
+                    height: 26
+                    radius: 13
+                    color: chipMouse.containsMouse
+                        ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.20)
+                        : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+                    Row {
+                        id: chipRow
+                        anchors.centerIn: parent
+                        spacing: 6
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.key
+                            font.family: ThemeConfig.monoFont
+                            font.pixelSize: 12
+                            font.weight: Font.Bold
+                            color: mocha.primary
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.label
+                            font.family: ThemeConfig.uiFont
+                            font.pixelSize: 11
+                            color: mocha.subtext1
+                        }
+                    }
+                    MouseArea {
+                        id: chipMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            searchInput.text = modelData.key;
+                            searchInput.forceActiveFocus();
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Resultaten van een voorvoegsel ----------------------------------
+        ListView {
+            id: prefixList
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.prefix !== ""
+            clip: true
+            model: root.prefixResults
+            spacing: 2
+            currentIndex: root.selectedIndex
+            boundsBehavior: Flickable.StopAtBounds
+
+            delegate: Rectangle {
+                id: prow
+                required property int index
+                required property var modelData
+                readonly property bool current: index === root.selectedIndex && modelData.kind !== "none"
+
+                width: prefixList.width
+                height: 46
+                radius: root.rowCornerRadius
+                color: current ? root.rowActive : (prowMouse.containsMouse && modelData.kind !== "none" ? root.rowHover : "transparent")
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    spacing: 12
+
+                    Text {
+                        Layout.preferredWidth: 26
+                        horizontalAlignment: Text.AlignHCenter
+                        text: prow.modelData.icon
+                        font.family: prow.modelData.emoji ? ThemeConfig.textFont : ThemeConfig.iconFont
+                        font.pixelSize: prow.modelData.emoji ? 20 : 17
+                        color: mocha.primary
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+                        Text {
+                            Layout.fillWidth: true
+                            text: prow.modelData.label
+                            elide: Text.ElideRight
+                            font.family: prow.modelData.kind === "copy" && !prow.modelData.emoji ? ThemeConfig.monoFont : ThemeConfig.uiFont
+                            font.pixelSize: 14
+                            font.weight: prow.current ? Font.Bold : Font.DemiBold
+                            color: prow.modelData.kind === "none" ? mocha.subtext0 : mocha.text
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            visible: text !== ""
+                            text: prow.modelData.detail || ""
+                            elide: Text.ElideRight
+                            font.family: ThemeConfig.uiFont
+                            font.pixelSize: 11
+                            color: mocha.subtext0
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: prowMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: prow.modelData.kind === "none" ? Qt.ArrowCursor : Qt.PointingHandCursor
+                    onEntered: root.selectedIndex = prow.index
+                    onClicked: root.runPrefixResult(prow.modelData)
+                }
+            }
+        }
+
         // --- Resultaten ------------------------------------------------------
         ListView {
             id: appList
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: root.prefix === ""
             clip: true
             model: root.filtered
             spacing: 2

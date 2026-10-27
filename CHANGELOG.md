@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell: launcher prefixes
+- The launcher understands a first character, like Caelestia and DMS: `=` calculator (Enter copies), `>` shell command (terminal or background), `:` emoji search (Enter copies, Dutch words like `:hart` work), `/` jump to a setting, `?` search DuckDuckGo, Arch Wiki or Wikipedia, `@` switch to an open window.
+- An empty launcher shows the prefixes as chips; click one to start.
+- The setting index now lives in `settings/SettingIndex.js`, shared by the settings app and the launcher; `open settings thema/fonts` also picks the theme-editor tab.
+
 ### Shell: control center
 - The panel that grows from the top edge is now a control center (Super+A, or click the status tile in the rail): quick toggles, volume and brightness, time, month and next appointment, system load, media, notifications and screen time in one place.
 - Toggles work like GNOME's quick settings: click to switch, the arrow expands the pill in place (Wi-Fi networks, Bluetooth devices, power profiles) with a link to the full panel.
