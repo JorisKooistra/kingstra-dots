@@ -124,6 +124,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + X` | FocusTime / power menu |
 | `Super + A` | Controlecentrum (snelle instellingen, agenda, media, meldingen) |
 | `Super + ,` / `Super + Ctrl + I` | Instellingen (eigen venster) |
+| `Super + Alt + Space` | Toetsenbordmenu voor alles (thema, modus, schermen, systeem, sessie) |
 | Klik op CPU/RAM-pil | Systeemstats popup |
 
 ---

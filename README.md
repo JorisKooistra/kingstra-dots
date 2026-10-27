@@ -387,6 +387,7 @@ for the full list.
 | `Super + O` | Monitors |
 | `Super + A` | Control center |
 | `Super + ,` / `Super + Ctrl + I` | Settings (own window) |
+| `Super + Alt + Space` | Keyboard menu for everything |
 | `Super + Ctrl + T` / `Super + Shift + T` | Theme picker / next theme |
 | `Super + Ctrl + M` | Mode picker |
 | `Super + Ctrl + W` / `Super + Shift + W` | Wallpaper picker / random wallpaper |

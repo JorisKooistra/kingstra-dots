@@ -25,7 +25,7 @@ Item {
             // focus meestal nog van de vorige keer, dus dat signaal blijft uit
             // en zou het zoekveld leeg laten. callLater wacht tot de Loader
             // zijn inhoud heeft geplaatst.
-            if (sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "windows") Qt.callLater(focusContent);
+            if (sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "windows" || sourceEntryId === "menu") Qt.callLater(focusContent);
         } else {
             visualClearTimer.restart();
         }
@@ -99,7 +99,7 @@ Item {
         // Launcher en klembord zijn beide zoekflows. Ze groeien uit dezelfde
         // onderrand en vormen zo één herkenbare Quickshell-taal, in plaats van
         // dat het klembord als een los zijpaneel naast de rail voelt.
-        if (entryId === "launcher" || entryId === "clipboard") return "bottom";
+        if (entryId === "launcher" || entryId === "clipboard" || entryId === "menu") return "bottom";
         if (isRailEntry(entryId)) return railOnRight ? "right" : "left";
         if (isStripEntry(entryId)) return stripOnBottom ? "bottom" : "top";
         return "";
@@ -107,7 +107,7 @@ Item {
     // Alleen panelen met tekstinvoer hebben een focusgrab nodig. Bij de
     // overige panelen zou de grab botsen met de legacy focus-afhandeling
     // in qs_manager.sh en het paneel meteen weer sluiten.
-    readonly property bool needsKeyboard: sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "windows"
+    readonly property bool needsKeyboard: sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "windows" || sourceEntryId === "menu"
     readonly property bool fromStrip: ThemeConfig.barStatusStripEnabled && !stripOnBottom
                                       && anchorY < stripH + 4
     readonly property string visualEdge: edgeFor(visualEntryId)
@@ -220,6 +220,7 @@ Item {
         let contentWidth = contentPreferredSize(entryId, "preferredPanelWidth");
         if (contentWidth > 0) return Math.min(contentWidth, availableW);
         if (entryId === "launcher") return Math.min(680, availableW);
+        if (entryId === "menu") return Math.min(560, availableW);
         if (entryId === "clipboard") return Math.min(680, availableW);
         if (entryId === "windows") return Math.min(620, availableW);
         if (entryId === "tophover") return Math.min(1060, availableW);
@@ -240,6 +241,7 @@ Item {
         let contentHeight = contentPreferredSize(entryId, "preferredPanelHeight");
         if (contentHeight > 0) return Math.min(contentHeight, availableH);
         if (entryId === "launcher") return Math.min(610, availableH);
+        if (entryId === "menu") return Math.min(520, availableH);
         if (entryId === "clipboard") return Math.min(570, availableH);
         // De atlas heeft vaak maar enkele regels. Een hoge vaste popup liet
         // dan een betekenisloos donker vlak over; extra vensters scrollen.
@@ -258,6 +260,7 @@ Item {
 
     function sourceFor(entryId) {
         if (entryId === "launcher") return Qt.resolvedUrl("LauncherPanel.qml");
+        if (entryId === "menu") return Qt.resolvedUrl("KingstraMenu.qml");
         if (entryId === "clipboard") return Qt.resolvedUrl("ClipboardPanel.qml");
         if (entryId === "windows") return Qt.resolvedUrl("WindowSwitcherPanel.qml");
         if (entryId === "tophover") return Qt.resolvedUrl("TopHoverWidget.qml");

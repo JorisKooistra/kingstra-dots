@@ -61,7 +61,8 @@ Onderhoud
 
 Openen
   settings [pagina]        instellingen, optioneel op een pagina (thema, geluid, sessie, ...)
-  keys | launcher | quick  sneltoetsen, launcher, snelle instellingen
+  keys | launcher | quick  sneltoetsen, launcher, controlecentrum
+  menu                     toetsenbordmenu voor alles (Super+Alt+Spatie)
 
 Overig
   welcome                  welkomstmelding en sneltoetsen opnieuw tonen
@@ -96,6 +97,7 @@ case "$cmd" in
         exec "$QS_MANAGER" open settings "${1:-}" ;;
     keys|toetsen|sneltoetsen) panel help ;;
     launcher) panel launcher ;;
+    menu) panel menu ;;
     quick|snel) panel tophover ;;
     welcome|welkom) run kingstra-welcome --force ;;
     version|versie|--version|-v)

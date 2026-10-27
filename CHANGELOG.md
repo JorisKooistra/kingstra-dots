@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell: keyboard menu
+- Super+Alt+Space (or `kingstra menu`) opens one keyboard menu for everything, like Omarchy's: apps, appearance (theme, wallpaper), mode, quick toggles, screens, capture, system (update, doctor, restore point, restart) and session. Arrows or 1-9 choose, Enter or → opens, ← goes back, typing filters.
+
 ### Shell: notifications
 - The control center groups notifications per app, newest app first; the cross on an app's row clears that app.
 - Notifications that support it (chat apps) get an answer field in the notifications panel; Enter sends the reply.
