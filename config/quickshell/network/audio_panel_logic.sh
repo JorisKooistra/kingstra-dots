@@ -56,6 +56,7 @@ CONNECTED_JSON=$(jq -n \
     --argjson muted "$MUTED" \
     '{id: $id, name: $name, icon: $icon, volume: $vol, port: $port, muted: $muted}')
 
+# shellcheck disable=SC2046 # bewust op één regel uitgevoerd
 echo $(jq -n \
     --arg power "$POWER" \
     --argjson connected "$CONNECTED_JSON" \

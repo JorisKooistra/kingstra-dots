@@ -12,6 +12,7 @@ hyprctl_ready() {
 
 wait_for_hyprctl() {
     local i
+    # shellcheck disable=SC2034 # alleen een teller
     for i in {1..30}; do
         hyprctl_ready && return 0
         sleep 0.2

@@ -1,0 +1,6 @@
+# Tildes in strings are deliberately literal: they end up in config files
+# (Matugen, Hyprland) that expand them themselves.
+disable=SC2088
+# `local x=$(cmd)` is used for best-effort reads where the exit status of cmd
+# is not checked anyway.
+disable=SC2155

@@ -28,6 +28,7 @@ mkdir -p "$CACHE_DIR"
 CURRENT_RAW=$(nmcli -t -f active,ssid,signal,security device wifi 2>/dev/null | grep "^yes")
 
 if [[ -n "$CURRENT_RAW" ]]; then
+    # shellcheck disable=SC2034 # veld van read, niet gebruikt
     IFS=':' read -r active ssid signal security <<< "$CURRENT_RAW"
     icon=$(get_icon "$signal")
     
@@ -37,6 +38,7 @@ if [[ -n "$CURRENT_RAW" ]]; then
     
     # Load cached IP and FREQ if they exist to prevent blocking
     if [ -f "$CACHE_FILE" ]; then
+        # shellcheck source=/dev/null
         source "$CACHE_FILE"
     fi
     
@@ -81,6 +83,7 @@ NETWORKS_JSON=$(nmcli -t -f active,ssid,signal,security device wifi list --resca
            '{id: $id, ssid: $ssid, icon: $icon, signal: $signal, security: $security}'
     done | jq -s '.')
 
+# shellcheck disable=SC2046 # bewust op één regel uitgevoerd
 echo $(jq -n \
        --arg power "on" \
        --argjson connected "${CONNECTED_JSON:-null}" \

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034 # variabelen worden gelezen door gesourcete code
 # Terugzetpunt maken, rollback, vastzetten en loslaten, plus eenmalige migraties.
 set -euo pipefail
 

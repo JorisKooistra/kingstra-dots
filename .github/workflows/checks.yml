@@ -29,9 +29,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: tests/scripts/check.sh shellcheck
-      - name: Warnings (non-blocking)
-        if: always()
-        continue-on-error: true
+      # Warnings block too since 2026.10: the list was cleaned up, deliberate
+      # exceptions carry an inline directive or live in .shellcheckrc.
+      - name: Warnings
         run: tests/scripts/check.sh shellcheck-warnings
 
   qmllint:

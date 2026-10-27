@@ -2,6 +2,7 @@
 
 ## NETWORK
 get_has_wifi() {
+    # shellcheck disable=SC2010 # sysfs-namen zijn altijd eenvoudig
     ls /sys/class/ieee80211/ 2>/dev/null | grep -q . && echo "true" || echo "false"
 }
 get_eth_interface() {

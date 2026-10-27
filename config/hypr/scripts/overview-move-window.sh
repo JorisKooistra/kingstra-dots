@@ -8,6 +8,7 @@ cursor_y="${4:-}"
 window_x="${5:-}"
 window_y="${6:-}"
 is_floating="${7:-false}"
+# shellcheck disable=SC2034 # bewaard voor leesbaarheid van het argument
 source_workspace="${8:-}"
 target_address="${9:-}"
 drop_side="${10:-}"

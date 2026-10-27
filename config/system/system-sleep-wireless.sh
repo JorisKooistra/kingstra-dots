@@ -14,6 +14,7 @@
 case "${1:-}" in
     post)
         # Bluetooth-adapter kwijt? Herlaad btusb.
+        # shellcheck disable=SC2010 # sysfs-namen zijn altijd eenvoudig
         if ! ls /sys/class/bluetooth/ 2>/dev/null | grep -q hci; then
             modprobe -r btusb 2>/dev/null || true
             sleep 1

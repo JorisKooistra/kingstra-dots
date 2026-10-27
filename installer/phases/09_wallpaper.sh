@@ -364,6 +364,7 @@ _phase09_generate_fallback_wallpaper() {
     command -v magick &>/dev/null || magick_cmd="convert"
 
     # Donkerblauw→paars gradient (Kingstra stijl)
+    # shellcheck disable=SC2140 # ImageMagick-syntax kleur-kleur
     "$magick_cmd" -size 1920x1080 \
         gradient:"#1e1e2e"-"#313244" \
         -gravity center \

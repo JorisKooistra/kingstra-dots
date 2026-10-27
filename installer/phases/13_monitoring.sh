@@ -66,6 +66,7 @@ _phase13_sensors_detect() {
     fi
 
     log_info "sensors-detect uitvoeren in automatische modus (geen interactie)..."
+    # shellcheck disable=SC2024 # log is van de gebruiker, niet van root
     sudo sensors-detect --auto >>"$LOG_FILE" 2>&1 && \
         log_ok "sensors-detect voltooid" || \
         log_warn "sensors-detect mislukt — temperatuur wordt gelezen via /sys/class/thermal (kernel)"

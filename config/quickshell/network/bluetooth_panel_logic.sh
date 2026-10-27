@@ -96,6 +96,7 @@ get_status() {
 
             # Profile, Name, and Icon do not change dynamically. Calculate ONCE.
             if [ -f "$CACHE_FILE" ]; then
+                # shellcheck source=/dev/null
                 source "$CACHE_FILE"
             else
                 name=$(echo "$c_line" | cut -d ' ' -f 3-)

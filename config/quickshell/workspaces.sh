@@ -22,6 +22,7 @@ trap cleanup EXIT SIGTERM SIGINT
 BT_PID_FILE="$HOME/.cache/bt_scan_pid"
 
 if [ -f "$BT_PID_FILE" ]; then
+    # shellcheck disable=SC2046 # pid-bestand bevat één getal
     kill $(cat "$BT_PID_FILE") 2>/dev/null
     rm -f "$BT_PID_FILE"
 fi
@@ -84,6 +85,7 @@ while true; do
                 # Hyprland emits HUNDREDS of events a second when you move/resize windows.
                 # This reads and discards all subsequent events arriving within a 50ms window.
                 # It bundles the storm into a single UI update, completely preventing CPU clogging!
+                # shellcheck disable=SC2034 # veld van read, niet gebruikt
                 while read -t 0.05 -r extra_line; do
                     continue
                 done

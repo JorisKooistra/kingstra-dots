@@ -226,6 +226,7 @@ if [[ "$ACTION" == "close" ]]; then
     
     if [[ "$TARGET" == "network" || "$TARGET" == "all" || -z "$TARGET" ]]; then
         if [ -f "$BT_PID_FILE" ]; then
+            # shellcheck disable=SC2046 # pid-bestand bevat één getal
             kill $(cat "$BT_PID_FILE") 2>/dev/null
             rm -f "$BT_PID_FILE"
         fi
