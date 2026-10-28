@@ -13,7 +13,7 @@
 
 phase_run() {
     log_step "Hardware-config genereren (lua/hardware.lua)..."
-    _phase14_write_hardware_lua
+    _phase14_write_hardware_lua "$HOME/.config/hypr/lua/hardware.lua"
 
     log_step "GPU-specifieke aanpassingen..."
     _phase14_gpu_setup
