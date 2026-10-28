@@ -177,42 +177,62 @@ Rectangle {
     // KLOKMODULE — zichtbaar als inputveld niet actief is
     // -------------------------------------------------------------------------
     ColumnLayout {
+        // Zelfde klok als het vergrendelscherm (Lock.qml): uren en minuten
+        // los, een gedimde dubbelepunt, en bij het typen een kleine krimp.
         anchors.centerIn: parent
-        anchors.verticalCenterOffset: root.inputActive ? -140 : -30
-        spacing: 4
+        anchors.verticalCenterOffset: root.inputActive ? -120 : -40
+        spacing: -10
         opacity: root.inputActive ? 0.0 : 1.0
+        scale: root.inputActive ? 0.9 : 1.0
         visible: opacity > 0.01
 
-        Behavior on anchors.verticalCenterOffset { NumberAnimation { duration: 500; easing.type: Easing.OutExpo } }
-        Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+        Behavior on anchors.verticalCenterOffset { NumberAnimation { duration: 600; easing.type: Easing.OutExpo } }
+        Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: 500; easing.type: Easing.OutBack } }
 
-        Text {
-            id: clockLabel
+        RowLayout {
             Layout.alignment: Qt.AlignHCenter
-            font { family: "JetBrains Mono"; pixelSize: 120; bold: true }
-            color: Colors.text
+            spacing: 0
+            Text {
+                id: clockHours
+                font { family: "JetBrains Mono"; pixelSize: 140; bold: true }
+                color: Colors.text
+            }
+            Text {
+                text: ":"
+                font { family: "JetBrains Mono"; pixelSize: 140; bold: true }
+                opacity: 0.5
+                color: Colors.text
+            }
+            Text {
+                id: clockMinutes
+                font { family: "JetBrains Mono"; pixelSize: 140; bold: true }
+                color: Colors.text
+            }
         }
 
         Text {
             id: dateLabel
             Layout.alignment: Qt.AlignHCenter
-            font { family: "JetBrains Mono"; pixelSize: 20 }
-            color: Colors.subtext0
+            font { family: "JetBrains Mono"; pixelSize: 22; bold: true }
+            color: Colors.text
         }
 
         Text {
             Layout.alignment: Qt.AlignHCenter
-            text: "Klik om in te loggen"
+            text: "Klik of typ om in te loggen"
             font { family: "JetBrains Mono"; pixelSize: 13 }
             color: Colors.outline
-            topPadding: 8
+            topPadding: 18
         }
 
         Timer {
             interval: 1000; running: true; repeat: true; triggeredOnStart: true
             onTriggered: {
-                clockLabel.text = Qt.formatTime(new Date(), "hh:mm")
-                dateLabel.text  = Qt.formatDate(new Date(), "dddd d MMMM")
+                let d = new Date()
+                clockHours.text = Qt.formatTime(d, "hh")
+                clockMinutes.text = Qt.formatTime(d, "mm")
+                dateLabel.text = Qt.formatDate(d, "dddd d MMMM")
             }
         }
     }
@@ -458,76 +478,86 @@ Rectangle {
     }
 
     // -------------------------------------------------------------------------
-    // Onderaan: sessiekiezer + power-knoppen
+    // Onderaan: sessie + power-knoppen, als pillen zoals op het
+    // vergrendelscherm (48 px, licht glas, iets groter bij hover).
     // -------------------------------------------------------------------------
+    component Pill: Rectangle {
+        id: pill
+        property string icon: ""
+        property string label: ""
+        property color accent: Colors.mauve
+        property bool danger: false
+        signal clicked()
+        readonly property bool hovered: pillMa.containsMouse
+
+        height: 48
+        width: pillRow.implicitWidth + 36
+        radius: height / 2
+        color: hovered ? Qt.rgba(Colors.surface.r, Colors.surface.g, Colors.surface.b, 0.6)
+                       : Qt.rgba(Colors.surface0.r, Colors.surface0.g, Colors.surface0.b, 0.4)
+        border.width: 1
+        border.color: hovered ? (danger ? Colors.red : accent) : Qt.rgba(Colors.text.r, Colors.text.g, Colors.text.b, 0.08)
+        scale: hovered ? 1.05 : 1.0
+        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+        Behavior on color { ColorAnimation { duration: 200 } }
+        Behavior on border.color { ColorAnimation { duration: 200 } }
+
+        Row {
+            id: pillRow
+            anchors.centerIn: parent
+            spacing: 8
+            Text {
+                visible: pill.icon !== ""
+                anchors.verticalCenter: parent.verticalCenter
+                text: pill.icon
+                font { family: "JetBrainsMono Nerd Font"; pixelSize: 18 }
+                color: pill.hovered ? (pill.danger ? Colors.red : pill.accent) : Colors.subtext0
+                Behavior on color { ColorAnimation { duration: 200 } }
+            }
+            Text {
+                visible: pill.label !== ""
+                anchors.verticalCenter: parent.verticalCenter
+                text: pill.label
+                font { family: "JetBrains Mono"; pixelSize: 14; weight: Font.Black }
+                color: Colors.text
+            }
+        }
+        MouseArea {
+            id: pillMa
+            anchors.fill: parent
+            hoverEnabled: true
+            onClicked: pill.clicked()
+        }
+    }
+
     RowLayout {
         anchors {
             bottom: parent.bottom
             horizontalCenter: parent.horizontalCenter
-            bottomMargin: 32
+            bottomMargin: 40
         }
         spacing: 16
-        opacity: root.inputActive ? 0.7 : 0.35
-        Behavior on opacity { NumberAnimation { duration: 300 } }
 
-        // Sessie
-        Rectangle {
-            width: sessionLabel.implicitWidth + 24; height: 32; radius: 16
-            color: Qt.rgba(Colors.surface0.r, Colors.surface0.g, Colors.surface0.b, 0.4)
-
-            Text {
-                id: sessionLabel
-                anchors.centerIn: parent
-                text: sessionModel.data(sessionModel.index(sessionModel.lastIndex, 0), 256) || "Hyprland"
-                font { family: "JetBrains Mono"; pixelSize: 12 }
-                color: Colors.subtext0
-            }
+        Pill {
+            icon: "󰌌"
+            label: keyboard && keyboard.layouts.length > 0 && keyboard.currentLayout < keyboard.layouts.length
+                ? String(keyboard.layouts[keyboard.currentLayout].shortName).toUpperCase() : "US"
+            onClicked: if (keyboard && keyboard.layouts.length > 1)
+                keyboard.currentLayout = (keyboard.currentLayout + 1) % keyboard.layouts.length
         }
-
-        // Reboot
-        Rectangle {
-            width: 32; height: 32; radius: 16
-            color: rebootMa.containsMouse
-                   ? Qt.rgba(Colors.error.r, Colors.error.g, Colors.error.b, 0.2)
-                   : Qt.rgba(Colors.surface0.r, Colors.surface0.g, Colors.surface0.b, 0.4)
-            Behavior on color { ColorAnimation { duration: 150 } }
-
-            Text {
-                anchors.centerIn: parent
-                text: "󰑐"
-                font { family: "JetBrainsMono Nerd Font"; pixelSize: 14 }
-                color: Colors.subtext0
-            }
-
-            MouseArea {
-                id: rebootMa
-                anchors.fill: parent
-                hoverEnabled: true
-                onClicked: sddm.reboot()
-            }
+        Pill {
+            icon: "󰍹"
+            label: sessionModel.data(sessionModel.index(sessionModel.lastIndex, 0), 256) || "Hyprland"
         }
-
-        // Afsluiten
-        Rectangle {
-            width: 32; height: 32; radius: 16
-            color: powerMa.containsMouse
-                   ? Qt.rgba(Colors.error.r, Colors.error.g, Colors.error.b, 0.2)
-                   : Qt.rgba(Colors.surface0.r, Colors.surface0.g, Colors.surface0.b, 0.4)
-            Behavior on color { ColorAnimation { duration: 150 } }
-
-            Text {
-                anchors.centerIn: parent
-                text: "󰐥"
-                font { family: "JetBrainsMono Nerd Font"; pixelSize: 14 }
-                color: Colors.subtext0
-            }
-
-            MouseArea {
-                id: powerMa
-                anchors.fill: parent
-                hoverEnabled: true
-                onClicked: sddm.powerOff()
-            }
+        Pill {
+            icon: "󰑐"
+            danger: true
+            onClicked: sddm.reboot()
+        }
+        Pill {
+            icon: "󰐥"
+            danger: true
+            onClicked: sddm.powerOff()
         }
     }
 }

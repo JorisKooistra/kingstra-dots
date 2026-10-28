@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Login screen (SDDM)
+- The Kingstra SDDM theme now matches the lock screen: the same 140 px clock with separate hours and minutes and a dimmed colon, the same date line, the same shrink-and-fade when you start typing, and the same 48 px glass pills at the bottom (keyboard layout, session, restart, power off) with hover growth.
+- `kingstra update` copies the theme to `/usr/share/sddm/themes/kingstra` as before.
+
 ### Session: resume apps
 - Like macOS and Windows, apps come back after logging in, each on the workspace where it was. The session starter saves the open apps every two minutes to `~/.local/state/kingstra/session.json` (command line, workspace, class; Flatpak apps restart via `flatpak run`) and restores them a few seconds after login.
 - Apps that are already running (autostart) are not started twice; a snapshot older than seven days is ignored; an empty snapshot (for example while shutting down) never overwrites a good one.
