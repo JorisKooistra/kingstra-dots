@@ -25,7 +25,8 @@ Item {
         return {mode: mode, inherited: !saved.mode, rail: values.rail || {},
             nowPlaying: values.nowPlaying || "auto",
             desktopMedia: values.desktopMedia !== undefined ? values.desktopMedia : (!saved.mode || mode === "media"),
-            playerStyle: values.playerStyle || "theme"};
+            playerStyle: values.playerStyle || "theme",
+            wallpaperDrift: saved.wallpaperDrift !== false};
     }
     function resolveMode(name, fallback) {
         let p = profile(name, fallback.name);

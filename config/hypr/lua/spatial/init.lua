@@ -125,10 +125,32 @@ local function publish(ctx, state, descriptors, placements)
     if os.rename(path .. ".tmp", path) then snapshot_cache[key] = raw end
 end
 
+-- Kingstra: meld cameraverschuivingen als Hyprland-IPC-event
+-- (custom>>kingstra-pan,<werkruimte>,<dx>,<dy>, in schermbreedtes), zodat
+-- de shell een klein wallpaper-effect kan tonen. Puur informatief.
+local last_camera = {}
+local function announce_pan(ctx, state)
+    local key = workspace_key(ctx):match("^workspace:(%d+)$")
+    local c = state.camera
+    if not key or not c then return end
+    local w, h = math.max(ctx.area.w or 1, 1), math.max(ctx.area.h or 1, 1)
+    local x = (c.col or 0) + (c.offset_x or 0) / w
+    local y = (c.row or 0) + (c.offset_y or 0) / h
+    local previous = last_camera[key]
+    last_camera[key] = { x = x, y = y }
+    if not previous then return end
+    local dx, dy = x - previous.x, y - previous.y
+    if math.abs(dx) < 0.001 and math.abs(dy) < 0.001 then return end
+    pcall(function()
+        hl.dispatch(hl.dsp.event(string.format("kingstra-pan,%s,%.4f,%.4f", key, dx, dy)))
+    end)
+end
+
 local function recalculate(ctx)
     local state, descriptors = context(ctx)
     local placements = core.placements(state, ctx.area, config)
     publish(ctx, state, descriptors, placements)
+    announce_pan(ctx, state)
 
     for id, descriptor in pairs(descriptors) do
         local placement = placements[id]

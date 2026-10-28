@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Wallpaper-effect bij scrollen
+- Bewegen over het ruimtelijk werkvlak geeft een klein effect op de wallpaper: een zachte lichtvlek in de accentkleur glijdt tegen de beweging in en dooft weer uit, zodat het voelt alsof je over de wallpaper beweegt. Per scherm aan of uit via Bediening.
+- Echte parallax kan niet met skwd-paper; de Lua-layout meldt camerabewegingen nu als Hyprland-event (`custom>>kingstra-pan`).
+
 ### Werkvlakkaart met live beelden
 - De kaart van het ruimtelijk werkvlak (Super+Tab) toont nu het live beeld van elk venster, met de titel als label eronder, net als het gewone overzicht. Zonder beeld blijft de titel zichtbaar.
 - Zoomen met het wiel gaat vloeiend, tegels glijden mee als het zicht verschuift, en de kaart opent met een korte uitzoombeweging. Het zichtgebied staat als kader met label boven de vensters.

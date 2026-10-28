@@ -43,6 +43,15 @@ class ProfilesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.update(self.a, "set", "powerProfile", '"performance"')
 
+    def test_wallpaper_drift_is_per_screen_not_per_mode(self):
+        self.update(self.a, "set", "wallpaperDrift", "false")
+        a = self.data["screens"][profiles.monitor_key(self.a)]
+        self.assertIs(a["wallpaperDrift"], False)
+        self.update(self.a, "mode", "media")
+        self.assertIs(a["wallpaperDrift"], False)
+        with self.assertRaises(ValueError):
+            self.update(self.a, "set", "wallpaperDrift", '"ja"')
+
     def test_corrupt_preferences_are_not_discarded(self):
         with tempfile.TemporaryDirectory() as folder:
             file = Path(folder) / "profiles.json"

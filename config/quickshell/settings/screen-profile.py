@@ -86,6 +86,13 @@ def change(data, monitor, command, args, available, fallback):
         else:
             raise ValueError("Onbekende mode")
         return
+    if command == "set" and args and args[0] == "wallpaperDrift":
+        # Geldt voor het scherm, los van de mode.
+        value = json.loads(args[1])
+        if type(value) is not bool:
+            raise ValueError("Aan/uit verwacht")
+        screen["wallpaperDrift"] = value
+        return
     mode = screen.get("mode", fallback.get("name", "office"))
     values = screen.setdefault("modes", {})
     if command == "reset":

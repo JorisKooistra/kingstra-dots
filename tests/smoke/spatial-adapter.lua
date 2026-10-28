@@ -22,6 +22,9 @@ _G.hl = {
         focus = function(options)
             return { kind = "focus", window = options.window }
         end,
+        event = function(data)
+            return { kind = "event", data = data }
+        end,
     },
 }
 
@@ -65,5 +68,18 @@ assert(response == true, "height resize command was rejected")
 
 response = registered.provider.layout_msg(ctx, "resize height sideways")
 assert(type(response) == "string", "invalid resize command should return an error")
+
+-- Camerabeweging wordt als custom IPC-event gemeld (wallpaper-effect).
+registered.provider.recalculate(ctx)
+local before = #dispatched
+assert(registered.provider.layout_msg(ctx, "pan down") == true, "pan was rejected")
+registered.provider.recalculate(ctx)
+local pan = dispatched[#dispatched]
+assert(#dispatched == before + 1 and pan.kind == "event", "camera move did not announce a pan event")
+assert(pan.data:match("^kingstra%-pan,9,[-%d.]+,[-%d.]+$"), "unexpected pan event: " .. tostring(pan.data))
+local dy = tonumber(pan.data:match(",([-%d.]+)$"))
+assert(dy and dy > 0, "panning down should report a positive dy")
+registered.provider.recalculate(ctx)
+assert(#dispatched == before + 1, "an unchanged camera must not announce again")
 
 print("ok - mocked Hyprland adapter")

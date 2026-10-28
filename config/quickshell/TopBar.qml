@@ -17,6 +17,7 @@ ShellRoot {
     }
 
     LazyLoader { active: true; source: "settings/SpatialOverviewWindow.qml" }
+    LazyLoader { active: true; source: "desktop/SpatialDrift.qml" }
 
     BarShell {}
     ShellSurface {}

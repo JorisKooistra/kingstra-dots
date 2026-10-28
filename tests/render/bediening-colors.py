@@ -95,7 +95,7 @@ QtObject {
         {name: "DP-3", x: 1920, y: 0, width: 1920, height: 1080, scale: 1, focused: true, description: "Test display", activeWorkspace: {id: 2}},
         {name: "DP-1", x: 3840, y: 0, width: 1920, height: 1080, scale: 1, activeWorkspace: {id: 3}}
     ]
-    function profile(name) { return {mode: "office", inherited: true, rail: {}, nowPlaying: "auto", desktopMedia: true, playerStyle: "theme"}; }
+    function profile(name) { return {mode: "office", inherited: true, rail: {}, nowPlaying: "auto", desktopMedia: true, playerStyle: "theme", wallpaperDrift: true}; }
     function action(args) {}
     function togglePin(name, id, current) {}
 }

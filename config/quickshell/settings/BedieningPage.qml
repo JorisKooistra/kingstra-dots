@@ -226,6 +226,12 @@ Item {
                     }
                 }
                 Action {
+                    label: root.profile.wallpaperDrift ? "Wallpaper-effect bij scrollen: aan" : "Wallpaper-effect bij scrollen: uit"
+                    chosen: root.profile.wallpaperDrift
+                    allowed: !!root.screenName && !ScreenProfiles.busy
+                    onTriggered: root.set("wallpaperDrift", !root.profile.wallpaperDrift)
+                }
+                Action {
                     label: "Open overzicht"
                     allowed: root.workspace > 0
                     onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/overview-toggle.sh"])

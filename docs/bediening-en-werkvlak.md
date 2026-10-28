@@ -52,8 +52,10 @@ belasting.
   compositor-configreload opnieuw worden opgebouwd.
 - Groepen, fullscreen en verplaatsen tussen fysieke monitoren moeten nog in de
   echte sessie worden beoordeeld. Geautomatiseerde tests vervangen die controle niet.
-- Wallpaper-parallax is nog niet gebouwd: er is nog geen geschikte skwd-offset-API
-  vastgesteld. Er wordt geen tweede wallpaper-renderer toegevoegd.
+- Echte wallpaper-parallax kan niet: skwd-paper (de Rust/Vulkan-renderer) kent
+  geen verschuiving van de wallpaper. In plaats daarvan glijdt bij elke
+  camerabeweging een zachte lichtvlek in de accentkleur tegen de beweging in en
+  dooft uit (Bediening › Wallpaper-effect bij scrollen, per scherm).
 - De sneltoetsenhandleiding is bijgewerkt; welke bestaande bindings Joris wil
   schrappen of vervangen vraagt nog een keuze. Geen gebruikslogging toegevoegd.
 - “Schermen minimaliseren” is nog niet ingevuld: een venster parkeren,
