@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Herstel leesbaarheid Bediening
+- De nieuwe Bediening-pagina verwijst expliciet naar Kingstra-kleuren. De naam palette botste met Qt's eigen palette-eigenschap, met zwarte tekst en witte of zwarte knoppen als gevolg.
+- Een Qt-rendertest reproduceert die fout en controleert daarna de echte pagina met donkere en lichte kleuren, inclusief geselecteerde en niet-geselecteerde bediening.
+
 ### Shell start weer na update
 - Het eiland gebruikte een eigen property `right`, een vaste (FINAL) eigenschap van elk Qt-item. Qt weigerde daardoor het eiland en via de shell-surface de hele bar; na `kingstra update` bleef het scherm leeg. Hersteld door de naam te wijzigen (96ec636).
 - Nieuwe smoketest `qml-final-properties.sh` vangt deze fout voortaan voordat hij op main komt.
