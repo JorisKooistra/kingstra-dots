@@ -349,6 +349,20 @@ Item {
             TabButton { index: 0; icon: "󰕮"; label: "Controlecentrum" }
             TabButton { index: 1; icon: "󰍛"; label: "Systeem" }
             Item { Layout.fillHeight: true }
+            Rectangle {
+                Layout.preferredWidth: 30
+                Layout.preferredHeight: 34
+                radius: 8
+                color: bedieningMouse.containsMouse ? mocha.shellHoverFill : "transparent"
+                Text { anchors.centerIn: parent; text: "󰒓"; font.family: ThemeConfig.iconFont; font.pixelSize: 18; color: mocha.text }
+                MouseArea {
+                    id: bedieningMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "open", "settings", "bediening"])
+                }
+            }
         }
 
         Item {

@@ -94,6 +94,7 @@ Item {
     // De oude tabbladen Quick en Widgets bestonden alleen uit knoppen en
     // keuzes die ook in Thema, Bar, Sessie of Snelle instellingen staan.
     property var tabs: [
+        { label: "Bediening", icon: "󰍹", pages: [0], pageLabels: ["Bediening"], keywords: "mode modus scherm profiel rail indeling scroll werkvlak wallpaper muziek" },
         { label: "Uiterlijk", icon: "󰏘", pages: [1, 2], pageLabels: ["Thema", "Bar"],
           keywords: "thema kleur kleurschema matugen font lettertype icoon bar topbar positie vorm hoogte breedte rand rondheid blur effecten" },
         { label: "Beeldschermen", icon: "󰍹", pages: [6], pageLabels: ["Beeldschermen"],
@@ -171,6 +172,7 @@ Item {
     // Diepe links (qs_manager.sh open settings <naam>): elke pagina heeft een
     // vaste naam, zodat panelen Instellingen op de juiste plek kunnen openen.
     readonly property var pageNames: ({
+        "bediening": 0, "home": 0, "control": 0,
         "thema": 1, "theme": 1, "bar": 2, "sneltoetsen": 4, "keybinds": 4,
         "invoer": 5, "input": 5, "beeldschermen": 6, "monitors": 6,
         "netwerk": 7, "network": 7, "geluid": 8, "audio": 8,
@@ -2619,6 +2621,13 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
+
+                Loader {
+                    anchors.fill: parent
+                    active: root.currentPage === 0
+                    source: "BedieningPage.qml"
+                    onLoaded: item.pageRequested.connect(root.openNamedPage)
+                }
 
             // =================================================================
             // TAB 13: ABOUT
