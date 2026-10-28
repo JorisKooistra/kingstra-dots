@@ -68,8 +68,15 @@ def dispatch(message):
     return hypr("dispatch", "hl.dsp.layout(" + json.dumps(message) + ")")
 
 
-def current():
-    workspace = query("activeworkspace")
+def current(workspace_id=None):
+    if workspace_id is None:
+        workspace = query("activeworkspace")
+    else:
+        if not re.fullmatch(r"[1-9]\d*", str(workspace_id)):
+            raise ValueError("Ongeldige werkruimte")
+        workspace = next((w for w in query("workspaces") if str(w.get("id")) == str(workspace_id)), None)
+        if workspace is None:
+            raise ValueError("Werkruimte is niet beschikbaar")
     actual = layout_name(workspace)
     preset = saved().get(str(workspace["id"]), "tegels")
     if LAYOUTS.get(preset) != actual:
@@ -176,6 +183,8 @@ def main(args):
         print("\n".join(LAYOUTS))
     elif command == "current":
         print(json.dumps(current()))
+    elif command == "inspect":
+        print(json.dumps(current(args[1])))
     elif command == "apply":
         print(json.dumps(apply(args[1], args[2] if len(args) > 2 else None)))
     elif command == "scroll":

@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Bediening als startpagina
+- Instellingen opent op Bediening: kies een fysieke monitor en wijzig mode, indeling van de werkruimte, zichtbare railonderdelen, extra knoppen en muziekzichtbaarheid.
+- Railkeuzes worden voor de gekozen mode op het gekozen scherm bewaard. Extra knoppen kunnen omhoog/omlaag worden gezet; de mode-indeling is terug te zetten.
+- Thema, wallpaper-picker en sneltoetsen zijn van hieruit bereikbaar. Een tandwiel in het controlecentrum en `kingstra bediening` openen dezelfde pagina.
+
 ### Mode en muziek per scherm
 - Schermprofielen bewaren mode en railkeuzes per fysieke monitor, met aparte aanpassingen per mode. Een modewissel raakt geen globale energie-, thema- of meldingsinstellingen.
 - De now-playing-pill kiest standaard één stabiel mediascherm in plaats van alle schermen of het steeds wisselende focusscherm. Zichtbaarheid en desktopmedia zijn per scherm instelbaar via Bediening.
