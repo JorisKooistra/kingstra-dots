@@ -30,6 +30,16 @@ FocusScope {
         focusProcess.running = true;
     }
 
+    // Parkeren = minimaliseren: het venster verdwijnt naar een verborgen
+    // werkruimte en staat onderaan deze lijst tot je het terughaalt.
+    function parkWindow(win) {
+        if (!win || win.parked || focusProcess.running) return;
+        parkProcess.command = ["bash", bridge, "park", String(win.address)];
+        parkProcess.running = true;
+    }
+
+    readonly property int parkedCount: windows.filter(win => win.parked).length
+
     function closePanel() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
     }
@@ -66,6 +76,11 @@ FocusScope {
         onExited: (exitCode) => {
             if (exitCode === 0) root.closePanel();
         }
+    }
+
+    Process {
+        id: parkProcess
+        onExited: root.refresh()
     }
 
     Timer {
@@ -107,7 +122,9 @@ FocusScope {
             ColumnLayout {
                 Layout.fillWidth: true; spacing: 1
                 Text { text: "Vensters"; font.family: ThemeConfig.displayFont; font.pixelSize: 18; font.weight: Font.Black; color: mocha.text }
-                Text { text: root.windows.length + " open · spring direct naar een app"; font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0 }
+                Text { text: (root.windows.length - root.parkedCount) + " open"
+                    + (root.parkedCount > 0 ? " · " + root.parkedCount + " geparkeerd" : "")
+                    + " · spring direct naar een app"; font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0 }
             }
             Rectangle {
                 Layout.preferredWidth: 32; Layout.preferredHeight: 32; radius: 10
@@ -147,6 +164,7 @@ FocusScope {
                 required property int index
                 readonly property bool current: root.selectedIndex === index
                 width: windowList.width; height: 58; radius: 13
+                opacity: modelData.parked ? 0.8 : 1
                 color: current || windowMouse.containsMouse ? Qt.rgba(mocha.accent2.r, mocha.accent2.g, mocha.accent2.b, current ? 0.18 : 0.12) : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.68)
                 border.width: 1
                 border.color: current ? Qt.rgba(mocha.accent2.r, mocha.accent2.g, mocha.accent2.b, 0.48) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
@@ -160,17 +178,27 @@ FocusScope {
                     ColumnLayout {
                         Layout.fillWidth: true; spacing: 1
                         Text { Layout.fillWidth: true; text: String(windowRow.modelData.title || "Zonder titel"); font.family: ThemeConfig.uiFont; font.pixelSize: 12; font.weight: Font.DemiBold; color: mocha.text; elide: Text.ElideRight }
-                        Text { Layout.fillWidth: true; text: String(windowRow.modelData.className || "App") + " · workspace " + String(windowRow.modelData.workspace); font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0; elide: Text.ElideRight }
+                        Text { Layout.fillWidth: true; text: String(windowRow.modelData.className || "App") + (windowRow.modelData.parked ? " · geparkeerd, Enter haalt terug" : " · workspace " + String(windowRow.modelData.workspace)); font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0; elide: Text.ElideRight }
                     }
                     Rectangle {
                         visible: Boolean(windowRow.modelData.focused)
                         Layout.preferredWidth: 7; Layout.preferredHeight: 7; radius: 4
                         color: mocha.accent2
                     }
-                    Text { text: "󰅂"; font.family: ThemeConfig.iconFont; font.pixelSize: 13; color: current ? mocha.accent2 : mocha.subtext0 }
+                    Rectangle {
+                        visible: !windowRow.modelData.parked
+                        Layout.preferredWidth: 28; Layout.preferredHeight: 28; radius: 9
+                        color: parkMouse.containsMouse ? Qt.rgba(mocha.accent2.r, mocha.accent2.g, mocha.accent2.b, 0.18) : "transparent"
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                        Text { anchors.centerIn: parent; text: "󰖰"; font.family: ThemeConfig.iconFont; font.pixelSize: 14; color: parkMouse.containsMouse ? mocha.accent2 : mocha.subtext0 }
+                        MouseArea { id: parkMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.parkWindow(windowRow.modelData) }
+                    }
+                    Text { text: windowRow.modelData.parked ? "󰁝" : "󰅂"; font.family: ThemeConfig.iconFont; font.pixelSize: 13; color: current ? mocha.accent2 : mocha.subtext0 }
                 }
                 MouseArea {
                     id: windowMouse
+                    // Onder de rij-inhoud, zodat de parkeerknop zijn eigen klik krijgt.
+                    z: -1
                     anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                     onEntered: root.selectedIndex = windowRow.index
                     onClicked: root.focusWindow(windowRow.modelData)
@@ -184,7 +212,7 @@ FocusScope {
         }
 
         Text {
-            Layout.fillWidth: true; text: "↑↓ kiezen · Enter wisselen · Esc sluiten"
+            Layout.fillWidth: true; text: "↑↓ kiezen · Enter wisselen · Super+- parkeren · Esc sluiten"
             font.family: ThemeConfig.monoFont; font.pixelSize: 10; color: mocha.subtext0
             horizontalAlignment: Text.AlignRight
         }

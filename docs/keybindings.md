@@ -71,6 +71,9 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Ctrl + .` / `,` | Scrollen: kolom breder / smaller |
 | ``Super + ` `` | Kladblok tonen/verbergen |
 | ``Super + Shift + ` `` | Actief venster naar het kladblok, of terug |
+| `Super + -` | Actief venster parkeren (minimaliseren) |
+| `Super + Shift + -` | Laatst geparkeerde venster terug op zijn eigen werkruimte |
+| `Super + W` | Vensterlijst: geparkeerde vensters staan onderaan, Enter haalt terug |
 | 3 vingers omlaag / omhoog | Controlecentrum / overzicht |
 
 ---

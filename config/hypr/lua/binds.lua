@@ -147,6 +147,10 @@ exec(mod .. " + ALT + Z", scripts .. "/zen.sh toggle")
 exec(mod .. " + ALT + S", scripts .. "/layout-tool.sh scroll")
 exec(mod .. " + grave", scripts .. "/scratchpad.sh toggle")
 exec(mod .. " + SHIFT + grave", scripts .. "/scratchpad.sh send")
+-- Parkeren (minimaliseren): Super+- zet het actieve venster weg, Super+Shift+-
+-- haalt het laatst geparkeerde terug; Super+W toont ze allemaal.
+exec(mod .. " + minus", "python3 " .. scripts .. "/park-window.py park")
+exec(mod .. " + SHIFT + minus", "python3 " .. scripts .. "/park-window.py last")
 -- In een scrollende werkruimte: Super+Shift+wiel schuift de strook een
 -- kolom op, Super+Ctrl+, en . maken de kolom smaller of breder. Op andere
 -- layouts doen deze toetsen niets.

@@ -68,6 +68,7 @@ Openen
   eiland [osd|meldingen|live] aan|uit  wat het eiland onder de balk toont
   indeling [naam|scroll|kies]  indeling van deze werkruimte (tegels, 50-50, 70-30, midden, kolommen, scrollen, focus)
   kladblok [stuur]         kladblok tonen, of het actieve venster erheen sturen
+  parkeer [terug|lijst]    actief venster parkeren (minimaliseren) of terughalen
   zen [aan|uit]            zen-modus: balk verbergen, niet storen, rest dimmen
   sessie [aan|uit|bewaar|herstel]  apps na inloggen terugzetten (zonder argument: status)
 
@@ -166,6 +167,12 @@ PY
             scroll|scrollen-wissel) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" scroll ;;
             list|lijst) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" list ;;
             *) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" apply "$1" ;;
+        esac ;;
+    parkeer|park)
+        case "${1:-}" in
+            terug|last) exec python3 "$CONFIG_HOME/hypr/scripts/park-window.py" last ;;
+            lijst|list) exec python3 "$CONFIG_HOME/hypr/scripts/park-window.py" list ;;
+            *) exec python3 "$CONFIG_HOME/hypr/scripts/park-window.py" park ;;
         esac ;;
     kladblok|scratchpad)
         if [[ "${1:-}" == "stuur" || "${1:-}" == "send" ]]; then

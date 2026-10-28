@@ -42,7 +42,9 @@ FocusScope {
             { icon: "󰁔", label: "Scrollen aan of uit", hint: "Super+Alt+S", cmd: ["bash", scripts + "/layout-tool.sh", "scroll"] },
             { icon: "󰕴", label: "Terug naar tegels", cmd: ["bash", scripts + "/layout-tool.sh", "apply", "tegels"] },
             { icon: "󰠮", label: "Kladblok tonen", hint: "Super+`", cmd: ["bash", scripts + "/scratchpad.sh", "toggle"] },
-            { icon: "󰁝", label: "Venster naar kladblok", hint: "Super+Shift+`", cmd: ["bash", scripts + "/scratchpad.sh", "send"] }
+            { icon: "󰁝", label: "Venster naar kladblok", hint: "Super+Shift+`", cmd: ["bash", scripts + "/scratchpad.sh", "send"] },
+            { icon: "󰖰", label: "Venster parkeren", hint: "Super+-", cmd: ["python3", scripts + "/park-window.py", "park"] },
+            { icon: "󰖯", label: "Geparkeerd venster terug", hint: "Super+Shift+-", cmd: ["python3", scripts + "/park-window.py", "last"] }
         ] },
         { icon: "󰏘", label: "Uiterlijk", children: [
             { icon: "󰏘", label: "Thema", children: [

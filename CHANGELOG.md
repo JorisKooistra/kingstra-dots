@@ -10,6 +10,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Super+, , `kingstra settings [pagina]`, `kingstra-settings` en alle diepe links (thema, geluid, bediening, ...) openen dezelfde app; een tweede aanroep springt naar de pagina in het open venster. Alle pagina's, zoeken en Bediening zijn ongewijzigd.
 - Nieuwe smoketest `settings-app.sh` controleert app-id, Hyprland-regel en startgedrag.
 
+### Vensters parkeren (minimaliseren)
+- Super+- parkeert het actieve venster, zoals minimaliseren naar de taakbalk. Super+Shift+- haalt het laatst geparkeerde terug, op de werkruimte waar het stond.
+- De vensterlijst (Super+W) toont geparkeerde vensters onderaan; Enter of klik haalt ze terug. Elke rij heeft een parkeerknop. Ook via het toetsenbordmenu (Vensters) en `kingstra parkeer [terug|lijst]`.
+- Fix: de vensterlijst kon door een jq-fout leeg blijven.
+
 ### Bediening: uitleg bij mode per scherm
 - Onder de modeknoppen staat nu wat een schermmode wel en niet regelt, en welke mode de desktop als geheel heeft. De volgorde van extra railknoppen toont nette namen in plaats van interne codes.
 
