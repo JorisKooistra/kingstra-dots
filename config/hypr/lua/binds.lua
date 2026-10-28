@@ -31,7 +31,13 @@ for _, direction in ipairs({ "left", "right", "up", "down" }) do
     bind(mod .. " + SHIFT + " .. direction, spatial.route("move " .. direction, function()
         hl.dispatch(hl.dsp.window.move({ direction = direction }))
     end))
-    bind(mod .. " + CTRL + ALT + " .. direction, spatial.route("pan " .. direction))
+    -- Zicht verschuiven: ruimtelijk in alle richtingen; op een scrollstrook
+    -- schuift links/rechts één kolom, zodat dezelfde toets overal "verder kijken" is.
+    bind(mod .. " + CTRL + ALT + " .. direction, spatial.route("pan " .. direction, function()
+        if direction == "left" or direction == "right" then
+            hl.exec_cmd(scripts .. "/layout-tool.sh wheel " .. direction)
+        end
+    end))
 end
 bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })

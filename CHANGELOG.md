@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Scrollen: één toets om verder te kijken
+- Super+Ctrl+Alt+links/rechts schuift nu ook op een scrollstrook één kolom, net zoals hij op het ruimtelijk werkvlak het zicht verplaatst. Op tegelende werkruimtes doet hij niets.
+
 ### Rail: Meer-knop voor minder gebruikte knoppen
 - In Bediening kies je per scherm en mode welke railknoppen achter Meer staan (meldingen, systeem, updates, games, extra knoppen, afsluiten, instellingen), zoals verborgen menubalk-items op macOS. Ze schuiven weg met een korte animatie; een klik op Meer in de rail laat ze weer zien en na acht seconden schuiven ze terug.
 

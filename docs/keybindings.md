@@ -68,6 +68,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Alt + S` | Scrollende kolommen aan/uit op deze werkruimte |
 | `Super + Alt + Z` | Zen-modus aan/uit (balk verborgen, niet storen, rest gedimd) |
 | `Super + Shift + wiel` | Strook: volgende/vorige kolom; ruimtelijk: omhoog/omlaag |
+| `Super + Ctrl + Alt + ←→` | Strook: kolom verder; ruimtelijk: zicht in alle richtingen |
 | `Super + Ctrl + .` / `,` | Scrollen: kolom breder / smaller |
 | ``Super + ` `` | Kladblok tonen/verbergen |
 | ``Super + Shift + ` `` | Actief venster naar het kladblok, of terug |
@@ -212,6 +213,7 @@ worden bij een update niet automatisch omgezet.
 - **Super+pijlen:** nabijgelegen venster kiezen.
 - **Super+Shift+pijlen:** venster verplaatsen of met een bezette plek wisselen.
 - **Super+Ctrl+Alt+pijlen:** het zichtgebied verplaatsen, zonder vensters te verplaatsen.
+  Op een scrollstrook schuift links/rechts één kolom; zo betekent deze toets overal "verder kijken".
 - **Super+drievingerveeg:** vrij in beide richtingen bewegen, ook diagonaal
   (vereist live Lua-gebaren).
 - **Super+Shift+wiel:** omhoog/omlaag; met een horizontaal wiel ook links/rechts.
