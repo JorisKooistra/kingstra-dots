@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Bediening: uitleg bij mode per scherm
+- Onder de modeknoppen staat nu wat een schermmode wel en niet regelt, en welke mode de desktop als geheel heeft. De volgorde van extra railknoppen toont nette namen in plaats van interne codes.
+
 ### Fix: vastpinnen werkt op elk scherm
 - Vastpinnen vanuit het controlecentrum schreef altijd naar de gedeelde lijst. Op een scherm met eigen railkeuzes (Bediening) verscheen de knop daardoor niet. Het controlecentrum weet nu op welk scherm het openstaat en pint daar vast; middelklik in de rail maakt los zonder ongevraagd eigen keuzes voor dat scherm aan te maken.
 

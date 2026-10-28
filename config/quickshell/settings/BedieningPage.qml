@@ -24,6 +24,7 @@ Item {
     readonly property var modules: profile.rail.modules !== undefined ? profile.rail.modules : (modeData.modules || [])
     readonly property var pins: profile.rail.pins !== undefined ? profile.rail.pins : RailPins.pins
     readonly property bool autohide: profile.rail.autohide !== undefined ? profile.rail.autohide : modeData.bar_autohide === true
+    readonly property var pinLabels: ({wifi: "Wi-Fi", bt: "Bluetooth", dnd: "Niet storen", power: "Energie", media: "Speler"})
     MatugenColors { id: pageColors }
     readonly property var themeColors: pageColors
 
@@ -188,6 +189,13 @@ Item {
             }
             Heading { text: root.screenName ? "Dit scherm  ·  " + root.screenName : "Geen schermgegevens" }
             Hint { text: root.monitor ? String(root.monitor.description || root.monitor.name) : ScreenProfiles.errorText; Layout.fillWidth: true }
+            Hint {
+                Layout.fillWidth: true
+                readonly property string globalMode: (ScreenProfiles.state.fallback || {}).name || "office"
+                text: "De mode van dit scherm bepaalt hier de railonderdelen, automatisch verbergen, de muziek "
+                    + "en of meldingen verschijnen (Gaming houdt ze stil). Thema, energieprofiel en Niet storen "
+                    + "gelden voor de hele desktop. Volg standaard neemt de desktopmode over (nu: " + globalMode + ")."
+            }
             Flow {
                 Layout.fillWidth: true
                 spacing: 8
@@ -252,7 +260,7 @@ Item {
                     model: ["wifi", "bt", "dnd", "power", "media"]
                     delegate: Action {
                         required property string modelData
-                        label: ({wifi: "Wi-Fi", bt: "Bluetooth", dnd: "Niet storen", power: "Energie", media: "Speler"})[modelData]
+                        label: root.pinLabels[modelData]
                         chosen: root.pins.indexOf(modelData) >= 0
                         allowed: !ScreenProfiles.busy
                         onTriggered: ScreenProfiles.togglePin(root.screenName, modelData, root.pins)
@@ -267,7 +275,7 @@ Item {
                         required property string modelData
                         required property int index
                         Layout.fillWidth: true
-                        Hint { text: modelData; Layout.fillWidth: true }
+                        Hint { text: root.pinLabels[modelData] || modelData; Layout.fillWidth: true }
                         Action { label: "Omhoog"; allowed: index > 0 && !ScreenProfiles.busy; onTriggered: root.movePin(index, -1) }
                         Action { label: "Omlaag"; allowed: index < root.pins.length - 1 && !ScreenProfiles.busy; onTriggered: root.movePin(index, 1) }
                     }
