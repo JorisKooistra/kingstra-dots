@@ -37,6 +37,9 @@ Item {
     property int ramPercent: 0
     property int diskPercent: 0
     property string cpuTemp: "--"
+    readonly property bool gpuMetricsVisible: root.visible && root.tab === 1
+    onGpuMetricsVisibleChanged: GpuMonitor.request(root, gpuMetricsVisible)
+    Component.onDestruction: GpuMonitor.request(root, false)
 
     readonly property var activePlayer: {
         let players = Mpris.players.values;
@@ -1135,6 +1138,29 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 12
                         spacing: 6
+
+                        CardHeader { title: "GPU"; target: "" }
+                        Repeater {
+                            model: GpuMonitor.gpus
+                            delegate: ColumnLayout {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                spacing: 3
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: String(modelData.name || "GPU")
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: mocha.text
+                                    elide: Text.ElideRight
+                                }
+                                StatLine { icon: "󰢮"; label: "Belasting"; value: modelData.sleeping ? "Slaapstand" : modelData.usage === null ? "Niet beschikbaar" : Math.round(modelData.usage) + "%"; accent: mocha.primary }
+                                StatLine { icon: "󰔏"; label: "Temperatuur"; value: modelData.temperature === null ? "Niet beschikbaar" : Math.round(modelData.temperature) + "°"; accent: mocha.peach }
+                                StatLine { icon: "󰍛"; label: "VRAM"; value: modelData.memoryUsed === null || modelData.memoryTotal === null ? "Niet beschikbaar" : Math.round(modelData.memoryUsed) + " / " + Math.round(modelData.memoryTotal) + " MiB"; accent: mocha.teal }
+                            }
+                        }
+                        EmptyText { visible: GpuMonitor.gpus.length === 0; text: GpuMonitor.errorText || "GPU-informatie niet beschikbaar" }
 
                         CardHeader { title: "Sessie"; target: "" }
 
