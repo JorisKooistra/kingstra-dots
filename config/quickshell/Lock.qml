@@ -8,6 +8,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Pam
+import Quickshell.Services.Mpris
 import "../" // Assuming scaler.qml is available here
 
 ShellRoot {
@@ -196,6 +197,74 @@ ShellRoot {
     Process {
         id: reloadProcess
         command: ["systemctl", "reboot"]
+    }
+
+    // ---------------------------------------------------------
+    // Blik-scherm: wat er speelt, hoeveel meldingen per app (zonder
+    // inhoud) en de volgende afspraak. Gedeeld door alle schermen.
+    // ---------------------------------------------------------
+    QtObject {
+        id: glance
+        readonly property var player: {
+            let players = Mpris.players.values;
+            for (let i = 0; i < players.length; i++) {
+                if (players[i].playbackState === MprisPlaybackState.Playing) return players[i];
+            }
+            for (let i = 0; i < players.length; i++) {
+                if (String(players[i].trackTitle || "").trim() !== "") return players[i];
+            }
+            return null;
+        }
+        readonly property bool playing: player !== null && player.playbackState === MprisPlaybackState.Playing
+        property var notifApps: []
+        property int notifTotal: 0
+        property var events: []
+        readonly property string nextEventText: {
+            let now = new Date();
+            let todayKey = Qt.formatDate(now, "yyyy-MM-dd");
+            let tomorrowKey = Qt.formatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), "yyyy-MM-dd");
+            let nowTime = Qt.formatTime(now, "HH:mm");
+            let best = null;
+            for (let i = 0; i < events.length; i++) {
+                let ev = events[i];
+                if (!ev || !ev.dateKey || ev.dateKey > tomorrowKey) continue;
+                let t = ev.allDay ? "00:00" : String(ev.timeRaw || ev.time || "00:00");
+                if (ev.dateKey < todayKey || (ev.dateKey === todayKey && !ev.allDay && t < nowTime)) continue;
+                let key = ev.dateKey + " " + t;
+                if (!best || key < best.key) best = { key: key, ev: ev };
+            }
+            if (!best) return "";
+            let when = best.ev.dateKey === todayKey ? "" : "Morgen ";
+            return when + (best.ev.allDay ? "hele dag" : String(best.ev.time || "")) + " · " + String(best.ev.title || "");
+        }
+    }
+
+    FileView {
+        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/kingstra-notification-summary.json"
+        preload: true
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                let d = JSON.parse(text() || "{}");
+                glance.notifApps = Array.isArray(d.apps) ? d.apps.slice(0, 5) : [];
+                glance.notifTotal = Number(d.total || 0);
+            } catch (e) {}
+        }
+    }
+
+    Process {
+        id: glanceAgenda
+        command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/calendar/agenda_events.py", "list"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let d = JSON.parse(this.text || "{}");
+                    glance.events = Array.isArray(d.events) ? d.events : [];
+                } catch (e) {}
+            }
+        }
     }
 
     WlSessionLock {
@@ -490,6 +559,178 @@ ShellRoot {
                                 if (clockHours.text !== nextHours) clockHours.text = nextHours;
                                 if (clockMinutes.text !== nextMinutes) clockMinutes.text = nextMinutes;
                                 if (dateText.text !== nextDate) dateText.text = nextDate;
+                            }
+                        }
+                    }
+
+                    // --- BLIK (Idle State) ---
+                    // Onder de klok: muziek, meldingen per app en de volgende
+                    // afspraak. Verdwijnt samen met de klok bij het typen.
+                    ColumnLayout {
+                        id: glanceModule
+                        anchors.top: clockModule.bottom
+                        anchors.topMargin: 34 * screenRoot.sc
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 14 * screenRoot.sc
+                        width: Math.min(460 * screenRoot.sc, parent.width - 80 * screenRoot.sc)
+
+                        opacity: screenRoot.inputActive ? 0.0 : 1.0
+                        visible: opacity > 0.01
+                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutCubic } }
+
+                        // Volgende afspraak
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            visible: glance.nextEventText !== ""
+                            text: "󰃭  " + glance.nextEventText
+                            font.family: ThemeConfig.textFont
+                            font.pixelSize: 15 * screenRoot.sc
+                            font.weight: Font.DemiBold
+                            color: root.text
+                            opacity: 0.85
+                            elide: Text.ElideRight
+                            Layout.maximumWidth: glanceModule.width
+                        }
+
+                        // Muziek
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 84 * screenRoot.sc
+                            visible: glance.player !== null
+                            radius: 22 * screenRoot.sc
+                            color: Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, 0.45)
+                            border.width: Math.max(1, 1 * screenRoot.sc)
+                            border.color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.08)
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12 * screenRoot.sc
+                                spacing: 12 * screenRoot.sc
+
+                                Rectangle {
+                                    Layout.preferredWidth: 60 * screenRoot.sc
+                                    Layout.preferredHeight: 60 * screenRoot.sc
+                                    radius: 14 * screenRoot.sc
+                                    clip: true
+                                    color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.2)
+                                    Image {
+                                        anchors.fill: parent
+                                        source: glance.player && glance.player.trackArtUrl ? String(glance.player.trackArtUrl) : ""
+                                        fillMode: Image.PreserveAspectCrop
+                                        sourceSize.width: 120
+                                        sourceSize.height: 120
+                                        asynchronous: true
+                                    }
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2 * screenRoot.sc
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: glance.player ? String(glance.player.trackTitle || "") : ""
+                                        elide: Text.ElideRight
+                                        font.family: ThemeConfig.textFont
+                                        font.pixelSize: 15 * screenRoot.sc
+                                        font.weight: Font.Bold
+                                        color: root.text
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: glance.player ? String(glance.player.trackArtist || "") : ""
+                                        visible: text !== ""
+                                        elide: Text.ElideRight
+                                        font.family: ThemeConfig.textFont
+                                        font.pixelSize: 12 * screenRoot.sc
+                                        color: root.subtext0
+                                    }
+                                }
+                                Repeater {
+                                    model: [
+                                        { icon: "󰒮", act: "prev" },
+                                        { icon: glance.playing ? "󰏤" : "󰐊", act: "toggle" },
+                                        { icon: "󰒭", act: "next" }
+                                    ]
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        Layout.preferredWidth: 38 * screenRoot.sc
+                                        Layout.preferredHeight: 38 * screenRoot.sc
+                                        radius: width / 2
+                                        color: mediaBtn.containsMouse
+                                            ? Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.3)
+                                            : Qt.rgba(root.text.r, root.text.g, root.text.b, 0.06)
+                                        scale: mediaBtn.containsMouse ? 1.08 : 1.0
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+                                        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(250); easing.type: Easing.OutExpo } }
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData.icon
+                                            font.family: ThemeConfig.iconFont
+                                            font.pixelSize: 16 * screenRoot.sc
+                                            color: root.text
+                                        }
+                                        MouseArea {
+                                            id: mediaBtn
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            enabled: !screenRoot.isPlayingIntro
+                                            onClicked: {
+                                                let p = glance.player;
+                                                if (!p) return;
+                                                if (modelData.act === "prev" && p.canGoPrevious) p.previous();
+                                                else if (modelData.act === "next" && p.canGoNext) p.next();
+                                                else if (modelData.act === "toggle" && p.canTogglePlaying) p.togglePlaying();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Meldingen: per app een pil met het aantal, geen inhoud.
+                        Flow {
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.maximumWidth: glanceModule.width
+                            visible: glance.notifTotal > 0
+                            spacing: 8 * screenRoot.sc
+                            Repeater {
+                                model: glance.notifApps
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    height: 32 * screenRoot.sc
+                                    width: notifPillRow.implicitWidth + 24 * screenRoot.sc
+                                    radius: height / 2
+                                    color: Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, 0.45)
+                                    border.width: Math.max(1, 1 * screenRoot.sc)
+                                    border.color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.08)
+                                    Row {
+                                        id: notifPillRow
+                                        anchors.centerIn: parent
+                                        spacing: 6 * screenRoot.sc
+                                        Text {
+                                            text: String(modelData.app || "")
+                                            font.family: ThemeConfig.textFont
+                                            font.pixelSize: 12 * screenRoot.sc
+                                            font.weight: Font.DemiBold
+                                            color: root.text
+                                        }
+                                        Rectangle {
+                                            width: Math.max(20 * screenRoot.sc, countText.implicitWidth + 10 * screenRoot.sc)
+                                            height: 20 * screenRoot.sc
+                                            radius: height / 2
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            color: root.mauve
+                                            Text {
+                                                id: countText
+                                                anchors.centerIn: parent
+                                                text: String(modelData.count || 0)
+                                                font.family: ThemeConfig.textFont
+                                                font.pixelSize: 11 * screenRoot.sc
+                                                font.weight: Font.Black
+                                                color: root.crust
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

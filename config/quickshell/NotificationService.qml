@@ -32,6 +32,20 @@ Item {
             "sh", dndStateFile, dnd ? "1" : "0"]);
     }
 
+    // Samenvatting voor het vergrendelscherm: alleen app-namen en aantallen,
+    // nooit de inhoud. Lock.qml draait als eigen proces en leest dit bestand.
+    readonly property string summaryFile: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/kingstra-notification-summary.json"
+    onCountChanged: summaryTimer.restart()
+    Timer {
+        id: summaryTimer
+        interval: 400
+        onTriggered: {
+            let summary = root.groups().map(g => ({ app: g.app, count: g.items.length }));
+            Quickshell.execDetached(["sh", "-c", "printf '%s\\n' \"$2\" > \"$1.tmp\" && mv -f \"$1.tmp\" \"$1\"",
+                "sh", root.summaryFile, JSON.stringify({ total: root.count, apps: summary })]);
+        }
+    }
+
     function toggleDnd() {
         dnd = !dnd;
     }

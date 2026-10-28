@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Lock screen: glance
+- Under the clock the lock screen now shows the next appointment (today or tomorrow), the track that plays or is paused with album art and working buttons, and one pill per app with the number of waiting notifications. Never the content: the shell writes only app names and counts to `$XDG_RUNTIME_DIR/kingstra-notification-summary.json`.
+- Everything fades away with the clock as soon as you start typing.
+
 ### Windows: snap layouts, scrolling and scratchpad
 - Super+Z opens a snap picker, like Snap Layouts in Windows 11 and KDE's tiles: seven layouts for the current workspace (Tegels, 50 | 50, 70 | 30, Midden groot, Drie kolommen, Scrollen, Eén tegelijk). Click a zone to put the active window there; the big zone makes it the main window. Keys 1-7, arrows and Enter work too.
 - Every layout is a real Hyprland layout (dwindle, master, scrolling, monocle), so windows stay tiled. The choice per workspace is saved in `~/.local/state/kingstra/workspace-layouts.json` and comes back after a restart.
