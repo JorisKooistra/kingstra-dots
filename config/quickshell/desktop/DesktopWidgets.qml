@@ -200,7 +200,8 @@ Scope {
                             accent: mocha.primary
                             artUrl: root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : ""
                             playing: root.playing
-                            vinylMode: root.vinylMode
+                            playerStyle: ScreenProfiles.profile(win.screen ? win.screen.name : "").playerStyle
+                            vinylMode: playerStyle === "cover" ? false : playerStyle === "vinyl" ? true : root.vinylMode
                             showArm: true
                             progress: root.mediaProgress
                             tracking: root.mediaTracking
