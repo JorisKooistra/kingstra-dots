@@ -77,6 +77,7 @@ QtObject {
     property real popupOpacity: 0.92
     property real styleGlassStrength: 0.1
     property real styleOutlineStrength: 0.18
+    function duration(value) { return 0; }
 }
 ''',
     "RailPins.qml": '''pragma Singleton

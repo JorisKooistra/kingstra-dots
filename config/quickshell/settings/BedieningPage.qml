@@ -43,10 +43,12 @@ Item {
         next.splice(target, 0, value);
         set("rail.pins", next);
     }
+    // Uitlezen en toepassen zijn aparte processen: het uitlezen elke twee
+    // seconden mag de knoppen niet steeds even uitschakelen (dat knipperde).
     function inspect() {
-        if (!workspace || layoutProcess.running) return;
-        layoutProcess.command = ["python3", helper, "inspect", String(workspace)];
-        layoutProcess.running = true;
+        if (!workspace || inspectProcess.running || layoutProcess.running) return;
+        inspectProcess.command = ["python3", helper, "inspect", String(workspace)];
+        inspectProcess.running = true;
     }
     function applyLayout(preset) {
         if (!workspace || layoutProcess.running) return;
@@ -57,12 +59,22 @@ Item {
     onWorkspaceChanged: inspect()
     Component.onCompleted: inspect()
     Timer { interval: 2000; repeat: true; running: root.visible; onTriggered: root.inspect() }
+    function acceptLayout(text) {
+        try {
+            let preset = JSON.parse(text).preset || "";
+            if (preset !== root.currentLayout) root.currentLayout = preset;
+        } catch (e) {}
+    }
+    Process {
+        id: inspectProcess
+        stdout: StdioCollector { onStreamFinished: root.acceptLayout(this.text) }
+    }
     Process {
         id: layoutProcess
         stdout: StdioCollector {
             onStreamFinished: {
-                try { root.currentLayout = JSON.parse(this.text).preset || ""; root.layoutError = ""; }
-                catch (e) {}
+                root.acceptLayout(this.text);
+                if (this.text.trim()) root.layoutError = "";
             }
         }
         stderr: StdioCollector { onStreamFinished: if (this.text.trim()) root.layoutError = this.text.trim() }
@@ -78,6 +90,11 @@ Item {
         implicitWidth: caption.implicitWidth + 24
         radius: 8
         opacity: allowed ? 1 : 0.45
+        scale: mouse.pressed ? 0.97 : 1.0
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(150) } }
+        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutQuart } }
+        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
         color: chosen ? Qt.alpha(root.themeColors.primary, 0.2) : mouse.containsMouse ? root.themeColors.shellHoverFill : root.themeColors.shellRaisedFill
         border.width: 1
         border.color: chosen ? root.themeColors.primary : root.themeColors.shellOutline
