@@ -132,6 +132,7 @@ bind(mod .. " + SHIFT + D", hl.dsp.window.move({ workspace = "special:discord" }
 -- toont het kladblok, Super+Shift+` stuurt het actieve venster erheen
 -- (of haalt het terug).
 exec(mod .. " + Z", scripts .. "/qs_manager.sh toggle snap")
+exec(mod .. " + ALT + Z", scripts .. "/zen.sh toggle")
 exec(mod .. " + ALT + S", scripts .. "/layout-tool.sh scroll")
 exec(mod .. " + grave", scripts .. "/scratchpad.sh toggle")
 exec(mod .. " + SHIFT + grave", scripts .. "/scratchpad.sh send")

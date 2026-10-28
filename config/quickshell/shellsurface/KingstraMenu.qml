@@ -73,7 +73,8 @@ FocusScope {
         { icon: "󰾅", label: "Modus", children: [
             { icon: "󰈙", label: "Office", cmd: kingstra("mode office") },
             { icon: "󰊴", label: "Gaming", cmd: kingstra("mode gaming") },
-            { icon: "󰝚", label: "Media", cmd: kingstra("mode media") }
+            { icon: "󰝚", label: "Media", cmd: kingstra("mode media") },
+            { icon: "󰚀", label: "Zen aan of uit", hint: "Super+Alt+Z", cmd: ["bash", scripts + "/zen.sh", "toggle"] }
         ] },
         { icon: "󰕮", label: "Snel schakelen", children: [
             { icon: "󰕮", label: "Controlecentrum", hint: "Super+A", cmd: qs("tophover"), panel: true },

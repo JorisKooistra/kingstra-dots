@@ -66,6 +66,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 |---|---|
 | `Super + Z` | Snap-indeling kiezen voor deze werkruimte (1-7, klik een vak) |
 | `Super + Alt + S` | Scrollende kolommen aan/uit op deze werkruimte |
+| `Super + Alt + Z` | Zen-modus aan/uit (balk verborgen, niet storen, rest gedimd) |
 | `Super + Shift + wiel` | Scrollen: één kolom verder of terug |
 | `Super + Ctrl + .` / `,` | Scrollen: kolom breder / smaller |
 | ``Super + ` `` | Kladblok tonen/verbergen |

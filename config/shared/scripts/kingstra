@@ -67,6 +67,7 @@ Openen
   eiland [osd|meldingen|live] aan|uit  wat het eiland onder de balk toont
   indeling [naam|scroll|kies]  indeling van deze werkruimte (tegels, 50-50, 70-30, midden, kolommen, scrollen, focus)
   kladblok [stuur]         kladblok tonen, of het actieve venster erheen sturen
+  zen [aan|uit]            zen-modus: balk verbergen, niet storen, rest dimmen
   sessie [aan|uit|bewaar|herstel]  apps na inloggen terugzetten (zonder argument: status)
 
 Overig
@@ -168,6 +169,12 @@ PY
             exec "$CONFIG_HOME/hypr/scripts/scratchpad.sh" send
         fi
         exec "$CONFIG_HOME/hypr/scripts/scratchpad.sh" toggle ;;
+    zen)
+        case "${1:-toggle}" in
+            aan|on) exec "$CONFIG_HOME/hypr/scripts/zen.sh" on ;;
+            uit|off) exec "$CONFIG_HOME/hypr/scripts/zen.sh" off ;;
+            *) exec "$CONFIG_HOME/hypr/scripts/zen.sh" toggle ;;
+        esac ;;
     sessie|session)
         tool="$CONFIG_HOME/hypr/scripts/session-restore.sh"
         case "${1:-status}" in

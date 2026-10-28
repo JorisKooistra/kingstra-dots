@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Zen mode
+- Super+Alt+Z (or `kingstra zen`, or Modus › Zen in the keyboard menu) hides the bar and rail until you touch the edge, turns on Niet storen, removes the desktop widgets and dims windows without focus. Switching it off restores exactly what was there before.
+
 ### Login screen (SDDM)
 - The Kingstra SDDM theme now matches the lock screen: the same 140 px clock with separate hours and minutes and a dimmed colon, the same date line, the same shrink-and-fade when you start typing, and the same 48 px glass pills at the bottom (keyboard layout, session, restart, power off) with hover growth.
 - `kingstra update` copies the theme to `/usr/share/sddm/themes/kingstra` as before.
