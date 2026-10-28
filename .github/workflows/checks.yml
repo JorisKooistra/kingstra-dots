@@ -47,3 +47,29 @@ jobs:
       - run: tests/scripts/check.sh qmllint
         env:
           QMLLINT: /usr/lib/qt6/bin/qmllint
+
+  bediening-colors:
+    name: Bediening render en contrast
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Qt renderer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libegl1 libopengl0 fonts-dejavu-core
+          python -m pip install PySide6==6.10.0
+      - name: Reproduce original color collision
+        run: python tests/render/bediening-colors.py --baseline
+      - name: Render and check dark and light colors
+        run: python tests/render/bediening-colors.py
+      - name: Save rendered pages
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bediening-render
+          path: artifacts/bediening-colors/*.png
+          if-no-files-found: ignore

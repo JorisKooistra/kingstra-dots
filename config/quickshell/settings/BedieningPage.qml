@@ -24,7 +24,8 @@ Item {
     readonly property var modules: profile.rail.modules !== undefined ? profile.rail.modules : (modeData.modules || [])
     readonly property var pins: profile.rail.pins !== undefined ? profile.rail.pins : RailPins.pins
     readonly property bool autohide: profile.rail.autohide !== undefined ? profile.rail.autohide : modeData.bar_autohide === true
-    MatugenColors { id: palette }
+    MatugenColors { id: pageColors }
+    readonly property var themeColors: pageColors
 
     function set(field, value) {
         if (!screenName) return;
@@ -77,14 +78,14 @@ Item {
         implicitWidth: caption.implicitWidth + 24
         radius: 8
         opacity: allowed ? 1 : 0.45
-        color: chosen ? Qt.alpha(palette.primary, 0.2) : mouse.containsMouse ? palette.shellHoverFill : palette.shellRaisedFill
+        color: chosen ? Qt.alpha(root.themeColors.primary, 0.2) : mouse.containsMouse ? root.themeColors.shellHoverFill : root.themeColors.shellRaisedFill
         border.width: 1
-        border.color: chosen ? palette.primary : palette.shellOutline
+        border.color: chosen ? root.themeColors.primary : root.themeColors.shellOutline
         Text {
             id: caption
             anchors.centerIn: parent
             text: button.label
-            color: palette.text
+            color: root.themeColors.text
             font.family: ThemeConfig.uiFont
             font.pixelSize: 12
         }
@@ -98,13 +99,13 @@ Item {
         }
     }
     component Heading: Text {
-        color: palette.text
+        color: root.themeColors.text
         font.family: ThemeConfig.uiFont
         font.pixelSize: 16
         font.bold: true
     }
     component Hint: Text {
-        color: palette.subtext0
+        color: root.themeColors.subtext0
         font.family: ThemeConfig.uiFont
         font.pixelSize: 12
         wrapMode: Text.Wrap
@@ -150,8 +151,8 @@ Item {
                         width: Math.max(20, modelData.width / (modelData.scale || 1) * screenMap.ratio - 6)
                         height: Math.max(20, modelData.height / (modelData.scale || 1) * screenMap.ratio - 6)
                         radius: 8
-                        color: modelData.name === root.screenName ? Qt.alpha(palette.primary, 0.2) : palette.shellRaisedFill
-                        border.color: modelData.name === root.screenName ? palette.primary : palette.shellOutline
+                        color: modelData.name === root.screenName ? Qt.alpha(root.themeColors.primary, 0.2) : root.themeColors.shellRaisedFill
+                        border.color: modelData.name === root.screenName ? root.themeColors.primary : root.themeColors.shellOutline
                         border.width: 2
                         clip: true
                         Text {
@@ -159,7 +160,7 @@ Item {
                             width: parent.width - 12
                             horizontalAlignment: Text.AlignHCenter
                             text: display.modelData.name + "\n" + ScreenProfiles.profile(display.modelData.name).mode
-                            color: palette.text
+                            color: root.themeColors.text
                             font.family: ThemeConfig.uiFont
                             font.pixelSize: 12
                             elide: Text.ElideRight
@@ -205,7 +206,7 @@ Item {
                     onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/overview-toggle.sh"])
                 }
             }
-            Hint { text: root.layoutError; visible: text !== ""; color: palette.red; Layout.fillWidth: true }
+            Hint { text: root.layoutError; visible: text !== ""; color: root.themeColors.red; Layout.fillWidth: true }
 
             Heading { text: "Rail  ·  " + root.profile.mode }
             Flow {
@@ -294,7 +295,7 @@ Item {
                 Action { label: "Sneltoetsen"; onTriggered: root.pageRequested("sneltoetsen") }
                 Action { label: "Beeldschermen"; onTriggered: root.pageRequested("beeldschermen") }
             }
-            Hint { text: ScreenProfiles.errorText; visible: text !== ""; color: palette.red; Layout.fillWidth: true }
+            Hint { text: ScreenProfiles.errorText; visible: text !== ""; color: root.themeColors.red; Layout.fillWidth: true }
         }
     }
 }
