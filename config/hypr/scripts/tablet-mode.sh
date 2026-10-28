@@ -70,6 +70,9 @@ resolve_monitor() {
     fi
 }
 
+# Huidige modus (breedte x hoogte @ verversing) in plaats van "preferred":
+# dan hoeft het scherm niet opnieuw te modesetten en blijft het draaien
+# zonder zwart knipperen.
 monitor_rule() {
     local monitor="$1"
     local transform="$2"
@@ -82,7 +85,7 @@ monitor_rule() {
                 --arg transform "$transform" '
                 .[]
                 | select(.name == $monitor)
-                | "\(.name), preferred, \(.x)x\(.y), \(.scale), transform, \($transform)"
+                | "\(.name), \(.width)x\(.height)@\(.refreshRate), \(.x)x\(.y), \(.scale), transform, \($transform)"
             ' 2>/dev/null | head -n 1 || true
         )"
         if [[ -n "$rule" && "$rule" != "null" ]]; then
@@ -192,22 +195,48 @@ stop_keyboard() {
     pkill -x maliit-keyboard >/dev/null 2>&1 || true
 }
 
+feedback() {
+    local token tmp
+    token="$(date +%s%3N)$RANDOM"
+    tmp="$(mktemp /tmp/kingstra-feedback.json.XXXXXX)" || return 0
+    printf '{"token":"%s","icon":"%s","title":"%s","detail":"%s","timeout":1800}\n' "$token" "$1" "$2" "$3" >"$tmp"
+    mv -f "$tmp" /tmp/kingstra-feedback.json
+}
+
+current_transform() {
+    local monitor="$1"
+    command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 || return 0
+    hyprctl monitors -j 2>/dev/null | jq -r --arg m "$monitor" '.[] | select(.name == $m) | .transform' 2>/dev/null | head -n 1
+}
+
 tablet_on() {
     local monitor
     monitor="$(resolve_monitor || true)"
-    apply_monitor_transform "$monitor" "$tablet_transform"
-    apply_touch_transform "$monitor" "$tablet_transform"
+    # De scharnierschakelaar stuurt soms meerdere "aan"-signalen achter
+    # elkaar; alleen draaien als het scherm nog niet goed staat.
+    if [[ "$(current_transform "$monitor")" != "$tablet_transform" ]]; then
+        apply_monitor_transform "$monitor" "$tablet_transform"
+        apply_touch_transform "$monitor" "$tablet_transform"
+    fi
     start_keyboard
-    printf 'on\n' > "$state_file"
+    if [[ ! -f "$state_file" ]]; then
+        printf 'on\n' > "$state_file"
+        feedback "󰓶" "Tabletmodus aan" "Schermtoetsenbord staat klaar"
+    fi
 }
 
 tablet_off() {
     local monitor
     monitor="$(resolve_monitor || true)"
-    apply_monitor_transform "$monitor" "$normal_transform"
-    apply_touch_transform "$monitor" "$normal_transform"
+    if [[ "$(current_transform "$monitor")" != "$normal_transform" ]]; then
+        apply_monitor_transform "$monitor" "$normal_transform"
+        apply_touch_transform "$monitor" "$normal_transform"
+    fi
     stop_keyboard
-    rm -f "$state_file"
+    if [[ -f "$state_file" ]]; then
+        rm -f "$state_file"
+        feedback "󰌌" "Tabletmodus uit" "Laptopstand"
+    fi
 }
 
 mode="${1:-toggle}"

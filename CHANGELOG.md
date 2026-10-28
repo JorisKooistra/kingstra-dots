@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Tablet mode: smoother
+- Rotating keeps the screen's current resolution and refresh rate instead of asking for "preferred", so the panel no longer needs a full modeset (no black flash or resolution jump).
+- Repeated hinge events no longer rotate again when the screen already has the right orientation; a short message in the corner says when tablet mode switches on or off.
+
 ### Zen mode
 - Super+Alt+Z (or `kingstra zen`, or Modus › Zen in the keyboard menu) hides the bar and rail until you touch the edge, turns on Niet storen, removes the desktop widgets and dims windows without focus. Switching it off restores exactly what was there before.
 
