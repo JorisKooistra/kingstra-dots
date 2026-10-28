@@ -10,7 +10,7 @@ import ".."
 // venster het hoofdvenster. De indelingen zijn gewone Hyprland-layouts
 // (dwindle, master, scrolling, monocle), dus alles blijft getegeld.
 //
-// Toetsen: 1-7 of pijltjes + Enter kiezen, S = scrollen aan/uit,
+// Toetsen: 1-8 of pijltjes + Enter kiezen, S = scrollen aan/uit,
 // K = actief venster naar het kladblok, Esc sluit.
 FocusScope {
     id: root
@@ -32,6 +32,7 @@ FocusScope {
         { id: "midden", label: "Midden groot", hint: "Brede schermen", zones: [[.25, 0, .5, 1, true], [0, 0, .25, 1], [.75, 0, .25, 1]] },
         { id: "kolommen", label: "Drie kolommen", hint: "Gelijke delen", zones: [[0, 0, .333, 1, true], [.333, 0, .334, 1], [.667, 0, .333, 1]] },
         { id: "scrollen", label: "Scrollen", hint: "Oneindige strook", scroll: true, zones: [[-.3, 0, .5, 1], [.25, 0, .5, 1, true], [.8, 0, .5, 1]] },
+        { id: "ruimtelijk", label: "Ruimtelijk", hint: "Boven, onder én opzij", zones: [[.1, .05, .35, .38], [.55, .05, .35, .38], [.1, .57, .35, .38], [.55, .57, .35, .38]] },
         { id: "focus", label: "Eén tegelijk", hint: "Rest erachter", stack: true, zones: [[0, 0, 1, 1, true]] }
     ]
 
@@ -345,7 +346,7 @@ FocusScope {
         Text {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
-            text: "1-7 kiezen  ·  Enter toepassen  ·  S scrollen aan/uit  ·  Super+` kladblok  ·  Super+Shift+` venster erin of eruit"
+            text: "1-8 kiezen  ·  Enter toepassen  ·  S scrollen aan/uit  ·  Super+` kladblok  ·  Super+Shift+` venster erin of eruit"
             font.family: ThemeConfig.uiFont
             font.pixelSize: 11
             color: mocha.subtext0

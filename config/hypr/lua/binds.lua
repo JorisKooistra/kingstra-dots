@@ -1,5 +1,11 @@
 local mod = "SUPER"
 local scripts = "~/.config/hypr/scripts"
+local ok_spatial, spatial = pcall(require, "lua.spatial")
+if not ok_spatial then
+    spatial = { route = function(_, fallback)
+        return function() if fallback then fallback() end end
+    end }
+end
 local function exec(keys, command, options)
     hl.bind(keys, hl.dsp.exec_cmd(command), options)
 end
@@ -13,14 +19,19 @@ bind(mod .. " + L", hl.dsp.focus({ direction = "right" }))
 bind(mod .. " + K", hl.dsp.focus({ direction = "up" }))
 bind(mod .. " + J", hl.dsp.focus({ direction = "down" }))
 for _, direction in ipairs({ "left", "right", "up", "down" }) do
-    exec(mod .. " + " .. direction, scripts .. "/focus-direction-safe.sh " .. direction)
+    bind(mod .. " + " .. direction, spatial.route("focus " .. direction, function()
+        hl.exec_cmd(scripts .. "/focus-direction-safe.sh " .. direction)
+    end))
 end
 bind(mod .. " + SHIFT + H", hl.dsp.window.move({ direction = "left" }))
 bind(mod .. " + SHIFT + L", hl.dsp.window.move({ direction = "right" }))
 bind(mod .. " + SHIFT + K", hl.dsp.window.move({ direction = "up" }))
 bind(mod .. " + SHIFT + J", hl.dsp.window.move({ direction = "down" }))
 for _, direction in ipairs({ "left", "right", "up", "down" }) do
-    bind(mod .. " + SHIFT + " .. direction, hl.dsp.window.move({ direction = direction }))
+    bind(mod .. " + SHIFT + " .. direction, spatial.route("move " .. direction, function()
+        hl.dispatch(hl.dsp.window.move({ direction = direction }))
+    end))
+    bind(mod .. " + CTRL + ALT + " .. direction, spatial.route("pan " .. direction))
 end
 bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
@@ -139,10 +150,12 @@ exec(mod .. " + SHIFT + grave", scripts .. "/scratchpad.sh send")
 -- In een scrollende werkruimte: Super+Shift+wiel schuift de strook een
 -- kolom op, Super+Ctrl+, en . maken de kolom smaller of breder. Op andere
 -- layouts doen deze toetsen niets.
-bind(mod .. " + SHIFT + mouse_down", hl.dsp.layout("move +col"))
-bind(mod .. " + SHIFT + mouse_up", hl.dsp.layout("move -col"))
-bind(mod .. " + CTRL + period", hl.dsp.layout("colresize +conf"))
-bind(mod .. " + CTRL + comma", hl.dsp.layout("colresize -conf"))
+exec(mod .. " + SHIFT + mouse_down", scripts .. "/layout-tool.sh wheel down")
+exec(mod .. " + SHIFT + mouse_up", scripts .. "/layout-tool.sh wheel up")
+exec(mod .. " + SHIFT + mouse_left", scripts .. "/layout-tool.sh wheel left")
+exec(mod .. " + SHIFT + mouse_right", scripts .. "/layout-tool.sh wheel right")
+exec(mod .. " + CTRL + period", scripts .. "/layout-tool.sh resize grow")
+exec(mod .. " + CTRL + comma", scripts .. "/layout-tool.sh resize shrink")
 
 hl.define_submap("passthrough", function()
     bind(mod .. " + Escape", hl.dsp.submap("reset"))

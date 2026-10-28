@@ -71,7 +71,7 @@ end
 -- schrijft "werkruimte layout" per regel; zo overleeft de keuze een herstart.
 local ok_layouts, layouts_file = pcall(io.open, state_home .. "/kingstra/workspace-layouts", "r")
 if ok_layouts and layouts_file then
-    local known = { dwindle = true, master = true, scrolling = true, monocle = true }
+    local known = { dwindle = true, master = true, scrolling = true, monocle = true, ["lua:hyprscroll2d"] = rawget(_G, "__hyprscroll2d_layout_registered") == true }
     for line in layouts_file:lines() do
         local ws, layout = line:match("^(%S+)%s+(%S+)$")
         if ws and known[layout] then
