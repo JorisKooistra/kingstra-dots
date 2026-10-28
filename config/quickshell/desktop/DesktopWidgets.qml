@@ -28,6 +28,7 @@ Scope {
     readonly property string stateFile: Quickshell.env("HOME") + "/.local/state/kingstra/desktop-widgets.json"
 
     FileView {
+        id: desktopStateFile
         path: root.stateFile
         preload: true
         watchChanges: true
@@ -44,12 +45,15 @@ Scope {
 
     // Zelfde keuze als in Geluid & media: plaat of hoes.
     FileView {
+        id: mediaStyleFile
         path: Quickshell.env("HOME") + "/.local/state/kingstra/media-view"
         preload: true
         watchChanges: true
         onFileChanged: reload()
         onLoaded: root.vinylMode = String(text() || "").trim() !== "cover"
     }
+
+    Timer { interval: 1000; repeat: true; running: true; onTriggered: { desktopStateFile.reload(); mediaStyleFile.reload(); } }
 
     property var now: new Date()
     Timer {
@@ -168,7 +172,7 @@ Scope {
                 // Onder de klok, of erboven als de klok onderaan staat.
                 Rectangle {
                     id: mediaCard
-                    readonly property bool shown: root.showMedia && root.activePlayer !== null
+                    readonly property bool shown: root.showMedia && root.activePlayer !== null && ScreenProfiles.profile(win.screen ? win.screen.name : "").desktopMedia
                     width: 420
                     height: 148
                     radius: Math.max(16, ThemeConfig.styleWidgetRadius + 6)

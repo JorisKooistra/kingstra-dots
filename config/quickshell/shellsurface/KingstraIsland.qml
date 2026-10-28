@@ -66,7 +66,7 @@ Item {
         }
         return null;
     }
-    readonly property bool mediaLive: liveEnabled && activePlayer !== null
+    readonly property bool mediaLive: liveEnabled && activePlayer !== null && ScreenProfiles.musicVisible(shellWindow.screen ? shellWindow.screen.name : "")
     readonly property bool privacyLive: liveEnabled && (privacyMic || privacyCamera || privacyRecording)
     readonly property bool hasLive: mediaLive || privacyLive
 

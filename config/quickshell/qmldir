@@ -6,3 +6,4 @@ singleton I18n 1.0 I18n.qml
 singleton NotificationService 1.0 NotificationService.qml
 Scaler 1.0 Scaler.qml
 singleton RailPins 1.0 RailPins.qml
+singleton ScreenProfiles 1.0 ScreenProfiles.qml
