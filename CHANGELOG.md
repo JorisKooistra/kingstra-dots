@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Systeem-widget toont de GPU
+- De GPU stond alleen in de Systeem-widget in de Gaming-mode. Zodra er een meting is (nvidia-smi of sysfs) staat hij er nu altijd bij, met belasting en temperatuur.
+
 ### Sneltoetsen opgeschoond
 - Op basis van Joris' aanvinklijst zijn 16 ongebruikte sneltoetsen weg: Super+H/J/K/L en Super+Shift+H/J/K/L (de pijltoetsen blijven), Super+Ctrl+pijlen (venster groter/kleiner; slepen met Super+RMB blijft), Super+Alt+T, Super+Shift+G, Super+Ctrl+Shift+G, Super+Shift+E, Super+Alt+I, Super+Alt+B, Super+Alt+N, Super+Ctrl+C, Super+A, Super+O, Super+X, Super+, en Super+Ctrl+G.
 - Geen functie verdwenen: alles staat in het toetsenbordmenu (Super+Alt+Space). Nieuw daarin: vastzetten op alle werkruimtes, uit groep halen, groep vergrendelen, nmtui, Blueman, kalender, FocusTime, games en yazi. Instellingen blijft op Super+Ctrl+I.

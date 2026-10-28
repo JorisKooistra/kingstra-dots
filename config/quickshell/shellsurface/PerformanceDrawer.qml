@@ -12,6 +12,9 @@ Item {
     property int cpuPercent: 0
     property int ramPercent: 0
     property int gpuPercent: 0
+    // Zodra er een GPU-meting binnenkomt staat de GPU altijd in de lijst,
+    // ook in Office; de mode bepaalt alleen nog of hij erbij moet zonder meting.
+    property bool gpuAvailable: false
     property string cpuTemperature: "--"
     property string gpuTemperature: "--"
     property string fps: "--"
@@ -41,7 +44,7 @@ Item {
     property var modeModules: ["cpu_temp", "ram_usage"]
     readonly property bool showCpu: hasModule("cpu_temp") || !anyMeterEnabled
     readonly property bool showRam: hasModule("ram_usage") || !anyMeterEnabled
-    readonly property bool showGpu: hasModule("gpu_temp")
+    readonly property bool showGpu: hasModule("gpu_temp") || gpuAvailable
     readonly property bool showFps: hasModule("fps")
     readonly property bool anyMeterEnabled: hasModule("cpu_temp") || hasModule("ram_usage")
         || hasModule("gpu_temp") || hasModule("fps")
@@ -180,7 +183,7 @@ Item {
             "for bat in /sys/class/power_supply/BAT*; do [ -d \"$bat\" ] || continue; pstate=$(cat \"$bat/status\" 2>/dev/null); " +
             "if [ -r \"$bat/power_now\" ]; then watts=$(awk 'NF{printf \"%.1f\", $1/1000000}' \"$bat/power_now\"); " +
             "elif [ -r \"$bat/current_now\" ] && [ -r \"$bat/voltage_now\" ]; then watts=$(awk 'NR==FNR{c=$1; next} {printf \"%.1f\", c*$1/1000000000000}' \"$bat/current_now\" \"$bat/voltage_now\"); fi; break; done; " +
-            "printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\\n' \"${cpu:-0}\" \"${ram:-0}\" \"${gpu:-0}\" \"${cput:---}\" \"${gput:---}\" \"${profile:-none}\" \"${up:---}\" " +
+            "printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\\n' \"${cpu:-0}\" \"${ram:-0}\" \"${gpu:-}\" \"${cput:---}\" \"${gput:---}\" \"${profile:-none}\" \"${up:---}\" " +
             "\"${rootu:-0}\" \"${roott:-0}\" \"${homeu:-0}\" \"${homet:-0}\" \"${rx:-}\" \"${tx:-}\" \"${watts:-0}\" \"${pstate:-}\""
         ]
         stdout: StdioCollector {
@@ -189,6 +192,7 @@ Item {
                 if (parts.length < 5) return;
                 root.cpuPercent = root.clampPercent(parts[0]);
                 root.ramPercent = root.clampPercent(parts[1]);
+                root.gpuAvailable = parts[2].trim() !== "";
                 root.gpuPercent = root.clampPercent(parts[2]);
                 root.cpuTemperature = parts[3] === "" || parts[3] === "--" ? "--" : parts[3] + " C";
                 root.gpuTemperature = parts[4] === "" || parts[4] === "--" ? "--" : parts[4] + " C";
