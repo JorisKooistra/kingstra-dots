@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### GPU in Systeem
+- Het systeemtabblad toont beschikbare GPU-belasting, temperatuur en VRAM per apparaat. Niet meetbare waarden heten Niet beschikbaar, geen fictieve 0%.
+- Eén gedeelde meetbron voor alle schermen; pollen gebeurt alleen wanneer een systeemtabblad zichtbaar is. Een gesuspendeerde GPU wordt niet voor een meting wakker gemaakt.
+
 ### Bediening als startpagina
 - Instellingen opent op Bediening: kies een fysieke monitor en wijzig mode, indeling van de werkruimte, zichtbare railonderdelen, extra knoppen en muziekzichtbaarheid.
 - Railkeuzes worden voor de gekozen mode op het gekozen scherm bewaard. Extra knoppen kunnen omhoog/omlaag worden gezet; de mode-indeling is terug te zetten.

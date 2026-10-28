@@ -7,3 +7,4 @@ singleton NotificationService 1.0 NotificationService.qml
 Scaler 1.0 Scaler.qml
 singleton RailPins 1.0 RailPins.qml
 singleton ScreenProfiles 1.0 ScreenProfiles.qml
+singleton GpuMonitor 1.0 GpuMonitor.qml
