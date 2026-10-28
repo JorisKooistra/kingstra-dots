@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Opruimen: SwayNC-resten
+- Per ongeluk meegecommitte SwayNC-kleurbestanden en de back-up van de Matugen-migratie zijn weg uit de repo en worden voortaan genegeerd. SwayNC wordt al sinds het eiland niet meer gebruikt.
+
 ### Herstel leesbaarheid Bediening
 - De nieuwe Bediening-pagina verwijst expliciet naar Kingstra-kleuren. De naam palette botste met Qt's eigen palette-eigenschap, met zwarte tekst en witte of zwarte knoppen als gevolg.
 - Een Qt-rendertest reproduceert die fout en controleert daarna de echte pagina met donkere en lichte kleuren, inclusief geselecteerde en niet-geselecteerde bediening.

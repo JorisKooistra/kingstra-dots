@@ -12,6 +12,10 @@ AGENTS.md
 *~
 .DS_Store
 __pycache__/
+artifacts/
+*.voor-swaync-migratie
+# SwayNC is vervangen door het eiland; oude Matugen-uitvoer niet meer meenemen
+config/swaync/
 
 # Matugen-gegenereerde kleurbestanden (output van templates)
 config/kitty/colors.conf
