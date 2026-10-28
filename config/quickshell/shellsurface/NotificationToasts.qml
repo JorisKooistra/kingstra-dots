@@ -18,6 +18,8 @@ Item {
     property int rightInset: 0
     property int topInset: 0
     property string activeMode: "office"
+    // Aan zolang het Kingstra-eiland de meldingen overneemt.
+    property bool suppressed: false
 
     readonly property int cardWidth: 360
     readonly property int maxToasts: 3
@@ -57,7 +59,7 @@ Item {
     }
 
     function show(notification) {
-        if (!notification || activeMode === "gaming" || !onFocusedScreen()) return;
+        if (suppressed || !notification || activeMode === "gaming" || !onFocusedScreen()) return;
         let key = nextKey++;
         let map = Object.assign({}, byKey);
         map[key] = notification;

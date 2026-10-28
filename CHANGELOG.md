@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell: Kingstra island
+- One place for short feedback, like Dynamic Island and Live Activities on macOS: a pill grows out of the middle of the bar (with hollow corners into the bar edge) and shrinks back.
+- Volume, microphone and brightness keys now run `hypr/scripts/osd.sh`, which changes the value itself (wpctl, brightnessctl) and shows it in the island. With the island's OSD off, or the shell not running, swayosd takes over as before.
+- New notifications appear in the island instead of the cards at the top right; more waiting shows as `+2`. Left-click opens, right-click dismisses, middle-click skips. Critical notifications stay until clicked.
+- Live activities: the playing track with album art and moving equalizer bars (click to expand with controls), plus dots when the microphone (orange), camera (green) or a screen recording (red) is in use.
+- `kingstra eiland [osd|meldingen|live] aan|uit` switches parts off; `kingstra eiland meldingen uit` brings back the old notification cards. Stored in `~/.local/state/kingstra/island.json`.
+
 ### Shell: desktop widgets
 - A large clock with the date and, when something plays or is paused, a media card sit on the wallpaper (above the wallpaper, below windows), in the theme's fonts and colors. Click the clock for the agenda.
 - `kingstra widgets aan|uit|klok <plek>|media aan|uit` and the keyboard menu (Uiterlijk › Bureaubladwidgets) switch them and move the clock (linksboven, rechtsboven, midden, linksonder, rechtsonder).

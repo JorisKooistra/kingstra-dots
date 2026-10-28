@@ -106,12 +106,13 @@ exec(mod .. " + SHIFT + P", scripts .. "/screenshot.sh --full")
 
 -- Media and brightness keys remain available while locked.
 local repeat_locked = { locked = true, repeating = true }
-exec("XF86AudioRaiseVolume", "swayosd-client --output-volume raise", repeat_locked)
-exec("XF86AudioLowerVolume", "swayosd-client --output-volume lower", repeat_locked)
-exec("XF86AudioMute", "swayosd-client --output-volume mute-toggle", { locked = true })
-exec("XF86AudioMicMute", "swayosd-client --input-volume mute-toggle", { locked = true })
-exec("XF86MonBrightnessUp", "swayosd-client --brightness raise", repeat_locked)
-exec("XF86MonBrightnessDown", "swayosd-client --brightness lower", repeat_locked)
+-- osd.sh toont de waarde in het Kingstra-eiland; staat dat uit, dan swayosd.
+exec("XF86AudioRaiseVolume", scripts .. "/osd.sh volume up", repeat_locked)
+exec("XF86AudioLowerVolume", scripts .. "/osd.sh volume down", repeat_locked)
+exec("XF86AudioMute", scripts .. "/osd.sh volume mute", { locked = true })
+exec("XF86AudioMicMute", scripts .. "/osd.sh mic mute", { locked = true })
+exec("XF86MonBrightnessUp", scripts .. "/osd.sh brightness up", repeat_locked)
+exec("XF86MonBrightnessDown", scripts .. "/osd.sh brightness down", repeat_locked)
 exec("XF86AudioPlay", "playerctl play-pause", { locked = true })
 exec("XF86AudioPause", "playerctl play-pause", { locked = true })
 exec("XF86AudioNext", "playerctl next", { locked = true })

@@ -28,6 +28,12 @@ my %labels = (
     'swayosd-client --output-volume raise'       => 'Volume omhoog',
     'swayosd-client --output-volume lower'       => 'Volume omlaag',
     'swayosd-client --output-volume mute-toggle' => 'Volume dempen',
+    '~/.config/hypr/scripts/osd.sh volume up'      => 'Volume omhoog',
+    '~/.config/hypr/scripts/osd.sh volume down'    => 'Volume omlaag',
+    '~/.config/hypr/scripts/osd.sh volume mute'    => 'Volume dempen',
+    '~/.config/hypr/scripts/osd.sh mic mute'       => 'Microfoon dempen',
+    '~/.config/hypr/scripts/osd.sh brightness up'  => 'Helderheid omhoog',
+    '~/.config/hypr/scripts/osd.sh brightness down'=> 'Helderheid omlaag',
 );
 
 my $line_no = 0;

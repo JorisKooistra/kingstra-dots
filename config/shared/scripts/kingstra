@@ -64,6 +64,7 @@ Openen
   keys | launcher | quick  sneltoetsen, launcher, controlecentrum
   menu                     toetsenbordmenu voor alles (Super+Alt+Spatie)
   widgets aan|uit|klok <plek>  bureaubladklok en media (plek: linksboven, rechtsboven, midden, linksonder, rechtsonder)
+  eiland [osd|meldingen|live] aan|uit  wat het eiland onder de balk toont
 
 Overig
   welcome                  welkomstmelding en sneltoetsen opnieuw tonen
@@ -127,6 +128,28 @@ elif action == "media":
     data["media"] = arg not in ("uit", "off")
 else:
     sys.exit("gebruik: kingstra widgets aan|uit|klok <plek>|media aan|uit")
+json.dump(data, open(path, "w"))
+PY
+        ;;
+    eiland|island)
+        # Kingstra-eiland: wat het toont. Zonder onderdeel: alles tegelijk.
+        file="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/island.json"
+        mkdir -p "$(dirname "$file")"
+        python3 - "$file" "${1:-}" "${2:-}" <<'PY'
+import json, sys
+path, part, value = sys.argv[1], sys.argv[2], sys.argv[3]
+keys = {"osd": "osd", "meldingen": "notifications", "notifications": "notifications", "live": "live"}
+if part in ("aan", "uit", "on", "off"):
+    part, value = "", part
+if value not in ("aan", "uit", "on", "off") or (part and part not in keys):
+    sys.exit("gebruik: kingstra eiland [osd|meldingen|live] aan|uit")
+try:
+    data = json.load(open(path))
+except Exception:
+    data = {}
+on = value in ("aan", "on")
+for key in ([keys[part]] if part else ["osd", "notifications", "live"]):
+    data[key] = on
 json.dump(data, open(path, "w"))
 PY
         ;;

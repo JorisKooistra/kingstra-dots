@@ -140,6 +140,19 @@ Scope {
                     rightInset: ThemeConfig.barRailEnabled && ThemeConfig.barRailEdge === "right"
                         ? chrome.railWidth : chrome.shellBorderWidth
                     topInset: chrome.stripHeight
+                    // Het eiland toont meldingen zelf; staat dat uit, dan
+                    // komen deze kaartjes terug.
+                    suppressed: island.handlesNotifications
+                }
+
+                // Het Kingstra-eiland onder het midden van de balk: OSD,
+                // meldingen en live activiteiten op één plek.
+                KingstraIsland {
+                    id: island
+                    shellWindow: surfaceWindow
+                    mocha: mocha
+                    chrome: chrome
+                    activeMode: chrome.activeMode
                 }
 
                 // Klik-buiten-om-te-sluiten. De geometrie is bewust aan de
@@ -279,6 +292,7 @@ Scope {
                     Region { item: closeDismissLayer }
                     Region { item: panelHost }
                     Region { item: notificationToasts }
+                    Region { item: island }
                 }
 
                 // Reservation windows intentionally carry no content or input.

@@ -146,12 +146,12 @@ Opgeslagen in `~/Pictures/Screenshots/`.
 
 | Toetsen | Actie |
 |---|---|
-| `XF86AudioRaiseVolume` | Volume omhoog (SwayOSD) |
-| `XF86AudioLowerVolume` | Volume omlaag (SwayOSD) |
+| `XF86AudioRaiseVolume` | Volume omhoog (eiland, anders SwayOSD) |
+| `XF86AudioLowerVolume` | Volume omlaag (eiland, anders SwayOSD) |
 | `XF86AudioMute` | Geluid dempen |
 | `XF86AudioMicMute` | Microfoon dempen |
-| `XF86MonBrightnessUp` | Helderheid omhoog (SwayOSD) |
-| `XF86MonBrightnessDown` | Helderheid omlaag (SwayOSD) |
+| `XF86MonBrightnessUp` | Helderheid omhoog (eiland, anders SwayOSD) |
+| `XF86MonBrightnessDown` | Helderheid omlaag (eiland, anders SwayOSD) |
 | `XF86AudioPlay` / `XF86AudioPause` | Afspelen/pauzeren |
 | `XF86AudioNext` | Volgend nummer |
 | `XF86AudioPrev` | Vorig nummer |
