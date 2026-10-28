@@ -141,4 +141,15 @@ load_optional("lua.input-overrides")
 -- A lone column uses the whole work area; no half-width first application.
 -- Nieuwe kolommen zijn een volle pagina: scroll je naar een lege plek en
 -- open je daar iets, dan vult het het scherm. Super+Ctrl+, maakt hem smaller.
-pcall(hl.config, { scrolling = { fullscreen_on_one_column = true, column_width = 1.0 } })
+-- Instellingen › Overzicht kan dit wijzigen (~/.config/kingstra/werkvlak.json).
+local column_width = 1.0
+do
+    local home = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
+    local file = io.open(home .. "/kingstra/werkvlak.json", "r")
+    if file then
+        local value = tonumber((file:read("a") or ""):match('"column_width"%s*:%s*([%d%.]+)'))
+        file:close()
+        if value and value >= 0.333 and value <= 1.0 then column_width = value end
+    end
+end
+pcall(hl.config, { scrolling = { fullscreen_on_one_column = true, column_width = column_width } })

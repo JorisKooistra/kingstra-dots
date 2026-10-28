@@ -15,6 +15,22 @@ local function load_relative(filename)
 end
 
 local config = load_relative("config.lua")
+
+-- Kingstra: eigen keuzes uit Instellingen › Overzicht. werkvlak-settings.py
+-- past ze live aan via deze globale tabel.
+do
+    local home = os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")
+    local file = io.open(home .. "/kingstra/werkvlak.json", "r")
+    if file then
+        local text = file:read("a") or ""
+        file:close()
+        local tiles = tonumber(text:match('"max_per_cell"%s*:%s*([%d%.]+)'))
+        local snap = tonumber(text:match('"snap"%s*:%s*([%d%.]+)'))
+        if tiles and tiles >= 1 and tiles <= 4 then config.max_per_cell = math.floor(tiles) end
+        if snap and snap >= 0 and snap <= 0.45 then config.snap = snap end
+    end
+end
+_G.__kingstra_spatial_config = config
 local core = load_relative("core.lua")
 local workspaces = {}
 

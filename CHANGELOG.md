@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Instellingen: nieuw tabblad Overzicht
+- Het eerste tabblad van Instellingen (Super+Ctrl+I) toont mode, thema, de indeling van de huidige werkruimte, scrollgedrag en wallpaper naast elkaar, allemaal direct te wijzigen. Thema's met voorbeeldafbeelding, wallpapers als miniaturen uit je wallpapermap.
+- Scrollen en werkvlak zijn nu instelbaar: breedte van een nieuwe kolom op een scrollstrook, hoeveel vensters als tegels op één plek staan en hoe sterk slepen vastklikt. Bewaard in `~/.config/kingstra/werkvlak.json` en meteen toegepast via het nieuwe `werkvlak-settings.py`.
+- Nieuwe smoketest `werkvlak-settings.sh`.
+
 ### Werkvlak: tegels, vrij slepen en scrollen binnen de werkruimte
 - Super+wiel scrolt nu binnen de werkruimte (scrollstrook: volgende/vorige pagina; ruimtelijk: omhoog/omlaag), Super+Ctrl+wiel opzij. Super+Shift+wiel wisselt van werkruimte (was andersom).
 - Super+middelmuis ingedrukt houden sleept het werkvlak vrij, ook diagonaal. Bij loslaten klikt het alleen op een plek vast als je er dichtbij bent; op een scrollstrook stapt slepen per kolom.

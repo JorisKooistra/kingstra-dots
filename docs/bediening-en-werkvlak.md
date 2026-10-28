@@ -24,6 +24,12 @@ behouden totdat je zelf een andere kiest.
 Het kader in de kaart is het zichtgebied. De tegels tonen live beelden van de
 vensters. De knop 󰊢 in de rail opent dezelfde kaart (uitzoomen).
 
+## Overzicht
+
+Instellingen opent op het tabblad Overzicht: mode, thema, de indeling van de
+huidige werkruimte, scrollgedrag (kolombreedte, tegels per plek, vastklikken)
+en de wallpaper staan daar samen en zijn direct te wijzigen.
+
 ## Afzonderlijke schermkeuzes
 
 De keuze van een schermmode verandert geen globale energieprofielen, Niet storen
