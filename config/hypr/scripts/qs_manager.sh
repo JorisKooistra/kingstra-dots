@@ -29,6 +29,13 @@ ACTION="$1"
 TARGET="$2"
 SUBTARGET="$3"
 
+# Instellingen is een eigen app in een eigen proces (settings-app.sh), geen
+# paneel: vóór de watchdog hieronder afhandelen, zodat Super+, ook werkt als
+# de bar niet draait. Optioneel derde argument = pagina (thema, geluid, ...).
+if [[ "$TARGET" == "settings" && ( "$ACTION" == "open" || "$ACTION" == "toggle" ) ]]; then
+    exec bash "$QS_DIR/settings-app.sh" "$ACTION" "$SUBTARGET"
+fi
+
 ensure_focustime_daemon() {
     [[ -f "$FOCUSTIME_DAEMON" ]] || return 0
     if ! pgrep -f "python3 .*focustime/focus_daemon\\.py" >/dev/null 2>&1; then
@@ -233,14 +240,6 @@ if [[ "$ACTION" == "close" ]]; then
         # Backgrounded to prevent DBus from hanging the script for 1s
         (bluetoothctl scan off > /dev/null 2>&1) &
     fi
-    exit 0
-fi
-
-# Instellingen is een eigen venster (quickshell/settings/SettingsWindow.qml)
-# en geen paneel meer: dat venster leest zijn eigen request-file en beslist
-# zelf over toggelen. Optioneel derde argument = pagina (thema, geluid, ...).
-if [[ "$TARGET" == "settings" && ( "$ACTION" == "open" || "$ACTION" == "toggle" ) ]]; then
-    printf '%s:%s:%s\n' "$ACTION" "${SUBTARGET//:/}" "$RANDOM$RANDOM" > /tmp/kingstra-settings-request
     exit 0
 fi
 

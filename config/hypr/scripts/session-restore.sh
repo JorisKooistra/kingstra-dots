@@ -32,7 +32,7 @@ save() {
     hypr clients -j 2>/dev/null | python3 -c '
 import json, os, sys, time
 
-SKIP_CLASSES = {"org.quickshell", "quickshell", "xdg-desktop-portal-gtk", "polkit-gnome-authentication-agent-1",
+SKIP_CLASSES = {"org.quickshell", "quickshell", "kingstra-settings", "xdg-desktop-portal-gtk", "polkit-gnome-authentication-agent-1",
                 "hyprpolkitagent", "org.kde.polkit-kde-authentication-agent-1", "", "steam_proton"}
 SKIP_EXE = {"quickshell", "qs", "Hyprland", "hyprland", "bash", "sh", "zsh", "fish", "python3", "python"}
 

@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Instellingen als eigen app
+- Instellingen draait nu als eigen app in een eigen proces (`SettingsApp.qml`, app-id `kingstra-settings`) in plaats van als venster binnen de bar. Hij staat als "Kingstra Instellingen" in Walker en de shell-launcher, verschijnt in het overzicht en het venstermenu als gewoon venster en werkt ook als de bar hangt of gecrasht is.
+- Opent standaard zwevend en gecentreerd; Super+T tegelt hem naast een andere app en onthoudt die keuze, zoals bij elke app. Venster sluiten stopt het proces.
+- Super+, , `kingstra settings [pagina]`, `kingstra-settings` en alle diepe links (thema, geluid, bediening, ...) openen dezelfde app; een tweede aanroep springt naar de pagina in het open venster. Alle pagina's, zoeken en Bediening zijn ongewijzigd.
+- Nieuwe smoketest `settings-app.sh` controleert app-id, Hyprland-regel en startgedrag.
+
 ### Bediening: uitleg bij mode per scherm
 - Onder de modeknoppen staat nu wat een schermmode wel en niet regelt, en welke mode de desktop als geheel heeft. De volgorde van extra railknoppen toont nette namen in plaats van interne codes.
 

@@ -22,14 +22,11 @@ ShellRoot {
     ShellSurface {}
     VolumeBarPopup {}
 
-    // Instellingen als eigen venster. Via LazyLoader met een bron-URL: een
-    // fout in dat venster laat de bar en de surface gewoon starten.
-    LazyLoader {
-        active: true
-        source: "settings/SettingsWindow.qml"
-    }
+    // Instellingen is een eigen app in een eigen proces (SettingsApp.qml,
+    // gestart via hypr/scripts/settings-app.sh), niet meer deel van de bar.
 
-    // Klok en media op het bureaublad; zelfde isolatie als hierboven.
+    // Klok en media op het bureaublad. Via LazyLoader met een bron-URL: een
+    // fout daar laat de bar en de surface gewoon starten.
     LazyLoader {
         active: true
         source: "desktop/DesktopWidgets.qml"

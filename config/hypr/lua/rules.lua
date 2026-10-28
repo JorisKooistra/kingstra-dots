@@ -21,11 +21,16 @@ rule("youtube-no-blur", { title = "YouTube" }, { no_blur = true })
 rule("spotify", { class = "^(Spotify|spotify)$" }, { workspace = "special:spotify" })
 rule("discord", { class = "^(discord|vesktop)$" }, { workspace = "special:discord" })
 rule("quickshell", { class = "^org\\.quickshell$" }, { float = true, no_blur = true, no_shadow = true, border_size = 0, no_initial_focus = true })
--- Instellingen is een echt Quickshell-venster: zwevend, gecentreerd en wel
--- focus, schaduw en rand, anders dan de overige quickshell-oppervlakken.
+-- Het werkvlak-overzicht is een echt Quickshell-venster: zwevend,
+-- gecentreerd en wel focus, anders dan de overige quickshell-oppervlakken.
 -- Komt na de algemene quickshell-regel, zodat deze waarden winnen.
 pcall(rule, "kingstra-workspace-map", { class = "^org\\.quickshell$", title = "^Kingstra Werkvlak$" }, { float = true, size = "1020 680", center = true, no_initial_focus = false })
-pcall(rule, "kingstra-settings", { class = "^org\\.quickshell$", title = "^Kingstra Instellingen$" }, { float = true, size = "1120 740", center = true, no_initial_focus = false, no_shadow = false, no_blur = false })
+-- Instellingen is een eigen app (app-id kingstra-settings, eigen proces):
+-- standaard zwevend en gecentreerd, maar Super+T tegelt hem als elk venster
+-- en onthoudt die keuze (de float-memory-regels hieronder winnen).
+pcall(rule, "kingstra-settings", { class = "^kingstra-settings$" }, { float = true, size = "1120 740", center = true })
+-- Vangnet voor een quickshell die de AppId-pragma niet kent (vóór 0.3.0).
+pcall(rule, "kingstra-settings-legacy", { class = "^org\\.quickshell$", title = "^Kingstra Instellingen$" }, { float = true, size = "1120 740", center = true, no_initial_focus = false, no_shadow = false, no_blur = false })
 rule("qs-master", { title = "^qs-master$" }, { float = true, no_blur = true, no_shadow = true, border_size = 0, no_initial_focus = true, workspace = "special:qs-master" })
 
 -- Super+T remembers per app class whether it floats (togglefloating-safe.sh

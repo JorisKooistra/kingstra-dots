@@ -3,33 +3,45 @@ import Quickshell
 import Quickshell.Io
 import "../"
 
-// Instellingen als echt venster, zoals de settings-app van GNOME, KDE en
-// end-4: verplaatsen, naast een app tegelen, op elk scherm openen, en hij
-// blijft open als je ergens anders klikt. Hyprland laat hem zwevend en
-// gecentreerd openen (regel "kingstra-settings" in hypr/lua/rules.lua).
+// Instellingen als eigen app, zoals de settings-app van GNOME, KDE en
+// end-4. Draait in een eigen quickshell-proces (SettingsApp.qml) met app-id
+// "kingstra-settings": een gewoon venster dat je verplaatst, naast een app
+// tegelt (Super+T), in Alt-tab en het overzicht terugvindt, en dat ook werkt
+// als de bar gecrasht is. Hyprland opent hem zwevend en gecentreerd (regel
+// "kingstra-settings" in hypr/lua/rules.lua). Venster dicht = proces stopt.
 //
-// Openen loopt via qs_manager.sh, dat een regel in
-// /tmp/kingstra-settings-request schrijft: "<actie>:<pagina>:<nonce>".
-// Actie is open of toggle; pagina is optioneel (thema, geluid, ...).
+// Starten loopt via hypr/scripts/settings-app.sh. De eerste pagina komt uit
+// KINGSTRA_SETTINGS_PAGE; verzoeken aan een draaiende app komen via
+// /tmp/kingstra-settings-request: "<actie>:<pagina>:<nonce>", met actie
+// open, toggle of close en een optionele pagina (thema, geluid, ...).
 Scope {
     id: root
 
-    property bool shown: false
-    property string pendingPage: ""
-    // De request-file overleeft een shell-herstart; de eerste read is alleen
-    // de uitgangspositie, anders gaat het venster bij elke login open.
+    property string pendingPage: Quickshell.env("KINGSTRA_SETTINGS_PAGE") || ""
+    // Bij het starten staat de vorige request nog in de file; de eerste read
+    // is alleen de uitgangspositie, de startpagina komt uit de omgeving.
     property bool primed: false
-    readonly property string windowTitle: "Kingstra Instellingen"
+    property bool quitting: false
+    readonly property string appId: "kingstra-settings"
 
     MatugenColors { id: mocha }
 
-    // Imperatief, geen binding: sluit Hyprland het venster, dan zet
-    // Quickshell visible zelf uit en zou een binding breken.
-    onShownChanged: settingsWindow.visible = shown
-
     function focusWindow() {
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/hypr-dispatch.sh",
-            "focuswindow", "title:^(" + windowTitle + ")$"]);
+            "focuswindow", "class:^(" + appId + ")$"]);
+    }
+
+    function quit() {
+        if (quitting) return;
+        quitting = true;
+        settingsWindow.visible = false;
+        Qt.quit();
+    }
+
+    function requestClose() {
+        let item = settingsLoader.item;
+        if (item) item.animateClose();
+        else quit();
     }
 
     function handleRequest(raw) {
@@ -40,31 +52,23 @@ Scope {
         let parts = String(raw || "").trim().split(":");
         let action = parts[0] || "";
         let page = parts.length > 1 ? parts[1] : "";
-        if (action !== "open" && action !== "toggle") return;
 
-        if (shown) {
-            let item = settingsLoader.item;
-            if (page !== "") {
-                if (item) item.openNamedPage(page);
-                focusWindow();
-            } else if (action === "toggle") {
-                if (item) item.animateClose();
-                else shown = false;
-            } else {
-                focusWindow();
-            }
+        if (action === "close" || (action === "toggle" && page === "")) {
+            requestClose();
             return;
         }
-        pendingPage = page;
-        shown = true;
-        focusTimer.restart();
+        if (action !== "open" && action !== "toggle") return;
+        let item = settingsLoader.item;
+        if (page !== "" && item) item.openNamedPage(page);
+        focusWindow();
     }
 
-    // Hyprland geeft een quickshell-venster standaard geen focus bij openen;
-    // even wachten tot het venster gemapt is en dan zelf focussen.
+    // Een nieuw venster krijgt in Hyprland meestal zelf focus; dit is het
+    // vangnet voor als een ander venster of paneel hem net voor was.
     Timer {
         id: focusTimer
         interval: 120
+        running: true
         onTriggered: root.focusWindow()
     }
 
@@ -86,19 +90,19 @@ Scope {
 
     FloatingWindow {
         id: settingsWindow
-        visible: false
-        title: root.windowTitle
+        visible: true
+        title: "Kingstra Instellingen"
         implicitWidth: 1120
         implicitHeight: 740
         color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, Math.max(0.92, ThemeConfig.popupOpacity))
 
-        // Sluiten via Hyprland (Super+Q of de muis) zet visible zelf uit.
-        onVisibleChanged: if (!visible) root.shown = false
+        // Sluiten via Hyprland (Super+Q of de muis) zet visible zelf uit;
+        // dan is de app klaar.
+        onVisibleChanged: if (!visible) root.quit()
 
         Loader {
             id: settingsLoader
             anchors.fill: parent
-            active: root.shown
             focus: true
             source: "SettingsPopup.qml"
             onLoaded: {
@@ -112,7 +116,7 @@ Scope {
         Connections {
             target: settingsLoader.item
             ignoreUnknownSignals: true
-            function onCloseRequested() { root.shown = false; }
+            function onCloseRequested() { root.quit(); }
         }
     }
 }

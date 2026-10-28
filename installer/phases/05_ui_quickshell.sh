@@ -28,6 +28,9 @@ phase_run() {
     log_step "UI-autostart aanmaken..."
     _phase05_write_autostart_ui
 
+    log_step "Instellingen-app registreren..."
+    _phase05_install_settings_app
+
     log_step "Widget-binds activeren..."
     _phase05_activate_widget_binds
 
@@ -62,6 +65,43 @@ _phase05_enable_paccache_timer() {
 
 _phase05_write_autostart_ui() {
     log_info "Quickshell start via hypr/lua/autostart.lua"
+}
+
+# Instellingen is een eigen app (quickshell/SettingsApp.qml, app-id
+# kingstra-settings). Commando plus desktop-entry, zodat hij in Walker en de
+# shell-launcher staat. De entry krijgt een absoluut pad: ~/.local/bin staat
+# niet gegarandeerd in de PATH van de Hyprland-sessie.
+_phase05_install_settings_app() {
+    local launcher="$REPO_ROOT/config/hypr/scripts/settings-app.sh"
+    local bin_dest="$HOME/.local/bin/kingstra-settings"
+    local apps_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    local desktop="$apps_dir/kingstra-settings.desktop"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Symlink: $bin_dest → $launcher"
+        log_dry "Desktop-entry zou worden geschreven: $desktop"
+        return 0
+    fi
+
+    chmod +x "$launcher"
+    deploy_link "$launcher" "$bin_dest"
+    ensure_dir "$apps_dir"
+    cat > "$desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Kingstra Instellingen
+GenericName=Instellingen
+Comment=Thema, bar, sneltoetsen, beeldschermen en meer
+Exec=$bin_dest open
+Icon=preferences-system
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=instellingen;settings;thema;theme;kingstra;bediening;
+StartupWMClass=kingstra-settings
+DESKTOP
+    command -v update-desktop-database >/dev/null 2>&1 \
+        && update-desktop-database "$apps_dir" >/dev/null 2>&1 || true
+    log_ok "Instellingen-app beschikbaar: kingstra-settings (Super+,)"
 }
 
 _phase05_activate_widget_binds() {
@@ -109,6 +149,9 @@ _phase05_validate() {
     validate_file "$HOME/.config/quickshell/sys_info.sh"       "sys_info.sh"
     validate_file "$HOME/.config/quickshell/shellsurface/kingstra-intel-gpu-usage" "Intel GPU telemetry helper"
     validate_file "$HOME/.config/hypr/scripts/qs_manager.sh"   "qs_manager.sh"
+    validate_file "$HOME/.config/quickshell/SettingsApp.qml"   "SettingsApp.qml"
+    validate_file "$HOME/.local/bin/kingstra-settings"         "kingstra-settings"
+    validate_file "${XDG_DATA_HOME:-$HOME/.local/share}/applications/kingstra-settings.desktop" "kingstra-settings.desktop"
     validate_file "$HOME/.local/lib/qml/Kingstra/Blobs/qmldir" "Kingstra.Blobs qmldir"
     validate_file "$HOME/.local/lib/qml/Kingstra/Blobs/libkingstrablobs.so" "Kingstra.Blobs plugin"
     validate_report

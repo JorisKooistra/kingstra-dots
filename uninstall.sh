@@ -210,6 +210,7 @@ stop_session() {
         "quickshell.*$HOME/.config/quickshell/TopBar.qml" \
         "quickshell.*$HOME/.config/quickshell/Main.qml" \
         "qs.*$HOME/.config/quickshell/overview/shell.qml" \
+        "quickshell.*$HOME/.config/quickshell/SettingsApp.qml" \
         "focus_daemon.py" \
         "walker --gapplication-service" \
         "swayosd-server" \
