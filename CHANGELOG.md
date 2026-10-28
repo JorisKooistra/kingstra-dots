@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Werkvlakkaart met live beelden
+- De kaart van het ruimtelijk werkvlak (Super+Tab) toont nu het live beeld van elk venster, met de titel als label eronder, net als het gewone overzicht. Zonder beeld blijft de titel zichtbaar.
+- Zoomen met het wiel gaat vloeiend, tegels glijden mee als het zicht verschuift, en de kaart opent met een korte uitzoombeweging. Het zichtgebied staat als kader met label boven de vensters.
+
 ### Instellingen als eigen app
 - Instellingen draait nu als eigen app in een eigen proces (`SettingsApp.qml`, app-id `kingstra-settings`) in plaats van als venster binnen de bar. Hij staat als "Kingstra Instellingen" in Walker en de shell-launcher, verschijnt in het overzicht en het venstermenu als gewoon venster en werkt ook als de bar hangt of gecrasht is.
 - Opent standaard zwevend en gecentreerd; Super+T tegelt hem naast een andere app en onthoudt die keuze, zoals bij elke app. Venster sluiten stopt het proces.
