@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Mode en muziek per scherm
+- Schermprofielen bewaren mode en railkeuzes per fysieke monitor, met aparte aanpassingen per mode. Een modewissel raakt geen globale energie-, thema- of meldingsinstellingen.
+- De now-playing-pill kiest standaard één stabiel mediascherm in plaats van alle schermen of het steeds wisselende focusscherm. Zichtbaarheid en desktopmedia zijn per scherm instelbaar via Bediening.
+- Schermen met een betrouwbare serienummeridentiteit herkennen hun profiel ook na opnieuw aansluiten. Zonder serienummer wordt de connector gebruikt om identieke displays uit elkaar te houden.
+
 ### Kaart van het ruimtelijke werkvlak
 - Super+Tab toont op ruimtelijke werkruimtes een kaart van alle vensters en het zichtgebied. Sleep in beide richtingen, vergroot/verklein de kaart met het wiel en kies een venster om terug te keren.
 - De kaart gebruikt venstertitels en geometrie; zij claimt geen live videopreviews of compositorzoom. Gewone werkruimtes houden het bestaande overzicht.

@@ -346,6 +346,16 @@ Item {
     readonly property Item stripHitRegion: stripHitArea
     readonly property Item topHoverHitRegion: topHoverHitArea
     readonly property bool topHoverHovered: topHover.hovered
+    readonly property string profileScreen: shellWindow && shellWindow.screen ? shellWindow.screen.name : ""
+    property string lastModeRaw: "{}"
+    readonly property var screenPins: {
+        let p = ScreenProfiles.profile(profileScreen);
+        return p.rail.pins !== undefined ? p.rail.pins : RailPins.pins;
+    }
+    Connections {
+        target: ScreenProfiles
+        function onStateChanged() { root.applyModeState(root.lastModeRaw); }
+    }
     property string activeMode: "office"
     readonly property string notificationTooltip: NotificationService.dnd
         ? "Niet storen staat aan · middelklik om uit te zetten"
@@ -416,17 +426,24 @@ Item {
     function applyModeState(rawText) {
         if (!rawText) return;
         try {
-            let m = JSON.parse(rawText);
+            root.lastModeRaw = rawText;
+            let m = ScreenProfiles.resolveMode(root.profileScreen, JSON.parse(rawText));
             let mode = m.name || "office";
             let resolvedModules = (m.modules && m.modules.length > 0)
                 ? m.modules
                 : root._defaultModules(mode);
+            let nextAutohide = m.bar_autohide === true;
+            let visibilityChanged = root.activeMode !== mode || root.barAutoHide !== nextAutohide;
             root.activeMode = mode;
-            root.moduleList = root._normalizeModules(mode, resolvedModules);
-            root.barAutoHide = m.bar_autohide === true;
-            root.autoHideVisible = true;
-            if (root.barAutoHide) autoHideTimer.restart();
-            else autoHideTimer.stop();
+            root.moduleList = m.explicitModules ? m.modules : root._normalizeModules(mode, resolvedModules);
+            root.barAutoHide = nextAutohide;
+            // Monitor snapshots also change on focus/workspace switches.
+            // They must not continually reopen an otherwise hidden rail.
+            if (visibilityChanged) {
+                root.autoHideVisible = true;
+                if (root.barAutoHide) autoHideTimer.restart();
+                else autoHideTimer.stop();
+            }
         } catch(e) {}
     }
 
@@ -1186,14 +1203,14 @@ Item {
             // Vastgepinde modules uit het controlecentrum: één klik schakelt,
             // middelklik maakt los (rechtsklik op de pil pint weer vast).
             Repeater {
-                model: RailPins.pins
+                model: root.screenPins
                 delegate: RailButton {
                     required property string modelData
                     tooltip: root.pinTooltip(modelData)
                     icon: root.pinIcon(modelData)
                     accent: root.pinActive(modelData) ? root.mocha.accent3 : root.mocha.subtext0
                     onTriggered: root.pinTrigger(modelData)
-                    onMiddleClicked: RailPins.toggle(modelData)
+                    onMiddleClicked: ScreenProfiles.togglePin(root.profileScreen, modelData, root.screenPins)
                 }
             }
 
