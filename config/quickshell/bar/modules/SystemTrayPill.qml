@@ -120,7 +120,10 @@ Rectangle {
                     hoverEnabled: true
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                     onClicked: mouse => {
-                        if (mouse.button === Qt.LeftButton) {
+                        // Shift+klik: de app echt afsluiten in plaats van naar de tray.
+                        if (mouse.modifiers & Qt.ShiftModifier) {
+                            Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/app-quit.sh", "tray", String(modelData.id || ""), String(modelData.title || modelData.tooltipTitle || "")]);
+                        } else if (mouse.button === Qt.LeftButton) {
                             modelData.activate();
                         } else if (mouse.button === Qt.MiddleButton) {
                             modelData.secondaryActivate();

@@ -52,6 +52,10 @@ bind(mod .. " + CTRL + up", hl.dsp.window.resize({ x = 0, y = -60 }), { repeatin
 bind(mod .. " + CTRL + down", hl.dsp.window.resize({ x = 0, y = 60 }), { repeating = true })
 
 bind(mod .. " + Q", hl.dsp.window.close())
+-- Echt afsluiten: het proces van het venster stoppen, ook als de app naar de
+-- tray zou gaan. Apps op de lijst "echt sluiten" (Instellingen › Sessie)
+-- stoppen al bij een gewone Super+Q.
+exec(mod .. " + SHIFT + Q", scripts .. "/app-quit.sh active")
 bind(mod .. " + F", hl.dsp.window.fullscreen({ mode = 0 }))
 bind(mod .. " + M", hl.dsp.window.fullscreen({ mode = 1 }))
 exec(mod .. " + T", scripts .. "/togglefloating-safe.sh")

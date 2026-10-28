@@ -200,6 +200,7 @@ Item {
     onCurrentPageChanged: {
         if (currentPage === 6) refreshDisplayStatus();
         if (currentPage === 8) refreshAudioState();
+        if (currentPage === 10) refreshCloseFully();
     }
 
     property real introBase: 0.0
@@ -1789,6 +1790,7 @@ Item {
         // Load active theme info
         refreshActiveTheme();
         refreshOperationalStatus();
+        refreshCloseFully();
         startupSequence.start();
     }
 
@@ -1945,6 +1947,50 @@ Item {
         repeat: true
         running: root.currentPage === 8
         onTriggered: root.refreshAudioState()
+    }
+
+    // Apps die bij sluiten echt stoppen in plaats van naar de tray
+    // (hypr/scripts/app-quit.sh beheert de lijst en beëindigt de processen).
+    readonly property string appQuitScript: Quickshell.env("HOME") + "/.config/hypr/scripts/app-quit.sh"
+    property var closeFullyList: []
+    property var closeFullyOpenClasses: []
+
+    function splitLines(text) {
+        return String(text || "").split("\n").map(line => line.trim()).filter(line => line !== "");
+    }
+    function refreshCloseFully() {
+        if (!closeFullyListProc.running) closeFullyListProc.running = true;
+        if (!closeFullyClassesProc.running) closeFullyClassesProc.running = true;
+    }
+    function changeCloseFully(action, appClass) {
+        let value = String(appClass || "").trim();
+        if (value === "" || closeFullyEditProc.running) return;
+        closeFullyEditProc.command = ["bash", appQuitScript, action, value];
+        closeFullyEditProc.running = true;
+    }
+    function closeFullyCovers(appClass) {
+        let lower = String(appClass || "").toLowerCase();
+        for (let i = 0; i < closeFullyList.length; i++) {
+            if (lower.indexOf(String(closeFullyList[i]).toLowerCase()) !== -1) return true;
+        }
+        return false;
+    }
+
+    Process {
+        id: closeFullyListProc
+        command: ["bash", root.appQuitScript, "list"]
+        stdout: StdioCollector { onStreamFinished: root.closeFullyList = root.splitLines(this.text) }
+    }
+
+    Process {
+        id: closeFullyClassesProc
+        command: ["bash", root.appQuitScript, "classes"]
+        stdout: StdioCollector { onStreamFinished: root.closeFullyOpenClasses = root.splitLines(this.text) }
+    }
+
+    Process {
+        id: closeFullyEditProc
+        onExited: root.refreshCloseFully()
     }
 
     Process {
@@ -4021,6 +4067,164 @@ Item {
                             SettingsActionButton { label: "Vergrendelen"; icon: "󰌾"; accent: root.yellow; onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/lock.sh"]) }
                             SettingsActionButton { label: "Uitlogmenu"; icon: "󰍃"; accent: root.red; onTriggered: Quickshell.execDetached(["wlogout"]) }
                             Item { Layout.fillWidth: true }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: closeFullyEditor.implicitHeight + root.s(28)
+                            radius: root.s(12)
+                            color: Qt.alpha(root.surface0, 0.46)
+                            border.color: Qt.alpha(root.surface2, 0.82)
+                            border.width: 1
+
+                            ColumnLayout {
+                                id: closeFullyEditor
+                                anchors.fill: parent
+                                anchors.margins: root.s(14)
+                                spacing: root.s(10)
+
+                                Text { text: "Apps echt sluiten"; font.family: root.uiFontFamily; font.weight: Font.Bold; font.pixelSize: root.s(14); color: root.text }
+                                Text {
+                                    text: "Apps op deze lijst stoppen helemaal zodra je hun laatste venster sluit (Super+Q of de X), in plaats van op de achtergrond in de tray te blijven. Een naam past op elke app-klasse waar hij in voorkomt. Daarnaast sluit Super+Shift+Q elke app direct af, en Shift+klik op een tray-icoon ook."
+                                    font.family: root.uiFontFamily
+                                    font.pixelSize: root.s(11)
+                                    color: root.subtext0
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
+
+                                Flow {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(8)
+
+                                    Text {
+                                        visible: root.closeFullyList.length === 0
+                                        text: "Nog geen apps: alles mag naar de tray."
+                                        font.family: root.uiFontFamily
+                                        font.pixelSize: root.s(11)
+                                        color: root.subtext0
+                                    }
+
+                                    Repeater {
+                                        model: root.closeFullyList
+                                        delegate: Rectangle {
+                                            id: closeFullyChip
+                                            required property var modelData
+                                            implicitWidth: closeFullyChipRow.implicitWidth + root.s(20)
+                                            implicitHeight: root.s(30)
+                                            radius: root.s(15)
+                                            color: Qt.alpha(root.red, closeFullyChipMa.containsMouse ? 0.22 : 0.12)
+                                            border.width: 1
+                                            border.color: Qt.alpha(root.red, closeFullyChipMa.containsMouse ? 0.9 : 0.45)
+                                            scale: closeFullyChipMa.pressed ? 0.96 : 1.0
+                                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutQuart } }
+
+                                            RowLayout {
+                                                id: closeFullyChipRow
+                                                anchors.centerIn: parent
+                                                spacing: root.s(6)
+                                                Text { text: closeFullyChip.modelData; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.text }
+                                                Text { text: "󰅖"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(12); color: closeFullyChipMa.containsMouse ? root.red : root.subtext0 }
+                                            }
+                                            MouseArea {
+                                                id: closeFullyChipMa
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.changeCloseFully("remove", closeFullyChip.modelData)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(10)
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: root.s(36)
+                                        radius: root.s(8)
+                                        color: root.surface0
+                                        border.color: closeFullyInput.activeFocus ? root.blue : root.surface2
+                                        border.width: 1
+                                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+
+                                        TextInput {
+                                            id: closeFullyInput
+                                            anchors.fill: parent
+                                            anchors.leftMargin: root.s(10)
+                                            anchors.rightMargin: root.s(10)
+                                            verticalAlignment: TextInput.AlignVCenter
+                                            font.family: ThemeConfig.textFont
+                                            font.pixelSize: root.s(12)
+                                            color: root.text
+                                            clip: true
+                                            selectByMouse: true
+                                            onAccepted: { root.changeCloseFully("add", text); text = ""; }
+                                            Text { text: "App-klasse, bijv. chatgpt of discord"; color: root.subtext0; visible: !parent.text && !parent.activeFocus; font: parent.font; anchors.verticalCenter: parent.verticalCenter }
+                                        }
+                                    }
+
+                                    SettingsActionButton {
+                                        implicitWidth: root.s(120)
+                                        label: "Toevoegen"
+                                        icon: "󰐕"
+                                        accent: root.red
+                                        onTriggered: { root.changeCloseFully("add", closeFullyInput.text); closeFullyInput.text = ""; }
+                                    }
+                                }
+
+                                Text {
+                                    visible: closeFullyOpenFlow.shownCount > 0
+                                    text: "Nu open, klik om toe te voegen:"
+                                    font.family: root.uiFontFamily
+                                    font.pixelSize: root.s(11)
+                                    color: root.subtext0
+                                }
+
+                                Flow {
+                                    id: closeFullyOpenFlow
+                                    readonly property int shownCount: root.closeFullyOpenClasses.filter(c => !root.closeFullyCovers(c)).length
+                                    Layout.fillWidth: true
+                                    spacing: root.s(8)
+
+                                    Repeater {
+                                        model: root.closeFullyOpenClasses.filter(c => !root.closeFullyCovers(c))
+                                        delegate: Rectangle {
+                                            id: openClassChip
+                                            required property var modelData
+                                            implicitWidth: openClassRow.implicitWidth + root.s(20)
+                                            implicitHeight: root.s(30)
+                                            radius: root.s(15)
+                                            color: openClassMa.containsMouse ? root.popupPanelHoverFill : Qt.alpha(root.surface0, 0.62)
+                                            border.width: 1
+                                            border.color: openClassMa.containsMouse ? root.blue : root.surface2
+                                            scale: openClassMa.pressed ? 0.96 : 1.0
+                                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutQuart } }
+
+                                            RowLayout {
+                                                id: openClassRow
+                                                anchors.centerIn: parent
+                                                spacing: root.s(6)
+                                                Text { text: "󰐕"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(12); color: openClassMa.containsMouse ? root.blue : root.subtext0 }
+                                                Text { text: openClassChip.modelData; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.text }
+                                            }
+                                            MouseArea {
+                                                id: openClassMa
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.changeCloseFully("add", openClassChip.modelData)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         Rectangle {

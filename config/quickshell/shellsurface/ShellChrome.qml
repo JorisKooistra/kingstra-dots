@@ -2599,7 +2599,7 @@ Item {
             delegate: Rectangle {
                 id: trayCell
                 required property var modelData
-                readonly property string label: String(modelData.tooltipTitle || modelData.title || modelData.id || "")
+                readonly property string label: String(modelData.tooltipTitle || modelData.title || modelData.id || "") + "  ·  Shift+klik sluit af"
                 visible: !root.isHiddenTrayItem(modelData)
                 width: tray.cell
                 height: tray.cell
@@ -2640,7 +2640,10 @@ Item {
                     onExited: root.hideTooltip(trayCell.label)
                     onClicked: (mouse) => {
                         let item = trayCell.modelData;
-                        if (mouse.button === Qt.MiddleButton) {
+                        // Shift+klik: de app echt afsluiten in plaats van naar de tray.
+                        if (mouse.modifiers & Qt.ShiftModifier) {
+                            Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/app-quit.sh", "tray", String(item.id || ""), String(item.title || item.tooltipTitle || "")]);
+                        } else if (mouse.button === Qt.MiddleButton) {
                             item.secondaryActivate();
                         } else if (mouse.button === Qt.RightButton || item.onlyMenu) {
                             if (item.hasMenu) trayMenu.open();

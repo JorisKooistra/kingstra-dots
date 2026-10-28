@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Apps echt sluiten in plaats van naar de tray
+- Nieuwe lijst "Apps echt sluiten" in Instellingen › Sessie. Apps op de lijst stoppen helemaal zodra hun laatste venster dicht is (Super+Q of de X), in plaats van op de achtergrond in de systeemtray te blijven. ChatGPT staat er standaard op. Toevoegen gaat met een naam of met één klik op een app die nu open is; een chip aanklikken haalt hem eraf.
+- Super+Shift+Q sluit het actieve venster direct echt af (het proces stopt), voor elke app.
+- Shift+klik op een tray-icoon sluit die app af, in de rail, de zijbalk en de topbar.
+- De watcher `app-quit.sh watch` start met de sessie; de lijst staat in `~/.config/kingstra/close-fully.list`. Nieuwe smoketest `app-quit.sh`.
+
 ### Scrollen: één toets om verder te kijken
 - Super+Ctrl+Alt+links/rechts schuift nu ook op een scrollstrook één kolom, net zoals hij op het ruimtelijk werkvlak het zicht verplaatst. Op tegelende werkruimtes doet hij niets.
 

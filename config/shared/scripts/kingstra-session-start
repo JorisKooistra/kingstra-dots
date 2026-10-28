@@ -115,6 +115,7 @@ start_core() {
     run_bg_once "monitor-hotplug-restore.sh" "monitor hotplug restore" "$CONFIG_HOME/hypr/scripts/monitor-hotplug-restore.sh"
     run_bg_once "lid-lock.sh" "lid lock watcher" "$CONFIG_HOME/hypr/scripts/lid-lock.sh"
     run_bg_once "float-memory-watch.sh" "float memory watcher" "$CONFIG_HOME/hypr/scripts/float-memory-watch.sh"
+    run_bg_once "app-quit.sh watch" "close-fully watcher" "$CONFIG_HOME/hypr/scripts/app-quit.sh" watch
     run_once "gtk.sh" "GTK settings" "$CONFIG_HOME/hypr/scripts/gtk.sh"
 
     has_cmd xdg-user-dirs-update && xdg-user-dirs-update >> "$LOG_FILE" 2>&1 || true
@@ -235,6 +236,7 @@ stop_session() {
     stop_pattern "monitor-hotplug-restore.sh" "monitor hotplug restore"
     stop_pattern "lid-lock.sh" "lid lock watcher"
     stop_pattern "float-memory-watch.sh" "float memory watcher"
+    stop_pattern "app-quit.sh watch" "close-fully watcher"
     stop_pattern "citrix-guard.sh" "Citrix passthrough guard"
     stop_pattern "session-restore.sh run" "session restore"
     systemctl_user stop skwd-daemon.service

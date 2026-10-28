@@ -825,7 +825,10 @@ Item {
                             onExited: root.railHoverExit()
                             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                             onClicked: mouse => {
-                                if (mouse.button === Qt.LeftButton) {
+                                // Shift+klik: de app echt afsluiten in plaats van naar de tray.
+                                if (mouse.modifiers & Qt.ShiftModifier) {
+                                    Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/app-quit.sh", "tray", String(trayItemPill.modelData.id || ""), String(trayItemPill.modelData.title || trayItemPill.modelData.tooltipTitle || "")]);
+                                } else if (mouse.button === Qt.LeftButton) {
                                     trayItemPill.modelData.activate();
                                 } else if (mouse.button === Qt.MiddleButton) {
                                     trayItemPill.modelData.secondaryActivate();

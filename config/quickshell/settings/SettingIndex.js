@@ -38,6 +38,7 @@ var entries = [
     { label: "Weer-API en locatie", page: 9, where: "Tijd & weer", keywords: "weer openweather api sleutel locatie eenheden celsius" },
     { label: "Modus (office, gaming, media)", page: 10, where: "Sessie", keywords: "mode modus office gaming media" },
     { label: "Automatisch vergrendelen", page: 10, where: "Sessie", keywords: "idle lock vergrendelen scherm uit dpms slaapstand suspend timeout" },
+    { label: "Apps echt sluiten", page: 10, where: "Sessie", keywords: "tray systeemtray achtergrond sluiten afsluiten quit kill chatgpt privacy minimaliseren" },
     { label: "Energieprofiel", page: 10, where: "Sessie", keywords: "power profile performance balanced saver batterij" },
     { label: "Updates", page: 11, where: "Systeem › Updates", keywords: "update pakketten dotfiles upgrade" },
     { label: "Shell herstarten", page: 12, where: "Systeem › Geavanceerd", keywords: "quickshell herstart topbar herladen matugen render" },
