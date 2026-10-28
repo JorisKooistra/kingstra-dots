@@ -27,6 +27,27 @@ FocusScope {
     property int maxPinnedApps: 3
     property string query: ""
     property int selectedIndex: 0
+    // Een stilstaande muis mag de toetsenbordselectie niet overnemen. De
+    // lijst schuift tijdens het typen onder de cursor door en vuurt dan
+    // onEntered, alsof je die rij bewust aanwees. Alleen echte beweging telt.
+    property bool pointerLive: false
+    property real pointerX: -1
+    property real pointerY: -1
+    function notePointer(x, y) {
+        if (pointerX < 0) {
+            pointerX = x;
+            pointerY = y;
+            return false;
+        }
+        let dx = x - pointerX;
+        let dy = y - pointerY;
+        if (dx * dx + dy * dy < 16)
+            return false;
+        pointerX = x;
+        pointerY = y;
+        pointerLive = true;
+        return true;
+    }
     readonly property var quickActions: [
         { icon: "󰒓", label: "Instellingen", detail: "Shell en systeem", target: "settings" },
         { icon: "󰏘", label: "Thema", detail: "Kleur en vorm · instellingen", target: "settings", page: "thema" },
@@ -99,7 +120,10 @@ FocusScope {
         }
         return [];
     }
-    onPrefixResultsChanged: if (prefix !== "") selectedIndex = 0
+    onPrefixResultsChanged: {
+        if (prefix !== "") selectedIndex = 0;
+        pointerLive = false;
+    }
     onPrefixChanged: if (prefix === "@" && !windowProc.running) windowProc.running = true
     onTermChanged: if (prefix === ":") emojiDebounce.restart()
 
@@ -260,7 +284,10 @@ FocusScope {
         return scored.map(result => result.action);
     }
 
-    onFilteredChanged: selectedIndex = 0
+    onFilteredChanged: {
+        selectedIndex = 0;
+        pointerLive = false;
+    }
 
     function normalizeSearch(value) {
         return String(value || "")
@@ -500,6 +527,7 @@ FocusScope {
     function move(delta) {
         let n = prefix !== "" ? prefixResults.length : filtered.length;
         if (n === 0) return;
+        pointerLive = false;
         selectedIndex = (selectedIndex + delta + n) % n;
         if (prefix !== "") prefixList.positionViewAtIndex(selectedIndex, ListView.Contain);
         else appList.positionViewAtIndex(selectedIndex, ListView.Contain);
@@ -760,7 +788,12 @@ FocusScope {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: prow.modelData.kind === "none" ? Qt.ArrowCursor : Qt.PointingHandCursor
-                    onEntered: root.selectedIndex = prow.index
+                    onPositionChanged: mouse => {
+                        let p = mapToItem(root, mouse.x, mouse.y);
+                        if (root.notePointer(p.x, p.y))
+                            root.selectedIndex = prow.index;
+                    }
+                    onEntered: if (root.pointerLive) root.selectedIndex = prow.index
                     onClicked: root.runPrefixResult(prow.modelData)
                 }
             }
@@ -886,7 +919,12 @@ FocusScope {
                     anchors.fill: parent
                     z: 0
                     hoverEnabled: true
-                    onEntered: root.selectedIndex = row.index
+                    onPositionChanged: mouse => {
+                        let p = mapToItem(root, mouse.x, mouse.y);
+                        if (root.notePointer(p.x, p.y))
+                            root.selectedIndex = row.index;
+                    }
+                    onEntered: if (root.pointerLive) root.selectedIndex = row.index
                     onClicked: root.launch(row.modelData)
                 }
             }

@@ -23,6 +23,7 @@ Scope {
     property bool enabled: true
     property string clockPos: "top-left"
     property bool showMedia: true
+    property bool vinylMode: true
 
     readonly property string stateFile: Quickshell.env("HOME") + "/.local/state/kingstra/desktop-widgets.json"
 
@@ -39,6 +40,15 @@ Scope {
                 root.showMedia = data.media !== false;
             } catch (e) {}
         }
+    }
+
+    // Zelfde keuze als in Geluid & media: plaat of hoes.
+    FileView {
+        path: Quickshell.env("HOME") + "/.local/state/kingstra/media-view"
+        preload: true
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: root.vinylMode = String(text() || "").trim() !== "cover"
     }
 
     property var now: new Date()
@@ -63,6 +73,17 @@ Scope {
         return null;
     }
     readonly property bool playing: activePlayer !== null && activePlayer.playbackState === MprisPlaybackState.Playing
+    readonly property bool mediaTracking: {
+        let p = activePlayer;
+        return p !== null && p.lengthSupported && p.length > 0;
+    }
+    readonly property real mediaProgress: {
+        let tick = now;
+        let p = activePlayer;
+        if (!p || !p.positionSupported || !p.lengthSupported || p.length <= 0)
+            return 0;
+        return Math.max(0, Math.min(1, p.position / p.length));
+    }
 
     Variants {
         model: root.enabled ? Quickshell.screens : []
@@ -148,8 +169,8 @@ Scope {
                 Rectangle {
                     id: mediaCard
                     readonly property bool shown: root.showMedia && root.activePlayer !== null
-                    width: 340
-                    height: 92
+                    width: 420
+                    height: 148
                     radius: Math.max(16, ThemeConfig.styleWidgetRadius + 6)
                     x: root.clockPos.indexOf("right") !== -1 ? win.width - width - win.margin
                         : (root.clockPos === "center" ? (win.width - width) / 2 : win.margin)
@@ -169,14 +190,17 @@ Scope {
                         spacing: 12
 
                         MediaVinyl {
-                            Layout.preferredWidth: 68
-                            Layout.preferredHeight: 68
+                            Layout.preferredWidth: 120
+                            Layout.preferredHeight: 120
                             mocha: mocha
                             accent: mocha.primary
                             artUrl: root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : ""
                             playing: root.playing
-                            showArm: false
-                            coverRadius: 14
+                            vinylMode: root.vinylMode
+                            showArm: true
+                            progress: root.mediaProgress
+                            tracking: root.mediaTracking
+                            coverRadius: 16
                         }
 
                         ColumnLayout {

@@ -1,0 +1,66 @@
+/* Automatisch gegenereerd door matugen. Pas dit bestand NIET aan. */
+/* Accent 1 = focus, accent 2 = status, accent 3 = attentie. */
+@define-color primary                   #e4c446;
+@define-color on-primary                #3b2f00;
+@define-color primary-container         #ac900d;
+@define-color on-primary-container      #000000;
+
+@define-color secondary                 #d7c68c;
+@define-color on-secondary              #3a3004;
+@define-color secondary-container       #524618;
+@define-color on-secondary-container    #f2dfa3;
+
+@define-color tertiary                  #abd46f;
+@define-color on-tertiary               #213600;
+@define-color tertiary-container        #789e40;
+@define-color on-tertiary-container     #000000;
+
+@define-color accent2-source            #5b841f;
+@define-color accent2                   #c5ce55;
+@define-color on-accent2                #2f3300;
+@define-color accent2-container         #8f9722;
+@define-color on-accent2-container      #000000;
+
+@define-color accent3-source            #295b13;
+@define-color accent3                   #b8d071;
+@define-color on-accent3                #283500;
+@define-color accent3-container         #445700;
+@define-color on-accent3-container      #e1fb96;
+
+@define-color error                     #ffb4ab;
+@define-color on-error                  #690005;
+@define-color error-container           #93000a;
+@define-color on-error-container        #ffdad6;
+
+@define-color background                #16130b;
+@define-color on-background             #e9e2d4;
+@define-color surface                   #16130b;
+@define-color on-surface                #e9e2d4;
+@define-color surface-variant           #4c4635;
+@define-color on-surface-variant        #cfc6af;
+@define-color surface-dim               #16130b;
+@define-color surface-bright            #3c392f;
+@define-color surface-container-lowest  #100e07;
+@define-color surface-container-low     #1e1b13;
+@define-color surface-container         #221f17;
+@define-color surface-container-high    #2d2a21;
+@define-color surface-container-highest #38352b;
+
+@define-color outline                   #98907b;
+@define-color outline-variant           #4c4635;
+@define-color inverse-surface           #e9e2d4;
+@define-color inverse-on-surface        #333027;
+
+@define-color text                      #e9e2d4;
+@define-color subtext0                  #cfc6af;
+@define-color surface0                  #1e1b13;
+@define-color surface1                  #221f17;
+@define-color base                      #16130b;
+@define-color mantle                    #100e07;
+@define-color crust                     #000000;
+@define-color green                     #c5ce55;
+@define-color yellow                    #b8d071;
+@define-color red                       #ffb4ab;
+@define-color mauve                     #b8d071;
+@define-color blue                      #e4c446;
+@define-color sky                       #789e40;

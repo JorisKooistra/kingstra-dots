@@ -305,11 +305,11 @@ Item {
         model: 2
         delegate: Canvas {
             required property int index
-            readonly property bool right: index === 1
+            readonly property bool isRightFillet: index === 1
             width: root.filletR
             height: root.filletR
             visible: root.height > 1
-            x: right ? root.width : -width
+            x: isRightFillet ? root.width : -width
             y: root.fromBottom ? root.height - height : 0
             onPaint: {
                 let ctx = getContext("2d");
@@ -320,7 +320,7 @@ Item {
                 ctx.fillRect(0, 0, width, height);
                 ctx.globalCompositeOperation = "destination-out";
                 ctx.beginPath();
-                ctx.arc(right ? width : 0, root.fromBottom ? 0 : height, width, 0, Math.PI * 2);
+                ctx.arc(isRightFillet ? width : 0, root.fromBottom ? 0 : height, width, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.globalCompositeOperation = "source-over";
             }
