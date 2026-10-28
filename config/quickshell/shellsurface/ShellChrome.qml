@@ -413,6 +413,24 @@ Item {
         return Array.isArray(moduleList) && moduleList.indexOf(name) !== -1;
     }
 
+    // Meer-menu, zoals verborgen menubalk-items op macOS (Bartender/Ice):
+    // knoppen die je in Bediening "achter Meer" zet, schuiven in de rail weg
+    // tot je op Meer klikt. Per scherm en mode, net als de andere railkeuzes.
+    readonly property var railOverflow: {
+        let p = ScreenProfiles.profile(profileScreen);
+        return Array.isArray(p.rail.overflow) ? p.rail.overflow : [];
+    }
+    property bool railMoreOpen: false
+    function railTucked(id) {
+        return !railMoreOpen && railOverflow.indexOf(id) !== -1;
+    }
+    Timer {
+        id: railMoreTimer
+        interval: 8000
+        running: root.railMoreOpen
+        onTriggered: root.railMoreOpen = false
+    }
+
     function anyModuleEnabled(names) {
         for (let i = 0; i < names.length; i++) {
             if (moduleEnabled(names[i])) return true;
@@ -1161,7 +1179,8 @@ Item {
             // Middelklik zet Niet storen aan of uit.
             RailButton {
                 tooltip: root.notificationTooltip
-                visible: root.moduleEnabled("notifications")
+                available: root.moduleEnabled("notifications")
+                tucked: root.railTucked("notifications")
                 icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜")
                 badge: NotificationService.dnd ? 0 : NotificationService.count
                 accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2
@@ -1172,7 +1191,8 @@ Item {
             // Focus (schermtijd) staat nu als kaart in het dashboard en
             // Monitoren als tegel Beeldschermen in Snelle instellingen.
             RailButton { tooltip: "Systeem";
-                visible: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps"])
+                available: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps"])
+                tucked: root.railTucked("system")
                 icon: "󰍛"
                 accent: root.mocha.accent1
                 onTriggered: root.togglePanel("performance")
@@ -1182,7 +1202,8 @@ Item {
             // altijd via `kingstra update` of Instellingen.
             RailButton {
                 tooltip: root.updateTooltip()
-                visible: root.moduleEnabled("updates") && root.updateCount > 0
+                available: root.moduleEnabled("updates") && root.updateCount > 0
+                tucked: root.railTucked("updates")
                 icon: "󰚰"
                 text: root.updateCount.toString()
                 accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0
@@ -1191,7 +1212,8 @@ Item {
 
             RailButton {
                 tooltip: "Games"
-                visible: root.moduleEnabled("game_launcher")
+                available: root.moduleEnabled("game_launcher")
+                tucked: root.railTucked("games")
                 icon: "󰊴"
                 accent: root.mocha.accent2
                 onTriggered: root.togglePanel("gaming")
@@ -1203,12 +1225,22 @@ Item {
                 model: root.screenPins
                 delegate: RailButton {
                     required property string modelData
+                    tucked: root.railTucked("pins")
                     tooltip: root.pinTooltip(modelData)
                     icon: root.pinIcon(modelData)
                     accent: root.pinActive(modelData) ? root.mocha.accent3 : root.mocha.subtext0
                     onTriggered: root.pinTrigger(modelData)
                     onMiddleClicked: ScreenProfiles.togglePinOn(root.profileScreen, modelData)
                 }
+            }
+
+            // Meer: toont of verbergt wat in Bediening achter Meer staat.
+            RailButton {
+                tooltip: root.railMoreOpen ? "Minder" : "Meer (" + root.railOverflow.length + ")"
+                available: root.railOverflow.length > 0
+                icon: root.railMoreOpen ? "󰅃" : "󰇘"
+                accent: root.mocha.subtext1
+                onTriggered: root.railMoreOpen = !root.railMoreOpen
             }
 
             Item { Layout.fillHeight: true }
@@ -1246,12 +1278,14 @@ Item {
             }
 
             RailButton { tooltip: "Afsluitmenu";
+                tucked: root.railTucked("power")
                 icon: "󰐥"
                 accent: root.mocha.red
                 onTriggered: root.togglePanel("power")
             }
             RailButton { tooltip: "Instellingen";
-                visible: root.activeMode !== "media"
+                available: root.activeMode !== "media"
+                tucked: root.railTucked("settings")
                 icon: "󰒓"
                 accent: root.mocha.subtext1
                 onTriggered: root.togglePanel("settings")
@@ -1840,12 +1874,27 @@ Item {
         property color accent: root.hotColor
         property string tooltip: ""
         property int badge: 0
+        // available: of de knop er hoort te zijn; tucked: weggeschoven achter
+        // Meer. Inschuiven animeert de hoogte en verbergt pas daarna.
+        property bool available: true
+        property bool tucked: false
         signal triggered()
         signal middleClicked()
         signal wheelDelta(int delta)
 
+        visible: available && (!tucked || opacity > 0.01)
+        enabled: !tucked
+        clip: true
+        opacity: tucked ? 0 : 1
+        Behavior on opacity {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+        Behavior on Layout.preferredHeight {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+
         Layout.fillWidth: true
-        Layout.preferredHeight: text === "" ? 34 : 40
+        Layout.preferredHeight: tucked ? 0 : (text === "" ? 34 : 40)
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: mouse.containsMouse ? root.pillHoverColor : "transparent"
         border.width: 1

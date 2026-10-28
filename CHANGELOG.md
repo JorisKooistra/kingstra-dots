@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Rail: Meer-knop voor minder gebruikte knoppen
+- In Bediening kies je per scherm en mode welke railknoppen achter Meer staan (meldingen, systeem, updates, games, extra knoppen, afsluiten, instellingen), zoals verborgen menubalk-items op macOS. Ze schuiven weg met een korte animatie; een klik op Meer in de rail laat ze weer zien en na acht seconden schuiven ze terug.
+
 ### Wallpaper-effect bij scrollen
 - Bewegen over het ruimtelijk werkvlak geeft een klein effect op de wallpaper: een zachte lichtvlek in de accentkleur glijdt tegen de beweging in en dooft weer uit, zodat het voelt alsof je over de wallpaper beweegt. Per scherm aan of uit via Bediening.
 - Echte parallax kan niet met skwd-paper; de Lua-layout meldt camerabewegingen nu als Hyprland-event (`custom>>kingstra-pan`).

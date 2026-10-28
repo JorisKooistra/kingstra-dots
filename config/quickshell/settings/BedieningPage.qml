@@ -37,6 +37,12 @@ Item {
         if (index >= 0) next.splice(index, 1); else next.push(id);
         set("rail.modules", next);
     }
+    readonly property var overflow: Array.isArray(profile.rail.overflow) ? profile.rail.overflow : []
+    function toggleOverflow(id) {
+        let next = overflow.slice(), index = next.indexOf(id);
+        if (index >= 0) next.splice(index, 1); else next.push(id);
+        set("rail.overflow", next);
+    }
     function movePin(index, delta) {
         let next = pins.slice(), target = index + delta;
         if (target < 0 || target >= next.length) return;
@@ -256,6 +262,20 @@ Item {
                         chosen: root.modules.indexOf(modelData.id) >= 0
                         allowed: !ScreenProfiles.busy
                         onTriggered: root.toggleModule(modelData.id)
+                    }
+                }
+            }
+            Hint { text: "Achter Meer: deze knoppen schuiven weg tot je in de rail op Meer klikt"; Layout.fillWidth: true }
+            Flow {
+                Layout.fillWidth: true; spacing: 7
+                Repeater {
+                    model: [{id: "notifications", title: "Meldingen"}, {id: "system", title: "Systeem"}, {id: "updates", title: "Updates"}, {id: "games", title: "Games"}, {id: "pins", title: "Extra knoppen"}, {id: "power", title: "Afsluiten"}, {id: "settings", title: "Instellingen"}]
+                    delegate: Action {
+                        required property var modelData
+                        label: modelData.title
+                        chosen: root.overflow.indexOf(modelData.id) >= 0
+                        allowed: !!root.screenName && !ScreenProfiles.busy
+                        onTriggered: root.toggleOverflow(modelData.id)
                     }
                 }
             }

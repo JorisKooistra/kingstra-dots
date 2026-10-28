@@ -26,7 +26,9 @@ dit zijn nog geen live videopreviews en het is geen renderzoom van appinhoud.
 De keuze van een schermmode verandert geen globale energieprofielen, Niet storen
 of Matugen-thema. Thema en wallpaper-picker hebben een ingang onder Hele desktop.
 De extra railknoppen kunnen per mode op een scherm in volgorde worden gezet.
-De vaste navigatiegroepen zijn in deze ronde nog niet vrij te verslepen.
+Knoppen die je weinig gebruikt zet je onder "Achter Meer": ze schuiven uit de
+rail tot je op Meer klikt. De vaste navigatiegroepen zijn nog niet vrij te
+verslepen.
 
 De muziekpill gebruikt standaard één stabiel mediascherm; tonen/verbergen kan
 per scherm worden overschreven. Desktopmedia kan apart aan/uit.

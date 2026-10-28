@@ -52,6 +52,13 @@ class ProfilesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.update(self.a, "set", "wallpaperDrift", '"ja"')
 
+    def test_overflow_accepts_only_rail_buttons(self):
+        self.update(self.a, "set", "rail.overflow", '["settings", "pins"]')
+        a = self.data["screens"][profiles.monitor_key(self.a)]
+        self.assertEqual(a["modes"]["office"]["rail"]["overflow"], ["settings", "pins"])
+        with self.assertRaises(ValueError):
+            self.update(self.a, "set", "rail.overflow", '["workspaces"]')
+
     def test_corrupt_preferences_are_not_discarded(self):
         with tempfile.TemporaryDirectory() as folder:
             file = Path(folder) / "profiles.json"

@@ -16,6 +16,8 @@ MODULES = {"workspaces", "clock", "updates", "cpu_temp", "gpu_temp", "ram_usage"
            "network", "battery", "volume", "bluetooth", "notifications", "brightness",
            "media_controls", "game_launcher"}
 PINS = {"wifi", "bt", "dnd", "power", "media"}
+# Railknoppen die achter Meer kunnen (zie ShellChrome.railTucked).
+OVERFLOW = {"notifications", "system", "updates", "games", "pins", "power", "settings"}
 
 
 def read(path, default):
@@ -102,8 +104,8 @@ def change(data, monitor, command, args, available, fallback):
         raise ValueError("Onbekende schermactie")
     field, raw = args
     value = json.loads(raw)
-    if field in ("rail.modules", "rail.pins"):
-        known = MODULES if field == "rail.modules" else PINS
+    if field in ("rail.modules", "rail.pins", "rail.overflow"):
+        known = {"rail.modules": MODULES, "rail.pins": PINS, "rail.overflow": OVERFLOW}[field]
         if not isinstance(value, list) or any(v not in known for v in value) or len(set(value)) != len(value):
             raise ValueError("Ongeldige modulelijst")
     elif field in ("rail.autohide", "desktopMedia"):
