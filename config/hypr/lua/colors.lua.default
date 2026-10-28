@@ -5,6 +5,13 @@ function M.apply()
     hl.config({ general = { col = {
         active_border = { colors = { "rgba(98cbffee)", "rgba(a5eb6eee)", "rgba(90d6a8ee)" }, angle = 55 },
         inactive_border = "rgba(89919d99)",
-    } }, decoration = { shadow = { color = "rgba(000000cc)" } } })
+    } }, decoration = { shadow = { color = "rgba(000000cc)" } },
+    group = {
+        col = { border_active = "rgba(98cbffee)", border_inactive = "rgba(2a2f3699)" },
+        groupbar = {
+            col = { active = "rgba(98cbffee)", inactive = "rgba(2a2f36dd)" },
+            text_color = "rgba(00325aff)", text_color_inactive = "rgba(e1e2e8ff)",
+        },
+    } })
 end
 return M

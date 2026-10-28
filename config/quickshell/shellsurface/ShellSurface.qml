@@ -153,6 +153,7 @@ Scope {
                     mocha: mocha
                     chrome: chrome
                     activeMode: chrome.activeMode
+                    suppressed: panelHost.open && panelHost.visualEdge === (island.fromBottom ? "bottom" : "top")
                 }
 
                 // Klik-buiten-om-te-sluiten. De geometrie is bewust aan de
@@ -239,7 +240,7 @@ Scope {
                         panelHost.sourceEntryId = "";
                         return;
                     }
-                    let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "quicksettings", "audiomedia", "gaming", "power", "notifications", "launcher", "clipboard", "windows", "tophover", "menu"];
+                    let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "quicksettings", "audiomedia", "gaming", "power", "notifications", "launcher", "clipboard", "windows", "tophover", "menu", "snap"];
                     if (!ThemeConfig.barZoneSchemaLoaded || surfaceTargets.indexOf(target) === -1) return;
                     if (Hyprland.monitorFor(surfaceWindow.screen) === Hyprland.focusedMonitor) {
                         // Via sneltoets of statustegel: blijft open tot Esc of klik ernaast.

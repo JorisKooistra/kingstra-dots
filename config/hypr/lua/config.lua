@@ -89,6 +89,25 @@ end
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
 hl.gesture({ fingers = 4, direction = "up", action = "special", workspace_name = "magic" })
 hl.gesture({ fingers = 4, direction = "down", action = "special", workspace_name = "magic" })
+-- Vensters in een groep (Super+G) krijgen een tabbalk met afgeronde
+-- pillen in plaats van dunne streepjes. Kleuren komen uit lua.colors.
+pcall(hl.config, { group = { groupbar = {
+    enabled = true, render_titles = true, gradients = true,
+    height = 22, font_size = 11, indicator_height = 0,
+    rounding = 11, gradient_rounding = 11,
+    round_only_edges = false, gradient_round_only_edges = false,
+    scrolling = true, middle_click_close = true,
+} } })
+
+-- Drie vingers omlaag opent het controlecentrum, omhoog het overzicht.
+-- Lua-functies als gebaar bestaan pas in nieuwere Hyprland-versies; pcall
+-- houdt de rest van de config heel als dat hier nog niet kan.
+pcall(hl.gesture, { fingers = 3, direction = "down", action = function()
+    hl.exec_cmd("~/.config/hypr/scripts/qs_manager.sh toggle tophover")
+end })
+pcall(hl.gesture, { fingers = 3, direction = "up", action = function()
+    hl.exec_cmd("~/.config/hypr/scripts/overview-toggle.sh")
+end })
 
 hl.curve("easeOut", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } })
 hl.curve("easeIn", { type = "bezier", points = { { 0.5, 0 }, { 1, 0.5 } } })

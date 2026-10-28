@@ -70,7 +70,12 @@ Item {
     readonly property bool privacyLive: liveEnabled && (privacyMic || privacyCamera || privacyRecording)
     readonly property bool hasLive: mediaLive || privacyLive
 
+    // Aan zolang een paneel uit dezelfde rand groeit (bv. het
+    // controlecentrum); dan maakt het eiland plaats.
+    property bool suppressed: false
+
     readonly property string mode: {
+        if (suppressed) return "";
         // Een toetsdruk gaat voor: je wilt meteen zien wat je deed.
         if (osdActive) return "osd";
         if (currentNotif !== null) return "notif";

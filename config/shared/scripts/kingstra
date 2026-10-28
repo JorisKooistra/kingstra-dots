@@ -65,6 +65,8 @@ Openen
   menu                     toetsenbordmenu voor alles (Super+Alt+Spatie)
   widgets aan|uit|klok <plek>  bureaubladklok en media (plek: linksboven, rechtsboven, midden, linksonder, rechtsonder)
   eiland [osd|meldingen|live] aan|uit  wat het eiland onder de balk toont
+  indeling [naam|scroll|kies]  indeling van deze werkruimte (tegels, 50-50, 70-30, midden, kolommen, scrollen, focus)
+  kladblok [stuur]         kladblok tonen, of het actieve venster erheen sturen
 
 Overig
   welcome                  welkomstmelding en sneltoetsen opnieuw tonen
@@ -153,6 +155,18 @@ for key in ([keys[part]] if part else ["osd", "notifications", "live"]):
 json.dump(data, open(path, "w"))
 PY
         ;;
+    indeling|layout)
+        case "${1:-kies}" in
+            kies|pick) panel snap ;;
+            scroll|scrollen-wissel) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" scroll ;;
+            list|lijst) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" list ;;
+            *) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" apply "$1" ;;
+        esac ;;
+    kladblok|scratchpad)
+        if [[ "${1:-}" == "stuur" || "${1:-}" == "send" ]]; then
+            exec "$CONFIG_HOME/hypr/scripts/scratchpad.sh" send
+        fi
+        exec "$CONFIG_HOME/hypr/scripts/scratchpad.sh" toggle ;;
     quick|snel) panel tophover ;;
     welcome|welkom) run kingstra-welcome --force ;;
     version|versie|--version|-v)

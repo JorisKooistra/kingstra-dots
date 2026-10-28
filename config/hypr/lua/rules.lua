@@ -67,6 +67,20 @@ if ok_file and float_file then
     float_file:close()
 end
 
+-- Indeling per werkruimte (Super+Z, `kingstra indeling`). layout-tool.sh
+-- schrijft "werkruimte layout" per regel; zo overleeft de keuze een herstart.
+local ok_layouts, layouts_file = pcall(io.open, state_home .. "/kingstra/workspace-layouts", "r")
+if ok_layouts and layouts_file then
+    local known = { dwindle = true, master = true, scrolling = true, monocle = true }
+    for line in layouts_file:lines() do
+        local ws, layout = line:match("^(%S+)%s+(%S+)$")
+        if ws and known[layout] then
+            pcall(hl.workspace_rule, { workspace = ws, layout = layout })
+        end
+    end
+    layouts_file:close()
+end
+
 -- Subtle border cue for every floating window; colors follow Matugen.
 local ok_colors, colors = pcall(require, "lua.colors")
 local floating_border = (ok_colors and type(colors) == "table" and colors.floating_border)

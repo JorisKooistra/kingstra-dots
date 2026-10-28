@@ -57,8 +57,8 @@ case "$dispatcher" in
         ;;
     togglefloating|setfloating)
         action=toggle
-        # shellcheck disable=SC2209 # "set" is de actienaam, geen commando
-        [[ "$dispatcher" == "setfloating" ]] && action=set
+        # Hyprland kent "enable"/"disable"; "set" zou als toggle gelezen worden.
+        [[ "$dispatcher" == "setfloating" ]] && action=enable
         expression="hl.dsp.window.float({ action = $(lua_quote "$action")$(window_field "${1:-}") })"
         ;;
     dpms)

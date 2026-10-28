@@ -25,6 +25,21 @@ function M.apply()
         decoration = {
             shadow = { color = "rgba(000000cc)" },
         },
+        -- Tabbalk van vensters in een groep: actieve tab in de accentkleur.
+        group = {
+            col = {
+                border_active = "rgba({{colors.primary.default.hex_stripped}}ee)",
+                border_inactive = "rgba({{colors.surface_container_high.default.hex_stripped}}99)",
+            },
+            groupbar = {
+                col = {
+                    active = "rgba({{colors.primary.default.hex_stripped}}ee)",
+                    inactive = "rgba({{colors.surface_container_high.default.hex_stripped}}dd)",
+                },
+                text_color = "rgba({{colors.on_primary.default.hex_stripped}}ff)",
+                text_color_inactive = "rgba({{colors.on_surface.default.hex_stripped}}ff)",
+            },
+        },
     })
 end
 

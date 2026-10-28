@@ -4,6 +4,16 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Windows: snap layouts, scrolling and scratchpad
+- Super+Z opens a snap picker, like Snap Layouts in Windows 11 and KDE's tiles: seven layouts for the current workspace (Tegels, 50 | 50, 70 | 30, Midden groot, Drie kolommen, Scrollen, Eén tegelijk). Click a zone to put the active window there; the big zone makes it the main window. Keys 1-7, arrows and Enter work too.
+- Every layout is a real Hyprland layout (dwindle, master, scrolling, monocle), so windows stay tiled. The choice per workspace is saved in `~/.local/state/kingstra/workspace-layouts.json` and comes back after a restart.
+- Scrolling columns like niri: Super+Alt+S switches the current workspace to a scrolling strip and back. Super+Shift+wheel moves one column, Super+Ctrl+, and . make the column narrower or wider.
+- Any window can become a scratchpad: Super+Shift+` sends the active window to the "kladblok" (floating, centered, 70% × 65%) or brings it back; Super+` shows or hides it. Spotify and Discord keep their own.
+- Window groups (Super+G) get a tab bar of rounded pills in the theme's colors instead of thin stripes.
+- New commands: `kingstra indeling [naam|scroll|kies]` and `kingstra kladblok [stuur]`; the keyboard menu has a Vensters submenu.
+- Three-finger swipe down opens the control center, up opens the overview (needs a Hyprland version with Lua gesture functions; older versions skip it).
+- Fix: `hypr-dispatch.sh setfloating` now sets floating instead of toggling it.
+
 ### Shell: Kingstra island
 - One place for short feedback, like Dynamic Island and Live Activities on macOS: a pill grows out of the middle of the bar (with hollow corners into the bar edge) and shrinks back.
 - Volume, microphone and brightness keys now run `hypr/scripts/osd.sh`, which changes the value itself (wpctl, brightnessctl) and shows it in the island. With the island's OSD off, or the shell not running, swayosd takes over as before.

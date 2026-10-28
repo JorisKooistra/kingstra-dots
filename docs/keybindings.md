@@ -60,6 +60,20 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 
 ---
 
+## Indelingen en kladblok
+
+| Toetsen | Actie |
+|---|---|
+| `Super + Z` | Snap-indeling kiezen voor deze werkruimte (1-7, klik een vak) |
+| `Super + Alt + S` | Scrollende kolommen aan/uit op deze werkruimte |
+| `Super + Shift + wiel` | Scrollen: één kolom verder of terug |
+| `Super + Ctrl + .` / `,` | Scrollen: kolom breder / smaller |
+| ``Super + ` `` | Kladblok tonen/verbergen |
+| ``Super + Shift + ` `` | Actief venster naar het kladblok, of terug |
+| 3 vingers omlaag / omhoog | Controlecentrum / overzicht |
+
+---
+
 ## Venstergroepen (tabs)
 
 | Toetsen | Actie |

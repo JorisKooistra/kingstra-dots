@@ -37,6 +37,13 @@ FocusScope {
     readonly property var tree: [
         { icon: "󱓞", label: "Apps", hint: "Launcher", cmd: qs("launcher"), panel: true },
         { icon: "󰊢", label: "Werkruimte-overzicht", hint: "Super+Tab", cmd: ["bash", scripts + "/overview-toggle.sh"] },
+        { icon: "󰕰", label: "Vensters", children: [
+            { icon: "󰕰", label: "Indeling kiezen", hint: "Super+Z", cmd: qs("snap"), panel: true },
+            { icon: "󰁔", label: "Scrollen aan of uit", hint: "Super+Alt+S", cmd: ["bash", scripts + "/layout-tool.sh", "scroll"] },
+            { icon: "󰕴", label: "Terug naar tegels", cmd: ["bash", scripts + "/layout-tool.sh", "apply", "tegels"] },
+            { icon: "󰠮", label: "Kladblok tonen", hint: "Super+`", cmd: ["bash", scripts + "/scratchpad.sh", "toggle"] },
+            { icon: "󰁝", label: "Venster naar kladblok", hint: "Super+Shift+`", cmd: ["bash", scripts + "/scratchpad.sh", "send"] }
+        ] },
         { icon: "󰏘", label: "Uiterlijk", children: [
             { icon: "󰏘", label: "Thema", children: [
                 { icon: "󰝤", label: "Mono", cmd: kingstra("theme mono") },

@@ -127,6 +127,22 @@ bind(mod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:spotify" }
 bind(mod .. " + D", hl.dsp.workspace.toggle_special("discord"))
 bind(mod .. " + SHIFT + D", hl.dsp.window.move({ workspace = "special:discord" }))
 
+-- Indelingen en kladblok. Super+Z kiest een snap-indeling voor deze
+-- werkruimte; Super+Alt+S zet scrollende kolommen aan of uit. Super+`
+-- toont het kladblok, Super+Shift+` stuurt het actieve venster erheen
+-- (of haalt het terug).
+exec(mod .. " + Z", scripts .. "/qs_manager.sh toggle snap")
+exec(mod .. " + ALT + S", scripts .. "/layout-tool.sh scroll")
+exec(mod .. " + grave", scripts .. "/scratchpad.sh toggle")
+exec(mod .. " + SHIFT + grave", scripts .. "/scratchpad.sh send")
+-- In een scrollende werkruimte: Super+Shift+wiel schuift de strook een
+-- kolom op, Super+Ctrl+, en . maken de kolom smaller of breder. Op andere
+-- layouts doen deze toetsen niets.
+bind(mod .. " + SHIFT + mouse_down", hl.dsp.layout("move +col"))
+bind(mod .. " + SHIFT + mouse_up", hl.dsp.layout("move -col"))
+bind(mod .. " + CTRL + period", hl.dsp.layout("colresize +conf"))
+bind(mod .. " + CTRL + comma", hl.dsp.layout("colresize -conf"))
+
 hl.define_submap("passthrough", function()
     bind(mod .. " + Escape", hl.dsp.submap("reset"))
 end)
