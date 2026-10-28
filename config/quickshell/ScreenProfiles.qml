@@ -78,6 +78,12 @@ Item {
     function accept(raw) {
         try {
             let next = JSON.parse(raw);
+            // Alleen een volledig antwoord vervangt de staat; anders blijven
+            // de vorige keuzes staan in plaats van dat alle bindingen breken.
+            if (!next || typeof next !== "object" || !next.profiles || !Array.isArray(next.monitors))
+                throw new Error("onvolledig");
+            next.presets = next.presets || {};
+            next.fallback = next.fallback || {name: "office"};
             if (JSON.stringify(next) !== JSON.stringify(state)) state = next;
             errorText = "";
         } catch (e) { errorText = "Schermprofielen konden niet worden gelezen"; }
