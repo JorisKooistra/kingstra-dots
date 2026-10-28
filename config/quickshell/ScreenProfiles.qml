@@ -53,6 +53,21 @@ Item {
         commands = commands.concat([args]);
         actionTimer.start();
     }
+    // Extra railknoppen: een scherm met eigen keuzes gebruikt die lijst,
+    // anders de gedeelde lijst van RailPins. Vastpinnen vanuit het
+    // controlecentrum loopt hier ook langs, zodat het op elk scherm werkt.
+    function pinsFor(name) {
+        let p = profile(name);
+        return p.rail.pins !== undefined ? p.rail.pins : RailPins.pins;
+    }
+    function isPinnedOn(name, id) {
+        return pinsFor(name).indexOf(id) !== -1;
+    }
+    function togglePinOn(name, id) {
+        let p = profile(name);
+        if (name && p.rail.pins !== undefined) togglePin(name, id, p.rail.pins);
+        else RailPins.toggle(id);
+    }
     function togglePin(name, id, current) {
         let list = current.slice();
         let i = list.indexOf(id);

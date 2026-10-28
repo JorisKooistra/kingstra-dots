@@ -513,6 +513,10 @@ Item {
                 if (entry === "network" && root.pendingNetworkMode !== "" && item.activeMode !== undefined)
                     item.activeMode = root.pendingNetworkMode;
                 root.pendingNetworkMode = "";
+                // Panelen die per scherm iets bewaren (vastpinnen in de rail)
+                // moeten weten op welk scherm ze openstaan.
+                if (item.screenName !== undefined && root.hostWindow && root.hostWindow.screen)
+                    item.screenName = root.hostWindow.screen.name;
                 root.holdEntryId = "";
                 if (root.open && root.needsKeyboard) root.focusContent();
             }

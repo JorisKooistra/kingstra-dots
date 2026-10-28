@@ -25,6 +25,8 @@ Item {
     readonly property color cardBorder: mocha.shellOutline
 
     property var now: new Date()
+    // Gezet door PanelHost: vastpinnen in de rail geldt voor dit scherm.
+    property string screenName: ""
     // Expliciete locale: de sessie draait op een C/en_US-locale, waardoor
     // dag- en maandnamen anders in het Engels tussen de Nederlandse labels
     // zouden staan.
@@ -402,6 +404,7 @@ Item {
                         ControlToggles {
                             id: toggles
                             width: togglesFlick.width
+                            screenName: root.screenName
                             onPanelSwitchRequested: (entryId) => {
                                 root.requestedNetworkMode = toggles.requestedNetworkMode;
                                 root.panelSwitchRequested(entryId);
@@ -612,7 +615,7 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             acceptedButtons: Qt.RightButton
-                            onClicked: RailPins.toggle("media")
+                            onClicked: ScreenProfiles.togglePinOn(root.screenName, "media")
                         }
                         Text {
                             anchors.top: parent.top
@@ -623,7 +626,7 @@ Item {
                             font.family: ThemeConfig.iconFont
                             font.pixelSize: 10
                             color: mocha.green
-                            opacity: RailPins.isPinned("media") ? 0.9 : 0
+                            opacity: ScreenProfiles.isPinnedOn(root.screenName, "media") ? 0.9 : 0
                             Behavior on opacity {
                                 NumberAnimation { duration: ThemeConfig.durationToken("fast") }
                             }

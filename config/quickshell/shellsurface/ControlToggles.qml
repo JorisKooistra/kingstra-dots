@@ -20,6 +20,8 @@ Item {
 
     signal panelSwitchRequested(string entryId)
     property string requestedNetworkMode: ""
+    // Scherm waarop het controlecentrum openstaat (vastpinnen per scherm).
+    property string screenName: ""
 
     readonly property int itemRadius: Math.max(10, Math.min(18, ThemeConfig.styleWidgetRadius))
     implicitHeight: content.implicitHeight
@@ -703,7 +705,7 @@ Item {
         property color accent: mocha.primary
         // Rechtsklik pint deze pil als mini-tegel in de rail (RailPins).
         property string pinId: ""
-        readonly property bool pinned: pinId !== "" && RailPins.isPinned(pinId)
+        readonly property bool pinned: pinId !== "" && ScreenProfiles.isPinnedOn(root.screenName, pinId)
         property bool editing: false
         property bool hiddenInEdit: false
         property bool wide: false
@@ -751,7 +753,7 @@ Item {
             onClicked: (mouse) => {
                 if (pill.editing) return;
                 if (mouse.button === Qt.RightButton) {
-                    if (pill.pinId !== "") RailPins.toggle(pill.pinId);
+                    if (pill.pinId !== "") ScreenProfiles.togglePinOn(root.screenName, pill.pinId);
                     return;
                 }
                 pill.triggered();

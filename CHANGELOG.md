@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Fix: vastpinnen werkt op elk scherm
+- Vastpinnen vanuit het controlecentrum schreef altijd naar de gedeelde lijst. Op een scherm met eigen railkeuzes (Bediening) verscheen de knop daardoor niet. Het controlecentrum weet nu op welk scherm het openstaat en pint daar vast; middelklik in de rail maakt los zonder ongevraagd eigen keuzes voor dat scherm aan te maken.
+
 ### Fix: Bediening knipperde elke paar seconden
 - Het uitlezen van de werkruimte-indeling (elke twee seconden) schakelde de indelingsknoppen steeds even uit, waardoor ze knipperden. Uitlezen en toepassen zijn nu gescheiden.
 - De knoppen op Bediening krijgen dezelfde zachte kleur-, druk- en vervaagovergangen als de rest van Instellingen.

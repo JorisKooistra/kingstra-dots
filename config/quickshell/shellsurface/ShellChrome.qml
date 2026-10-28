@@ -348,10 +348,7 @@ Item {
     readonly property bool topHoverHovered: topHover.hovered
     readonly property string profileScreen: shellWindow && shellWindow.screen ? shellWindow.screen.name : ""
     property string lastModeRaw: "{}"
-    readonly property var screenPins: {
-        let p = ScreenProfiles.profile(profileScreen);
-        return p.rail.pins !== undefined ? p.rail.pins : RailPins.pins;
-    }
+    readonly property var screenPins: ScreenProfiles.pinsFor(profileScreen)
     Connections {
         target: ScreenProfiles
         function onStateChanged() { root.applyModeState(root.lastModeRaw); }
@@ -1210,7 +1207,7 @@ Item {
                     icon: root.pinIcon(modelData)
                     accent: root.pinActive(modelData) ? root.mocha.accent3 : root.mocha.subtext0
                     onTriggered: root.pinTrigger(modelData)
-                    onMiddleClicked: ScreenProfiles.togglePin(root.profileScreen, modelData, root.screenPins)
+                    onMiddleClicked: ScreenProfiles.togglePinOn(root.profileScreen, modelData)
                 }
             }
 
