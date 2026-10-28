@@ -16,6 +16,8 @@ ShellRoot {
         Qt.application.organization = "kingstra-shell";
     }
 
+    LazyLoader { active: true; source: "settings/SpatialOverviewWindow.qml" }
+
     BarShell {}
     ShellSurface {}
     VolumeBarPopup {}

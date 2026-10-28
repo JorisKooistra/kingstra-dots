@@ -24,6 +24,7 @@ rule("quickshell", { class = "^org\\.quickshell$" }, { float = true, no_blur = t
 -- Instellingen is een echt Quickshell-venster: zwevend, gecentreerd en wel
 -- focus, schaduw en rand, anders dan de overige quickshell-oppervlakken.
 -- Komt na de algemene quickshell-regel, zodat deze waarden winnen.
+pcall(rule, "kingstra-workspace-map", { class = "^org\\.quickshell$", title = "^Kingstra Werkvlak$" }, { float = true, size = "1020 680", center = true, no_initial_focus = false })
 pcall(rule, "kingstra-settings", { class = "^org\\.quickshell$", title = "^Kingstra Instellingen$" }, { float = true, size = "1120 740", center = true, no_initial_focus = false, no_shadow = false, no_blur = false })
 rule("qs-master", { title = "^qs-master$" }, { float = true, no_blur = true, no_shadow = true, border_size = 0, no_initial_focus = true, workspace = "special:qs-master" })
 
