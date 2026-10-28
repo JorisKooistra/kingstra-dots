@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Rustige muziekstatus
+- De animatie in de now-playing-pill gebruikt een vaste tekenruimte. Alleen de streepjes schalen; titel en pill veranderen daardoor niet meer mee van hoogte.
+
 ### Tablet mode: smoother
 - Rotating keeps the screen's current resolution and refresh rate instead of asking for "preferred", so the panel no longer needs a full modeset (no black flash or resolution jump).
 - Repeated hinge events no longer rotate again when the screen already has the right orientation; a short message in the corner says when tablet mode switches on or off.

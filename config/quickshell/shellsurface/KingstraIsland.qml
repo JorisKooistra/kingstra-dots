@@ -397,25 +397,38 @@ Item {
             }
             Item { visible: !root.mediaLive; Layout.fillWidth: true }
 
-            // Equalizer-streepjes zolang er muziek speelt.
-            Row {
+            // Vaste geometrie: bewegende streepjes mogen de RowLayout of de
+            // tekstbasis niet laten verspringen. Alleen hun tekeninhoud schaalt.
+            Item {
                 visible: root.mediaLive
-                spacing: 2
+                Layout.preferredWidth: 18
+                Layout.preferredHeight: 16
+                Layout.minimumWidth: 18
+                Layout.maximumWidth: 18
+                Layout.minimumHeight: 16
+                Layout.maximumHeight: 16
                 Layout.alignment: Qt.AlignVCenter
                 Repeater {
                     model: 4
                     delegate: Rectangle {
                         required property int index
+                        x: index * 5
+                        y: 1
                         width: 3
+                        height: 14
                         radius: 1.5
                         color: root.mocha.primary
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: 6
-                        SequentialAnimation on height {
-                            running: root.mode === "live" && root.mediaLive
-                            loops: Animation.Infinite
-                            NumberAnimation { to: 14 - index * 2; duration: 260 + index * 70; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 4 + index; duration: 300 + index * 50; easing.type: Easing.InOutSine }
+                        transform: Scale {
+                            id: barScale
+                            origin.x: 1.5
+                            origin.y: 7
+                            yScale: 0.45
+                            SequentialAnimation on yScale {
+                                running: root.visible && root.mode === "live" && root.mediaLive
+                                loops: Animation.Infinite
+                                NumberAnimation { to: (14 - index * 2) / 14; duration: 260 + index * 70; easing.type: Easing.InOutSine }
+                                NumberAnimation { to: (4 + index) / 14; duration: 300 + index * 50; easing.type: Easing.InOutSine }
+                            }
                         }
                     }
                 }
