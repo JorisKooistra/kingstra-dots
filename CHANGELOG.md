@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell start weer na update
+- Het eiland gebruikte een eigen property `right`, een vaste (FINAL) eigenschap van elk Qt-item. Qt weigerde daardoor het eiland en via de shell-surface de hele bar; na `kingstra update` bleef het scherm leeg. Hersteld door de naam te wijzigen (96ec636).
+- Nieuwe smoketest `qml-final-properties.sh` vangt deze fout voortaan voordat hij op main komt.
+
 ### Muziekspeler met materiaal en traagheid
 - De desktopspeler krijgt een vaste plint, fijnere groeven en een plaat die op gang komt en rustig uitloopt bij pauze. De toonarm en plint draaien niet mee.
 - Organic gebruikt een warme houtachtige plint, Paper een getekende omlijsting, Neon een compacte disc zonder toonarm en Mono een rustige hifi-uitvoering. De bestaande afspeelknoppen blijven gelijk.
