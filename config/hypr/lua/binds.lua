@@ -6,6 +6,7 @@ if not ok_spatial then
         return function() if fallback then fallback() end end
     end }
 end
+local noop = function() end
 local function exec(keys, command, options)
     hl.bind(keys, hl.dsp.exec_cmd(command), options)
 end
@@ -63,8 +64,20 @@ for workspace = 1, 10 do
     exec(mod .. " + SHIFT + " .. key, scripts .. "/workspace-action.sh movetoworkspace " .. workspace)
     exec(mod .. " + ALT + " .. key, scripts .. "/workspace-action.sh movetoworkspacesilent " .. workspace)
 end
-exec(mod .. " + mouse_down", scripts .. "/workspace-scroll.sh next")
-exec(mod .. " + mouse_up", scripts .. "/workspace-scroll.sh prev")
+-- Super+wiel scrolt binnen de werkruimte (ruimtelijk: omhoog/omlaag,
+-- scrollstrook: kolommen), Super+Ctrl+wiel opzij, Super+Shift+wiel wisselt
+-- van werkruimte. Super+middelmuis ingedrukt houden sleept het werkvlak vrij.
+local wheel = spatial.wheel or function() return noop end
+bind(mod .. " + mouse_down", wheel("down"))
+bind(mod .. " + mouse_up", wheel("up"))
+bind(mod .. " + mouse_left", wheel("left"))
+bind(mod .. " + mouse_right", wheel("right"))
+bind(mod .. " + CTRL + mouse_down", wheel("right"))
+bind(mod .. " + CTRL + mouse_up", wheel("left"))
+exec(mod .. " + SHIFT + mouse_down", scripts .. "/workspace-scroll.sh next")
+exec(mod .. " + SHIFT + mouse_up", scripts .. "/workspace-scroll.sh prev")
+bind(mod .. " + mouse:274", spatial.drag_start or noop)
+bind("mouse:274", spatial.drag_stop or noop, { release = true, ignore_mods = true, non_consuming = true })
 exec(mod .. " + Tab", scripts .. "/overview-toggle.sh")
 bind("ALT + Tab", hl.dsp.focus({ workspace = "previous" }))
 
@@ -138,13 +151,8 @@ exec(mod .. " + SHIFT + grave", scripts .. "/scratchpad.sh send")
 -- haalt het laatst geparkeerde terug; Super+W toont ze allemaal.
 exec(mod .. " + minus", "python3 " .. scripts .. "/park-window.py park")
 exec(mod .. " + SHIFT + minus", "python3 " .. scripts .. "/park-window.py last")
--- In een scrollende werkruimte: Super+Shift+wiel schuift de strook een
--- kolom op, Super+Ctrl+, en . maken de kolom smaller of breder. Op andere
--- layouts doen deze toetsen niets.
-exec(mod .. " + SHIFT + mouse_down", scripts .. "/layout-tool.sh wheel down")
-exec(mod .. " + SHIFT + mouse_up", scripts .. "/layout-tool.sh wheel up")
-exec(mod .. " + SHIFT + mouse_left", scripts .. "/layout-tool.sh wheel left")
-exec(mod .. " + SHIFT + mouse_right", scripts .. "/layout-tool.sh wheel right")
+-- In een scrollende werkruimte maken Super+Ctrl+, en . de kolom smaller
+-- of breder. Op andere layouts doen deze toetsen niets.
 exec(mod .. " + CTRL + period", scripts .. "/layout-tool.sh resize grow")
 exec(mod .. " + CTRL + comma", scripts .. "/layout-tool.sh resize shrink")
 

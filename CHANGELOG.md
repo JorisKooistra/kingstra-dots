@@ -4,6 +4,17 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Werkvlak: tegels, vrij slepen en scrollen binnen de werkruimte
+- Super+wiel scrolt nu binnen de werkruimte (scrollstrook: volgende/vorige pagina; ruimtelijk: omhoog/omlaag), Super+Ctrl+wiel opzij. Super+Shift+wiel wisselt van werkruimte (was andersom).
+- Super+middelmuis ingedrukt houden sleept het werkvlak vrij, ook diagonaal. Bij loslaten klikt het alleen op een plek vast als je er dichtbij bent; op een scrollstrook stapt slepen per kolom.
+- Ruimtelijk werkvlak: een plek kan tot vier vensters als tegels hebben. Eén plek met vensters vult het hele scherm, net als gewone tegels. Een nieuw venster komt waar je kijkt: op een lege plek die je met scrollen of slepen hebt opgezocht, of als extra tegel. Vroeger verdween het altijd rechts in de rij.
+- Ook met één venster kun je het zicht verplaatsen (dat kon pas vanaf twee).
+- De camera springt niet meer weg als de muis over een venster gaat dat al grotendeels zichtbaar is.
+- Super+Shift+pijl naar een plek met vensters voegt het venster als tegel toe; bij een volle plek wisselen ze.
+- Scrollstrook: nieuwe kolommen zijn een volle pagina, zodat een venster op een lege pagina niet meer op half scherm opent. Super+Ctrl+, maakt een kolom smaller.
+- Nieuwe railknop Uitzoomen: de werkvlakkaart op het ruimtelijk werkvlak, elders het werkruimte-overzicht.
+- Nieuwe smoketest `spatial-drag.lua` voor slepen en Super+wiel.
+
 ### Systeem-widget toont de GPU
 - De GPU stond alleen in de Systeem-widget in de Gaming-mode. Zodra er een meting is (nvidia-smi of sysfs) staat hij er nu altijd bij, met belasting en temperatuur.
 

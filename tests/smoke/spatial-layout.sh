@@ -16,3 +16,4 @@ assert data["windows"][0]["title"] == 'Quoted "title"\nsecond line'
 print("ok - overview snapshot is valid JSON, including quoted titles")
 PY
 python3 tests/smoke/workspace-layout.py
+lua tests/smoke/spatial-drag.lua

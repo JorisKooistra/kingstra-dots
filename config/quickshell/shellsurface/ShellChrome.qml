@@ -1170,6 +1170,14 @@ Item {
                 }
             }
 
+            // Uitzoomen: op het ruimtelijk werkvlak de kaart met al je
+            // vensters, elders het werkruimte-overzicht (zelfde als Super+Tab).
+            RailButton { tooltip: "Uitzoomen";
+                icon: "󰊢"
+                accent: root.mocha.accent3
+                onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/overview-toggle.sh"])
+            }
+
             // Kleine adem tussen navigatie en de statusgroep.
             Item { Layout.fillWidth: true; Layout.preferredHeight: 6 }
 

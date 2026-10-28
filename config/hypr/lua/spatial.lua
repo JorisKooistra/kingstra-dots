@@ -40,4 +40,83 @@ if ok and hl.gesture then
         },
     })
 end
+-- Vrij slepen met Super+middelmuis. Hyprland kent geen muisbeweging als
+-- Lua-gebeurtenis, dus een korte timer leest de cursor en schuift de camera
+-- mee (ruimtelijk) of stapt per kolom (scrollstrook). Bij loslaten klikt het
+-- ruimtelijk werkvlak alleen op een plek vast als je er dichtbij bent.
+local function layout_of_active()
+    local ok, window = pcall(hl.get_active_window)
+    local layout = ok and window and window.layout
+    return layout and layout.name or ""
+end
+
+local drag = { on = false, kind = nil, last = nil, carry = 0, started = 0, timer = nil }
+
+local function cursor()
+    local ok, pos = pcall(hl.get_cursor_pos)
+    if ok and pos and pos.x and pos.y then return pos end
+end
+
+local function drag_stop()
+    if not drag.on then return end
+    drag.on = false
+    if drag.timer then pcall(function() drag.timer:set_enabled(false) end) end
+    if drag.kind == "spatial" then hl.dispatch(hl.dsp.layout("dragend")) end
+    drag.kind = nil
+end
+
+local function drag_tick()
+    if not drag.on then return end
+    -- Vangnet als het loslaten gemist wordt.
+    if os.time() - drag.started > 60 then return drag_stop() end
+    local pos = cursor()
+    if not pos or not drag.last then return end
+    local dx, dy = pos.x - drag.last.x, pos.y - drag.last.y
+    drag.last = pos
+    if dx == 0 and dy == 0 then return end
+    if drag.kind == "spatial" then
+        hl.dispatch(hl.dsp.layout(string.format("panby %.4f %.4f", -dx, -dy)))
+    elseif drag.kind == "scrolling" then
+        drag.carry = drag.carry + dx
+        local ok, monitor = pcall(hl.get_active_monitor)
+        local step = (ok and monitor and monitor.width or 1920) / 4
+        if math.abs(drag.carry) >= step then
+            hl.dispatch(hl.dsp.layout(drag.carry > 0 and "move -col" or "move +col"))
+            drag.carry = 0
+        end
+    end
+end
+
+local function drag_start()
+    if drag.on or not hl.timer then return end
+    local layout = layout_of_active()
+    local kind = layout == "lua:hyprscroll2d" and "spatial" or layout == "scrolling" and "scrolling" or nil
+    local pos = cursor()
+    if not kind or not pos then return end
+    drag.on, drag.kind, drag.last, drag.carry, drag.started = true, kind, pos, 0, os.time()
+    if kind == "spatial" then hl.dispatch(hl.dsp.layout("dragstart")) end
+    if not drag.timer then
+        local ok, timer = pcall(hl.timer, drag_tick, { timeout = 16, type = "repeat" })
+        if not ok then drag.on = false; return end
+        drag.timer = timer
+    else
+        pcall(function() drag.timer:set_enabled(true) end)
+    end
+end
+
+-- Super+wiel binnen de werkruimte: ruimtelijk één plek verder, op een
+-- scrollstrook één kolom. Tegels hebben niets om te scrollen.
+function M.wheel(direction)
+    return function()
+        local layout = layout_of_active()
+        if layout == "lua:hyprscroll2d" then
+            hl.dispatch(hl.dsp.layout("pan " .. direction))
+        elseif layout == "scrolling" then
+            hl.dispatch(hl.dsp.layout((direction == "up" or direction == "left") and "move -col" or "move +col"))
+        end
+    end
+end
+
+M.drag_start = drag_start
+M.drag_stop = drag_stop
 return M

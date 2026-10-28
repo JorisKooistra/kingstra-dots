@@ -12,4 +12,11 @@ return {
     height_steps = { 0.50, 0.67, 0.85, 1.00 },
     default_width_step = 4,
     default_height_step = 4,
+
+    -- Kingstra: tegels per plek, vastklikken na vrij slepen en hoeveel van
+    -- een venster zichtbaar moet zijn voordat focus via de muis de camera
+    -- laat staan.
+    max_per_cell = 4,
+    snap = 0.2,
+    follow_min_visible = 0.4,
 }

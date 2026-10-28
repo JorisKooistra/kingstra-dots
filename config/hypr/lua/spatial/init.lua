@@ -77,7 +77,7 @@ local function context(ctx)
     for _, target in ipairs(ctx.targets or {}) do
         table.insert(ids, target_id(target, #ids + 1))
     end
-    core.sync(state, ids, active_id, config)
+    core.sync(state, ids, active_id, config, ctx.area)
 
     return state, descriptors
 end
@@ -148,6 +148,7 @@ end
 
 local function recalculate(ctx)
     local state, descriptors = context(ctx)
+    core.resolve_follow(state, ctx.area, config)
     local placements = core.placements(state, ctx.area, config)
     publish(ctx, state, descriptors, placements)
     announce_pan(ctx, state)
@@ -170,11 +171,20 @@ local function layout_msg(ctx, message)
         local id = core.focus(state, argument)
         focus_descriptor(id and descriptors[id])
     elseif command == "move" then
-        core.move(state, argument)
+        core.move(state, argument, config)
     elseif command == "pan" then
         core.pan(state, argument)
-    elseif command == "follow" or command == "center" then
+    elseif command == "follow" then
+        -- Focuswissel van buitenaf (muis, klik): alleen volgen als het
+        -- venster grotendeels buiten beeld staat.
+        if not state.dragging then state.pending_follow = true end
+    elseif command == "center" then
         core.follow(state)
+    elseif command == "dragstart" then
+        state.dragging = true
+        state.pending_follow = false
+    elseif command == "dragend" or command == "settle" then
+        core.settle(state, ctx.area, config)
     elseif command == "resize" and argument == "width" then
         if extra ~= "grow" and extra ~= "shrink" then
             return "hyprscroll2d: resize width expects grow or shrink"
@@ -186,7 +196,7 @@ local function layout_msg(ctx, message)
         end
         core.resize_height(state, config, extra == "grow" and 1 or -1)
     else
-        return "hyprscroll2d: expected focus/move/pan <direction>, resize width/height grow/shrink, or center"
+        return "hyprscroll2d: expected focus/move/pan <direction>, panby dx dy, resize width/height grow/shrink, dragstart, dragend or center"
     end
 
     return true

@@ -66,7 +66,9 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Z` | Snap-indeling kiezen voor deze werkruimte (1-8, klik een vak) |
 | `Super + Alt + S` | Scrollende kolommen aan/uit op deze werkruimte |
 | `Super + Alt + Z` | Zen-modus aan/uit (balk verborgen, niet storen, rest gedimd) |
-| `Super + Shift + wiel` | Strook: volgende/vorige kolom; ruimtelijk: omhoog/omlaag |
+| `Super + wiel` | Binnen de werkruimte: strook volgende/vorige pagina; ruimtelijk omhoog/omlaag |
+| `Super + Ctrl + wiel` | Binnen de werkruimte opzij (ruimtelijk links/rechts) |
+| `Super + middelmuis slepen` | Werkvlak vrij verschuiven; klikt alleen vast als je dicht bij een plek loslaat |
 | `Super + Ctrl + Alt + ←→` | Strook: kolom verder; ruimtelijk: zicht in alle richtingen |
 | `Super + Ctrl + .` / `,` | Scrollen: kolom breder / smaller |
 | ``Super + ` `` | Kladblok tonen/verbergen |
@@ -95,7 +97,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + 1–0` | Naar werkruimte 1–10 |
 | `Super + Tab` | Werkruimte-overzicht; op een ruimtelijke werkruimte de vensterkaart |
 | `Alt + Tab` | Vorige werkruimte |
-| `Super + Scroll` | Door werkruimten bladeren |
+| `Super + Shift + wiel` | Door werkruimten bladeren |
 | `Super + Shift + 1–0` | Venster naar werkruimte 1–10 verplaatsen |
 | `Super + Alt + 1–0` | Venster stil verplaatsen (focus blijft hier) |
 | `Super + S` | Spotify-werkruimte tonen/verbergen |
@@ -199,12 +201,20 @@ Kies **Ruimtelijk werkvlak** in Bediening of **Super+Z**. Bestaande werkruimtes
 worden bij een update niet automatisch omgezet.
 
 - **Super+pijlen:** nabijgelegen venster kiezen.
-- **Super+Shift+pijlen:** venster verplaatsen of met een bezette plek wisselen.
+- **Super+Shift+pijlen:** venster naar de buurplek. Is die leeg, dan staat het er alleen;
+  staan er al vensters, dan komt het erbij als tegel (maximaal vier, daarna wisselen ze).
 - **Super+Ctrl+Alt+pijlen:** het zichtgebied verplaatsen, zonder vensters te verplaatsen.
   Op een scrollstrook schuift links/rechts één kolom; zo betekent deze toets overal "verder kijken".
 - **Super+drievingerveeg:** vrij in beide richtingen bewegen, ook diagonaal
   (vereist live Lua-gebaren).
-- **Super+Shift+wiel:** omhoog/omlaag; met een horizontaal wiel ook links/rechts.
+- **Super+wiel:** omhoog/omlaag; **Super+Ctrl+wiel** of een kantelwiel: links/rechts.
+- **Super+middelmuis ingedrukt:** het werkvlak vrij slepen, ook diagonaal. Bij loslaten
+  klikt het alleen op een plek vast als je er dichtbij bent.
+- **Nieuwe vensters** komen waar je kijkt: op een lege plek vult het venster die plek,
+  op een plek met vensters wordt het een extra tegel (tot vier). Eén plek met vensters
+  vult het hele scherm, net als gewone tegels; scroll of sleep opzij voor meer ruimte.
+- **Muisfocus** verschuift het beeld niet meer zolang het venster grotendeels zichtbaar is.
+- **Uitzoomen:** de knop 󰊢 in de rail of Super+Tab.
 - **Super+Ctrl+, / .:** breedte kleiner/groter.
 - **Super+Tab:** kaart openen; sleep om vrij te bewegen, wiel om de kaart te
   vergroten/verkleinen, kies een venster om erop terug te keren.

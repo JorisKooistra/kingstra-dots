@@ -142,7 +142,7 @@ def apply(preset, workspace=None):
             "70-30": ["orientationleft", "mfact exact 0.7"],
             "midden": ["orientationcenter", "mfact exact 0.5"],
             "kolommen": ["colresize all 0.333"],
-            "scrollen": ["colresize all 0.5"],
+            "scrollen": ["colresize all 1.0"],
         }.get(preset, []):
             if observed["windows"]:
                 dispatch(message)

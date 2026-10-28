@@ -11,15 +11,18 @@ behouden totdat je zelf een andere kiest.
 3. Pas de zichtbare railonderdelen, extra railknoppen, autohide en muziek aan.
    Deze keuzes worden per scherm én per mode bewaard.
 4. Kies bij de werkruimte Ruimtelijk werkvlak, of kies die kaart met Super+Z.
-5. Open twee apps. Super+Shift+omhoog verplaatst een app naar de rij erboven.
-   Super+pijlen kiest een app; Super+Ctrl+Alt+pijlen verplaatst het zicht.
+5. Open twee apps: ze staan als tegels naast elkaar en vullen het scherm.
+   Super+Shift+omhoog zet een app op een eigen plek erboven. Super+pijlen kiest
+   een app; Super+wiel, Super+Ctrl+wiel of Super+Ctrl+Alt+pijlen verplaatst het zicht.
+   Houd Super+middelmuis ingedrukt om vrij te slepen. Een app die je op een lege
+   plek opent, komt op die plek.
 6. Super+drievingerveeg verwerkt X en Y tegelijk waar de compositor live
    Lua-gebaren ondersteunt. Gewone appscroll en ongewijzigde gebaren blijven bestaan.
 7. Super+Tab opent de vensterkaart. Sleep om het echte zichtgebied te verplaatsen,
    vergroot/verklein de kaart met het wiel en klik een venster om terug te keren.
 
-Het kader in de kaart is het zichtgebied. De tegels tonen titels en geometrie:
-dit zijn nog geen live videopreviews en het is geen renderzoom van appinhoud.
+Het kader in de kaart is het zichtgebied. De tegels tonen live beelden van de
+vensters. De knop 󰊢 in de rail opent dezelfde kaart (uitzoomen).
 
 ## Afzonderlijke schermkeuzes
 

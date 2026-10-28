@@ -139,4 +139,6 @@ load_optional("lua.theme")
 load_optional("lua.input-overrides")
 
 -- A lone column uses the whole work area; no half-width first application.
-pcall(hl.config, { scrolling = { fullscreen_on_one_column = true } })
+-- Nieuwe kolommen zijn een volle pagina: scroll je naar een lege plek en
+-- open je daar iets, dan vult het het scherm. Super+Ctrl+, maakt hem smaller.
+pcall(hl.config, { scrolling = { fullscreen_on_one_column = true, column_width = 1.0 } })
