@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Kaart van het ruimtelijke werkvlak
+- Super+Tab toont op ruimtelijke werkruimtes een kaart van alle vensters en het zichtgebied. Sleep in beide richtingen, vergroot/verklein de kaart met het wiel en kies een venster om terug te keren.
+- De kaart gebruikt venstertitels en geometrie; zij claimt geen live videopreviews of compositorzoom. Gewone werkruimtes houden het bestaande overzicht.
+
 ### Ruimtelijk werkvlak
 - Super+Z biedt Ruimtelijk: vensters kunnen boven, onder en naast elkaar staan. De bestaande indeling blijft standaard behouden.
 - Super+pijlen kiest een venster; Super+Shift+pijlen verplaatst het; Super+Ctrl+Alt+pijlen verplaatst het zicht. Super+drievingerveeg verwerkt beide assen tegelijk waar live Lua-gebaren ondersteund worden.
