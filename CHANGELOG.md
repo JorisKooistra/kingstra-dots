@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Muziekspeler met materiaal en traagheid
+- De desktopspeler krijgt een vaste plint, fijnere groeven en een plaat die op gang komt en rustig uitloopt bij pauze. De toonarm en plint draaien niet mee.
+- Organic gebruikt een warme houtachtige plint, Paper een getekende omlijsting, Neon een compacte disc zonder toonarm en Mono een rustige hifi-uitvoering. De bestaande afspeelknoppen blijven gelijk.
+- Bediening biedt per scherm en mode: volg thema, altijd vinyl of alleen hoes.
+
 ### GPU in Systeem
 - Het systeemtabblad toont beschikbare GPU-belasting, temperatuur en VRAM per apparaat. Niet meetbare waarden heten Niet beschikbaar, geen fictieve 0%.
 - Eén gedeelde meetbron voor alle schermen; pollen gebeurt alleen wanneer een systeemtabblad zichtbaar is. Een gesuspendeerde GPU wordt niet voor een meting wakker gemaakt.

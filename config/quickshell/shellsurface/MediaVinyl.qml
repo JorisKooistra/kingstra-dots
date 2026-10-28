@@ -21,6 +21,27 @@ Item {
     property bool showArm: true
     property color accent: mocha.accent3
     property real coverRadius: 14
+    property string playerStyle: "theme"
+    readonly property bool paperDeck: playerStyle === "theme" && ThemeConfig.theme === "paper"
+    readonly property bool woodDeck: playerStyle === "theme" && ThemeConfig.theme === "organic"
+    readonly property bool compactDisc: playerStyle === "theme" && ThemeConfig.theme === "neon"
+    property real angularVelocity: 0
+    property real discAngle: 0
+    property real lastTick: Date.now()
+    Timer {
+        interval: 16
+        repeat: true
+        running: deck.visible && deck.vinyl > 0.01 && (deck.playing || deck.angularVelocity > 0.05)
+        onRunningChanged: deck.lastTick = Date.now()
+        onTriggered: {
+            let now = Date.now(), dt = Math.min(0.1, Math.max(0, (now - deck.lastTick) / 1000));
+            deck.lastTick = now;
+            let target = deck.playing ? 45 : 0;
+            deck.angularVelocity += (target - deck.angularVelocity) * (1 - Math.exp(-dt / 0.5));
+            if (!deck.playing && deck.angularVelocity < 0.05) deck.angularVelocity = 0;
+            deck.discAngle = (deck.discAngle + deck.angularVelocity * dt) % 360;
+        }
+    }
 
     readonly property bool hasArt: art.status === Image.Ready
     // 0 = hoes, 1 = plaat. Hierop hangen alle overgangen.
@@ -33,9 +54,9 @@ Item {
     implicitHeight: 132
 
     // Rustige terugvering bij pauzeren, zoals in de popup.
-    scale: playing ? 1.0 : 0.94
+    scale: playing ? 1.0 : 0.985
     Behavior on scale {
-        NumberAnimation { duration: 700; easing.type: Easing.OutElastic; easing.overshoot: 1.1 }
+        NumberAnimation { duration: ThemeConfig.duration(500); easing.type: Easing.OutCubic }
     }
 
     Image {
@@ -100,10 +121,43 @@ Item {
         }
     }
 
+    // The plinth stays still while platter, grooves and label rotate.
+    Rectangle {
+        anchors.fill: parent
+        radius: deck.paperDeck ? 5 : 12
+        visible: deck.vinyl > 0.01
+        opacity: deck.vinyl
+        color: deck.woodDeck ? Qt.tint(deck.mocha.surface0, Qt.alpha(deck.mocha.peach, 0.18)) : deck.mocha.surface0
+        border.color: deck.paperDeck ? deck.mocha.text : deck.mocha.overlay1
+        border.width: deck.paperDeck ? 1 : 2
+        Repeater {
+            model: deck.woodDeck ? 8 : 0
+            Rectangle {
+                required property int index
+                x: 5
+                y: 5 + index * (parent.height - 10) / 8
+                width: parent.width - 10
+                height: 1
+                color: Qt.alpha(deck.mocha.peach, index % 2 ? 0.10 : 0.06)
+            }
+        }
+        Repeater {
+            model: 4
+            Rectangle {
+                required property int index
+                width: 3; height: 3; radius: 1.5
+                x: index % 2 ? parent.width - 7 : 4
+                y: index < 2 ? 4 : parent.height - 7
+                color: deck.mocha.overlay2
+            }
+        }
+    }
+
     // --- Plaat (vinyl aan) ----------------------------------------------------
     Item {
         id: record
         anchors.fill: parent
+        anchors.margins: deck.width * 0.075
         opacity: deck.vinyl
         visible: opacity > 0.01
         scale: 0.9 + 0.1 * deck.vinyl
@@ -141,7 +195,7 @@ Item {
 
             // Fijne groeven, zodat de plaat ook zonder hoes echt oogt.
             Repeater {
-                model: Math.max(3, Math.round(deck.width / 22))
+                model: deck.compactDisc ? 3 : Math.max(3, Math.round(deck.width / 16))
                 Rectangle {
                     required property int index
                     anchors.centerIn: parent
@@ -158,7 +212,7 @@ Item {
             // Label met de hoes.
             Rectangle {
                 anchors.centerIn: parent
-                width: parent.width * 0.38
+                width: parent.width * (deck.compactDisc ? 0.24 : 0.38)
                 height: width
                 radius: width / 2
                 color: Qt.rgba(deck.accent.r, deck.accent.g, deck.accent.b, 0.42)
@@ -183,7 +237,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     visible: !deck.hasArt && deck.width >= 90
-                    text: "KANT A"
+                    text: deck.compactDisc ? "CD" : "KANT A"
                     font.family: ThemeConfig.monoFont
                     font.pixelSize: 7
                     font.weight: Font.Bold
@@ -216,18 +270,13 @@ Item {
                 }
             }
 
-            NumberAnimation on rotation {
-                from: 0; to: 360; duration: 8000
-                loops: Animation.Infinite
-                running: deck.vinyl > 0.01
-                paused: !deck.playing
-            }
+            rotation: deck.discAngle
         }
 
         // Toonarm: draait niet mee met de plaat. Pivot → arm → element.
         Item {
             id: tonearm
-            visible: deck.showArm
+            visible: deck.showArm && !deck.compactDisc
             readonly property real u: deck.width / 220
             width: 94 * u
             height: 96 * u

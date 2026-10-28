@@ -272,6 +272,19 @@ Item {
                     }
                 }
             }
+            Flow {
+                Layout.fillWidth: true; spacing: 8
+                Repeater {
+                    model: [{id: "theme", title: "Speler volgt thema"}, {id: "vinyl", title: "Altijd vinyl"}, {id: "cover", title: "Alleen hoes"}]
+                    delegate: Action {
+                        required property var modelData
+                        label: modelData.title
+                        chosen: root.profile.playerStyle === modelData.id
+                        allowed: !ScreenProfiles.busy
+                        onTriggered: root.set("playerStyle", modelData.id)
+                    }
+                }
+            }
             Heading { text: "Hele desktop" }
             Hint { text: "Thema, energieprofiel en Niet storen zijn gedeeld tussen je schermen."; Layout.fillWidth: true }
             Flow {
