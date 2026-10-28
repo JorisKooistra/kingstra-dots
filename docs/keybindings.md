@@ -64,10 +64,10 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 
 | Toetsen | Actie |
 |---|---|
-| `Super + Z` | Snap-indeling kiezen voor deze werkruimte (1-7, klik een vak) |
+| `Super + Z` | Snap-indeling kiezen voor deze werkruimte (1-8, klik een vak) |
 | `Super + Alt + S` | Scrollende kolommen aan/uit op deze werkruimte |
 | `Super + Alt + Z` | Zen-modus aan/uit (balk verborgen, niet storen, rest gedimd) |
-| `Super + Shift + wiel` | Scrollen: één kolom verder of terug |
+| `Super + Shift + wiel` | Strook: volgende/vorige kolom; ruimtelijk: omhoog/omlaag |
 | `Super + Ctrl + .` / `,` | Scrollen: kolom breder / smaller |
 | ``Super + ` `` | Kladblok tonen/verbergen |
 | ``Super + Shift + ` `` | Actief venster naar het kladblok, of terug |
@@ -85,22 +85,22 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Ctrl + Shift + G` | Groep vergrendelen/ontgrendelen |
 | `Super + Shift + G` | Venster uit groep halen |
 
----/
+---
 
 ## Werkruimten
 
 | Toetsen | Actie |
 |---|---|
 | `Super + 1–0` | Naar werkruimte 1–10 |
-| `Super + Tab` | Werkruimte-overzicht |
+| `Super + Tab` | Werkruimte-overzicht; op een ruimtelijke werkruimte de vensterkaart |
 | `Alt + Tab` | Vorige werkruimte |
 | `Super + Scroll` | Door werkruimten bladeren |
 | `Super + Shift + 1–0` | Venster naar werkruimte 1–10 verplaatsen |
 | `Super + Alt + 1–0` | Venster stil verplaatsen (focus blijft hier) |
-| `Super + S` | Scratchpad in-/uitschakelen |
-| `Super + Shift + S` | Venster naar scratchpad sturen |
+| `Super + S` | Spotify-werkruimte tonen/verbergen |
+| `Super + Shift + S` | Venster naar de Spotify-werkruimte sturen |
 
----/
+---
 
 ## Applicaties
 
@@ -124,7 +124,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 
 | Toetsen | Actie |
 |---|---|
-| `Super + N` | SwayNC meldingscentrum in-/uitschakelen |
+| `Super + N` | Quickshell meldingscentrum in-/uitschakelen |
 | `Super + Shift + N` | Alle meldingen sluiten |
 | `Super + Alt + N` | Niet-storen in-/uitschakelen |
 | `Super + Shift + W` | Willekeurige wallpaper (uit skwd-map) |
@@ -136,9 +136,9 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Shift + M` | Muziek popup |
 | `Super + Ctrl + C` | Kalender popup |
 | `Super + O` | Monitor overzicht |
-| `Super + X` | FocusTime / power menu |
+| `Super + X` | FocusTime |
 | `Super + A` | Controlecentrum (snelle instellingen, agenda, media, meldingen) |
-| `Super + ,` / `Super + Ctrl + I` | Instellingen (eigen venster) |
+| `Super + ,` / `Super + Ctrl + I` | Bediening en instellingen (eigen venster) |
 | `Super + Alt + Space` | Toetsenbordmenu voor alles (thema, modus, schermen, systeem, sessie) |
 | Klik op CPU/RAM-pil | Systeemstats popup |
 
@@ -194,9 +194,30 @@ de binds automatisch terug.
 
 | Toetsen | Actie |
 |---|---|
-| `Super + Ctrl + L` | Scherm vergrendelen (hyprlock + vingerafdruk indien beschikbaar) |
+| `Super + Ctrl + L` | Quickshell-vergrendelscherm (hyprlock als terugval) |
 | Laptop dichtklappen | Scherm vergrendelen |
 | `Super + Ctrl + R` | Hyprland herladen |
 | `Super + Ctrl + Backspace` | Sessie afsluiten |
 | `Super + Ctrl + F12` | Tabletmodus handmatig wisselen (touchscreen/2-in-1) |
 | Tabletmodus-schakelaar | Intern scherm roteren + schermtoetsenbord openen (automatisch) |
+
+## Ruimtelijk werkvlak
+
+Kies **Ruimtelijk werkvlak** in Bediening of **Super+Z**. Bestaande werkruimtes
+worden bij een update niet automatisch omgezet.
+
+- **Super+pijlen:** nabijgelegen venster kiezen.
+- **Super+Shift+pijlen:** venster verplaatsen of met een bezette plek wisselen.
+- **Super+Ctrl+Alt+pijlen:** het zichtgebied verplaatsen, zonder vensters te verplaatsen.
+- **Super+drievingerveeg:** vrij in beide richtingen bewegen, ook diagonaal
+  (vereist live Lua-gebaren).
+- **Super+Shift+wiel:** omhoog/omlaag; met een horizontaal wiel ook links/rechts.
+- **Super+Ctrl+, / .:** breedte kleiner/groter.
+- **Super+Tab:** kaart openen; sleep om vrij te bewegen, wiel om de kaart te
+  vergroten/verkleinen, kies een venster om erop terug te keren.
+- **Esc** in de kaart: sluiten.
+
+Gewone appscroll blijft bij de app. De ruimtelijke acties zijn buiten die layout
+niet actief; de bestaande focus- en vensteracties blijven daar werken.
+
+Gebruik **Super+,** of `kingstra bediening` voor schermmode, rail en muziek.
