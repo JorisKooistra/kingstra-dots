@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Ruimtelijk werkvlak
+- Super+Z biedt Ruimtelijk: vensters kunnen boven, onder en naast elkaar staan. De bestaande indeling blijft standaard behouden.
+- Super+pijlen kiest een venster; Super+Shift+pijlen verplaatst het; Super+Ctrl+Alt+pijlen verplaatst het zicht. Super+drievingerveeg verwerkt beide assen tegelijk waar live Lua-gebaren ondersteund worden.
+- Eén venster vult het werkgebied. Scroll-/kolombreedteacties controleren de werkelijke layout en doen niets wanneer scrollen uitstaat of de werkruimte leeg is.
+- Lay-outkeuzes worden pas opgeslagen nadat Hyprland de wijziging bevestigt. Basis: Hyprscroll2D (MIT), met eigen Kingstra-integratie en tests.
+
 ### Rustige muziekstatus
 - De animatie in de now-playing-pill gebruikt een vaste tekenruimte. Alleen de streepjes schalen; titel en pill veranderen daardoor niet meer mee van hoogte.
 

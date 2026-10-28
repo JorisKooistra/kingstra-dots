@@ -4,6 +4,7 @@
 
 require("lua.config")
 require("lua.monitors")
+pcall(require, "lua.spatial")
 require("lua.rules")
 require("lua.binds")
 require("lua.autostart")
