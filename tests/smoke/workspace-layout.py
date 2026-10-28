@@ -52,6 +52,35 @@ class LayoutTests(unittest.TestCase):
             self.assertEqual(hypr.call_count, 1)
             save.assert_not_called()
 
+    def test_spatial_probe_uses_repl_because_eval_only_answers_ok(self):
+        # Real Hyprland 0.56: `hyprctl eval` prints "ok", values only via repl.
+        with patch.object(module, "hypr", return_value="true") as hypr:
+            self.assertTrue(module.spatial_registered())
+            self.assertEqual(hypr.call_args[0][0], "repl")
+        with patch.object(module, "hypr", return_value="ok"):
+            self.assertIsNone(module.spatial_registered())
+
+    def test_registered_spatial_layout_is_applied_and_saved(self):
+        states = [self.state("dwindle")] * 3 + [self.state("lua:hyprscroll2d")] * 3
+
+        def hypr(*args):
+            if args[0] == "repl":
+                return "true"
+            return "ok"
+        with patch.object(module, "query", side_effect=lambda name: states.pop(0)), \
+             patch.object(module, "hypr", side_effect=hypr), \
+             patch.object(module, "save") as save:
+            self.assertEqual(module.apply("ruimtelijk")["layout"], "lua:hyprscroll2d")
+            save.assert_called_once_with("3", "ruimtelijk")
+
+    def test_unreadable_probe_falls_back_to_layout_confirmation(self):
+        with patch.object(module, "query", return_value=self.state("dwindle")), \
+             patch.object(module, "hypr", return_value="ok"), \
+             patch.object(module, "save") as save, patch.object(module.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "niet geladen"):
+                module.apply("ruimtelijk")
+            save.assert_not_called()
+
     def test_atomic_preferences_roundtrip(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(module, "STATE", Path(folder)):
             module.save("3", "ruimtelijk")

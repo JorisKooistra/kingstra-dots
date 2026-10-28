@@ -64,6 +64,30 @@ def save(workspace, preset):
     atomic(STATE / "workspace-layouts.json", json.dumps(data, indent=2) + "\n")
 
 
+SPATIAL_MISSING = ("Het ruimtelijk werkvlak is niet geladen in Hyprland. Nodig: Hyprland 0.56 of nieuwer "
+                   "(zie hyprctl version) en een herladen config (Super+Shift+R of opnieuw inloggen).")
+
+
+def spatial_registered():
+    """True/False when Hyprland answers; None when the answer is unreadable.
+
+    `hyprctl eval` only answers "ok"; returned values come back through
+    `hyprctl repl <code>`. An unreadable answer is not a refusal: the layout
+    confirmation in apply() decides then.
+    """
+    try:
+        out = hypr("repl", 'return rawget(_G, "__hyprscroll2d_layout_registered") == true')
+    except (RuntimeError, OSError, subprocess.SubprocessError):
+        return None
+    lines = out.strip().splitlines()
+    answer = lines[-1].strip().lower() if lines else ""
+    if answer == "true":
+        return True
+    if answer == "false":
+        return False
+    return None
+
+
 def dispatch(message):
     return hypr("dispatch", "hl.dsp.layout(" + json.dumps(message) + ")")
 
@@ -98,10 +122,8 @@ def apply(preset, workspace=None):
             raise RuntimeError("Werkruimte kon niet worden geselecteerd")
     before = current()
     wanted = LAYOUTS[preset]
-    if wanted == "lua:hyprscroll2d":
-        registered = hypr("eval", 'return rawget(_G, "__hyprscroll2d_layout_registered") == true')
-        if "true" not in registered.lower():
-            raise RuntimeError("Ruimtelijk werkvlak vereist de Lua-layout-API van Hyprland 0.56")
+    if wanted == "lua:hyprscroll2d" and spatial_registered() is False:
+        raise RuntimeError(SPATIAL_MISSING)
     rule = "hl.workspace_rule({workspace=%s,layout=%s})"
     hypr("eval", rule % (json.dumps(target), json.dumps(wanted)))
     try:
@@ -112,6 +134,8 @@ def apply(preset, workspace=None):
                 break
             time.sleep(0.05)
         if observed["layout"] != wanted:
+            if wanted == "lua:hyprscroll2d":
+                raise RuntimeError(SPATIAL_MISSING)
             raise RuntimeError("Hyprland bevestigt de gevraagde indeling niet")
         for message in {
             "50-50": ["orientationleft", "mfact exact 0.5"],

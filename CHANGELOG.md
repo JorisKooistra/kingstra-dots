@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Fix: Ruimtelijk werkvlak gaf altijd een foutmelding
+- De controle of de ruimtelijke layout geladen is vroeg het antwoord op via `hyprctl eval`. Dat antwoordt in Hyprland 0.56 altijd alleen `ok`, nooit de waarde, dus de keuze werd steeds geweigerd. De controle gebruikt nu `hyprctl repl`, en een onleesbaar antwoord laat Hyprland zelf de indeling bevestigen.
+- De foutmelding zegt nu wat er nodig is: Hyprland 0.56 of nieuwer en een herladen config.
+
 ### Opruimen: SwayNC-resten
 - Per ongeluk meegecommitte SwayNC-kleurbestanden en de back-up van de Matugen-migratie zijn weg uit de repo en worden voortaan genegeerd. SwayNC wordt al sinds het eiland niet meer gebruikt.
 
