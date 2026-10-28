@@ -101,7 +101,7 @@ StartupWMClass=kingstra-settings
 DESKTOP
     command -v update-desktop-database >/dev/null 2>&1 \
         && update-desktop-database "$apps_dir" >/dev/null 2>&1 || true
-    log_ok "Instellingen-app beschikbaar: kingstra-settings (Super+,)"
+    log_ok "Instellingen-app beschikbaar: kingstra-settings (Super+Ctrl+I)"
 }
 
 _phase05_activate_widget_binds() {

@@ -88,7 +88,7 @@ phase_run() {
     log_info "Thema wisselen:      kingstra-theme-switch <thema_naam>"
     log_info "Mode wisselen:       kingstra-mode-switch <office|gaming|media>"
     log_info "State toepassen:     apply-shell-state"
-    log_info "Game launcher:       quickshell-game  (of Super+Alt+G)"
+    log_info "Game launcher:       quickshell-game  (of via het toetsenbordmenu)"
 }
 
 # ---------------------------------------------------------------------------
@@ -476,7 +476,7 @@ _phase08_install_game_launcher() {
         quickshell-game --init 2>/dev/null || true
     fi
 
-    log_ok "Game launcher beschikbaar: quickshell-game (Super+Alt+G)"
+    log_ok "Game launcher beschikbaar: quickshell-game"
 }
 
 _phase08_initial_apply() {

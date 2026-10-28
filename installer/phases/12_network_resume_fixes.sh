@@ -49,8 +49,8 @@ phase_run() {
     validate_report
 
     log_ok "Fase 12 voltooid — Netwerk- en resume-fixes actief."
-    log_info "WiFi beheren:   Super+Alt+N (nmtui in kitty)"
-    log_info "Bluetooth:      Super+Alt+B (blueman)"
+    log_info "WiFi beheren:   nmtui (toetsenbordmenu › Snel schakelen)"
+    log_info "Bluetooth:      Blueman (toetsenbordmenu › Snel schakelen)"
     log_info "Geavanceerd:    nm-connection-editor"
     log_info "Resume-service: systemctl --user status kingstra-resume"
     log_info "Lid-lock:       systemctl --user status kingstra-lid-lock"

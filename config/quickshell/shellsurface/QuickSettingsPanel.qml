@@ -293,7 +293,7 @@ Item {
                 onDetailRequested: root.openPanel("battery")
             }
             // Beeldschermen: stond als Monitoren-knop in de rail. Opent de
-            // schermindeling (resolutie, positie, hoofdscherm), ook via Super+O.
+            // schermindeling (resolutie, positie, hoofdscherm), ook via het toetsenbordmenu.
             Tile {
                 icon: "󰍹"
                 label: "Beeldschermen"

@@ -32,7 +32,7 @@ Item {
         syncActiveWidgetState();
     }
     // Het controlecentrum (tophover) sluit bij hover-openen zodra de muis
-    // weggaat. Geopend met een klik of Super+A, of zodra je erin klikt,
+    // weggaat. Geopend met een klik, drie vingers omlaag of het menu, of zodra je erin klikt,
     // blijft het open tot Esc of een klik ernaast.
     property bool stickyTopHover: false
     readonly property bool isCentered: sourceEntryId === "settings" && !ThemeConfig.barRailEnabled

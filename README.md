@@ -202,16 +202,16 @@ Keybinds: `Super + Shift + W` (random) and `Super + Ctrl + W` (visual picker).
   and up to three pinned apps; the search buttons open it too. Walker is still installed as a
   standalone command but no longer runs as a background service.
 - **Notifications** — Quickshell pop-ups next to the rail and a center grouped per app
-  (`Super + N`), clear (`Super + Shift + N`), do-not-disturb (`Super + Alt + N`, or middle-click
+  (`Super + N`), clear (`Super + Shift + N`), do-not-disturb (keyboard menu, or middle-click
   the rail bell). Do-not-disturb keeps notifications silently and survives a restart.
 - **Clipboard** — cliphist with a Quickshell panel (`Super + V`), text and images.
 - **Lockscreen** — `lock.sh` starts the Quickshell lock (`Lock.qml`) and falls back to hyprlock,
   then `loginctl lock-session`. Fingerprint works through PAM when detected.
 - **Game launcher** — [quickshell-games-launchers](https://github.com/Eaquo/quickshell-games-launchers)
-  (`Super + Ctrl + G`).
-- **Files** — Nautilus (`Super + E`) and yazi (`Super + Shift + E`).
+  (keyboard menu or the rail).
+- **Files** — Nautilus (`Super + E`) and yazi (keyboard menu).
 - **Monitoring** — btop, lm_sensors, and the performance drawer and HUD telemetry in the shell.
-- **Calendar** — compact agenda panel (`Super + Ctrl + C`) with local events you can add, edit
+- **Calendar** — compact agenda panel (keyboard menu) with local events you can add, edit
   and delete (`calendar/agenda_events.py`), plus the weather per day and hour.
 - **Passthrough** — `Super + Escape` toggles a submap where Hyprland consumes no Super shortcuts.
   `citrix-guard.sh` does this automatically for Citrix (`wfica`) windows to avoid the Super-key crash.
@@ -380,18 +380,14 @@ for the full list.
 | `Super + Ctrl + Return` | App launcher |
 | `Super + Tab` | Workspace overview |
 | `Super + W` | Window switcher |
-| `Super + E` / `Super + Shift + E` | Nautilus / yazi |
+| `Super + E` | Nautilus (yazi via the keyboard menu) |
 | `Super + V` | Clipboard history |
 | `Super + N` | Notifications |
-| `Super + X` | FocusTime |
-| `Super + O` | Monitors |
-| `Super + A` | Control center |
-| `Super + ,` / `Super + Ctrl + I` | Settings (own app, `kingstra-settings`) |
+| `Super + Ctrl + I` | Settings (own app, `kingstra-settings`) |
 | `Super + Alt + Space` | Keyboard menu for everything |
 | `Super + Ctrl + T` / `Super + Shift + T` | Theme picker / next theme |
 | `Super + Ctrl + M` | Mode picker |
 | `Super + Ctrl + W` / `Super + Shift + W` | Wallpaper picker / random wallpaper |
-| `Super + Ctrl + G` | Game launcher |
 | `Super + Ctrl + L` | Lock |
 | `Super + Escape` | Passthrough submap |
 | `Super + F1` | Help |

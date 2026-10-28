@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Sneltoetsen opgeschoond
+- Op basis van Joris' aanvinklijst zijn 16 ongebruikte sneltoetsen weg: Super+H/J/K/L en Super+Shift+H/J/K/L (de pijltoetsen blijven), Super+Ctrl+pijlen (venster groter/kleiner; slepen met Super+RMB blijft), Super+Alt+T, Super+Shift+G, Super+Ctrl+Shift+G, Super+Shift+E, Super+Alt+I, Super+Alt+B, Super+Alt+N, Super+Ctrl+C, Super+A, Super+O, Super+X, Super+, en Super+Ctrl+G.
+- Geen functie verdwenen: alles staat in het toetsenbordmenu (Super+Alt+Space). Nieuw daarin: vastzetten op alle werkruimtes, uit groep halen, groep vergrendelen, nmtui, Blueman, kalender, FocusTime, games en yazi. Instellingen blijft op Super+Ctrl+I.
+- Toetsen die niet zijn beoordeeld (zoals parkeren en nieuwe toetsen) blijven staan.
+
 ### Apps echt sluiten in plaats van naar de tray
 - Nieuwe lijst "Apps echt sluiten" in Instellingen › Sessie. Apps op de lijst stoppen helemaal zodra hun laatste venster dicht is (Super+Q of de X), in plaats van op de achtergrond in de systeemtray te blijven. ChatGPT staat er standaard op. Toevoegen gaat met een naam of met één klik op een app die nu open is; een chip aanklikken haalt hem eraf.
 - Super+Shift+Q sluit het actieve venster direct echt af (het proces stopt), voor elke app.

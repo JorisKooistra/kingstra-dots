@@ -3,6 +3,12 @@
 > **Super** = Windows/Meta key  
 > Binds staan in `config/hypr/lua/binds.lua`.
 
+Opgeschoond op 28-10-2026: toetsen die niet gebruikt werden zijn weg. De functies
+zelf staan in het toetsenbordmenu (`Super + Alt + Space`): controlecentrum,
+niet storen, schermindeling, kalender, FocusTime, games, yazi, nmtui, Blueman,
+vastzetten op alle werkruimtes en de groepsacties. Het controlecentrum opent ook
+met drie vingers omlaag of een klik op de bovenbalk.
+
 ---
 
 ## Ontwerpregels
@@ -23,10 +29,6 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 
 | Toetsen | Actie |
 |---|---|
-| `Super + H` | Focus naar links |
-| `Super + J` | Focus naar beneden |
-| `Super + K` | Focus naar boven |
-| `Super + L` | Focus naar rechts |
 | `Super + ←↓↑→` | Focus (pijltoetsen, met monitor-fallback) |
 
 ---
@@ -35,9 +37,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 
 | Toetsen | Actie |
 |---|---|
-| `Super + Shift + H/J/K/L` | Venster verplaatsen |
 | `Super + Shift + ←↓↑→` | Venster verplaatsen (pijltoetsen) |
-| `Super + Ctrl + ←↓↑→` | Venster aanpassen (60px per druk) |
 | `Super + LMB slepen` | Venster verslepen (muis) |
 | `Super + RMB slepen` | Venster aanpassen (muis) |
 | `Duimknop slepen` | Venster verslepen (Logitech M720, via logiops) |
@@ -53,7 +53,6 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + F` | Volledig scherm |
 | `Super + M` | Maximaliseren (balk + gaps blijven zichtbaar) |
 | `Super + T` | Zwevend/geplaatst wisselen; onthouden per app, inclusief grootte en positie (`~/.local/state/kingstra/floating-apps`) |
-| `Super + Alt + T` | Vastzetten op alle werkruimten (pin) |
 | `Super + Shift + Space` | Zwevend venster centreren |
 | `Super + P` | Pseudo-tiling (dwindle) |
 | `Super + \` | Split-richting wisselen (dwindle) |
@@ -86,8 +85,6 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + G` | Groepsmodus in-/uitschakelen |
 | `Super + Alt + →` | Volgende tab in groep |
 | `Super + Alt + ←` | Vorige tab in groep |
-| `Super + Ctrl + Shift + G` | Groep vergrendelen/ontgrendelen |
-| `Super + Shift + G` | Venster uit groep halen |
 
 ---
 
@@ -114,12 +111,9 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Ctrl + Return` | App launcher |
 | `Super + B` | Browser (standaard) |
 | `Super + E` | Nautilus (bestandsbeheer) |
-| `Super + Shift + E` | Yazi (terminal bestandsbeheer) |
 | `Super + V` | Klembordgeschiedenis (cliphist) |
 | `Super + Shift + Return` | btop in Kitty |
 | `Super + Shift + C` | cava (audio visualizer) in Kitty |
-| `Super + Alt + I` | nmtui (netwerk) in Kitty |
-| `Super + Alt + B` | Blueman (Bluetooth) |
 | `Super + Ctrl + B` | Hyprland config herladen (+ melding) |
 
 ---
@@ -130,19 +124,13 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 |---|---|
 | `Super + N` | Quickshell meldingscentrum in-/uitschakelen |
 | `Super + Shift + N` | Alle meldingen sluiten |
-| `Super + Alt + N` | Niet-storen in-/uitschakelen |
 | `Super + Shift + W` | Willekeurige wallpaper (uit skwd-map) |
 | `Super + Ctrl + W` | Wallpaper picker |
 | `Super + Shift + T` | Volgend thema (cyclisch) |
 | `Super + Ctrl + T` | Thema picker |
 | `Super + Ctrl + M` | Modus picker (office / gaming / media) |
-| `Super + Ctrl + G` | Game launcher |
 | `Super + Shift + M` | Muziek popup |
-| `Super + Ctrl + C` | Kalender popup |
-| `Super + O` | Monitor overzicht |
-| `Super + X` | FocusTime |
-| `Super + A` | Controlecentrum (snelle instellingen, agenda, media, meldingen) |
-| `Super + ,` / `Super + Ctrl + I` | Bediening en instellingen (eigen app, ook in de launcher) |
+| `Super + Ctrl + I` | Bediening en instellingen (eigen app, ook in de launcher) |
 | `Super + Alt + Space` | Toetsenbordmenu voor alles (thema, modus, schermen, systeem, sessie) |
 | Klik op CPU/RAM-pil | Systeemstats popup |
 
@@ -225,4 +213,4 @@ worden bij een update niet automatisch omgezet.
 Gewone appscroll blijft bij de app. De ruimtelijke acties zijn buiten die layout
 niet actief; de bestaande focus- en vensteracties blijven daar werken.
 
-Gebruik **Super+,** of `kingstra bediening` voor schermmode, rail en muziek.
+Gebruik **Super+Ctrl+I** of `kingstra bediening` voor schermmode, rail en muziek.

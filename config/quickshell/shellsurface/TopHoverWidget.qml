@@ -972,7 +972,7 @@ Item {
 
                     // --- Schermtijd (Focus) ---------------------------------------------
                     // Stond als knop in de rail; hier zie je het in één oogopslag.
-                    // Het pijltje opent het volledige Focus-paneel (Super+X).
+                    // Het pijltje opent het volledige Focus-paneel.
                     Card {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 74

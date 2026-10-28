@@ -99,7 +99,7 @@ trap 'rm -f "$tmp_file"' EXIT
     printf '%s\n' '-- ============================================================================='
     printf '%s\n' '-- monitors-local.lua - Lokale monitor-layout'
     printf '%s\n' '-- ============================================================================='
-    printf '%s\n' '-- Gegenereerd door Super+O Monitor UI. Dit bestand is user-state en staat in .gitignore.'
+    printf '%s\n' '-- Gegenereerd door de Monitor UI. Dit bestand is user-state en staat in .gitignore.'
     printf '%s\n\n' '-- ============================================================================='
     printf 'return {\n    apply = function()\n'
     for lua_rule in "${lua_rules[@]}"; do

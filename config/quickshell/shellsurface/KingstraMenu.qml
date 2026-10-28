@@ -44,7 +44,10 @@ FocusScope {
             { icon: "󰠮", label: "Kladblok tonen", hint: "Super+`", cmd: ["bash", scripts + "/scratchpad.sh", "toggle"] },
             { icon: "󰁝", label: "Venster naar kladblok", hint: "Super+Shift+`", cmd: ["bash", scripts + "/scratchpad.sh", "send"] },
             { icon: "󰖰", label: "Venster parkeren", hint: "Super+-", cmd: ["python3", scripts + "/park-window.py", "park"] },
-            { icon: "󰖯", label: "Geparkeerd venster terug", hint: "Super+Shift+-", cmd: ["python3", scripts + "/park-window.py", "last"] }
+            { icon: "󰖯", label: "Geparkeerd venster terug", hint: "Super+Shift+-", cmd: ["python3", scripts + "/park-window.py", "last"] },
+            { icon: "󰐃", label: "Op alle werkruimtes vastzetten", cmd: ["hyprctl", "dispatch", "hl.dsp.window.pin()"] },
+            { icon: "󰓩", label: "Venster uit groep halen", cmd: ["hyprctl", "dispatch", "hl.dsp.group.move_window({ action = \"out\" })"] },
+            { icon: "󰌾", label: "Groep vergrendelen of vrijgeven", cmd: ["hyprctl", "dispatch", "hl.dsp.group.lock_active({ action = \"toggle\" })"] }
         ] },
         { icon: "󰏘", label: "Uiterlijk", children: [
             { icon: "󰏘", label: "Thema", children: [
@@ -79,10 +82,12 @@ FocusScope {
             { icon: "󰚀", label: "Zen aan of uit", hint: "Super+Alt+Z", cmd: ["bash", scripts + "/zen.sh", "toggle"] }
         ] },
         { icon: "󰕮", label: "Snel schakelen", children: [
-            { icon: "󰕮", label: "Controlecentrum", hint: "Super+A", cmd: qs("tophover"), panel: true },
+            { icon: "󰕮", label: "Controlecentrum", cmd: qs("tophover"), panel: true },
             { icon: "󰤨", label: "Wi-Fi aan/uit", cmd: ["bash", "-lc", "[ \"$(nmcli radio wifi)\" = enabled ] && nmcli radio wifi off || nmcli radio wifi on"] },
             { icon: "󰂯", label: "Bluetooth aan/uit", cmd: ["bash", home + "/.config/quickshell/network/bluetooth_panel_logic.sh", "--toggle"] },
-            { icon: "󰂛", label: "Niet storen aan/uit", hint: "Super+Alt+N", cmd: ["bash", home + "/.config/quickshell/notifications/notification_control.sh", "dnd"] },
+            { icon: "󰤨", label: "Netwerk beheren (nmtui)", cmd: ["kitty", "--title=Network", "nmtui"] },
+            { icon: "󰂱", label: "Bluetooth-apparaten", cmd: ["blueman-manager"] },
+            { icon: "󰂛", label: "Niet storen aan/uit", cmd: ["bash", home + "/.config/quickshell/notifications/notification_control.sh", "dnd"] },
             { icon: "󰓅", label: "Energieprofiel", children: [
                 { icon: "󰌪", label: "Energiebesparing", cmd: ["powerprofilesctl", "set", "power-saver"] },
                 { icon: "󰾅", label: "Gebalanceerd", cmd: ["powerprofilesctl", "set", "balanced"] },
@@ -90,7 +95,7 @@ FocusScope {
             ] }
         ] },
         { icon: "󰍹", label: "Schermen", children: [
-            { icon: "󰍹", label: "Schermindeling", hint: "Super+O", cmd: qs("monitors"), panel: true },
+            { icon: "󰍹", label: "Schermindeling", cmd: qs("monitors"), panel: true },
             { icon: "󰓶", label: "Tabletmodus aan/uit", cmd: ["bash", scripts + "/tablet-mode.sh", "toggle"] }
         ] },
         { icon: "󰄀", label: "Vastleggen", children: [
@@ -101,11 +106,15 @@ FocusScope {
             { icon: "󰅌", label: "Klembord", hint: "Super+V", cmd: qs("clipboard"), panel: true }
         ] },
         { icon: "󰒓", label: "Systeem", children: [
-            { icon: "󰒓", label: "Instellingen", hint: "Super+,", cmd: ["bash", scripts + "/qs_manager.sh", "open", "settings"] },
+            { icon: "󰒓", label: "Instellingen", hint: "Super+Ctrl+I", cmd: ["bash", scripts + "/qs_manager.sh", "open", "settings"] },
             { icon: "󰚰", label: "Bijwerken", cmd: inTerminal("kingstra update") },
             { icon: "󰓙", label: "Controleren (doctor)", cmd: inTerminal("kingstra doctor") },
             { icon: "󰁯", label: "Terugzetpunt maken", cmd: inTerminal("kingstra snapshot create") },
             { icon: "󰑓", label: "Shell herstarten", cmd: kingstra("restart") },
+            { icon: "󰃭", label: "Kalender", cmd: qs("calendar"), panel: true },
+            { icon: "󱎫", label: "FocusTime", cmd: qs("focustime"), panel: true },
+            { icon: "󰊴", label: "Games", cmd: ["quickshell-game"] },
+            { icon: "󰉋", label: "Yazi (bestanden in terminal)", cmd: ["kitty", "--title=yazi", "yazi"] },
             { icon: "󰍛", label: "Systeemmonitor", cmd: ["kitty", "--title", "btop — Kingstra", "bash", "-lc", "exec btop"] }
         ] },
         { icon: "󰐥", label: "Sessie", children: [

@@ -6,7 +6,7 @@ behouden totdat je zelf een andere kiest.
 
 ## Beginnen
 
-1. Open Instellingen met Super+, en kies op Bediening een fysieke monitor.
+1. Open Instellingen met Super+Ctrl+I en kies op Bediening een fysieke monitor.
 2. Kies bijvoorbeeld Media op één scherm en Office op de andere schermen.
 3. Pas de zichtbare railonderdelen, extra railknoppen, autohide en muziek aan.
    Deze keuzes worden per scherm én per mode bewaard.
@@ -67,7 +67,7 @@ belasting.
 
 ## Live controleren na bijwerken
 
-- Starten bar, panelen en Instellingen; Super+, opent Bediening.
+- Starten bar, panelen en Instellingen; Super+Ctrl+I opent Bediening.
 - Media op één display, Office op twee andere: wisselen, herstart en los/weer
   aansluiten overschrijven de andere schermen niet.
 - Nieuwe lege ruimtelijke werkruimte: eerste venster staat volledig in beeld.

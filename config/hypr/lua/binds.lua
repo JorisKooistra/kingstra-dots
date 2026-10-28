@@ -14,19 +14,13 @@ local function bind(keys, dispatcher, options)
 end
 
 -- Focus and movement
-bind(mod .. " + H", hl.dsp.focus({ direction = "left" }))
-bind(mod .. " + L", hl.dsp.focus({ direction = "right" }))
-bind(mod .. " + K", hl.dsp.focus({ direction = "up" }))
-bind(mod .. " + J", hl.dsp.focus({ direction = "down" }))
+-- Opgeschoond 2026-10-28 op Joris' aanvinklijst: alleen de pijltoetsen.
+-- Weggehaalde functies staan in het toetsenbordmenu (Super+Alt+Space).
 for _, direction in ipairs({ "left", "right", "up", "down" }) do
     bind(mod .. " + " .. direction, spatial.route("focus " .. direction, function()
         hl.exec_cmd(scripts .. "/focus-direction-safe.sh " .. direction)
     end))
 end
-bind(mod .. " + SHIFT + H", hl.dsp.window.move({ direction = "left" }))
-bind(mod .. " + SHIFT + L", hl.dsp.window.move({ direction = "right" }))
-bind(mod .. " + SHIFT + K", hl.dsp.window.move({ direction = "up" }))
-bind(mod .. " + SHIFT + J", hl.dsp.window.move({ direction = "down" }))
 for _, direction in ipairs({ "left", "right", "up", "down" }) do
     bind(mod .. " + SHIFT + " .. direction, spatial.route("move " .. direction, function()
         hl.dispatch(hl.dsp.window.move({ direction = direction }))
@@ -46,10 +40,6 @@ bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 -- opent het overzicht (zelfde als Super+Tab).
 bind("mouse:279", hl.dsp.window.drag(), { mouse = true })
 exec("mouse:279", scripts .. "/thumb-double-click.sh")
-bind(mod .. " + CTRL + right", hl.dsp.window.resize({ x = 60, y = 0 }), { repeating = true })
-bind(mod .. " + CTRL + left", hl.dsp.window.resize({ x = -60, y = 0 }), { repeating = true })
-bind(mod .. " + CTRL + up", hl.dsp.window.resize({ x = 0, y = -60 }), { repeating = true })
-bind(mod .. " + CTRL + down", hl.dsp.window.resize({ x = 0, y = 60 }), { repeating = true })
 
 bind(mod .. " + Q", hl.dsp.window.close())
 -- Echt afsluiten: het proces van het venster stoppen, ook als de app naar de
@@ -60,15 +50,12 @@ bind(mod .. " + F", hl.dsp.window.fullscreen({ mode = 0 }))
 bind(mod .. " + M", hl.dsp.window.fullscreen({ mode = 1 }))
 exec(mod .. " + T", scripts .. "/togglefloating-safe.sh")
 exec(mod .. " + SHIFT + T", scripts .. "/theme-next-safe.sh")
-bind(mod .. " + ALT + T", hl.dsp.window.pin())
 bind(mod .. " + P", hl.dsp.window.pseudo())
 bind(mod .. " + backslash", hl.dsp.layout("togglesplit"))
 bind(mod .. " + SHIFT + Space", hl.dsp.window.center())
 bind(mod .. " + G", hl.dsp.group.toggle())
 bind(mod .. " + ALT + right", hl.dsp.group.next())
 bind(mod .. " + ALT + left", hl.dsp.group.prev())
-bind(mod .. " + CTRL + SHIFT + G", hl.dsp.group.lock_active({ action = "toggle" }))
-bind(mod .. " + SHIFT + G", hl.dsp.group.move_window({ action = "out" }))
 
 for workspace = 1, 10 do
     local key = workspace % 10
@@ -90,12 +77,9 @@ exec(mod .. " + Return", "kitty")
 exec(mod .. " + CTRL + Return", scripts .. "/qs_manager.sh toggle launcher")
 exec(mod .. " + B", "xdg-open https://")
 exec(mod .. " + E", "nautilus")
-exec(mod .. " + SHIFT + E", "kitty --title=yazi yazi")
 exec(mod .. " + V", scripts .. "/qs_manager.sh toggle clipboard")
 exec(mod .. " + SHIFT + Return", "kitty --title=btop btop")
 exec(mod .. " + SHIFT + C", "kitty --title=cava cava")
-exec(mod .. " + ALT + I", "kitty --title=Network nmtui")
-exec(mod .. " + ALT + B", "blueman-manager")
 exec(mod .. " + SHIFT + W", scripts .. "/wallpaper-random-safe.sh")
 exec(mod .. " + CTRL + W", scripts .. "/wallpaper-picker-safe.sh")
 exec(mod .. " + W", scripts .. "/qs_manager.sh toggle windows")
@@ -103,18 +87,11 @@ exec(mod .. " + CTRL + B", "hyprctl reload && notify-send 'Hyprland' 'Config her
 
 exec(mod .. " + N", "~/.config/quickshell/notifications/notification_control.sh toggle")
 exec(mod .. " + SHIFT + N", "~/.config/quickshell/notifications/notification_control.sh clear")
-exec(mod .. " + ALT + N", "~/.config/quickshell/notifications/notification_control.sh dnd")
 exec(mod .. " + SHIFT + M", scripts .. "/qs_manager.sh toggle music")
-exec(mod .. " + CTRL + C", scripts .. "/qs_manager.sh toggle calendar")
-exec(mod .. " + A", scripts .. "/qs_manager.sh toggle tophover")
-exec(mod .. " + O", scripts .. "/qs_manager.sh toggle monitors")
-exec(mod .. " + X", scripts .. "/qs_manager.sh toggle focustime")
 exec(mod .. " + CTRL + I", scripts .. "/qs_manager.sh toggle settings")
-exec(mod .. " + comma", scripts .. "/qs_manager.sh toggle settings")
 exec(mod .. " + ALT + Space", scripts .. "/qs_manager.sh toggle menu")
 exec(mod .. " + CTRL + T", scripts .. "/qs_manager.sh toggle theme")
 exec(mod .. " + CTRL + M", scripts .. "/qs_manager.sh toggle mode")
-exec(mod .. " + CTRL + G", "quickshell-game")
 exec(mod .. " + F1", scripts .. "/qs_manager.sh toggle help")
 
 -- Screenshots

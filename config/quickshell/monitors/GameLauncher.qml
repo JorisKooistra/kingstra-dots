@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 import "../"
 
-// GameLauncher — Opent quickshell-games-launchers (Super+Alt+G)
+// GameLauncher — Opent quickshell-games-launchers (toetsenbordmenu of rail)
 Rectangle {
     id: root
     property var mocha

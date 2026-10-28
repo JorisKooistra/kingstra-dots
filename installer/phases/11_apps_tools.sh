@@ -79,7 +79,7 @@ phase_run() {
     validate_report
 
     log_ok "Fase 11 voltooid — Apps en dagelijkse tools beschikbaar."
-    log_info "Bestandsbeheer:  yazi (Super+E opent nautilus, Super+Shift+E start yazi)"
+    log_info "Bestandsbeheer:  yazi (Super+E opent nautilus, yazi staat in het toetsenbordmenu)"
     log_info "Klembord:        Super+V — cliphist via Walker, plakt selectie"
     log_info "Screenshot:      Print / Super+Print / Shift+Print"
 }

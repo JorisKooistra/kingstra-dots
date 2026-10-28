@@ -28,7 +28,7 @@ date '+%Y-%m-%d %H:%M:%S' > "$MARKER"
 
 body="Super + Ctrl + Enter   apps zoeken
 Super + Tab           werkruimte-overzicht
-Super + A             snelle instellingen
+Super + Alt + Space   menu met alles
 Super + Ctrl + T      thema kiezen
 Super + F1            alle sneltoetsen
 

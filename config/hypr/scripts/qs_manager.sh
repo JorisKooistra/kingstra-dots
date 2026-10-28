@@ -30,7 +30,7 @@ TARGET="$2"
 SUBTARGET="$3"
 
 # Instellingen is een eigen app in een eigen proces (settings-app.sh), geen
-# paneel: vóór de watchdog hieronder afhandelen, zodat Super+, ook werkt als
+# paneel: vóór de watchdog hieronder afhandelen, zodat Super+Ctrl+I ook werkt als
 # de bar niet draait. Optioneel derde argument = pagina (thema, geluid, ...).
 if [[ "$TARGET" == "settings" && ( "$ACTION" == "open" || "$ACTION" == "toggle" ) ]]; then
     exec bash "$QS_DIR/settings-app.sh" "$ACTION" "$SUBTARGET"
