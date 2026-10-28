@@ -82,4 +82,29 @@ assert(dy and dy > 0, "panning down should report a positive dy")
 registered.provider.recalculate(ctx)
 assert(#dispatched == before + 1, "an unchanged camera must not announce again")
 
+-- Werkvlakkaart: venster op een plek zetten via zijn adres.
+assert(registered.provider.layout_msg(ctx, "place 0xB 3 -2") == true, "place was rejected")
+registered.provider.recalculate(ctx)
+assert(type(registered.provider.layout_msg(ctx, "place 0xZZ 0 0")) == "string", "unknown window should error")
+
+assert(registered.provider.layout_msg(ctx, "place 0xA 3 -2 0") == true, "place with a tile spot was rejected")
+
+-- Miniaturen: een venster dat helemaal in beeld staat krijgt na een korte
+-- pauze een plaatje via werkvlak-thumb.sh.
+local timer_fn, commands = nil, {}
+hl.timer = function(fn) timer_fn = fn; return { set_enabled = function() end } end
+hl.exec_cmd = function(command) table.insert(commands, command) end
+hl.get_active_window = function() return a.window end
+local solo = target("C", true)
+solo.window.address = "0xC"
+solo.window.mapped = true
+solo.window.workspace = { id = 10, visible = true }
+solo.window.at = { x = 0, y = 0 }
+solo.window.size = { x = 1000, y = 800 }
+registered.provider.recalculate({ area = { x = 0, y = 0, w = 1000, h = 800 }, targets = { solo } })
+assert(timer_fn, "no thumbnail timer was scheduled")
+timer_fn()
+assert(#commands == 1 and commands[1]:match("werkvlak%-thumb%.sh c '0,0 1000x800'$"),
+    "unexpected thumbnail command: " .. tostring(commands[1]))
+
 print("ok - mocked Hyprland adapter")

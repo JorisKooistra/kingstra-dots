@@ -18,11 +18,18 @@ behouden totdat je zelf een andere kiest.
    plek opent, komt op die plek.
 6. Super+drievingerveeg verwerkt X en Y tegelijk waar de compositor live
    Lua-gebaren ondersteunt. Gewone appscroll en ongewijzigde gebaren blijven bestaan.
-7. Super+Tab opent de vensterkaart. Sleep om het echte zichtgebied te verplaatsen,
-   vergroot/verklein de kaart met het wiel en klik een venster om terug te keren.
+7. Super+Tab opent de vensterkaart. Sleep de achtergrond om het echte zichtgebied
+   te verplaatsen, sleep een venster naar een andere plek (de oplichtende tegelplek
+   laat zien waar het komt), vergroot/verklein de kaart met het wiel en klik een
+   venster om terug te keren.
+8. Super+linkermuis slepen op het scherm zelf werkt hetzelfde: het venster komt
+   waar je het loslaat, ook tussen bestaande tegels.
 
-Het kader in de kaart is het zichtgebied. De tegels tonen live beelden van de
-vensters. De knop 󰊢 in de rail opent dezelfde kaart (uitzoomen).
+Het kader in de kaart is het zichtgebied. Vensters in beeld tonen live beeld;
+Hyprland geeft geen beeld van vensters buiten het scherm, dus die tonen een
+miniatuur die bewaard is toen ze voor het laatst helemaal in beeld stonden
+(`werkvlak-thumb.sh`, in `$XDG_RUNTIME_DIR/kingstra-thumbs`). De knop 󰊢 in de
+rail opent dezelfde kaart (uitzoomen).
 
 ## Overzicht
 

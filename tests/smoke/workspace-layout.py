@@ -35,6 +35,22 @@ class LayoutTests(unittest.TestCase):
             self.assertTrue(module.action("panby", "12.5", "-7.25"))
             dispatch.assert_called_once_with("panby 12.5000 -7.2500")
 
+    def test_map_place_dispatches_on_spatial_only(self):
+        with patch.object(module, "query", return_value=self.state("lua:hyprscroll2d")), \
+             patch.object(module, "dispatch") as dispatch:
+            module.main(["place", "0xABC", "-1", "2"])
+            dispatch.assert_called_once_with("place 0xABC -1 2")
+        with patch.object(module, "query", return_value=self.state("lua:hyprscroll2d")), \
+             patch.object(module, "dispatch") as dispatch:
+            module.main(["place", "0xABC", "0", "0", "1"])
+            dispatch.assert_called_once_with("place 0xABC 0 0 1")
+        with patch.object(module, "query", return_value=self.state("dwindle")), \
+             patch.object(module, "dispatch") as dispatch:
+            module.main(["place", "0xABC", "0", "0"])
+            dispatch.assert_not_called()
+        with self.assertRaises(ValueError):
+            module.main(["place", "0xABC; rm", "0", "0"])
+
     def test_failed_application_does_not_save_a_success(self):
         with patch.object(module, "query", return_value=self.state("dwindle")), \
              patch.object(module, "hypr", return_value="ok"), \

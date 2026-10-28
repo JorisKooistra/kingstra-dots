@@ -80,6 +80,13 @@ local function describe(ctx)
     return descriptors, active_id
 end
 
+local function cursor()
+    local ok, pos = pcall(function() return hl.get_cursor_pos() end)
+    if ok and type(pos) == "table" and tonumber(pos.x) and tonumber(pos.y) then
+        return { x = tonumber(pos.x), y = tonumber(pos.y) }
+    end
+end
+
 local function context(ctx)
     local key = workspace_key(ctx)
     local state = workspaces[key]
@@ -93,7 +100,7 @@ local function context(ctx)
     for _, target in ipairs(ctx.targets or {}) do
         table.insert(ids, target_id(target, #ids + 1))
     end
-    core.sync(state, ids, active_id, config, ctx.area)
+    core.sync(state, ids, active_id, config, ctx.area, cursor())
 
     return state, descriptors
 end
@@ -129,9 +136,13 @@ local function publish(ctx, state, descriptors, placements)
         end
     end
     local a = ctx.area
+    local c = state.camera
+    local metrics = core.cell_metrics(a, config)
     local raw = string.format(
-        '{"workspace":%s,"area":{"x":%.3f,"y":%.3f,"w":%.3f,"h":%.3f},"windows":[%s]}',
-        key, a.x, a.y, a.w, a.h, table.concat(rows, ","))
+        '{"workspace":%s,"area":{"x":%.3f,"y":%.3f,"w":%.3f,"h":%.3f},'
+        .. '"camera":{"col":%d,"row":%d,"x":%.3f,"y":%.3f},"pitch":{"x":%.3f,"y":%.3f},"max":%d,"windows":[%s]}',
+        key, a.x, a.y, a.w, a.h, c.col, c.row, c.offset_x or 0, c.offset_y or 0,
+        metrics.pitch_x, metrics.pitch_y, math.max(1, math.floor(config.max_per_cell or 4)), table.concat(rows, ","))
     if snapshot_cache[key] == raw then return end
     local path = runtime .. "/kingstra-spatial-" .. key .. ".json"
     local file = io.open(path .. ".tmp", "w")
@@ -162,12 +173,74 @@ local function announce_pan(ctx, state)
     end)
 end
 
+local function normalize_address(value)
+    return tostring(value or ""):lower():gsub("^0x", "")
+end
+
+-- Kingstra: miniaturen voor de werkvlakkaart. Hyprland levert alleen live
+-- beeld van vensters die op het scherm staan; daarom bewaren we kort na een
+-- wijziging een klein plaatje (grim) van elk venster dat helemaal in beeld
+-- is. De kaart toont dat plaatje voor vensters buiten beeld.
+local thumbs = { pending = {}, taken = {}, timer = nil }
+local THUMB_SCRIPT = (os.getenv("HOME") or "") .. "/.config/hypr/scripts/werkvlak-thumb.sh"
+
+local function thumb_capture()
+    if thumbs.timer then pcall(function() thumbs.timer:set_enabled(false) end) end
+    local pending = thumbs.pending
+    thumbs.pending = {}
+    local ok, active = pcall(hl.get_active_window)
+    -- Iets zwevends (zoals de kaart zelf) ligt mogelijk over de vensters.
+    if ok and active and (safe_field(active, "floating") or safe_field(active, "title") == "Kingstra Werkvlak") then return end
+    local now = os.time()
+    for address, entry in pairs(pending) do
+        local window, area = entry.window, entry.area
+        local workspace = safe_field(window, "workspace")
+        local at, size = safe_field(window, "at"), safe_field(window, "size")
+        if safe_field(window, "mapped") and not safe_field(window, "hidden")
+            and safe_field(workspace, "visible") and not safe_field(workspace, "has_fullscreen")
+            and at and size and size.x > 40 and size.y > 40
+            and at.x >= area.x - 1 and at.y >= area.y - 1
+            and at.x + size.x <= area.x + area.w + 1 and at.y + size.y <= area.y + area.h + 1 then
+            thumbs.taken[address] = now
+            pcall(hl.exec_cmd, string.format("%s %s '%d,%d %dx%d'", THUMB_SCRIPT, address, at.x, at.y, size.x, size.y))
+        end
+    end
+end
+
+local function thumb_schedule(ctx, state, descriptors, placements)
+    if state.dragging or not hl.timer or not hl.exec_cmd then return end
+    local now = os.time()
+    local any = false
+    for id, descriptor in pairs(descriptors) do
+        local address = normalize_address(descriptor.address)
+        local box = placements[id]
+        if address ~= "" and address:match("^%x+$") and box
+            and core.visible_fraction(box, ctx.area) > 0.98
+            and now - (thumbs.taken[address] or 0) >= 15 then
+            thumbs.pending[address] = {
+                window = descriptor.window,
+                area = { x = ctx.area.x, y = ctx.area.y, w = ctx.area.w, h = ctx.area.h },
+            }
+            any = true
+        end
+    end
+    if not any then return end
+    -- Wachten tot animaties klaar zijn; elke nieuwe wijziging schuift dit op.
+    if not thumbs.timer then
+        local ok, timer = pcall(hl.timer, thumb_capture, { timeout = 900, type = "repeat" })
+        if ok then thumbs.timer = timer end
+    else
+        pcall(function() thumbs.timer:set_enabled(true) end)
+    end
+end
+
 local function recalculate(ctx)
     local state, descriptors = context(ctx)
     core.resolve_follow(state, ctx.area, config)
     local placements = core.placements(state, ctx.area, config)
     publish(ctx, state, descriptors, placements)
     announce_pan(ctx, state)
+    thumb_schedule(ctx, state, descriptors, placements)
 
     for id, descriptor in pairs(descriptors) do
         local placement = placements[id]
@@ -177,6 +250,19 @@ end
 
 local function layout_msg(ctx, message)
     local state, descriptors = context(ctx)
+
+    -- place <adres> <kolom> <rij> [tegelplek]: vanuit de werkvlakkaart.
+    local address, col, row, slot = message:match("^place%s+(%S+)%s+(%-?%d+)%s+(%-?%d+)%s*(%d*)$")
+    if address then
+        local wanted = normalize_address(address)
+        for id, descriptor in pairs(descriptors) do
+            if normalize_address(descriptor.address) == wanted then
+                core.place(state, id, tonumber(col), tonumber(row), config, tonumber(slot))
+                return true
+            end
+        end
+        return "hyprscroll2d: unknown window " .. address
+    end
     local command, argument, extra = message:match("^(%S+)%s*(%S*)%s*(%S*)$")
 
     if command == "panby" then

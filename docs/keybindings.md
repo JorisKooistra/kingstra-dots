@@ -216,8 +216,12 @@ worden bij een update niet automatisch omgezet.
 - **Muisfocus** verschuift het beeld niet meer zolang het venster grotendeels zichtbaar is.
 - **Uitzoomen:** de knop 󰊢 in de rail of Super+Tab.
 - **Super+Ctrl+, / .:** breedte kleiner/groter.
-- **Super+Tab:** kaart openen; sleep om vrij te bewegen, wiel om de kaart te
-  vergroten/verkleinen, kies een venster om erop terug te keren.
+- **Super+linkermuis slepen** van een venster: het komt precies waar je loslaat,
+  op een lege plek of op de tegelplek onder de muis. Het beeld schuift niet mee.
+- **Super+Tab:** kaart openen; sleep de achtergrond om vrij te bewegen, sleep een
+  venster naar een andere plek of tegelplek, wiel om de kaart te vergroten/verkleinen,
+  kies een venster om erop terug te keren. Vensters buiten beeld tonen hun laatste
+  miniatuur.
 - **Esc** in de kaart: sluiten.
 
 Gewone appscroll blijft bij de app. De ruimtelijke acties zijn buiten die layout

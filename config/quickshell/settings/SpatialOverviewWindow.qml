@@ -20,7 +20,15 @@ Scope {
     property real dragX: 0
     property real dragY: 0
     property bool dragged: false
+    // Een venster verslepen naar een andere plek (alleen op de kaart).
+    property int movingIndex: -1
+    property real moveX: 0
+    property real moveY: 0
+    readonly property var camera: snapshot.camera || ({col: 0, row: 0, x: 0, y: 0})
+    readonly property var pitch: snapshot.pitch || ({x: area.w, y: area.h})
     property string errorText: ""
+    // Nieuw bij elke keer openen, zodat bewaarde miniaturen opnieuw laden.
+    property int thumbStamp: 0
     readonly property string runtime: Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
     readonly property string helper: Quickshell.env("HOME") + "/.config/hypr/scripts/workspace-layout.py"
     readonly property var windows: snapshot.windows || []
@@ -60,7 +68,7 @@ Scope {
             lastToken = String(d.token);
             if (shown) { shown = false; return; }
             workspace = Number(d.workspace);
-            selected = 0; zoomTarget = 1; errorText = "";
+            selected = 0; zoomTarget = 1; errorText = ""; thumbStamp += 1;
             shown = true;
             snapshotFile.reload();
             focusTimer.restart();
@@ -84,6 +92,60 @@ Scope {
         if (best >= 0) selected = best;
     }
     function beginDrag(x, y) { dragX = x; dragY = y; dragged = false; }
+    // Werkvlakcoördinaat → plek (kolom, rij), met dezelfde maat als de layout.
+    function cellAt(wx, wy) {
+        let px = Math.max(1, Number(pitch.x) || area.w), py = Math.max(1, Number(pitch.y) || area.h);
+        return {
+            col: Number(camera.col) + Math.round((wx - (area.x + area.w / 2) + Number(camera.x)) / px),
+            row: Number(camera.row) + Math.round((wy - (area.y + area.h / 2) + Number(camera.y)) / py)
+        };
+    }
+    function cellBox(cell) {
+        let px = Math.max(1, Number(pitch.x) || area.w), py = Math.max(1, Number(pitch.y) || area.h);
+        let cx = area.x + area.w / 2 + (cell.col - Number(camera.col)) * px - Number(camera.x);
+        let cy = area.y + area.h / 2 + (cell.row - Number(camera.row)) * py - Number(camera.y);
+        return {x: cx - px / 2 + 6, y: cy - py / 2 + 6, w: px - 12, h: py - 12};
+    }
+    // Waar een versleept venster landt: plek, tegelplek (slot) en de vakken
+    // om dat te tonen. Op een bezette plek telt het hele tegelvak.
+    readonly property var dropSpot: {
+        if (movingIndex < 0 || !windows[movingIndex]) return null;
+        let moving = windows[movingIndex];
+        let px = moving.x + moving.w / 2 + moveX / scene.mapScale;
+        let py = moving.y + moving.h / 2 + moveY / scene.mapScale;
+        let cells = {};
+        for (let i = 0; i < windows.length; ++i) {
+            if (i === movingIndex) continue;
+            let w = windows[i], key = w.col + ":" + w.row, c = cells[key];
+            if (!c) cells[key] = c = {col: w.col, row: w.row, x1: w.x, y1: w.y, x2: w.x + w.w, y2: w.y + w.h, count: 0};
+            c.x1 = Math.min(c.x1, w.x); c.y1 = Math.min(c.y1, w.y);
+            c.x2 = Math.max(c.x2, w.x + w.w); c.y2 = Math.max(c.y2, w.y + w.h);
+            c.count += 1;
+        }
+        for (let key in cells) {
+            let c = cells[key];
+            if (px < c.x1 || px > c.x2 || py < c.y1 || py > c.y2) continue;
+            let n = Math.min(c.count + 1, Math.max(1, Number(snapshot.max) || 4));
+            let cols = n <= 3 ? n : Math.ceil(n / 2), rows = n <= 3 ? 1 : 2;
+            let fx = Math.min(0.999, (px - c.x1) / Math.max(1, c.x2 - c.x1));
+            let fy = Math.min(0.999, (py - c.y1) / Math.max(1, c.y2 - c.y1));
+            let sc = Math.floor(fx * cols), sr = Math.floor(fy * rows);
+            let slot = Math.min(sr * cols + sc, c.count);
+            let box = {x: c.x1, y: c.y1, w: c.x2 - c.x1, h: c.y2 - c.y1};
+            let tw = box.w / cols, th = box.h / rows;
+            return {col: c.col, row: c.row, slot: slot, box: box,
+                    slotBox: {x: box.x + sc * tw, y: box.y + sr * th, w: tw, h: th}};
+        }
+        let cell = cellAt(px, py);
+        return {col: cell.col, row: cell.row, slot: 0, box: cellBox(cell), slotBox: null};
+    }
+    function finishMove() {
+        let w = windows[movingIndex], spot = dropSpot;
+        if (w && spot)
+            Quickshell.execDetached(["python3", helper, "place", String(w.address),
+                String(spot.col), String(spot.row), String(spot.slot)]);
+        movingIndex = -1; moveX = 0; moveY = 0;
+    }
     function drag(x, y) {
         let dx = x - dragX, dy = y - dragY;
         if (!dragged && dx * dx + dy * dy < 9) return;
@@ -188,7 +250,7 @@ Scope {
                     }
                 }
                 Text {
-                    text: "Sleep om vrij te bewegen. Wiel zoomt in en uit. Kies een venster om erop in te zoomen."
+                    text: "Sleep een venster naar een andere plek; op een venster wordt het een tegel. Sleep de achtergrond om je zicht te verschuiven. Wiel zoomt, klik kiest een venster."
                     color: colors.subtext0
                     font.family: ThemeConfig.uiFont
                     font.pixelSize: 12
@@ -219,8 +281,11 @@ Scope {
                             id: tile
                             required property var modelData
                             required property int index
-                            x: scene.offsetX + (modelData.x - root.bounds.x) * scene.mapScale
-                            y: scene.offsetY + (modelData.y - root.bounds.y) * scene.mapScale
+                            readonly property bool moving: root.movingIndex === index
+                            x: scene.offsetX + (modelData.x - root.bounds.x) * scene.mapScale + (moving ? root.moveX : 0)
+                            y: scene.offsetY + (modelData.y - root.bounds.y) * scene.mapScale + (moving ? root.moveY : 0)
+                            z: moving ? 3 : 0
+                            opacity: moving ? 0.85 : 1
                             width: Math.max(1, modelData.w * scene.mapScale)
                             height: Math.max(1, modelData.h * scene.mapScale)
                             readonly property bool chosen: root.selected === index
@@ -230,9 +295,10 @@ Scope {
                             border.color: chosen ? colors.primary : colors.shellOutline
                             border.width: chosen ? 2 : 1
                             clip: true
-                            scale: chosen ? 1.0 : 0.985
-                            Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-                            Behavior on y { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                            scale: moving ? 0.92 : chosen ? 1.0 : 0.985
+                            Behavior on x { enabled: !tile.moving; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                            Behavior on y { enabled: !tile.moving; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(150) } }
                             Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutCubic } }
                             Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
 
@@ -244,6 +310,23 @@ Scope {
                                 captureSource: tile.toplevel
                                 live: root.shown
                                 opacity: hasContent ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
+                            }
+                            // Buiten beeld geeft Hyprland geen live beeld: dan het
+                            // laatst bewaarde plaatje (werkvlak-thumb.sh).
+                            Image {
+                                id: still
+                                anchors.fill: parent
+                                anchors.margins: tile.border.width
+                                visible: !preview.hasContent
+                                source: root.shown ? "file://" + root.runtime + "/kingstra-thumbs/"
+                                    + String(tile.modelData.address || "").toLowerCase().replace(/^0x/, "")
+                                    + ".jpg?" + root.thumbStamp : ""
+                                cache: false
+                                asynchronous: true
+                                fillMode: Image.PreserveAspectCrop
+                                sourceSize.width: 640
+                                opacity: status === Image.Ready ? 1 : 0
                                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
                             }
                             Rectangle {
@@ -258,7 +341,7 @@ Scope {
                                 anchors.right: parent.right
                                 anchors.bottom: parent.bottom
                                 anchors.margins: 6
-                                visible: preview.hasContent && tile.height > 40
+                                visible: (preview.hasContent || still.status === Image.Ready) && tile.height > 40
                                 height: Math.min(26, parent.height / 3)
                                 radius: height / 2
                                 color: Qt.alpha(colors.base, 0.82)
@@ -276,7 +359,7 @@ Scope {
                             Text {
                                 anchors.fill: parent
                                 anchors.margins: 10
-                                visible: !preview.hasContent
+                                visible: !preview.hasContent && still.status !== Image.Ready
                                 text: String(tile.modelData.title || "Venster")
                                 color: colors.text
                                 font.family: ThemeConfig.uiFont
@@ -288,12 +371,63 @@ Scope {
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: pressed ? Qt.ClosedHandCursor : Qt.PointingHandCursor
-                                onPressed: mouse => { let p = mapToItem(scene, mouse.x, mouse.y); root.beginDrag(p.x, p.y); root.selected = tile.index; }
-                                onPositionChanged: mouse => { if (pressed) { let p = mapToItem(scene, mouse.x, mouse.y); root.drag(p.x, p.y); } }
+                                property real startX: 0
+                                property real startY: 0
+                                onPressed: mouse => {
+                                    let p = mapToItem(scene, mouse.x, mouse.y);
+                                    startX = p.x; startY = p.y;
+                                    root.dragged = false;
+                                    root.selected = tile.index;
+                                }
+                                onPositionChanged: mouse => {
+                                    if (!pressed) return;
+                                    let p = mapToItem(scene, mouse.x, mouse.y);
+                                    let dx = p.x - startX, dy = p.y - startY;
+                                    if (root.movingIndex < 0 && dx * dx + dy * dy < 36) return;
+                                    root.dragged = true;
+                                    root.movingIndex = tile.index;
+                                    root.moveX = dx; root.moveY = dy;
+                                }
+                                onReleased: if (root.movingIndex === tile.index) root.finishMove()
+                                onCanceled: { root.movingIndex = -1; root.moveX = 0; root.moveY = 0; }
                                 onClicked: if (!root.dragged) root.choose(tile.index)
                                 onWheel: wheel => { root.zoomBy(wheel.angleDelta.y); wheel.accepted = true; }
                             }
                         }
+                    }
+                    // Doelplek tijdens het verslepen van een venster, met de
+                    // tegelplek waar het venster precies komt.
+                    Rectangle {
+                        z: 1
+                        readonly property var box: root.dropSpot ? root.dropSpot.box : null
+                        visible: box !== null
+                        x: box ? scene.offsetX + (box.x - root.bounds.x) * scene.mapScale : 0
+                        y: box ? scene.offsetY + (box.y - root.bounds.y) * scene.mapScale : 0
+                        width: box ? box.w * scene.mapScale : 0
+                        height: box ? box.h * scene.mapScale : 0
+                        radius: 10
+                        color: Qt.alpha(colors.primary, 0.08)
+                        border.color: Qt.alpha(colors.primary, 0.6)
+                        border.width: 1
+                        Behavior on x { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                        Behavior on y { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                    }
+                    Rectangle {
+                        z: 4
+                        readonly property var box: root.dropSpot ? (root.dropSpot.slotBox || root.dropSpot.box) : null
+                        visible: box !== null
+                        x: box ? scene.offsetX + (box.x - root.bounds.x) * scene.mapScale + 3 : 0
+                        y: box ? scene.offsetY + (box.y - root.bounds.y) * scene.mapScale + 3 : 0
+                        width: box ? Math.max(1, box.w * scene.mapScale - 6) : 0
+                        height: box ? Math.max(1, box.h * scene.mapScale - 6) : 0
+                        radius: 8
+                        color: Qt.alpha(colors.primary, 0.22)
+                        border.color: colors.primary
+                        border.width: 2
+                        Behavior on x { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                        Behavior on y { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                        Behavior on width { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                        Behavior on height { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
                     }
                     // Zichtgebied boven de tegels, zodat het kader zichtbaar blijft
                     // ook als een venster precies het hele scherm vult.

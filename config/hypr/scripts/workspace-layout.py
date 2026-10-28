@@ -222,6 +222,17 @@ def main(args):
             raise ValueError("Ongeldig venster")
         if any(c.get("address") == address for c in query("clients")):
             hypr("dispatch", "hl.dsp.focus({window=" + json.dumps("address:" + address) + "})")
+    elif command == "place":
+        # Werkvlakkaart: venster naar een plek slepen.
+        # Optioneel vierde getal: tegelplek binnen de plek (0 = eerste).
+        address, col, row = args[1], args[2], args[3]
+        slot = args[4] if len(args) > 4 else ""
+        if (not re.fullmatch(r"0x[0-9a-fA-F]+", address)
+                or not all(re.fullmatch(r"-?\d{1,4}", v) for v in (col, row))
+                or not re.fullmatch(r"\d?", slot)):
+            raise ValueError("Ongeldige plek")
+        if current()["layout"] == "lua:hyprscroll2d":
+            dispatch(f"place {address} {int(col)} {int(row)}" + (f" {slot}" if slot else ""))
     elif command == "main":
         state = current()
         if state["layout"] == "master":

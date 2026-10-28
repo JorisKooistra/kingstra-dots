@@ -97,6 +97,8 @@ local function cell_metrics(area, config)
     }
 end
 
+M.cell_metrics = cell_metrics
+
 -- De cel waar de camera nu (ongeveer) op staat, inclusief vrije verschuiving.
 function M.view_cell(state, area, config)
     local col, row = state.camera.col, state.camera.row
@@ -125,9 +127,33 @@ function M.new_state()
     }
 end
 
+-- Vensters die net uit een werkruimte verdwenen (gesloten, verplaatst of
+-- opgepakt om te slepen). Alleen een terugkeer in dezelfde werkruimte telt.
+local departed = {}
+
 local function assign_order(state, id)
     state.order[id] = state.next_order or 1
     state.next_order = (state.next_order or 1) + 1
+end
+
+-- Zet een venster op een bepaalde tegelplek (0 = eerste) in een cel.
+-- Is de cel vol, dan schuift de tegel op die plek naar spare (de oude plek
+-- van het venster), zodat er nooit meer dan max_per_cell in een cel staan.
+local function insert_at(state, id, col, row, slot, config, spare)
+    local list = members(state, col, row, id)
+    if #list >= max_per_cell(config) then
+        local index = clamp(math.floor(slot or #list) + 1, 1, #list)
+        local other = table.remove(list, index)
+        local target = spare or find_open_right(state, { col = col, row = row }, config)
+        state.positions[other] = { col = target.col, row = target.row }
+        assign_order(state, other)
+    end
+    local index = clamp(math.floor(slot or #list) + 1, 1, #list + 1)
+    table.insert(list, index, id)
+    state.positions[id] = { col = col, row = row }
+    for _, member in ipairs(list) do
+        assign_order(state, member)
+    end
 end
 
 function M.follow(state)
@@ -142,7 +168,8 @@ function M.follow(state)
 end
 
 -- area is optioneel: zonder area komt een nieuw venster bij het actieve.
-function M.sync(state, ids, active_id, config, area)
+-- drop is de cursor ({x, y}); die bepaalt waar een teruggezet venster landt.
+function M.sync(state, ids, active_id, config, area, drop)
     state.order = state.order or {}
     local present = {}
     local unique_ids = {}
@@ -154,8 +181,11 @@ function M.sync(state, ids, active_id, config, area)
         end
     end
 
-    for id in pairs(state.positions) do
+    for id, position in pairs(state.positions) do
         if not present[id] then
+            -- Onthouden: een venster dat je met Super+slepen oppakt, wordt
+            -- even zwevend en komt bij loslaten terug (zie drop hieronder).
+            departed[id] = { state = state, col = position.col, row = position.row }
             state.positions[id] = nil
             state.order[id] = nil
             state.width_step_by_id[id] = nil
@@ -165,9 +195,24 @@ function M.sync(state, ids, active_id, config, area)
 
     state.ids = unique_ids
 
-    local added = {}
+    local added, dropped = {}, {}
     for _, id in ipairs(unique_ids) do
-        if not state.positions[id] then
+        local returning = not state.positions[id] and departed[id]
+        if returning then departed[id] = nil end
+        if returning and returning.state ~= state then returning = nil end
+        if returning then
+            -- Terug na slepen of zwevend: waar je het loslaat, anders op de
+            -- oude plek. De camera blijft staan.
+            local spot = drop and area and M.spot_at(state, area, config, drop.x, drop.y, id)
+            if spot then
+                insert_at(state, id, spot.col, spot.row, spot.slot, config, returning)
+            else
+                insert_at(state, id, returning.col, returning.row, nil, config)
+            end
+            state.width_step_by_id[id] = state.width_step_by_id[id] or config.default_width_step
+            state.height_step_by_id[id] = state.height_step_by_id[id] or config.default_height_step
+            dropped[id] = true
+        elseif not state.positions[id] then
             local target
             if area then
                 target = M.view_cell(state, area, config)
@@ -194,13 +239,17 @@ function M.sync(state, ids, active_id, config, area)
         state.observed_active_id = active_id
         state.focused_id = active_id
     elseif not state.focused_id or not present[state.focused_id] then
+        -- Het actieve venster is (even) weg, bijvoorbeeld omdat je het
+        -- versleept: kies een ander, maar laat de camera staan.
         state.focused_id = unique_ids[1]
         state.observed_active_id = state.focused_id
-        focus_changed = state.focused_id ~= nil
+        focus_changed = state.focused_id ~= nil and not area
     end
 
     if focus_changed and state.focused_id and state.positions[state.focused_id] then
-        if added[state.focused_id] or not area then
+        if dropped[state.focused_id] then
+            state.pending_follow = false
+        elseif added[state.focused_id] or not area then
             -- Een nieuw venster krijgt altijd beeld; zonder area (tests,
             -- oude aanroepen) volgt de camera zoals vroeger direct.
             M.follow(state)
@@ -304,6 +353,18 @@ function M.move(state, direction, config)
     assign_order(state, focused_id)
 
     M.follow(state)
+    return true
+end
+
+-- Kaart: sleep een venster naar een plek, op tegelplek slot (0 = eerste,
+-- leeg = achteraan). Een volle plek stuurt de tegel op die plek naar de
+-- oude plek van het venster.
+function M.place(state, id, col, row, config, slot)
+    local position = state.positions[id]
+    if not position or type(col) ~= "number" or type(row) ~= "number" then return false end
+    col, row = math.floor(col + 0.5), math.floor(row + 0.5)
+    if position.col == col and position.row == row and slot == nil then return false end
+    insert_at(state, id, col, row, slot, config, { col = position.col, row = position.row })
     return true
 end
 
@@ -482,6 +543,44 @@ function M.placements(state, area, config)
     end
 
     return placements
+end
+
+-- Plek en tegelplek onder een schermpunt, alsof venster id (dat nu niet
+-- meetelt) erbij komt. Nil als het punt buiten het werkvlak valt.
+function M.spot_at(state, area, config, x, y, id)
+    if type(x) ~= "number" or type(y) ~= "number" then return nil end
+    if x < area.x or y < area.y or x > area.x + area.w or y > area.y + area.h then return nil end
+    local placements = M.placements(state, area, config)
+    local boxes = {}
+    for other, box in pairs(placements) do
+        if other ~= id then
+            local p = state.positions[other]
+            local key = position_key(p.col, p.row)
+            local cell = boxes[key]
+            if not cell then
+                boxes[key] = { col = p.col, row = p.row, x1 = box.x, y1 = box.y, x2 = box.x + box.w, y2 = box.y + box.h }
+            else
+                cell.x1, cell.y1 = math.min(cell.x1, box.x), math.min(cell.y1, box.y)
+                cell.x2, cell.y2 = math.max(cell.x2, box.x + box.w), math.max(cell.y2, box.y + box.h)
+            end
+        end
+    end
+    local hit
+    for _, cell in pairs(boxes) do
+        if x >= cell.x1 and x <= cell.x2 and y >= cell.y1 and y <= cell.y2 then hit = cell end
+    end
+    if not hit then
+        local metrics = cell_metrics(area, config)
+        local col = state.camera.col + round((x - (area.x + area.w / 2) + (state.camera.offset_x or 0)) / metrics.pitch_x)
+        local row = state.camera.row + round((y - (area.y + area.h / 2) + (state.camera.offset_y or 0)) / metrics.pitch_y)
+        return { col = col, row = row, slot = 0 }
+    end
+    local count = #members(state, hit.col, hit.row, id)
+    local cols, rows = grid_for(math.min(count + 1, max_per_cell(config)))
+    local fx = clamp((x - hit.x1) / math.max(1, hit.x2 - hit.x1), 0, 0.999)
+    local fy = clamp((y - hit.y1) / math.max(1, hit.y2 - hit.y1), 0, 0.999)
+    local slot = math.floor(fy * rows) * cols + math.floor(fx * cols)
+    return { col = hit.col, row = hit.row, slot = clamp(slot, 0, count) }
 end
 
 -- Deel van een venster dat binnen het werkvlak valt (0..1).

@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Werkvlak: slepen landt waar je loslaat, kaart met miniaturen
+- Super+slepen van een venster op het ruimtelijk werkvlak zette het venster altijd als laatste tegel neer en liet het beeld verschuiven. Hyprland haalt een gesleept venster even uit de layout; dat werd bij terugkomst als nieuw venster gezien. Nu komt het op de plek en tegelplek onder de muis (buiten beeld: terug naar de oude plek) en blijft de camera staan.
+- In de werkvlakkaart (Super+Tab of 󰊢) sleep je een venster naar een andere plek of tussen tegels; een oplichtend vak toont waar het komt. Op een volle plek ruilt de tegel daar met de oude plek.
+- De kaart toont voor vensters buiten beeld een miniatuur in plaats van alleen de titel. Hyprland levert alleen live beeld van vensters op het scherm, dus het nieuwe `werkvlak-thumb.sh` bewaart met grim een klein plaatje zodra een venster helemaal in beeld staat.
+- Nieuwe tests voor neerzetten, tegelplekken en miniaturen.
+
 ### Instellingen: nieuw tabblad Overzicht
 - Het eerste tabblad van Instellingen (Super+Ctrl+I) toont mode, thema, de indeling van de huidige werkruimte, scrollgedrag en wallpaper naast elkaar, allemaal direct te wijzigen. Thema's met voorbeeldafbeelding, wallpapers als miniaturen uit je wallpapermap.
 - Scrollen en werkvlak zijn nu instelbaar: breedte van een nieuwe kolom op een scrollstrook, hoeveel vensters als tegels op één plek staan en hoe sterk slepen vastklikt. Bewaard in `~/.config/kingstra/werkvlak.json` en meteen toegepast via het nieuwe `werkvlak-settings.py`.
