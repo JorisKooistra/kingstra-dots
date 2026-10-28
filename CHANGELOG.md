@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Session: resume apps
+- Like macOS and Windows, apps come back after logging in, each on the workspace where it was. The session starter saves the open apps every two minutes to `~/.local/state/kingstra/session.json` (command line, workspace, class; Flatpak apps restart via `flatpak run`) and restores them a few seconds after login.
+- Apps that are already running (autostart) are not started twice; a snapshot older than seven days is ignored; an empty snapshot (for example while shutting down) never overwrites a good one.
+- `kingstra sessie` shows what is saved; `kingstra sessie aan|uit|bewaar|herstel` switches it or saves and restores right away.
+
 ### Lock screen: glance
 - Under the clock the lock screen now shows the next appointment (today or tomorrow), the track that plays or is paused with album art and working buttons, and one pill per app with the number of waiting notifications. Never the content: the shell writes only app names and counts to `$XDG_RUNTIME_DIR/kingstra-notification-summary.json`.
 - Everything fades away with the clock as soon as you start typing.

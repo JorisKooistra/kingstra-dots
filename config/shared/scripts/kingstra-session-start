@@ -149,6 +149,9 @@ start_ui() {
     run_bg_once "swayosd-server$" "SwayOSD" swayosd-server
     start_shell_watch
 
+    # Apps terug op hun werkruimte, daarna elke twee minuten de stand bewaren.
+    run_bg_once "session-restore.sh run" "session restore" "$CONFIG_HOME/hypr/scripts/session-restore.sh" run
+
     # Eenmalig welkom na een verse installatie.
     if [[ -x "$HOME/.local/bin/kingstra-welcome" && ! -f "$LOG_DIR/welcome-shown" ]]; then
         run_bg_once "kingstra-welcome" "welcome" "$HOME/.local/bin/kingstra-welcome"
@@ -233,6 +236,7 @@ stop_session() {
     stop_pattern "lid-lock.sh" "lid lock watcher"
     stop_pattern "float-memory-watch.sh" "float memory watcher"
     stop_pattern "citrix-guard.sh" "Citrix passthrough guard"
+    stop_pattern "session-restore.sh run" "session restore"
     systemctl_user stop skwd-daemon.service
 }
 
