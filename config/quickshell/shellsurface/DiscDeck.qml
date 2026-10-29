@@ -37,6 +37,39 @@ Item {
     signal scrubReleased(real fraction)
 
     readonly property real u: width / 100
+
+    // Tekst langs een cirkel (midden van het item); onderaan leesbaar van
+    // links naar rechts, net als bovenaan.
+    component ArcText: Item {
+        id: arc
+        property string text: ""
+        property real radius: 50
+        property real center: -90
+        property string fontFamily: ""
+        property real pixelSize: 10
+        property int weight: Font.Normal
+        property bool italic: false
+        property real charWidth: 6
+        property color color: "white"
+        readonly property bool below: center > 0
+        readonly property real step: charWidth / Math.max(1, radius) * 180 / Math.PI
+        Repeater {
+            model: arc.text.length
+            Text {
+                required property int index
+                readonly property real ang: arc.center + (arc.below ? -1 : 1) * (index - (arc.text.length - 1) / 2) * arc.step
+                x: arc.width / 2 + Math.cos(ang * Math.PI / 180) * arc.radius - width / 2
+                y: arc.height / 2 + Math.sin(ang * Math.PI / 180) * arc.radius - height / 2
+                rotation: arc.below ? ang - 90 : ang + 90
+                text: arc.text.charAt(index)
+                font.family: arc.fontFamily
+                font.pixelSize: arc.pixelSize
+                font.weight: arc.weight
+                font.italic: arc.italic
+                color: arc.color
+            }
+        }
+    }
     readonly property alias bodyRadius: body.radius
 
     property string look: {
@@ -204,29 +237,31 @@ Item {
         width: lid.width
         height: lid.height
 
-        Text {
+        // Opdruk langs de ronding van het deksel: merk boven, tekst onder.
+        ArcText {
+            anchors.fill: parent
             visible: deck.detail > 0.01
             opacity: deck.detail
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: deck.u * 3.4
+            radius: deck.u * 39.5
+            center: -90
             text: deck.look === "paper" ? "kingstra" : "KINGSTRA"
-            font.family: ThemeConfig.displayFont
-            font.pixelSize: Math.max(8, deck.u * 3.2)
-            font.weight: Font.Black
-            font.italic: deck.look !== "neon"
-            font.letterSpacing: deck.u * 0.3
+            fontFamily: ThemeConfig.displayFont
+            pixelSize: Math.max(8, deck.u * 3.2)
+            weight: Font.Black
+            italic: deck.look !== "neon"
+            charWidth: pixelSize * 0.82
             color: deck.skin.brandColor
         }
-        Text {
+        ArcText {
+            anchors.fill: parent
             visible: deck.detail > 0.01
             opacity: deck.detail
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: deck.u * 3.2
+            radius: deck.u * 39.5
+            center: 90
             text: deck.look === "neon" ? "DIGITAL // ANTI-SKIP" : "COMPACT DISC · ANTI-SKIP"
-            font.family: ThemeConfig.monoFont
-            font.pixelSize: Math.max(7, deck.u * 1.8)
-            font.letterSpacing: deck.u * 0.2
+            fontFamily: ThemeConfig.monoFont
+            pixelSize: Math.max(7, deck.u * 1.8)
+            charWidth: pixelSize * 0.62 + deck.u * 0.2
             color: deck.skin.brandColor
         }
 

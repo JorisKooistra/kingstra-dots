@@ -26,7 +26,8 @@ DeviceStage {
     look: cassette.look
     upright: true
     faceAspect: 0.71
-    widthShare: 0.4
+    widthShare: look === "wood" ? 0.27 : 0.38
+    phonesScale: 1.45
     bodyRadius: cassette.bodyRadius
     hint: "Spatie afspelen  ·  ◀◀ ▶▶ vorige/volgende, vasthouden spoelt  ·  sleep over het venster  ·  ← → spoelen  ·  Esc sluit"
     onNudge: seconds => seeker.nudge(seconds)
@@ -63,9 +64,9 @@ DeviceStage {
 
     // Op de bovenkant: midden van de diepte. Alles hier komt in beeld als
     // de kast is uitgevouwen.
-    readonly property real keyR: rigWidth * 0.056
-    readonly property real keyK: 0.46
-    readonly property real keyH: rigWidth * 0.034
+    readonly property real keyR: rigWidth * 0.043
+    readonly property real keyK: 0.32
+    readonly property real keyH: rigWidth * 0.028
     readonly property real shellIn: clamp01((extrudeT - 0.55) / 0.45)
     function topX(f) { return rigWidth * f + offX * 0.5; }
     readonly property real topY: -offY * 0.5
@@ -122,7 +123,7 @@ DeviceStage {
 
             // Koptelefoonaansluiting bovenop, rechts.
             Item {
-                readonly property real rr: stage.rigWidth * 0.022
+                readonly property real rr: stage.rigWidth * 0.018
                 x: stage.topX(0.92) - rr
                 y: stage.topY - rr * stage.keyK
                 width: 2 * rr
@@ -144,27 +145,29 @@ DeviceStage {
                 }
             }
 
-            // Volumewieltje dat uit de rechterzijkant steekt.
-            VolumeWheel {
-                width: stage.rigWidth * 0.042
-                height: stage.rigWidth * 0.17
-                x: stage.rigWidth + stage.offX * 0.5 - width * 0.3
-                y: stage.topDepth * 0.2 - stage.offY * 0.5
-                skin: stage.skin
-                value: stage.volume
-                flat: stage.look === "paper"
-                viewLean: stage.viewLean
-                onRequested: value => stage.volumeRequested(value)
-            }
-            Text {
-                x: stage.rigWidth + stage.offX * 0.5 - width / 2
-                y: stage.topDepth * 0.2 - stage.offY * 0.5 + stage.rigWidth * 0.19
-                opacity: stage.detailT
-                text: "VOL"
-                font.family: ThemeConfig.monoFont
-                font.pixelSize: Math.max(8, stage.rigWidth * 0.017)
-                font.letterSpacing: 1
-                color: stage.skin.print
+            // Volumewiel in de rechterzijkant: as van voor naar achter, een
+            // stuk steekt uit de kast; wat erin zit, valt weg.
+            Item {
+                id: sideSlot
+                readonly property real wheelR: stage.rigWidth * 0.085
+                x: stage.rigWidth + stage.offX * 0.5
+                y: -stage.offY
+                width: wheelR
+                height: stage.topDepth + stage.offY
+                clip: true
+                SideWheel {
+                    r: sideSlot.wheelR
+                    dx: stage.offX * 0.4
+                    dy: stage.offY * 0.4
+                    x: stage.rigWidth - r * 0.42 + stage.offX * 0.3 - sideSlot.x - r
+                    y: stage.topDepth * 0.3 - stage.offY * 0.3 - sideSlot.y - r - dy
+                    skin: stage.skin
+                    face: stage.look === "paper" ? stage.mocha.base : stage.skin.metal
+                    rim: stage.look === "paper" ? stage.mocha.base : stage.skin.metal
+                    value: stage.volume
+                    flat: stage.look === "paper"
+                    onRequested: value => stage.volumeRequested(value)
+                }
             }
         }
     ]

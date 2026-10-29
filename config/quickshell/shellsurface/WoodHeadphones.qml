@@ -21,18 +21,20 @@ Item {
 
     readonly property real u: width / 100
     // Tafelcoördinaten in u: X naar rechts, Z naar achteren, H omhoog.
-    readonly property real cupR: 17
-    readonly property real cupX: 31
-    readonly property real cushionH: 6
-    readonly property real shellH: 15.5
-    readonly property real bandA: 31
-    readonly property real bandB: 27
+    readonly property real cupR: 21
+    readonly property real cupX: 27
+    readonly property real cushionH: 5.5
+    readonly property real shellH: 13
+    readonly property real bandA: 27
+    readonly property real bandB: 26
     readonly property real bandZ: cupR * 0.55
-    readonly property real band0: 4.5
-    readonly property real band1: 14.5
+    readonly property real band0: 4
+    readonly property real band1: 12
     readonly property real cx: width / 2
     readonly property real cy: u * ((bandZ + bandB + 4) * k + band1 * v + 3)
     height: cy + u * (34 * k + 4)
+    // Voorkant van de schelpen op tafel: daarmee zet DeviceStage hem neer.
+    readonly property real tableFront: sy(-cupR, 0)
     function sx(X) { return cx + X * u; }
     function sy(Z, H) { return cy - (Z * k + H * v) * u; }
 

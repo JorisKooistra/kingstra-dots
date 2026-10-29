@@ -44,8 +44,15 @@ FocusScope {
     // Staand: hoogte van het front en hoe ver de achterkant in beeld
     // verschuift (naar rechtsboven), beide t.o.v. de breedte.
     property real faceAspect: 0.71
-    property real obliqueX: 0.085
-    property real obliqueY: 0.12
+    property real obliqueX: 0.04
+    property real obliqueY: 0.055
+    // Organic: breedte van de koptelefoon t.o.v. het apparaat (echte maat:
+    // een koptelefoon is breder dan een walkman of discman).
+    property real phonesScale: 1.4
+    readonly property bool hasPhones: look === "wood"
+    readonly property real phonesWidth: rigWidth * phonesScale
+    // Apparaat en koptelefoon samen in het midden.
+    readonly property real sceneShift: hasPhones ? phonesWidth * 0.5 : 0
 
     // 0 = dicht, 1 = open; het venster animeert dit.
     property real reveal: 1
@@ -181,7 +188,7 @@ FocusScope {
     readonly property real extrudeT: fromOrigin ? tiltT : reveal
     readonly property real offX: upright ? rigWidth * obliqueX * extrudeT : 0
     readonly property real offY: upright ? rigWidth * obliqueY * extrudeT : 0
-    readonly property real finalX: upright ? (width - rigWidth * (1 + obliqueX)) / 2 + rigWidth * 0.06 : (width - rigWidth) / 2
+    readonly property real finalX: (upright ? (width - rigWidth * (1 + obliqueX)) / 2 : (width - rigWidth) / 2) + sceneShift
     readonly property real visibleHeight: upright ? topDepth + rigWidth * obliqueY : topDepth * foreshorten + frontHeight
     readonly property real finalY: upright
         ? (height - visibleHeight - height * 0.11) / 2 + rigWidth * obliqueY
@@ -211,17 +218,18 @@ FocusScope {
     // hetzelfde perspectief. Komt pas aan het eind van de overgang in beeld.
     WoodHeadphones {
         id: decoration
-        visible: stage.look === "wood" && stage.detailT > 0.01
+        visible: stage.hasPhones && stage.detailT > 0.01
         opacity: stage.detailT
         mocha: stage.mocha
-        width: stage.rigWidth * (stage.upright ? 0.58 : 0.5)
+        width: stage.phonesWidth
         // Tafel in beeld: hoe plat het tafelblad staat en hoe hoog dingen
         // erop worden.
-        k: stage.upright ? 0.42 : Math.sin(stage.maxTilt * Math.PI / 180) * 0.9 + 0.12
-        v: stage.upright ? 0.92 : Math.cos(stage.maxTilt * Math.PI / 180) * 0.55
-        x: stage.finalX - width * (stage.upright ? 1.0 : 0.98)
-        y: stage.upright ? stage.finalY + stage.topDepth - height * 0.86
-                         : stage.finalY + stage.topDepth + stage.frontHeight - height * 0.9
+        k: stage.upright ? 0.34 : Math.sin(stage.maxTilt * Math.PI / 180) * 0.9 + 0.12
+        v: stage.upright ? 0.94 : Math.cos(stage.maxTilt * Math.PI / 180) * 0.55
+        x: stage.finalX - width - stage.rigWidth * 0.02
+        // Iets achter de voorrand van het apparaat.
+        y: (stage.upright ? stage.finalY + stage.topDepth : stage.finalY + stage.topDepth + stage.frontHeight * 0.4)
+           - tableFront - stage.rigWidth * 0.03
         wood: Qt.tint(Qt.darker(stage.mocha.peach, 1.9), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.35))
         metal: stage.skin.metal || stage.mocha.subtext1
         leather: Qt.tint(Qt.darker(stage.mocha.surface1, 1.2), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.45))
