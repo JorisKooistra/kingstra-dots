@@ -20,8 +20,11 @@ import "../shellsurface"
 // clock: top-left, top-right, center, bottom-left, bottom-right.
 // `kingstra widgets aan|uit|klok <plek>` en het toetsenbordmenu schrijven dit.
 //
-// De vinylknop op de mediakaart (of `kingstra vinyl`) opent VinylStage: de
-// draaitafel schermvullend in perspectief, als een screensaver.
+// De knop op de mediakaart (of `kingstra vinyl`) opent VinylStage: de speler
+// van de kaart schermvullend in perspectief, als een screensaver. Welke
+// speler (draaitafel, cassettespeler of discman) kies je per scherm in
+// Super+A (playerStyle); `kingstra cassette` en `kingstra discman` openen
+// die meteen groot.
 Scope {
     id: root
 
@@ -163,7 +166,10 @@ Scope {
     property var stageScreen: null
     // Waar de kleine speler op het scherm staat; de grote groeit daaruit.
     property rect stageOrigin: Qt.rect(0, 0, 0, 0)
-    property real stageDiscAngle: 0
+    // Welke speler groot wordt: vinyl, cassette of discman.
+    property string stageDevice: "vinyl"
+    // Stand van plaat, spoelen of cd van de kleine speler.
+    property var stageSpin: ({})
     property var deckItems: ({})
     function registerDeck(name, item) {
         let d = Object.assign({}, deckItems);
@@ -171,7 +177,12 @@ Scope {
         deckItems = d;
     }
     Component.onCompleted: Hyprland.refreshMonitors()
-    function openStage() {
+    function deviceFor(style) {
+        return style === "cassette" || style === "discman" ? style
+            : style === "cover" ? "" : style === "vinyl" ? "vinyl" : (root.vinylMode ? "vinyl" : "");
+    }
+    // kind leeg: de speler die op de kaart staat (of de draaitafel).
+    function openStage(kind) {
         let mon = Hyprland.focusedMonitor;
         let screens = Quickshell.screens;
         let pick = screens.length > 0 ? screens[0] : null;
@@ -180,8 +191,12 @@ Scope {
         }
         stageScreen = pick;
         stageOrigin = Qt.rect(0, 0, 0, 0);
-        let deck = pick ? deckItems[pick.name] : null;
-        if (deck && deck.visible && deck.opacity > 0.5 && deck.width > 0) {
+        stageSpin = ({});
+        let slot = pick ? deckItems[pick.name] : null;
+        let shown = slot ? slot.device : "";
+        stageDevice = kind ? kind : (shown !== "" ? shown : "vinyl");
+        let deck = slot && shown === stageDevice ? slot.activeDeck : null;
+        if (deck && deck.visible && deck.opacity > 0.5 && deck.width > 0 && slot.parentCard.shown) {
             // Het bureaubladvenster begint na gereserveerde ruimte (bar, rail);
             // het schermvullende venster op 0,0. Hyprland kent die marges.
             let hm = Hyprland.monitorFor(pick);
@@ -189,7 +204,7 @@ Scope {
             let res = ipc && ipc.reserved ? ipc.reserved : [0, 0, 0, 0];
             let p = deck.mapToItem(null, 0, 0);
             stageOrigin = Qt.rect(p.x + Number(res[0] || 0), p.y + Number(res[1] || 0), deck.width, deck.height);
-            stageDiscAngle = deck.vinyl.discAngle;
+            stageSpin = stageDevice === "vinyl" ? { a: deck.vinyl.discAngle } : deck.spinState();
         }
         Hyprland.refreshMonitors();
         stageAlive = true;
@@ -200,6 +215,13 @@ Scope {
         function open() { root.openStage() }
         function close() { root.stageOpen = false }
         function toggle() { if (root.stageOpen) root.stageOpen = false; else root.openStage(); }
+        function cassette() { root.toggleStage("cassette") }
+        function discman() { root.toggleStage("discman") }
+        function turntable() { root.toggleStage("vinyl") }
+    }
+    function toggleStage(kind) {
+        if (root.stageOpen && root.stageDevice === kind) root.stageOpen = false;
+        else if (!root.stageOpen) root.openStage(kind);
     }
     LazyLoader {
         active: root.saverSeconds > 0
@@ -303,7 +325,7 @@ Scope {
                 Rectangle {
                     id: mediaCard
                     readonly property bool shown: root.showMedia && root.activePlayer !== null && ScreenProfiles.profile(win.screen ? win.screen.name : "").desktopMedia
-                    width: deckSlot.turntable ? 460 : 420
+                    width: deckSlot.device === "vinyl" || deckSlot.device === "cassette" ? 460 : deckSlot.device === "discman" ? 424 : 420
                     height: 148
                     Behavior on width { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }
                     radius: Math.max(16, ThemeConfig.styleWidgetRadius + 6)
@@ -356,13 +378,20 @@ Scope {
                         anchors.rightMargin: 40
                         spacing: 12
 
-                        // Draaitafel (zelfde vorm als de schermvullende) of de hoes.
+                        // Draaitafel, cassettespeler of discman (zelfde vorm als
+                        // de schermvullende), of de hoes.
                         Item {
                             id: deckSlot
                             readonly property string style: ScreenProfiles.profile(win.screen ? win.screen.name : "").playerStyle
-                            readonly property bool turntable: style === "cover" ? false : style === "vinyl" ? true : root.vinylMode
-                            Layout.preferredWidth: turntable ? 160 : 120
+                            readonly property string device: root.deviceFor(style)
+                            readonly property bool turntable: device === "vinyl"
+                            readonly property var activeDeck: device === "cassette" ? miniCassette : device === "discman" ? miniDisc : miniDeck
+                            readonly property var parentCard: mediaCard
+                            // Onder de schermvullende speler weg, die hier uit groeit.
+                            readonly property bool covered: root.stageCovering && root.stageScreen === win.screen
+                            Layout.preferredWidth: device === "vinyl" || device === "cassette" ? 160 : device === "discman" ? 124 : 120
                             Layout.preferredHeight: 124
+                            Component.onCompleted: root.registerDeck(win.screen ? win.screen.name : "", deckSlot)
 
                             TurntableDeck {
                                 id: miniDeck
@@ -384,12 +413,47 @@ Scope {
                                 onVolumeRequested: value => root.setMediaVolume(value)
                                 onTogglePlay: root.mediaToggle()
                                 onSeek: fraction => root.mediaSeek(fraction)
-                                // Onder de schermvullende speler weg, die hier uit groeit.
-                                opacity: !deckSlot.turntable ? 0 : (root.stageCovering && root.stageScreen === win.screen ? 0 : 1)
+                                opacity: !deckSlot.turntable ? 0 : (deckSlot.covered ? 0 : 1)
                                 visible: opacity > 0.01
                                 scale: deckSlot.turntable ? 1 : 0.9
                                 Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }
-                                Component.onCompleted: root.registerDeck(win.screen ? win.screen.name : "", miniDeck)
+                            }
+                            CassetteDeck {
+                                id: miniCassette
+                                anchors.centerIn: parent
+                                width: 160
+                                height: 115
+                                compact: true
+                                mocha: mocha
+                                accent: mocha.primary
+                                title: root.activePlayer ? String(root.activePlayer.trackTitle || "") : ""
+                                artist: root.activePlayer ? String(root.activePlayer.trackArtist || "") : ""
+                                playing: root.playing
+                                position: root.mediaTracking ? root.mediaProgress : 0
+                                onTogglePlay: root.mediaToggle()
+                                opacity: deckSlot.device !== "cassette" ? 0 : (deckSlot.covered ? 0 : 1)
+                                visible: opacity > 0.01
+                                scale: deckSlot.device === "cassette" ? 1 : 0.9
+                                Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }
+                            }
+                            DiscDeck {
+                                id: miniDisc
+                                anchors.centerIn: parent
+                                width: 124
+                                height: 124
+                                compact: true
+                                mocha: mocha
+                                accent: mocha.primary
+                                artUrl: miniDeck.artUrl
+                                playing: root.playing
+                                tracking: root.mediaTracking
+                                position: root.mediaProgress
+                                length: root.activePlayer && root.activePlayer.lengthSupported ? Number(root.activePlayer.length || 0) : 0
+                                onTogglePlay: root.mediaToggle()
+                                opacity: deckSlot.device !== "discman" ? 0 : (deckSlot.covered ? 0 : 1)
+                                visible: opacity > 0.01
+                                scale: deckSlot.device === "discman" ? 1 : 0.9
+                                Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }
                             }
                             MediaVinyl {
                                 anchors.centerIn: parent
@@ -402,7 +466,7 @@ Scope {
                                 vinylMode: false
                                 showArm: false
                                 coverRadius: 16
-                                opacity: deckSlot.turntable ? 0 : 1
+                                opacity: deckSlot.device !== "" ? 0 : 1
                                 visible: opacity > 0.01
                                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("normal") } }
                             }

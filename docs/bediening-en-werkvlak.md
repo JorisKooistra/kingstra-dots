@@ -70,7 +70,10 @@ verslepen.
 
 De muziekpill gebruikt standaard één stabiel mediascherm; tonen/verbergen kan
 per scherm worden overschreven. Desktopmedia kan apart aan/uit.
-Bij playerstijl kan het uiterlijk het thema volgen of altijd vinyl/hoes blijven.
+Bij playerstijl kies je de speler op de mediakaart: het thema volgen, een
+platenspeler, een cassettespeler (walkman), een discman of alleen de hoes. De
+knop op de kaart opent dezelfde speler schermvullend; `kingstra vinyl`,
+`kingstra cassette` en `kingstra discman` doen dat ook.
 
 Een monitor met bruikbaar serienummer behoudt zijn profiel bij een andere
 connector. Voor identieke schermen zonder serienummer is de connector de sleutel.

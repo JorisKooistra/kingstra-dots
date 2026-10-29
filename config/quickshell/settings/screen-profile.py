@@ -117,7 +117,7 @@ def change(data, monitor, command, args, available, fallback):
         if value not in ("auto", "show", "hide"):
             raise ValueError("Ongeldige muziekzichtbaarheid")
     elif field == "playerStyle":
-        if value not in ("theme", "vinyl", "cover"):
+        if value not in ("theme", "vinyl", "cassette", "discman", "cover"):
             raise ValueError("Ongeldige spelerstijl")
     else:
         raise ValueError("Onbekende scherminstelling")

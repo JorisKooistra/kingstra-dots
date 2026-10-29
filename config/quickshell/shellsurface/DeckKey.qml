@@ -19,6 +19,8 @@ Item {
     property real keyWidth: 40
     property real keyHeight: 26
     signal activated()
+    // Ingedrukt (voor vasthouden, zoals spoelen op een walkman).
+    readonly property alias down: keyMouse.pressed
 
     // Echt 3D: de kap is een uitgetrokken blokje boven een voetafdruk.
     // Bovenop de tafel (frontFacing uit) kijk je schuin van voren tegen de

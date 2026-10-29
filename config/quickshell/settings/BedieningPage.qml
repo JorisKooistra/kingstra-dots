@@ -328,7 +328,7 @@ Item {
             Flow {
                 Layout.fillWidth: true; spacing: 8
                 Repeater {
-                    model: [{id: "theme", title: "Speler volgt thema"}, {id: "vinyl", title: "Altijd vinyl"}, {id: "cover", title: "Alleen hoes"}]
+                    model: [{id: "theme", title: "Speler volgt thema"}, {id: "vinyl", title: "Platenspeler"}, {id: "cassette", title: "Cassettespeler"}, {id: "discman", title: "Discman"}, {id: "cover", title: "Alleen hoes"}]
                     delegate: Action {
                         required property var modelData
                         label: modelData.title

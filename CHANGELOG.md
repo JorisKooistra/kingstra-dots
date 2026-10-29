@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Cassettespeler en discman naast de draaitafel
+- Nieuwe spelers op de mediakaart en schermvullend: een draagbare cassettespeler (walkman, `shellsurface/CassetteDeck.qml`) en een discman (`shellsurface/DiscDeck.qml`). Klein en groot hebben dezelfde vorm; de grote groeit uit de kaart in dezelfde fases als de draaitafel (groeien, kantelen en uitvouwen, details als laatste) en start pas na de eerste getekende frames.
+- Keuze per scherm in Super+A onder "Muziek op dit scherm": Speler volgt thema, Platenspeler, Cassettespeler, Discman of Alleen hoes. `kingstra cassette` en `kingstra discman` openen ze direct schermvullend (nog een keer sluit), net als `kingstra vinyl`; ook in het toetsenbordmenu. De screensaver opent de speler die op de kaart staat.
+- Cassettespeler: heldere cassette met titel (lopend) en artiest op het label; het tapepakket krimpt links en groeit rechts met de voortgang en de kleinste spoel draait het snelst. Pianotoetsen ⏏ ◀◀ ▶ ▶▶ (play blijft ingedrukt; ◀◀/▶▶ vorige/volgende, vasthouden windt zichtbaar), een mechanische teller, een tapebalk om te slepen en een volumewieltje.
+- Discman: rookglazen deksel met de hoes als opdruk op de draaiende cd (het licht op glas en spiegelring staat stil), een lcd met nummer, lopende titel, artiest, tijd en een balk om te spoelen, OPEN/HOLD-schuifjes en op de voorkant ⏮ ⏯ ⏭ ⏹ en een volumewieltje.
+- Gedeeld: `DeviceStage.qml` (podium met fases, perspectief en een voorkant die de afgeronde kast volgt), `SeekControl.qml` (spoelen zonder terugspringen), `VolumeWheel.qml`, `MarqueeText.qml`, `WoodGrain.qml` en `TapeReel.qml`. Alle uitstekende delen gebruiken DeckKey/Extruded; kleuren per thema uit primary, accent 2, tertiary en de containers; draaien per frame, nerf en naven één keer getekend.
+
 ### Draaitafel: gedetailleerder en schermvullend
 - 33/45 toeren is nu gedeeld tussen de kleine en de grote speler en wordt onthouden (`~/.local/state/kingstra/vinyl-rpm`); sluiten springt niet meer van single naar lp.
 - De meedraaiende camera schuift de zichtbare zijkanten van knoppen, arm, lampje en schuiven mee; knoppen in een rij blijven op hun plek.

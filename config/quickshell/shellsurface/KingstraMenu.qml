@@ -73,6 +73,8 @@ FocusScope {
                 { icon: "󰝚", label: "Mediakaart aan", cmd: kingstra("widgets media aan") },
                 { icon: "󰝛", label: "Mediakaart uit", cmd: kingstra("widgets media uit") },
                 { icon: "󰀥", label: "Draaitafel schermvullend", cmd: kingstra("vinyl") },
+                { icon: "󰗅", label: "Cassettespeler schermvullend", cmd: kingstra("cassette") },
+                { icon: "󰗮", label: "Discman schermvullend", cmd: kingstra("discman") },
                 { icon: "󰀥", label: "Draaitafel als screensaver aan", cmd: kingstra("vinyl auto 120") },
                 { icon: "󰀥", label: "Draaitafel als screensaver uit", cmd: kingstra("vinyl auto uit") }
             ] },
