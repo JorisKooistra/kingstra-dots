@@ -5,6 +5,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- 33/45 toeren is nu gedeeld tussen de kleine en de grote speler en wordt onthouden (`~/.local/state/kingstra/vinyl-rpm`); sluiten springt niet meer van single naar lp.
+- De meedraaiende camera schuift de zichtbare zijkanten van knoppen, arm, lampje en schuiven mee; knoppen in een rij blijven op hun plek.
+- Zijwanden van knoppen en onderdelen zijn altijd donkerder dan de belichte kap, ook als een thema een lichte zijkleur geeft. Neon, Paper en Mono nagelopen.
 - Fix: bij het groot maken klapte de voorkant de andere kant op dan de bovenkant. Nu draait hij als één kast mee: zelfde richting, zelfde hoeveelheid.
 - Afspeelknop heeft één play/pauze-icoon en blijft ingedrukt staan zolang er muziek speelt, zoals op een echte draaitafel. START en de gekozen 33/45-knop vergrendelen op dezelfde manier.
 - Tweede kleur is nu accent 2 uit de wallpaper (Matugens secondary lag vaak gelijk aan primary); de mat gebruikt de accent-2-container, het hout houdt de secondary-container.

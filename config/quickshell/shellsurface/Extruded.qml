@@ -31,6 +31,10 @@ Item {
     readonly property real reach: flat ? 0 : 1 - 0.75 * press
     readonly property real dx: lean * depth * 0.6 * reach
     readonly property real dy: (frontFacing ? depth : -depth) * reach
+    // Zijwand altijd duidelijk donkerder dan de belichte kap, ook als een
+    // skin een lichte zijkleur meegeeft.
+    function luma(c) { return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; }
+    readonly property color wall: luma(side) > luma(faceBottom) * 0.8 ? Qt.darker(faceBottom, 1.4) : side
 
     Rectangle {
         visible: ex.recess && !ex.flat
@@ -59,8 +63,8 @@ Item {
         Rectangle {
             required property int index
             readonly property real t: index / Math.max(1, Math.min(12, Math.ceil(ex.depth * ex.reach)))
-            readonly property color far: ex.frontFacing ? Qt.darker(ex.side, 1.2) : Qt.darker(ex.side, 1.45)
-            readonly property color near: ex.frontFacing ? Qt.darker(ex.faceBottom, 1.18) : ex.side
+            readonly property color far: ex.frontFacing ? Qt.darker(ex.wall, 1.2) : Qt.darker(ex.wall, 1.45)
+            readonly property color near: ex.frontFacing ? Qt.darker(ex.faceBottom, 1.18) : ex.wall
             x: ex.dx * t
             y: ex.dy * t
             width: ex.width

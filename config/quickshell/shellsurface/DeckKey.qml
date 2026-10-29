@@ -36,12 +36,19 @@ Item {
     property real press: keyMouse.pressed ? 1 : latched ? 0.65 : 0
     Behavior on press { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutCubic } }
     readonly property real reach: 1 - 0.75 * press
-    readonly property real dxFull: lean * depth * 0.6
-    readonly property real baseX: dxFull < 0 ? -dxFull : 0
+    // Camera-zwaai: schuift alleen de kap mee, niet de plek in de rij, zodat
+    // knoppen naast elkaar niet gaan wiebelen.
+    property real viewLean: 0
+    readonly property real dxLayout: lean * depth * 0.6
+    readonly property real dxFull: Math.max(-1, Math.min(1, lean + viewLean)) * depth * 0.6
+    readonly property real baseX: dxLayout < 0 ? -dxLayout : 0
     readonly property real baseY: frontFacing ? 0 : depth
     readonly property real faceX: baseX + dxFull * reach
     readonly property real faceY: frontFacing ? depth * reach : depth * (1 - reach)
-    implicitWidth: keyWidth + Math.abs(dxFull)
+    // Zijwand altijd duidelijk donkerder dan de belichte kap.
+    function luma(c) { return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; }
+    readonly property color wall: luma(skin.capSide) > luma(skin.capB) * 0.8 ? Qt.darker(skin.capB, 1.4) : skin.capSide
+    implicitWidth: keyWidth + Math.abs(dxLayout)
     implicitHeight: keyHeight + depth
     opacity: enabled ? 1 : 0.4
 
@@ -75,8 +82,8 @@ Item {
         Rectangle {
             required property int index
             readonly property real t: index / Math.max(1, Math.min(12, Math.ceil(key.depth * key.reach)))
-            readonly property color far: key.frontFacing ? Qt.darker(key.skin.capSide, 1.2) : Qt.darker(key.skin.capSide, 1.45)
-            readonly property color near: key.frontFacing ? Qt.darker(key.skin.capB, 1.18) : key.skin.capSide
+            readonly property color far: key.frontFacing ? Qt.darker(key.wall, 1.2) : Qt.darker(key.wall, 1.45)
+            readonly property color near: key.frontFacing ? Qt.darker(key.skin.capB, 1.18) : key.wall
             x: key.baseX + (key.faceX - key.baseX) * t
             y: key.baseY + (key.faceY - key.baseY) * t
             width: key.keyWidth

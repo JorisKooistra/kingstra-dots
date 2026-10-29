@@ -81,6 +81,8 @@ PanelWindow {
         canNext: p !== null && p.canGoNext
         volume: win.host.mediaVolume
         onVolumeRequested: value => win.host.setMediaVolume(value)
+        rpm: win.host.vinylRpm
+        onRpmRequested: value => win.host.setVinylRpm(value)
         onTogglePlay: win.host.mediaToggle()
         onPrevious: if (p && p.canGoPrevious) p.previous()
         onNext: if (p && p.canGoNext) p.next()

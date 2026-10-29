@@ -30,6 +30,7 @@ FocusScope {
     property real length: 0
     // 0..1, of -1 als het onbekend is; de schuif rechts op de speler.
     property real volume: -1
+    property int rpm: 33
 
     // 0 = dicht, 1 = open; het venster animeert dit.
     property real reveal: 1
@@ -53,6 +54,7 @@ FocusScope {
     signal next()
     signal seek(real fraction)
     signal volumeRequested(real value)
+    signal rpmRequested(int value)
     signal closeRequested()
 
     // Uitvoering per thema: Organic walnoot met messing, Neon zwart glas met
@@ -65,6 +67,8 @@ FocusScope {
     readonly property var vinyl: table.vinyl
 
     property real sway: 0
+    // Wat de camera-zwaai doet met de zijkanten van knoppen en onderdelen.
+    readonly property real viewLean: sway / 2.4 * 0.2
     // Langzaam meedraaiende camera zolang er muziek speelt.
     SequentialAnimation {
         running: stage.playing && stage.reveal > 0.99
@@ -248,11 +252,14 @@ FocusScope {
                 progress: stage.progress
                 canSeek: stage.canSeek
                 volume: stage.volume
+                rpm: stage.rpm
+                viewLean: stage.viewLean
                 squareBottom: true
                 detail: stage.detailT
                 onTogglePlay: stage.togglePlay()
                 onSeek: fraction => stage.seek(fraction)
                 onVolumeRequested: value => stage.volumeRequested(value)
+                onRpmRequested: value => stage.rpmRequested(value)
             }
         }
 
@@ -521,6 +528,7 @@ FocusScope {
                         icon: "󰒮"
                         frontFacing: true
                         lean: 0.3
+                        viewLean: table.viewLean
                         enabled: stage.canPrevious
                         keyWidth: stage.frontHeight * 0.78
                         keyHeight: stage.frontHeight * 0.56
@@ -535,6 +543,7 @@ FocusScope {
                         latched: stage.playing
                         frontFacing: true
                         lean: 0.45
+                        viewLean: table.viewLean
                         lit: stage.playing
                         keyWidth: stage.frontHeight * 1.0
                         keyHeight: stage.frontHeight * 0.56
@@ -547,6 +556,7 @@ FocusScope {
                         icon: "󰒭"
                         frontFacing: true
                         lean: 0.62
+                        viewLean: table.viewLean
                         enabled: stage.canNext
                         keyWidth: stage.frontHeight * 0.78
                         keyHeight: stage.frontHeight * 0.56
@@ -560,6 +570,7 @@ FocusScope {
                         icon: "󰅖"
                         frontFacing: true
                         lean: 0.85
+                        viewLean: table.viewLean
                         keyWidth: stage.frontHeight * 0.56
                         keyHeight: stage.frontHeight * 0.56
                         onActivated: stage.closeRequested()

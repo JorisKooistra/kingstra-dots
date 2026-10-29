@@ -125,6 +125,12 @@ Item {
     }
 
     property int rpm: 33
+    // Meedraaiende camera: schuift de zichtbare zijkanten van alle 3D-delen
+    // een beetje mee (positief = meer linkerzijkant).
+    property real viewLean: 0
+    function leanAt(base) { return Math.max(-1, Math.min(1, base + viewLean)); }
+    // De eigenaar onthoudt het toerental en zet rpm terug.
+    signal rpmRequested(int value)
     // Pitch in procent; de schuif is nu volume, dit blijft 0.
     property real pitch: 0
 
@@ -315,7 +321,7 @@ Item {
         single: table.rpm === 45
         armPivot: Qt.point(table.width * 0.835 - x, table.height * 0.2 - y)
         armReach: 2.05
-        armLean: 0.67
+        armLean: table.leanAt(0.67)
         secondary: table.secondary
         tertiary: table.tertiary
         secondaryContainer: table.secondaryContainer
@@ -347,7 +353,7 @@ Item {
             anchors.fill: parent
             radius: width / 2
             depth: Math.max(2, width * 0.14)
-            lean: -0.9
+            lean: table.leanAt(-0.9)
             flat: table.look === "paper"
             faceTop: table.look === "paper" ? table.mocha.base : Qt.lighter(adapter.body, 1.15)
             faceBottom: table.look === "paper" ? table.mocha.base : Qt.darker(adapter.body, 1.15)
@@ -406,7 +412,7 @@ Item {
             anchors.fill: parent
             radius: width / 2
             depth: Math.max(2, width * 0.16)
-            lean: -0.95
+            lean: table.leanAt(-0.95)
             flat: table.look === "paper"
             faceTop: table.look === "paper" ? table.mocha.base : Qt.lighter(lamp.ring, 1.2)
             faceBottom: table.look === "paper" ? table.mocha.base : Qt.darker(lamp.ring, 1.5)
@@ -449,6 +455,7 @@ Item {
         y: table.height * 0.835
         label: "START"
         lean: -0.85
+        viewLean: table.viewLean
         lit: table.playing
         latched: table.playing
         keyWidth: table.height * 0.15
@@ -472,11 +479,12 @@ Item {
                 label: String(modelData)
                 ledColor: table.role("litAlt", table.skin.lit)
                 lean: modelData === 33 ? -0.62 : -0.48
+                viewLean: table.viewLean
                 lit: table.rpm === modelData
                 latched: table.rpm === modelData
                 keyWidth: table.height * 0.085
                 keyHeight: table.height * 0.045
-                onActivated: table.rpm = modelData
+                onActivated: table.rpmRequested(modelData)
             }
         }
     }
@@ -509,7 +517,7 @@ Item {
                 height: parent.width * 0.6
                 radius: height / 2
                 depth: parent.height - height
-                lean: 0.8
+                lean: table.leanAt(0.8)
                 flat: table.look === "paper"
                 faceTop: Qt.lighter(table.skin.needle, 1.25)
                 faceBottom: Qt.darker(table.skin.needle, 1.3)
@@ -567,7 +575,7 @@ Item {
             height: parent.width * 0.55
             radius: table.look === "neon" ? 2 : 4
             depth: Math.max(2, height * 0.45)
-            lean: 0.85
+            lean: table.leanAt(0.85)
             y: depth + (1 - pitchFader.shown) * (pitchFader.height - height - depth)
             flat: table.look === "paper"
             faceTop: table.look === "paper" ? table.skin.capA : Qt.lighter(table.skin.capA, 1.12)

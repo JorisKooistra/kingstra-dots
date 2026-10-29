@@ -61,6 +61,25 @@ Scope {
         onLoaded: root.vinylMode = String(text() || "").trim() !== "cover"
     }
 
+    // Toerental van de draaitafel (33 of 45), gedeeld door de kleine speler
+    // en de grote, en onthouden. 45 laat een single zien.
+    property int vinylRpm: 33
+    readonly property string rpmFile: Quickshell.env("HOME") + "/.local/state/kingstra/vinyl-rpm"
+    FileView {
+        id: rpmStateFile
+        path: root.rpmFile
+        preload: true
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: root.vinylRpm = String(text() || "").trim() === "45" ? 45 : 33
+    }
+    function setVinylRpm(value) {
+        let rpm = value === 45 ? 45 : 33;
+        if (rpm === root.vinylRpm) return;
+        root.vinylRpm = rpm;
+        Quickshell.execDetached(["sh", "-c", 'mkdir -p "$(dirname "$1")" && printf "%s\\n" "$2" > "$1"', "sh", root.rpmFile, String(rpm)]);
+    }
+
     Timer { interval: 1000; repeat: true; running: true; onTriggered: { desktopStateFile.reload(); mediaStyleFile.reload(); } }
 
     property var now: new Date()
@@ -360,6 +379,8 @@ Scope {
                                 progress: root.mediaProgress
                                 canSeek: root.mediaCanSeek
                                 volume: root.mediaVolume
+                                rpm: root.vinylRpm
+                                onRpmRequested: value => root.setVinylRpm(value)
                                 onVolumeRequested: value => root.setMediaVolume(value)
                                 onTogglePlay: root.mediaToggle()
                                 onSeek: fraction => root.mediaSeek(fraction)
