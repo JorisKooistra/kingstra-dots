@@ -199,7 +199,7 @@ try:
  check(str(d['workspace']['id'])==ws2,'animated app is on the other output')
  first=next(m for m in mm if m['name']=='WAYLAND-1')
  width=max(m['x']+m['width'] for m in mm);height=max(m['y']+m['height'] for m in mm)
- subprocess.run([vpointer,str(width),str(height),'abs',str(first['x']+first['width']//2),str(first['y']+first['height']//2)],env=env,check=True)
+ pointer('abs',str(first['x']+first['width']//2),str(first['y']+first['height']//2))
  ctl('dispatch','hl.dsp.focus({workspace="1"})');time.sleep(.2)
  def frame_count():return sum(l.startswith('frame zoom-D ') for l in (run/'zoom-D.log').read_text().splitlines())
  baseline=frame_count();time.sleep(.5);check(frame_count()>baseline,'other output receives ordinary frame callbacks')
@@ -209,7 +209,7 @@ try:
  check(frame_count()>baseline,'other output keeps receiving frame callbacks during zoom')
  # Hover on the ordinary output must switch focus without a click too.
  dx=int(d['at'][0]+d['size'][0]/2);dy=int(d['at'][1]+d['size'][1]/2)
- subprocess.run([vpointer,str(width),str(height),'abs',str(dx),str(dy),'sleep','180'],env=env,check=True)
+ pointer('abs',str(dx),str(dy),'sleep','180')
  check(json.loads(ctl('activewindow','-j'))['address']==d['address'],'hover on the other monitor selects its app without clicking')
  # Return the pointer and focus to an actually visible zoomed app.
  view=json.loads(ctl('spatialoverview'))['screens'][0]['view']
@@ -217,15 +217,23 @@ try:
  hovered=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-A')
  hx=int(first['x']+(hovered['at'][0]+hovered['size'][0]/2-view[0])*first['width']/view[2])
  hy=int(first['y']+(hovered['at'][1]+hovered['size'][1]/2-view[1])*first['height']/view[3])
- subprocess.run([vpointer,str(width),str(height),'abs',str(hx),str(hy),'sleep','180'],env=env,check=True)
+ pointer('abs',str(hx),str(hy),'sleep','180')
  check(json.loads(ctl('activewindow','-j'))['address']==hovered['address'],'returning to the zoomed monitor focuses the same app without clicking')
 
  # A drag can originate on the ordinary output, outside any canvas listener.
- def cross_output_drag(w, dest, start=None):
-  start=start or [int(w['at'][i]+w['size'][i]/2) for i in (0,1)]
+ def cross_output_drag(w, dest):
+  # Nested Wayland outputs can resize when the parent's layout changes. Read
+  # the actual app box and its current zoom immediately before picking it up.
+  current=next(c for c in json.loads(ctl('clients','-j')) if c['address']==w['address'])
+  monitor=next(m for m in json.loads(ctl('monitors','-j')) if m['id']==current['monitor'])
+  screen=next((s for s in json.loads(ctl('spatialoverview'))['screens'] if s['monitor']==monitor['name']),None)
+  start=[int(current['at'][i]+current['size'][i]/2) for i in (0,1)]
+  if screen:
+   start=[int(monitor[['x','y'][i]]+(start[i]-screen['view'][i])*monitor[['width','height'][i]]/screen['view'][i+2]) for i in (0,1)]
+  print('DRAG',w['title'],start,dest,flush=True)
   keys=subprocess.Popen(['wtype','-M','logo','-s','2000','-m','logo'],env=env);time.sleep(.12)
-  subprocess.run([vpointer,str(width),str(height),'abs',*map(str,start),'sleep','120','down','sleep','90',
-                  'abs',str(start[0]-50),str(start[1]),'sleep','90','abs',*map(str,dest),'sleep','180','up','sleep','180'],env=env,check=True)
+  pointer('abs',*map(str,start),'sleep','120','down','sleep','90',
+                  'abs',str(start[0]-50),str(start[1]),'sleep','90','abs',*map(str,dest),'sleep','180','up','sleep','180')
   keys.wait(timeout=3);time.sleep(.2)
  cross_camera=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
  cross_output_drag(d,(hx,hy))
@@ -236,13 +244,16 @@ try:
  cells={w['address']:(w['col'],w['row']) for w in imported['windows'] if not w.get('floating')}
  check(cells[d['address']]==cells[hovered['address']],'cross-output drop joins the page under the scaled pointer')
  check(imported['camera']==cross_camera,'cross-output drop preserves the zoomed camera')
- # Restore the independent animated output for the clipping checks below.
- ctl('dispatch','hl.dsp.window.move({workspace="'+ws2+'",follow=false,window="address:'+d['address']+'"})')
- time.sleep(.3)
+ # Reverse the same drag: a canvas grab must also land on an ordinary output
+ # with no overview object, including an otherwise empty destination workspace.
+ cross_output_drag(d,(dx,dy))
  d=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D')
- subprocess.run([vpointer,str(width),str(height),'abs',str(hx),str(hy),'sleep','150'],env=env,check=True)
+ check(str(d['workspace']['id'])==ws2 and not d['floating'],'drag out of zoom returns the tiled app to the ordinary output')
+ check(json.loads((run/'kingstra-spatial-1.json').read_text())['camera']==cross_camera,'drag out of zoom preserves the source camera')
+ pointer('abs',str(hx),str(hy),'sleep','150')
 
  # Open a real new application through the same keybind path as Super+Return.
+ ctl('dispatch','hl.dsp.focus({workspace="1"})')
  cmd='python3 '+str(root/'tests/integration/native-zoom-app.py')+' zoom-E > '+str(run/'zoom-E.log')+' 2>&1'
  camera_before=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
  native_before=json.loads(ctl('spatialoverview'))['screens'][0]['view']
@@ -254,6 +265,7 @@ try:
   time.sleep(.1)
  check(bool(found),'terminal launch opens the new app while zoomed')
  check(found[0]['floating'],'remembered floating preference is preserved')
+ check(found[0]['workspace']['id']==1,'floating overflow fixture belongs to the zoomed output')
  time.sleep(.3)
  camera_after=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
  native_after=json.loads(ctl('spatialoverview'))['screens'][0]['view']
@@ -268,13 +280,15 @@ try:
  sample=Image.open(run/'foreign-during-zoom.png').convert('RGB').getpixel((min(100,second['width']-1),min(100,second['height']-1)))
  print('FOREIGN FLOAT PIXEL DURING ZOOM',sample,flush=True)
  check(max(sample)-min(sample)<20,'oversized floating app stays clipped to its zoomed monitor')
- subprocess.run([vpointer,str(width),str(height),'abs',str(second['x']+min(100,second['width']-1)),str(second['y']+min(100,second['height']-1)),'sleep','200'],env=env,check=True)
+ pointer('abs',str(second['x']+min(100,second['width']-1)),str(second['y']+min(100,second['height']-1)),'sleep','200')
  check(json.loads(ctl('activewindow','-j'))['address']==d['address'],'hidden floating overflow cannot capture focus on the other monitor')
  ctl('eval','zoom.reset("WAYLAND-1")');time.sleep(.2)
  subprocess.run(['grim','-o','ZOOM-2',str(run/'foreign-at-100.png')],env=env,check=True)
  sample=Image.open(run/'foreign-at-100.png').convert('RGB').getpixel((min(100,second['width']-1),min(100,second['height']-1)))
  print('FOREIGN FLOAT PIXEL AT 100%',sample,flush=True)
  check(sample[1]>sample[0]+50,'100% restores normal cross-monitor floating rendering')
+ # The oversized floating fixture would otherwise cover the tiled drag source.
+ os.kill(e['pid'],15);time.sleep(.2)
 
  # Importing a floating app must retain its size and place its grabbed point
  # at the inverse-transformed pointer, rather than scaling its buffer.
@@ -296,18 +310,45 @@ try:
  f=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-F')
  check(f['workspace']['id']==1 and f['floating'] and f['size']==float_size,'cross-output floating drop preserves floating mode and size')
  check(all(abs(f['at'][i]+f['size'][i]/2-world[i])<5 for i in (0,1)),'floating app lands at the inverse-scaled pointer position')
+ cross_output_drag(f,(dx,dy))
+ f=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-F')
+ check(str(f['workspace']['id'])==ws2 and f['floating'] and f['size']==float_size,'floating drag out of zoom preserves its mode and size')
+ check(all(abs(f['at'][i]+f['size'][i]/2-[dx,dy][i])<5 for i in (0,1)),'floating drag out lands at the ordinary desktop pointer')
+ # Keep D unobstructed for the independent zoom-to-zoom route below.
+ os.kill(f['pid'],15);time.sleep(.2)
 
  # The source may itself be zoomed, using a separate canvas drag instead of
  # Hyprland's native grab. Both routes must assign the destination workspace.
  pointer('abs',dx,dy);ctl('dispatch','hl.dsp.focus({workspace="'+ws2+'"})');ctl('eval','zoom.zoom("out")');time.sleep(.3)
  screens=json.loads(ctl('spatialoverview'))['screens']
  check(len(screens)==2,'both physical outputs can be zoomed independently')
- source_view=next(s['view'] for s in screens if s['monitor']=='ZOOM-2')
  d=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D')
- start=[int(second[['x','y'][i]]+(d['at'][i]+d['size'][i]/2-source_view[i])*second[['width','height'][i]]/source_view[i+2]) for i in (0,1)]
- cross_output_drag(d,dest,start)
+ cross_output_drag(d,dest)
  d=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D')
  check(d['workspace']['id']==1 and not d['floating'],'drag between two zoomed outputs transfers the app and keeps it tiled')
+
+ # An ordinary destination can use stock Dwindle instead of the spatial layout.
+ ctl('eval','zoom.reset("ZOOM-2")')
+ second=next(m for m in json.loads(ctl('monitors','-j')) if m['name']=='ZOOM-2')
+ pointer('abs',second['x']+second['width']//2,second['y']+second['height']//2,'sleep','120')
+ ctl('dispatch','hl.dsp.focus({workspace="'+ws2+'"})');ctl('dispatch','hl.dsp.focus({workspace="3"})')
+ cmd='python3 '+str(root/'tests/integration/native-zoom-app.py')+' zoom-G > '+str(run/'zoom-G.log')+' 2>&1'
+ ctl('dispatch','hl.dsp.exec_cmd('+json.dumps(cmd)+')')
+ for _ in range(50):
+  found=[w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-G']
+  if found:break
+  time.sleep(.1)
+ g=found[0]
+ print('DWINDLE FIXTURE',g['workspace'],g['floating'],flush=True)
+ check(g['workspace']['id']==3 and not g['floating'],'ordinary Dwindle destination is ready')
+ d=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D')
+ dest=[int(g['at'][i]+g['size'][i]/2) for i in (0,1)]
+ cross_output_drag(d,dest)
+ windows=json.loads(ctl('clients','-j'));d=next(w for w in windows if w['title']=='zoom-D');g=next(w for w in windows if w['title']=='zoom-G')
+ print('DWINDLE DROP',[(w['title'],w['workspace']['id'],w['floating'],w['at'],w['size']) for w in (d,g)],flush=True)
+ check(d['workspace']['id']==g['workspace']['id']==3 and not d['floating'] and not g['floating'],'drag out of zoom inserts into stock Dwindle without exchanging apps')
+ overlap=[min(d['at'][i]+d['size'][i],g['at'][i]+g['size'][i])-max(d['at'][i],g['at'][i]) for i in (0,1)]
+ check(min(overlap)<=0,'ordinary Dwindle tiles the dropped app beside its existing app')
  check('Lua error' not in (run/'hypr'/sig/'hyprland.log').read_text(),'no Lua runtime errors during real input')
  print('RUNTIME',run,flush=True)
 finally:

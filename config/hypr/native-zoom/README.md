@@ -16,6 +16,8 @@ Super+slepen tussen fysieke monitors werkt ook als het doelscherm uitgezoomd is,
 zowel vanaf een gewone desktop als vanaf een ander uitgezoomd scherm. De app
 komt op de pagina onder de muis terecht; getegeld blijft getegeld en zwevend
 behoudt zijn grootte. De camera verschuift niet door het droppen.
+Terug slepen naar een scherm op 100% werkt eveneens, ook naar een leeg werkvlak
+of een gewone Dwindle-indeling. Daar geldt de normale muispositie zonder zoom.
 
 Fase 05 van de installer/updater draait `kingstra-build-native-zoom`. Die bouwt
 [Phantomat](https://github.com/kaolti/phantomat) op vaste revisie

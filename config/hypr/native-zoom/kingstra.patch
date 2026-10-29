@@ -156,7 +156,7 @@ index 54bcf2e..36421a1 100644
          SCROLLOVERVIEW_HANDLE,
          findFnOrThrow("renderWorkspace", {"CHyprRenderer::renderWorkspace(", "IHyprRenderer::renderWorkspace("}),
 diff --git a/scrollOverview.cpp b/scrollOverview.cpp
-index 5c9a055..91c51ab 100644
+index 5c9a055..236d652 100644
 --- a/scrollOverview.cpp
 +++ b/scrollOverview.cpp
 @@ -38,6 +38,7 @@
@@ -334,26 +334,39 @@ index 5c9a055..91c51ab 100644
  void CScrollOverview::endWindowDrag() {
      const auto WINDOW = getOverviewWindowToShow(dragActiveWindow.lock());
      const auto TARGET = WINDOW ? WINDOW->layoutTarget() : nullptr;
-@@ -5995,6 +6079,37 @@ void CScrollOverview::endWindowDrag() {
+@@ -5994,7 +6078,54 @@ void CScrollOverview::endWindowDrag() {
+     auto*               dropOverview   = targetOverview ? dynamic_cast<CScrollOverview*>(targetOverview.get()) : nullptr;
  
      const auto          MONITOR           = pMonitor.lock();
-     const auto          DROPMONITOR       = dropOverview ? dropOverview->pMonitor.lock() : PHLMONITOR{};
-+    // Resolve both local and cross-output canvas drags in destination world
-+    // coordinates. A floating app retains its mode and unscaled buffer size.
-+    if (WINDOW && dropOverview && dropOverview->isCanvasDesktop() && MONITOR && DROPMONITOR &&
+-    const auto          DROPMONITOR       = dropOverview ? dropOverview->pMonitor.lock() : PHLMONITOR{};
++    const auto POINT = g_pInputManager->getMouseCoordsInternal();
++    const auto DROPMONITOR = dropOverview ? dropOverview->pMonitor.lock() : State::monitorState()->query().vec(POINT).run();
++    // A normal destination has no overview. Resolve its physical output and
++    // active workspace too, using raw logical coordinates at 100% zoom.
++    const bool KINGSTRA_TARGET = !dropOverview || dropOverview->isCanvasDesktop();
++    if (WINDOW && isCanvasDesktop() && KINGSTRA_TARGET && MONITOR && DROPMONITOR &&
 +        !ScrollOverview::Config::getCanvasAutoFloat() && !ScrollOverview::Config::getCanvasAutoPlace()) {
-+        const auto POINT = g_pInputManager->getMouseCoordsInternal();
-+        const auto WORLD = dropOverview->canvasScreenToWorld(CBox{POINT, Vector2D{1, 1}});
-+        if (WORLD) {
-+            if (WINDOW->m_workspace != dropOverview->startedOn)
-+                Desktop::globalWindowController()->moveWindowToWorkspace(WINDOW, dropOverview->startedOn);
++        const auto WORKSPACE = dropOverview ? dropOverview->startedOn :
++            (DROPMONITOR->m_activeSpecialWorkspace ? DROPMONITOR->m_activeSpecialWorkspace : DROPMONITOR->m_activeWorkspace);
++        const auto WORLD = dropOverview ? dropOverview->canvasScreenToWorld(CBox{POINT, Vector2D{1, 1}}) : std::optional<CBox>{CBox{POINT, Vector2D{1, 1}}};
++        if (WORLD && WORKSPACE) {
++            if (WINDOW->m_workspace != WORKSPACE)
++                Desktop::globalWindowController()->moveWindowToWorkspace(WINDOW, WORKSPACE);
 +            const auto CURRENT = WINDOW->layoutTarget();
 +            const auto SPACE = CURRENT ? CURRENT->space() : nullptr;
 +            const auto DESTINATION = SPACE ? SPACE->algorithm() : nullptr;
 +            if (DESTINATION) {
 +                if (dragStartedTiled) {
-+                    const auto MSG = std::format("dropat 0x{:x} {:.4f} {:.4f}", rc<uintptr_t>(WINDOW.get()), WORLD->x, WORLD->y);
-+                    DESTINATION->layoutMsg(MSG);
++                    const auto LAYOUT = DESTINATION->tiledAlgo()->layoutName().value_or("");
++                    if (LAYOUT == "hyprscroll2d" || LAYOUT == "lua:hyprscroll2d") {
++                        const auto MSG = std::format("dropat 0x{:x} {:.4f} {:.4f}", rc<uintptr_t>(WINDOW.get()), WORLD->x, WORLD->y);
++                        DESTINATION->layoutMsg(MSG);
++                    } else {
++                        // Reinsert at the real pointer without registering the
++                        // already moved target twice in the destination layout.
++                        DESTINATION->removeTarget(CURRENT);
++                        DESTINATION->moveTarget(CURRENT, WORLD->pos());
++                    }
 +                    DESTINATION->recalculate();
 +                } else {
 +                    const auto SIZE = dragOriginalBox.size();
@@ -361,8 +374,13 @@ index 5c9a055..91c51ab 100644
 +                    CURRENT->warpPositionSize();
 +                }
 +            }
-+            dropOverview->canvasAdoptFocus(WINDOW);
-+            if (dropOverview != this) { dropOverview->redrawAll(); dropOverview->damage(); }
++            if (dropOverview) {
++                dropOverview->canvasAdoptFocus(WINDOW);
++                if (dropOverview != this) { dropOverview->redrawAll(); dropOverview->damage(); }
++            } else {
++                Desktop::focusState()->fullWindowFocus(WINDOW, Desktop::FOCUS_REASON_DESKTOP_STATE_CHANGE);
++                DROPMONITOR->addDamage(DROPMONITOR->logicalBox());
++            }
 +        }
 +        clearDragPending();
 +        redrawAll();
@@ -372,7 +390,7 @@ index 5c9a055..91c51ab 100644
      const auto          ACTIVEWORKSPACEBEFOREDROP     = MONITOR ? MONITOR->m_activeWorkspace : PHLWORKSPACE{};
      const auto          DROPACTIVEWORKSPACEBEFOREDROP = DROPMONITOR ? DROPMONITOR->m_activeWorkspace : PHLWORKSPACE{};
      const auto          DROPPOINTLOCAL    = getOverviewMousePosLocal(DROPMONITOR);
-@@ -7030,7 +7145,7 @@ void CScrollOverview::restoreWorkspaceAnimationOverrides() {
+@@ -7030,7 +7161,7 @@ void CScrollOverview::restoreWorkspaceAnimationOverrides() {
  
  void CScrollOverview::forceWorkspaceAlphaVisible() {
      for (const auto& workspace : State::workspaceState()->workspaces()) {
@@ -381,7 +399,7 @@ index 5c9a055..91c51ab 100644
              continue;
  
          workspace->m_alpha->setValueAndWarp(1.F);
-@@ -7066,7 +7181,10 @@ void CScrollOverview::applyInputConfigOverrides() {
+@@ -7066,7 +7197,10 @@ void CScrollOverview::applyInputConfigOverrides() {
      ScrollOverview::Config::setValue("cursor:warp_on_change_workspace", 0);
      ScrollOverview::Config::setValue("cursor:warp_on_toggle_special", 0);
      ScrollOverview::Config::setValue("cursor:warp_back_after_non_mouse_input", 0);
@@ -393,7 +411,7 @@ index 5c9a055..91c51ab 100644
  }
  
  void CScrollOverview::restoreInputConfigOverrides() {
-@@ -8405,6 +8523,9 @@ bool CScrollOverview::shouldAllowSurfaceFrame(SP<CWLSurfaceResource> surface, co
+@@ -8405,6 +8539,9 @@ bool CScrollOverview::shouldAllowSurfaceFrame(SP<CWLSurfaceResource> surface, co
          return true;
  
      auto window = getOverviewWindowToShow(windowOwner);
@@ -403,7 +421,7 @@ index 5c9a055..91c51ab 100644
      if (g_pointerGrabOverview && g_pointerGrabOverview->dragActiveWindow &&
          window == getOverviewWindowToShow(g_pointerGrabOverview->dragActiveWindow.lock()))
          return true;
-@@ -8501,8 +8622,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
+@@ -8501,8 +8638,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
          if (layerOwner->m_monitor != MONITOR)
              return true;
  
@@ -414,7 +432,7 @@ index 5c9a055..91c51ab 100644
  
          markBlurDirty();
          if (layerOwner->m_layer == ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND)
-@@ -8514,6 +8636,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
+@@ -8514,6 +8652,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
          return true;
  
      auto window = getOverviewWindowToShow(windowOwner);
@@ -424,7 +442,7 @@ index 5c9a055..91c51ab 100644
      if (g_pointerGrabOverview && g_pointerGrabOverview->dragActiveWindow &&
          window == getOverviewWindowToShow(g_pointerGrabOverview->dragActiveWindow.lock())) {
          const auto DRAGBOX = g_pointerGrabOverview->draggedWindowGlobalBox();
-@@ -8608,6 +8733,12 @@ void CScrollOverview::close() {
+@@ -8608,6 +8749,12 @@ void CScrollOverview::close() {
      }
  
      closeApplied = true;
@@ -437,7 +455,7 @@ index 5c9a055..91c51ab 100644
  
      const bool ACTIVATESELECTION = activeScrollOverview().get() == this;
      setClosing(true);
-@@ -10871,8 +11002,8 @@ bool CScrollOverview::flightDeckAction(const std::string& action) {
+@@ -10871,8 +11018,8 @@ bool CScrollOverview::flightDeckAction(const std::string& action) {
          return true;
      }
      if (action == "zoom in" || action == "zoom out") {
