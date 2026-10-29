@@ -11,6 +11,8 @@ Item {
     property string label: ""
     property string icon: ""
     property bool lit: false
+    // Kleur van ledje, rand en lichtstreep als hij aan staat.
+    property color ledColor: skin.lit
     property real keyWidth: 40
     property real keyHeight: 26
     signal activated()
@@ -93,7 +95,7 @@ Item {
         }
         border.width: 1
         border.color: key.lit
-            ? key.skin.lit
+            ? key.ledColor
             : key.skin.capBorder
         Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
 
@@ -135,7 +137,7 @@ Item {
             width: parent.width * 0.3
             height: Math.max(2, key.keyHeight * 0.05)
             radius: height / 2
-            color: key.skin.lit
+            color: key.ledColor
             opacity: key.lit ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("normal") } }
         }
@@ -146,7 +148,7 @@ Item {
             anchors.top: parent.top
             anchors.margins: 4
             width: 4; height: 4; radius: 2
-            color: key.lit ? key.skin.lit : key.skin.capText
+            color: key.lit ? key.ledColor : key.skin.capText
             opacity: key.lit ? 1 : 0.25
         }
     }

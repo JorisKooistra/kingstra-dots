@@ -40,24 +40,41 @@ Item {
         let f = ThemeConfig.styleFamily;
         return f === "organic" ? "wood" : f === "neon" ? "neon" : f === "paper" ? "paper" : "mono";
     }
+    // Meer kleuren uit het thema dan alleen het accent: secondary en tertiary
+    // (met hun containers) krijgen elk een eigen rol, zodat het geen
+    // eenkleurig filter wordt. Ontbreken ze, dan valt het terug op het palet.
+    readonly property color secondary: mocha.secondary !== undefined ? mocha.secondary : mocha.pink
+    readonly property color tertiary: mocha.tertiary !== undefined ? mocha.tertiary : mocha.peach
+    readonly property color secondaryContainer: mocha.secondaryContainer !== undefined ? mocha.secondaryContainer : secondary
+    readonly property color tertiaryContainer: mocha.tertiaryContainer !== undefined ? mocha.tertiaryContainer : tertiary
+    readonly property color primaryContainer: mocha.primaryContainer !== undefined ? mocha.primaryContainer : accent
+    function role(name, fallback) {
+        let v = skin[name];
+        return v !== undefined ? v : fallback;
+    }
     readonly property var skin: {
         let m = mocha, a = accent;
+        let sec = secondary, ter = tertiary, secC = secondaryContainer, terC = tertiaryContainer, priC = primaryContainer;
         let ink = m.text;
         // Hout en neon houden hun vormen; de kleuren komen uit het thema.
         // Hout: warm en ambachtelijk. Themakleuren, maar geen gloed:
         // crèmekleurige knoppen, geborsteld metaal, een donkere rand.
         if (look === "wood") {
-            let wood = Qt.tint(m.surface1, Qt.rgba(a.r, a.g, a.b, 0.14));
-            let cream = Qt.tint(m.text, Qt.rgba(a.r, a.g, a.b, 0.14));
-            let metal = Qt.tint(m.subtext1, Qt.rgba(a.r, a.g, a.b, 0.22));
+            // Hout uit surface met secondary-container, crème met een zweem
+            // tertiary, metaal met secondary; het accent (primary) blijft
+            // voor wat aan staat.
+            let wood = Qt.tint(Qt.tint(m.surface1, Qt.rgba(secC.r, secC.g, secC.b, 0.16)), Qt.rgba(a.r, a.g, a.b, 0.05));
+            let cream = Qt.tint(m.text, Qt.rgba(terC.r, terC.g, terC.b, 0.18));
+            let metal = Qt.tint(m.subtext1, Qt.rgba(sec.r, sec.g, sec.b, 0.24));
             return {
                 plinthA: Qt.lighter(wood, 1.08), plinthB: Qt.darker(wood, 1.35),
                 border: Qt.darker(wood, 2.2), borderW: 3, radius: 14,
-                frontA: Qt.darker(wood, 1.5), frontB: Qt.darker(wood, 2.3), frontEdge: Qt.darker(wood, 2.6),
+                frontA: Qt.darker(Qt.tint(wood, Qt.rgba(priC.r, priC.g, priC.b, 0.06)), 1.5), frontB: Qt.darker(wood, 2.3), frontEdge: Qt.darker(wood, 2.6),
                 capA: cream, capB: Qt.darker(cream, 1.12), capHover: Qt.lighter(cream, 1.08),
                 capSide: Qt.darker(cream, 1.8), capText: m.crust, capBorder: Qt.darker(cream, 1.4), lit: a,
                 capShine: 0.5,
-                dispBg: m.crust, dispText: a, dispBorder: Qt.darker(wood, 2.2),
+                litAlt: sec, litWarm: ter, faderLit: ter, needleMark: sec,
+                dispBg: m.crust, dispText: a, dispText2: sec, dispText3: ter, dispBorder: Qt.darker(wood, 2.2),
                 brand: "KINGSTRA · ORGANIC", brandColor: Qt.rgba(cream.r, cream.g, cream.b, 0.55),
                 screw: metal, metal: metal, track: Qt.rgba(0, 0, 0, 0.35), fill: a,
                 needle: metal, hint: m.subtext0
@@ -69,6 +86,7 @@ Item {
             capA: Qt.tint(m.mantle, Qt.rgba(a.r, a.g, a.b, 0.10)), capB: m.crust,
             capHover: Qt.tint(m.surface0, Qt.rgba(a.r, a.g, a.b, 0.18)), capSide: Qt.darker(m.crust, 1.5),
             capText: a, capBorder: Qt.rgba(a.r, a.g, a.b, 0.55), lit: m.pink, litText: true,
+            litAlt: sec, litWarm: ter, faderLit: sec, needleMark: sec, dispText2: sec, dispText3: ter,
             dispBg: Qt.darker(m.crust, 1.4), dispText: a, dispBorder: Qt.rgba(a.r, a.g, a.b, 0.6),
             brand: "KINGSTRA // NEON DRIVE", brandColor: Qt.rgba(a.r, a.g, a.b, 0.75),
             screw: a, track: Qt.rgba(a.r, a.g, a.b, 0.14), fill: a,
@@ -85,7 +103,8 @@ Item {
             needle: ink, hint: ink
         };
         return {
-            plinthA: Qt.lighter(m.surface0, 1.18), plinthB: m.surface0,
+            plinthA: Qt.tint(Qt.lighter(m.surface0, 1.18), Qt.rgba(secC.r, secC.g, secC.b, 0.06)), plinthB: m.surface0,
+            litAlt: sec, litWarm: ter, faderLit: ter, needleMark: sec, dispText2: sec, dispText3: ter,
             border: Qt.rgba(m.text.r, m.text.g, m.text.b, 0.16), borderW: 1,
             radius: Math.max(14, ThemeConfig.styleWidgetRadius + 6),
             frontA: Qt.darker(m.surface0, 1.25), frontB: Qt.darker(m.surface0, 1.7),
@@ -292,6 +311,10 @@ Item {
         armPivot: Qt.point(table.width * 0.835 - x, table.height * 0.2 - y)
         armReach: 2.05
         armLean: 0.67
+        secondary: table.secondary
+        tertiary: table.tertiary
+        secondaryContainer: table.secondaryContainer
+        tertiaryContainer: table.tertiaryContainer
         armBase: 1.9
         artUrl: table.artUrl
         trackKey: table.trackKey
@@ -365,7 +388,7 @@ Item {
             width: parent.width * 1.5
             height: width
             radius: width / 2
-            color: table.skin.lit
+            color: table.role("litWarm", table.skin.lit)
             opacity: table.playing ? 0.35 : 0
             Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500) } }
             layer.enabled: true
@@ -406,7 +429,7 @@ Item {
                 width: parent.width * 0.4
                 height: width
                 radius: width / 2
-                color: table.playing ? table.skin.lit : Qt.rgba(0.5, 0.5, 0.5, 0.35)
+                color: table.playing ? table.role("litWarm", table.skin.lit) : Qt.rgba(0.5, 0.5, 0.5, 0.35)
                 Behavior on color { ColorAnimation { duration: ThemeConfig.duration(500) } }
             }
         }
@@ -441,6 +464,7 @@ Item {
                 skin: table.skin
                 required property int modelData
                 label: String(modelData)
+                ledColor: table.role("litAlt", table.skin.lit)
                 lean: modelData === 33 ? -0.62 : -0.48
                 lit: table.rpm === modelData
                 keyWidth: table.height * 0.085
@@ -555,7 +579,7 @@ Item {
                     required property int index
                     width: faderCap.width * 0.7
                     height: Math.max(1, faderCap.height * 0.08)
-                    color: index === 1 ? table.skin.lit : Qt.rgba(0, 0, 0, 0.3)
+                    color: index === 1 ? table.role("faderLit", table.skin.lit) : Qt.rgba(0, 0, 0, 0.3)
                 }
             }
         }

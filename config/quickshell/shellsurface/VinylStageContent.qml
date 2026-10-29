@@ -124,6 +124,19 @@ FocusScope {
         opacity: backdropArt.status === Image.Ready ? 0.32 * stage.reveal : 0
         Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(600) } }
     }
+    // Zachte gloed in de secondary- en tertiary-container van het thema,
+    // zodat de achtergrond niet in één tint blijft hangen.
+    Rectangle {
+        anchors.fill: parent
+        visible: stage.look !== "paper"
+        opacity: stage.reveal
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: Qt.rgba(table.secondaryContainer.r, table.secondaryContainer.g, table.secondaryContainer.b, 0.10) }
+            GradientStop { position: 0.5; color: "transparent" }
+            GradientStop { position: 1.0; color: Qt.rgba(table.tertiaryContainer.r, table.tertiaryContainer.g, table.tertiaryContainer.b, 0.10) }
+        }
+    }
     // Vignet zodat de speler het licht pakt.
     Rectangle {
         anchors.fill: parent
@@ -384,7 +397,7 @@ FocusScope {
                                 elide: Text.ElideRight
                                 font.family: ThemeConfig.monoFont
                                 font.pixelSize: Math.max(9, stage.frontHeight * 0.15)
-                                color: stage.skin.dispText
+                                color: table.role("dispText2", stage.skin.dispText)
                                 opacity: 0.8
                             }
                             Text {
@@ -395,7 +408,7 @@ FocusScope {
                                     : "--:--"
                                 font.family: ThemeConfig.monoFont
                                 font.pixelSize: Math.max(9, stage.frontHeight * 0.15)
-                                color: stage.skin.dispText
+                                color: table.role("dispText3", stage.skin.dispText)
                                 opacity: 0.6
                             }
                         }
@@ -462,12 +475,12 @@ FocusScope {
                             radius: width * 0.3
                             color: stage.mocha.surface2
                             border.width: 1
-                            border.color: stage.accent
+                            border.color: table.role("needleMark", stage.accent)
                             Rectangle {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 anchors.top: parent.bottom
                                 width: 3; height: 3; radius: 1.5
-                                color: stage.accent
+                                color: table.role("needleMark", stage.accent)
                                 opacity: 1 - vinyl.armLift
                             }
                         }

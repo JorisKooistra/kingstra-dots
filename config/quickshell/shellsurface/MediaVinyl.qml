@@ -25,6 +25,11 @@ Item {
     property bool vinylMode: true
     property bool showArm: true
     property color accent: mocha.accent3
+    // Extra themakleuren voor label, element, mat en armvoet.
+    property color secondary: mocha.secondary !== undefined ? mocha.secondary : accent
+    property color tertiary: mocha.tertiary !== undefined ? mocha.tertiary : accent
+    property color secondaryContainer: mocha.secondaryContainer !== undefined ? mocha.secondaryContainer : secondary
+    property color tertiaryContainer: mocha.tertiaryContainer !== undefined ? mocha.tertiaryContainer : tertiary
     property real coverRadius: 14
     // Album of hoes-URL; verandert dit, dan wisselt de plaat met een animatie.
     property string trackKey: ""
@@ -54,13 +59,13 @@ Item {
         : woodDeck ? "wood" : paperDeck ? "paper" : compactDisc ? "neon" : ""
     readonly property color brass: accent
     // Hout: geborsteld metaal met een zweem van het accent, geen gloed.
-    readonly property color metal: Qt.tint(mocha.subtext1, Qt.rgba(accent.r, accent.g, accent.b, 0.22))
+    readonly property color metal: Qt.tint(mocha.subtext1, Qt.rgba(secondary.r, secondary.g, secondary.b, 0.24))
     readonly property color armTubeColor: look === "wood" ? metal
         : look === "neon" ? accent : look === "paper" ? mocha.text : mocha.overlay2
     // Armvoet: buitenring, binnenring en accent (lagerkap).
     readonly property color baseOuter: look === "wood" ? mocha.mantle : look === "neon" ? mocha.crust
         : look === "paper" ? mocha.base : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.96)
-    readonly property color baseInner: look === "wood" ? mocha.surface1 : look === "neon" ? Qt.tint(mocha.mantle, Qt.rgba(accent.r, accent.g, accent.b, 0.08))
+    readonly property color baseInner: look === "wood" ? Qt.tint(mocha.surface1, Qt.rgba(tertiaryContainer.r, tertiaryContainer.g, tertiaryContainer.b, 0.2)) : look === "neon" ? Qt.tint(mocha.mantle, Qt.rgba(accent.r, accent.g, accent.b, 0.08))
         : look === "paper" ? mocha.base : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.92)
     readonly property color baseAccent: look === "wood" ? metal : look === "paper" ? mocha.text : accent
     readonly property color armShellColor: look === "wood" ? mocha.surface0
@@ -69,7 +74,7 @@ Item {
         : look === "neon" ? accent : look === "paper" ? mocha.text
         : (playing ? accent : mocha.overlay0)
     // Rubbermat in een eigen tint, zodat een single er niet in verdwijnt.
-    readonly property color matColor: look === "wood" ? Qt.darker(Qt.tint(mocha.surface1, Qt.rgba(accent.r, accent.g, accent.b, 0.22)), 1.35)
+    readonly property color matColor: look === "wood" ? Qt.darker(Qt.tint(mocha.surface1, Qt.rgba(secondaryContainer.r, secondaryContainer.g, secondaryContainer.b, 0.3)), 1.35)
         : look === "neon" ? Qt.tint(mocha.mantle, Qt.rgba(accent.r, accent.g, accent.b, 0.14))
         : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.92)
     readonly property color grooveColor: look === "neon" ? accent : mocha.overlay2
@@ -561,7 +566,7 @@ Item {
                 width: parent.width * deck.labelFrac
                 height: width
                 radius: width / 2
-                color: Qt.rgba(deck.accent.r, deck.accent.g, deck.accent.b, 0.42)
+                color: Qt.rgba(deck.tertiary.r, deck.tertiary.g, deck.tertiary.b, 0.5)
                 border.width: 1
                 border.color: Qt.rgba(deck.mocha.text.r, deck.mocha.text.g, deck.mocha.text.b, 0.30)
 
@@ -799,7 +804,7 @@ Item {
                     readonly property color edge: deck.look === "wood" ? deck.metal
                         : deck.look === "neon" ? deck.accent : deck.mocha.overlay1
                     readonly property bool glow: deck.look === "neon"
-                    readonly property color tip: deck.accent
+                    readonly property color tip: deck.look === "paper" ? deck.mocha.text : deck.secondary
                     onTubeChanged: requestPaint()
                     onEdgeChanged: requestPaint()
                     onGlowChanged: requestPaint()
