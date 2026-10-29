@@ -7,11 +7,14 @@ local path = override or (base .. "/hypr/native-zoom/kingstra-native-zoom.so")
 -- A package upgrade can replace Hyprland while this repo remains unchanged.
 -- Only load the locally built ABI; the installer rebuilds it on updates.
 if not override then
-    local stamp = io.open(path .. ".abi", "r")
+    local running = (os.getenv("HYPRLAND_INSTANCE_SIGNATURE") or ""):match("^([a-fA-F0-9]+)_")
+    -- Keep the running session's build when package headers already belong to
+    -- the next Hyprland version. A reboot selects that version's own entry.
+    local stamp = running and io.open(path .. "." .. running .. ".abi", "r")
+    stamp = stamp or io.open(path .. ".abi", "r")
     local abi = stamp and stamp:read("l")
     local binary = stamp and stamp:read("l")
     if stamp then stamp:close() end
-    local running = (os.getenv("HYPRLAND_INSTANCE_SIGNATURE") or ""):match("^([^_]+)_")
     if not abi or (running and running ~= abi) then return M end
     if binary and binary ~= "" then path = binary end
 end
@@ -30,6 +33,10 @@ end
 hl.plugin.load(path)
 local ok, err = pcall(function()
     assert(loaded(), "native zoom plugin did not load")
+    if type(hl.plugin.spatialoverview._backend)=="function" and hl.plugin.spatialoverview._backend()=="kingstra-0.57" then
+        hl.config({plugin={spatialoverview={canvas={hover_focus=true}}}})
+        return
+    end
     hl.config({plugin={spatialoverview={
         layout="grid", scale=1.0,
         animation={enabled=true,speed=8.0},

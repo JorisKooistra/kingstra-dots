@@ -92,6 +92,9 @@ config/kingstra/overrides.conf
 # Native zoom wordt per machine/Hyprland-ABI gebouwd, nooit mee distribueren.
 config/hypr/native-zoom/*.so
 config/hypr/native-zoom/*.so.abi
+config/hypr/native-zoom/*.so.*.abi
+config/hypr/native-zoom/*.so.*.abi.tmp
+config/hypr/native-zoom/*.so.abi.tmp
 
 # Cava installeert deze pakketvoorbeelden zelf.
 config/cava/shaders/

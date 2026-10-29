@@ -49,6 +49,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Vensters zien er overal hetzelfde uit: ronde hoek, live beeld (of het bewaarde plaatje), en een titel-label met app-icoon onderin. Zonder beeld krijg je het app-icoon in plaats van tekst. Hover, keuze en sleepdoel gebruiken dezelfde accentkleur, rand en overgangen. De kaart toont nu ook hover.
 - Beide overzichten hebben dezelfde kop: een titel in kleine hoofdletters met een uitlegregel in een afgeronde pil. De actieve werkruimte en het zicht-kader gebruiken dezelfde accentrand.
 
+### Werkvlak: Hyprland 0.57 en updates tijdens een sessie
+- Native desktopzoom ondersteunt nu ook Hyprland 0.57.0, met de nieuwe scene-renderer en directe muisinput op aangrenzende pagina's.
+- De updater bewaart een aparte pluginbuild per Hyprland-ABI. Een lopende 0.56.2-sessie behoudt zijn eigen build na de pakketupdate; de volgende sessie laadt de nieuwe 0.57-build.
+- Camera-slepen en tegelresizing stoppen op 0.57 ook wanneer de releasebinding niet wordt aangeroepen, zodat een volgende app-sleepbeweging de camera niet meeneemt.
+- Integratietests controleren volledige vensterbuffers buiten de huidige pagina, reset, focus, onafhankelijke verversing van monitors en slepen van getegelde en zwevende apps tussen gewone en uitgezoomde schermen.
+
 ### Werkvlak: muisfocus en zwevende vensters
 - Focus volgt de muis tijdens zoomen en op andere monitors; terugkeren naar dezelfde app vereist geen klik meer.
 - Alleen tijdens zoomen worden beeld én muisdetectie van zwevende vensters tot de eigen monitor beperkt. Buiten beeld doorlopende delen lekken niet naar een andere fysieke monitor. Op 100% blijft het normale zweefgedrag gelden.

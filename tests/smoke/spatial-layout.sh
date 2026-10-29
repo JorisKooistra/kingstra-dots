@@ -25,4 +25,6 @@ lua tests/smoke/spatial-drag.lua
 lua tests/smoke/spatial-storage.lua
 lua tests/smoke/spatial-binds.lua
 lua tests/smoke/native-zoom.lua
+lua tests/smoke/native-zoom-abi.lua
+python3 tests/smoke/native-zoom-build.py
 QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/smoke/qml -o -,txt

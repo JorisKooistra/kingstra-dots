@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.27)
+project(kingstra_native_zoom LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 23)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(HYPR REQUIRED IMPORTED_TARGET hyprland lua)
+add_library(spatialoverview SHARED main.cpp)
+target_link_libraries(spatialoverview PRIVATE PkgConfig::HYPR dl)
+target_compile_options(spatialoverview PRIVATE -Wall -Wextra -Wno-unused-parameter)

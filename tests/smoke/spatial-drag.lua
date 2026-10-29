@@ -17,7 +17,7 @@ _G.hl = {
     get_cursor_pos = function() return { x = cursor.x, y = cursor.y } end,
     timer = function(fn, opts)
         assert(opts.type == "repeat" and opts.timeout > 0)
-        timer.fn, timer.enabled = fn, true
+        timer = {fn=fn,enabled=true,set_enabled=timer.set_enabled}
         return timer
     end,
 }
@@ -32,6 +32,7 @@ local spatial = assert(loadfile("config/hypr/lua/spatial.lua"))()
 local function last() return dispatched[#dispatched] end
 
 spatial.drag_start()
+local drag_timer=timer
 assert(last() == "dragstart", "drag did not start: " .. tostring(last()))
 assert(timer.enabled, "timer not running")
 cursor = { x = 130, y = 90 }
@@ -85,6 +86,7 @@ print("ok - Super+wheel scrolls inside the workspace")
 layout_name = "lua:hyprscroll2d"
 cursor={x=200,y=100}
 spatial.resize_start()
+local resize_timer=timer
 assert(last()=="resizestart" and timer.enabled)
 cursor={x=230,y=85}
 timer.fn()
@@ -92,3 +94,13 @@ assert(last()=="resizeby 30.0000 -15.0000")
 spatial.resize_stop()
 assert(last()=="resizeend" and not timer.enabled)
 print('ok - Super+right mouse resizes tile splits without moving the camera')
+
+local held=true
+hl.plugin={spatialoverview={_button_down=function(button) assert(button==272 or button==273);return held end}}
+spatial.drag_start()
+held=false;cursor.x=cursor.x+50;drag_timer.fn()
+assert(last()=='dragend' and not drag_timer.enabled,'native button release must stop camera movement before a later app drag')
+held=true;spatial.resize_start()
+held=false;resize_timer.fn()
+assert(last()=='resizeend' and not resize_timer.enabled,'native button release must stop tile resizing')
+print('ok - 0.57 gestures stop when release-only keybind callbacks are missed')

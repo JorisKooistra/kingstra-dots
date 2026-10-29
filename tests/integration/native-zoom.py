@@ -1,22 +1,36 @@
 #!/usr/bin/env python3
 """Opt-in integration test: opens a nested compositor with disposable GTK apps.
-Requires a real Wayland session, Hyprland 0.56.2, the locally built native plugin,
+Requires a real Wayland session, Hyprland 0.56.2 or 0.57.0, the matching native plugin,
 python-gobject/GTK4, Pillow, grim, wtype, cc, and wayland-scanner. Never dispatches to the
 parent compositor. Retains its /tmp/kz* directory for diagnosis.
 """
 import os,sys,json,subprocess,tempfile,time,shutil
 from pathlib import Path
+from PIL import Image
 root=Path(__file__).resolve().parents[2]
 plugin=Path(sys.argv[1] if len(sys.argv)>1 else root/'config/hypr/native-zoom/kingstra-native-zoom.so').resolve()
-source=Path(os.getenv('KINGSTRA_ZOOM_TEST_SOURCE',str(plugin.parent.parent/'source')))
-if not (source/'tests/tools/vpointer.c').exists():raise SystemExit('Set KINGSTRA_ZOOM_TEST_SOURCE to the pinned Phantomat source checkout')
+source=Path(os.getenv('KINGSTRA_ZOOM_TEST_SOURCE',str(root/'tests/integration')))
+pointer_tools=source/'tools' if (source/'tools/vpointer.c').exists() else source/'tests/tools'
+if not (pointer_tools/'vpointer.c').exists():raise SystemExit('Virtual pointer test fixtures are missing')
 
 run=Path(tempfile.mkdtemp(prefix='kz',dir='/tmp'));run.chmod(0o700)
 parent=dict(os.environ);env=dict(parent,AQ_BACKEND='wayland',WAYLAND_DISPLAY=str(Path(parent['XDG_RUNTIME_DIR'])/parent['WAYLAND_DISPLAY']),XDG_RUNTIME_DIR=str(run),XDG_CONFIG_HOME=str(run/'config'),XDG_STATE_HOME=str(run/'state'),XDG_CACHE_HOME=str(run/'cache'),KINGSTRA_NATIVE_ZOOM_PLUGIN=str(plugin))
+env['HOME']=str(run/'home');Path(env['HOME']).mkdir()
+if abi:=os.getenv('KINGSTRA_TEST_ABI_INDEX'):
+ stamp=Path(env['XDG_CONFIG_HOME'])/'hypr/native-zoom/kingstra-native-zoom.so'
+ stamp.parent.mkdir(parents=True)
+ Path(str(stamp)+'.'+abi+'.abi').write_text(abi+'\n'+str(plugin)+'\n')
+ Path(str(stamp)+'.abi').write_text('0000\n/nonexistent/plugin.so\n')
+ env.pop('KINGSTRA_NATIVE_ZOOM_PLUGIN')
 config=run/'test.lua'
 config.write_text('''
 hl.monitor({output="",mode="1024x640@60",position="auto",scale=1})
-hl.config({misc={disable_hyprland_logo=true,disable_splash_rendering=true,size_limits_tiled=false},animations={enabled=false},xwayland={enabled=false},general={gaps_in=0,gaps_out=0,border_size=0},input={follow_mouse=1},debug={disable_logs=false}})
+hl.config({misc={disable_hyprland_logo=true,disable_splash_rendering=true,size_limits_tiled=false},ecosystem={no_donation_nag=true},animations={enabled=false},xwayland={enabled=false},general={gaps_in=0,gaps_out=0,border_size=0},input={follow_mouse=1},debug={disable_logs=false}})
+-- Parent pointer events would race the test's virtual mouse when the user
+-- moves over a nested output. Disable only that backend device in the child.
+hl.device({name="wl_pointer",enabled=false})
+hl.device({name="wl_keyboard",enabled=false})
+hl.device({name="hl-virtual-keyboard-wtype",resolve_binds_by_sym=true})
 package.path="@ROOT@/config/hypr/?.lua;"..package.path
 _G.__hyprscroll2d_layout_registered=nil; assert(loadfile("@ROOT@/config/hypr/lua/spatial/init.lua"))()
 hl.workspace_rule({workspace="1",layout="lua:hyprscroll2d"})
@@ -30,6 +44,8 @@ _G.spatial=require("lua.spatial")
 hl.bind("SUPER + CTRL + mouse:272",spatial.drag_start)
 hl.bind("SUPER + mouse:272",hl.dsp.window.drag(),{mouse=true})
 hl.bind("mouse:272",spatial.drag_stop,{release=true,ignore_mods=true,non_consuming=true})
+hl.bind("SUPER + F24",function() _G.test_mods_ready=true end)
+hl.bind("SUPER + CTRL + F24",function() _G.test_mods_ready=true end)
 '''.replace('@ROOT@',str(root)))
 binary=os.getenv('KINGSTRA_TEST_HYPRLAND','Hyprland')
 if os.getenv('KINGSTRA_TEST_UNLINK_BINARY'):
@@ -38,8 +54,8 @@ log=(run/'log').open('w');proc=subprocess.Popen([binary,'-c',str(config)],env=en
 if os.getenv('KINGSTRA_TEST_UNLINK_BINARY'):Path(binary).unlink()
 sig=None;qs=None;qs_config=None;qs_log=None
 pointer_build=run/'pointer';pointer_build.mkdir()
-xml=source/'tests/tools/wlr-virtual-pointer-unstable-v1.xml'
-pointer_source=(source/'tests/tools/vpointer.c').read_text()
+xml=pointer_tools/'wlr-virtual-pointer-unstable-v1.xml'
+pointer_source=(pointer_tools/'vpointer.c').read_text()
 old='        if (!strcmp(cmd, "abs") && i + 2 < argc) {'
 new='        if (!strcmp(cmd, "wheel") && i + 1 < argc) {\n            int direction = atoi(argv[++i]);\n            zwlr_virtual_pointer_v1_axis_source(pointer, WL_POINTER_AXIS_SOURCE_WHEEL);\n            zwlr_virtual_pointer_v1_axis_discrete(pointer, now_ms(), WL_POINTER_AXIS_VERTICAL_SCROLL, wl_fixed_from_double(direction * 10), direction);\n        } else if (!strcmp(cmd, "abs") && i + 2 < argc) {'
 # A source checkout used for development may already have the wheel helper.
@@ -67,6 +83,9 @@ try:
   if proc.poll()!=None:raise RuntimeError('compositor died: '+str(run))
   time.sleep(.1)
  check(bool(sig),'isolated compositor started');env['HYPRLAND_INSTANCE_SIGNATURE']=sig
+ # First-run helper windows are compositor UI, not fixture applications.
+ for w in json.loads(ctl('clients','-j')):
+  if w.get('class')=='hyprland-donate-screen':os.kill(w['pid'],15)
  time.sleep(.5)
  print('PLUGINS',ctl('plugin','list','-j'),flush=True)
  check(ctl('repl','return zoom.ready')=='true','zoom module initializes from real startup config')
@@ -108,6 +127,13 @@ try:
  m=json.loads(ctl('monitors','-j'))[0];ww,hh=m['width'],m['height']
  state=json.loads(ctl('spatialoverview'));print('VIEW',state,flush=True)
  windows=json.loads(ctl('clients','-j'));print('WINDOWS',[(w['title'],w['at'],w['size']) for w in windows],flush=True)
+ image=Image.open(run/'zoom.png').convert('RGB')
+ view=state['screens'][0]['view']
+ for name,channel in [('zoom-A',0),('zoom-B',1),('zoom-C',2)]:
+  window=next(w for w in windows if w['title']==name)
+  point=[int((window['at'][i]+window['size'][i]/2-view[i])*[ww,hh][i]/view[i+2]) for i in (0,1)]
+  pixel=image.getpixel(tuple(point))
+  check(pixel[channel]>max(pixel[j] for j in range(3) if j!=channel)+40,name+' renders its complete offscreen buffer')
  view=state['screens'][0]['view'];target=next(w for w in windows if w['title']=='zoom-B')
  tx=max(view[0]+10,target['at'][0])+min(target['size'][0]/3,100)
  ty=max(view[1]+10,target['at'][1])+min(target['size'][1]/3,100)
@@ -127,17 +153,26 @@ try:
   outputs=json.loads(ctl('monitors','-j'))
   pw=max(m['x']+m['width']/m['scale'] for m in outputs);ph=max(m['y']+m['height']/m['scale'] for m in outputs)
   subprocess.run([vpointer,str(int(pw)),str(int(ph)),*map(str,commands)],env=env,check=True)
- def modified_drag(mods,x1,y1,x2,y2):
+ def hold_modifiers(mods):
+  ctl('eval','_G.test_mods_ready=false')
   cmd=['wtype']
   for mod in mods:cmd+=['-M',mod]
-  cmd+=['-s','2000']
+  cmd+=['-k','F24','-s','2500']
   for mod in reversed(mods):cmd+=['-m',mod]
-  keys=subprocess.Popen(cmd,env=env);time.sleep(.12)
-  pointer('abs',x1,y1,'sleep',60,'down','sleep',70,'abs',x2,y2,'sleep',120,'up','sleep',100)
+  keys=subprocess.Popen(cmd,env=env)
+  for _ in range(30):
+   if ctl('repl','return test_mods_ready')=='true':return keys
+   if keys.poll()!=None:break
+   time.sleep(.03)
+  raise AssertionError('virtual keyboard did not arm drag modifiers')
+ def modified_drag(mods,x1,y1,x2,y2):
+  keys=hold_modifiers(mods)
+  pointer('abs',x1,y1,'sleep',100,'down','sleep',150,'abs',x2,y2,'sleep',350,'up','sleep',150)
   keys.wait(timeout=3)
  m=json.loads(ctl('monitors','-j'))[0];ww,hh=m['width'],m['height']
  camera_before=json.loads((run/'kingstra-spatial-1.json').read_text())
- modified_drag(['logo','ctrl'],ww//2,hh//2,ww//2+50,hh//2+25)
+ # Move beyond the layout's proportional page-snap radius on every output size.
+ modified_drag(['logo','ctrl'],ww//2,hh//2,ww//2+ww//6,hh//2+hh//6)
  time.sleep(.2)
  camera_after=json.loads((run/'kingstra-spatial-1.json').read_text())
  print('CAMERA',camera_before['camera'],camera_after['camera'],flush=True)
@@ -151,6 +186,7 @@ try:
  source,dest=center(aa),center(bb)
  modified_drag(['logo'],*source,*dest);time.sleep(.2)
  updated=json.loads(ctl('clients','-j'));a_after=next(w for w in updated if w['title']=='zoom-A');b_after=next(w for w in updated if w['title']=='zoom-B')
+ print('LOCAL DROP',[(w['title'],w['workspace'],w['at'],w['size']) for w in (a_after,b_after)],source,dest,flush=True)
  check(a_after['at'][0]>b_after['at'][0] and a_after['at'][1]==b_after['at'][1],'cross-page Super drag adds the app beside the target')
  check(not a_after['floating'] and not b_after['floating'],'zoomed drag keeps apps tiled')
  cells={w['address']:(w['col'],w['row']) for w in json.loads((run/'kingstra-spatial-1.json').read_text())['windows'] if not w.get('floating')}
@@ -182,7 +218,12 @@ try:
  print('RESET STATE',ctl('spatialoverview'),flush=True)
  check(not json.loads(ctl('spatialoverview'))['screens'],'clicking the actual reset control restores 100%')
  # Add an independent output with a continuously frame-driven GTK app.
- ctl('output','create','wayland','ZOOM-2');time.sleep(.7)
+ ctl('output','create','wayland','ZOOM-2')
+ for _ in range(100):
+  mm=json.loads(ctl('monitors','-j'))
+  if len(mm)==2 and all(m['width']>0 and m['height']>0 for m in mm):break
+  time.sleep(.1)
+ time.sleep(.3)
  mm=json.loads(ctl('monitors','-j'));print('MULTI OUTPUTS',[(m['name'],m['x'],m['y'],m['width'],m['height'],m['activeWorkspace']) for m in mm],flush=True)
  check(len(mm)==2 and all(m['width']>0 and m['height']>0 for m in mm),'two real nested outputs are active')
  second=next(m for m in mm if m['name']=='ZOOM-2');ws2=str(second['activeWorkspace']['id'])
@@ -231,7 +272,7 @@ try:
   if screen:
    start=[int(monitor[['x','y'][i]]+(start[i]-screen['view'][i])*monitor[['width','height'][i]]/screen['view'][i+2]) for i in (0,1)]
   print('DRAG',w['title'],start,dest,flush=True)
-  keys=subprocess.Popen(['wtype','-M','logo','-s','2000','-m','logo'],env=env);time.sleep(.12)
+  keys=hold_modifiers(['logo'])
   pointer('abs',*map(str,start),'sleep','120','down','sleep','90',
                   'abs',str(start[0]-50),str(start[1]),'sleep','90','abs',*map(str,dest),'sleep','180','up','sleep','180')
   keys.wait(timeout=3);time.sleep(.2)
@@ -272,9 +313,13 @@ try:
  print('NEW APP CAMERA',camera_before,camera_after,native_before,native_after,flush=True)
  check(camera_before==camera_after and native_before==native_after,'opening an app preserves both spatial and native cameras')
 
- from PIL import Image
  # Gray animated app D fills the other display; green E must not bleed there.
+ # Mapping clamps oversized floats in 0.57; explicitly create overflow after
+ # checking that merely launching the app leaves both cameras unchanged.
  e=found[0]
+ ctl('dispatch','hl.dsp.window.move({x=0,y=0,relative=false,window="address:'+e['address']+'"})')
+ time.sleep(.2)
+ e=next(w for w in json.loads(ctl('clients','-j')) if w['address']==e['address'])
  check(e['at'][0]+e['size'][0]>second['x'],'floating test window extends beyond its owning output')
  subprocess.run(['grim','-o','ZOOM-2',str(run/'foreign-during-zoom.png')],env=env,check=True)
  sample=Image.open(run/'foreign-during-zoom.png').convert('RGB').getpixel((min(100,second['width']-1),min(100,second['height']-1)))

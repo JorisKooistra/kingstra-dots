@@ -71,6 +71,12 @@ end
 
 local function drag_tick()
     if not drag.on then return end
+    -- Hyprland 0.57 arms release binds differently. The native observer sees
+    -- every button event, even when a consuming press bind owns the gesture.
+    local native = hl.plugin and hl.plugin.spatialoverview
+    if native and type(native._button_down)=="function" and not native._button_down(272) then
+        return drag_stop()
+    end
     -- Vangnet als het loslaten gemist wordt.
     if os.time() - drag.started > 60 then return drag_stop() end
     local pos = cursor()
@@ -138,6 +144,10 @@ function M.resize_stop()
 end
 local function resize_tick()
     if not resize.on then return end
+    local native = hl.plugin and hl.plugin.spatialoverview
+    if native and type(native._button_down)=="function" and not native._button_down(273) then
+        return M.resize_stop()
+    end
     if os.time() - resize.started > 60 or not active() then return M.resize_stop() end
     local pos = cursor()
     if not pos then return end

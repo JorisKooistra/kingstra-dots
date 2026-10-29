@@ -19,11 +19,13 @@ behoudt zijn grootte. De camera verschuift niet door het droppen.
 Terug slepen naar een scherm op 100% werkt eveneens, ook naar een leeg werkvlak
 of een gewone Dwindle-indeling. Daar geldt de normale muispositie zonder zoom.
 
-Fase 05 van de installer/updater draait `kingstra-build-native-zoom`. Die bouwt
-[Phantomat](https://github.com/kaolti/phantomat) op vaste revisie
-`a1e8a0806541640d01503ac861a8a39548de8724`, met `kingstra.patch`, tegen de lokale
-Hyprland 0.56.2-headers. Bron en build staan in de gebruikerscache, gescheiden
-per bronrevisie, patch en Hyprland-ABI. De `.so`-symlink en ABI-stamp zijn ignored.
+Fase 05 van de installer/updater draait `kingstra-build-native-zoom`. Voor
+Hyprland 0.56.2 bouwt die [Phantomat](https://github.com/kaolti/phantomat) op vaste
+revisie `a1e8a0806541640d01503ac861a8a39548de8724`, met `kingstra.patch`.
+Voor Hyprland 0.57.0 bouwt die de renderer in `modern/`, aangepast aan de nieuwe
+scene- en input-API. Beide gebruiken de lokale Hyprland-headers en controleren
+de ABI bij laden. Bron en build staan in de gebruikerscache, gescheiden
+per bronrevisie en Hyprland-ABI. De `.so`-symlink en ABI-stamps zijn ignored.
 Er worden geen binaries of monitor-specifieke bestanden uit deze pc verspreid.
 
 Handmatig opnieuw bouwen vanuit de repo:
@@ -34,8 +36,10 @@ hyprctl reload
 ```
 
 Bij herladen sluit de zoom en laadt Hyprland de nieuwe build vanuit zijn eigen
-cachepad. Een build voor een andere Hyprland-versie wordt overgeslagen; het gewone
-werkvlak en de Quickshell-kaart blijven dan werken.
+cachepad. Bij een pakketupdate blijft de oude build beschikbaar voor de lopende
+sessie; een nieuwe sessie kiest de build voor de bijgewerkte Hyprland. Onbekende
+versies worden overgeslagen; het gewone werkvlak en de Quickshell-kaart blijven
+dan werken.
 
 De patch beperkt het renderen tot de betreffende werkruimte, behoudt de
 Lua-Dwindle-geometrie en de bestaande Super-muisbindings, laat directe app-input
@@ -52,3 +56,5 @@ een oudere versie gebruikt dan de geïnstalleerde systeemupdate.
 `KINGSTRA_TEST_UNLINK_BINARY=1` simuleert bovendien dat de draaiende binary
 door een pakketupdate is vervangen; de plugin blijft dan zijn ABI-gecontroleerde
 functies uit het actieve proces laden.
+`KINGSTRA_TEST_ABI_INDEX=<commit-hash>` controleert het laden via de versiegebonden
+ABI-stamp terwijl de standaardstamp bewust naar een andere versie verwijst.
