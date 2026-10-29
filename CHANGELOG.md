@@ -5,6 +5,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- De vingerlift aan de headshell is een kort lipje in de kleur van de headshell, geen schuin uitstekende lijn meer.
+- Knoplabels blijven leesbaar als een knop aan staat: dat zie je nu aan het ledje, de rand en een lichtstreepje onder het icoon.
+- De armsteun is een paaltje met schaduw en een gootje, de streepjes bij de volumeschuif zijn dikker en vallen in perspectief niet meer uiteen, en lange titels lopen langzaam door op het display.
 - Fix: spoelen haperde. De schaduw van de arm wordt nu één keer getekend en alleen verschoven, in plaats van bij elke stap van het optillen opnieuw met vervaging.
 - Fix: de plaat draaide schokkerig. Hij draait nu op het ritme van het scherm, en de stroboscoopring maakt geen sprong meer bij elke omwenteling.
 - Headshell en element zijn groter en hebben dikte: een zijkant, een belicht element met glanslijn en een naaldhouder. Armvoet, pivotkapje, volumeschuif, armlift, lampje en 45-adapter hebben licht, schaduw en een zijkant.

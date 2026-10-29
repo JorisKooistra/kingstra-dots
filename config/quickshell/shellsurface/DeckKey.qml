@@ -75,8 +75,22 @@ Item {
             font.pixelSize: key.icon !== "" ? Math.max(12, key.keyHeight * 0.48) : Math.max(6, key.keyHeight * 0.34)
             font.weight: Font.Bold
             font.letterSpacing: key.icon !== "" ? 0 : 1
-            color: key.lit ? key.skin.lit : key.skin.capText
+            // Opschrift blijft leesbaar; "aan" zie je aan het ledje en de rand.
+            color: key.lit && key.skin.litText === true ? key.skin.lit : key.skin.capText
             Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
+        }
+        // Lichtstreepje onder een icoonknop die aan staat.
+        Rectangle {
+            visible: key.icon !== "" && key.skin.litText !== true
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: Math.max(3, key.keyHeight * 0.12)
+            width: parent.width * 0.3
+            height: Math.max(2, key.keyHeight * 0.05)
+            radius: height / 2
+            color: key.skin.lit
+            opacity: key.lit ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("normal") } }
         }
         // Ledje.
         Rectangle {

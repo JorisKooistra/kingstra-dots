@@ -63,7 +63,7 @@ Item {
             frontA: Qt.tint(m.crust, Qt.rgba(a.r, a.g, a.b, 0.05)), frontB: m.crust, frontEdge: a,
             capA: Qt.tint(m.mantle, Qt.rgba(a.r, a.g, a.b, 0.10)), capB: m.crust,
             capHover: Qt.tint(m.surface0, Qt.rgba(a.r, a.g, a.b, 0.18)), capSide: Qt.darker(m.crust, 1.5),
-            capText: a, capBorder: Qt.rgba(a.r, a.g, a.b, 0.55), lit: m.pink,
+            capText: a, capBorder: Qt.rgba(a.r, a.g, a.b, 0.55), lit: m.pink, litText: true,
             dispBg: Qt.darker(m.crust, 1.4), dispText: a, dispBorder: Qt.rgba(a.r, a.g, a.b, 0.6),
             brand: "KINGSTRA // NEON DRIVE", brandColor: Qt.rgba(a.r, a.g, a.b, 0.75),
             screw: a, track: Qt.rgba(a.r, a.g, a.b, 0.14), fill: a,
@@ -515,7 +515,8 @@ Item {
                 x: -parent.width * 0.35
                 y: index * (pitchFader.height / 8)
                 width: index === 4 ? parent.width * 0.3 : parent.width * 0.18
-                height: 1
+                // In perspectief valt een lijn van 1 px uiteen in puntjes.
+                height: Math.max(2, Math.round(table.height * 0.004))
                 color: table.skin.brandColor
             }
         }

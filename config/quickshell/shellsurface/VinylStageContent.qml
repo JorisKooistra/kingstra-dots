@@ -310,14 +310,37 @@ FocusScope {
                         x: 12
                         width: parent.width - 24
                         spacing: 2
-                        Text {
+                        // Lange titels lopen langzaam door, zoals op een display.
+                        Item {
+                            id: titleBox
                             width: parent.width
-                            text: stage.title !== "" ? stage.title : "Geen nummer"
-                            elide: Text.ElideRight
-                            font.family: ThemeConfig.monoFont
-                            font.pixelSize: Math.max(10, stage.frontHeight * 0.2)
-                            font.weight: Font.Bold
-                            color: stage.skin.dispText
+                            height: titleText.implicitHeight
+                            clip: true
+                            readonly property real overflow: Math.max(0, titleText.implicitWidth - width)
+                            Text {
+                                id: titleText
+                                text: stage.title !== "" ? stage.title : "Geen nummer"
+                                font.family: ThemeConfig.monoFont
+                                font.pixelSize: Math.max(10, stage.frontHeight * 0.2)
+                                font.weight: Font.Bold
+                                color: stage.skin.dispText
+                                onTextChanged: x = 0
+                            }
+                            SequentialAnimation {
+                                running: titleBox.overflow > 0 && stage.reveal > 0.99
+                                loops: Animation.Infinite
+                                onRunningChanged: if (!running) titleText.x = 0
+                                PauseAnimation { duration: 2200 }
+                                NumberAnimation {
+                                    target: titleText; property: "x"; to: -titleBox.overflow
+                                    duration: Math.max(1500, titleBox.overflow * 35); easing.type: Easing.InOutSine
+                                }
+                                PauseAnimation { duration: 1600 }
+                                NumberAnimation {
+                                    target: titleText; property: "x"; to: 0
+                                    duration: Math.max(1500, titleBox.overflow * 35); easing.type: Easing.InOutSine
+                                }
+                            }
                         }
                         Item {
                             width: parent.width

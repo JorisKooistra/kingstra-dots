@@ -702,17 +702,50 @@ Item {
                 }
             }
 
-            // Armsteun waar de arm rust als hij niet speelt.
-            Rectangle {
+            // Armsteun waar de arm rust als hij niet speelt: een paaltje met
+            // schaduw, zijkant en een gootje bovenop.
+            Item {
+                id: armRestPost
                 width: 9 * tonearm.u
                 height: 6 * tonearm.u
-                radius: 2 * tonearm.u
                 readonly property real d: 44 * tonearm.u * deck.armReach
+                readonly property color postColor: deck.look === "" ? deck.mocha.surface2 : deck.look === "wood" ? deck.metal : deck.armShellColor
                 x: tonearm.pivotX - Math.sin(deck.armRest * Math.PI / 180) * d - width / 2
                 y: tonearm.pivotY + Math.cos(deck.armRest * Math.PI / 180) * d - height / 2
-                color: deck.look === "" ? deck.mocha.surface2 : deck.armShellColor
-                border.width: 1
-                border.color: deck.look === "" ? Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.6) : deck.baseAccent
+                Rectangle {
+                    visible: deck.look !== "paper"
+                    x: parent.width * 0.15
+                    y: parent.height * 0.5
+                    width: parent.width
+                    height: parent.height
+                    radius: 2 * tonearm.u
+                    color: Qt.rgba(0, 0, 0, 0.4)
+                }
+                Rectangle {
+                    y: parent.height * 0.3
+                    width: parent.width
+                    height: parent.height
+                    radius: 2 * tonearm.u
+                    color: deck.look === "paper" ? deck.mocha.text : Qt.darker(armRestPost.postColor, 2.0)
+                }
+                Rectangle {
+                    width: parent.width
+                    height: parent.height
+                    radius: 2 * tonearm.u
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: deck.look === "paper" ? deck.mocha.base : Qt.lighter(armRestPost.postColor, 1.25) }
+                        GradientStop { position: 1.0; color: deck.look === "paper" ? deck.mocha.base : Qt.darker(armRestPost.postColor, 1.3) }
+                    }
+                    border.width: 1
+                    border.color: deck.look === "" ? Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.6) : deck.baseAccent
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: parent.width * 0.6
+                        height: Math.max(1, parent.height * 0.22)
+                        radius: height / 2
+                        color: Qt.rgba(0, 0, 0, 0.45)
+                    }
+                }
             }
 
             Item {
@@ -913,17 +946,18 @@ Item {
                         ctx.translate(end.x, end.y);
                         ctx.rotate(28 * Math.PI / 180);
                         ctx.scale(deck.headScale, deck.headScale);
-                        // Vingerlift met schaduw.
+                        // Vingerlift: een kort lipje opzij, in de kleur van de
+                        // headshell, zodat hij niet als een losse naald oogt.
                         ctx.beginPath();
-                        ctx.moveTo(5 * u, 4.2 * u);
-                        ctx.lineTo(10.5 * u, 2.7 * u);
-                        ctx.lineWidth = Math.max(1, 1.4 * u);
-                        ctx.strokeStyle = Qt.rgba(0, 0, 0, 0.45);
+                        ctx.moveTo(4.6 * u, 3.6 * u);
+                        ctx.lineTo(7.2 * u, 3.0 * u);
+                        ctx.lineWidth = Math.max(1, 1.6 * u);
+                        ctx.strokeStyle = Qt.rgba(0, 0, 0, 0.35);
                         ctx.stroke();
                         ctx.beginPath();
-                        ctx.moveTo(5 * u, 3 * u);
-                        ctx.lineTo(10 * u, 1.5 * u);
-                        ctx.strokeStyle = Qt.lighter(edge, 1.2);
+                        ctx.moveTo(4.6 * u, 2.6 * u);
+                        ctx.lineTo(7.2 * u, 2.0 * u);
+                        ctx.strokeStyle = Qt.darker(shell, 1.1);
                         ctx.stroke();
 
                         // Element onder de headshell: blokje met zijkant,
