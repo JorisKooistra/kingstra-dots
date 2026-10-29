@@ -31,7 +31,13 @@ Item {
 
     property int barHeight: 40
     property string barPosition: "top"
-    property bool barRailEnabled: false
+    // Rail volgens het thema, tenzij Rail-indeling hem in dit thema aan- of
+    // uitzet (rail-layout.json, "rail": "on"/"off").
+    property bool themeRailEnabled: false
+    property var railOverrides: ({})
+    readonly property string railOverride: String(railOverrides[theme] || "")
+    readonly property bool barRailEnabled: railOverride === "on" ? true
+        : (railOverride === "off" ? false : themeRailEnabled)
     property string barRailEdge: "left"
     property int barRailWidth: 52
     property bool barStatusStripEnabled: true
@@ -262,7 +268,7 @@ Item {
                 let legacyPosition = root.normalizeBarPosition(data.bar_position !== undefined ? data.bar_position : root.barPosition);
                 root.barZoneSchemaLoaded = data.bar_rail_enabled !== undefined
                     || data.bar_status_strip_enabled !== undefined;
-                root.barRailEnabled = data.bar_rail_enabled !== undefined
+                root.themeRailEnabled = data.bar_rail_enabled !== undefined
                     ? !!data.bar_rail_enabled : (legacyPosition === "left" || legacyPosition === "right");
                 root.barRailEdge = root.normalizeEdge(data.bar_rail_edge, legacyPosition === "right" ? "right" : "left");
                 root.barRailWidth = parseInt(root.clamp(Number(data.bar_rail_width !== undefined ? data.bar_rail_width : 52), 44, 96));
@@ -329,4 +335,26 @@ Item {
 
     // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
     Timer { interval: 5000; running: true; repeat: true; onTriggered: themeFileView.reload() }
+
+    // Alleen de rail-keuze per thema; de rest van de indeling leest RailLayout.
+    function applyRailOverrides(raw) {
+        try {
+            let themes = (JSON.parse(String(raw || "").trim() || "{}").themes) || {};
+            let next = {};
+            for (let key in themes) {
+                let choice = themes[key] ? themes[key].rail : "";
+                if (choice === "on" || choice === "off") next[key] = choice;
+            }
+            if (JSON.stringify(next) !== JSON.stringify(root.railOverrides)) root.railOverrides = next;
+        } catch (e) {}
+    }
+    FileView {
+        id: railLayoutView
+        path: Quickshell.env("HOME") + "/.local/state/kingstra/rail-layout.json"
+        watchChanges: true
+        preload: true
+        onLoaded: root.applyRailOverrides(text())
+        onFileChanged: reload()
+    }
+    Timer { interval: 2000; running: true; repeat: true; onTriggered: railLayoutView.reload() }
 }

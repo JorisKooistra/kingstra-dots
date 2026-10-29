@@ -66,7 +66,7 @@ Scope {
                     group: chrome.edgeBlobGroup
                     radius: chrome.cornerR
                     borderLeft: chrome.railExtent - anchors.margins
-                    borderRight: chrome.shellBorderWidth - anchors.margins
+                    borderRight: chrome.rightFrameExtent - anchors.margins
                     borderTop: chrome.stripHeight - anchors.margins
                     borderBottom: chrome.shellBorderWidth - anchors.margins
                 }
@@ -103,6 +103,7 @@ Scope {
                         topHoverCloseTimer.stop();
                         panelHost.anchorX = anchorX;
                         panelHost.anchorY = anchorY;
+                        panelHost.fromSecondRail = chrome.lastTriggerSecondRail;
                         if (sourceEntryId === "tophover") {
                             // Klik op een open, vastgezet controlecentrum = dicht.
                             if (!chrome.hoverRequest && panelHost.sourceEntryId === "tophover" && panelHost.stickyTopHover) {
@@ -128,7 +129,7 @@ Scope {
                     shellWindow: surfaceWindow
                     mocha: mocha
                     topInset: chrome.stripHeight
-                    rightInset: chrome.shellBorderWidth
+                    rightInset: chrome.rightEdgeExtent > 0 ? chrome.rightEdgeExtent : chrome.shellBorderWidth
                 }
 
                 // Pop-ups voor nieuwe meldingen, naast de rail.
@@ -137,9 +138,8 @@ Scope {
                     shellWindow: surfaceWindow
                     mocha: mocha
                     activeMode: chrome.activeMode
-                    leftInset: chrome.railExtent
-                    rightInset: ThemeConfig.barRailEnabled && ThemeConfig.barRailEdge === "right"
-                        ? chrome.railExtent : chrome.shellBorderWidth
+                    leftInset: chrome.leftEdgeExtent > 0 ? chrome.leftEdgeExtent : chrome.railExtent
+                    rightInset: chrome.rightEdgeExtent > 0 ? chrome.rightEdgeExtent : chrome.shellBorderWidth
                     topInset: chrome.stripHeight
                     // Het eiland toont meldingen zelf; staat dat uit, dan
                     // komen deze kaartjes terug.
@@ -169,10 +169,8 @@ Scope {
                 Item {
                     id: closeDismissLayer
 
-                    readonly property int railInset: ThemeConfig.barRailEnabled
-                        && ThemeConfig.barRailEdge === "left" ? Math.ceil(chrome.railExtent) : 0
-                    readonly property int rightInset: ThemeConfig.barRailEnabled
-                        && ThemeConfig.barRailEdge === "right" ? Math.ceil(chrome.railExtent) : 0
+                    readonly property int railInset: Math.ceil(chrome.leftEdgeExtent)
+                    readonly property int rightInset: Math.ceil(chrome.rightEdgeExtent)
                     readonly property int topInset: ThemeConfig.barStatusStripEnabled
                         && ThemeConfig.barStatusStripEdge === "top" ? chrome.stripHeight : 0
                     readonly property int bottomInset: ThemeConfig.barStatusStripEnabled
@@ -244,6 +242,8 @@ Scope {
                     let surfaceTargets = ["battery", "focustime", "network", "volume", "music", "calendar", "monitors", "performance", "quicksettings", "audiomedia", "gaming", "power", "notifications", "launcher", "clipboard", "windows", "tophover", "menu", "snap"];
                     if (!ThemeConfig.barZoneSchemaLoaded || surfaceTargets.indexOf(target) === -1) return;
                     if (Hyprland.monitorFor(surfaceWindow.screen) === Hyprland.focusedMonitor) {
+                        // Via sneltoets: altijd aan de kant van de hoofdrail.
+                        panelHost.fromSecondRail = false;
                         // Via sneltoets of statustegel: blijft open tot Esc of klik ernaast.
                         if (target === "tophover") panelHost.stickyTopHover = true;
                         panelHost.sourceEntryId = target;
@@ -289,6 +289,7 @@ Scope {
                 // this full-screen host remains click-through.
                 mask: Region {
                     Region { item: chrome.railHitRegion }
+                    Region { item: chrome.secondRailHitRegion }
                     Region { item: chrome.stripHitRegion }
                     Region { item: chrome.topHoverHitRegion }
                     Region { item: closeDismissLayer }
@@ -317,6 +318,23 @@ Scope {
                     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
                 }
 
+                // Tweede rail aan de overkant (Rail-indeling).
+                PanelWindow {
+                    screen: surfaceWindow.screen
+                    visible: ThemeConfig.barZoneSchemaLoaded && chrome.secondRailEnabled
+                    anchors.left: !chrome.secondRailOnRight
+                    anchors.right: chrome.secondRailOnRight
+                    anchors.top: true
+                    anchors.bottom: true
+                    implicitWidth: Math.max(1, chrome.secondRailReservedWidth)
+                    color: "transparent"
+                    mask: Region {}
+                    WlrLayershell.namespace: "quickshell:kingstra-shell-second-rail-reservation"
+                    WlrLayershell.layer: WlrLayer.Top
+                    WlrLayershell.exclusiveZone: chrome.secondRailReservedWidth
+                    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+                }
+
                 PanelWindow {
                     screen: surfaceWindow.screen
                     visible: ThemeConfig.barZoneSchemaLoaded && ThemeConfig.barStatusStripEnabled
@@ -337,7 +355,9 @@ Scope {
                 // tekenwerk zit in ShellChrome.
                 PanelWindow {
                     screen: surfaceWindow.screen
+                    // Staat er een tweede rail rechts, dan reserveert die al.
                     visible: ThemeConfig.barZoneSchemaLoaded && chrome.frameEnabled
+                        && !(chrome.secondRailEnabled && chrome.secondRailOnRight)
                     anchors.right: true
                     anchors.top: true
                     anchors.bottom: true

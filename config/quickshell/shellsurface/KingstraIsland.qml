@@ -41,8 +41,8 @@ Item {
     // Plaats: onder de statusstrook, of erboven als die onderaan staat.
     readonly property bool fromBottom: ThemeConfig.barStatusStripEnabled && ThemeConfig.barStatusStripEdge === "bottom"
     readonly property int edgeInset: chrome.stripHeight
-    readonly property real railLeftInset: ThemeConfig.barRailEnabled && ThemeConfig.barRailEdge === "left" ? chrome.railExtent : 0
-    readonly property real railRightInset: ThemeConfig.barRailEnabled && ThemeConfig.barRailEdge === "right" ? chrome.railExtent : 0
+    readonly property real railLeftInset: chrome.leftEdgeExtent
+    readonly property real railRightInset: chrome.rightEdgeExtent
     readonly property real centerX: railLeftInset + (parent.width - railLeftInset - railRightInset) / 2
     readonly property color fill: chrome._stripFillAt(centerX)
 

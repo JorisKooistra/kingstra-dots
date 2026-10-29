@@ -60,6 +60,21 @@ Item {
     readonly property bool secondRailEnabled: secondRailItems.length > 0
     readonly property bool secondRailOnRight: !railOnRight
     readonly property int workspaceCount: RailLayout.workspaceCount
+    // Wat aan elke kant van het scherm aan rail staat (zichtbare breedte) en
+    // wat panelen daar vrij moeten laten (volle breedte).
+    readonly property real secondRailExtent: secondRailEnabled ? railExtent : 0
+    readonly property int secondRailReservedWidth: secondRailEnabled ? railReservedWidth : 0
+    readonly property real leftEdgeExtent: (railEnabled && !railOnRight ? railExtent : 0)
+        + (secondRailEnabled && !secondRailOnRight ? secondRailExtent : 0)
+    readonly property real rightEdgeExtent: (railEnabled && railOnRight ? railExtent : 0)
+        + (secondRailEnabled && secondRailOnRight ? secondRailExtent : 0)
+    // Rechterkant van de omlijsting: de tweede rail of de dunne rand.
+    readonly property real rightFrameExtent: secondRailEnabled && secondRailOnRight ? secondRailExtent : shellBorderWidth
+    readonly property int leftRailReserve: (railEnabled && !railOnRight) || (secondRailEnabled && !secondRailOnRight) ? railWidth : 0
+    readonly property int rightRailReserve: (railEnabled && railOnRight) || (secondRailEnabled && secondRailOnRight) ? railWidth : shellBorderWidth
+    // Kwam de laatste paneelklik uit de tweede rail? Dan groeit het paneel
+    // aan die kant uit de omlijsting.
+    property bool lastTriggerSecondRail: false
     // Als alle statusstrip-content naar de rail is verhuisd, blijft boven alleen
     // de omlijsting over. Die hoort even dun te zijn als de onderrand.
     readonly property int stripHeight: stripControlsEnabled ? ThemeConfig.barStatusStripHeight : shellBorderWidth
@@ -351,6 +366,8 @@ Item {
     }
 
     readonly property Item railHitRegion: railHitArea
+    readonly property Item secondRailHitRegion: secondRailHitArea
+    readonly property bool anyRailHovered: railHover.hovered || secondRailHover.hovered
     readonly property Item stripHitRegion: stripHitArea
     readonly property Item topHoverHitRegion: topHoverHitArea
     readonly property bool topHoverHovered: topHover.hovered
@@ -367,7 +384,7 @@ Item {
         : (NotificationService.count === 0 ? "Geen meldingen"
             : (NotificationService.count === 1 ? "1 melding" : NotificationService.count + " meldingen"))
     readonly property bool secondaryScreen: !primaryScreen
-    readonly property bool gamingMinimal: activeMode === "gaming" && !railHover.hovered
+    readonly property bool gamingMinimal: activeMode === "gaming" && !anyRailHovered
     // De omlijsting is altijd gesloten. Een frame op nevenmonitoren weghalen
     // maakte hun buitenhoeken vierkant; hem half transparant maken leverde
     // juist dubbele/kapotte boogjes op. Daarom krijgt elk scherm dezelfde
@@ -375,7 +392,7 @@ Item {
     readonly property bool frameEnabled: cornersActive
     readonly property real chromePresence: gamingMinimal ? 0.76 : 1.0
     readonly property real railModulePresence: secondaryScreen
-        ? (railHover.hovered ? 1.0 : 0.78) : (gamingMinimal ? 0.72 : 1.0)
+        ? (anyRailHovered ? 1.0 : 0.78) : (gamingMinimal ? 0.72 : 1.0)
     property var moduleList: ["workspaces", "clock", "updates", "cpu_temp", "network", "battery", "volume", "bluetooth", "notifications"]
     property bool barAutoHide: false
     property bool autoHideVisible: true
@@ -394,7 +411,7 @@ Item {
     // Houdt de rail uitgeklapt zolang er een paneel open is (gezet door
     // ShellSurface), anders schuift hij weg onder een paneel dat eraan hangt.
     property bool railHold: false
-    readonly property bool railContentVisible: !barAutoHide || autoHideVisible || railHover.hovered || railHold
+    readonly property bool railContentVisible: !barAutoHide || autoHideVisible || anyRailHovered || railHold
     // Automatisch verbergen schuift de rail écht weg: wat overblijft is de
     // dunne omlijsting (even breed als rechts/onder), en de gereserveerde
     // ruimte krimpt mee zodat vensters de volle breedte krijgen. Bij hover op
@@ -505,6 +522,8 @@ Item {
             Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "settings"]);
             return;
         }
+        lastTriggerSecondRail = secondRailEnabled
+            && (secondRailOnRight ? lastTriggerX >= width - railWidth : lastTriggerX <= railWidth);
         panelRequested(target, lastTriggerX, lastTriggerY);
     }
 
@@ -690,7 +709,7 @@ Item {
         id: autoHideTimer
         interval: 2400
         repeat: false
-        onTriggered: if (root.barAutoHide && !railHover.hovered && !stripHover.hovered) root.autoHideVisible = false
+        onTriggered: if (root.barAutoHide && !root.anyRailHovered && !stripHover.hovered) root.autoHideVisible = false
     }
 
     readonly property bool hasWifi: {
@@ -1073,6 +1092,90 @@ Item {
         }
     }
 
+    // --- Tweede rail -----------------------------------------------------------
+    // Aan de overkant van de hoofdrail, met wat je in Rail-indeling naar
+    // "tweede rail" sleept. Zelfde vlak, knoppen en animaties; bij
+    // automatisch verbergen schuift hij samen met de hoofdrail weg.
+    Item {
+        id: secondRailHitArea
+        visible: root.secondRailEnabled
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: root.secondRailOnRight ? undefined : parent.left
+        anchors.right: root.secondRailOnRight ? parent.right : undefined
+        width: root.secondRailEnabled ? Math.ceil(root.secondRailExtent) : 0
+
+        HoverHandler {
+            id: secondRailHover
+            onHoveredChanged: {
+                if (hovered) {
+                    root.autoHideVisible = true;
+                } else if (root.barAutoHide) {
+                    autoHideTimer.restart();
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        id: secondRail
+        visible: root.secondRailEnabled
+        anchors.top: secondRailHitArea.top
+        anchors.bottom: secondRailHitArea.bottom
+        anchors.left: root.secondRailOnRight ? undefined : parent.left
+        anchors.right: root.secondRailOnRight ? parent.right : undefined
+        width: root.railWidth - (root.frameEnabled ? root.frameBandW : 0)
+        gradient: Gradient {
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0; color: root._diagColor(root.secondRailOnRight ? root.width - root.railWidth / 2 : root.railWidth / 2, 0) }
+            GradientStop { position: 1.0; color: root._diagColor(root.secondRailOnRight ? root.width - root.railWidth / 2 : root.railWidth / 2, root.height) }
+        }
+        border.width: 0
+        opacity: root.chromePresence
+        transform: Translate {
+            x: root.secondRailOnRight ? root.railWidth - root.railExtent : root.railExtent - root.railWidth
+        }
+        Behavior on opacity {
+            NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+
+        Rectangle {
+            visible: !root.frameEnabled
+            width: 2
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.left: root.secondRailOnRight ? parent.left : undefined
+            anchors.right: root.secondRailOnRight ? undefined : parent.right
+            opacity: root.chromeAccentAlpha
+            gradient: Gradient {
+                orientation: Gradient.Vertical
+                GradientStop { position: 0.0; color: root.barHueA }
+                GradientStop { position: 0.5; color: root.barHueB }
+                GradientStop { position: 1.0; color: root.barHueC }
+            }
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 7
+            spacing: 7
+            opacity: root.railModulePresence * Math.max(0, Math.min(1, root.railReveal * 1.6 - 0.6))
+
+            Behavior on opacity {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+            }
+
+            Repeater {
+                model: root.secondRailItems
+                delegate: RailSlot {}
+            }
+            Item {
+                visible: root.secondRailItems.indexOf("fill") === -1
+                Layout.fillHeight: true
+            }
+        }
+    }
+
     Item {
         id: statusStripZone
         visible: root.stripEnabled
@@ -1080,9 +1183,9 @@ Item {
         // Tijdens bottom/geen-rail → top/rail kan Qt beide tegenoverliggende
         // anchors een frame vasthouden. Dan rekt deze strip over het hele
         // scherm en bedekt hij alle surfaces onder het layer-shell-venster.
-        x: root.railEnabled && !root.railOnRight ? root.railExtent : 0
+        x: root.leftEdgeExtent
         y: root.stripOnBottom ? root.height - root.stripHeight : 0
-        width: Math.max(0, root.width - (root.railEnabled ? root.railExtent : 0))
+        width: Math.max(0, root.width - root.leftEdgeExtent - root.rightEdgeExtent)
         height: root.stripHeight
 
         Item {
@@ -1324,7 +1427,8 @@ Item {
     // de content, met afgeronde binnenhoeken.
     Rectangle {
         id: rightBorder
-        visible: root.frameEnabled
+        // Met een tweede rail rechts is die rail de rechterkant van het kader.
+        visible: root.frameEnabled && !(root.secondRailEnabled && root.secondRailOnRight)
         // frameBandW erbij opgeteld: de accentband van de blob-shader ligt op
         // de binnenrand van de omlijsting en moet zichtbaar blijven.
         x: root.width - root.shellBorderWidth + root.frameBandW
@@ -1343,7 +1447,7 @@ Item {
         visible: root.frameEnabled
         x: root.railExtent
         y: root.height - root.shellBorderWidth + root.frameBandW
-        width: root.width - root.railExtent - root.shellBorderWidth
+        width: root.width - root.railExtent - root.rightFrameExtent
         height: root.shellBorderWidth - root.frameBandW
         gradient: Gradient {
             orientation: Gradient.Horizontal
@@ -1364,7 +1468,7 @@ Item {
 
         readonly property real l: root.railExtent + root.frameBandW + 2
         readonly property real t: root.stripHeight + root.frameBandW + 2
-        readonly property real r: root.width - root.shellBorderWidth - root.frameBandW - 2
+        readonly property real r: root.width - root.rightFrameExtent - root.frameBandW - 2
         readonly property real b: root.height - root.shellBorderWidth - root.frameBandW - 2
         readonly property real cut: Math.min(34, Math.max(22, root.width * 0.012))
         readonly property real step: Math.min(70, Math.max(42, root.width * 0.026))
@@ -1452,7 +1556,7 @@ Item {
         width: tipText.implicitWidth + 18
         height: tipText.implicitHeight + 10
         x: root.tooltipFromRail
-            ? (root.railOnRight ? root.width - root.railWidth - width - 10 : root.railWidth + 10)
+            ? (root.tooltipAnchorX > root.width / 2 ? root.width - root.railWidth - width - 10 : root.railWidth + 10)
             : Math.max(4, Math.min(root.width - width - 4, root.tooltipAnchorX - width / 2))
         y: root.tooltipFromRail
             ? Math.max(4, Math.min(root.height - height - 4, root.tooltipAnchorY - height / 2))

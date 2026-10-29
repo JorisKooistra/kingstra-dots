@@ -49,6 +49,16 @@ Item {
     readonly property int borderW: (anchorItem && anchorItem.shellBorderWidth !== undefined)
         ? anchorItem.shellBorderWidth : 0
     readonly property int railW: ThemeConfig.barRailEnabled ? ThemeConfig.barRailWidth : 0
+    // Gezet door ShellSurface: kwam het verzoek uit de tweede rail aan de
+    // overkant? Dan groeit het paneel aan die kant uit de omlijsting.
+    property bool fromSecondRail: false
+    readonly property bool secondRailActive: fromSecondRail && anchorItem !== null
+        && anchorItem.secondRailEnabled === true
+    // Wat panelen links en rechts vrij moeten laten (rails of dunne rand).
+    readonly property int leftReserve: (anchorItem && anchorItem.leftRailReserve !== undefined)
+        ? anchorItem.leftRailReserve : ((ThemeConfig.barRailEnabled && !railOnRight) ? railW : 0)
+    readonly property int rightReserve: (anchorItem && anchorItem.rightRailReserve !== undefined)
+        ? anchorItem.rightRailReserve : ((ThemeConfig.barRailEnabled && railOnRight) ? railW : borderW)
     readonly property int stripH: (anchorItem && anchorItem.stripHeight !== undefined)
         ? anchorItem.stripHeight : ThemeConfig.barStatusStripHeight
     readonly property int stripTopH: ThemeConfig.barStatusStripEnabled && !stripOnBottom ? stripH : 0
@@ -100,7 +110,7 @@ Item {
         // onderrand en vormen zo één herkenbare Quickshell-taal, in plaats van
         // dat het klembord als een los zijpaneel naast de rail voelt.
         if (entryId === "launcher" || entryId === "clipboard" || entryId === "menu" || entryId === "snap") return "bottom";
-        if (isRailEntry(entryId)) return railOnRight ? "right" : "left";
+        if (isRailEntry(entryId)) return (railOnRight !== secondRailActive) ? "right" : "left";
         if (isStripEntry(entryId)) return stripOnBottom ? "bottom" : "top";
         return "";
     }
@@ -177,7 +187,7 @@ Item {
     }
 
     // Ruimte die de chrome zelf inneemt; panelen mogen daar niet onder schuiven.
-    readonly property int availableW: (hostWindow ? hostWindow.width : 1920) - railW - borderW - gap * 2
+    readonly property int availableW: (hostWindow ? hostWindow.width : 1920) - leftReserve - rightReserve - gap * 2
     readonly property int availableH: (hostWindow ? hostWindow.height : 1080)
         - stripTopH - stripBotH - borderW - gap * 2
 
@@ -293,8 +303,8 @@ Item {
         if (!hostWindow) return 12;
         let entry = visualEntryId !== "" ? visualEntryId : sourceEntryId;
         let W = panelWidth(entry);
-        let leftEdge = (ThemeConfig.barRailEnabled && !railOnRight) ? railW : 0;
-        let rightEdge = (ThemeConfig.barRailEnabled && railOnRight) ? hostWindow.width - railW : hostWindow.width - borderW;
+        let leftEdge = leftReserve;
+        let rightEdge = hostWindow.width - rightReserve;
         if (visualEdge === "bottom" || visualEdge === "top")
             return Math.round((leftEdge + rightEdge - W) / 2);
         // Flush tegen de rail/omlijsting, net als de launcher onderaan: de

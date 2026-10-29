@@ -10,6 +10,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Eigen apps en launchers (naam, icoon uit het icoonthema of een Nerd Font-teken, commando) kunnen als knop in de rail.
 - Het aantal werkruimtes in rail en strook is per thema in te stellen (1–10); scrollen over de werkruimtes telt hetzelfde aantal.
 - Per scherm en mode blijft alles werken zoals het was: zichtbare onderdelen, Meer, extra knoppen en automatisch verbergen liggen daar bovenop. Inschuiven achter Meer animeert nu voor elk onderdeel op dezelfde manier.
+- Tweede rail aan de overkant: zet je onderdelen op de tweede rail, dan verschijnt die rechts (of links als de hoofdrail rechts staat) met hetzelfde vlak, dezelfde knoppen en animaties. Hij reserveert eigen ruimte, schuift bij automatisch verbergen mee weg, en de omlijsting, de bovenstrook, het eiland, meldingen en tooltips houden er rekening mee. Panelen uit de tweede rail groeien aan die kant uit de omlijsting.
+- De rail kan per thema aan of uit, los van wat het thema zelf kiest; zo krijgen ook Paper en Mono een rail (en een tweede rail).
 
 ### Rail: automatisch verbergen verbergt nu echt
 - Met "automatisch verbergen" (per scherm of via de mode) schuift de rail nu helemaal weg tot alleen de dunne omlijsting over is, even breed als rechts en onder. Eerder bleef er een lege railstrook met gereserveerde ruimte tussen de vensters staan.
