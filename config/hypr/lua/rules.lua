@@ -105,3 +105,5 @@ layer("skwd-paper", "skwd-paper", { no_anim = true })
 layer("skwd-paper-transition", "skwd-paper-transition", { no_anim = true })
 layer("wallpaper-selector", "wallpaper-selector-parallel", { no_anim = true })
 layer("quickshell", "quickshell", { no_anim = true })
+-- De schermvullende draaitafel animeert zelf vanuit de mediakaart.
+layer("kingstra-vinyl-stage", "quickshell:kingstra-vinyl-stage", { no_anim = true })

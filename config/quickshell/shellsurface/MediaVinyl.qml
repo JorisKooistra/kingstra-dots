@@ -45,25 +45,25 @@ Item {
     property bool strobe: false
     readonly property string look: finish !== "" ? finish
         : woodDeck ? "wood" : paperDeck ? "paper" : compactDisc ? "neon" : ""
-    readonly property color brass: "#c9a55f"
+    readonly property color brass: accent
     readonly property color armTubeColor: look === "wood" ? brass
         : look === "neon" ? accent : look === "paper" ? mocha.text : mocha.overlay2
     // Armvoet: buitenring, binnenring en accent (lagerkap).
-    readonly property color baseOuter: look === "wood" ? "#2b1d14" : look === "neon" ? "#05070c"
+    readonly property color baseOuter: look === "wood" ? mocha.mantle : look === "neon" ? mocha.crust
         : look === "paper" ? mocha.base : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.96)
-    readonly property color baseInner: look === "wood" ? "#6e5330" : look === "neon" ? "#0b1220"
+    readonly property color baseInner: look === "wood" ? mocha.surface1 : look === "neon" ? Qt.tint(mocha.mantle, Qt.rgba(accent.r, accent.g, accent.b, 0.08))
         : look === "paper" ? mocha.base : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.92)
     readonly property color baseAccent: look === "wood" ? brass : look === "paper" ? mocha.text : accent
-    readonly property color armShellColor: look === "wood" ? "#2b1d14"
-        : look === "neon" ? "#05070c" : mocha.base
+    readonly property color armShellColor: look === "wood" ? mocha.crust
+        : look === "neon" ? mocha.crust : mocha.base
     readonly property color platterRim: look === "wood" ? brass
         : look === "neon" ? accent : look === "paper" ? mocha.text
         : (playing ? accent : mocha.overlay0)
-    readonly property color matColor: look === "wood" ? "#2a2320"
-        : look === "neon" ? "#04060a" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.92)
+    readonly property color matColor: look === "wood" ? mocha.crust
+        : look === "neon" ? Qt.darker(mocha.crust, 1.3) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.92)
     readonly property color grooveColor: look === "neon" ? accent : mocha.overlay2
-    readonly property color discColor: look === "neon" ? "#07090f"
-        : look === "wood" ? "#151312" : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
+    readonly property color discColor: look === "neon" ? Qt.darker(mocha.crust, 1.6)
+        : look === "wood" ? Qt.darker(mocha.crust, 1.4) : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
     // Graden per seconde tijdens afspelen (gestileerd, niet echt 33 tpm).
     property real spinSpeed: 45
     property real angularVelocity: 0
@@ -387,7 +387,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: deck.look === "wood" ? "#3a2c22" : deck.look === "neon" ? "#05070c" : deck.mocha.surface0
+            color: deck.look === "wood" ? Qt.darker(deck.mocha.surface0, 1.2) : deck.look === "neon" ? deck.mocha.crust : deck.mocha.surface0
             border.width: Math.max(2, Math.round(deck.width * 0.022))
             border.color: deck.platterRim
             Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
@@ -423,7 +423,7 @@ Item {
                     y: parent.height / 2 + Math.sin(a) * rr - height / 2
                     color: deck.look === "neon"
                         ? Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, index % 2 ? 0.9 : 0.35)
-                        : deck.look === "wood" ? Qt.rgba(0.17, 0.11, 0.07, index % 2 ? 0.85 : 0.35)
+                        : deck.look === "wood" ? Qt.rgba(deck.mocha.crust.r, deck.mocha.crust.g, deck.mocha.crust.b, index % 2 ? 0.85 : 0.35)
                         : deck.look === "paper" ? Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, index % 2 ? 0.95 : 0.4)
                         : Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, index % 2 ? 0.8 : 0.3)
                 }

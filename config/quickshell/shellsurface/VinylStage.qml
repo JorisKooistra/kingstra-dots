@@ -4,7 +4,8 @@ import Quickshell.Wayland
 import ".."
 
 // Venster om VinylStageContent: schermvullend op de Overlay-laag, boven de
-// bar, met toetsenbordfocus zolang hij open is. DesktopWidgets laadt dit
+// bar, met toetsenbordfocus op aanvraag zolang hij open is: Exclusive
+// blokkeerde klikken op de andere schermen. DesktopWidgets laadt dit
 // alleen terwijl de weergave open is of nog wegfadet.
 //
 // Staat in shellsurface/ en niet naast DesktopWidgets: Quickshell maakt alleen
@@ -23,7 +24,7 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell:kingstra-vinyl-stage"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.exclusiveZone: -1
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     MatugenColors { id: mocha }
 

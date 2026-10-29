@@ -33,22 +33,25 @@ Item {
     readonly property var skin: {
         let m = mocha, a = accent;
         let ink = m.text;
+        // Hout en neon houden hun vormen; de kleuren komen uit het thema.
         if (look === "wood") return {
-            plinthA: "#7a4a2b", plinthB: "#55311b", border: "#a8764a", borderW: 2, radius: 18,
-            frontA: "#4a2a17", frontB: "#2e190d", frontEdge: "#c9a55f",
-            capA: "#f1e8d4", capB: "#d6c9ac", capHover: "#fff8e8", capSide: "#7d6c50",
-            capText: "#3a2616", capBorder: "#b39f7a", lit: "#ffb347",
-            dispBg: "#1a1008", dispText: "#ffb347", dispBorder: "#6b4a2a",
-            brand: "KINGSTRA · WALNUT", brandColor: Qt.rgba(0.93, 0.85, 0.68, 0.7),
-            screw: "#c9a55f", track: Qt.rgba(1, 0.92, 0.78, 0.16), fill: "#ffb347",
-            needle: "#c9a55f", hint: "#e8d3a8"
+            plinthA: Qt.tint(m.surface1, Qt.rgba(a.r, a.g, a.b, 0.12)), plinthB: Qt.darker(m.surface0, 1.15),
+            border: Qt.rgba(a.r, a.g, a.b, 0.5), borderW: 2, radius: 18,
+            frontA: Qt.darker(m.surface0, 1.3), frontB: m.crust, frontEdge: a,
+            capA: Qt.lighter(m.surface2, 1.2), capB: m.surface2, capHover: Qt.lighter(m.surface2, 1.45),
+            capSide: m.crust, capText: m.text, capBorder: Qt.rgba(a.r, a.g, a.b, 0.4), lit: a,
+            dispBg: m.crust, dispText: a, dispBorder: Qt.rgba(a.r, a.g, a.b, 0.35),
+            brand: "KINGSTRA · ORGANIC", brandColor: Qt.rgba(m.text.r, m.text.g, m.text.b, 0.6),
+            screw: a, track: Qt.rgba(a.r, a.g, a.b, 0.16), fill: a,
+            needle: a, hint: m.subtext0
         };
         if (look === "neon") return {
-            plinthA: "#0b1122", plinthB: "#03050a", border: a, borderW: 1.5, radius: 6,
-            frontA: "#070a14", frontB: "#020308", frontEdge: a,
-            capA: "#0d1426", capB: "#060a14", capHover: "#14203a", capSide: "#000000",
+            plinthA: Qt.tint(m.mantle, Qt.rgba(a.r, a.g, a.b, 0.08)), plinthB: m.crust, border: a, borderW: 1.5, radius: 6,
+            frontA: Qt.tint(m.crust, Qt.rgba(a.r, a.g, a.b, 0.05)), frontB: m.crust, frontEdge: a,
+            capA: Qt.tint(m.mantle, Qt.rgba(a.r, a.g, a.b, 0.10)), capB: m.crust,
+            capHover: Qt.tint(m.surface0, Qt.rgba(a.r, a.g, a.b, 0.18)), capSide: Qt.darker(m.crust, 1.5),
             capText: a, capBorder: Qt.rgba(a.r, a.g, a.b, 0.55), lit: m.pink,
-            dispBg: "#000000", dispText: a, dispBorder: Qt.rgba(a.r, a.g, a.b, 0.6),
+            dispBg: Qt.darker(m.crust, 1.4), dispText: a, dispBorder: Qt.rgba(a.r, a.g, a.b, 0.6),
             brand: "KINGSTRA // NEON DRIVE", brandColor: Qt.rgba(a.r, a.g, a.b, 0.75),
             screw: a, track: Qt.rgba(a.r, a.g, a.b, 0.14), fill: a,
             needle: a, hint: a
@@ -100,6 +103,11 @@ Item {
             anchors.fill: parent
             anchors.margins: 3
             visible: table.look === "wood"
+            // Nerf in de donkerste en lichtste themakleur.
+            readonly property color dark: table.mocha.crust
+            readonly property color light: table.mocha.text
+            onDarkChanged: requestPaint()
+            onLightChanged: requestPaint()
             onWidthChanged: requestPaint()
             onHeightChanged: requestPaint()
             onVisibleChanged: if (visible) requestPaint()
@@ -120,9 +128,9 @@ Item {
                             + Math.sin(x / w * 17 + i) * 1.2;
                         if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                     }
-                    let dark = rnd() < 0.7;
-                    ctx.strokeStyle = dark ? Qt.rgba(0.16, 0.08, 0.03, 0.10 + rnd() * 0.16)
-                                           : Qt.rgba(1, 0.86, 0.66, 0.04 + rnd() * 0.06);
+                    let isDark = rnd() < 0.7;
+                    let c = isDark ? grain.dark : grain.light;
+                    ctx.strokeStyle = Qt.rgba(c.r, c.g, c.b, isDark ? 0.14 + rnd() * 0.18 : 0.04 + rnd() * 0.06);
                     ctx.lineWidth = 0.6 + rnd() * 1.8;
                     ctx.stroke();
                 }
@@ -131,7 +139,7 @@ Item {
                     for (let r = 0; r < 5; r++) {
                         ctx.beginPath();
                         ctx.ellipse(kx - (8 + r * 6), ky - (3 + r * 2.2), (8 + r * 6) * 2, (3 + r * 2.2) * 2);
-                        ctx.strokeStyle = Qt.rgba(0.14, 0.07, 0.02, 0.22 - r * 0.035);
+                        ctx.strokeStyle = Qt.rgba(grain.dark.r, grain.dark.g, grain.dark.b, 0.26 - r * 0.04);
                         ctx.lineWidth = 1;
                         ctx.stroke();
                     }
@@ -239,7 +247,7 @@ Item {
         width: table.height * 0.1
         height: width
         radius: width / 2
-        color: table.look === "wood" ? "#c9a55f" : table.look === "neon" ? "#05070c" : table.mocha.overlay1
+        color: table.look === "wood" ? table.accent : table.look === "neon" ? table.mocha.crust : table.mocha.overlay1
         border.width: table.look === "neon" || table.look === "paper" ? 1.5 : 1
         border.color: table.look === "neon" ? table.accent : table.look === "paper" ? table.mocha.text : Qt.rgba(0, 0, 0, 0.3)
         Rectangle {
@@ -280,9 +288,9 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: table.look === "paper" ? table.mocha.base : "#15171c"
+            color: table.look === "paper" ? table.mocha.base : table.mocha.crust
             border.width: table.look === "paper" ? 1.5 : 2
-            border.color: table.look === "wood" ? "#c9a55f" : table.look === "paper" ? table.mocha.text : table.mocha.overlay1
+            border.color: table.look === "wood" ? table.accent : table.look === "paper" ? table.mocha.text : table.mocha.overlay1
             Rectangle {
                 anchors.centerIn: parent
                 width: parent.width * 0.45
@@ -384,7 +392,7 @@ Item {
             height: parent.width * 0.55
             radius: table.look === "neon" ? 2 : 4
             y: (table.pitch + 8) / 16 * (pitchFader.height - height)
-            color: table.look === "wood" ? "#c9a55f" : table.skin.capA
+            color: table.look === "wood" ? table.accent : table.skin.capA
             border.width: 1
             border.color: table.skin.capBorder
             Rectangle {
