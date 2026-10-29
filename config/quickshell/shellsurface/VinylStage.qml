@@ -28,13 +28,32 @@ PanelWindow {
 
     MatugenColors { id: mocha }
 
+    // De animatie start pas als het venster echt op het scherm staat. Begint
+    // hij eerder, dan mist hij de eerste frames (schokken) en is de kleine
+    // speler al weg terwijl de grote nog niet zichtbaar is (knipperen).
+    // Tot dan ligt de grote speler precies over de kleine heen.
     property real reveal: 0
-    Component.onCompleted: reveal = Qt.binding(() => win.open ? 1 : 0)
+    property bool started: false
+    Timer {
+        interval: 120
+        running: win.visible && !win.started
+        onTriggered: {
+            win.started = true;
+            win.host.stageCovering = true;
+            win.reveal = Qt.binding(() => win.open ? 1 : 0);
+        }
+    }
     Behavior on reveal {
+        enabled: win.started
         // Rustig in- en uitlopen: de speler groeit van de mediakaart naar het midden.
         NumberAnimation { duration: ThemeConfig.duration(760); easing.type: Easing.InOutCubic }
     }
-    onRevealChanged: if (!open && reveal <= 0.001) finished()
+    onRevealChanged: if (started && !open && reveal <= 0.001) {
+        win.host.stageCovering = false;
+        finished();
+    }
+    // Dicht voordat de animatie begon: meteen klaar.
+    onOpenChanged: if (!open && !started) finished()
 
     VinylStageContent {
         id: content
@@ -58,6 +77,8 @@ PanelWindow {
         canSeek: win.host.mediaCanSeek
         canPrevious: p !== null && p.canGoPrevious
         canNext: p !== null && p.canGoNext
+        volume: win.host.mediaVolume
+        onVolumeRequested: value => win.host.setMediaVolume(value)
         onTogglePlay: win.host.mediaToggle()
         onPrevious: if (p && p.canGoPrevious) p.previous()
         onNext: if (p && p.canGoNext) p.next()

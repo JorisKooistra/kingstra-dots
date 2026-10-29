@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Services.Mpris
+import Quickshell.Services.Pipewire
 import "../"
 import "../shellsurface"
 
@@ -123,10 +124,23 @@ Scope {
         else if (p.canPlay) p.play();
     }
 
+    // Systeemvolume voor de schuif op de draaitafel.
+    readonly property var audioSink: Pipewire.defaultAudioSink
+    PwObjectTracker { objects: root.audioSink ? [root.audioSink] : [] }
+    readonly property real mediaVolume: audioSink && audioSink.audio && audioSink.ready ? audioSink.audio.volume : -1
+    function setMediaVolume(v) {
+        if (!audioSink || !audioSink.audio) return;
+        audioSink.audio.muted = false;
+        audioSink.audio.volume = Math.max(0, Math.min(1, v));
+    }
+
     // --- Schermvullende draaitafel -----------------------------------------
     property bool stageOpen: false
     // Blijft geladen tot het sluiten is uitgefadet.
     property bool stageAlive: false
+    // De grote speler staat op het scherm en ligt over de kleine heen; pas
+    // dan verdwijnt de kleine, anders knippert het.
+    property bool stageCovering: false
     property var stageScreen: null
     // Waar de kleine speler op het scherm staat; de grote groeit daaruit.
     property rect stageOrigin: Qt.rect(0, 0, 0, 0)
@@ -182,7 +196,7 @@ Scope {
             host: root
             screen: root.stageScreen
             open: root.stageOpen
-            onFinished: root.stageAlive = false
+            onFinished: { root.stageCovering = false; root.stageAlive = false; }
         }
     }
 
@@ -345,10 +359,12 @@ Scope {
                                 tracking: root.mediaTracking
                                 progress: root.mediaProgress
                                 canSeek: root.mediaCanSeek
+                                volume: root.mediaVolume
+                                onVolumeRequested: value => root.setMediaVolume(value)
                                 onTogglePlay: root.mediaToggle()
                                 onSeek: fraction => root.mediaSeek(fraction)
                                 // Onder de schermvullende speler weg, die hier uit groeit.
-                                opacity: !deckSlot.turntable ? 0 : (root.stageAlive && root.stageScreen === win.screen ? 0 : 1)
+                                opacity: !deckSlot.turntable ? 0 : (root.stageCovering && root.stageScreen === win.screen ? 0 : 1)
                                 visible: opacity > 0.01
                                 scale: deckSlot.turntable ? 1 : 0.9
                                 Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }

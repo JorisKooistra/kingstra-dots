@@ -5,6 +5,15 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- Organic oogt weer als hout in plaats van futuristisch. De kleuren blijven uit het thema, maar zonder gloed: crèmekleurige knoppen, geborsteld metalen arm en draaischijfrand, een donkere houten rand en duidelijkere nerf.
+- Arm en knoppen hebben meer diepte: de buis is belicht als een cilinder, het contragewicht en de armvoet hebben licht en schaduw, en de knoppen hebben een zijkant en een slagschaduw.
+- START en 33/45 staan nu in de hoek langs de onderrand, niet meer op de draaischijf. Op 45 toeren gaat de lp eraf en komt er een single van 7 inch op, met een groot gat en de adapter op de as.
+- De schuif rechts regelt nu het systeemvolume (slepen of scrollen).
+- Het display op de schermvullende speler toont ook de artiest.
+- Fix: de grote speler knipperde en schokte bij het openen. De animatie start pas als het venster op het scherm staat, en de kleine speler verdwijnt pas als de grote erover ligt.
+- Fix: de spoelbalk sprong bij loslaten eerst terug naar de oude plek.
+- Fix: de rand tussen bovenkant en voorkant sluit nu recht aan, zonder verspringing.
+- Fix: de glans op de plaat draaide mee; het licht staat nu stil en de plaat draait eronder door.
 - Fix: na een plaatwissel of spoelen sprong de naald soms meteen terug op de plaat. De arm zwenkt nu altijd zichtbaar terug.
 - Fix: bij een volgend album verscheen soms eerst de nieuwe hoes op de oude plaat. De hoes wacht nu even, zodat de oude plaat eraf gaat en de nieuwe erop komt.
 - Fix: de kleuren volgen nu het Matugen-thema. Hout (organic) en neon houden hun vormen, nerf en lichtlijnen, maar messing, walnoot en zwart zijn vervangen door accent- en oppervlaktekleuren uit het palet.

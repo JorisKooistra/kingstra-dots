@@ -43,20 +43,29 @@ Item {
     property string finish: ""
     // Stroboscoopstippen op de rand; hout en neon hebben ze altijd.
     property bool strobe: false
+    // Gekleurde gloed achter de plaat tijdens afspelen.
+    property bool halo: true
+    // 45 toeren: een single van 7 inch in plaats van een lp van 12 inch.
+    // Wisselen gaat als een plaatwissel (oude eraf, nieuwe erop).
+    property bool single: false
+    property bool shownSingle: false
+    readonly property real discScale: shownSingle ? 0.6 : 1
     readonly property string look: finish !== "" ? finish
         : woodDeck ? "wood" : paperDeck ? "paper" : compactDisc ? "neon" : ""
     readonly property color brass: accent
-    readonly property color armTubeColor: look === "wood" ? brass
+    // Hout: geborsteld metaal met een zweem van het accent, geen gloed.
+    readonly property color metal: Qt.tint(mocha.subtext1, Qt.rgba(accent.r, accent.g, accent.b, 0.22))
+    readonly property color armTubeColor: look === "wood" ? metal
         : look === "neon" ? accent : look === "paper" ? mocha.text : mocha.overlay2
     // Armvoet: buitenring, binnenring en accent (lagerkap).
     readonly property color baseOuter: look === "wood" ? mocha.mantle : look === "neon" ? mocha.crust
         : look === "paper" ? mocha.base : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.96)
     readonly property color baseInner: look === "wood" ? mocha.surface1 : look === "neon" ? Qt.tint(mocha.mantle, Qt.rgba(accent.r, accent.g, accent.b, 0.08))
         : look === "paper" ? mocha.base : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.92)
-    readonly property color baseAccent: look === "wood" ? brass : look === "paper" ? mocha.text : accent
-    readonly property color armShellColor: look === "wood" ? mocha.crust
+    readonly property color baseAccent: look === "wood" ? metal : look === "paper" ? mocha.text : accent
+    readonly property color armShellColor: look === "wood" ? mocha.surface0
         : look === "neon" ? mocha.crust : mocha.base
-    readonly property color platterRim: look === "wood" ? brass
+    readonly property color platterRim: look === "wood" ? Qt.darker(metal, 1.25)
         : look === "neon" ? accent : look === "paper" ? mocha.text
         : (playing ? accent : mocha.overlay0)
     readonly property color matColor: look === "wood" ? mocha.crust
@@ -98,8 +107,9 @@ Item {
     readonly property real armStart: solveArmAngle(discRadius * 0.93)
     readonly property real armSpan: Math.max(8, solveArmAngle(labelRadius * 1.12) - armStart)
     readonly property real armRest: armStart - 14
-    readonly property real discRadius: (width * 0.85 - 2 * width * 0.06) / 2
-    readonly property real labelRadius: discRadius * (compactDisc ? 0.24 : 0.38)
+    readonly property real discRadius: (width * 0.85 - 2 * width * 0.06) / 2 * discScale
+    readonly property real labelFrac: compactDisc ? 0.24 : shownSingle ? 0.5 : 0.38
+    readonly property real labelRadius: discRadius * labelFrac
     function solveArmAngle(r) {
         let u = width / 220;
         // Naald t.o.v. het draaipunt bij hoek 0 (headshell 28° gedraaid).
@@ -158,6 +168,7 @@ Item {
     property real armLift: 0
     property real cueTarget: 0
     readonly property bool busy: cueAnim.running || swapAnim.running
+    readonly property bool cueing: cueAnim.running
 
     function holdArm() {
         if (armHeld) return;
@@ -233,7 +244,7 @@ Item {
     property real discShift: 0
     // 0..1: plaat van de draaitafel getild (groter, diepere schaduw).
     property real discLift: 0
-    Component.onCompleted: { shownKey = trackKey; shownArt = artUrl; }
+    Component.onCompleted: { shownKey = trackKey; shownArt = artUrl; shownSingle = single; }
     onTrackKeyChanged: maybeSwap()
     // Spelers sturen de nieuwe hoes vaak net vóór het nieuwe album. Even
     // wachten, zodat een wissel de oude plaat afhaalt in plaats van eerst de
@@ -247,11 +258,17 @@ Item {
         interval: 600
         onTriggered: if (!swapAnim.running && deck.trackKey === deck.shownKey) deck.shownArt = deck.artUrl
     }
+    onSingleChanged: maybeSwap()
     function maybeSwap() {
-        if (trackKey === shownKey || swapAnim.running) return;
-        if (shownKey === "" || trackKey === "" || vinyl < 0.5 || !visible) {
+        if ((trackKey === shownKey && single === shownSingle) || swapAnim.running) return;
+        if (single !== shownSingle && trackKey === shownKey && (vinyl < 0.5 || !visible)) {
+            shownSingle = single;
+            return;
+        }
+        if (trackKey !== shownKey && (shownKey === "" || trackKey === "" || vinyl < 0.5 || !visible)) {
             shownKey = trackKey;
             shownArt = artUrl;
+            shownSingle = single;
             return;
         }
         cueAnim.stop();
@@ -271,6 +288,7 @@ Item {
             script: {
                 deck.shownKey = deck.trackKey;
                 deck.shownArt = deck.artUrl;
+                deck.shownSingle = deck.single;
                 deck.discAngle = Math.random() * 360;
                 deck.discShift = -1;
             }
@@ -322,6 +340,7 @@ Item {
         height: width
         radius: deck.vinyl > 0.5 ? width / 2 : deck.coverRadius + 6
         color: deck.accent
+        visible: deck.halo
         opacity: deck.playing ? 0.30 : 0.0
         Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("normal") } }
         layer.enabled: true
@@ -478,6 +497,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             anchors.margins: deck.width * 0.06
+            scale: deck.discScale
             radius: width / 2
             color: Qt.rgba(0, 0, 0, 0.30 * deck.discLift * (1 - Math.abs(deck.discShift)))
             visible: deck.discLift > 0.01
@@ -493,7 +513,7 @@ Item {
             id: discCarrier
             anchors.fill: parent
             anchors.margins: deck.width * 0.06
-            scale: 1 + 0.05 * deck.discLift
+            scale: (1 + 0.05 * deck.discLift) * deck.discScale
             opacity: 1 - Math.min(1, Math.abs(deck.discShift) * 1.15)
             transform: Translate { x: deck.discShift * deck.width * 0.9 }
 
@@ -532,7 +552,7 @@ Item {
             // Label met de hoes.
             Rectangle {
                 anchors.centerIn: parent
-                width: parent.width * (deck.compactDisc ? 0.24 : 0.38)
+                width: parent.width * deck.labelFrac
                 height: width
                 radius: width / 2
                 color: Qt.rgba(deck.accent.r, deck.accent.g, deck.accent.b, 0.42)
@@ -563,18 +583,23 @@ Item {
                     font.weight: Font.Bold
                     color: deck.mocha.text
                 }
+                // Gat in het midden; bij een single groot, met de adapter erin.
                 Rectangle {
                     anchors.centerIn: parent
-                    width: Math.max(5, parent.width * 0.20)
+                    width: Math.max(5, parent.width * (deck.shownSingle ? 0.3 : 0.20))
                     height: width
                     radius: width / 2
-                    color: Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, 0.96)
+                    color: deck.shownSingle ? deck.metal : Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, 0.96)
                     border.width: 1
                     border.color: Qt.rgba(deck.mocha.text.r, deck.mocha.text.g, deck.mocha.text.b, 0.22)
                 }
             }
 
-            // Zachte glans op de lak.
+            rotation: deck.discAngle
+        }
+
+            // Zachte glans op de lak. Buiten de draaiende plaat: het licht
+            // staat stil, de plaat draait eronder door.
             Rectangle {
                 width: parent.width * 0.16
                 height: parent.height * 0.72
@@ -589,9 +614,20 @@ Item {
                     GradientStop { position: 1.0; color: "transparent" }
                 }
             }
-
-            rotation: deck.discAngle
-        }
+            Rectangle {
+                width: parent.width * 0.10
+                height: parent.height * 0.5
+                radius: width / 2
+                x: parent.width * 0.68
+                y: parent.height * 0.42
+                rotation: -28
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: "transparent" }
+                    GradientStop { position: 0.5; color: Qt.rgba(deck.mocha.text.r, deck.mocha.text.g, deck.mocha.text.b, 0.06) }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
+            }
         }
 
 
@@ -620,6 +656,12 @@ Item {
                 x: tonearm.pivotX - width / 2
                 y: tonearm.pivotY - height / 2
                 color: deck.baseOuter
+                // Licht van linksboven, zodat de voet boven de plint uitsteekt.
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: deck.look === "paper" ? deck.baseOuter : Qt.lighter(deck.baseOuter, 1.6) }
+                    GradientStop { position: 0.5; color: deck.baseOuter }
+                    GradientStop { position: 1.0; color: deck.look === "paper" ? deck.baseOuter : Qt.darker(deck.baseOuter, 1.5) }
+                }
                 border.width: deck.look === "paper" ? 1.5 : 1
                 border.color: deck.look === "" ? Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.68) : deck.baseAccent
                 Rectangle {
@@ -628,6 +670,10 @@ Item {
                     height: width
                     radius: width / 2
                     color: deck.baseInner
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: deck.look === "paper" ? deck.baseInner : Qt.darker(deck.baseInner, 1.3) }
+                        GradientStop { position: 1.0; color: deck.look === "paper" ? deck.baseInner : Qt.lighter(deck.baseInner, 1.3) }
+                    }
                     border.width: 1
                     border.color: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.4)
                 }
@@ -682,7 +728,7 @@ Item {
                     readonly property color tube: deck.armTubeColor
                     readonly property color shine: deck.mocha.text
                     readonly property color shell: deck.armShellColor
-                    readonly property color edge: deck.look === "wood" ? deck.brass
+                    readonly property color edge: deck.look === "wood" ? deck.metal
                         : deck.look === "neon" ? deck.accent : deck.mocha.overlay1
                     readonly property bool glow: deck.look === "neon"
                     readonly property color tip: deck.accent
@@ -742,43 +788,76 @@ Item {
                         ctx.lineCap = "round";
                         ctx.lineJoin = "round";
 
-                        // Schaduw: verder weg naarmate de arm hoger is.
-                        let off = (1.5 + 5 * lift) * u;
+                        // Schaduw: zachter en verder weg naarmate de arm hoger is.
+                        let off = (2 + 7 * lift) * u;
                         ctx.save();
                         ctx.translate(off, off * 1.3);
-                        ctx.globalAlpha = 0.20 + 0.10 * (1 - lift);
+                        ctx.shadowColor = "black";
+                        ctx.shadowBlur = (2 + 6 * lift) * u;
+                        ctx.globalAlpha = 0.28 - 0.10 * lift;
                         tubePath(ctx, u, cx, hub, end);
-                        ctx.lineWidth = tw;
+                        ctx.lineWidth = tw * 1.1;
                         ctx.strokeStyle = "black";
                         ctx.stroke();
                         headshell(ctx, u, end, "black", null);
                         ctx.restore();
 
-                        // Contragewicht achter het draaipunt.
-                        ctx.fillStyle = Qt.rgba(edge.r, edge.g, edge.b, 1);
+                        // Contragewicht achter het draaipunt: een cilinder met
+                        // licht van linksboven en twee groeven.
+                        let cwx = cx - 5.5 * u * bs, cwy = hub - (4 + 8 * bs) * u;
+                        let cww = 11 * u * bs, cwh = 8 * u * bs;
+                        let cwg = ctx.createLinearGradient(cwx, 0, cwx + cww, 0);
+                        cwg.addColorStop(0.0, Qt.darker(edge, 1.5));
+                        cwg.addColorStop(0.3, Qt.lighter(edge, 1.25));
+                        cwg.addColorStop(0.55, edge);
+                        cwg.addColorStop(1.0, Qt.darker(edge, 1.9));
+                        ctx.fillStyle = cwg;
                         ctx.beginPath();
-                        ctx.roundedRect(cx - 5.5 * u * bs, hub - (4 + 8 * bs) * u, 11 * u * bs, 8 * u * bs, 2.5 * u * bs, 2.5 * u * bs);
+                        ctx.roundedRect(cwx, cwy, cww, cwh, 2.5 * u * bs, 2.5 * u * bs);
                         ctx.fill();
+                        ctx.lineWidth = Math.max(0.6, 0.5 * u);
+                        ctx.strokeStyle = Qt.rgba(0, 0, 0, 0.35);
+                        for (let g = 1; g <= 2; g++) {
+                            ctx.beginPath();
+                            ctx.moveTo(cwx + 1, cwy + cwh * g / 3);
+                            ctx.lineTo(cwx + cww - 1, cwy + cwh * g / 3);
+                            ctx.stroke();
+                        }
 
-                        // Buis met een smalle glans erover; neon gloeit.
+                        // Buis als cilinder: donkere rand, de buis zelf, een
+                        // heldere glans links en een zachte terugkaatsing rechts.
                         if (glow) {
                             ctx.save();
                             ctx.shadowColor = Qt.rgba(tube.r, tube.g, tube.b, 0.9);
                             ctx.shadowBlur = 10 * u;
+                        } else {
+                            tubePath(ctx, u, cx, hub, end);
+                            ctx.lineWidth = tw * 1.35;
+                            ctx.strokeStyle = Qt.darker(tube, 2.2);
+                            ctx.stroke();
                         }
                         tubePath(ctx, u, cx, hub, end);
                         ctx.lineWidth = glow ? Math.max(1.2, tw * 0.7) : tw;
                         ctx.strokeStyle = tube;
                         ctx.stroke();
                         if (glow) ctx.restore();
-                        tubePath(ctx, u, cx - tw * 0.18, hub, { x: end.x - tw * 0.18, y: end.y });
-                        ctx.lineWidth = Math.max(0.6, tw * 0.28);
-                        ctx.strokeStyle = Qt.rgba(shine.r, shine.g, shine.b, 0.35);
+                        if (!glow) {
+                            tubePath(ctx, u, cx + tw * 0.22, hub, { x: end.x + tw * 0.22, y: end.y });
+                            ctx.lineWidth = Math.max(0.6, tw * 0.3);
+                            ctx.strokeStyle = Qt.rgba(0, 0, 0, 0.22);
+                            ctx.stroke();
+                        }
+                        tubePath(ctx, u, cx - tw * 0.2, hub, { x: end.x - tw * 0.2, y: end.y });
+                        ctx.lineWidth = Math.max(0.6, tw * 0.26);
+                        ctx.strokeStyle = Qt.rgba(shine.r, shine.g, shine.b, glow ? 0.35 : 0.7);
                         ctx.stroke();
 
-                        // Headshell met vingerlift en naald.
-                        headshell(ctx, u, end, Qt.rgba(shell.r, shell.g, shell.b, 0.96),
-                                  Qt.rgba(edge.r, edge.g, edge.b, 0.9));
+                        // Headshell met vingerlift en naald; licht van linksboven.
+                        let hg = ctx.createLinearGradient(end.x - 6 * u, end.y - 2 * u, end.x + 8 * u, end.y + 14 * u);
+                        hg.addColorStop(0.0, Qt.lighter(shell, 1.9));
+                        hg.addColorStop(0.45, shell);
+                        hg.addColorStop(1.0, Qt.darker(shell, 1.6));
+                        headshell(ctx, u, end, hg, Qt.rgba(edge.r, edge.g, edge.b, 0.9));
                         ctx.save();
                         ctx.translate(end.x, end.y);
                         ctx.rotate(28 * Math.PI / 180);

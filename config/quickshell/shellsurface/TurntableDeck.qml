@@ -19,10 +19,15 @@ Item {
     property real progress: 0
     // Kleine uitvoering: geen merk- en pitchtekst, geen 33/45.
     property bool compact: false
+    // Onderrand recht, zodat hij naadloos op de voorkant van VinylStage past.
+    property bool squareBottom: false
     property alias vinyl: vinyl
+    // Volume 0..1 voor de schuif rechts; onder 0 is er geen volume bekend.
+    property real volume: -1
 
     signal togglePlay()
     signal seek(real fraction)
+    signal volumeRequested(real value)
 
     // Uitvoering per thema: Organic walnoot met messing, Neon zwart glas met
     // lichtlijnen, Paper inkt op papier, de rest geborsteld en neutraal.
@@ -34,17 +39,25 @@ Item {
         let m = mocha, a = accent;
         let ink = m.text;
         // Hout en neon houden hun vormen; de kleuren komen uit het thema.
-        if (look === "wood") return {
-            plinthA: Qt.tint(m.surface1, Qt.rgba(a.r, a.g, a.b, 0.12)), plinthB: Qt.darker(m.surface0, 1.15),
-            border: Qt.rgba(a.r, a.g, a.b, 0.5), borderW: 2, radius: 18,
-            frontA: Qt.darker(m.surface0, 1.3), frontB: m.crust, frontEdge: a,
-            capA: Qt.lighter(m.surface2, 1.2), capB: m.surface2, capHover: Qt.lighter(m.surface2, 1.45),
-            capSide: m.crust, capText: m.text, capBorder: Qt.rgba(a.r, a.g, a.b, 0.4), lit: a,
-            dispBg: m.crust, dispText: a, dispBorder: Qt.rgba(a.r, a.g, a.b, 0.35),
-            brand: "KINGSTRA · ORGANIC", brandColor: Qt.rgba(m.text.r, m.text.g, m.text.b, 0.6),
-            screw: a, track: Qt.rgba(a.r, a.g, a.b, 0.16), fill: a,
-            needle: a, hint: m.subtext0
-        };
+        // Hout: warm en ambachtelijk. Themakleuren, maar geen gloed:
+        // crèmekleurige knoppen, geborsteld metaal, een donkere rand.
+        if (look === "wood") {
+            let wood = Qt.tint(m.surface1, Qt.rgba(a.r, a.g, a.b, 0.14));
+            let cream = Qt.tint(m.text, Qt.rgba(a.r, a.g, a.b, 0.14));
+            let metal = Qt.tint(m.subtext1, Qt.rgba(a.r, a.g, a.b, 0.22));
+            return {
+                plinthA: Qt.lighter(wood, 1.08), plinthB: Qt.darker(wood, 1.35),
+                border: Qt.darker(wood, 2.2), borderW: 3, radius: 14,
+                frontA: Qt.darker(wood, 1.5), frontB: Qt.darker(wood, 2.3), frontEdge: Qt.darker(wood, 2.6),
+                capA: cream, capB: Qt.darker(cream, 1.12), capHover: Qt.lighter(cream, 1.08),
+                capSide: Qt.darker(cream, 1.8), capText: m.crust, capBorder: Qt.darker(cream, 1.4), lit: a,
+                capShine: 0.5,
+                dispBg: m.crust, dispText: a, dispBorder: Qt.darker(wood, 2.2),
+                brand: "KINGSTRA · ORGANIC", brandColor: Qt.rgba(cream.r, cream.g, cream.b, 0.55),
+                screw: metal, metal: metal, track: Qt.rgba(0, 0, 0, 0.35), fill: a,
+                needle: metal, hint: m.subtext0
+            };
+        }
         if (look === "neon") return {
             plinthA: Qt.tint(m.mantle, Qt.rgba(a.r, a.g, a.b, 0.08)), plinthB: m.crust, border: a, borderW: 1.5, radius: 6,
             frontA: Qt.tint(m.crust, Qt.rgba(a.r, a.g, a.b, 0.05)), frontB: m.crust, frontEdge: a,
@@ -60,7 +73,7 @@ Item {
             plinthA: m.base, plinthB: m.base, border: ink, borderW: 2, radius: 8,
             frontA: Qt.darker(m.base, 1.04), frontB: Qt.darker(m.base, 1.08), frontEdge: ink,
             capA: m.base, capB: m.base, capHover: Qt.tint(m.base, Qt.rgba(a.r, a.g, a.b, 0.15)), capSide: ink,
-            capText: ink, capBorder: ink, lit: a,
+            capText: ink, capBorder: ink, lit: a, capShine: 0,
             dispBg: ink, dispText: m.base, dispBorder: ink,
             brand: "kingstra — platenspeler", brandColor: Qt.rgba(ink.r, ink.g, ink.b, 0.7),
             screw: ink, track: Qt.rgba(ink.r, ink.g, ink.b, 0.15), fill: ink,
@@ -83,7 +96,7 @@ Item {
     }
 
     property int rpm: 33
-    // Pitch in procent, -8..8 zoals op een echte draaitafel.
+    // Pitch in procent; de schuif is nu volume, dit blijft 0.
     property real pitch: 0
 
     Rectangle {
@@ -97,7 +110,36 @@ Item {
             GradientStop { position: 1.0; color: table.skin.plinthB }
         }
 
-        // Walnoot: getekende nerf met een paar noesten, steeds dezelfde.
+        // Rechte onderhoeken voor de schermvullende speler.
+        Rectangle {
+            visible: table.squareBottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: plinth.radius + plinth.border.width
+            color: table.skin.plinthB
+            border.width: plinth.border.width
+            border.color: plinth.border.color
+            Rectangle {
+                x: plinth.border.width
+                y: -1
+                width: parent.width - 2 * plinth.border.width
+                height: plinth.border.width + 1
+                color: table.skin.plinthB
+            }
+        }
+        // Hout: lichte bovenrand en donkere onderrand geven de plint dikte.
+        Rectangle {
+            visible: table.look === "wood"
+            anchors.fill: parent
+            anchors.margins: plinth.border.width
+            radius: Math.max(0, plinth.radius - plinth.border.width)
+            color: "transparent"
+            border.width: 2
+            border.color: Qt.rgba(1, 1, 1, 0.07)
+        }
+
+        // Nerf met een paar noesten, steeds dezelfde.
         Canvas {
             id: grain
             anchors.fill: parent
@@ -130,7 +172,7 @@ Item {
                     }
                     let isDark = rnd() < 0.7;
                     let c = isDark ? grain.dark : grain.light;
-                    ctx.strokeStyle = Qt.rgba(c.r, c.g, c.b, isDark ? 0.14 + rnd() * 0.18 : 0.04 + rnd() * 0.06);
+                    ctx.strokeStyle = Qt.rgba(c.r, c.g, c.b, isDark ? 0.18 + rnd() * 0.22 : 0.05 + rnd() * 0.08);
                     ctx.lineWidth = 0.6 + rnd() * 1.8;
                     ctx.stroke();
                 }
@@ -227,6 +269,8 @@ Item {
         playerStyle: "vinyl"
         finish: table.look === "mono" ? "" : table.look
         strobe: true
+        halo: table.look === "neon" || table.look === "mono"
+        single: table.rpm === 45
         armPivot: Qt.point(table.width * 0.835 - x, table.height * 0.2 - y)
         armReach: 2.05
         armBase: 1.9
@@ -240,14 +284,16 @@ Item {
         onSeekRequested: fraction => table.seek(fraction)
     }
 
-    // 45-toerenadapter linksboven.
+    // 45-toerenadapter linksboven; ligt op de as zolang er een single speelt.
     Rectangle {
         x: table.width * 0.035
         y: table.height * 0.06
         width: table.height * 0.1
         height: width
         radius: width / 2
-        color: table.look === "wood" ? table.accent : table.look === "neon" ? table.mocha.crust : table.mocha.overlay1
+        opacity: vinyl.shownSingle ? 0 : 1
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("normal") } }
+        color: table.look === "wood" ? table.skin.metal : table.look === "neon" ? table.mocha.crust : table.mocha.overlay1
         border.width: table.look === "neon" || table.look === "paper" ? 1.5 : 1
         border.color: table.look === "neon" ? table.accent : table.look === "paper" ? table.mocha.text : Qt.rgba(0, 0, 0, 0.3)
         Rectangle {
@@ -290,7 +336,7 @@ Item {
             radius: width / 2
             color: table.look === "paper" ? table.mocha.base : table.mocha.crust
             border.width: table.look === "paper" ? 1.5 : 2
-            border.color: table.look === "wood" ? table.accent : table.look === "paper" ? table.mocha.text : table.mocha.overlay1
+            border.color: table.look === "wood" ? table.skin.metal : table.look === "paper" ? table.mocha.text : table.mocha.overlay1
             Rectangle {
                 anchors.centerIn: parent
                 width: parent.width * 0.45
@@ -308,7 +354,7 @@ Item {
         accent: table.accent
         skin: table.skin
         x: table.width * 0.03
-        y: table.height * 0.82
+        y: table.height * 0.835
         label: "START"
         lit: table.playing
         keyWidth: table.height * 0.15
@@ -317,8 +363,9 @@ Item {
     }
     Row {
         visible: !table.compact
+        // Langs de onderrand, onder de draaischijf door.
         x: table.width * 0.03 + table.height * 0.17
-        y: table.height * 0.82 + table.height * 0.11 - table.height * 0.045
+        y: table.height * 0.925
         spacing: table.height * 0.015
         Repeater {
             model: [33, 45]
@@ -357,9 +404,14 @@ Item {
         }
     }
 
-    // Pitch-schuif rechtsonder: verstelt het toerental een paar procent.
+    // Schuif rechtsonder, op de plek van de pitch: het volume. Omhoog is
+    // harder; tijdens slepen volgt de kap de muis, daarna het systeem.
     Item {
         id: pitchFader
+        visible: table.volume >= 0
+        property bool dragging: false
+        property real dragValue: 0
+        readonly property real shown: dragging ? dragValue : Math.max(0, Math.min(1, table.volume))
         x: table.width * 0.915
         y: table.height * 0.58
         width: table.height * 0.06
@@ -391,8 +443,8 @@ Item {
             width: parent.width * 1.1
             height: parent.width * 0.55
             radius: table.look === "neon" ? 2 : 4
-            y: (table.pitch + 8) / 16 * (pitchFader.height - height)
-            color: table.look === "wood" ? table.accent : table.skin.capA
+            y: (1 - pitchFader.shown) * (pitchFader.height - height)
+            color: table.skin.capA
             border.width: 1
             border.color: table.skin.capBorder
             Rectangle {
@@ -409,12 +461,14 @@ Item {
             preventStealing: true
             function setAt(my) {
                 let f = Math.max(0, Math.min(1, (my - 8 - faderCap.height / 2) / (pitchFader.height - faderCap.height)));
-                let v = f * 16 - 8;
-                table.pitch = Math.abs(v) < 0.6 ? 0 : Math.round(v * 10) / 10;
+                pitchFader.dragValue = Math.round((1 - f) * 100) / 100;
+                table.volumeRequested(pitchFader.dragValue);
             }
-            onPressed: mouse => setAt(mouse.y)
+            onPressed: mouse => { pitchFader.dragging = true; setAt(mouse.y); }
             onPositionChanged: mouse => { if (pressed) setAt(mouse.y); }
-            onDoubleClicked: table.pitch = 0
+            onReleased: pitchFader.dragging = false
+            onCanceled: pitchFader.dragging = false
+            onWheel: wheel => table.volumeRequested(Math.max(0, Math.min(1, table.volume + (wheel.angleDelta.y > 0 ? 0.05 : -0.05))))
         }
     }
 
@@ -430,10 +484,10 @@ Item {
         color: table.skin.brandColor
     }
     Text {
-        visible: !table.compact
+        visible: !table.compact && pitchFader.visible
         anchors.horizontalCenter: pitchFader.horizontalCenter
         y: pitchFader.y - height - table.height * 0.02
-        text: (table.pitch > 0 ? "+" : "") + table.pitch.toFixed(1) + "%"
+        text: "VOL " + Math.round(pitchFader.shown * 100)
         font.family: ThemeConfig.monoFont
         font.pixelSize: Math.max(8, table.width * 0.014)
         color: table.skin.brandColor

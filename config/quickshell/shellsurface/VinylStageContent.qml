@@ -28,6 +28,8 @@ FocusScope {
     property real progress: 0
     // In seconden, alleen voor het display.
     property real length: 0
+    // 0..1, of -1 als het onbekend is; de schuif rechts op de speler.
+    property real volume: -1
 
     // 0 = dicht, 1 = open; het venster animeert dit.
     property real reveal: 1
@@ -42,6 +44,7 @@ FocusScope {
     signal previous()
     signal next()
     signal seek(real fraction)
+    signal volumeRequested(real value)
     signal closeRequested()
 
     // Uitvoering per thema: Organic walnoot met messing, Neon zwart glas met
@@ -223,8 +226,11 @@ FocusScope {
                 tracking: stage.tracking
                 progress: stage.progress
                 canSeek: stage.canSeek
+                volume: stage.volume
+                squareBottom: true
                 onTogglePlay: stage.togglePlay()
                 onSeek: fraction => stage.seek(fraction)
+                onVolumeRequested: value => stage.volumeRequested(value)
             }
         }
 
@@ -292,7 +298,7 @@ FocusScope {
                 // Display met titel en tijd.
                 Rectangle {
                     Layout.fillHeight: true
-                    Layout.preferredWidth: stage.rigWidth * 0.27
+                    Layout.preferredWidth: stage.rigWidth * 0.34
                     radius: stage.look === "neon" ? 3 : 8
                     color: stage.skin.dispBg
                     border.width: 1
@@ -313,16 +319,32 @@ FocusScope {
                             font.weight: Font.Bold
                             color: stage.skin.dispText
                         }
-                        Text {
+                        Item {
                             width: parent.width
-                            text: stage.tracking
-                                ? stage.clock(vinyl.shownProgress * stage.length) + " / " + stage.clock(stage.length)
-                                : (stage.artist !== "" ? stage.artist : "--:--")
-                            elide: Text.ElideRight
-                            font.family: ThemeConfig.monoFont
-                            font.pixelSize: Math.max(9, stage.frontHeight * 0.16)
-                            color: stage.skin.dispText
-                            opacity: 0.72
+                            height: artistText.implicitHeight
+                            Text {
+                                id: artistText
+                                anchors.left: parent.left
+                                anchors.right: timeText.left
+                                anchors.rightMargin: 8
+                                text: stage.artist
+                                elide: Text.ElideRight
+                                font.family: ThemeConfig.monoFont
+                                font.pixelSize: Math.max(9, stage.frontHeight * 0.15)
+                                color: stage.skin.dispText
+                                opacity: 0.8
+                            }
+                            Text {
+                                id: timeText
+                                anchors.right: parent.right
+                                text: stage.tracking
+                                    ? stage.clock(scrub.shown * stage.length) + " / " + stage.clock(stage.length)
+                                    : "--:--"
+                                font.family: ThemeConfig.monoFont
+                                font.pixelSize: Math.max(9, stage.frontHeight * 0.15)
+                                color: stage.skin.dispText
+                                opacity: 0.6
+                            }
                         }
                     }
                 }
@@ -337,7 +359,10 @@ FocusScope {
                     opacity: enabled ? 1 : 0.4
                     property bool dragging: false
                     property real dragFraction: 0
-                    readonly property real shown: dragging ? dragFraction : vinyl.shownProgress
+                    // Na loslaten blijft de balk op het doel staan terwijl de
+                    // arm er nog heen zwenkt, in plaats van even terug te springen.
+                    readonly property real shown: dragging ? dragFraction
+                        : vinyl.cueing ? vinyl.cueTarget : vinyl.shownProgress
 
                     Rectangle {
                         id: scrubTrack
@@ -403,8 +428,8 @@ FocusScope {
                             vinyl.previewCue(scrub.dragFraction);
                         }
                         onReleased: mouse => {
-                            scrub.dragging = false;
                             vinyl.cueTo(fractionAt(mouse.x));
+                            scrub.dragging = false;
                         }
                         onCanceled: { scrub.dragging = false; vinyl.cancelCue(); }
                     }

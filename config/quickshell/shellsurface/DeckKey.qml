@@ -14,24 +14,39 @@ Item {
     property real keyWidth: 40
     property real keyHeight: 26
     signal activated()
+    // Hoogte van de zijkant: de kap staat zichtbaar boven de kast.
+    readonly property real depth: Math.max(2, Math.round(keyHeight * 0.16))
+    readonly property real capRadius: Math.min(keyHeight / 2, skin.radius < 10 ? 4 : 10)
     implicitWidth: keyWidth
-    implicitHeight: keyHeight + 3
+    implicitHeight: keyHeight + depth
     opacity: enabled ? 1 : 0.4
 
-    // Zijkant van de knop; de kap schuift erover bij indrukken.
+    // Schaduw op de kast.
     Rectangle {
-        y: 3
+        x: 1
+        y: key.depth + 1
         width: parent.width
         height: key.keyHeight
-        radius: Math.min(height / 2, key.skin.radius < 10 ? 4 : 10)
-        color: key.skin.capSide
+        radius: key.capRadius
+        color: Qt.rgba(0, 0, 0, 0.35)
+    }
+    // Zijkant van de knop; de kap schuift erover bij indrukken.
+    Rectangle {
+        y: key.depth
+        width: parent.width
+        height: key.keyHeight
+        radius: key.capRadius
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: key.skin.capSide }
+            GradientStop { position: 1.0; color: Qt.darker(key.skin.capSide, 1.4) }
+        }
     }
     Rectangle {
         id: cap
-        y: keyMouse.pressed ? 2.5 : 0
+        y: keyMouse.pressed ? key.depth * 0.8 : 0
         width: parent.width
         height: key.keyHeight
-        radius: Math.min(height / 2, key.skin.radius < 10 ? 4 : 10)
+        radius: key.capRadius
         Behavior on y { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutCubic } }
         gradient: Gradient {
             GradientStop { position: 0.0; color: keyMouse.containsMouse ? key.skin.capHover : key.skin.capA }
@@ -42,6 +57,15 @@ Item {
             ? key.skin.lit
             : key.skin.capBorder
         Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
+
+        // Glanslijn langs de bovenrand.
+        Rectangle {
+            x: key.capRadius * 0.6
+            y: 1
+            width: parent.width - key.capRadius * 1.2
+            height: 1
+            color: Qt.rgba(1, 1, 1, key.skin.capShine !== undefined ? key.skin.capShine : 0.18)
+        }
 
         Text {
             anchors.centerIn: parent
