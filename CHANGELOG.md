@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- Afspeelknop heeft één play/pauze-icoon en blijft ingedrukt staan zolang er muziek speelt, zoals op een echte draaitafel. START en de gekozen 33/45-knop vergrendelen op dezelfde manier.
 - Tweede kleur is nu accent 2 uit de wallpaper (Matugens secondary lag vaak gelijk aan primary); de mat gebruikt de accent-2-container, het hout houdt de secondary-container.
 - Lichter: de stroboscoopring (72 stippen) en de groeven zijn elk één keer getekende canvassen in plaats van tientallen losse rechthoeken; de groeven staan buiten de draaiing (ringen zien er gedraaid hetzelfde uit) en dubbele ringen zijn weg. Zijwanden van knoppen en uitstekende delen hebben hooguit 12 laagjes.
 - De draaitafel gebruikt meer van het thema dan alleen het accent: hout en mat uit de secondary-container, crème knoppen met tertiary-container, metaal met secondary, label en lampje in tertiary, element en 33/45-ledjes in secondary. Op het display zijn titel, artiest en tijd elk een eigen themakleur, en de achtergrond krijgt een zachte gloed uit beide containers.

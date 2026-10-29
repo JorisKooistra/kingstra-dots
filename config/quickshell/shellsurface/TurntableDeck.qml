@@ -450,6 +450,7 @@ Item {
         label: "START"
         lean: -0.85
         lit: table.playing
+        latched: table.playing
         keyWidth: table.height * 0.15
         keyHeight: table.height * 0.11
         onActivated: table.togglePlay()
@@ -472,6 +473,7 @@ Item {
                 ledColor: table.role("litAlt", table.skin.lit)
                 lean: modelData === 33 ? -0.62 : -0.48
                 lit: table.rpm === modelData
+                latched: table.rpm === modelData
                 keyWidth: table.height * 0.085
                 keyHeight: table.height * 0.045
                 onActivated: table.rpm = modelData

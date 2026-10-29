@@ -11,6 +11,9 @@ Item {
     property string label: ""
     property string icon: ""
     property bool lit: false
+    // Vergrendelde knop, zoals start/stop op een echte draaitafel: blijft
+    // half ingedrukt staan zolang hij aan is.
+    property bool latched: false
     // Kleur van ledje, rand en lichtstreep als hij aan staat.
     property color ledColor: skin.lit
     property real keyWidth: 40
@@ -30,7 +33,7 @@ Item {
     readonly property real depth: Math.max(2, Math.round(keyHeight * depthScale))
     readonly property real capRadius: Math.min(keyHeight / 2, skin.radius < 10 ? 4 : 10)
     // 0 = uit, 1 = ingedrukt; de kap zakt dan bijna tot in de voet.
-    property real press: keyMouse.pressed ? 1 : 0
+    property real press: keyMouse.pressed ? 1 : latched ? 0.65 : 0
     Behavior on press { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutCubic } }
     readonly property real reach: 1 - 0.75 * press
     readonly property real dxFull: lean * depth * 0.6

@@ -528,7 +528,9 @@ FocusScope {
                         mocha: stage.mocha
                         accent: stage.accent
                         skin: stage.skin
-                        icon: stage.playing ? "󰏤" : "󰐊"
+                        // Eén icoon; de knop blijft ingedrukt zolang er muziek speelt.
+                        icon: "󰐎"
+                        latched: stage.playing
                         frontFacing: true
                         lean: 0.45
                         lit: stage.playing
