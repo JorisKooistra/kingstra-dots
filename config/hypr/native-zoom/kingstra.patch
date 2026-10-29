@@ -1,17 +1,26 @@
 diff --git a/main.cpp b/main.cpp
-index 54bcf2e..93ffce9 100644
+index 54bcf2e..36421a1 100644
 --- a/main.cpp
 +++ b/main.cpp
-@@ -37,6 +37,8 @@ using namespace Hyprutils::String;
+@@ -2,6 +2,7 @@
+ 
+ #include <unistd.h>
+ #include <sstream>
++#include <dlfcn.h>
+ 
+ #include <hyprland/src/Compositor.hpp>
+ #include <hyprland/src/desktop/state/FocusState.hpp>
+@@ -37,6 +38,9 @@ using namespace Hyprutils::String;
  
  // Methods
  static CFunctionHook* g_pScrollRenderWorkspaceHook = nullptr;
 +static CFunctionHook* g_pKingstraRenderWindowHook = nullptr;
 +static CFunctionHook* g_pKingstraWindowAtHook = nullptr;
++static CFunctionHook* g_pKingstraEndDragHook = nullptr;
  static CFunctionHook* g_pScrollAddDamageHookA      = nullptr;
  static CFunctionHook* g_pScrollAddDamageHookB      = nullptr;
  static CFunctionHook* g_pScrollDamageSurfaceHook   = nullptr;
-@@ -59,6 +61,10 @@ bool canvasTakeClientWindowGesture(const PHLWINDOW& window, std::optional<Layout
+@@ -59,6 +63,10 @@ bool canvasTakeClientWindowGesture(const PHLWINDOW& window, std::optional<Layout
  CBox canvasX11Configure(void* surface, const CBox& box);
  CBox canvasX11Request(void* window, CBox box);
  void canvasReleaseX11Windows();
@@ -22,25 +31,27 @@ index 54bcf2e..93ffce9 100644
  typedef void (*origRenderWorkspace)(void*, PHLMONITOR, PHLWORKSPACE, const Time::steady_tp&, const CBox&);
  typedef void (*origAddDamageA)(void*, const CBox&);
  typedef void (*origAddDamageB)(void*, const pixman_region32_t*);
-@@ -88,6 +94,8 @@ bool ensureScrollOverviewHooks() {
+@@ -88,6 +96,9 @@ bool ensureScrollOverviewHooks() {
          return true;
  
      bool success = g_pScrollRenderWorkspaceHook->hook();
 +    success = success && g_pKingstraRenderWindowHook->hook();
 +    success = success && g_pKingstraWindowAtHook->hook();
++    success = success && g_pKingstraEndDragHook->hook();
      success      = success && g_pScrollScheduleFrameHook->hook();
      success      = success && g_pScrollDamageSurfaceHook->hook();
      success      = success && g_pScrollSendFrameEventsHook->hook();
-@@ -112,6 +120,8 @@ bool ensureScrollOverviewHooks() {
+@@ -112,6 +123,9 @@ bool ensureScrollOverviewHooks() {
  }
  
  void disableScrollOverviewHooks() {
++    if (g_pKingstraEndDragHook) g_pKingstraEndDragHook->unhook();
 +    if (g_pKingstraRenderWindowHook) g_pKingstraRenderWindowHook->unhook();
 +    if (g_pKingstraWindowAtHook) g_pKingstraWindowAtHook->unhook();
      if (g_pX11ConfigureRequestHook)
          g_pX11ConfigureRequestHook->unhook();
      if (g_pX11ConfigureHook)
-@@ -142,6 +152,29 @@ void disableScrollOverviewHooks() {
+@@ -142,6 +156,29 @@ void disableScrollOverviewHooks() {
      g_scrollOverviewHooksActive = false;
  }
  
@@ -70,7 +81,21 @@ index 54bcf2e..93ffce9 100644
  static void hkScheduleFrame(void* thisptr, Aquamarine::IOutput::scheduleFrameReason reason) {
      const auto OVERVIEW = scrollOverviewForMonitor(sc<Monitor::CMonitor*>(thisptr)->m_self.lock());
      if (OVERVIEW) {
-@@ -443,6 +476,9 @@ static bool openOverview(PHLMONITOR monitor) {
+@@ -300,6 +337,13 @@ static void hkElementDrawTex(void* thisptr, WP<CTexPassElement> element, const C
+ // as canvas drags; see CScrollOverview::beginClientWindowGesture. Hyprland
+ // inlines the request handlers, so the drag start is where to catch them.
+ typedef void (*origBeginDragTarget)(void*, SP<Layout::ITarget>, eMouseBindMode, std::optional<Layout::eRectCorner>, bool);
++static void hkKingstraEndDrag(void* thisptr) {
++    const auto overview = scrollOverviewAt(g_pInputManager->getMouseCoordsInternal());
++    const auto canvas = overview ? dynamic_cast<CScrollOverview*>(overview.get()) : nullptr;
++    const auto original = rc<void (*)(void*)>(g_pKingstraEndDragHook->m_original);
++    if (!canvas || !canvas->finishKingstraNativeDrag(thisptr, original)) original(thisptr);
++}
++
+ static void hkBeginDragTarget(void* thisptr, SP<Layout::ITarget> target, eMouseBindMode mode, std::optional<Layout::eRectCorner> edge, bool exclusiveGrab) {
+     if (target && target->window()) {
+         const bool MOVE   = mode == MBIND_MOVE;
+@@ -443,6 +487,9 @@ static bool openOverview(PHLMONITOR monitor) {
      renderingOverview                = true;
      auto overview                    = makeShared<CScrollOverview>(monitor->m_activeWorkspace, false, monitor);
      registerScrollOverview(overview);
@@ -80,13 +105,48 @@ index 54bcf2e..93ffce9 100644
      renderingOverview = PREVRENDERINGOVERVIEW;
      canvasReclaimScreen(monitor);
      return true;
-@@ -825,6 +861,14 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
+@@ -677,6 +724,31 @@ static void failNotif(const std::string& reason) {
+ 
+ // Helper function to find a function by name and ensure it contains one of the requested substrings in its demangled name (to disambiguate overloads).
+ static void* findFnOrThrow(const std::string& name, std::initializer_list<std::string_view> demangledNeedles) {
++    // Resolve the exact exports of our ABI-pinned build in memory. Hyprland's
++    // scanner canonicalizes /proc/self/exe, which throws after a package update
++    // replaces the executable while the compositor keeps running. The API hash
++    // check above still rejects plugins built for a different running version.
++    if (name.starts_with("_Z")) {
++        if (auto address = dlsym(RTLD_DEFAULT, name.c_str())) return address;
++    }
++    static const std::pair<std::string_view, const char*> KINGSTRA_EXPORTS[] = {
++        {"endDragTarget", "_ZN6Layout14CLayoutManager13endDragTargetEv"},
++        {"renderWorkspace", "_ZN6Render13IHyprRenderer15renderWorkspaceEN9Hyprutils6Memory14CSharedPointerIN7Monitor8CMonitorEEENS3_I10CWorkspaceEERKNSt6chrono10time_pointINS9_3_V212steady_clockENS9_8durationIlSt5ratioILl1ELl1000000000EEEEEERKNS1_4Math4CBoxE"},
++        {"damageSurface", "_ZN6Render13IHyprRenderer13damageSurfaceEN9Hyprutils6Memory14CSharedPointerI18CWLSurfaceResourceEEddd"},
++        {"sendFrameEventsToWorkspace", "_ZN6Render13IHyprRenderer26sendFrameEventsToWorkspaceEN9Hyprutils6Memory14CSharedPointerIN7Monitor8CMonitorEEENS3_I10CWorkspaceEERKNSt6chrono10time_pointINS9_3_V212steady_clockENS9_8durationIlSt5ratioILl1ELl1000000000EEEEEE"},
++        {"addDamageEPK15pixman_region32", "_ZN7Monitor8CMonitor9addDamageEPK15pixman_region32"},
++        {"draw", "_ZN6Render2GL18CGLElementRenderer4drawEN9Hyprutils6Memory12CWeakPointerI15CTexPassElementEERKNS2_4Math7CRegionE"},
++        {"drawTex", "_ZN6Render16IElementRenderer7drawTexEN9Hyprutils6Memory12CWeakPointerI15CTexPassElementEERKNS1_4Math7CRegionE"},
++        {"beginDragTarget", "_ZN6Layout14CLayoutManager15beginDragTargetEN9Hyprutils6Memory14CSharedPointerINS_7ITargetEEE14eMouseBindModeSt8optionalINS_11eRectCornerEEb"},
++        {"configure", "_ZN16CXWaylandSurface9configureERKN9Hyprutils4Math4CBoxE"},
++        {"onX11ConfigureRequest", "_ZN7Desktop4View7CWindow21onX11ConfigureRequestEN9Hyprutils4Math4CBoxE"},
++        {"handleClientMessage", "_ZN4CXWM19handleClientMessageEP26xcb_client_message_event_t"},
++        {"reposition", "_ZN7Desktop4View6CPopup10repositionEv"},
++    };
++    for (const auto& [query, symbol] : KINGSTRA_EXPORTS)
++        if (name == query) {
++            if (auto address = dlsym(RTLD_DEFAULT, symbol)) return address;
++        }
+     auto fns = HyprlandAPI::findFunctionsByName(SCROLLOVERVIEW_HANDLE, name);
+     if (fns.empty()) {
+         failNotif(std::format("no fns for hook {}", name));
+@@ -825,6 +897,17 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
          throw std::runtime_error("[he] Version mismatch");
      }
  
 +    g_pKingstraWindowAtHook = HyprlandAPI::createFunctionHook(SCROLLOVERVIEW_HANDLE,
 +        findFnOrThrow("_ZNK7Desktop14CViewHitTester8windowAtERKN9Hyprutils4Math8Vector2DEtNS1_6Memory14CSharedPointerINS_4View7CWindowEEE", {""}),
 +        rc<void*>(hkWindowAt));
++
++    g_pKingstraEndDragHook = HyprlandAPI::createFunctionHook(SCROLLOVERVIEW_HANDLE,
++        findFnOrThrow("endDragTarget", {"CLayoutManager::endDragTarget("}), rc<void*>(hkKingstraEndDrag));
 +
 +    g_pKingstraRenderWindowHook = HyprlandAPI::createFunctionHook(SCROLLOVERVIEW_HANDLE,
 +        findFnOrThrow("_ZN6Render13IHyprRenderer18shouldRenderWindowEN9Hyprutils6Memory14CSharedPointerIN7Desktop4View7CWindowEEENS3_IN7Monitor8CMonitorEEE", {""}),
@@ -96,10 +156,18 @@ index 54bcf2e..93ffce9 100644
          SCROLLOVERVIEW_HANDLE,
          findFnOrThrow("renderWorkspace", {"CHyprRenderer::renderWorkspace(", "IHyprRenderer::renderWorkspace("}),
 diff --git a/scrollOverview.cpp b/scrollOverview.cpp
-index 5c9a055..84d99a2 100644
+index 5c9a055..91c51ab 100644
 --- a/scrollOverview.cpp
 +++ b/scrollOverview.cpp
-@@ -80,6 +80,31 @@
+@@ -38,6 +38,7 @@
+ #include <hyprland/src/managers/SeatManager.hpp>
+ #include <hyprland/src/managers/SessionLockManager.hpp>
+ #include <hyprland/src/layout/LayoutManager.hpp>
++#include <hyprland/src/layout/supplementary/DragController.hpp>
+ #include <hyprland/src/layout/algorithm/Algorithm.hpp>
+ #include <hyprland/src/layout/space/Space.hpp>
+ #include <hyprland/src/layout/target/Target.hpp>
+@@ -80,6 +81,31 @@
  #include "Hud.hpp"
  #include "Icons.hpp"
  #include "Memory.hpp"
@@ -131,7 +199,18 @@ index 5c9a055..84d99a2 100644
  #include "Navigator.hpp"
  #include "Tuning.hpp"
  #include "DropIndicator.hpp"
-@@ -1585,6 +1610,9 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_, PHLMONITO
+@@ -1575,6 +1601,10 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_, PHLMONITO
+         if (closing || (g_pointerGrabOverview && g_pointerGrabOverview != this) || (!g_pointerGrabOverview && INPUTOVERVIEW.get() != this))
+             return;
+ 
++        // A grab begun on a normal output still belongs to Hyprland. Let its
++        // motion and release through; the end-drag hook resolves the zoomed drop.
++        if (isCanvasDesktop() && g_layoutManager->dragController()->target()) return;
++
+         markCanvasCameraActive(pMonitor.lock());
+ 
+         const bool     LEFT_HANDED           = ScrollOverview::Config::getLeftHanded();
+@@ -1585,6 +1615,9 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_, PHLMONITO
          const float    DRAGTHRESHOLDSQ       = std::pow(DRAGTHRESHOLD, 2);
  
          lastMousePosLocal = getOverviewMousePosLocal(pMonitor.lock());
@@ -141,7 +220,16 @@ index 5c9a055..84d99a2 100644
          if (landingDrag) {
              info.cancelled = true;
              updateExperimentDrag();
-@@ -1754,6 +1782,8 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_, PHLMONITO
+@@ -1720,6 +1753,8 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_, PHLMONITO
+             (!g_pointerGrabOverview && INPUTOVERVIEW.get() != this && !FORWARDEDTOPLAYERRELEASE))
+             return;
+ 
++        if (isCanvasDesktop() && g_layoutManager->dragController()->target()) return;
++
+         markCanvasCameraActive(pMonitor.lock());
+ 
+         const bool RELEASESPOINTERGRAB = event.state == WL_POINTER_BUTTON_STATE_RELEASED;
+@@ -1754,6 +1789,8 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_, PHLMONITO
          }
  
          if (isCanvasDesktop()) {
@@ -150,7 +238,7 @@ index 5c9a055..84d99a2 100644
              lastMousePosLocal         = getOverviewMousePosLocal(pMonitor.lock());
              const bool LEFT_HANDED    = ScrollOverview::Config::getLeftHanded();
              const uint32_t MAIN       = LEFT_HANDED ? BTN_RIGHT : BTN_LEFT;
-@@ -2088,6 +2118,8 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_, PHLMONITO
+@@ -2088,6 +2125,8 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_, PHLMONITO
          markCanvasCameraActive(pMonitor.lock());
  
          if (isCanvasDesktop()) {
@@ -159,7 +247,7 @@ index 5c9a055..84d99a2 100644
              info.cancelled = true;
              const auto MODS      = g_pInputManager->getModsFromAllKBs();
              const bool NAVIGATOR = navigatorOwnsPointer();
-@@ -3522,6 +3554,8 @@ void CScrollOverview::refreshCanvasSettings() {
+@@ -3522,6 +3561,8 @@ void CScrollOverview::refreshCanvasSettings() {
  }
  
  CBox CScrollOverview::canvasDesktopWindowBox(const PHLWINDOW& window) const {
@@ -168,7 +256,7 @@ index 5c9a055..84d99a2 100644
      const auto MONITOR = pMonitor.lock();
      if (MONITOR && canvasScreenFixedWindow(window))
          return getOverviewGlobalBox(window->geometricBox(Desktop::View::IGeometric::GEOMETRIC_CURRENT), MONITOR, 1.F, Vector2D{}, Vector2D{}, layout, false);
-@@ -4537,6 +4571,10 @@ void CScrollOverview::ensureCanvasKeyboardFocus(PHLWINDOW window) {
+@@ -4537,6 +4578,10 @@ void CScrollOverview::ensureCanvasKeyboardFocus(PHLWINDOW window) {
  }
  
  bool CScrollOverview::followCanvasWindow(PHLWINDOW window, bool syncFocus, bool animate) {
@@ -179,7 +267,7 @@ index 5c9a055..84d99a2 100644
      if (animate)
          syncAnimationConfig();
      window = getOverviewWindowToShow(window);
-@@ -4581,11 +4619,14 @@ bool CScrollOverview::manageCanvasWindow(PHLWINDOW window, bool placeNew) {
+@@ -4581,11 +4626,14 @@ bool CScrollOverview::manageCanvasWindow(PHLWINDOW window, bool placeNew) {
          return false;
  
      window = getOverviewWindowToShow(window);
@@ -194,7 +282,7 @@ index 5c9a055..84d99a2 100644
      if (!g_canvasNativeLayout.contains(window->m_stableID))
          g_canvasNativeLayout.emplace(window->m_stableID, saveCanvasWindow(window));
  
-@@ -5012,7 +5053,7 @@ void CScrollOverview::forwardCanvasPointerMotion(uint32_t timeMs) {
+@@ -5012,7 +5060,7 @@ void CScrollOverview::forwardCanvasPointerMotion(uint32_t timeMs) {
      g_pSeatManager->sendPointerFrame();
  
      if (ScrollOverview::Config::getCanvasHoverFocus() && !(canvasNavigationActive && SpatialOverview::Navigator::isOpen()) && !hoverFocusSettling &&
@@ -203,20 +291,78 @@ index 5c9a055..84d99a2 100644
          size_t workspaceIdx = viewportCurrentWorkspace;
          for (size_t i = 0; i < images.size(); ++i) {
              if (images[i] && images[i]->pWorkspace == WINDOW->m_workspace) {
-@@ -5995,6 +6036,22 @@ void CScrollOverview::endWindowDrag() {
+@@ -5984,6 +6032,42 @@ bool CScrollOverview::moveScrollingStackSelection(bool next) {
+     return false;
+ }
+ 
++bool CScrollOverview::finishKingstraNativeDrag(void* manager, void (*finish)(void*)) {
++    const auto& DRAG = g_layoutManager->dragController();
++    const auto TARGET = DRAG->target();
++    const auto WINDOW = TARGET ? TARGET->window() : PHLWINDOW{};
++    if (!isCanvasDesktop() || closing || !WINDOW || !startedOn || DRAG->mode() != MBIND_MOVE ||
++        ScrollOverview::Config::getCanvasAutoFloat() || ScrollOverview::Config::getCanvasAutoPlace()) return false;
++    const auto POINT = g_pInputManager->getMouseCoordsInternal();
++    const auto WORLD = canvasScreenToWorld(CBox{POINT, Vector2D{1,1}});
++    if (!WORLD) return false;
++    const bool TILED = DRAG->draggingTiled() || !TARGET->floating();
++    const auto SIZE = TARGET->position().size();
++    const auto OFFSET = POINT - TARGET->position().pos();
++    // Complete the native grab first, including restoring the original float
++    // size for a tiled app. Then assign to the canvas at inverse-scaled coords.
++    finish(manager);
++    if (WINDOW->m_workspace != startedOn)
++        Desktop::globalWindowController()->moveWindowToWorkspace(WINDOW, startedOn);
++    const auto CURRENT = WINDOW->layoutTarget();
++    const auto SPACE = CURRENT ? CURRENT->space() : nullptr;
++    const auto ALGO = SPACE ? SPACE->algorithm() : nullptr;
++    if (ALGO) {
++        if (CURRENT->floating() == TILED) ALGO->setFloating(CURRENT, !TILED, false);
++        if (TILED) {
++            ALGO->layoutMsg(std::format("dropat 0x{:x} {:.4f} {:.4f}", rc<uintptr_t>(WINDOW.get()), WORLD->x, WORLD->y));
++            ALGO->recalculate();
++        } else {
++            CURRENT->setPositionGlobal(CBox{WORLD->pos() - OFFSET, SIZE});
++            CURRENT->warpPositionSize();
++        }
++    }
++    canvasAdoptFocus(WINDOW);
++    redrawAll();
++    damage();
++    return true;
++}
++
+ void CScrollOverview::endWindowDrag() {
+     const auto WINDOW = getOverviewWindowToShow(dragActiveWindow.lock());
+     const auto TARGET = WINDOW ? WINDOW->layoutTarget() : nullptr;
+@@ -5995,6 +6079,37 @@ void CScrollOverview::endWindowDrag() {
  
      const auto          MONITOR           = pMonitor.lock();
      const auto          DROPMONITOR       = dropOverview ? dropOverview->pMonitor.lock() : PHLMONITOR{};
-+    // Kingstra tiles never become floating or accept scaled screen geometry.
-+    if (dragStartedTiled && ALGO && dropOverview && MONITOR && DROPMONITOR &&
-+        dropOverview->startedOn == WINDOW->m_workspace &&
++    // Resolve both local and cross-output canvas drags in destination world
++    // coordinates. A floating app retains its mode and unscaled buffer size.
++    if (WINDOW && dropOverview && dropOverview->isCanvasDesktop() && MONITOR && DROPMONITOR &&
 +        !ScrollOverview::Config::getCanvasAutoFloat() && !ScrollOverview::Config::getCanvasAutoPlace()) {
 +        const auto POINT = g_pInputManager->getMouseCoordsInternal();
 +        const auto WORLD = dropOverview->canvasScreenToWorld(CBox{POINT, Vector2D{1, 1}});
 +        if (WORLD) {
-+            const auto MSG = std::format("dropat 0x{:x} {:.4f} {:.4f}", rc<uintptr_t>(WINDOW.get()), WORLD->x, WORLD->y);
-+            ALGO->layoutMsg(MSG);
-+            ALGO->recalculate();
++            if (WINDOW->m_workspace != dropOverview->startedOn)
++                Desktop::globalWindowController()->moveWindowToWorkspace(WINDOW, dropOverview->startedOn);
++            const auto CURRENT = WINDOW->layoutTarget();
++            const auto SPACE = CURRENT ? CURRENT->space() : nullptr;
++            const auto DESTINATION = SPACE ? SPACE->algorithm() : nullptr;
++            if (DESTINATION) {
++                if (dragStartedTiled) {
++                    const auto MSG = std::format("dropat 0x{:x} {:.4f} {:.4f}", rc<uintptr_t>(WINDOW.get()), WORLD->x, WORLD->y);
++                    DESTINATION->layoutMsg(MSG);
++                    DESTINATION->recalculate();
++                } else {
++                    const auto SIZE = dragOriginalBox.size();
++                    CURRENT->setPositionGlobal(CBox{WORLD->pos() - Vector2D{SIZE.x * dragGrabRatio.x, SIZE.y * dragGrabRatio.y}, SIZE});
++                    CURRENT->warpPositionSize();
++                }
++            }
++            dropOverview->canvasAdoptFocus(WINDOW);
++            if (dropOverview != this) { dropOverview->redrawAll(); dropOverview->damage(); }
 +        }
 +        clearDragPending();
 +        redrawAll();
@@ -226,7 +372,7 @@ index 5c9a055..84d99a2 100644
      const auto          ACTIVEWORKSPACEBEFOREDROP     = MONITOR ? MONITOR->m_activeWorkspace : PHLWORKSPACE{};
      const auto          DROPACTIVEWORKSPACEBEFOREDROP = DROPMONITOR ? DROPMONITOR->m_activeWorkspace : PHLWORKSPACE{};
      const auto          DROPPOINTLOCAL    = getOverviewMousePosLocal(DROPMONITOR);
-@@ -7030,7 +7087,7 @@ void CScrollOverview::restoreWorkspaceAnimationOverrides() {
+@@ -7030,7 +7145,7 @@ void CScrollOverview::restoreWorkspaceAnimationOverrides() {
  
  void CScrollOverview::forceWorkspaceAlphaVisible() {
      for (const auto& workspace : State::workspaceState()->workspaces()) {
@@ -235,7 +381,7 @@ index 5c9a055..84d99a2 100644
              continue;
  
          workspace->m_alpha->setValueAndWarp(1.F);
-@@ -7066,7 +7123,10 @@ void CScrollOverview::applyInputConfigOverrides() {
+@@ -7066,7 +7181,10 @@ void CScrollOverview::applyInputConfigOverrides() {
      ScrollOverview::Config::setValue("cursor:warp_on_change_workspace", 0);
      ScrollOverview::Config::setValue("cursor:warp_on_toggle_special", 0);
      ScrollOverview::Config::setValue("cursor:warp_back_after_non_mouse_input", 0);
@@ -247,7 +393,7 @@ index 5c9a055..84d99a2 100644
  }
  
  void CScrollOverview::restoreInputConfigOverrides() {
-@@ -8405,6 +8465,9 @@ bool CScrollOverview::shouldAllowSurfaceFrame(SP<CWLSurfaceResource> surface, co
+@@ -8405,6 +8523,9 @@ bool CScrollOverview::shouldAllowSurfaceFrame(SP<CWLSurfaceResource> surface, co
          return true;
  
      auto window = getOverviewWindowToShow(windowOwner);
@@ -257,7 +403,7 @@ index 5c9a055..84d99a2 100644
      if (g_pointerGrabOverview && g_pointerGrabOverview->dragActiveWindow &&
          window == getOverviewWindowToShow(g_pointerGrabOverview->dragActiveWindow.lock()))
          return true;
-@@ -8501,8 +8564,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
+@@ -8501,8 +8622,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
          if (layerOwner->m_monitor != MONITOR)
              return true;
  
@@ -268,7 +414,7 @@ index 5c9a055..84d99a2 100644
  
          markBlurDirty();
          if (layerOwner->m_layer == ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND)
-@@ -8514,6 +8578,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
+@@ -8514,6 +8636,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
          return true;
  
      auto window = getOverviewWindowToShow(windowOwner);
@@ -278,7 +424,7 @@ index 5c9a055..84d99a2 100644
      if (g_pointerGrabOverview && g_pointerGrabOverview->dragActiveWindow &&
          window == getOverviewWindowToShow(g_pointerGrabOverview->dragActiveWindow.lock())) {
          const auto DRAGBOX = g_pointerGrabOverview->draggedWindowGlobalBox();
-@@ -8608,6 +8675,12 @@ void CScrollOverview::close() {
+@@ -8608,6 +8733,12 @@ void CScrollOverview::close() {
      }
  
      closeApplied = true;
@@ -291,7 +437,7 @@ index 5c9a055..84d99a2 100644
  
      const bool ACTIVATESELECTION = activeScrollOverview().get() == this;
      setClosing(true);
-@@ -10871,8 +10944,8 @@ bool CScrollOverview::flightDeckAction(const std::string& action) {
+@@ -10871,8 +11002,8 @@ bool CScrollOverview::flightDeckAction(const std::string& action) {
          return true;
      }
      if (action == "zoom in" || action == "zoom out") {
@@ -302,3 +448,15 @@ index 5c9a055..84d99a2 100644
          return true;
      }
      if (action.starts_with("pan ") || action.starts_with("nudge ")) {
+diff --git a/scrollOverview.hpp b/scrollOverview.hpp
+index 6d86eaf..18784af 100644
+--- a/scrollOverview.hpp
++++ b/scrollOverview.hpp
+@@ -110,6 +110,7 @@ class CScrollOverview : public IOverview {
+     static bool         canvasWindowOnScreen(const PHLWINDOW& window);
+     // Make a window this canvas's selection and focus it, camera untouched.
+     void                canvasAdoptFocus(const PHLWINDOW& window);
++    bool                finishKingstraNativeDrag(void* manager, void (*finish)(void*));
+     // At 100%, where windows are drawn 1:1.
+     bool                canvasAtRestZoom() const;
+     float               canvasZoom() const;

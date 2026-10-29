@@ -4,7 +4,7 @@ Requires a real Wayland session, Hyprland 0.56.2, the locally built native plugi
 python-gobject/GTK4, Pillow, grim, wtype, cc, and wayland-scanner. Never dispatches to the
 parent compositor. Retains its /tmp/kz* directory for diagnosis.
 """
-import os,sys,json,subprocess,tempfile,time
+import os,sys,json,subprocess,tempfile,time,shutil
 from pathlib import Path
 root=Path(__file__).resolve().parents[2]
 plugin=Path(sys.argv[1] if len(sys.argv)>1 else root/'config/hypr/native-zoom/kingstra-native-zoom.so').resolve()
@@ -20,6 +20,7 @@ hl.config({misc={disable_hyprland_logo=true,disable_splash_rendering=true,size_l
 package.path="@ROOT@/config/hypr/?.lua;"..package.path
 _G.__hyprscroll2d_layout_registered=nil; assert(loadfile("@ROOT@/config/hypr/lua/spatial/init.lua"))()
 hl.workspace_rule({workspace="1",layout="lua:hyprscroll2d"})
+hl.workspace_rule({workspace="2",layout="lua:hyprscroll2d"})
 _G.zoom=require("lua.native-zoom")
 hl.bind("SUPER + u",function() zoom.zoom("out") end)
 hl.bind("SUPER + CTRL + mouse_down",function() zoom.zoom("out") end)
@@ -27,9 +28,14 @@ hl.bind("SUPER + CTRL + mouse_up",function() zoom.zoom("in") end)
 hl.bind("SUPER + CTRL + mouse:274",function() zoom.reset() end)
 _G.spatial=require("lua.spatial")
 hl.bind("SUPER + CTRL + mouse:272",spatial.drag_start)
+hl.bind("SUPER + mouse:272",hl.dsp.window.drag(),{mouse=true})
 hl.bind("mouse:272",spatial.drag_stop,{release=true,ignore_mods=true,non_consuming=true})
 '''.replace('@ROOT@',str(root)))
-log=(run/'log').open('w');proc=subprocess.Popen(['Hyprland','-c',str(config)],env=env,stdout=log,stderr=subprocess.STDOUT)
+binary=os.getenv('KINGSTRA_TEST_HYPRLAND','Hyprland')
+if os.getenv('KINGSTRA_TEST_UNLINK_BINARY'):
+ shutil.copy2(shutil.which(binary) or binary,run/'Hyprland');binary=str(run/'Hyprland')
+log=(run/'log').open('w');proc=subprocess.Popen([binary,'-c',str(config)],env=env,stdout=log,stderr=subprocess.STDOUT)
+if os.getenv('KINGSTRA_TEST_UNLINK_BINARY'):Path(binary).unlink()
 sig=None;qs=None;qs_config=None;qs_log=None
 pointer_build=run/'pointer';pointer_build.mkdir()
 xml=source/'tests/tools/wlr-virtual-pointer-unstable-v1.xml'
@@ -118,15 +124,18 @@ try:
 
 
  def pointer(*commands):
-  subprocess.run([vpointer,str(ww),str(hh),*map(str,commands)],env=env,check=True)
+  outputs=json.loads(ctl('monitors','-j'))
+  pw=max(m['x']+m['width']/m['scale'] for m in outputs);ph=max(m['y']+m['height']/m['scale'] for m in outputs)
+  subprocess.run([vpointer,str(int(pw)),str(int(ph)),*map(str,commands)],env=env,check=True)
  def modified_drag(mods,x1,y1,x2,y2):
   cmd=['wtype']
   for mod in mods:cmd+=['-M',mod]
-  cmd+=['-s','650']
+  cmd+=['-s','2000']
   for mod in reversed(mods):cmd+=['-m',mod]
   keys=subprocess.Popen(cmd,env=env);time.sleep(.12)
   pointer('abs',x1,y1,'sleep',60,'down','sleep',70,'abs',x2,y2,'sleep',120,'up','sleep',100)
   keys.wait(timeout=3)
+ m=json.loads(ctl('monitors','-j'))[0];ww,hh=m['width'],m['height']
  camera_before=json.loads((run/'kingstra-spatial-1.json').read_text())
  modified_drag(['logo','ctrl'],ww//2,hh//2,ww//2+50,hh//2+25)
  time.sleep(.2)
@@ -211,6 +220,28 @@ try:
  subprocess.run([vpointer,str(width),str(height),'abs',str(hx),str(hy),'sleep','180'],env=env,check=True)
  check(json.loads(ctl('activewindow','-j'))['address']==hovered['address'],'returning to the zoomed monitor focuses the same app without clicking')
 
+ # A drag can originate on the ordinary output, outside any canvas listener.
+ def cross_output_drag(w, dest, start=None):
+  start=start or [int(w['at'][i]+w['size'][i]/2) for i in (0,1)]
+  keys=subprocess.Popen(['wtype','-M','logo','-s','2000','-m','logo'],env=env);time.sleep(.12)
+  subprocess.run([vpointer,str(width),str(height),'abs',*map(str,start),'sleep','120','down','sleep','90',
+                  'abs',str(start[0]-50),str(start[1]),'sleep','90','abs',*map(str,dest),'sleep','180','up','sleep','180'],env=env,check=True)
+  keys.wait(timeout=3);time.sleep(.2)
+ cross_camera=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
+ cross_output_drag(d,(hx,hy))
+ d=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D')
+ print('IMPORTED APP',d,flush=True)
+ check(d['workspace']['id']==1 and not d['floating'],'drag from ordinary output joins the zoomed workspace and stays tiled')
+ imported=json.loads((run/'kingstra-spatial-1.json').read_text())
+ cells={w['address']:(w['col'],w['row']) for w in imported['windows'] if not w.get('floating')}
+ check(cells[d['address']]==cells[hovered['address']],'cross-output drop joins the page under the scaled pointer')
+ check(imported['camera']==cross_camera,'cross-output drop preserves the zoomed camera')
+ # Restore the independent animated output for the clipping checks below.
+ ctl('dispatch','hl.dsp.window.move({workspace="'+ws2+'",follow=false,window="address:'+d['address']+'"})')
+ time.sleep(.3)
+ d=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D')
+ subprocess.run([vpointer,str(width),str(height),'abs',str(hx),str(hy),'sleep','150'],env=env,check=True)
+
  # Open a real new application through the same keybind path as Super+Return.
  cmd='python3 '+str(root/'tests/integration/native-zoom-app.py')+' zoom-E > '+str(run/'zoom-E.log')+' 2>&1'
  camera_before=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
@@ -244,6 +275,39 @@ try:
  sample=Image.open(run/'foreign-at-100.png').convert('RGB').getpixel((min(100,second['width']-1),min(100,second['height']-1)))
  print('FOREIGN FLOAT PIXEL AT 100%',sample,flush=True)
  check(sample[1]>sample[0]+50,'100% restores normal cross-monitor floating rendering')
+
+ # Importing a floating app must retain its size and place its grabbed point
+ # at the inverse-transformed pointer, rather than scaling its buffer.
+ pointer('abs',first['x']+first['width']//2,first['y']+first['height']//2)
+ ctl('dispatch','hl.dsp.focus({workspace="1"})');ctl('eval','zoom.zoom("out")');time.sleep(.3)
+ pointer('abs',dx,dy);ctl('dispatch','hl.dsp.focus({workspace="'+ws2+'"})')
+ ctl('eval','hl.window_rule({name="test-import-float",match={title="^zoom-F$"},float=true,size="300 200",move="100 100"})')
+ cmd='python3 '+str(root/'tests/integration/native-zoom-app.py')+' zoom-F > '+str(run/'zoom-F.log')+' 2>&1'
+ ctl('dispatch','hl.dsp.exec_cmd('+json.dumps(cmd)+')')
+ for _ in range(50):
+  found=[w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-F']
+  if found:break
+  time.sleep(.1)
+ f=found[0];float_size=f['size']
+ view=next(s for s in json.loads(ctl('spatialoverview'))['screens'] if s['monitor']=='WAYLAND-1')['view']
+ dest=(first['x']+first['width']//2,first['y']+first['height']//2)
+ world=[view[i]+(dest[i]-first[['x','y'][i]])*view[i+2]/first[['width','height'][i]] for i in (0,1)]
+ cross_output_drag(f,dest)
+ f=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-F')
+ check(f['workspace']['id']==1 and f['floating'] and f['size']==float_size,'cross-output floating drop preserves floating mode and size')
+ check(all(abs(f['at'][i]+f['size'][i]/2-world[i])<5 for i in (0,1)),'floating app lands at the inverse-scaled pointer position')
+
+ # The source may itself be zoomed, using a separate canvas drag instead of
+ # Hyprland's native grab. Both routes must assign the destination workspace.
+ pointer('abs',dx,dy);ctl('dispatch','hl.dsp.focus({workspace="'+ws2+'"})');ctl('eval','zoom.zoom("out")');time.sleep(.3)
+ screens=json.loads(ctl('spatialoverview'))['screens']
+ check(len(screens)==2,'both physical outputs can be zoomed independently')
+ source_view=next(s['view'] for s in screens if s['monitor']=='ZOOM-2')
+ d=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D')
+ start=[int(second[['x','y'][i]]+(d['at'][i]+d['size'][i]/2-source_view[i])*second[['width','height'][i]]/source_view[i+2]) for i in (0,1)]
+ cross_output_drag(d,dest,start)
+ d=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D')
+ check(d['workspace']['id']==1 and not d['floating'],'drag between two zoomed outputs transfers the app and keeps it tiled')
  check('Lua error' not in (run/'hypr'/sig/'hyprland.log').read_text(),'no Lua runtime errors during real input')
  print('RUNTIME',run,flush=True)
 finally:
