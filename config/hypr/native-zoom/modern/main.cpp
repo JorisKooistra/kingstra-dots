@@ -330,7 +330,10 @@ void mouseAxis(IPointer::SAxisEvent event,Event::SCallbackInfo& info) {
     if (info.cancelled || (g_pInputManager->getModsFromAllKBs()&Input::HL_MODIFIER_META)) return;
     const auto monitor=monitorAt(g_pInputManager->getMouseCoordsInternal());
     if (!zoomFor(monitor) || topLayerAt(monitor,g_pInputManager->getMouseCoordsInternal()) || !forwardMotion(monitor,event.timeMs)) return;
-    g_pSeatManager->sendPointerAxis(event.timeMs,event.axis,event.delta,event.deltaDiscrete,0,event.source,event.relativeDirection);
+    // Hyprland stores wheel detents in 120ths. Wayland v8+ clients consume
+    // value120 instead of legacy discrete ticks; zero loses the wheel step.
+    const int32_t discrete=(event.deltaDiscrete>0)-(event.deltaDiscrete<0);
+    g_pSeatManager->sendPointerAxis(event.timeMs,event.axis,event.delta,discrete,event.deltaDiscrete,event.source,event.relativeDirection);
     g_pSeatManager->sendPointerFrame();
     info.cancelled=true;
 }

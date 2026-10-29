@@ -4,7 +4,7 @@ Requires a real Wayland session, Hyprland 0.56.2 or 0.57.0, the matching native 
 python-gobject/GTK4, Pillow, grim, wtype, cc, and wayland-scanner. Never dispatches to the
 parent compositor. Retains its /tmp/kz* directory for diagnosis.
 """
-import os,sys,json,subprocess,tempfile,time,shutil
+import os,sys,json,subprocess,tempfile,time,shutil,re
 from pathlib import Path
 from PIL import Image
 root=Path(__file__).resolve().parents[2]
@@ -52,7 +52,7 @@ if os.getenv('KINGSTRA_TEST_UNLINK_BINARY'):
  shutil.copy2(shutil.which(binary) or binary,run/'Hyprland');binary=str(run/'Hyprland')
 log=(run/'log').open('w');proc=subprocess.Popen([binary,'-c',str(config)],env=env,stdout=log,stderr=subprocess.STDOUT)
 if os.getenv('KINGSTRA_TEST_UNLINK_BINARY'):Path(binary).unlink()
-sig=None;qs=None;qs_config=None;qs_log=None
+sig=None;qs=None;qs_config=None;qs_log=None;browser=None;browser_log=None
 pointer_build=run/'pointer';pointer_build.mkdir()
 xml=pointer_tools/'wlr-virtual-pointer-unstable-v1.xml'
 pointer_source=(pointer_tools/'vpointer.c').read_text()
@@ -147,6 +147,64 @@ try:
  check('click zoom-B' in (run/'zoom-B.log').read_text(),'scaled click reaches neighbouring app')
  check('key zoom-B k' in (run/'zoom-B.log').read_text(),'typing reaches clicked app while zoomed')
  check(positions(before)==positions(json.loads(ctl('clients','-j'))),'focus on adjacent page does not move the camera')
+
+ def document_offset():
+  rows=[line.split() for line in (run/'zoom-B.log').read_text().splitlines() if line.startswith('offset zoom-B ')]
+  return float(rows[-1][2]) if rows else 0
+ start_offset=document_offset()
+ subprocess.run([vpointer,str(ww),str(hh),'abs',str(x),str(y),'sleep','100','wheel','1','sleep','350'],env=env,check=True)
+ down_offset=document_offset()
+ check(down_offset>start_offset,'wheel scrolls real document down while zoomed')
+ subprocess.run([vpointer,str(ww),str(hh),'abs',str(x),str(y),'sleep','100','wheel','-1','sleep','350'],env=env,check=True)
+ check(document_offset()<down_offset,'wheel scrolls real document back up while zoomed')
+ check(positions(before)==positions(json.loads(ctl('clients','-j'))),'document scrolling keeps workspace camera and window geometry unchanged')
+ if shutil.which('firefox'):
+  profile=run/'firefox';profile.mkdir()
+  (profile/'user.js').write_text('''
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("browser.aboutwelcome.enabled", false);
+user_pref("browser.startup.homepage_override.mstone", "ignore");
+user_pref("browser.startup.firstrunSkipsHomepage", true);
+user_pref("datareporting.policy.dataSubmissionEnabled", false);
+user_pref("toolkit.telemetry.enabled", false);
+user_pref("app.update.auto", false);
+user_pref("general.smoothScroll", false);
+''')
+  document=run/'scroll-test.html'
+  document.write_text('''<!doctype html><title>zoom-scroll-0</title>
+<style>body{margin:0;background:#dff0d8;font:24px sans-serif}main{height:8000px;padding:40px;background:repeating-linear-gradient(#dff0d8 0 180px,#98c991 180px 360px)}</style>
+<main>Scrolltest voor de uitgezoomde maillezer</main>
+<script>addEventListener('scroll',()=>document.title='zoom-scroll-'+Math.round(scrollY));</script>''')
+  browser_log=(run/'firefox.log').open('w')
+  browser=subprocess.Popen(['firefox','--no-remote','--profile',str(profile),document.as_uri()],
+      env=dict(env,MOZ_ENABLE_WAYLAND='1',MOZ_DBUS_REMOTE='0',WAYLAND_DEBUG='client'),stdout=browser_log,stderr=subprocess.STDOUT)
+  def browser_window():
+   return next((w for w in json.loads(ctl('clients','-j')) if w['title'].startswith('zoom-scroll-')),None)
+  for _ in range(150):
+   firefox=browser_window()
+   if firefox:break
+   if browser.poll() is not None:raise RuntimeError('Firefox fixture exited: '+str(run/'firefox.log'))
+   time.sleep(.1)
+  check(bool(firefox),'isolated Firefox document started')
+  view=json.loads(ctl('spatialoverview'))['screens'][0]['view']
+  fx=int((firefox['at'][0]+firefox['size'][0]/2-view[0])*ww/view[2])
+  fy=int((firefox['at'][1]+firefox['size'][1]*.7-view[1])*hh/view[3])
+  def firefox_offset():return int(browser_window()['title'].split('zoom-scroll-')[1].split()[0])
+  subprocess.run([vpointer,str(ww),str(hh),'abs',str(fx),str(fy),'sleep','150','wheel','1','sleep','350'],env=env,check=True)
+  firefox_down=firefox_offset()
+  pointer_log=(run/'firefox.log').read_text()
+  wheel_values=re.findall(r'wl_pointer[#@]\d+\.axis_value120\((\d+), (-?\d+)\)',pointer_log)
+  check(any(axis=='0' and int(value)>0 for axis,value in wheel_values),'Firefox receives nonzero high-resolution wheel steps')
+  legacy_values=re.findall(r'wl_pointer[#@]\d+\.axis_discrete\((\d+), (-?\d+)\)',pointer_log)
+  check(any(axis=='0' and value=='1' for axis,value in legacy_values),'legacy wheel events carry one detent rather than 120')
+  check(firefox_down>0,'Firefox scrolls document down while zoomed')
+  subprocess.run([vpointer,str(ww),str(hh),'abs',str(fx),str(fy),'sleep','100','wheel','-1','sleep','350'],env=env,check=True)
+  check(firefox_offset()<firefox_down,'Firefox scrolls document back up while zoomed')
+  browser.terminate();browser.wait(timeout=5);browser=None
+  time.sleep(.3)
+ if os.getenv('KINGSTRA_TEST_SCROLL_ONLY'):
+  print('RUNTIME',run,flush=True)
+  sys.exit(0)
 
 
  def pointer(*commands):
@@ -397,6 +455,11 @@ try:
  check('Lua error' not in (run/'hypr'/sig/'hyprland.log').read_text(),'no Lua runtime errors during real input')
  print('RUNTIME',run,flush=True)
 finally:
+ if browser and browser.poll()==None:
+  browser.terminate()
+  try:browser.wait(timeout=5)
+  except subprocess.TimeoutExpired:browser.kill()
+ if browser_log:browser_log.close()
  if qs and qs.poll()==None:
   qs.terminate()
   try:qs.wait(timeout=5)

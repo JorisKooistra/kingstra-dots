@@ -8,7 +8,15 @@ def activate(app):
  box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL);box.append(Gtk.Label(label=name)); area=Gtk.DrawingArea();area.set_hexpand(True);area.set_vexpand(True)
  colors={'zoom-A':(0.9,0.2,0.2),'zoom-B':(0.2,0.8,0.3),'zoom-C':(0.2,0.3,0.9),'zoom-E':(0.2,0.9,0.2)}
  def draw(a,cr,ww,hh): cr.set_source_rgb(*colors.get(name,(0.5,0.5,0.5)));cr.paint()
- area.set_draw_func(draw);box.append(area);w.set_child(box)
+ area.set_draw_func(draw)
+ if name=='zoom-B':
+  # A real scrolling document, like the mail reader that exposed lost wheel input.
+  scroller=Gtk.ScrolledWindow();scroller.set_hexpand(True);scroller.set_vexpand(True)
+  area.set_content_height(4000);scroller.set_child(area);box.append(scroller)
+  adjustment=scroller.get_vadjustment()
+  adjustment.connect('value-changed',lambda a: print(f'offset {name} {a.get_value():.2f}',flush=True))
+ else:box.append(area)
+ w.set_child(box)
  frame=[0]
  def tick(widget,clock):
   frame[0]+=1;widget.queue_draw()

@@ -50,6 +50,10 @@ De upstream BSD-licentie staat in `LICENSE.upstream`.
 Regressies: `bash tests/smoke/spatial-layout.sh`. De optionele integratietest in
 `tests/integration/native-zoom.py` opent een aparte geneste Hyprland met testapps;
 de echte gebruikersvensters worden niet aangestuurd.
+De test controleert ook scrollen in een echt GTK-document en, wanneer Firefox
+aanwezig is, in een apart Firefox-profiel met een lokaal document. Daarbij worden
+zowel het bewegen van de inhoud als de Wayland-wielwaarden gecontroleerd.
+Met `KINGSTRA_TEST_SCROLL_ONLY=1` stopt de test na deze inputcontroles.
 Met `KINGSTRA_TEST_HYPRLAND=/pad/naar/Hyprland` kan die test een afzonderlijke
 binary gebruiken die overeenkomt met de plugin wanneer de lopende sessie nog
 een oudere versie gebruikt dan de geïnstalleerde systeemupdate.
