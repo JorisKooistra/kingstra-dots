@@ -133,6 +133,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Shift + T` | Volgend thema (cyclisch) |
 | `Super + Ctrl + T` | Thema picker |
 | `Super + Ctrl + M` | Modus picker (office / gaming / media) |
+| `Super + A` | Bediening: thema, wallpaper, mode (ook per scherm), energie, indeling, scrollen en rail in één overlay |
 | `Super + Shift + M` | Muziek popup |
 | `Super + Ctrl + I` | Bediening en instellingen (eigen app, ook in de launcher) |
 | `Super + Alt + Space` | Toetsenbordmenu voor alles (thema, modus, schermen, systeem, sessie) |

@@ -81,6 +81,7 @@ FocusScope {
             { icon: "󰝚", label: "Media", cmd: kingstra("mode media") },
             { icon: "󰚀", label: "Zen aan of uit", hint: "Super+Alt+Z", cmd: ["bash", scripts + "/zen.sh", "toggle"] }
         ] },
+        { icon: "󰒓", label: "Bediening (alles in één)", hint: "Super+A", cmd: qs("bediening"), panel: true },
         { icon: "󰕮", label: "Snel schakelen", children: [
             { icon: "󰕮", label: "Controlecentrum", cmd: qs("tophover"), panel: true },
             { icon: "󰤨", label: "Wi-Fi aan/uit", cmd: ["bash", "-lc", "[ \"$(nmcli radio wifi)\" = enabled ] && nmcli radio wifi off || nmcli radio wifi on"] },

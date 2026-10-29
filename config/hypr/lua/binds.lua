@@ -128,6 +128,9 @@ exec(mod .. " + CTRL + I", scripts .. "/qs_manager.sh toggle settings")
 exec(mod .. " + ALT + Space", scripts .. "/qs_manager.sh toggle menu")
 exec(mod .. " + CTRL + T", scripts .. "/qs_manager.sh toggle theme")
 exec(mod .. " + CTRL + M", scripts .. "/qs_manager.sh toggle mode")
+-- Bediening: thema, wallpaper, mode (ook per scherm), energie, indeling,
+-- scrollen en rail in één overlay.
+exec(mod .. " + A", scripts .. "/qs_manager.sh toggle bediening")
 exec(mod .. " + F1", scripts .. "/qs_manager.sh toggle help")
 
 -- Screenshots

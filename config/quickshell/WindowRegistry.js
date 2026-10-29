@@ -35,6 +35,11 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
     let sidebarTopY = s(12, scale);
     let sidebarBottomMargin = s(16, scale);
 
+    // Bediening (Super+A): ruim genoeg voor drie kolommen naast elkaar,
+    // maar altijd binnen het scherm met een rand eromheen.
+    let controlWidth = Math.min(s(1380, scale), Math.max(360, mw - s(48, scale)));
+    let controlHeight = Math.min(s(880, scale), Math.max(420, mh - s(48, scale)));
+
     let settingsWidth = Math.min(s(1200, scale), Math.max(360, mw - s(40, scale)));
     let settingsHeight = Math.min(s(750, scale), Math.max(420, mh - s(40, scale)));
 
@@ -66,6 +71,10 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
 
         // Mode picker — groter voor leesbaarheid van kaarten + hintbalk
         "mode":      { w: s(980, scale), h: s(560, scale), rx: Math.floor((mw/2)-(s(980, scale)/2)), ry: Math.floor((mh/2)-(s(560, scale)/2)), comp: "modes/ModePicker.qml" },
+
+        // Alles-in-één bediening: thema, wallpaper, mode (ook per scherm),
+        // energie, indeling, scrollen en rail tegelijk.
+        "bediening": { w: controlWidth, h: controlHeight, rx: Math.floor((mw - controlWidth) / 2), ry: Math.floor((mh - controlHeight) / 2), comp: "control/ControlOverlay.qml" },
 
         // Sneltoetsen-cheatsheet (Super + F1)
         "help":      { w: s(1250, scale), h: s(780, scale), rx: Math.floor((mw/2)-(s(1250, scale)/2)), ry: Math.floor((mh/2)-(s(780, scale)/2)), comp: "help/KeybindsHelp.qml" },

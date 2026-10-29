@@ -4,6 +4,16 @@ Deze ronde wordt via de bestaande updater geïnstalleerd. Er hoeft geen aparte
 plugininstaller gedraaid te worden. De bestaande werkruimte-indeling blijft
 behouden totdat je zelf een andere kiest.
 
+## Alles in één: Super+A
+
+Super+A opent de Bediening-overlay, net als de thema- en modekiezer maar met
+alles tegelijk: thema, wallpaper, mode voor de hele desktop, mode per scherm
+(klik een scherm op het kaartje), energieprofiel, indeling van de werkruimte,
+kolombreedte en snap-sterkte, wallpaper-effect en de rail per scherm. Een klik
+past het meteen toe; Esc of nogmaals Super+A sluit. Het toetsenbordmenu
+(Super+Alt+Space) heeft dezelfde ingang. Voor de details (muziek, extra
+railknoppen, Meer-lijst) gaat "Meer en muziek…" naar Instellingen › Bediening.
+
 ## Beginnen
 
 1. Open Instellingen met Super+Ctrl+I en kies op Bediening een fysieke monitor.
