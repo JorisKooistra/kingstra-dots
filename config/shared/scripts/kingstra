@@ -70,6 +70,7 @@ Openen
   kladblok [stuur]         kladblok tonen, of het actieve venster erheen sturen
   parkeer [terug|lijst]    actief venster parkeren (minimaliseren) of terughalen
   zen [aan|uit]            zen-modus: balk verbergen, niet storen, rest dimmen
+  vinyl [uit]              draaitafel schermvullend (screensaver); Esc sluit
   sessie [aan|uit|bewaar|herstel]  apps na inloggen terugzetten (zonder argument: status)
 
 Overig
@@ -197,6 +198,13 @@ PY
             herstel|restore) exec "$tool" restore ;;
             *) exec "$tool" status ;;
         esac ;;
+    vinyl|platenspeler)
+        case "${1:-toggle}" in
+            uit|off|close) action=close ;;
+            aan|on|open) action=open ;;
+            *) action=toggle ;;
+        esac
+        exec qs ipc -p "$CONFIG_HOME/quickshell/TopBar.qml" call vinyl "$action" ;;
     quick|snel) panel tophover ;;
     welcome|welkom) run kingstra-welcome --force ;;
     version|versie|--version|-v)

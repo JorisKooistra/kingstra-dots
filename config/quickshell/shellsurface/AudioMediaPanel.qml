@@ -646,6 +646,13 @@ Item {
                             tracking: root.hasPlayer && root.trackLength > 0
                             vinylMode: root.vinylMode
                             coverRadius: Math.min(root.itemRadius, 14)
+                            trackKey: root.trackAlbum !== "" ? root.trackAlbum : root.artUrl
+                            canSeek: root.canSeek
+                            onSeekRequested: fraction => {
+                                let target = root.trackLength * fraction;
+                                root.trackPosition = target;
+                                if (root.canSeek) root.player.position = target;
+                            }
                         }
 
                         ColumnLayout {

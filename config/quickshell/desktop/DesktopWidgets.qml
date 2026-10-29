@@ -4,6 +4,7 @@ import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import Quickshell.Services.Mpris
 import "../"
 import "../shellsurface"
@@ -17,6 +18,9 @@ import "../shellsurface"
 //   { "enabled": true, "clock": "top-left", "media": true }
 // clock: top-left, top-right, center, bottom-left, bottom-right.
 // `kingstra widgets aan|uit|klok <plek>` en het toetsenbordmenu schrijven dit.
+//
+// De vinylknop op de mediakaart (of `kingstra vinyl`) opent VinylStage: de
+// draaitafel schermvullend in perspectief, als een screensaver.
 Scope {
     id: root
 
@@ -61,7 +65,11 @@ Scope {
         running: root.enabled
         repeat: true
         triggeredOnStart: true
-        onTriggered: root.now = new Date()
+        onTriggered: {
+            // Mpris werkt `position` niet zelf bij; zonder dit staat de arm stil.
+            if (root.activePlayer && root.activePlayer.positionSupported) root.activePlayer.positionChanged();
+            root.now = new Date();
+        }
     }
 
     // De speler die speelt, anders een gepauzeerde met een titel: zo blijft
@@ -87,6 +95,61 @@ Scope {
         if (!p || !p.positionSupported || !p.lengthSupported || p.length <= 0)
             return 0;
         return Math.max(0, Math.min(1, p.position / p.length));
+    }
+
+    // Album (of anders de hoes): verandert dit, dan wisselt de plaat.
+    readonly property string mediaTrackKey: {
+        let p = activePlayer;
+        if (!p) return "";
+        let album = String(p.trackAlbum || "").trim();
+        return album !== "" ? album : String(p.trackArtUrl || "");
+    }
+    readonly property bool mediaCanSeek: {
+        let p = activePlayer;
+        return p !== null && p.canSeek && p.positionSupported && mediaTracking;
+    }
+    function mediaSeek(fraction) {
+        let p = activePlayer;
+        if (!p || !mediaCanSeek) return;
+        p.position = Math.max(0, Math.min(1, fraction)) * p.length;
+    }
+    function mediaToggle() {
+        let p = activePlayer;
+        if (!p) return;
+        if (p.canTogglePlaying) p.togglePlaying();
+        else if (p.canPlay) p.play();
+    }
+
+    // --- Schermvullende draaitafel -----------------------------------------
+    property bool stageOpen: false
+    // Blijft geladen tot het sluiten is uitgefadet.
+    property bool stageAlive: false
+    property var stageScreen: null
+    function openStage() {
+        let mon = Hyprland.focusedMonitor;
+        let screens = Quickshell.screens;
+        let pick = screens.length > 0 ? screens[0] : null;
+        for (let i = 0; mon && i < screens.length; i++) {
+            if (screens[i].name === mon.name) pick = screens[i];
+        }
+        stageScreen = pick;
+        stageAlive = true;
+        stageOpen = true;
+    }
+    IpcHandler {
+        target: "vinyl"
+        function open() { root.openStage() }
+        function close() { root.stageOpen = false }
+        function toggle() { if (root.stageOpen) root.stageOpen = false; else root.openStage(); }
+    }
+    LazyLoader {
+        active: root.stageAlive
+        VinylStage {
+            host: root
+            screen: root.stageScreen
+            open: root.stageOpen
+            onFinished: root.stageAlive = false
+        }
     }
 
     Variants {
@@ -188,9 +251,41 @@ Scope {
                     Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("normal") } }
                     Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") } }
 
+                    // Schermvullende draaitafel openen.
+                    Rectangle {
+                        z: 2
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        anchors.margins: 10
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: stageMouse.containsMouse
+                            ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.26)
+                            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
+                        scale: stageMouse.pressed ? 0.92 : 1
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+                        Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutCubic } }
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰊓"
+                            font.family: ThemeConfig.iconFont
+                            font.pixelSize: 13
+                            color: mocha.text
+                        }
+                        MouseArea {
+                            id: stageMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.openStage()
+                        }
+                    }
+
                     RowLayout {
                         anchors.fill: parent
                         anchors.margins: 12
+                        anchors.rightMargin: 40
                         spacing: 12
 
                         MediaVinyl {
@@ -205,6 +300,9 @@ Scope {
                             showArm: true
                             progress: root.mediaProgress
                             tracking: root.mediaTracking
+                            trackKey: root.mediaTrackKey
+                            canSeek: root.mediaCanSeek
+                            onSeekRequested: fraction => root.mediaSeek(fraction)
                             coverRadius: 16
                         }
 

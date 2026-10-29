@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Draaitafel: gedetailleerder en schermvullend
+- De toonarm is gebogen (S-bocht met schuin headshell, vingerlift en contragewicht) en heeft een schaduw die verder wegvalt als de arm omhoog gaat.
+- Spoelen gaat als op een echte speler: de arm gaat omhoog, zwenkt naar de nieuwe plek en zakt weer. Je kunt de naald zelf slepen (mediakaart op het bureaublad, Geluid & media en de schermvullende weergave).
+- Bij een nieuw album gaat de arm naar zijn steun, schuift de oude plaat eraf en de nieuwe erop.
+- Nieuw: schermvullende draaitafel als screensaver, in voor/bovenaanzicht met langzaam meedraaiende camera. Open hem met de knop rechtsboven op de mediakaart, `kingstra vinyl` of het toetsenbordmenu. De voorkant heeft een display, een spoelbalk met naaldje (slepen tilt de arm op) en werkende knoppen; bovenop zitten 33/45 en start/stop. Spatie speelt/pauzeert, ← → spoelt 10 s, N/P volgend/vorig, Esc of klik ernaast sluit.
+
 ### Rail: indeling per thema
 - De rail wordt nu opgebouwd uit een opgeslagen indeling per thema (`RailLayout.qml`, `~/.local/state/kingstra/rail-layout.json`, geschreven via `settings/rail-layout.py`). Zonder eigen keuze blijft de vertrouwde volgorde staan.
 - Elk railonderdeel (launcher, werkruimtes, kladblokken, uitzoomen, meldingen, systeem, updates, games, extra knoppen, Meer, systeemvak, geluid, status, klok, afsluiten, instellingen) is een los blok dat je kunt verplaatsen; "Kleine ruimte" en "Duw naar onder" mogen vaker voorkomen.

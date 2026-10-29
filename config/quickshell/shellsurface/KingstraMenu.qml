@@ -71,7 +71,8 @@ FocusScope {
                 { icon: "󰁆", label: "Klok linksonder", cmd: kingstra("widgets klok linksonder") },
                 { icon: "󰁅", label: "Klok rechtsonder", cmd: kingstra("widgets klok rechtsonder") },
                 { icon: "󰝚", label: "Mediakaart aan", cmd: kingstra("widgets media aan") },
-                { icon: "󰝛", label: "Mediakaart uit", cmd: kingstra("widgets media uit") }
+                { icon: "󰝛", label: "Mediakaart uit", cmd: kingstra("widgets media uit") },
+                { icon: "󰀥", label: "Draaitafel schermvullend", cmd: kingstra("vinyl") }
             ] },
             { icon: "󰒓", label: "Thema-instellingen", cmd: ["bash", scripts + "/qs_manager.sh", "open", "settings", "thema"] }
         ] },
