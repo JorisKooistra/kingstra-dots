@@ -1,9 +1,9 @@
 import QtQuick
-import QtQuick.Layouts
 import ".."
 
-// Schermvullende discman, zoals de draaitafel: de speler ligt achterover met
-// het deksel en de lcd naar boven, de voorrand met de knoppen kijkt naar je.
+// Schermvullende discman, rond zoals de klassieke Sony: de speler ligt op
+// tafel, iets rechtop naar je toe gekanteld, met het deksel en de lcd
+// bovenop; op de gebogen voorrand zitten de ronde knoppen.
 // Play/pauze blijft ingedrukt tijdens afspelen; ⏮ en ⏭ gaan naar het
 // vorige/volgende nummer en zoeken als je ze vasthoudt. Slepen over de balk
 // op de lcd spoelt. Volume zit in het wieltje rechts.
@@ -25,8 +25,9 @@ DeviceStage {
     skin: disc.skin
     look: disc.look
     topAspect: 1.0
-    frontRatio: 0.11
-    widthShare: 0.46
+    frontRatio: 0.09
+    widthShare: 0.42
+    maxTilt: 24
     bodyRadius: disc.bodyRadius
     hint: "Spatie afspelen  ·  ⏮ ⏭ vorige/volgende, vasthouden zoekt  ·  sleep over de balk op het scherm  ·  ← → spoelen  ·  Esc sluit"
     onNudge: seconds => seeker.nudge(seconds)
@@ -74,139 +75,142 @@ DeviceStage {
         }
     ]
 
-    frontData: [
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: Math.max(stage.cornerX * 0.8, stage.rigWidth * 0.04)
-            anchors.rightMargin: Math.max(stage.cornerX * 0.8, stage.rigWidth * 0.04)
-            anchors.topMargin: stage.frontHeight * 0.14
-            anchors.bottomMargin: stage.frontHeight * 0.22
-            spacing: stage.rigWidth * 0.02
+    // Knoppen op de gebogen voorrand: x als deel van de breedte, de hoogte
+    // volgt de bovenrand van de band.
+    function bandX(f) { return frontWidth * f; }
+    function bandY(f, h) { return rimY(frontWidth * f) + (frontHeight - h) / 2; }
+    readonly property real keySize: frontHeight * 0.6
 
-            // Koptelefoonaansluiting.
-            Row {
-                Layout.alignment: Qt.AlignVCenter
-                spacing: stage.frontHeight * 0.12
+    frontData: [
+        Item {
+            anchors.fill: parent
+
+            // Koptelefoonaansluiting met opschrift.
+            Rectangle {
+                id: jack
+                width: stage.frontHeight * 0.34
+                height: width
+                x: stage.bandX(0.29) - width / 2
+                y: stage.bandY(0.29, height)
+                radius: width / 2
+                color: stage.look === "paper" ? stage.mocha.base : stage.skin.metal
+                border.width: stage.look === "paper" ? 1.5 : 1
+                border.color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.5)
                 Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: stage.frontHeight * 0.34
+                    anchors.centerIn: parent
+                    width: parent.width * 0.5
                     height: width
                     radius: width / 2
-                    color: stage.look === "paper" ? stage.mocha.base : stage.skin.metal
-                    border.width: stage.look === "paper" ? 1.5 : 1
-                    border.color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.5)
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: parent.width * 0.5
-                        height: width
-                        radius: width / 2
-                        color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.85)
-                    }
-                }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    opacity: stage.detailT
-                    text: "PHONES"
-                    font.family: ThemeConfig.monoFont
-                    font.pixelSize: Math.max(8, stage.frontHeight * 0.13)
-                    font.letterSpacing: 1
-                    color: stage.skin.brandColor
+                    color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.85)
                 }
             }
-
-            Item { Layout.fillWidth: true; Layout.fillHeight: true }
-
-            Row {
-                Layout.alignment: Qt.AlignVCenter
-                spacing: stage.rigWidth * 0.01
-                DeckKey {
-                    id: prevKey
-                    mocha: stage.mocha
-                    accent: stage.accent
-                    skin: stage.skin
-                    icon: "󰒮"
-                    frontFacing: true
-                    lean: -0.3
-                    viewLean: stage.viewLean
-                    lit: seeker.windDir < 0
-                    keyWidth: stage.frontHeight * 0.8
-                    keyHeight: stage.frontHeight * 0.56
-                    property bool held: false
-                    onDownChanged: if (down) { held = false; prevHold.restart(); } else { prevHold.stop(); if (held) seeker.stopWind(); }
-                    onActivated: if (!held && stage.canPrevious) stage.previous()
-                    Timer { id: prevHold; interval: 380; onTriggered: { prevKey.held = true; seeker.startWind(-1); } }
-                }
-                DeckKey {
-                    mocha: stage.mocha
-                    accent: stage.accent
-                    skin: stage.skin
-                    // Eén icoon; blijft ingedrukt zolang er muziek speelt.
-                    icon: "󰐎"
-                    latched: stage.playing
-                    lit: stage.playing
-                    frontFacing: true
-                    lean: 0
-                    viewLean: stage.viewLean
-                    keyWidth: stage.frontHeight * 1.05
-                    keyHeight: stage.frontHeight * 0.56
-                    onActivated: stage.togglePlay()
-                }
-                DeckKey {
-                    id: nextKey
-                    mocha: stage.mocha
-                    accent: stage.accent
-                    skin: stage.skin
-                    icon: "󰒭"
-                    frontFacing: true
-                    lean: 0.3
-                    viewLean: stage.viewLean
-                    lit: seeker.windDir > 0
-                    keyWidth: stage.frontHeight * 0.8
-                    keyHeight: stage.frontHeight * 0.56
-                    property bool held: false
-                    onDownChanged: if (down) { held = false; nextHold.restart(); } else { nextHold.stop(); if (held) seeker.stopWind(); }
-                    onActivated: if (!held && stage.canNext) stage.next()
-                    Timer { id: nextHold; interval: 380; onTriggered: { nextKey.held = true; seeker.startWind(1); } }
-                }
-                Item { width: stage.rigWidth * 0.012; height: 1 }
-                DeckKey {
-                    mocha: stage.mocha
-                    accent: stage.accent
-                    skin: stage.skin
-                    icon: "󰓛"
-                    frontFacing: true
-                    lean: 0.5
-                    viewLean: stage.viewLean
-                    keyWidth: stage.frontHeight * 0.62
-                    keyHeight: stage.frontHeight * 0.56
-                    onActivated: stage.closeRequested()
-                }
+            Text {
+                x: jack.x + jack.width + stage.frontHeight * 0.1
+                y: jack.y + (jack.height - height) / 2
+                opacity: stage.detailT
+                text: "PHONES"
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: Math.max(8, stage.frontHeight * 0.13)
+                font.letterSpacing: 1
+                color: stage.skin.brandColor
             }
 
-            Item { Layout.fillWidth: true; Layout.fillHeight: true }
+            DeckKey {
+                id: prevKey
+                x: stage.bandX(0.42) - stage.keySize / 2
+                y: stage.bandY(0.42, implicitHeight)
+                mocha: stage.mocha
+                accent: stage.accent
+                skin: stage.skin
+                icon: "󰒮"
+                round: true
+                frontFacing: true
+                lean: -0.3
+                viewLean: stage.viewLean
+                lit: seeker.windDir < 0
+                keyWidth: stage.keySize
+                keyHeight: stage.keySize
+                property bool held: false
+                onDownChanged: if (down) { held = false; prevHold.restart(); } else { prevHold.stop(); if (held) seeker.stopWind(); }
+                onActivated: if (!held && stage.canPrevious) stage.previous()
+                Timer { id: prevHold; interval: 380; onTriggered: { prevKey.held = true; seeker.startWind(-1); } }
+            }
+            DeckKey {
+                x: stage.bandX(0.5) - stage.keySize * 0.6
+                y: stage.bandY(0.5, implicitHeight)
+                mocha: stage.mocha
+                accent: stage.accent
+                skin: stage.skin
+                // Eén icoon; blijft ingedrukt zolang er muziek speelt.
+                icon: "󰐎"
+                round: true
+                latched: stage.playing
+                lit: stage.playing
+                frontFacing: true
+                lean: 0
+                viewLean: stage.viewLean
+                keyWidth: stage.keySize * 1.2
+                keyHeight: stage.keySize
+                onActivated: stage.togglePlay()
+            }
+            DeckKey {
+                id: nextKey
+                x: stage.bandX(0.58) - stage.keySize / 2
+                y: stage.bandY(0.58, implicitHeight)
+                mocha: stage.mocha
+                accent: stage.accent
+                skin: stage.skin
+                icon: "󰒭"
+                round: true
+                frontFacing: true
+                lean: 0.3
+                viewLean: stage.viewLean
+                lit: seeker.windDir > 0
+                keyWidth: stage.keySize
+                keyHeight: stage.keySize
+                property bool held: false
+                onDownChanged: if (down) { held = false; nextHold.restart(); } else { nextHold.stop(); if (held) seeker.stopWind(); }
+                onActivated: if (!held && stage.canNext) stage.next()
+                Timer { id: nextHold; interval: 380; onTriggered: { nextKey.held = true; seeker.startWind(1); } }
+            }
+            DeckKey {
+                x: stage.bandX(0.66) - stage.keySize * 0.4
+                y: stage.bandY(0.66, implicitHeight)
+                mocha: stage.mocha
+                accent: stage.accent
+                skin: stage.skin
+                icon: "󰓛"
+                round: true
+                frontFacing: true
+                lean: 0.5
+                viewLean: stage.viewLean
+                keyWidth: stage.keySize * 0.8
+                keyHeight: stage.keySize * 0.8
+                onActivated: stage.closeRequested()
+            }
 
-            Row {
-                Layout.alignment: Qt.AlignVCenter
-                spacing: stage.frontHeight * 0.12
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    opacity: stage.detailT
-                    text: "VOL"
-                    font.family: ThemeConfig.monoFont
-                    font.pixelSize: Math.max(8, stage.frontHeight * 0.13)
-                    font.letterSpacing: 1
-                    color: stage.skin.brandColor
-                }
-                VolumeWheel {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: stage.frontHeight * 0.36
-                    height: stage.frontHeight * 0.52
-                    skin: stage.skin
-                    value: stage.volume
-                    flat: stage.look === "paper"
-                    viewLean: stage.viewLean
-                    onRequested: value => stage.volumeRequested(value)
-                }
+            // Volumewieltje met opschrift.
+            VolumeWheel {
+                id: volume
+                width: stage.frontHeight * 0.36
+                height: stage.frontHeight * 0.56
+                x: stage.bandX(0.76) - width / 2
+                y: stage.bandY(0.76, height)
+                skin: stage.skin
+                value: stage.volume
+                flat: stage.look === "paper"
+                viewLean: stage.viewLean
+                onRequested: value => stage.volumeRequested(value)
+            }
+            Text {
+                x: volume.x - width - stage.frontHeight * 0.12
+                y: volume.y + (volume.height - height) / 2
+                opacity: stage.detailT
+                text: "VOL"
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: Math.max(8, stage.frontHeight * 0.13)
+                font.letterSpacing: 1
+                color: stage.skin.brandColor
             }
         }
     ]

@@ -4,9 +4,10 @@ import ".."
 
 // Bovenkant van een draagbare cd-speler (discman), gedeeld door de
 // mediakaart op het bureaublad (klein, plat) en DiscmanStageContent (groot,
-// in perspectief): een kast met afgeronde hoeken, een deksel met een
-// rookglazen venster waaronder de cd draait (met de hoes als opdruk), en een
-// lcd met titel, artiest, tijd en een balk om te spoelen. Het licht op glas
+// in perspectief): een ronde kast zoals de klassieke Sony, een rond deksel
+// met een rookglazen venster waaronder de cd draait (met de hoes als
+// opdruk), en daaronder op het deksel een lcd met titel, artiest, tijd en
+// een balk om te spoelen. Het licht op glas
 // en cd staat stil; alleen de opdruk draait. De afwerking volgt het thema.
 Item {
     id: deck
@@ -147,7 +148,7 @@ Item {
     Rectangle {
         id: body
         anchors.fill: parent
-        radius: deck.u * (deck.look === "neon" ? 10 : 16)
+        radius: width / 2
         border.width: deck.skin.borderW
         border.color: deck.skin.border
         gradient: Gradient {
@@ -181,9 +182,9 @@ Item {
     // ligt op de kap (lid.dx, lid.dy).
     Extruded {
         id: lid
-        x: deck.u * 11
-        y: deck.u * 4
-        width: deck.u * 78
+        x: deck.u * 6
+        y: deck.u * 6
+        width: deck.u * 88
         height: width
         radius: width / 2
         depth: Math.max(1.5, deck.u * 1.2)
@@ -207,7 +208,7 @@ Item {
             visible: deck.detail > 0.01
             opacity: deck.detail
             anchors.horizontalCenter: parent.horizontalCenter
-            y: deck.u * 2.2
+            y: deck.u * 3.4
             text: deck.look === "paper" ? "kingstra" : "KINGSTRA"
             font.family: ThemeConfig.displayFont
             font.pixelSize: Math.max(8, deck.u * 3.2)
@@ -221,8 +222,8 @@ Item {
             opacity: deck.detail
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: deck.u * 2.4
-            text: deck.look === "neon" ? "DIGITAL // ANTI-SKIP" : "COMPACT DISC PLAYER · ANTI-SKIP"
+            anchors.bottomMargin: deck.u * 3.2
+            text: deck.look === "neon" ? "DIGITAL // ANTI-SKIP" : "COMPACT DISC · ANTI-SKIP"
             font.family: ThemeConfig.monoFont
             font.pixelSize: Math.max(7, deck.u * 1.8)
             font.letterSpacing: deck.u * 0.2
@@ -233,7 +234,8 @@ Item {
         Rectangle {
             id: ring
             anchors.centerIn: parent
-            width: deck.u * 66
+            anchors.verticalCenterOffset: -deck.u * 7
+            width: deck.u * 54
             height: width
             radius: width / 2
             color: "transparent"
@@ -243,7 +245,7 @@ Item {
         // Verzonken venster: daaronder de cd.
         Item {
             id: well
-            anchors.centerIn: parent
+            anchors.centerIn: ring
             width: ring.width - ring.border.width * 2
             height: width
 
@@ -473,19 +475,20 @@ Item {
     }
 
     // --- Schuifjes OPEN en HOLD ------------------------------------------------
+    // Op de rand rond het deksel, langs de omtrek gedraaid.
     Repeater {
-        model: [{ x: 5, label: "OPEN" }, { x: 84, label: "HOLD" }]
+        model: [{ a: -148, side: -0.8 }, { a: -32, side: 0.8 }]
         Item {
             id: switchSlot
             required property var modelData
-            readonly property real side: modelData.x < 50 ? -0.8 : 0.8
-            x: deck.u * modelData.x
-            y: deck.u * 85.5
-            width: deck.u * 11
-            height: deck.u * 9
+            readonly property real rad: modelData.a * Math.PI / 180
+            width: deck.u * 9
+            height: deck.u * 2.8
+            x: deck.width / 2 + Math.cos(rad) * deck.u * 47 - width / 2
+            y: deck.height / 2 + Math.sin(rad) * deck.u * 47 - height / 2
+            rotation: modelData.a + 90
             Rectangle {
-                width: parent.width
-                height: deck.u * 3.4
+                anchors.fill: parent
                 radius: height / 2
                 color: deck.look === "paper" ? deck.mocha.base : Qt.rgba(0, 0, 0, 0.45)
                 border.width: deck.look === "paper" ? 1.5 : 0
@@ -497,7 +500,7 @@ Item {
                     height: parent.height * 0.75
                     radius: height / 2
                     depth: Math.max(1.5, height * 0.4)
-                    lean: Math.max(-1, Math.min(1, switchSlot.side + deck.viewLean))
+                    lean: Math.max(-1, Math.min(1, switchSlot.modelData.side + deck.viewLean))
                     flat: deck.look === "paper"
                     faceTop: Qt.lighter(deck.skin.capA, 1.08)
                     faceBottom: deck.skin.capB
@@ -505,17 +508,6 @@ Item {
                     borderWidth: 1
                     borderColor: deck.skin.capBorder
                 }
-            }
-            Text {
-                visible: deck.detail > 0.01
-                opacity: deck.detail
-                y: deck.u * 4.6
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: switchSlot.modelData.label
-                font.family: ThemeConfig.monoFont
-                font.pixelSize: Math.max(6, deck.u * 1.8)
-                font.letterSpacing: deck.u * 0.2
-                color: deck.skin.brandColor
             }
         }
     }
@@ -529,9 +521,10 @@ Item {
     }
     Rectangle {
         id: lcdBezel
-        x: deck.u * 20
-        y: deck.u * 84.5
-        width: deck.u * 60
+        // Op het deksel, onder het venster (volgt de kap van het deksel).
+        x: lid.x + lid.dx + deck.u * 22
+        y: lid.y + lid.dy + deck.u * 65.5
+        width: deck.u * 44
         height: deck.u * 12
         radius: deck.u * (deck.look === "neon" ? 1 : 2)
         color: deck.look === "paper" ? deck.mocha.text : Qt.darker(deck.skin.bodyB, 1.6)
@@ -601,13 +594,29 @@ Item {
                 font.pixelSize: lcd.px * 2.5
                 color: deck.skin.lcdText2
             }
+            // Tijd: groot zolang er geen details zijn (klein op het bureaublad),
+            // daarna klein naast de artiest; ze lopen in elkaar over.
             Text {
+                visible: opacity > 0.01
+                opacity: 1 - deck.detail
                 anchors.right: parent.right
                 anchors.rightMargin: lcd.px * 1.2
-                y: deck.compact || deck.detail < 0.5 ? (lcd.height - height) / 2 - lcd.px * 1.2 : lcd.px * 4.1
+                y: (lcd.height - height) / 2 - lcd.px * 1.2
                 text: deck.tracking ? deck.clock(deck.position * deck.length) : "-:--"
                 font.family: ThemeConfig.monoFont
-                font.pixelSize: deck.compact || deck.detail < 0.5 ? lcd.px * 4 : lcd.px * 2.6
+                font.pixelSize: lcd.px * 4
+                font.weight: Font.Bold
+                color: deck.skin.lcdText3
+            }
+            Text {
+                visible: deck.detail > 0.01
+                opacity: deck.detail
+                anchors.right: parent.right
+                anchors.rightMargin: lcd.px * 1.2
+                y: lcd.px * 4.1
+                text: deck.tracking ? deck.clock(deck.position * deck.length) : "-:--"
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: lcd.px * 2.6
                 font.weight: Font.Bold
                 color: deck.skin.lcdText3
             }
@@ -648,8 +657,8 @@ Item {
     }
     // Lampje: brandt tijdens afspelen.
     Rectangle {
-        x: deck.u * 84.5
-        y: deck.u * 5.5
+        x: deck.width / 2 + Math.cos(-0.5 * Math.PI + 0.62) * deck.u * 47 - width / 2
+        y: deck.height / 2 + Math.sin(-0.5 * Math.PI + 0.62) * deck.u * 47 - height / 2
         width: Math.max(3, deck.u * 1.8)
         height: width
         radius: width / 2

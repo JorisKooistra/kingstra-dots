@@ -12,6 +12,11 @@ import ".."
 //
 // Inhoud: topData (de bovenkant, vult het vlak) en frontData (de knoppen op
 // de voorkant). Alleen QtQuick: het venster eromheen staat in VinylStage.qml.
+//
+// Staand (upright, de cassettespeler): het front kijkt recht naar je en de
+// kast heeft diepte naar achteren. Je kijkt er iets van rechtsboven op, dus
+// je ziet de bovenkant (met de knoppen, shellData) en de rechterzijkant
+// (met het wieltje). Die vouwen uit in de tweede fase van de overgang.
 FocusScope {
     id: stage
 
@@ -34,7 +39,13 @@ FocusScope {
     property real widthShare: 0.52
     // Hoekradius van de kast op de uiteindelijke grootte (in pixels).
     property real bodyRadius: 12
-    readonly property real maxTilt: 38
+    property real maxTilt: 38
+    property bool upright: false
+    // Staand: hoogte van het front en hoe ver de achterkant in beeld
+    // verschuift (naar rechtsboven), beide t.o.v. de breedte.
+    property real faceAspect: 0.71
+    property real obliqueX: 0.085
+    property real obliqueY: 0.12
 
     // 0 = dicht, 1 = open; het venster animeert dit.
     property real reveal: 1
@@ -51,6 +62,7 @@ FocusScope {
 
     property alias topData: topFace.data
     property alias frontData: frontContent.data
+    property alias shellData: shellLayer.data
     readonly property alias frontWidth: front.width
 
     signal togglePlay()
@@ -159,50 +171,65 @@ FocusScope {
 
     // --- Het apparaat ---------------------------------------------------------
     readonly property real foreshorten: Math.cos(maxTilt * Math.PI / 180)
-    readonly property real rigWidth: Math.min(width * widthShare, height * 0.70 / (topAspect * foreshorten + frontRatio))
-    readonly property real topDepth: rigWidth * topAspect
-    readonly property real frontHeight: rigWidth * frontRatio
-    readonly property real tilt: fromOrigin ? maxTilt * tiltT : 8 + (maxTilt - 8) * reveal
-    readonly property real finalX: (width - rigWidth) / 2
-    readonly property real visibleHeight: topDepth * foreshorten + frontHeight
-    readonly property real finalY: (height - visibleHeight - height * 0.11) / 2 - topDepth * (1 - foreshorten)
+    readonly property real rigWidth: upright
+        ? Math.min(width * widthShare, height * 0.64 / (faceAspect + obliqueY))
+        : Math.min(width * widthShare, height * 0.70 / (topAspect * foreshorten + frontRatio))
+    readonly property real topDepth: upright ? rigWidth * faceAspect : rigWidth * topAspect
+    readonly property real frontHeight: upright ? 0 : rigWidth * frontRatio
+    readonly property real tilt: upright ? 0 : fromOrigin ? maxTilt * tiltT : 8 + (maxTilt - 8) * reveal
+    // Staand: diepte van de kast in beeld; groeit mee in de tweede fase.
+    readonly property real extrudeT: fromOrigin ? tiltT : reveal
+    readonly property real offX: upright ? rigWidth * obliqueX * extrudeT : 0
+    readonly property real offY: upright ? rigWidth * obliqueY * extrudeT : 0
+    readonly property real finalX: upright ? (width - rigWidth * (1 + obliqueX)) / 2 + rigWidth * 0.06 : (width - rigWidth) / 2
+    readonly property real visibleHeight: upright ? topDepth + rigWidth * obliqueY : topDepth * foreshorten + frontHeight
+    readonly property real finalY: upright
+        ? (height - visibleHeight - height * 0.11) / 2 + rigWidth * obliqueY
+        : (height - visibleHeight - height * 0.11) / 2 - topDepth * (1 - foreshorten)
     // Kast-hoeken in de voorkant: de afronding van de bovenkant, gezien
-    // onder de eindhoek (ellips).
-    readonly property real cornerX: Math.min(bodyRadius, rigWidth * 0.3)
+    // onder de eindhoek (ellips). Een ronde kast (discman) heeft als
+    // voorkant een gebogen band.
+    readonly property real cornerX: Math.min(bodyRadius, rigWidth * 0.5)
     readonly property real cornerY: cornerX * foreshorten
+    // Bovenrand van de voorkant op hoogte x (in pixels, t.o.v. de voorkant),
+    // om knoppen op een gebogen band te zetten.
+    function rimY(x) {
+        let p = band.rim;
+        if (p.length === 0) return 0;
+        if (x <= p[0][0]) return p[0][1];
+        for (let i = 1; i < p.length; i++) {
+            if (x <= p[i][0]) {
+                let a = p[i - 1], b = p[i];
+                let t = b[0] > a[0] ? (x - a[0]) / (b[0] - a[0]) : 0;
+                return a[1] + (b[1] - a[1]) * t;
+            }
+        }
+        return p[p.length - 1][1];
+    }
 
     // Organic: een houten koptelefoon ligt naast het apparaat op tafel, in
-    // hetzelfde perspectief als de bovenkant. Komt pas aan het eind van de
-    // overgang in beeld.
-    Item {
+    // hetzelfde perspectief. Komt pas aan het eind van de overgang in beeld.
+    WoodHeadphones {
         id: decoration
         visible: stage.look === "wood" && stage.detailT > 0.01
         opacity: stage.detailT
-        width: stage.rigWidth * 0.44
-        height: width * 1.0
-        x: stage.finalX - width * 1.02
-        y: stage.finalY + stage.topDepth - height
-        transform: [
-            Rotation {
-                origin.x: decoration.width / 2
-                origin.y: decoration.height
-                axis { x: 1; y: 0; z: 0 }
-                angle: stage.maxTilt
-            },
-            Rotation {
-                origin.x: decoration.width + stage.rigWidth / 2
-                origin.y: decoration.height + stage.frontHeight
-                axis { x: 0; y: 1; z: 0 }
-                angle: stage.sway
-            }
-        ]
-        WoodHeadphones {
-            anchors.fill: parent
-            rotation: -14
-            mocha: stage.mocha
-            wood: Qt.tint(Qt.darker(stage.mocha.peach, 1.9), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.35))
-            metal: stage.skin.metal || stage.mocha.subtext1
-            leather: Qt.tint(Qt.lighter(stage.mocha.surface2, 1.15), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.5))
+        mocha: stage.mocha
+        width: stage.rigWidth * (stage.upright ? 0.58 : 0.5)
+        // Tafel in beeld: hoe plat het tafelblad staat en hoe hoog dingen
+        // erop worden.
+        k: stage.upright ? 0.42 : Math.sin(stage.maxTilt * Math.PI / 180) * 0.9 + 0.12
+        v: stage.upright ? 0.92 : Math.cos(stage.maxTilt * Math.PI / 180) * 0.55
+        x: stage.finalX - width * (stage.upright ? 1.0 : 0.98)
+        y: stage.upright ? stage.finalY + stage.topDepth - height * 0.86
+                         : stage.finalY + stage.topDepth + stage.frontHeight - height * 0.9
+        wood: Qt.tint(Qt.darker(stage.mocha.peach, 1.9), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.35))
+        metal: stage.skin.metal || stage.mocha.subtext1
+        leather: Qt.tint(Qt.darker(stage.mocha.surface1, 1.2), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.45))
+        transform: Rotation {
+            origin.x: decoration.width + stage.rigWidth / 2
+            origin.y: decoration.height
+            axis { x: 0; y: 1; z: 0 }
+            angle: stage.sway
         }
     }
 
@@ -227,7 +254,7 @@ FocusScope {
 
         // Zachte schaduw onder de kast.
         Rectangle {
-            visible: stage.look !== "paper"
+            visible: stage.look !== "paper" && !stage.upright
             opacity: stage.reveal
             width: parent.width * 1.02
             height: stage.frontHeight * 1.3
@@ -239,8 +266,116 @@ FocusScope {
             layer.effect: MultiEffect { blurEnabled: true; blurMax: 48; blur: 1.0 }
         }
 
+        // Staand: schaduw op tafel, onder de hele kast tot achteren.
+        Rectangle {
+            visible: stage.look !== "paper" && stage.upright
+            opacity: stage.reveal
+            x: -stage.rigWidth * 0.02
+            width: parent.width + stage.offX + stage.rigWidth * 0.06
+            height: stage.offY + stage.rigWidth * 0.07
+            y: parent.height - height + stage.rigWidth * 0.035
+            radius: height / 2
+            color: Qt.rgba(0, 0, 0, 0.55)
+            layer.enabled: true
+            layer.effect: MultiEffect { blurEnabled: true; blurMax: 48; blur: 1.0 }
+        }
+
         // Klikken op het apparaat zelf sluit niet.
-        MouseArea { anchors.fill: parent }
+        MouseArea {
+            x: 0
+            y: -stage.offY
+            width: parent.width + stage.offX
+            height: parent.height + stage.offY
+        }
+
+        // Staand: de kast achter het front. De omtrek is het front plus
+        // dezelfde vorm naar achteren geschoven (convex omhulsel); daarover
+        // de bovenkant lichter en een randje waar licht op valt.
+        Shape {
+            id: shell
+            visible: stage.upright && stage.offY > 0.5
+            preferredRendererType: Shape.CurveRenderer
+            readonly property real r: Math.min(stage.bodyRadius, stage.rigWidth * 0.2)
+            function corners(ox, oy, w, h, r, top) {
+                let pts = [], n = 6;
+                function arc(cx, cy, a0, a1) {
+                    for (let i = 0; i <= n; i++) {
+                        let a = a0 + (a1 - a0) * i / n;
+                        pts.push([cx + r * Math.cos(a), cy - r * Math.sin(a)]);
+                    }
+                }
+                arc(ox + w - r, oy + r, 0, Math.PI / 2);
+                arc(ox + r, oy + r, Math.PI / 2, Math.PI);
+                if (!top) {
+                    arc(ox + r, oy + h - r, Math.PI, 1.5 * Math.PI);
+                    arc(ox + w - r, oy + h - r, 1.5 * Math.PI, 2 * Math.PI);
+                }
+                return pts;
+            }
+            function hull(pts) {
+                pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+                function cross(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+                let lower = [], upper = [];
+                for (let p of pts) {
+                    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+                    lower.push(p);
+                }
+                for (let i = pts.length - 1; i >= 0; i--) {
+                    let p = pts[i];
+                    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+                    upper.push(p);
+                }
+                upper.pop();
+                lower.pop();
+                let out = lower.concat(upper), d = "M " + out[0][0].toFixed(2) + " " + out[0][1].toFixed(2);
+                for (let i = 1; i < out.length; i++) d += " L " + out[i][0].toFixed(2) + " " + out[i][1].toFixed(2);
+                return d + " Z";
+            }
+            readonly property string outline: {
+                if (!stage.upright) return "";
+                let w = stage.rigWidth, h = stage.topDepth;
+                return hull(corners(0, 0, w, h, r, false).concat(corners(stage.offX, -stage.offY, w, h, r, false)));
+            }
+            readonly property string topOutline: {
+                if (!stage.upright) return "";
+                let w = stage.rigWidth;
+                return hull(corners(0, 0, w, 0, r, true).concat(corners(stage.offX, -stage.offY, w, 0, r, true)));
+            }
+            ShapePath {
+                strokeWidth: stage.look === "paper" ? 2 : 1
+                strokeColor: stage.look === "paper" ? stage.mocha.text : stage.skin.shellEdge || Qt.rgba(0, 0, 0, 0.4)
+                fillGradient: LinearGradient {
+                    x1: stage.rigWidth; y1: 0
+                    x2: stage.rigWidth + stage.offX; y2: 0
+                    GradientStop { position: 0.0; color: stage.skin.shellSide || "#333" }
+                    GradientStop { position: 1.0; color: Qt.darker(stage.skin.shellSide || "#333", stage.look === "paper" ? 1 : 1.25) }
+                }
+                PathSvg { path: shell.outline }
+            }
+            ShapePath {
+                strokeWidth: stage.look === "paper" ? 2 : 0
+                strokeColor: stage.look === "paper" ? stage.mocha.text : "transparent"
+                fillGradient: LinearGradient {
+                    x1: 0; y1: -stage.offY
+                    x2: 0; y2: 0
+                    GradientStop { position: 0.0; color: Qt.darker(stage.skin.shellTop || "#555", stage.look === "paper" ? 1 : 1.12) }
+                    GradientStop { position: 1.0; color: stage.skin.shellTop || "#555" }
+                }
+                PathSvg { path: shell.topOutline }
+            }
+        }
+        // Neon: gloed langs de achterrand.
+        Shape {
+            visible: stage.upright && stage.look === "neon" && stage.offY > 0.5
+            preferredRendererType: Shape.CurveRenderer
+            opacity: stage.playing ? 0.8 : 0.5
+            ShapePath {
+                strokeWidth: 1.5
+                strokeColor: stage.accent
+                fillColor: "transparent"
+                PathSvg { path: shell.outline }
+            }
+        }
 
         // Bovenkant, achterover gekanteld rond de voorrand.
         Item {
@@ -254,6 +389,11 @@ FocusScope {
                 angle: stage.tilt
             }
         }
+        // Staand: alles op de bovenkant en zijkant (knoppen, wieltje).
+        Item {
+            id: shellLayer
+            visible: stage.upright
+        }
 
         // Voorkant: draait als één kast mee met de bovenkant.
         Item {
@@ -262,7 +402,7 @@ FocusScope {
             width: parent.width
             height: stage.frontHeight
             opacity: stage.fromOrigin ? stage.clamp01((stage.tiltT - 0.06) * 3) : 1
-            visible: opacity > 0.01
+            visible: !stage.upright && opacity > 0.01
             transform: Rotation {
                 origin.x: front.width / 2
                 origin.y: 0
@@ -298,12 +438,14 @@ FocusScope {
                         let z = -yy * Math.sin(t), s = d / (d + z);
                         pts.push([cx + (x - cx) * s, yy * Math.cos(t) * s, s]);
                     }
-                    for (let i = 0; i <= 8; i++) {
-                        let a = i / 8 * Math.PI / 2;
+                    // Meer punten bij een grote afronding (ronde kast).
+                    let n = 8 + Math.round(r / Math.max(1, w) * 48);
+                    for (let i = 0; i <= n; i++) {
+                        let a = i / n * Math.PI / 2;
                         add(r - r * Math.cos(a), -r + r * Math.sin(a));
                     }
-                    for (let i = 8; i >= 0; i--) {
-                        let a = i / 8 * Math.PI / 2;
+                    for (let i = n; i >= 0; i--) {
+                        let a = i / n * Math.PI / 2;
                         add(w - r + r * Math.cos(a), -r + r * Math.sin(a));
                     }
                     return pts;

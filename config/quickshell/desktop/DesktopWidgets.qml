@@ -422,7 +422,7 @@ Scope {
                                 id: miniCassette
                                 anchors.centerIn: parent
                                 width: 160
-                                height: 115
+                                height: 114
                                 compact: true
                                 mocha: mocha
                                 accent: mocha.primary

@@ -89,7 +89,8 @@ Item {
         // Glans langs de bovenrand en een iets donkerdere onderrand.
         Rectangle {
             visible: !ex.flat && ex.height >= 8
-            x: Math.min(ex.radius * 0.6, parent.width * 0.25)
+            // Bij een ronde kap binnen de boog blijven.
+            x: Math.max(Math.min(ex.radius * 0.6, parent.width * 0.25), ex.radius - Math.sqrt(Math.max(0, 2 * ex.radius - 1)) + 1)
             y: 1
             width: parent.width - 2 * x
             height: 1
@@ -97,7 +98,7 @@ Item {
         }
         Rectangle {
             visible: !ex.flat && ex.height >= 8
-            x: Math.min(ex.radius * 0.6, parent.width * 0.25)
+            x: Math.max(Math.min(ex.radius * 0.6, parent.width * 0.25), ex.radius - Math.sqrt(Math.max(0, 4 * ex.radius - 4)) + 1)
             y: parent.height - 2
             width: parent.width - 2 * x
             height: 1

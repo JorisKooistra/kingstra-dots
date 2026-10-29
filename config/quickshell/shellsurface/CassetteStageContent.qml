@@ -1,12 +1,12 @@
 import QtQuick
-import QtQuick.Layouts
 import ".."
 
-// Schermvullende cassettespeler (walkman), zoals de draaitafel: de kast ligt
-// achterover met het venster en de cassette naar boven, de bovenrand met de
-// pianotoetsen kijkt naar je. Play blijft ingedrukt tijdens afspelen; ◀◀ en
-// ▶▶ gaan naar het vorige/volgende nummer en spoelen als je ze vasthoudt,
-// dan winden de spoelen zichtbaar door. Volume zit in het wieltje rechts.
+// Schermvullende cassettespeler, staand zoals een moderne walkman (FiiO
+// CP13): het front met het venster kijkt naar je, bovenop staan de ronde
+// knoppen en uit de rechterzijkant steekt het volumewieltje. Play blijft
+// ingedrukt tijdens afspelen; ◀◀ en ▶▶ gaan naar het vorige/volgende nummer
+// en spoelen als je ze vasthoudt, dan winden de spoelen zichtbaar door.
+// Slepen over het venster spoelt ook.
 DeviceStage {
     id: stage
 
@@ -24,10 +24,11 @@ DeviceStage {
 
     skin: cassette.skin
     look: cassette.look
-    topAspect: 0.72
-    frontRatio: 0.13
+    upright: true
+    faceAspect: 0.71
+    widthShare: 0.4
     bodyRadius: cassette.bodyRadius
-    hint: "Spatie afspelen  ·  ◀◀ ▶▶ vorige/volgende, vasthouden spoelt  ·  sleep over de tape  ·  ← → spoelen  ·  Esc sluit"
+    hint: "Spatie afspelen  ·  ◀◀ ▶▶ vorige/volgende, vasthouden spoelt  ·  sleep over het venster  ·  ← → spoelen  ·  Esc sluit"
     onNudge: seconds => seeker.nudge(seconds)
 
     SeekControl {
@@ -47,229 +48,123 @@ DeviceStage {
             title: stage.title
             artist: stage.artist
             playing: stage.playing
+            tracking: stage.tracking
+            length: stage.length
             position: stage.tracking ? seeker.shown : 0
             detail: stage.detailT
             marquee: stage.settled
-            viewLean: stage.viewLean
+            seekable: seeker.canSeek
             onTogglePlay: stage.togglePlay()
+            onScrubPressed: fraction => seeker.begin(fraction)
+            onScrubMoved: fraction => seeker.move(fraction)
+            onScrubReleased: fraction => seeker.commit(fraction)
         }
     ]
 
-    frontData: [
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: Math.max(stage.cornerX * 0.7, stage.rigWidth * 0.035)
-            anchors.rightMargin: Math.max(stage.cornerX * 0.7, stage.rigWidth * 0.035)
-            anchors.topMargin: stage.frontHeight * 0.16
-            anchors.bottomMargin: stage.frontHeight * 0.2
-            spacing: stage.rigWidth * 0.02
+    // Op de bovenkant: midden van de diepte. Alles hier komt in beeld als
+    // de kast is uitgevouwen.
+    readonly property real keyR: rigWidth * 0.056
+    readonly property real keyK: 0.46
+    readonly property real keyH: rigWidth * 0.034
+    readonly property real shellIn: clamp01((extrudeT - 0.55) / 0.45)
+    function topX(f) { return rigWidth * f + offX * 0.5; }
+    readonly property real topY: -offY * 0.5
 
-            // Mechanische teller: speeltijd op losse rolletjes; loopt mee met
-            // de tape, dus ook tijdens het winden.
-            Rectangle {
-                id: counter
-                Layout.alignment: Qt.AlignVCenter
-                readonly property string digits: stage.tracking ? stage.clock(cassette.tapePos * stage.length) : "-:--"
-                readonly property real cell: stage.frontHeight * 0.3
-                implicitWidth: counterRow.implicitWidth + cell * 0.5
-                implicitHeight: cell * 1.45
-                radius: stage.look === "neon" ? 2 : cell * 0.18
-                color: stage.skin.counterFrame
-                border.width: stage.look === "paper" ? 2 : 1
-                border.color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.5)
-                Row {
-                    id: counterRow
-                    anchors.centerIn: parent
-                    spacing: counter.cell * 0.08
-                    Repeater {
-                        // Vaste plekken; alleen de tekst verandert.
-                        model: counter.digits.length
-                        Rectangle {
-                            required property int index
-                            readonly property string modelData: counter.digits.charAt(index)
-                            readonly property bool sep: modelData === ":"
-                            width: sep ? counter.cell * 0.35 : counter.cell * 0.78
-                            height: counter.cell * 1.15
-                            radius: 1
-                            color: sep ? "transparent" : stage.skin.counterBg
-                            // Rolletje: donker naar boven en onder.
-                            Rectangle {
-                                anchors.fill: parent
-                                visible: !parent.sep && stage.look !== "paper"
-                                radius: parent.radius
-                                gradient: Gradient {
-                                    GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.6) }
-                                    GradientStop { position: 0.35; color: Qt.rgba(1, 1, 1, 0.10) }
-                                    GradientStop { position: 0.65; color: "transparent" }
-                                    GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.6) }
-                                }
-                            }
-                            Text {
-                                anchors.centerIn: parent
-                                text: parent.modelData
-                                font.family: ThemeConfig.monoFont
-                                font.pixelSize: counter.cell * 0.82
-                                font.weight: Font.Bold
-                                color: parent.sep && stage.look !== "paper" ? stage.skin.counterBg : stage.skin.counterText
-                            }
-                        }
+    shellData: [
+        Item {
+            opacity: stage.shellIn
+            visible: opacity > 0.01
+
+            Repeater {
+                model: [
+                    { f: 0.17, icon: "󰇪", kind: "eject" },
+                    { f: 0.37, icon: "󰑟", kind: "rew" },
+                    { f: 0.57, icon: "󰐊", kind: "play" },
+                    { f: 0.77, icon: "󰈑", kind: "ff" }
+                ]
+                CylinderKey {
+                    id: key
+                    required property var modelData
+                    readonly property bool isPlay: modelData.kind === "play"
+                    readonly property int wind: modelData.kind === "rew" ? -1 : modelData.kind === "ff" ? 1 : 0
+                    r: stage.keyR * (isPlay ? 1.12 : 1)
+                    k: stage.keyK
+                    h: stage.keyH
+                    x: stage.topX(modelData.f) - r
+                    y: stage.topY - baseY
+                    icon: modelData.icon
+                    flat: stage.skin.flat === true
+                    latched: isPlay && stage.playing
+                    lit: isPlay ? stage.playing : wind !== 0 && seeker.windDir === wind
+                    capA: isPlay ? stage.skin.playA : stage.skin.keyA
+                    capB: isPlay ? stage.skin.playB : stage.skin.keyB
+                    side: isPlay ? stage.skin.playSide : stage.skin.keySide
+                    border: stage.skin.border
+                    iconColor: isPlay ? stage.skin.playIcon : stage.skin.keyIcon
+                    litColor: isPlay && stage.look !== "neon" ? stage.skin.playIcon : stage.skin.lit
+                    viewLean: stage.viewLean + (modelData.f - 0.5) * 0.5
+                    // Klik = vorige/volgende, vasthouden = spoelen.
+                    property bool held: false
+                    onDownChanged: {
+                        if (wind === 0) return;
+                        if (down) { held = false; holdTimer.restart(); }
+                        else { holdTimer.stop(); if (held) seeker.stopWind(); }
                     }
+                    onActivated: {
+                        if (isPlay) stage.togglePlay();
+                        else if (modelData.kind === "eject") stage.closeRequested();
+                        else if (!held && wind < 0 && stage.canPrevious) stage.previous();
+                        else if (!held && wind > 0 && stage.canNext) stage.next();
+                    }
+                    Timer { id: holdTimer; interval: 380; onTriggered: { key.held = true; seeker.startWind(key.wind); } }
                 }
             }
 
-            // Tapebalk: slepen windt de tape naar de nieuwe plek.
+            // Koptelefoonaansluiting bovenop, rechts.
             Item {
-                id: scrub
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                enabled: seeker.canSeek
-                opacity: enabled ? 1 : 0.4
+                readonly property real rr: stage.rigWidth * 0.022
+                x: stage.topX(0.92) - rr
+                y: stage.topY - rr * stage.keyK
+                width: 2 * rr
+                height: 2 * rr
+                transform: Scale { yScale: stage.keyK }
                 Rectangle {
-                    id: slot
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width
-                    height: Math.max(5, stage.frontHeight * 0.14)
-                    radius: stage.look === "neon" ? 1 : height / 2
-                    color: stage.skin.track
-                    border.width: stage.look === "paper" ? 1.5 : 0
-                    border.color: stage.mocha.text
-                    Rectangle {
-                        visible: stage.look !== "paper"
-                        width: parent.width
-                        height: parent.height * 0.5
-                        radius: parent.radius
-                        color: Qt.rgba(0, 0, 0, 0.35)
-                    }
-                    // Tape die al gespeeld is (rechterspoel).
-                    Rectangle {
-                        width: Math.max(height, parent.width * seeker.shown)
-                        height: parent.height
-                        radius: parent.radius
-                        color: stage.skin.fill
-                        opacity: 0.85
-                    }
-                }
-                // Schuifje als uitgetrokken blokje, zelfde 3D als de knoppen.
-                Extruded {
-                    id: thumb
-                    width: stage.frontHeight * 0.2
-                    height: stage.frontHeight * 0.34
-                    x: seeker.shown * (scrub.width - width)
-                    y: (scrub.height - height) / 2 - depth * 0.5
-                    radius: stage.look === "neon" ? 1.5 : 3
-                    depth: Math.max(2, height * 0.22)
-                    frontFacing: true
-                    lean: 0.1 + stage.viewLean
-                    flat: stage.look === "paper"
-                    faceTop: Qt.lighter(stage.skin.capA, 1.08)
-                    faceBottom: stage.skin.capB
-                    side: stage.skin.capSide
-                    borderWidth: 1
-                    borderColor: stage.skin.capBorder
-                }
-                MouseArea {
                     anchors.fill: parent
-                    anchors.topMargin: -stage.frontHeight * 0.1
-                    cursorShape: Qt.PointingHandCursor
-                    preventStealing: true
-                    function at(mx) { return Math.max(0, Math.min(1, mx / scrub.width)); }
-                    onPressed: mouse => seeker.begin(at(mouse.x))
-                    onPositionChanged: mouse => { if (pressed) seeker.move(at(mouse.x)); }
-                    onReleased: mouse => seeker.commit(at(mouse.x))
-                    onCanceled: seeker.cancel()
+                    radius: width / 2
+                    color: stage.skin.metal
+                    border.width: stage.look === "paper" ? 2 / stage.keyK : 1
+                    border.color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.45)
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: parent.width * 0.5
+                        height: width
+                        radius: width / 2
+                        color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.85)
+                    }
                 }
             }
 
-            // Pianotoetsen.
-            Row {
-                Layout.alignment: Qt.AlignVCenter
-                spacing: stage.rigWidth * 0.008
-                DeckKey {
-                    mocha: stage.mocha
-                    accent: stage.accent
-                    skin: stage.skin
-                    icon: "󰇪"
-                    frontFacing: true
-                    lean: 0.15
-                    viewLean: stage.viewLean
-                    keyWidth: stage.frontHeight * 0.62
-                    keyHeight: stage.frontHeight * 0.56
-                    onActivated: stage.closeRequested()
-                }
-                DeckKey {
-                    id: rewKey
-                    mocha: stage.mocha
-                    accent: stage.accent
-                    skin: stage.skin
-                    icon: "󰑟"
-                    frontFacing: true
-                    lean: 0.3
-                    viewLean: stage.viewLean
-                    lit: seeker.windDir < 0
-                    keyWidth: stage.frontHeight * 0.8
-                    keyHeight: stage.frontHeight * 0.56
-                    property bool held: false
-                    onDownChanged: if (down) { held = false; rewHold.restart(); } else { rewHold.stop(); if (held) seeker.stopWind(); }
-                    onActivated: if (!held && stage.canPrevious) stage.previous()
-                    Timer { id: rewHold; interval: 380; onTriggered: { rewKey.held = true; seeker.startWind(-1); } }
-                }
-                DeckKey {
-                    mocha: stage.mocha
-                    accent: stage.accent
-                    skin: stage.skin
-                    // Eén icoon; blijft ingedrukt zolang er muziek speelt.
-                    icon: "󰐊"
-                    latched: stage.playing
-                    lit: stage.playing
-                    frontFacing: true
-                    lean: 0.45
-                    viewLean: stage.viewLean
-                    keyWidth: stage.frontHeight * 1.05
-                    keyHeight: stage.frontHeight * 0.56
-                    onActivated: stage.togglePlay()
-                }
-                DeckKey {
-                    id: ffKey
-                    mocha: stage.mocha
-                    accent: stage.accent
-                    skin: stage.skin
-                    icon: "󰈑"
-                    frontFacing: true
-                    lean: 0.6
-                    viewLean: stage.viewLean
-                    lit: seeker.windDir > 0
-                    keyWidth: stage.frontHeight * 0.8
-                    keyHeight: stage.frontHeight * 0.56
-                    property bool held: false
-                    onDownChanged: if (down) { held = false; ffHold.restart(); } else { ffHold.stop(); if (held) seeker.stopWind(); }
-                    onActivated: if (!held && stage.canNext) stage.next()
-                    Timer { id: ffHold; interval: 380; onTriggered: { ffKey.held = true; seeker.startWind(1); } }
-                }
+            // Volumewieltje dat uit de rechterzijkant steekt.
+            VolumeWheel {
+                width: stage.rigWidth * 0.042
+                height: stage.rigWidth * 0.17
+                x: stage.rigWidth + stage.offX * 0.5 - width * 0.3
+                y: stage.topDepth * 0.2 - stage.offY * 0.5
+                skin: stage.skin
+                value: stage.volume
+                flat: stage.look === "paper"
+                viewLean: stage.viewLean
+                onRequested: value => stage.volumeRequested(value)
             }
-
-            // Volumewieltje met opschrift.
-            Column {
-                Layout.alignment: Qt.AlignVCenter
-                spacing: stage.frontHeight * 0.04
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    opacity: stage.detailT
-                    text: "VOL"
-                    font.family: ThemeConfig.monoFont
-                    font.pixelSize: Math.max(8, stage.frontHeight * 0.12)
-                    font.letterSpacing: 1
-                    color: stage.skin.brandColor
-                }
-                VolumeWheel {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    width: stage.frontHeight * 0.36
-                    height: stage.frontHeight * 0.48
-                    skin: stage.skin
-                    value: stage.volume
-                    flat: stage.look === "paper"
-                    viewLean: stage.viewLean
-                    onRequested: value => stage.volumeRequested(value)
-                }
+            Text {
+                x: stage.rigWidth + stage.offX * 0.5 - width / 2
+                y: stage.topDepth * 0.2 - stage.offY * 0.5 + stage.rigWidth * 0.19
+                opacity: stage.detailT
+                text: "VOL"
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: Math.max(8, stage.rigWidth * 0.017)
+                font.letterSpacing: 1
+                color: stage.skin.print
             }
         }
     ]
