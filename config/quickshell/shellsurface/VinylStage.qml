@@ -34,10 +34,11 @@ PanelWindow {
     // Tot dan ligt de grote speler precies over de kleine heen.
     property real reveal: 0
     property bool started: false
-    Timer {
-        interval: 120
+    // Pas starten als het venster een paar frames heeft getekend: dan zijn
+    // de canvassen (nerf, arm) klaar en kost het eerste animatieframe niets.
+    FrameAnimation {
         running: win.visible && !win.started
-        onTriggered: {
+        onTriggered: if (currentFrame >= 4 && elapsedTime >= 0.1) {
             win.started = true;
             win.host.stageCovering = true;
             win.reveal = Qt.binding(() => win.open ? 1 : 0);
@@ -46,7 +47,8 @@ PanelWindow {
     Behavior on reveal {
         enabled: win.started
         // Rustig in- en uitlopen: de speler groeit van de mediakaart naar het midden.
-        NumberAnimation { duration: ThemeConfig.duration(760); easing.type: Easing.InOutCubic }
+        // Lineair: VinylStageContent geeft elke fase zelf een zachte curve.
+        NumberAnimation { duration: ThemeConfig.duration(950); easing.type: Easing.Linear }
     }
     onRevealChanged: if (started && !open && reveal <= 0.001) {
         win.host.stageCovering = false;

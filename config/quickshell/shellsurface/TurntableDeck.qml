@@ -19,6 +19,11 @@ Item {
     property real progress: 0
     // Kleine uitvoering: geen merk- en pitchtekst, geen 33/45.
     property bool compact: false
+    // 0..1: hoeveel van de grote uitvoering zichtbaar is (33/45, merk,
+    // volumetekst, hoekradius). VinylStage laat dit pas aan het eind van de
+    // groei-animatie oplopen, zodat de bovenkant dan niet ineens verandert.
+    property real detail: compact ? 0 : 1
+    readonly property real compactRadius: Math.min(10, skin.radius) * width / 160
     // Onderrand recht, zodat hij naadloos op de voorkant van VinylStage past.
     property bool squareBottom: false
     property alias vinyl: vinyl
@@ -102,7 +107,8 @@ Item {
     Rectangle {
         id: plinth
         anchors.fill: parent
-        radius: table.compact ? Math.min(10, table.skin.radius) : table.skin.radius
+        radius: table.compact ? Math.min(10, table.skin.radius)
+            : table.compactRadius + (table.skin.radius - table.compactRadius) * table.detail
         border.width: table.skin.borderW
         border.color: table.skin.border
         gradient: Gradient {
@@ -112,7 +118,8 @@ Item {
 
         // Rechte onderhoeken voor de schermvullende speler.
         Rectangle {
-            visible: table.squareBottom
+            visible: table.squareBottom && table.detail > 0.01
+            opacity: table.detail
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
@@ -420,7 +427,8 @@ Item {
         onActivated: table.togglePlay()
     }
     Row {
-        visible: !table.compact
+        visible: !table.compact && table.detail > 0.01
+        opacity: table.detail
         // Langs de onderrand, onder de draaischijf door.
         x: table.width * 0.03 + table.height * 0.17
         y: table.height * 0.925
@@ -570,7 +578,8 @@ Item {
     }
 
     Text {
-        visible: !table.compact
+        visible: !table.compact && table.detail > 0.01
+        opacity: table.detail
         anchors.right: parent.right
         anchors.rightMargin: table.width * 0.13
         y: table.height * 0.92
@@ -581,7 +590,8 @@ Item {
         color: table.skin.brandColor
     }
     Text {
-        visible: !table.compact && pitchFader.visible
+        visible: !table.compact && pitchFader.visible && table.detail > 0.01
+        opacity: table.detail
         anchors.horizontalCenter: pitchFader.horizontalCenter
         y: pitchFader.y - height - table.height * 0.02
         text: "VOL " + Math.round(pitchFader.shown * 100)

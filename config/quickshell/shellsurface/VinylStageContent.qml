@@ -39,6 +39,14 @@ FocusScope {
     property rect originRect: Qt.rect(0, 0, 0, 0)
     readonly property bool fromOrigin: originRect.width > 0
     function lerp(a, b, t) { return a + (b - a) * t; }
+    function clamp01(t) { return Math.max(0, Math.min(1, t)); }
+    function ease(t) { t = clamp01(t); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+    // De overgang in fases, zodat er nooit alles tegelijk verandert: eerst
+    // groeit de platte speler naar zijn plek, dan kantelt hij en vouwt de
+    // voorkant uit, pas daarna komen de kleine details erbij.
+    readonly property real growT: fromOrigin ? ease(reveal / 0.62) : reveal
+    readonly property real tiltT: fromOrigin ? ease((reveal - 0.38) / 0.62) : reveal
+    readonly property real detailT: fromOrigin ? clamp01((reveal - 0.75) / 0.25) : 1
 
     signal togglePlay()
     signal previous()
@@ -136,7 +144,7 @@ FocusScope {
     readonly property real rigWidth: Math.min(width * 0.58, height * 0.9)
     readonly property real topDepth: rigWidth * 0.78
     readonly property real frontHeight: rigWidth * 0.12
-    readonly property real tilt: fromOrigin ? 38 * reveal : 8 + 30 * reveal
+    readonly property real tilt: fromOrigin ? 38 * tiltT : 8 + 30 * reveal
     readonly property real finalX: (width - rigWidth) / 2
     readonly property real finalY: (height - topDepth - frontHeight) / 2 - height * 0.09
 
@@ -144,13 +152,13 @@ FocusScope {
         id: rig
         width: stage.rigWidth
         height: stage.topDepth + stage.frontHeight
-        x: stage.fromOrigin ? stage.lerp(stage.originRect.x, stage.finalX, stage.reveal) : stage.finalX
-        y: stage.fromOrigin ? stage.lerp(stage.originRect.y, stage.finalY, stage.reveal)
+        x: stage.fromOrigin ? stage.lerp(stage.originRect.x, stage.finalX, stage.growT) : stage.finalX
+        y: stage.fromOrigin ? stage.lerp(stage.originRect.y, stage.finalY, stage.growT)
                             : stage.finalY + (1 - stage.reveal) * 60
         transformOrigin: stage.fromOrigin ? Item.TopLeft : Item.Center
         opacity: stage.fromOrigin ? 1 : stage.reveal
         scale: stage.fromOrigin
-            ? stage.lerp(stage.originRect.width / stage.rigWidth, 1, stage.reveal)
+            ? stage.lerp(stage.originRect.width / stage.rigWidth, 1, stage.growT)
             : 0.9 + 0.1 * stage.reveal
         transform: Rotation {
             origin.x: rig.width / 2
@@ -228,6 +236,7 @@ FocusScope {
                 canSeek: stage.canSeek
                 volume: stage.volume
                 squareBottom: true
+                detail: stage.detailT
                 onTogglePlay: stage.togglePlay()
                 onSeek: fraction => stage.seek(fraction)
                 onVolumeRequested: value => stage.volumeRequested(value)
@@ -241,12 +250,12 @@ FocusScope {
             width: parent.width
             height: stage.frontHeight
             // Vouwt uit onder de bovenplaat als de speler uit de kleine groeit.
-            opacity: stage.fromOrigin ? Math.min(1, stage.reveal * 1.6) : 1
+            opacity: stage.fromOrigin ? stage.clamp01((stage.tiltT - 0.06) * 3) : 1
             transform: Rotation {
                 origin.x: front.width / 2
                 origin.y: 0
                 axis { x: 1; y: 0; z: 0 }
-                angle: stage.fromOrigin ? (1 - stage.reveal) * 88 : 0
+                angle: stage.fromOrigin ? (1 - stage.tiltT) * 88 : 0
             }
 
             Rectangle {
