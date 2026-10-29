@@ -13,6 +13,7 @@ end end
 spatial.resize_start=function() sent[#sent+1]='resizestart' end
 spatial.resize_stop=function() end
 package.loaded['lua.spatial']=spatial
+package.loaded['lua.window-close']=assert(loadfile('config/hypr/lua/window-close.lua'))()
 _G.hl={
  dsp=dsp('dsp'),dispatch=function(d) sent[#sent+1]=d end,
  exec_cmd=function() end,
@@ -34,6 +35,8 @@ local function find(key,mouse)
  error('missing bind '..key)
 end
 local drag=find('SUPER + mouse:272',true)
+assert(find('SUPER + Q',false).handler == package.loaded['lua.window-close'].close,
+ 'Super+Q must use the cursor monitor close handler')
 local native_resize=find('SUPER + mouse:273',true)
 local custom_resize=find('SUPER + mouse:273',false)
 local camera_drag=find('SUPER + CTRL + mouse:272',false)

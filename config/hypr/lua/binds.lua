@@ -59,7 +59,7 @@ update_mouse_binds(hl.get_active_window())
 bind("mouse:279", hl.dsp.window.drag(), { mouse = true })
 exec("mouse:279", scripts .. "/thumb-double-click.sh")
 
-bind(mod .. " + Q", hl.dsp.window.close())
+bind(mod .. " + Q", require("lua.window-close").close)
 -- Echt afsluiten: het proces van het venster stoppen, ook als de app naar de
 -- tray zou gaan. Apps op de lijst "echt sluiten" (Instellingen › Sessie)
 -- stoppen al bij een gewone Super+Q.
