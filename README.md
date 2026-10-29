@@ -384,7 +384,7 @@ for the full list.
 | `Super + V` | Clipboard history |
 | `Super + N` | Notifications |
 | `Super + Ctrl + I` | Settings (own app, `kingstra-settings`) |
-| `Super + Alt + Space` | Keyboard menu for everything |
+| `Super + Ctrl + Space` | Keyboard menu for everything |
 | `Super + Ctrl + T` / `Super + Shift + T` | Theme picker / next theme |
 | `Super + Ctrl + M` | Mode picker |
 | `Super + Ctrl + W` / `Super + Shift + W` | Wallpaper picker / random wallpaper |

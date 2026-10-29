@@ -7,6 +7,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ### Bediening: alles in één overlay (Super+A)
 - Nieuwe overlay `control/ControlOverlay.qml`, geopend met Super+A of via het toetsenbordmenu, in dezelfde qs-master als de thema- en modekiezer. Drie kolommen tegelijk zichtbaar: thema (met voorbeelden) en wallpaper (miniaturen, willekeurig, grote kiezer); mode voor de hele desktop, mode per scherm via een schermkaartje, wallpaper-effect en energieprofiel; indeling van de werkruimte, kolombreedte, snap-sterkte als schuif en de rail per scherm (onderdelen, automatisch verbergen, herstellen).
 - Gebruikt dezelfde helpers als Instellingen › Overzicht en › Bediening (`kingstra mode/theme/wallpaper`, `workspace-layout.py`, `werkvlak-settings.py`, `screen-profile.py`, `powerprofilesctl`); die tabbladen en de losse kiezers (Super+Ctrl+T, Super+Ctrl+M) blijven zoals ze waren.
+- Het toetsenbordmenu opent nu met Super+Ctrl+Space (was Super+Alt+Space).
 - Ronde vormen, glijdende markering bij keuzes en kolommen die gespreid binnenkomen; Esc of nogmaals Super+A sluit.
 
 ### Werkvlak: muisfocus en zwevende vensters

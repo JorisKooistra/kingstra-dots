@@ -4,7 +4,7 @@
 > Binds staan in `config/hypr/lua/binds.lua`.
 
 Opgeschoond op 28-10-2026: toetsen die niet gebruikt werden zijn weg. De functies
-zelf staan in het toetsenbordmenu (`Super + Alt + Space`): controlecentrum,
+zelf staan in het toetsenbordmenu (`Super + Ctrl + Space`): controlecentrum,
 niet storen, schermindeling, kalender, FocusTime, games, yazi, nmtui, Blueman,
 vastzetten op alle werkruimtes en de groepsacties. Het controlecentrum opent ook
 met drie vingers omlaag of een klik op de bovenbalk.
@@ -136,7 +136,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + A` | Bediening: thema, wallpaper, mode (ook per scherm), energie, indeling, scrollen en rail in één overlay |
 | `Super + Shift + M` | Muziek popup |
 | `Super + Ctrl + I` | Bediening en instellingen (eigen app, ook in de launcher) |
-| `Super + Alt + Space` | Toetsenbordmenu voor alles (thema, modus, schermen, systeem, sessie) |
+| `Super + Ctrl + Space` | Toetsenbordmenu voor alles (thema, modus, schermen, systeem, sessie) |
 | Klik op CPU/RAM-pil | Systeemstats popup |
 
 ---

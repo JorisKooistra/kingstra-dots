@@ -18,7 +18,7 @@ end
 
 -- Focus and movement
 -- Opgeschoond 2026-10-28 op Joris' aanvinklijst: alleen de pijltoetsen.
--- Weggehaalde functies staan in het toetsenbordmenu (Super+Alt+Space).
+-- Weggehaalde functies staan in het toetsenbordmenu (Super+Ctrl+Space).
 for _, direction in ipairs({ "left", "right", "up", "down" }) do
     bind(mod .. " + " .. direction, spatial.route("focus " .. direction, function()
         hl.exec_cmd(scripts .. "/focus-direction-safe.sh " .. direction)
@@ -125,7 +125,7 @@ exec(mod .. " + N", "~/.config/quickshell/notifications/notification_control.sh 
 exec(mod .. " + SHIFT + N", "~/.config/quickshell/notifications/notification_control.sh clear")
 exec(mod .. " + SHIFT + M", scripts .. "/qs_manager.sh toggle music")
 exec(mod .. " + CTRL + I", scripts .. "/qs_manager.sh toggle settings")
-exec(mod .. " + ALT + Space", scripts .. "/qs_manager.sh toggle menu")
+exec(mod .. " + CTRL + Space", scripts .. "/qs_manager.sh toggle menu")
 exec(mod .. " + CTRL + T", scripts .. "/qs_manager.sh toggle theme")
 exec(mod .. " + CTRL + M", scripts .. "/qs_manager.sh toggle mode")
 -- Bediening: thema, wallpaper, mode (ook per scherm), energie, indeling,
