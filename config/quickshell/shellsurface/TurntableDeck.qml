@@ -284,6 +284,7 @@ Item {
         single: table.rpm === 45
         armPivot: Qt.point(table.width * 0.835 - x, table.height * 0.2 - y)
         armReach: 2.05
+        armLean: 0.67
         armBase: 1.9
         artUrl: table.artUrl
         trackKey: table.trackKey
@@ -296,42 +297,50 @@ Item {
     }
 
     // 45-toerenadapter linksboven; ligt op de as zolang er een single speelt.
-    Rectangle {
-        visible: table.look !== "paper"
-        x: table.width * 0.035 + width * 0.08
-        y: table.height * 0.06 + width * 0.12
-        width: table.height * 0.1
-        height: width
-        radius: width / 2
-        color: Qt.rgba(0, 0, 0, 0.4)
-        opacity: vinyl.shownSingle ? 0 : 1
-    }
-    Rectangle {
+    // Een schijfje met dikte, zelfde 3D als de knoppen.
+    Item {
+        id: adapter
+        readonly property color body: table.look === "wood" ? table.skin.metal : table.look === "neon" ? table.mocha.crust : table.mocha.overlay1
         x: table.width * 0.035
         y: table.height * 0.06
         width: table.height * 0.1
         height: width
-        radius: width / 2
         opacity: vinyl.shownSingle ? 0 : 1
         Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("normal") } }
-        color: table.look === "wood" ? table.skin.metal : table.look === "neon" ? table.mocha.crust : table.mocha.overlay1
-        border.width: table.look === "neon" || table.look === "paper" ? 1.5 : 1
-        border.color: table.look === "neon" ? table.accent : table.look === "paper" ? table.mocha.text : Qt.rgba(0, 0, 0, 0.3)
-        Rectangle {
-            anchors.centerIn: parent
-            width: parent.width * 0.62
-            height: width
+        Extruded {
+            id: adapterDisc
+            anchors.fill: parent
             radius: width / 2
-            color: "transparent"
-            border.width: 1
-            border.color: Qt.rgba(0, 0, 0, 0.25)
+            depth: Math.max(2, width * 0.14)
+            lean: -0.9
+            flat: table.look === "paper"
+            faceTop: table.look === "paper" ? table.mocha.base : Qt.lighter(adapter.body, 1.15)
+            faceBottom: table.look === "paper" ? table.mocha.base : Qt.darker(adapter.body, 1.15)
+            side: table.look === "paper" ? table.mocha.text : Qt.darker(adapter.body, 1.5)
+            borderWidth: table.look === "neon" || table.look === "paper" ? 1.5 : 1
+            borderColor: table.look === "neon" ? table.accent : table.look === "paper" ? table.mocha.text : Qt.rgba(0, 0, 0, 0.3)
         }
-        Rectangle {
-            anchors.centerIn: parent
-            width: parent.width * 0.16
-            height: width
-            radius: width / 2
-            color: Qt.rgba(0, 0, 0, 0.5)
+        Item {
+            x: adapterDisc.dx
+            y: adapterDisc.dy
+            width: parent.width
+            height: parent.height
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width * 0.62
+                height: width
+                radius: width / 2
+                color: "transparent"
+                border.width: 1
+                border.color: Qt.rgba(0, 0, 0, 0.25)
+            }
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width * 0.16
+                height: width
+                radius: width / 2
+                color: Qt.rgba(0, 0, 0, 0.5)
+            }
         }
     }
 
@@ -355,25 +364,26 @@ Item {
             layer.enabled: true
             layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1.0 }
         }
-        // Schaduw en metalen ring, daarin een verzonken lampje.
-        Rectangle {
-            visible: table.look !== "paper"
-            x: parent.width * 0.08
-            y: parent.width * 0.14
-            width: parent.width
-            height: width
-            radius: width / 2
-            color: Qt.rgba(0, 0, 0, 0.4)
-        }
-        Rectangle {
+        // Metalen ring met dikte (zelfde 3D als de knoppen), daarin een
+        // verzonken lampje.
+        Extruded {
+            id: lampRing
             anchors.fill: parent
             radius: width / 2
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: table.look === "paper" ? table.mocha.base : Qt.lighter(lamp.ring, 1.2) }
-                GradientStop { position: 1.0; color: table.look === "paper" ? table.mocha.base : Qt.darker(lamp.ring, 1.8) }
-            }
-            border.width: table.look === "paper" ? 1.5 : 0
-            border.color: table.mocha.text
+            depth: Math.max(2, width * 0.16)
+            lean: -0.95
+            flat: table.look === "paper"
+            faceTop: table.look === "paper" ? table.mocha.base : Qt.lighter(lamp.ring, 1.2)
+            faceBottom: table.look === "paper" ? table.mocha.base : Qt.darker(lamp.ring, 1.5)
+            side: table.look === "paper" ? table.mocha.text : Qt.darker(lamp.ring, 1.7)
+            borderWidth: table.look === "paper" ? 1.5 : 0
+            borderColor: table.mocha.text
+        }
+        Item {
+            x: lampRing.dx
+            y: lampRing.dy
+            width: parent.width
+            height: parent.height
             Rectangle {
                 anchors.centerIn: parent
                 width: parent.width * 0.72
@@ -453,31 +463,18 @@ Item {
             y: vinyl.armLift > 0.5 ? parent.height * 0.02 : parent.height * 0.5
             Behavior on y { NumberAnimation { duration: ThemeConfig.duration(200); easing.type: Easing.OutCubic } }
             width: parent.width * 1.5
-            height: width * 0.6 * 1.35
-            Rectangle {
-                visible: table.look !== "paper"
-                x: parent.height * 0.2
-                y: parent.height * 0.35
+            height: width * 0.6 * 1.6
+            Extruded {
+                y: parent.height - height
                 width: parent.width
                 height: parent.width * 0.6
                 radius: height / 2
-                color: Qt.rgba(0, 0, 0, 0.4)
-            }
-            Rectangle {
-                y: parent.width * 0.6 * 0.3
-                width: parent.width
-                height: parent.width * 0.6
-                radius: height / 2
-                color: Qt.darker(table.skin.needle, 1.9)
-            }
-            Rectangle {
-                width: parent.width
-                height: parent.width * 0.6
-                radius: height / 2
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: Qt.lighter(table.skin.needle, 1.25) }
-                    GradientStop { position: 1.0; color: Qt.darker(table.skin.needle, 1.3) }
-                }
+                depth: parent.height - height
+                lean: 0.8
+                flat: table.look === "paper"
+                faceTop: Qt.lighter(table.skin.needle, 1.25)
+                faceBottom: Qt.darker(table.skin.needle, 1.3)
+                side: Qt.darker(table.skin.needle, 1.6)
             }
         }
     }
@@ -522,48 +519,35 @@ Item {
                 color: table.skin.brandColor
             }
         }
-        // Schuifkap als blokje: schaduw, zijkant, belichte bovenkant met ribbels.
-        Rectangle {
-            visible: table.look !== "paper"
-            x: faderCap.x + faderCap.height * 0.25
-            y: faderCap.y + faderCap.height * 0.55
-            width: faderCap.width
-            height: faderCap.height
-            radius: faderCap.radius
-            color: Qt.rgba(0, 0, 0, 0.4)
-        }
-        Rectangle {
-            x: faderCap.x
-            y: faderCap.y + faderCap.height * 0.3
-            width: faderCap.width
-            height: faderCap.height
-            radius: faderCap.radius
-            color: table.look === "paper" ? table.mocha.text : table.skin.capSide
-        }
-        Rectangle {
+        // Schuifkap als uitgetrokken blokje (zelfde 3D als de knoppen),
+        // met ribbels op de kap.
+        Extruded {
             id: faderCap
             anchors.horizontalCenter: parent.horizontalCenter
             width: parent.width * 1.1
             height: parent.width * 0.55
             radius: table.look === "neon" ? 2 : 4
-            y: (1 - pitchFader.shown) * (pitchFader.height - height * 1.3)
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: table.look === "paper" ? table.skin.capA : Qt.lighter(table.skin.capA, 1.12) }
-                GradientStop { position: 1.0; color: table.skin.capB }
-            }
-            border.width: 1
-            border.color: table.skin.capBorder
-            Column {
-                anchors.centerIn: parent
-                spacing: Math.max(1, faderCap.height * 0.14)
-                Repeater {
-                    model: 3
-                    Rectangle {
-                        required property int index
-                        width: faderCap.width * 0.7
-                        height: Math.max(1, faderCap.height * 0.08)
-                        color: index === 1 ? table.skin.lit : Qt.rgba(0, 0, 0, 0.3)
-                    }
+            depth: Math.max(2, height * 0.45)
+            lean: 0.85
+            y: depth + (1 - pitchFader.shown) * (pitchFader.height - height - depth)
+            flat: table.look === "paper"
+            faceTop: table.look === "paper" ? table.skin.capA : Qt.lighter(table.skin.capA, 1.12)
+            faceBottom: table.skin.capB
+            side: table.skin.capSide
+            borderWidth: 1
+            borderColor: table.skin.capBorder
+        }
+        Column {
+            x: faderCap.x + faderCap.dx + (faderCap.width - width) / 2
+            y: faderCap.y + faderCap.dy + (faderCap.height - height) / 2
+            spacing: Math.max(1, faderCap.height * 0.14)
+            Repeater {
+                model: 3
+                Rectangle {
+                    required property int index
+                    width: faderCap.width * 0.7
+                    height: Math.max(1, faderCap.height * 0.08)
+                    color: index === 1 ? table.skin.lit : Qt.rgba(0, 0, 0, 0.3)
                 }
             }
         }
@@ -573,7 +557,7 @@ Item {
             cursorShape: Qt.SizeVerCursor
             preventStealing: true
             function setAt(my) {
-                let f = Math.max(0, Math.min(1, (my - 8 - faderCap.height / 2) / (pitchFader.height - faderCap.height)));
+                let f = Math.max(0, Math.min(1, (my - 8 - faderCap.height / 2) / (pitchFader.height - faderCap.height - faderCap.depth)));
                 pitchFader.dragValue = Math.round((1 - f) * 100) / 100;
                 table.volumeRequested(pitchFader.dragValue);
             }

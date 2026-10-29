@@ -305,6 +305,27 @@ FocusScope {
                     border.color: stage.skin.dispBorder
                     clip: true
 
+                    // Verzonken in het paneel: schaduw langs de bovenrand,
+                    // licht op de onderrand.
+                    Rectangle {
+                        visible: stage.look !== "paper"
+                        width: parent.width
+                        height: Math.max(3, parent.height * 0.12)
+                        radius: parent.radius
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.55) }
+                            GradientStop { position: 1.0; color: "transparent" }
+                        }
+                    }
+                    Rectangle {
+                        visible: stage.look !== "paper"
+                        x: parent.radius
+                        y: parent.height - 1
+                        width: parent.width - 2 * parent.radius
+                        height: 1
+                        color: Qt.rgba(1, 1, 1, 0.12)
+                    }
+
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
                         x: 12
@@ -395,6 +416,14 @@ FocusScope {
                         height: Math.max(4, stage.frontHeight * 0.07)
                         radius: height / 2
                         color: stage.skin.track
+                        // Gleuf: donkere bovenrand.
+                        Rectangle {
+                            visible: stage.look !== "paper"
+                            width: parent.width
+                            height: Math.max(1, parent.height * 0.45)
+                            radius: parent.radius
+                            color: Qt.rgba(0, 0, 0, 0.35)
+                        }
                         Rectangle {
                             width: Math.max(height, parent.width * scrub.shown)
                             height: parent.height

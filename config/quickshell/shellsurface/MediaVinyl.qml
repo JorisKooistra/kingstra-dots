@@ -105,6 +105,9 @@ Item {
     property real armBase: 1
     // Grootte van headshell en element t.o.v. de buis; groter oogt minder plat.
     property real headScale: 1.3
+    // Waar de armvoet links/rechts van het midden staat (-1..1), voor de
+    // zijkant van de uitstekende delen (zie Extruded).
+    property real armLean: 0
     // Begin- en eindhoek volgen uit de geometrie: de naald moet de buitenste
     // groef en de rand van het label raken, waar de voet ook staat.
     readonly property real armStart: solveArmAngle(discRadius * 0.93)
@@ -652,100 +655,67 @@ Item {
             readonly property real pivotX: width - 14.5 * u
             readonly property real pivotY: 13 * u
 
-            // Armvoet als een ronde sokkel: slagschaduw op het hout en een
-            // zijkant, zodat hij boven de plint uitsteekt.
-            Rectangle {
-                readonly property real d: 31 * tonearm.u * tonearm.bs
-                width: d * 1.04
-                height: width
-                radius: width / 2
-                x: tonearm.pivotX - d / 2 + d * 0.06
-                y: tonearm.pivotY - d / 2 + d * 0.09
-                color: Qt.rgba(0, 0, 0, deck.look === "paper" ? 0 : 0.35)
-            }
-            Rectangle {
+            // Armvoet als een ronde sokkel met dikte (zelfde 3D als de
+            // knoppen). De voetafdruk ligt iets lager, zodat de bovenkant
+            // precies rond het draaipunt van de arm valt.
+            Extruded {
+                id: armBaseDisc
                 readonly property real d: 31 * tonearm.u * tonearm.bs
                 width: d
-                height: width
-                radius: width / 2
-                x: tonearm.pivotX - d / 2
-                y: tonearm.pivotY - d / 2 + d * 0.05
-                color: deck.look === "paper" ? deck.mocha.text : Qt.darker(deck.baseOuter, 1.9)
+                height: d
+                radius: d / 2
+                depth: Math.max(2, d * 0.09)
+                lean: deck.armLean
+                x: tonearm.pivotX - d / 2 - dx
+                y: tonearm.pivotY - d / 2 - dy
+                flat: deck.look === "paper"
+                faceTop: deck.look === "paper" ? deck.baseOuter : Qt.lighter(deck.baseOuter, 1.6)
+                faceBottom: deck.look === "paper" ? deck.baseOuter : Qt.darker(deck.baseOuter, 1.4)
+                side: deck.look === "paper" ? deck.mocha.text : Qt.darker(deck.baseOuter, 1.3)
+                borderWidth: deck.look === "paper" ? 1.5 : 1
+                borderColor: deck.look === "" ? Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.68) : deck.baseAccent
             }
             Rectangle {
-                width: 31 * tonearm.u * tonearm.bs
+                width: armBaseDisc.d * 0.7
                 height: width
                 radius: width / 2
                 x: tonearm.pivotX - width / 2
                 y: tonearm.pivotY - height / 2
-                color: deck.baseOuter
-                // Licht van linksboven, zodat de voet boven de plint uitsteekt.
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: deck.look === "paper" ? deck.baseOuter : Qt.lighter(deck.baseOuter, 1.6) }
-                    GradientStop { position: 0.5; color: deck.baseOuter }
-                    GradientStop { position: 1.0; color: deck.look === "paper" ? deck.baseOuter : Qt.darker(deck.baseOuter, 1.5) }
+                    GradientStop { position: 0.0; color: deck.look === "paper" ? deck.baseInner : Qt.darker(deck.baseInner, 1.3) }
+                    GradientStop { position: 1.0; color: deck.look === "paper" ? deck.baseInner : Qt.lighter(deck.baseInner, 1.3) }
                 }
-                border.width: deck.look === "paper" ? 1.5 : 1
-                border.color: deck.look === "" ? Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.68) : deck.baseAccent
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width * 0.7
-                    height: width
-                    radius: width / 2
-                    color: deck.baseInner
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: deck.look === "paper" ? deck.baseInner : Qt.darker(deck.baseInner, 1.3) }
-                        GradientStop { position: 1.0; color: deck.look === "paper" ? deck.baseInner : Qt.lighter(deck.baseInner, 1.3) }
-                    }
-                    border.width: 1
-                    border.color: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.4)
-                }
+                border.width: 1
+                border.color: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.4)
             }
 
             // Armsteun waar de arm rust als hij niet speelt: een paaltje met
-            // schaduw, zijkant en een gootje bovenop.
-            Item {
+            // dikte (zelfde 3D als de knoppen) en een gootje bovenop.
+            Extruded {
                 id: armRestPost
-                width: 9 * tonearm.u
-                height: 6 * tonearm.u
                 readonly property real d: 44 * tonearm.u * deck.armReach
                 readonly property color postColor: deck.look === "" ? deck.mocha.surface2 : deck.look === "wood" ? deck.metal : deck.armShellColor
-                x: tonearm.pivotX - Math.sin(deck.armRest * Math.PI / 180) * d - width / 2
-                y: tonearm.pivotY + Math.cos(deck.armRest * Math.PI / 180) * d - height / 2
-                Rectangle {
-                    visible: deck.look !== "paper"
-                    x: parent.width * 0.15
-                    y: parent.height * 0.5
-                    width: parent.width
-                    height: parent.height
-                    radius: 2 * tonearm.u
-                    color: Qt.rgba(0, 0, 0, 0.4)
-                }
-                Rectangle {
-                    y: parent.height * 0.3
-                    width: parent.width
-                    height: parent.height
-                    radius: 2 * tonearm.u
-                    color: deck.look === "paper" ? deck.mocha.text : Qt.darker(armRestPost.postColor, 2.0)
-                }
-                Rectangle {
-                    width: parent.width
-                    height: parent.height
-                    radius: 2 * tonearm.u
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: deck.look === "paper" ? deck.mocha.base : Qt.lighter(armRestPost.postColor, 1.25) }
-                        GradientStop { position: 1.0; color: deck.look === "paper" ? deck.mocha.base : Qt.darker(armRestPost.postColor, 1.3) }
-                    }
-                    border.width: 1
-                    border.color: deck.look === "" ? Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.6) : deck.baseAccent
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: parent.width * 0.6
-                        height: Math.max(1, parent.height * 0.22)
-                        radius: height / 2
-                        color: Qt.rgba(0, 0, 0, 0.45)
-                    }
-                }
+                width: 9 * tonearm.u
+                height: 6 * tonearm.u
+                radius: 2 * tonearm.u
+                depth: Math.max(2, 4 * tonearm.u)
+                lean: deck.armLean
+                x: tonearm.pivotX - Math.sin(deck.armRest * Math.PI / 180) * d - width / 2 - dx
+                y: tonearm.pivotY + Math.cos(deck.armRest * Math.PI / 180) * d - height / 2 - dy
+                flat: deck.look === "paper"
+                faceTop: deck.look === "paper" ? deck.mocha.base : Qt.lighter(postColor, 1.25)
+                faceBottom: deck.look === "paper" ? deck.mocha.base : Qt.darker(postColor, 1.3)
+                side: deck.look === "paper" ? deck.mocha.text : Qt.darker(postColor, 1.5)
+                borderWidth: 1
+                borderColor: deck.look === "" ? Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.6) : deck.baseAccent
+            }
+            Rectangle {
+                width: armRestPost.width * 0.6
+                height: Math.max(1, armRestPost.height * 0.22)
+                radius: height / 2
+                x: armRestPost.x + armRestPost.dx + (armRestPost.width - width) / 2
+                y: armRestPost.y + armRestPost.dy + (armRestPost.height - height) / 2
+                color: Qt.rgba(0, 0, 0, 0.45)
             }
 
             Item {
@@ -1031,49 +1001,46 @@ Item {
                 }
             }
 
-            // Kleine pivot bovenop de arm: een kapje met zijkant en glans.
-            Rectangle {
+            // Kleine pivot bovenop de arm: een kapje met dikte en glans.
+            Extruded {
+                id: pivotCap
                 readonly property real d: 18 * tonearm.u * tonearm.bs
+                readonly property color capColor: deck.look === "" ? deck.mocha.surface0 : deck.baseOuter
                 width: d
-                height: width
-                radius: width / 2
-                x: tonearm.pivotX - d / 2 + d * 0.05
-                y: tonearm.pivotY - d / 2 + d * 0.12
-                color: Qt.rgba(0, 0, 0, deck.look === "paper" ? 0 : 0.4)
+                height: d
+                radius: d / 2
+                depth: Math.max(2, d * 0.16)
+                lean: deck.armLean
+                x: tonearm.pivotX - d / 2 - dx
+                y: tonearm.pivotY - d / 2 - dy
+                flat: deck.look === "paper"
+                faceTop: deck.look === "paper" ? deck.mocha.base : Qt.lighter(capColor, 1.9)
+                faceBottom: deck.look === "paper" ? deck.mocha.base : Qt.darker(capColor, 1.3)
+                side: deck.look === "paper" ? deck.mocha.text : Qt.darker(capColor, 1.2)
+                borderWidth: 1
+                borderColor: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.72)
             }
             Rectangle {
-                width: 18 * tonearm.u * tonearm.bs
+                width: pivotCap.d / 3
                 height: width
                 radius: width / 2
                 x: tonearm.pivotX - width / 2
                 y: tonearm.pivotY - height / 2
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: deck.look === "paper" ? deck.mocha.base : Qt.lighter(deck.look === "" ? deck.mocha.surface0 : deck.baseOuter, 1.9) }
-                    GradientStop { position: 1.0; color: deck.look === "paper" ? deck.mocha.base : Qt.darker(deck.look === "" ? deck.mocha.surface0 : deck.baseOuter, 1.3) }
+                    GradientStop { position: 0.0; color: Qt.lighter(deck.baseAccent, 1.3) }
+                    GradientStop { position: 1.0; color: Qt.darker(deck.baseAccent, 1.4) }
                 }
-                border.width: 1
-                border.color: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.72)
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width / 3
-                    height: width
-                    radius: width / 2
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: Qt.lighter(deck.baseAccent, 1.3) }
-                        GradientStop { position: 1.0; color: Qt.darker(deck.baseAccent, 1.4) }
-                    }
-                }
-                // Glanspuntje linksboven.
-                Rectangle {
-                    visible: deck.look !== "paper"
-                    x: parent.width * 0.2
-                    y: parent.height * 0.14
-                    width: parent.width * 0.22
-                    height: width * 0.6
-                    radius: height / 2
-                    rotation: -35
-                    color: Qt.rgba(1, 1, 1, 0.35)
-                }
+            }
+            // Glanspuntje linksboven.
+            Rectangle {
+                visible: deck.look !== "paper"
+                width: pivotCap.d * 0.22
+                height: width * 0.6
+                radius: height / 2
+                x: tonearm.pivotX - pivotCap.d / 2 + pivotCap.d * 0.2
+                y: tonearm.pivotY - pivotCap.d / 2 + pivotCap.d * 0.14
+                rotation: -35
+                color: Qt.rgba(1, 1, 1, 0.35)
             }
         }
     }

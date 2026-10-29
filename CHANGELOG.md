@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- Alle uitstekende delen gebruiken nu dezelfde 3D-regels als de knoppen (nieuw `shellsurface/Extruded.qml`): armvoet, pivotkapje, armsteun, volumeschuif, armlift, lampje en 45-adapter hebben echte dikte, een zijkant naar gelang hun plek en een zachte slagschaduw. Display en spoelbalk liggen verzonken in het voorpaneel.
 - Knoppen zijn echte uitgetrokken blokjes met een voetuitsparing, zijwanden en een zachte slagschaduw. Op het staande voorpaneel steken ze naar je toe (je ziet de bovenkant en schaduw eronder), bovenop de tafel zie je de voorkant; links of rechts van het midden zie je ook een zijkant. Indrukken duwt de kap terug in de voet.
 - Fix: de linkerbovenhoek van de headshell werd afgeknipt, omdat hij buiten het tekenvlak van de arm viel. Het tekenvlak is nu ruimer.
 - De naaldhouder stak als een licht puntje schuin onder het element uit; nu zie je alleen een donker naaldpuntje. De vingerlift is een kort lipje in de kleur van de headshell, geen schuin uitstekende lijn meer.
