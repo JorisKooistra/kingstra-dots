@@ -814,9 +814,14 @@ Item {
                     }
                 }
 
+                // Breder dan de arm zelf: de schuine headshell steekt links
+                // buiten de buis uit en werd anders afgeknipt.
                 Canvas {
                     id: armCanvas
-                    anchors.fill: parent
+                    readonly property real pad: 14 * arm.u
+                    x: -pad
+                    width: arm.width + 2 * pad
+                    height: arm.height + pad
                     antialiasing: true
                     readonly property color tube: deck.armTubeColor
                     readonly property color shine: deck.mocha.text
@@ -872,7 +877,8 @@ Item {
                         let ctx = getContext("2d");
                         ctx.reset();
                         let u = arm.u;
-                        let cx = width / 2;
+                        ctx.translate(pad, 0);
+                        let cx = arm.width / 2;
                         let hub = arm.hubY;
                         let end = { x: cx - 7 * u, y: hub + 66 * u * arm.reach };
                         let bs = tonearm.bs;

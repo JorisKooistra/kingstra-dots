@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- Fix: de linkerbovenhoek van de headshell werd afgeknipt, omdat hij buiten het tekenvlak van de arm viel. Het tekenvlak is nu ruimer.
 - De naaldhouder stak als een licht puntje schuin onder het element uit; nu zie je alleen een donker naaldpuntje. De vingerlift is een kort lipje in de kleur van de headshell, geen schuin uitstekende lijn meer.
 - Knoplabels blijven leesbaar als een knop aan staat: dat zie je nu aan het ledje, de rand en een lichtstreepje onder het icoon.
 - De armsteun is een paaltje met schaduw en een gootje, de streepjes bij de volumeschuif zijn dikker en vallen in perspectief niet meer uiteen, en lange titels lopen langzaam door op het display.
