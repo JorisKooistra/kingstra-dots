@@ -262,13 +262,15 @@ FocusScope {
             y: stage.topDepth
             width: parent.width
             height: stage.frontHeight
-            // Vouwt uit onder de bovenplaat als de speler uit de kleine groeit.
+            // Komt in beeld terwijl de kast achterover kantelt.
             opacity: stage.fromOrigin ? stage.clamp01((stage.tiltT - 0.06) * 3) : 1
             transform: Rotation {
                 origin.x: front.width / 2
                 origin.y: 0
                 axis { x: 1; y: 0; z: 0 }
-                angle: stage.fromOrigin ? (1 - stage.tiltT) * 88 : 0
+                // Draait als één kast mee met de bovenkant: zelfde richting,
+                // zelfde hoeveelheid, zodat de hoek ertussen gelijk blijft.
+                angle: stage.tilt - 38
             }
 
             Rectangle {

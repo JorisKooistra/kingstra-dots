@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- Fix: bij het groot maken klapte de voorkant de andere kant op dan de bovenkant. Nu draait hij als één kast mee: zelfde richting, zelfde hoeveelheid.
 - Afspeelknop heeft één play/pauze-icoon en blijft ingedrukt staan zolang er muziek speelt, zoals op een echte draaitafel. START en de gekozen 33/45-knop vergrendelen op dezelfde manier.
 - Tweede kleur is nu accent 2 uit de wallpaper (Matugens secondary lag vaak gelijk aan primary); de mat gebruikt de accent-2-container, het hout houdt de secondary-container.
 - Lichter: de stroboscoopring (72 stippen) en de groeven zijn elk één keer getekende canvassen in plaats van tientallen losse rechthoeken; de groeven staan buiten de draaiing (ringen zien er gedraaid hetzelfde uit) en dubbele ringen zijn weg. Zijwanden van knoppen en uitstekende delen hebben hooguit 12 laagjes.
