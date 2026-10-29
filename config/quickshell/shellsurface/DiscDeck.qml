@@ -58,16 +58,17 @@ Item {
         let sec = secondary, ter = tertiary, secC = secondaryContainer, terC = tertiaryContainer, priC = primaryContainer;
         let ink = m.text;
         if (look === "wood") {
-            // Walnoot met een metalen ring, een warm verlichte lcd.
-            let woodC = m.secondaryContainer !== undefined ? m.secondaryContainer : secC;
-            let wood = Qt.tint(Qt.tint(m.surface1, Qt.rgba(woodC.r, woodC.g, woodC.b, 0.16)), Qt.rgba(a.r, a.g, a.b, 0.05));
+            // Organic: warm, mat kunststof in aardetinten (geen hout: een
+            // walkman of discman is van plastic) met geborsteld metaal.
+            let earth = m.tertiaryContainer !== undefined ? m.tertiaryContainer : terC;
+            let wood = Qt.tint(Qt.tint(Qt.lighter(m.surface2, 1.25), Qt.rgba(earth.r, earth.g, earth.b, 0.42)), Qt.rgba(a.r, a.g, a.b, 0.04));
             let cream = Qt.tint(m.text, Qt.rgba(terC.r, terC.g, terC.b, 0.18));
             let metal = Qt.tint(m.subtext1, Qt.rgba(sec.r, sec.g, sec.b, 0.24));
             let lcd = Qt.tint(Qt.darker(cream, 1.18), Qt.rgba(ter.r, ter.g, ter.b, 0.22));
             return {
-                bodyA: Qt.lighter(wood, 1.08), bodyB: Qt.darker(wood, 1.35),
-                border: Qt.darker(wood, 2.2), borderW: 2.5, radius: 14,
-                lidA: Qt.lighter(wood, 1.14), lidB: Qt.darker(wood, 1.25), lidSide: Qt.darker(wood, 1.9), lidBorder: Qt.darker(wood, 1.8),
+                bodyA: Qt.lighter(wood, 1.12), bodyB: Qt.darker(wood, 1.18),
+                border: Qt.darker(wood, 1.7), borderW: 1.5, radius: 14,
+                lidA: Qt.lighter(wood, 1.2), lidB: Qt.darker(wood, 1.08), lidSide: Qt.darker(wood, 1.6), lidBorder: Qt.darker(wood, 1.5),
                 ring: metal, glass: Qt.rgba(m.crust.r, m.crust.g, m.crust.b, 0.42),
                 mirrorA: Qt.tint(metal, Qt.rgba(ter.r, ter.g, ter.b, 0.2)), mirrorB: Qt.tint(Qt.darker(metal, 1.5), Qt.rgba(sec.r, sec.g, sec.b, 0.3)),
                 print: terC, print2: secC, printText: cream,
@@ -164,17 +165,6 @@ Item {
             layer.enabled: visible
             layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1.0 }
         }
-        WoodGrain {
-            visible: deck.look === "wood"
-            x: body.border.width
-            y: body.border.width
-            width: parent.width - 2 * x
-            height: parent.height - 2 * y
-            radius: Math.max(0, body.radius - body.border.width)
-            dark: deck.mocha.crust
-            light: deck.mocha.text
-            seed: 23
-        }
         Rectangle {
             visible: deck.look !== "paper"
             anchors.fill: parent
@@ -213,16 +203,6 @@ Item {
         width: lid.width
         height: lid.height
 
-        WoodGrain {
-            visible: deck.look === "wood"
-            anchors.fill: parent
-            anchors.margins: 2
-            radius: width / 2
-            dark: deck.mocha.crust
-            light: deck.mocha.text
-            seed: 41
-            strength: 0.8
-        }
         Text {
             visible: deck.detail > 0.01
             opacity: deck.detail

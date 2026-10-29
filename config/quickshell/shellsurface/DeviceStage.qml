@@ -171,6 +171,41 @@ FocusScope {
     readonly property real cornerX: Math.min(bodyRadius, rigWidth * 0.3)
     readonly property real cornerY: cornerX * foreshorten
 
+    // Organic: een houten koptelefoon ligt naast het apparaat op tafel, in
+    // hetzelfde perspectief als de bovenkant. Komt pas aan het eind van de
+    // overgang in beeld.
+    Item {
+        id: decoration
+        visible: stage.look === "wood" && stage.detailT > 0.01
+        opacity: stage.detailT
+        width: stage.rigWidth * 0.44
+        height: width * 1.0
+        x: stage.finalX - width * 1.02
+        y: stage.finalY + stage.topDepth - height
+        transform: [
+            Rotation {
+                origin.x: decoration.width / 2
+                origin.y: decoration.height
+                axis { x: 1; y: 0; z: 0 }
+                angle: stage.maxTilt
+            },
+            Rotation {
+                origin.x: decoration.width + stage.rigWidth / 2
+                origin.y: decoration.height + stage.frontHeight
+                axis { x: 0; y: 1; z: 0 }
+                angle: stage.sway
+            }
+        ]
+        WoodHeadphones {
+            anchors.fill: parent
+            rotation: -14
+            mocha: stage.mocha
+            wood: Qt.tint(Qt.darker(stage.mocha.peach, 1.9), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.35))
+            metal: stage.skin.metal || stage.mocha.subtext1
+            leather: Qt.tint(Qt.lighter(stage.mocha.surface2, 1.15), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.5))
+        }
+    }
+
     Item {
         id: rig
         width: stage.rigWidth

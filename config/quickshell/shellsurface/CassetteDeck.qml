@@ -54,15 +54,16 @@ Item {
         let sec = secondary, ter = tertiary, secC = secondaryContainer, terC = tertiaryContainer, priC = primaryContainer;
         let ink = m.text;
         if (look === "wood") {
-            // Walnoot met crème en geborsteld metaal, geen gloed.
-            let woodC = m.secondaryContainer !== undefined ? m.secondaryContainer : secC;
-            let wood = Qt.tint(Qt.tint(m.surface1, Qt.rgba(woodC.r, woodC.g, woodC.b, 0.16)), Qt.rgba(a.r, a.g, a.b, 0.05));
+            // Organic: warm, mat kunststof in aardetinten (geen hout: een
+            // walkman of discman is van plastic) met geborsteld metaal.
+            let earth = m.tertiaryContainer !== undefined ? m.tertiaryContainer : terC;
+            let wood = Qt.tint(Qt.tint(Qt.lighter(m.surface2, 1.25), Qt.rgba(earth.r, earth.g, earth.b, 0.42)), Qt.rgba(a.r, a.g, a.b, 0.04));
             let cream = Qt.tint(m.text, Qt.rgba(terC.r, terC.g, terC.b, 0.18));
             let metal = Qt.tint(m.subtext1, Qt.rgba(sec.r, sec.g, sec.b, 0.24));
             return {
-                bodyA: Qt.lighter(wood, 1.08), bodyB: Qt.darker(wood, 1.35),
-                border: Qt.darker(wood, 2.2), borderW: 2.5, radius: 14,
-                bezel: Qt.darker(wood, 1.9), bezelEdge: metal, glass: Qt.rgba(m.crust.r, m.crust.g, m.crust.b, 0.42),
+                bodyA: Qt.lighter(wood, 1.12), bodyB: Qt.darker(wood, 1.18),
+                border: Qt.darker(wood, 1.7), borderW: 1.5, radius: 14,
+                bezel: Qt.darker(metal, 1.25), bezelEdge: Qt.lighter(metal, 1.2), glass: Qt.rgba(m.crust.r, m.crust.g, m.crust.b, 0.42),
                 shellA: Qt.rgba(ter.r * 0.35, ter.g * 0.3, ter.b * 0.25, 0.55), shellB: Qt.rgba(0.05, 0.04, 0.03, 0.62),
                 shellEdge: Qt.rgba(cream.r, cream.g, cream.b, 0.28),
                 label: cream, labelText: m.crust, labelText2: Qt.darker(Qt.tint(m.crust, Qt.rgba(sec.r, sec.g, sec.b, 0.5)), 1.1),
@@ -190,17 +191,6 @@ Item {
             layer.enabled: visible
             layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1.0 }
         }
-        WoodGrain {
-            visible: deck.look === "wood"
-            x: body.border.width
-            y: body.border.width
-            width: parent.width - 2 * x
-            height: parent.height - 2 * y
-            radius: Math.max(0, body.radius - body.border.width)
-            dark: deck.mocha.crust
-            light: deck.mocha.text
-            seed: 11
-        }
         // Lichte binnenrand: de kast heeft dikte.
         Rectangle {
             visible: deck.look !== "paper"
@@ -265,6 +255,18 @@ Item {
         color: deck.skin.bezel
         border.width: deck.look === "paper" ? 2 : 1
         border.color: deck.look === "paper" ? deck.mocha.text : Qt.rgba(0, 0, 0, 0.45)
+        // Organic: geborsteld metalen plaat om het venster.
+        Repeater {
+            model: deck.look === "wood" ? Math.floor(bezel.height / Math.max(2, deck.u * 0.9)) : 0
+            Rectangle {
+                required property int index
+                x: bezel.radius * 0.5
+                width: bezel.width - bezel.radius
+                y: (index + 0.5) * Math.max(2, deck.u * 0.9)
+                height: 1
+                color: index % 3 === 0 ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.07)
+            }
+        }
         Rectangle {
             visible: deck.look !== "paper"
             anchors.fill: parent

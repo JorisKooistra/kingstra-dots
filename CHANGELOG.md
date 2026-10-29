@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Cassettespeler en discman naast de draaitafel
+- Organic: walkman en discman zijn nu van warm, mat kunststof in aardetinten met geborsteld metaal in plaats van hout; schermvullend ligt er een houten koptelefoon als versiering naast (`WoodHeadphones.qml`).
 - Nieuwe spelers op de mediakaart en schermvullend: een draagbare cassettespeler (walkman, `shellsurface/CassetteDeck.qml`) en een discman (`shellsurface/DiscDeck.qml`). Klein en groot hebben dezelfde vorm; de grote groeit uit de kaart in dezelfde fases als de draaitafel (groeien, kantelen en uitvouwen, details als laatste) en start pas na de eerste getekende frames.
 - Keuze per scherm in Super+A onder "Muziek op dit scherm": Speler volgt thema, Platenspeler, Cassettespeler, Discman of Alleen hoes. `kingstra cassette` en `kingstra discman` openen ze direct schermvullend (nog een keer sluit), net als `kingstra vinyl`; ook in het toetsenbordmenu. De screensaver opent de speler die op de kaart staat.
 - Cassettespeler: heldere cassette met titel (lopend) en artiest op het label; het tapepakket krimpt links en groeit rechts met de voortgang en de kleinste spoel draait het snelst. Pianotoetsen ⏏ ◀◀ ▶ ▶▶ (play blijft ingedrukt; ◀◀/▶▶ vorige/volgende, vasthouden windt zichtbaar), een mechanische teller, een tapebalk om te slepen en een volumewieltje.
