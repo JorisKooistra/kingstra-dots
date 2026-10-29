@@ -981,13 +981,11 @@ Item {
                         ctx.lineWidth = Math.max(0.6, 0.6 * u);
                         ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.55);
                         ctx.stroke();
-                        // Naaldhouder en naald.
+                        // De naald zit onder het element; van bovenaf zie je
+                        // alleen een donker puntje aan de voorkant.
                         ctx.beginPath();
-                        ctx.moveTo(-1.2 * u, cy0 + ch);
-                        ctx.lineTo(1.2 * u, cy0 + ch);
-                        ctx.lineTo(0, cy0 + ch + 2.6 * u);
-                        ctx.closePath();
-                        ctx.fillStyle = Qt.lighter(edge, 1.3);
+                        ctx.arc(0, cy0 + ch - 1.2 * u, Math.max(0.8, 0.9 * u), 0, Math.PI * 2);
+                        ctx.fillStyle = Qt.darker(tip, 3);
                         ctx.fill();
                         ctx.restore();
                     }
