@@ -41,7 +41,7 @@ local ok, err = pcall(function()
             enabled=true,desktop_mode=true,persistent=true,linked_screens=false,
             initial_zoom=1.0,min_zoom=0.25,max_zoom=1.0,zoom_step=0.12,
             auto_float=false,auto_place=false,remember_layout=false,
-            direct_input=true,hover_focus=false,space_pan=false,
+            direct_input=true,hover_focus=true,space_pan=false,
             grid_enabled=false,minimap_enabled=false,viewport_enabled=false,
             background_dim=0.0,float_on_drag=false,snap_enabled=false,
             snap_viewport_on_pan=false,commit_viewport_on_close=false,

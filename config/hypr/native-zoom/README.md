@@ -6,6 +6,12 @@ op hun eigen afmetingen; klikken en scrollen worden naar de geschaalde app gelei
 Super+wiel gaat een hele pagina verder; Super+Ctrl+linkermuis bedient de Lua-camera.
 Elke wielstap zoomt ongeveer 25%. Uitgezoomd verschijnt een knop Reset 100%.
 
+Focus volgt de muis, zowel in het uitgezoomde werkvlak als op andere monitors.
+Tijdens zoomen blijft het uitstekende deel van een zwevend venster verborgen
+op andere fysieke monitors en vangt het daar geen muisinput. Op 100% geldt weer
+het normale gedrag over monitorranden. De opgeslagen zwevende/getegelde stand
+en geometrie per app blijven behouden.
+
 Fase 05 van de installer/updater draait `kingstra-build-native-zoom`. Die bouwt
 [Phantomat](https://github.com/kaolti/phantomat) op vaste revisie
 `a1e8a0806541640d01503ac861a8a39548de8724`, met `kingstra.patch`, tegen de lokale

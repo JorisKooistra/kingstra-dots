@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Werkvlak: muisfocus en zwevende vensters
+- Focus volgt de muis tijdens zoomen en op andere monitors; terugkeren naar dezelfde app vereist geen klik meer.
+- Alleen tijdens zoomen worden beeld én muisdetectie van zwevende vensters tot de eigen monitor beperkt. Buiten beeld doorlopende delen lekken niet naar een andere fysieke monitor. Op 100% blijft het normale zweefgedrag gelden.
+- De opgeslagen zwevende/getegelde stand en geometrie per app blijven behouden; Super+Return krijgt geen geforceerde tegelstand.
+- Integratietests controleren focus zonder klik, verborgen zwevende overlap op een tweede monitor, behoud van de zweefstand en herstel van normaal zweven op 100%.
+
 ### Werkvlak: afzonderlijke schermen en bediening
 - Zoomen, camera slepen en zoom resetten gebruiken nu Super+Ctrl; Super+Alt+wiel scrolt horizontaal. De resetknop heeft een contrasterende accentvulling.
 - Frame-updates van apps op andere fysieke schermen blijven doorlopen terwijl één werkvlak is uitgezoomd; normale overlays zoals de resetknop verversen weer.

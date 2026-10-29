@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Opt-in integration test: opens a nested compositor with disposable GTK apps.
 Requires a real Wayland session, Hyprland 0.56.2, the locally built native plugin,
-python-gobject/GTK4, grim, wtype, cc, and wayland-scanner. Never dispatches to the
+python-gobject/GTK4, Pillow, grim, wtype, cc, and wayland-scanner. Never dispatches to the
 parent compositor. Retains its /tmp/kz* directory for diagnosis.
 """
 import os,sys,json,subprocess,tempfile,time
@@ -16,7 +16,7 @@ parent=dict(os.environ);env=dict(parent,AQ_BACKEND='wayland',WAYLAND_DISPLAY=str
 config=run/'test.lua'
 config.write_text('''
 hl.monitor({output="",mode="1024x640@60",position="auto",scale=1})
-hl.config({misc={disable_hyprland_logo=true,disable_splash_rendering=true,size_limits_tiled=false},animations={enabled=false},xwayland={enabled=false},general={gaps_in=0,gaps_out=0,border_size=0},input={follow_mouse=0},debug={disable_logs=false}})
+hl.config({misc={disable_hyprland_logo=true,disable_splash_rendering=true,size_limits_tiled=false},animations={enabled=false},xwayland={enabled=false},general={gaps_in=0,gaps_out=0,border_size=0},input={follow_mouse=1},debug={disable_logs=false}})
 package.path="@ROOT@/config/hypr/?.lua;"..package.path
 _G.__hyprscroll2d_layout_registered=nil; assert(loadfile("@ROOT@/config/hypr/lua/spatial/init.lua"))()
 hl.workspace_rule({workspace="1",layout="lua:hyprscroll2d"})
@@ -94,6 +94,7 @@ try:
  state=json.loads(ctl('spatialoverview'));check(bool(state['screens']),'native rendering is active')
  check(state['screens'][0]['zoom']<1,'desktop is zoomed out')
  check(not state['screens'][0]['navigating'],'applications retain direct input')
+ check(json.loads(ctl('getoption','input:follow_mouse','-j'))['int']==1,'zoom preserves global focus-follow-mouse')
  for _ in range(7):ctl('eval','zoom.zoom("out")')
  time.sleep(.6)
  env['WAYLAND_DISPLAY']=next(p.name for p in run.glob('wayland-*') if not p.name.endswith('.lock'))
@@ -106,6 +107,8 @@ try:
  ty=max(view[1]+10,target['at'][1])+min(target['size'][1]/3,100)
  x=int((tx-view[0])*ww/view[2]);y=int((ty-view[1])*hh/view[3])
  print('CLICK',x,y,flush=True)
+ subprocess.run([vpointer,str(ww),str(hh),'abs',str(x),str(y),'sleep','180'],env=env,check=True)
+ check(json.loads(ctl('activewindow','-j'))['address']==target['address'],'hover selects a zoomed app without clicking')
  subprocess.run([vpointer,str(ww),str(hh),'abs',str(x),str(y),'sleep','100','down','up','sleep','100'],env=env,check=True)
  subprocess.run(['wtype','k'],env=env,check=True);time.sleep(.2)
  print('APPLOG', (run/'zoom-B.log').read_text(),flush=True)
@@ -195,23 +198,52 @@ try:
  baseline=frame_count();time.sleep(.8)
  print('OTHER OUTPUT FRAMES',baseline,frame_count(),flush=True)
  check(frame_count()>baseline,'other output keeps receiving frame callbacks during zoom')
+ # Hover on the ordinary output must switch focus without a click too.
+ dx=int(d['at'][0]+d['size'][0]/2);dy=int(d['at'][1]+d['size'][1]/2)
+ subprocess.run([vpointer,str(width),str(height),'abs',str(dx),str(dy),'sleep','180'],env=env,check=True)
+ check(json.loads(ctl('activewindow','-j'))['address']==d['address'],'hover on the other monitor selects its app without clicking')
+ # Return the pointer and focus to an actually visible zoomed app.
+ view=json.loads(ctl('spatialoverview'))['screens'][0]['view']
+ first=next(m for m in json.loads(ctl('monitors','-j')) if m['name']=='WAYLAND-1')
+ hovered=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-A')
+ hx=int(first['x']+(hovered['at'][0]+hovered['size'][0]/2-view[0])*first['width']/view[2])
+ hy=int(first['y']+(hovered['at'][1]+hovered['size'][1]/2-view[1])*first['height']/view[3])
+ subprocess.run([vpointer,str(width),str(height),'abs',str(hx),str(hy),'sleep','180'],env=env,check=True)
+ check(json.loads(ctl('activewindow','-j'))['address']==hovered['address'],'returning to the zoomed monitor focuses the same app without clicking')
 
  # Open a real new application through the same keybind path as Super+Return.
  cmd='python3 '+str(root/'tests/integration/native-zoom-app.py')+' zoom-E > '+str(run/'zoom-E.log')+' 2>&1'
  camera_before=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
  native_before=json.loads(ctl('spatialoverview'))['screens'][0]['view']
+ ctl('eval','hl.window_rule({name="test-remember-float",match={title="^zoom-E$"},float=true,size="1800 1000",move="0 0"})')
  ctl('dispatch','hl.dsp.exec_cmd('+json.dumps(cmd)+')')
  for _ in range(50):
   found=[w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-E']
   if found:break
   time.sleep(.1)
  check(bool(found),'terminal launch opens the new app while zoomed')
+ check(found[0]['floating'],'remembered floating preference is preserved')
  time.sleep(.3)
  camera_after=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
  native_after=json.loads(ctl('spatialoverview'))['screens'][0]['view']
  print('NEW APP CAMERA',camera_before,camera_after,native_before,native_after,flush=True)
  check(camera_before==camera_after and native_before==native_after,'opening an app preserves both spatial and native cameras')
+
+ from PIL import Image
+ # Gray animated app D fills the other display; green E must not bleed there.
+ e=found[0]
+ check(e['at'][0]+e['size'][0]>second['x'],'floating test window extends beyond its owning output')
+ subprocess.run(['grim','-o','ZOOM-2',str(run/'foreign-during-zoom.png')],env=env,check=True)
+ sample=Image.open(run/'foreign-during-zoom.png').convert('RGB').getpixel((min(100,second['width']-1),min(100,second['height']-1)))
+ print('FOREIGN FLOAT PIXEL DURING ZOOM',sample,flush=True)
+ check(max(sample)-min(sample)<20,'oversized floating app stays clipped to its zoomed monitor')
+ subprocess.run([vpointer,str(width),str(height),'abs',str(second['x']+min(100,second['width']-1)),str(second['y']+min(100,second['height']-1)),'sleep','200'],env=env,check=True)
+ check(json.loads(ctl('activewindow','-j'))['address']==d['address'],'hidden floating overflow cannot capture focus on the other monitor')
  ctl('eval','zoom.reset("WAYLAND-1")');time.sleep(.2)
+ subprocess.run(['grim','-o','ZOOM-2',str(run/'foreign-at-100.png')],env=env,check=True)
+ sample=Image.open(run/'foreign-at-100.png').convert('RGB').getpixel((min(100,second['width']-1),min(100,second['height']-1)))
+ print('FOREIGN FLOAT PIXEL AT 100%',sample,flush=True)
+ check(sample[1]>sample[0]+50,'100% restores normal cross-monitor floating rendering')
  check('Lua error' not in (run/'hypr'/sig/'hyprland.log').read_text(),'no Lua runtime errors during real input')
  print('RUNTIME',run,flush=True)
 finally:

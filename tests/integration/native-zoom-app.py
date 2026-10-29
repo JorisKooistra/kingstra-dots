@@ -6,7 +6,7 @@ name=sys.argv[1]
 def activate(app):
  w=Gtk.ApplicationWindow(application=app,title=name);w.set_default_size(640,400)
  box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL);box.append(Gtk.Label(label=name)); area=Gtk.DrawingArea();area.set_hexpand(True);area.set_vexpand(True)
- colors={'zoom-A':(0.9,0.2,0.2),'zoom-B':(0.2,0.8,0.3),'zoom-C':(0.2,0.3,0.9)}
+ colors={'zoom-A':(0.9,0.2,0.2),'zoom-B':(0.2,0.8,0.3),'zoom-C':(0.2,0.3,0.9),'zoom-E':(0.2,0.9,0.2)}
  def draw(a,cr,ww,hh): cr.set_source_rgb(*colors.get(name,(0.5,0.5,0.5)));cr.paint()
  area.set_draw_func(draw);box.append(area);w.set_child(box)
  frame=[0]

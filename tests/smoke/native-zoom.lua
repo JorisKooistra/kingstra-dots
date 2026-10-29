@@ -19,7 +19,7 @@ _G.hl={
  config=function(c)
   local cfg=c.plugin.spatialoverview.canvas
   assert(not cfg.auto_float and not cfg.auto_place and not cfg.linked_screens)
-  assert(cfg.direct_input and not cfg.hover_focus and not cfg.remember_layout)
+  assert(cfg.direct_input and cfg.hover_focus and not cfg.remember_layout)
  end,
  dispatch=function() error('plugin commands must not pass nil to hl.dispatch') end,
  on=function(e,fn) events[e]=fn end,
