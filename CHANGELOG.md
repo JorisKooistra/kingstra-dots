@@ -15,6 +15,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Het toetsenbordmenu opent nu met Super+Ctrl+Space (was Super+Alt+Space).
 - Ronde vormen, glijdende markering bij keuzes en kolommen die gespreid binnenkomen; Esc of nogmaals Super+A sluit.
 
+### Super+Tab: beide overzichten in één stijl
+- Het werkruimte-overzicht en de werkvlak-kaart delen nu dezelfde onderdelen in `quickshell/overview/common/kingstra/`: `KingstraLook` (kleuren uit colors.json, letter, hoeken en tempo uit theme.json), `OverviewHeader` en `OverviewWindowCard`. Het gedrag per indeling is ongewijzigd.
+- Het werkruimte-overzicht volgt nu het Kingstra-thema in plaats van vaste paarse standaardkleuren (`colorSource: "kingstra"`). Glas-glans staat uit, zodat het net zo vlak oogt als de kaart. Zet `glassMode` in `overview/config.json` aan als je de glans terug wilt.
+- Vensters zien er overal hetzelfde uit: ronde hoek, live beeld (of het bewaarde plaatje), en een titel-label met app-icoon onderin. Zonder beeld krijg je het app-icoon in plaats van tekst. Hover, keuze en sleepdoel gebruiken dezelfde accentkleur, rand en overgangen. De kaart toont nu ook hover.
+- Beide overzichten hebben dezelfde kop: een titel in kleine hoofdletters met een uitlegregel in een afgeronde pil. De actieve werkruimte en het zicht-kader gebruiken dezelfde accentrand.
+
 ### Werkvlak: muisfocus en zwevende vensters
 - Focus volgt de muis tijdens zoomen en op andere monitors; terugkeren naar dezelfde app vereist geen klik meer.
 - Alleen tijdens zoomen worden beeld én muisdetectie van zwevende vensters tot de eigen monitor beperkt. Buiten beeld doorlopende delen lekken niet naar een andere fysieke monitor. Op 100% blijft het normale zweefgedrag gelden.

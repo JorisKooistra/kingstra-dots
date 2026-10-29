@@ -5,6 +5,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "functions"
+import "kingstra"
 import "." as Common
 
 Singleton {
@@ -12,7 +13,13 @@ Singleton {
     property string colorSource: Common.Config.options.appearance.colorSource
     property string caelestiaAccentProfile: Common.Config.options.appearance.caelestia.accentProfile
     property string lastCaelestiaPayload: ""
+    // Gedeelde Kingstra-stijl (colors.json + theme.json), dezelfde als de
+    // werkvlak-kaart gebruikt.
+    property KingstraLook look: KingstraLook {}
+    readonly property bool followsKingstra: colorSource === "kingstra"
     property QtObject m3colors: {
+        if (colorSource === "kingstra")
+            return kingstraColors;
         if (colorSource === "matugen" && matugenLoader.item)
             return matugenLoader.item;
         if (colorSource === "caelestia" && caelestiaPaletteLoaded)
@@ -57,6 +64,33 @@ Singleton {
         property color m3inverseOnSurface: "#342F34"
         property color m3outline: "#988E97"
         property color m3outlineVariant: "#4C444D"
+        property color m3shadow: "#000000"
+    }
+
+    property QtObject kingstraColors: QtObject {
+        property bool darkmode: true
+        property color m3primary: root.look.primary
+        property color m3onPrimary: root.look.primaryText
+        property color m3primaryContainer: root.look.primaryContainer
+        property color m3onPrimaryContainer: root.look.primaryContainerText
+        property color m3secondary: root.look.secondary
+        property color m3onSecondary: root.look.secondaryText
+        property color m3secondaryContainer: root.look.secondaryContainer
+        property color m3onSecondaryContainer: root.look.secondaryContainerText
+        property color m3background: root.look.base
+        property color m3onBackground: root.look.text
+        property color m3surface: root.look.base
+        property color m3surfaceContainerLow: root.look.surface0
+        property color m3surfaceContainer: root.look.surface1
+        property color m3surfaceContainerHigh: root.look.surface2
+        property color m3surfaceContainerHighest: root.look.surfaceContainerHighest
+        property color m3onSurface: root.look.text
+        property color m3surfaceVariant: root.look.surface1
+        property color m3onSurfaceVariant: root.look.subtext0
+        property color m3inverseSurface: root.look.text
+        property color m3inverseOnSurface: root.look.base
+        property color m3outline: root.look.overlay0
+        property color m3outlineVariant: root.look.surface1
         property color m3shadow: "#000000"
     }
 
@@ -288,9 +322,9 @@ Singleton {
 
     font: QtObject {
         property QtObject family: QtObject {
-            property string main: Common.Config.options.appearance.font.family.main
-            property string title: Common.Config.options.appearance.font.family.title
-            property string expressive: Common.Config.options.appearance.font.family.expressive
+            property string main: root.followsKingstra ? root.look.uiFont : Common.Config.options.appearance.font.family.main
+            property string title: root.followsKingstra ? root.look.uiFont : Common.Config.options.appearance.font.family.title
+            property string expressive: root.followsKingstra ? root.look.uiFont : Common.Config.options.appearance.font.family.expressive
         }
         property QtObject pixelSize: QtObject {
             property int smaller: Common.Config.options.appearance.font.pixelSize.smaller

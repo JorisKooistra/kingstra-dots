@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Wayland
 import "../../common"
 import "../../common/functions"
+import "../../common/kingstra"
 import "../../services"
 
 Item { // Window
@@ -122,68 +123,18 @@ Item { // Window
         animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
     }
 
-    ScreencopyView {
+    // Zelfde kaart als de werkvlak-kaart: beeld, icoon, titel-label.
+    OverviewWindowCard {
         id: windowPreview
         anchors.fill: parent
+        look: Appearance.look
         captureSource: shouldCapturePreview ? root.toplevel : null
-        live: livePreviewEnabled
-
-        Rectangle {
-            anchors.fill: parent
-            radius: Appearance.rounding.windowRounding * root.scale
-            color: pressed ? ColorUtils.applyAlpha(Appearance.colors.colLayer2Active, Math.min(1, root.effectiveWindowOverlayOpacity + 0.30)) :
-                hovered ? ColorUtils.applyAlpha(Appearance.colors.colLayer2Hover, Math.min(1, root.effectiveWindowOverlayOpacity + 0.20)) :
-                ColorUtils.applyAlpha(
-                    root.glassMode ? ColorUtils.mix(Appearance.colors.colLayer2, Appearance.colors.colLayer0, 0.38) : Appearance.colors.colLayer2,
-                    root.effectiveWindowOverlayOpacity
-                )
-            border.color : root.glassMode
-                ? ColorUtils.applyAlpha(Appearance.m3colors.m3outline, 0.62)
-                : ColorUtils.transparentize(Appearance.m3colors.m3outline, 0.7)
-            border.width : 1
-
-            Rectangle {
-                visible: root.glassMode
-                anchors.fill: parent
-                radius: parent.radius
-                color: "transparent"
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: ColorUtils.applyAlpha("#FFFFFF", root.glassShineOpacity * 0.24) }
-                    GradientStop { position: 0.5; color: ColorUtils.applyAlpha("#FFFFFF", 0.0) }
-                    GradientStop { position: 1.0; color: ColorUtils.applyAlpha("#000000", root.glassShineOpacity * 0.14) }
-                }
-            }
-
-            Rectangle {
-                visible: root.glassMode
-                anchors.fill: parent
-                anchors.margins: 1
-                radius: Math.max(parent.radius - 1, 0)
-                color: "transparent"
-                border.width: 1
-                border.color: ColorUtils.applyAlpha("#FFFFFF", root.glassShineOpacity * 0.32)
-            }
-        }
-
-        ColumnLayout {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.right: parent.right
-            spacing: Appearance.font.pixelSize.smaller * 0.5
-
-            Image {
-                id: windowIcon
-                property var iconSize: {
-                    const renderedSize = Math.min(root.width, root.height);
-                    return renderedSize * (root.compactMode ? root.iconToWindowRatioCompact : root.iconToWindowRatio) / (root.monitorData?.scale ?? 1);
-                }
-                Layout.alignment: Qt.AlignHCenter
-                source: root.iconPath
-                width: iconSize
-                height: iconSize
-                sourceSize: Qt.size(Math.max(1, Math.round(iconSize)), Math.max(1, Math.round(iconSize)))
-            }
-        }
+        liveCapture: livePreviewEnabled
+        iconSource: root.iconPath
+        label: `${root.windowData?.title ?? ""}`
+        floatingWindow: root.windowData?.floating ?? false
+        hovering: root.hovered
+        pressing: root.pressed
     }
 
     function refreshCapture() {

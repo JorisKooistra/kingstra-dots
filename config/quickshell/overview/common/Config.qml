@@ -54,7 +54,7 @@ Singleton {
         property QtObject appearance: QtObject {
             property string colorSource: root.readString(
                 "appearance.colorSource",
-                root.readBool("appearance.useMatugenColors", false) ? "matugen" : "default"
+                root.readBool("appearance.useMatugenColors", false) ? "matugen" : "kingstra"
             )
             property bool useMatugenColors: colorSource === "matugen"
             property QtObject caelestia: QtObject {

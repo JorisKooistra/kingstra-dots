@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "../"
+import "../overview/common/kingstra"
 import "SpatialOverviewLogic.js" as MapLogic
 
 Scope {
@@ -47,6 +48,8 @@ Scope {
     readonly property var windows: snapshot.windows || []
     readonly property var area: snapshot.area || ({x: 0, y: 0, w: 1, h: 1})
     MatugenColors { id: colors }
+    // Zelfde stijlbron als het werkruimte-overzicht.
+    KingstraLook { id: mapLook }
     // Wiel zoomt vloeiend: de kaart volgt zoomTarget met een korte animatie.
     property real zoomTarget: 1
     Behavior on zoom { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.OutCubic } }
@@ -267,7 +270,7 @@ Scope {
         title: "Kingstra Werkvlak"
         implicitWidth: 1020
         implicitHeight: 680
-        color: colors.base
+        color: mapLook.panelFill
         onVisibleChanged: if (!visible) root.shown = false
 
         Item {
@@ -299,37 +302,20 @@ Scope {
                 anchors.fill: parent
                 anchors.margins: 24
                 spacing: 14
-                RowLayout {
-                    Layout.fillWidth: true
-                    Text {
-                        text: "Werkvlak  ·  werkruimte " + root.workspace
-                        font.family: ThemeConfig.uiFont
-                        font.pixelSize: 22
-                        font.bold: true
-                        color: colors.text
-                        Layout.fillWidth: true
-                    }
-                    Text {
-                        text: "Sluiten"
-                        color: colors.primary
-                        font.family: ThemeConfig.uiFont
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.shown = false }
-                    }
-                }
-                Text {
-                    text: "Slepen verplaatst je zicht. Super + slepen verplaatst een app: midden wisselt, rand splitst. Wiel zoomt, klik kiest."
-                    color: colors.subtext0
-                    font.family: ThemeConfig.uiFont
-                    font.pixelSize: 12
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
+                // Zelfde kop als het werkruimte-overzicht.
+                OverviewHeader {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.maximumWidth: parent.width
+                    look: mapLook
+                    heading: "Werkvlak  ·  werkruimte " + root.workspace
+                    hint: "Slepen verplaatst je zicht  ·  Super + slepen verplaatst een app  ·  wiel zoomt, klik kiest"
                 }
                 Rectangle {
                     id: scene
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    color: colors.shellRaisedFill
-                    radius: 12
+                    color: mapLook.raisedFill
+                    radius: mapLook.panelRadius
                     clip: true
                     readonly property real mapScale: Math.max(0.001, Math.min((width - 48) / root.bounds.w, (height - 48) / root.bounds.h) * root.zoom)
                     readonly property real offsetX: (width - root.bounds.w * mapScale) / 2
@@ -338,13 +324,14 @@ Scope {
                     // Eén vaste muislaag: camera en vensters delen dezelfde
                     // coördinaten; de bewegende miniaturen pakken de muis niet af.
                     SpatialMapInput {
+                        id: mapInput
                         anchors.fill: parent
                         z: 10
                         controller: root
                     }
                     Repeater {
                         model: windowModel
-                        delegate: Rectangle {
+                        delegate: Item {
                             id: tile
                             required property var entry
                             readonly property var modelData: entry
@@ -357,82 +344,29 @@ Scope {
                             height: Math.max(1, modelData.h * scene.mapScale)
                             readonly property bool chosen: root.selected === index
                             readonly property var toplevel: root.shown ? root.toplevelFor(modelData.address) : null
-                            radius: 8
-                            color: colors.base
-                            border.color: chosen ? colors.primary : colors.shellOutline
-                            border.width: chosen ? 2 : 1
-                            clip: true
+                            readonly property var desktopEntry: toplevel ? DesktopEntries.heuristicLookup(toplevel.appId) : null
                             scale: moving ? 0.95 : chosen ? 1.0 : 0.985
                             opacity: moving ? 0.8 : 1
-                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(150) } }
-                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutCubic } }
-                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                            Behavior on opacity { NumberAnimation { duration: mapLook.duration(150) } }
+                            Behavior on scale { NumberAnimation { duration: mapLook.duration(160); easing.type: Easing.OutCubic } }
 
-                            // Live beeld van het venster zelf, zoals het gewone overzicht.
-                            ScreencopyView {
-                                id: preview
+                            // Zelfde kaart als het werkruimte-overzicht. Buiten beeld
+                            // geeft Hyprland geen live beeld: dan het laatst bewaarde
+                            // plaatje (werkvlak-thumb.sh), anders het app-icoon.
+                            OverviewWindowCard {
                                 anchors.fill: parent
-                                anchors.margins: tile.border.width
+                                look: mapLook
                                 captureSource: tile.toplevel
-                                live: root.shown && !root.cameraDragging && !root.movingAddress
-                                opacity: hasContent ? 1 : 0
-                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
-                            }
-                            // Buiten beeld geeft Hyprland geen live beeld: dan het
-                            // laatst bewaarde plaatje (werkvlak-thumb.sh).
-                            Image {
-                                id: still
-                                anchors.fill: parent
-                                anchors.margins: tile.border.width
-                                visible: !preview.hasContent
-                                source: root.shown ? "file://" + root.runtime + "/kingstra-thumbs/"
+                                liveCapture: root.shown && !root.cameraDragging && !root.movingAddress
+                                stillSource: root.shown ? "file://" + root.runtime + "/kingstra-thumbs/"
                                     + String(tile.modelData.address || "").toLowerCase().replace(/^0x/, "")
                                     + ".jpg?" + root.thumbStamp : ""
-                                cache: false
-                                asynchronous: true
-                                fillMode: Image.PreserveAspectCrop
-                                sourceSize.width: 640
-                                opacity: status === Image.Ready ? 1 : 0
-                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
-                            }
-                            Rectangle {
-                                anchors.fill: parent
-                                radius: tile.radius
-                                color: tile.chosen ? Qt.alpha(colors.primary, 0.16) : "transparent"
-                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                            }
-                            // Titel: los op de tegel zonder beeld, als label onderin met beeld.
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                anchors.margins: 6
-                                visible: (preview.hasContent || still.status === Image.Ready) && tile.height > 40
-                                height: Math.min(26, parent.height / 3)
-                                radius: height / 2
-                                color: Qt.alpha(colors.base, 0.82)
-                                Text {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 10; anchors.rightMargin: 10
-                                    verticalAlignment: Text.AlignVCenter
-                                    text: (tile.modelData.floating ? "◇  " : "") + String(tile.modelData.title || "Venster")
-                                    color: colors.text
-                                    font.family: ThemeConfig.uiFont
-                                    font.pixelSize: 11
-                                    elide: Text.ElideRight
-                                }
-                            }
-                            Text {
-                                anchors.fill: parent
-                                anchors.margins: 10
-                                visible: !preview.hasContent && still.status !== Image.Ready
-                                text: (tile.modelData.floating ? "◇  " : "") + String(tile.modelData.title || "Venster")
-                                color: colors.text
-                                font.family: ThemeConfig.uiFont
-                                font.pixelSize: 12
-                                elide: Text.ElideRight
-                                wrapMode: Text.Wrap
-                                maximumLineCount: 3
+                                iconSource: tile.desktopEntry && tile.desktopEntry.icon
+                                    ? Quickshell.iconPath(String(tile.desktopEntry.icon), "application-x-executable") : ""
+                                label: String(tile.modelData.title || "Venster")
+                                floatingWindow: tile.modelData.floating === true
+                                chosen: tile.chosen
+                                hovering: mapInput.hoverIndex === tile.index
                             }
                         }
                     }
@@ -442,15 +376,15 @@ Scope {
                         visible: box !== null
                         x: box ? box.x : 0; y: box ? box.y : 0
                         width: box ? box.w : 0; height: box ? box.h : 0
-                        radius: 8
-                        color: Qt.alpha(colors.primary,0.18)
-                        border.color: colors.primary
+                        radius: mapLook.cardRadius
+                        color: mapLook.selectedTint
+                        border.color: mapLook.primary
                         border.width: 2
                         Text {
                             anchors.centerIn: parent
                             text: root.dropTarget && root.dropTarget.edge === "center" ? "Wisselen" : ""
-                            color: colors.text
-                            font.family: ThemeConfig.uiFont
+                            color: mapLook.text
+                            font.family: mapLook.uiFont
                         }
                     }
                     // Zichtgebied boven de tegels, zodat het kader zichtbaar blijft
@@ -462,9 +396,9 @@ Scope {
                         width: root.area.w * scene.mapScale + 8
                         height: root.area.h * scene.mapScale + 8
                         color: "transparent"
-                        border.color: Qt.alpha(colors.primary, 0.9)
+                        border.color: Qt.alpha(mapLook.primary, 0.9)
                         border.width: 2
-                        radius: 12
+                        radius: mapLook.panelRadius
                         Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
                         Behavior on y { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
                         Rectangle {
@@ -474,13 +408,13 @@ Scope {
                             width: viewLabel.implicitWidth + 16
                             height: 18
                             radius: 9
-                            color: colors.primary
+                            color: mapLook.primary
                             Text {
                                 id: viewLabel
                                 anchors.centerIn: parent
                                 text: "zicht"
-                                color: colors.base
-                                font.family: ThemeConfig.uiFont
+                                color: mapLook.primaryText
+                                font.family: mapLook.uiFont
                                 font.pixelSize: 10
                                 font.bold: true
                             }
@@ -490,17 +424,27 @@ Scope {
                         anchors.centerIn: parent
                         visible: root.windows.length === 0
                         text: "Open een venster op dit werkvlak"
-                        color: colors.subtext0
-                        font.family: ThemeConfig.uiFont
+                        color: mapLook.subtext0
+                        font.family: mapLook.uiFont
                     }
                 }
-                Text {
+                RowLayout {
                     Layout.fillWidth: true
-                    text: root.errorText || "Pijltjes: kiezen  ·  Enter: terug naar venster  ·  Esc: sluiten"
-                    color: root.errorText ? colors.red : colors.subtext0
-                    font.family: ThemeConfig.uiFont
-                    font.pixelSize: 12
-                    wrapMode: Text.Wrap
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.errorText || "Pijltjes kiezen  ·  Enter terug naar venster  ·  Esc sluit"
+                        color: root.errorText ? mapLook.red : mapLook.subtext0
+                        font.family: mapLook.uiFont
+                        font.pixelSize: 12
+                        wrapMode: Text.Wrap
+                    }
+                    Text {
+                        text: "Sluiten"
+                        color: mapLook.primary
+                        font.family: mapLook.uiFont
+                        font.pixelSize: 12
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.shown = false }
+                    }
                 }
             }
         }

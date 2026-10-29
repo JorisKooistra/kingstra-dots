@@ -1,6 +1,6 @@
 {
   "appearance": {
-    "colorSource": "default",
+    "colorSource": "kingstra",
     "caelestia": {
       "autoRefresh": true,
       "refreshInterval": 2000,
@@ -68,7 +68,7 @@
       "emptyWorkspaceWallpaperOverlayOpacity": 0.18,
       "windowOverlayOpacity": 0.22,
       "enableBlur": false,
-      "glassMode": true,
+      "glassMode": false,
       "glassTintStrength": 0.26,
       "glassBorderOpacity": 0.54,
       "glassShineOpacity": 0.09

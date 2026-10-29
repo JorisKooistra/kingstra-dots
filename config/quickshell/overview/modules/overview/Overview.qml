@@ -7,6 +7,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import "../../common/functions/HyprDispatch.js" as HyprDispatch
 import "../../common"
+import "../../common/kingstra"
 import "../../services"
 import "."
 
@@ -216,23 +217,13 @@ Scope {
                 scale: 0.96 + 0.04 * root.reveal
                 transformOrigin: Item.Center
 
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "WERKRUIMTEN"
-                    color: "#E6FFFFFF"
-                    font.family: "JetBrains Mono"
-                    font.pixelSize: 12
-                    font.letterSpacing: 1.8
-                    font.bold: true
-                }
-
-                Text {
+                // Zelfde kop als de werkvlak-kaart.
+                OverviewHeader {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.bottomMargin: 4
-                    text: "klik om te kiezen · sleep een venster · rechtsklik of Esc sluit"
-                    color: "#A8FFFFFF"
-                    font.family: "sans-serif"
-                    font.pixelSize: 13
+                    look: Appearance.look
+                    heading: "Werkruimten"
+                    hint: "Klik kiest  ·  sleep een venster  ·  rechtsklik of Esc sluit"
                 }
 
                 Loader {

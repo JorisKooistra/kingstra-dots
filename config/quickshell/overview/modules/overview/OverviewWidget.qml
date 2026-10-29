@@ -28,7 +28,7 @@ Item {
     property var workspaceIds: HyprlandData.workspaceIds
     property var monitorData: HyprlandData.monitors.find(m => m.id === root.monitor?.id)
     property real scale: Config.options.overview.scale
-    property color activeBorderColor: Appearance.colors.colSecondary
+    property color activeBorderColor: Appearance.look.primary
 
     property real workspaceImplicitWidth: (monitorData?.transform % 2 === 1) ? 
         ((monitor.height / monitor.scale - (monitorData?.reserved?.[0] ?? 0) - (monitorData?.reserved?.[2] ?? 0)) * root.scale) :
@@ -498,7 +498,7 @@ Item {
 
         implicitWidth: contentLayout.implicitWidth + padding * 2
         implicitHeight: contentLayout.implicitHeight + padding * 2
-        radius: Appearance.rounding.screenRounding * root.scale + padding
+        radius: Appearance.look.panelRadius * 2
         clip: true
         color: ColorUtils.applyAlpha(
             root.glassMode
@@ -565,7 +565,7 @@ Item {
                             property bool showWallpaper: root.hasEmptyWorkspaceWallpaper
                             property color defaultWorkspaceColor: Appearance.colors.colLayer1
                             property color hoveredWorkspaceColor: ColorUtils.mix(defaultWorkspaceColor, Appearance.colors.colLayer1Hover, 0.1)
-                            property color hoveredBorderColor: Appearance.colors.colLayer2Hover
+                            property color hoveredBorderColor: Appearance.look.primary
                             property bool hoveredWhileDragging: false
 
                             implicitWidth: root.workspaceImplicitWidth
@@ -576,7 +576,7 @@ Item {
                                     : (hoveredWhileDragging ? hoveredWorkspaceColor : defaultWorkspaceColor),
                                 root.effectiveWorkspaceOpacity
                             )
-                            radius: Appearance.rounding.screenRounding * root.scale
+                            radius: Appearance.look.panelRadius
                             border.width: 2
                             border.color: hoveredWhileDragging
                                 ? ColorUtils.applyAlpha(hoveredBorderColor, root.glassMode ? root.glassBorderOpacity : 1)
@@ -704,7 +704,7 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: Appearance.rounding.normal * root.scale
+                    radius: Appearance.look.panelRadius
                     color: ColorUtils.applyAlpha(
                         root.glassMode
                             ? ColorUtils.mix(Appearance.colors.colLayer0, Appearance.colors.colLayer1, 0.70)
@@ -766,7 +766,7 @@ Item {
                                 property real contentOffsetY: Math.max(0, (height - contentHeight) / 2)
                                 implicitWidth: root.specialWorkspaceTileWidth
                                 implicitHeight: root.specialWorkspaceTileHeight
-                                radius: Appearance.rounding.screenRounding * root.scale
+                                radius: Appearance.look.panelRadius
                                 clip: true
                                 color: showWallpaper ? "transparent" : ColorUtils.applyAlpha(
                                     root.glassMode
@@ -973,7 +973,7 @@ Item {
                             property bool showWallpaper: root.hasSpecialEmptyWorkspaceWallpaper
                             implicitWidth: root.specialWorkspaceTileWidth
                             implicitHeight: root.specialWorkspaceTileHeight
-                            radius: Appearance.rounding.screenRounding * root.scale
+                            radius: Appearance.look.panelRadius
                             color: showWallpaper ? "transparent" : ColorUtils.applyAlpha(
                                 root.glassMode
                                     ? ColorUtils.mix(Appearance.colors.colSecondaryContainer, Appearance.colors.colLayer1, 0.58)
@@ -1238,7 +1238,7 @@ Item {
                 width: root.workspaceImplicitWidth
                 height: root.workspaceImplicitHeight
                 color: "transparent"
-                radius: Appearance.rounding.screenRounding * root.scale
+                radius: Appearance.look.panelRadius
                 border.width: 2
                 border.color: root.activeBorderColor
                 Behavior on x {
