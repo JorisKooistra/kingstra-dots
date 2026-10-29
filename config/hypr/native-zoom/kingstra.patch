@@ -13,7 +13,7 @@ index 54bcf2e..c834478 100644
      canvasReclaimScreen(monitor);
      return true;
 diff --git a/scrollOverview.cpp b/scrollOverview.cpp
-index 5c9a055..e6ee83f 100644
+index 5c9a055..1aecdd1 100644
 --- a/scrollOverview.cpp
 +++ b/scrollOverview.cpp
 @@ -1585,6 +1585,9 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_, PHLMONITO
@@ -22,7 +22,7 @@ index 5c9a055..e6ee83f 100644
          lastMousePosLocal = getOverviewMousePosLocal(pMonitor.lock());
 +        // Leave camera dragging to Lua, without application focus side effects.
 +        const auto KINGSTRA_MODS = g_pInputManager->getModsFromAllKBs();
-+        if (isCanvasDesktop() && (KINGSTRA_MODS & (HL_MODIFIER_META | HL_MODIFIER_ALT)) == (HL_MODIFIER_META | HL_MODIFIER_ALT)) return;
++        if (isCanvasDesktop() && (KINGSTRA_MODS & (HL_MODIFIER_META | HL_MODIFIER_CTRL)) == (HL_MODIFIER_META | HL_MODIFIER_CTRL)) return;
          if (landingDrag) {
              info.cancelled = true;
              updateExperimentDrag();
@@ -31,7 +31,7 @@ index 5c9a055..e6ee83f 100644
  
          if (isCanvasDesktop()) {
 +            const auto KINGSTRA_MODS = g_pInputManager->getModsFromAllKBs();
-+            if ((KINGSTRA_MODS & (HL_MODIFIER_META | HL_MODIFIER_ALT)) == (HL_MODIFIER_META | HL_MODIFIER_ALT)) return;
++            if ((KINGSTRA_MODS & (HL_MODIFIER_META | HL_MODIFIER_CTRL)) == (HL_MODIFIER_META | HL_MODIFIER_CTRL)) return;
              lastMousePosLocal         = getOverviewMousePosLocal(pMonitor.lock());
              const bool LEFT_HANDED    = ScrollOverview::Config::getLeftHanded();
              const uint32_t MAIN       = LEFT_HANDED ? BTN_RIGHT : BTN_LEFT;
@@ -39,7 +39,7 @@ index 5c9a055..e6ee83f 100644
          markCanvasCameraActive(pMonitor.lock());
  
          if (isCanvasDesktop()) {
-+            // Compositor bindings own Super+wheel (pages) and Super+Alt+wheel (zoom).
++            // Compositor bindings own Super+wheel (pages) and Super+Ctrl+wheel (zoom).
 +            if (isPointerOnTopLayer(pMonitor.lock()) || (g_pInputManager->getModsFromAllKBs() & HL_MODIFIER_META)) return;
              info.cancelled = true;
              const auto MODS      = g_pInputManager->getModsFromAllKBs();
@@ -53,15 +53,18 @@ index 5c9a055..e6ee83f 100644
      const auto MONITOR = pMonitor.lock();
      if (MONITOR && canvasScreenFixedWindow(window))
          return getOverviewGlobalBox(window->geometricBox(Desktop::View::IGeometric::GEOMETRIC_CURRENT), MONITOR, 1.F, Vector2D{}, Vector2D{}, layout, false);
-@@ -4537,6 +4546,7 @@ void CScrollOverview::ensureCanvasKeyboardFocus(PHLWINDOW window) {
+@@ -4537,6 +4546,10 @@ void CScrollOverview::ensureCanvasKeyboardFocus(PHLWINDOW window) {
  }
  
  bool CScrollOverview::followCanvasWindow(PHLWINDOW window, bool syncFocus, bool animate) {
++    // Lua owns the camera. Opening/focusing an app must never move a second,
++    // hidden native camera (including Super+Return while zoomed out).
++    if (!ScrollOverview::Config::getCanvasAutoFloat() && !ScrollOverview::Config::getCanvasAutoPlace()) return false;
 +    if (window && window->m_workspace != startedOn) return false;
      if (animate)
          syncAnimationConfig();
      window = getOverviewWindowToShow(window);
-@@ -4581,11 +4591,14 @@ bool CScrollOverview::manageCanvasWindow(PHLWINDOW window, bool placeNew) {
+@@ -4581,11 +4594,14 @@ bool CScrollOverview::manageCanvasWindow(PHLWINDOW window, bool placeNew) {
          return false;
  
      window = getOverviewWindowToShow(window);
@@ -76,7 +79,7 @@ index 5c9a055..e6ee83f 100644
      if (!g_canvasNativeLayout.contains(window->m_stableID))
          g_canvasNativeLayout.emplace(window->m_stableID, saveCanvasWindow(window));
  
-@@ -5995,6 +6008,22 @@ void CScrollOverview::endWindowDrag() {
+@@ -5995,6 +6011,22 @@ void CScrollOverview::endWindowDrag() {
  
      const auto          MONITOR           = pMonitor.lock();
      const auto          DROPMONITOR       = dropOverview ? dropOverview->pMonitor.lock() : PHLMONITOR{};
@@ -99,7 +102,7 @@ index 5c9a055..e6ee83f 100644
      const auto          ACTIVEWORKSPACEBEFOREDROP     = MONITOR ? MONITOR->m_activeWorkspace : PHLWORKSPACE{};
      const auto          DROPACTIVEWORKSPACEBEFOREDROP = DROPMONITOR ? DROPMONITOR->m_activeWorkspace : PHLWORKSPACE{};
      const auto          DROPPOINTLOCAL    = getOverviewMousePosLocal(DROPMONITOR);
-@@ -7030,7 +7059,7 @@ void CScrollOverview::restoreWorkspaceAnimationOverrides() {
+@@ -7030,7 +7062,7 @@ void CScrollOverview::restoreWorkspaceAnimationOverrides() {
  
  void CScrollOverview::forceWorkspaceAlphaVisible() {
      for (const auto& workspace : State::workspaceState()->workspaces()) {
@@ -108,7 +111,38 @@ index 5c9a055..e6ee83f 100644
              continue;
  
          workspace->m_alpha->setValueAndWarp(1.F);
-@@ -8608,6 +8637,12 @@ void CScrollOverview::close() {
+@@ -8405,6 +8437,9 @@ bool CScrollOverview::shouldAllowSurfaceFrame(SP<CWLSurfaceResource> surface, co
+         return true;
+ 
+     auto window = getOverviewWindowToShow(windowOwner);
++    // Kingstra owns one workspace, never the frame clock of another screen.
++    if (isCanvasDesktop() && window && window->m_workspace != startedOn)
++        return true;
+     if (g_pointerGrabOverview && g_pointerGrabOverview->dragActiveWindow &&
+         window == getOverviewWindowToShow(g_pointerGrabOverview->dragActiveWindow.lock()))
+         return true;
+@@ -8501,8 +8536,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
+         if (layerOwner->m_monitor != MONITOR)
+             return true;
+ 
++        // Reset/control overlays are normal interactive layer-shell surfaces.
+         if (layerOwner->m_layer > ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM)
+-            return false;
++            return true;
+ 
+         markBlurDirty();
+         if (layerOwner->m_layer == ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND)
+@@ -8514,6 +8550,9 @@ bool CScrollOverview::shouldHandleSurfaceDamage(SP<CWLSurfaceResource> surface)
+         return true;
+ 
+     auto window = getOverviewWindowToShow(windowOwner);
++    // Kingstra owns one workspace, never the frame clock of another screen.
++    if (isCanvasDesktop() && window && window->m_workspace != startedOn)
++        return true;
+     if (g_pointerGrabOverview && g_pointerGrabOverview->dragActiveWindow &&
+         window == getOverviewWindowToShow(g_pointerGrabOverview->dragActiveWindow.lock())) {
+         const auto DRAGBOX = g_pointerGrabOverview->draggedWindowGlobalBox();
+@@ -8608,6 +8647,12 @@ void CScrollOverview::close() {
      }
  
      closeApplied = true;
@@ -121,7 +155,7 @@ index 5c9a055..e6ee83f 100644
  
      const bool ACTIVATESELECTION = activeScrollOverview().get() == this;
      setClosing(true);
-@@ -10871,8 +10906,8 @@ bool CScrollOverview::flightDeckAction(const std::string& action) {
+@@ -10871,8 +10916,8 @@ bool CScrollOverview::flightDeckAction(const std::string& action) {
          return true;
      }
      if (action == "zoom in" || action == "zoom out") {

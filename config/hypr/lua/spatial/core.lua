@@ -452,7 +452,8 @@ function M.place(state, id, col, row, config, slot)
     return true
 end
 
--- Midden: de volledige vlakken ruilen. Rand: alleen dat vlak splitsen.
+-- Midden binnen dezelfde pagina: tegels ruilen. Naar een andere pagina:
+-- toevoegen naast het doelvenster. Rand: alleen dat vlak splitsen.
 -- De rest van de boom en de camera blijven precies staan.
 function M.tile_place(state, id, target, edge, area, config)
     local source, dest = state.positions[id], state.positions[target]
@@ -460,6 +461,7 @@ function M.tile_place(state, id, target, edge, area, config)
     if edge ~= "center" and not DIRECTIONS[edge] then return false end
     M.placements(state, area, config)
     local skey, dkey = position_key(source.col, source.row), position_key(dest.col, dest.row)
+    if edge == "center" and skey ~= dkey then edge = "right" end
     if edge == "center" then
         if skey == dkey then
             local marker = {}

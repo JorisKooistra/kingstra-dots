@@ -36,7 +36,7 @@ end
 local drag=find('SUPER + mouse:272',true)
 local native_resize=find('SUPER + mouse:273',true)
 local custom_resize=find('SUPER + mouse:273',false)
-local camera_drag=find('SUPER + ALT + mouse:272',false)
+local camera_drag=find('SUPER + CTRL + mouse:272',false)
 assert(drag.enabled and not native_resize.enabled and custom_resize.enabled)
 active={title='Kingstra Werkvlak',layout={name='floating'}}
 events['window.active'](active)

@@ -67,10 +67,10 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Alt + S` | Scrollende kolommen aan/uit op deze werkruimte |
 | `Super + Alt + Z` | Zen-modus aan/uit (balk verborgen, niet storen, rest gedimd) |
 | `Super + wiel` | Binnen de werkruimte: strook volgende/vorige pagina; ruimtelijk omhoog/omlaag |
-| `Super + Ctrl + wiel` | Binnen de werkruimte opzij (ruimtelijk links/rechts) |
-| `Super + Alt + linkermuis slepen` | Werkvlak vrij verschuiven; klikt alleen vast als je dicht bij een plek loslaat |
-| `Super + Alt + wiel` | Echte desktop uit-/inzoomen op de monitor onder de muis (ruimtelijk werkvlak) |
-| `Super + Alt + middelklik` | Desktopzoom terug naar 100% |
+| `Super + Alt + wiel` | Binnen de werkruimte opzij (ruimtelijk links/rechts) |
+| `Super + Ctrl + linkermuis slepen` | Werkvlak vrij verschuiven; klikt alleen vast als je dicht bij een plek loslaat |
+| `Super + Ctrl + wiel` | Echte desktop uit-/inzoomen op de monitor onder de muis (ruimtelijk werkvlak) |
+| `Super + Ctrl + middelklik` | Desktopzoom terug naar 100% |
 | `Super + Ctrl + Alt + ←→` | Strook: kolom verder; ruimtelijk: zicht in alle richtingen |
 | `Super + Ctrl + .` / `,` | Scrollen: kolom breder / smaller |
 | ``Super + ` `` | Kladblok tonen/verbergen |
@@ -209,23 +209,23 @@ worden bij een update niet automatisch omgezet.
   Op een scrollstrook schuift links/rechts één kolom; zo betekent deze toets overal "verder kijken".
 - **Super+drievingerveeg:** vrij in beide richtingen bewegen, ook diagonaal
   (vereist live Lua-gebaren).
-- **Super+wiel:** één pagina omhoog/omlaag; **Super+Ctrl+wiel** of een kantelwiel: links/rechts.
-- **Super+Alt+linkermuis ingedrukt:** het werkvlak vrij slepen, ook diagonaal. Bij loslaten
+- **Super+wiel:** één pagina omhoog/omlaag; **Super+Alt+wiel** of een kantelwiel: links/rechts.
+- **Super+Ctrl+linkermuis ingedrukt:** het werkvlak vrij slepen, ook diagonaal. Bij loslaten
   klikt het alleen op een plek vast als je er dichtbij bent.
 - **Nieuwe vensters** komen waar je kijkt: op een lege plek vult het venster die plek,
   op een plek met vensters wordt het een extra tegel (zonder maximum). Eén plek met vensters
   vult het hele scherm, net als gewone tegels; scroll of sleep opzij voor meer ruimte.
 - **Muisfocus** verschuift het beeld niet zolang er nog een rand van het venster zichtbaar is.
-- **Super+Alt+wiel:** echte desktop uit-/inzoomen (100–25%), met direct klikken, typen en appscroll.
-  Dit werkt per monitor; **Super+Alt+middelklik** zet de monitor terug op 100%.
-  Super+wiel blijft een hele pagina verplaatsen; Super+Alt+linkermuis sleept vrij.
+- **Super+Ctrl+wiel:** echte desktop uit-/inzoomen (100–25%), met direct klikken, typen en appscroll.
+  Dit werkt per monitor; **Super+Ctrl+middelklik** zet de monitor terug op 100%.
+  Super+wiel blijft een hele pagina verplaatsen; Super+Ctrl+linkermuis sleept vrij.
 - **Vensterkaart:** de knop 󰊢 in de rail of Super+Tab.
 - **Super+Ctrl+, / .:** breedte kleiner/groter.
 - **Super+linkermuis slepen** van een venster: het komt precies waar je loslaat,
   op een lege plek of op de tegelplek onder de muis. Het beeld schuift niet mee.
 - **Super+Tab:** kaart openen; gewoon slepen verplaatst alleen de camera,
   **Super+slepen** verplaatst een app. Op het midden van een ander venster wisselen
-  ze van vlak, aan een rand splits je dat vlak. Wiel zoomt, klik kiest een venster.
+  ze van tegel binnen dezelfde pagina; vanaf een andere pagina komt de app ernaast. Aan een rand splits je dat vlak. Wiel zoomt, klik kiest een venster.
   Zwevende vensters staan er ook bij; vensters buiten beeld tonen hun laatste miniatuur.
 - **Super+rechtermuis:** Dwindle-verhoudingen veranderen binnen de pagina.
 - **Super+backslash:** richting van de geselecteerde Dwindle-splitsing wisselen.

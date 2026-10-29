@@ -22,15 +22,15 @@ _G.__hyprscroll2d_layout_registered=nil; assert(loadfile("@ROOT@/config/hypr/lua
 hl.workspace_rule({workspace="1",layout="lua:hyprscroll2d"})
 _G.zoom=require("lua.native-zoom")
 hl.bind("SUPER + u",function() zoom.zoom("out") end)
-hl.bind("SUPER + ALT + mouse_down",function() zoom.zoom("out") end)
-hl.bind("SUPER + ALT + mouse_up",function() zoom.zoom("in") end)
-hl.bind("SUPER + ALT + mouse:274",function() zoom.reset() end)
+hl.bind("SUPER + CTRL + mouse_down",function() zoom.zoom("out") end)
+hl.bind("SUPER + CTRL + mouse_up",function() zoom.zoom("in") end)
+hl.bind("SUPER + CTRL + mouse:274",function() zoom.reset() end)
 _G.spatial=require("lua.spatial")
-hl.bind("SUPER + ALT + mouse:272",spatial.drag_start)
+hl.bind("SUPER + CTRL + mouse:272",spatial.drag_start)
 hl.bind("mouse:272",spatial.drag_stop,{release=true,ignore_mods=true,non_consuming=true})
 '''.replace('@ROOT@',str(root)))
 log=(run/'log').open('w');proc=subprocess.Popen(['Hyprland','-c',str(config)],env=env,stdout=log,stderr=subprocess.STDOUT)
-sig=None
+sig=None;qs=None;qs_config=None;qs_log=None
 pointer_build=run/'pointer';pointer_build.mkdir()
 xml=source/'tests/tools/wlr-virtual-pointer-unstable-v1.xml'
 pointer_source=(source/'tests/tools/vpointer.c').read_text()
@@ -81,7 +81,7 @@ try:
  ctl('eval','hl.dispatch(hl.dsp.layout("pan left")); hl.dispatch(hl.dsp.layout("pan right"))')
  before=json.loads(ctl('clients','-j'));time.sleep(.25)
  env['WAYLAND_DISPLAY']=next(p.name for p in run.glob('wayland-*') if not p.name.endswith('.lock'))
- km=subprocess.Popen(['wtype','-M','logo','-M','alt','-s','650','-m','alt','-m','logo'],env=env);time.sleep(.15)
+ km=subprocess.Popen(['wtype','-M','logo','-M','ctrl','-s','650','-m','ctrl','-m','logo'],env=env);time.sleep(.15)
  mm=json.loads(ctl('monitors','-j'))[0]
  subprocess.run([vpointer,str(mm['width']),str(mm['height']),'abs',str(mm['width']//2),str(mm['height']//2),'wheel','1'],env=env,check=True)
  km.wait(timeout=3);time.sleep(.4)
@@ -125,11 +125,11 @@ try:
   pointer('abs',x1,y1,'sleep',60,'down','sleep',70,'abs',x2,y2,'sleep',120,'up','sleep',100)
   keys.wait(timeout=3)
  camera_before=json.loads((run/'kingstra-spatial-1.json').read_text())
- modified_drag(['logo','alt'],ww//2,hh//2,ww//2+50,hh//2+25)
+ modified_drag(['logo','ctrl'],ww//2,hh//2,ww//2+50,hh//2+25)
  time.sleep(.2)
  camera_after=json.loads((run/'kingstra-spatial-1.json').read_text())
  print('CAMERA',camera_before['camera'],camera_after['camera'],flush=True)
- check(camera_before['camera']!=camera_after['camera'],'real Super+Alt drag pans while zoomed')
+ check(camera_before['camera']!=camera_after['camera'],'real Super+Ctrl drag pans while zoomed')
  # Return to the previous page/camera before testing swap at scaled coordinates.
  ctl('dispatch','hl.dsp.layout("pan up")');ctl('dispatch','hl.dsp.layout("pan down")')
  ctl('dispatch','hl.dsp.layout("center")');time.sleep(.2)
@@ -139,16 +139,88 @@ try:
  source,dest=center(aa),center(bb)
  modified_drag(['logo'],*source,*dest);time.sleep(.2)
  updated=json.loads(ctl('clients','-j'));a_after=next(w for w in updated if w['title']=='zoom-A');b_after=next(w for w in updated if w['title']=='zoom-B')
- check(a_after['at']==bb['at'] and b_after['at']==aa['at'],'real Super drag swaps pages at the displayed position')
+ check(a_after['at'][0]>b_after['at'][0] and a_after['at'][1]==b_after['at'][1],'cross-page Super drag adds the app beside the target')
  check(not a_after['floating'] and not b_after['floating'],'zoomed drag keeps apps tiled')
+ cells={w['address']:(w['col'],w['row']) for w in json.loads((run/'kingstra-spatial-1.json').read_text())['windows'] if not w.get('floating')}
+ check(cells[aa['address']]==cells[bb['address']]==(1,0),'target stays on its page and the dragged app joins it')
  # Baseline has deliberately changed through the drag.
  before=updated
  ctl('eval','zoom.reset()');time.sleep(.4)
  check(not json.loads(ctl('spatialoverview'))['screens'],'reset returns to native 100%')
  check(positions(before)==positions(json.loads(ctl('clients','-j'))),'reset preserves pages and sizes')
+
+ # Run the actual reset component against the disposable compositor.
+ fd,qs_path=tempfile.mkstemp(prefix='.NativeZoomTest-',suffix='.qml',dir=root/'config/quickshell')
+ qs_config=Path(qs_path)
+ os.write(fd,b'import Quickshell\nShellRoot { LazyLoader { active: true; source: "desktop/SpatialZoomControl.qml" } }\n');os.close(fd)
+ qs_log=(run/'quickshell.log').open('w')
+ qs=subprocess.Popen(['quickshell','--no-duplicate','-p',str(qs_config)],env=env,stdout=qs_log,stderr=subprocess.STDOUT)
+ ctl('eval','zoom.zoom("out")');time.sleep(.4)
+ layers=[]
+ for _ in range(30):
+  data=json.loads(ctl('layers','-j'))
+  layers=[l for monitor in data.values() for level in monitor.get('levels',{}).values() for l in level if l.get('namespace')=='quickshell:kingstra-native-zoom']
+  if layers:break
+  time.sleep(.1)
+ check(bool(layers),'real reset control appears on the zoomed output')
+ layer=layers[0];print('RESET LAYER',layer,flush=True);time.sleep(.3)
+ subprocess.run(['grim',str(run/'reset-button.png')],env=env,check=True)
+ pointer('abs',int(layer['x']+layer['w']/2),int(layer['y']+layer['h']/2),'sleep',120,'down','sleep',60,'up','sleep',200)
+ time.sleep(.4)
+ print('RESET STATE',ctl('spatialoverview'),flush=True)
+ check(not json.loads(ctl('spatialoverview'))['screens'],'clicking the actual reset control restores 100%')
+ # Add an independent output with a continuously frame-driven GTK app.
+ ctl('output','create','wayland','ZOOM-2');time.sleep(.7)
+ mm=json.loads(ctl('monitors','-j'));print('MULTI OUTPUTS',[(m['name'],m['x'],m['y'],m['width'],m['height'],m['activeWorkspace']) for m in mm],flush=True)
+ check(len(mm)==2 and all(m['width']>0 and m['height']>0 for m in mm),'two real nested outputs are active')
+ second=next(m for m in mm if m['name']=='ZOOM-2');ws2=str(second['activeWorkspace']['id'])
+ ctl('dispatch','hl.dsp.exec_cmd('+json.dumps('python3 '+str(root/'tests/integration/native-zoom-app.py')+' zoom-D > '+str(run/'zoom-D.log')+' 2>&1')+')')
+ for _ in range(50):
+  found=[w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D']
+  if found:break
+  time.sleep(.1)
+ check(bool(found),'frame-driven app starts')
+ d=found[0]
+ ctl('dispatch','hl.dsp.window.move({workspace="'+ws2+'",follow=false,window="address:'+d['address']+'"})')
+ time.sleep(.4)
+ d=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-D')
+ check(str(d['workspace']['id'])==ws2,'animated app is on the other output')
+ first=next(m for m in mm if m['name']=='WAYLAND-1')
+ width=max(m['x']+m['width'] for m in mm);height=max(m['y']+m['height'] for m in mm)
+ subprocess.run([vpointer,str(width),str(height),'abs',str(first['x']+first['width']//2),str(first['y']+first['height']//2)],env=env,check=True)
+ ctl('dispatch','hl.dsp.focus({workspace="1"})');time.sleep(.2)
+ def frame_count():return sum(l.startswith('frame zoom-D ') for l in (run/'zoom-D.log').read_text().splitlines())
+ baseline=frame_count();time.sleep(.5);check(frame_count()>baseline,'other output receives ordinary frame callbacks')
+ ctl('eval','zoom.zoom("out")');time.sleep(.3)
+ baseline=frame_count();time.sleep(.8)
+ print('OTHER OUTPUT FRAMES',baseline,frame_count(),flush=True)
+ check(frame_count()>baseline,'other output keeps receiving frame callbacks during zoom')
+
+ # Open a real new application through the same keybind path as Super+Return.
+ cmd='python3 '+str(root/'tests/integration/native-zoom-app.py')+' zoom-E > '+str(run/'zoom-E.log')+' 2>&1'
+ camera_before=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
+ native_before=json.loads(ctl('spatialoverview'))['screens'][0]['view']
+ ctl('dispatch','hl.dsp.exec_cmd('+json.dumps(cmd)+')')
+ for _ in range(50):
+  found=[w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-E']
+  if found:break
+  time.sleep(.1)
+ check(bool(found),'terminal launch opens the new app while zoomed')
+ time.sleep(.3)
+ camera_after=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
+ native_after=json.loads(ctl('spatialoverview'))['screens'][0]['view']
+ print('NEW APP CAMERA',camera_before,camera_after,native_before,native_after,flush=True)
+ check(camera_before==camera_after and native_before==native_after,'opening an app preserves both spatial and native cameras')
+ ctl('eval','zoom.reset("WAYLAND-1")');time.sleep(.2)
  check('Lua error' not in (run/'hypr'/sig/'hyprland.log').read_text(),'no Lua runtime errors during real input')
  print('RUNTIME',run,flush=True)
 finally:
+ if qs and qs.poll()==None:
+  qs.terminate()
+  try:qs.wait(timeout=5)
+  except subprocess.TimeoutExpired:qs.kill()
+ if qs_log:qs_log.close()
+ if qs_config:qs_config.unlink(missing_ok=True)
  if sig and proc.poll()==None:
   try:ctl('dispatch','hl.dsp.exit()')
   except Exception:proc.terminate()

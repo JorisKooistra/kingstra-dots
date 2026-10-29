@@ -40,7 +40,7 @@ if ok and hl.gesture then
         },
     })
 end
--- Vrij slepen met Super+Alt+linkermuis. Hyprland kent geen muisbeweging als
+-- Vrij slepen met Super+Ctrl+linkermuis. Hyprland kent geen muisbeweging als
 -- Lua-gebeurtenis, dus een korte timer leest de cursor en schuift de camera
 -- mee (ruimtelijk) of stapt per kolom (scrollstrook). Bij loslaten klikt het
 -- ruimtelijk werkvlak alleen op een plek vast als je er dichtbij bent.

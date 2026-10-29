@@ -115,7 +115,7 @@ Scope {
         let rows = [];
         for (let i = 0; i < windowModel.count; ++i) {
             let w = windowModel.get(i).entry;
-            rows.push({address:w.address,index:i,floating:w.floating,
+            rows.push({address:w.address,index:i,floating:w.floating,col:w.col,row:w.row,
                 x:scene.offsetX + (w.x + (w.floating ? 0 : anchorX-displayX) - bounds.x) * scene.mapScale,
                 y:scene.offsetY + (w.y + (w.floating ? 0 : anchorY-displayY) - bounds.y) * scene.mapScale,
                 w:w.w*scene.mapScale,h:w.h*scene.mapScale});
@@ -144,7 +144,7 @@ Scope {
         let tiles=rows.filter(w => !w.floating);
         let index=MapLogic.hit(tiles,pointerX,pointerY,movingAddress);
         if (index >= 0) {
-            let w=tiles[index], edge=MapLogic.dropEdge(w,pointerX,pointerY);
+            let w=tiles[index], edge=MapLogic.placementEdge(source,w,pointerX,pointerY);
             let box={x:w.x,y:w.y,w:w.w,h:w.h};
             if (edge==="left" || edge==="right") { box.w/=2; if (edge==="right") box.x+=box.w; }
             if (edge==="up" || edge==="down") { box.h/=2; if (edge==="down") box.y+=box.h; }

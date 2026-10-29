@@ -1,9 +1,9 @@
 # Native werkvlakzoom
 
-Super+Alt+wiel zoomt de echte desktop tussen 100% en 25%; Super+Alt+middelklik
+Super+Ctrl+wiel zoomt de echte desktop tussen 100% en 25%; Super+Ctrl+middelklik
 herstelt 100%. Werkt alleen bij `lua:hyprscroll2d`, per monitor. Appbuffers blijven
 op hun eigen afmetingen; klikken en scrollen worden naar de geschaalde app geleid.
-Super+wiel gaat een hele pagina verder; Super+Alt+linkermuis bedient de Lua-camera.
+Super+wiel gaat een hele pagina verder; Super+Ctrl+linkermuis bedient de Lua-camera.
 Elke wielstap zoomt ongeveer 25%. Uitgezoomd verschijnt een knop Reset 100%.
 
 Fase 05 van de installer/updater draait `kingstra-build-native-zoom`. Die bouwt

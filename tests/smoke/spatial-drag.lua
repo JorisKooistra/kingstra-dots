@@ -1,4 +1,4 @@
--- Super+Alt+linkermuis slepen en Super+wiel in config/hypr/lua/spatial.lua, met
+-- Super+Ctrl+linkermuis slepen en Super+wiel in config/hypr/lua/spatial.lua, met
 -- een nagebootste Hyprland: timer, cursor en actieve layout.
 local dispatched = {}
 local layout_name = "lua:hyprscroll2d"

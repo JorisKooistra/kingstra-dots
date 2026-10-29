@@ -39,7 +39,7 @@ end
 local window_drag = bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 local window_resize = bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 local tile_resize = bind(mod .. " + mouse:273", spatial.resize_start or noop)
-local camera_drag = bind(mod .. " + ALT + mouse:272", spatial.drag_start or noop)
+local camera_drag = bind(mod .. " + CTRL + mouse:272", spatial.drag_start or noop)
 bind("mouse:272", spatial.drag_stop or noop, { release = true, ignore_mods = true, non_consuming = true })
 bind("mouse:273", spatial.resize_stop or noop, { release = true, ignore_mods = true, non_consuming = true })
 local function update_mouse_binds(window)
@@ -82,19 +82,19 @@ for workspace = 1, 10 do
     exec(mod .. " + ALT + " .. key, scripts .. "/workspace-action.sh movetoworkspacesilent " .. workspace)
 end
 -- Super+wiel scrolt binnen de werkruimte (ruimtelijk: omhoog/omlaag,
--- scrollstrook: kolommen), Super+Ctrl+wiel opzij, Super+Shift+wiel wisselt
--- van werkruimte. Super+Alt+linkermuis sleept het werkvlak vrij.
+-- scrollstrook: kolommen), Super+Alt+wiel opzij, Super+Shift+wiel wisselt
+-- van werkruimte. Super+Ctrl+linkermuis sleept het werkvlak vrij.
 local wheel = spatial.wheel or function() return noop end
 bind(mod .. " + mouse_down", wheel("down"))
 bind(mod .. " + mouse_up", wheel("up"))
 bind(mod .. " + mouse_left", wheel("left"))
 bind(mod .. " + mouse_right", wheel("right"))
-bind(mod .. " + CTRL + mouse_down", wheel("right"))
-bind(mod .. " + CTRL + mouse_up", wheel("left"))
+bind(mod .. " + ALT + mouse_down", wheel("right"))
+bind(mod .. " + ALT + mouse_up", wheel("left"))
 if zoom.ready then
-    bind(mod .. " + ALT + mouse_down", function() zoom.zoom("out") end)
-    bind(mod .. " + ALT + mouse_up", function() zoom.zoom("in") end)
-    bind(mod .. " + ALT + mouse:274", zoom.reset)
+    bind(mod .. " + CTRL + mouse_down", function() zoom.zoom("out") end)
+    bind(mod .. " + CTRL + mouse_up", function() zoom.zoom("in") end)
+    bind(mod .. " + CTRL + mouse:274", zoom.reset)
 end
 exec(mod .. " + SHIFT + mouse_down", scripts .. "/workspace-scroll.sh next")
 exec(mod .. " + SHIFT + mouse_up", scripts .. "/workspace-scroll.sh prev")

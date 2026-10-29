@@ -37,6 +37,13 @@ function dropEdge(box, x, y) {
     return edge;
 }
 
+// A cross-page drop adds a tile; only a centre drop within one page swaps.
+function placementEdge(source, target, x, y) {
+    var edge=dropEdge(target,x,y);
+    if (edge==="center" && (source.col!==target.col || source.row!==target.row)) return "right";
+    return edge;
+}
+
 function same(a, b) {
     for (var key in b) {
         if (typeof b[key] === "number") {

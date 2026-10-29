@@ -13,21 +13,21 @@ behouden totdat je zelf een andere kiest.
 4. Kies bij de werkruimte Ruimtelijk werkvlak, of kies die kaart met Super+Z.
 5. Open twee apps: ze staan als tegels naast elkaar en vullen het scherm.
    Super+Shift+omhoog zet een app op een eigen plek erboven. Super+pijlen kiest
-   een app; Super+wiel, Super+Ctrl+wiel of Super+Ctrl+Alt+pijlen verplaatst het zicht.
-   Houd Super+Alt+linkermuis ingedrukt om vrij te slepen. Een app die je op een lege
+   een app; Super+wiel, Super+Alt+wiel of Super+Ctrl+Alt+pijlen verplaatst het zicht.
+   Houd Super+Ctrl+linkermuis ingedrukt om vrij te slepen. Een app die je op een lege
    plek opent, komt op die plek.
 6. Super+drievingerveeg verwerkt X en Y tegelijk waar de compositor live
    Lua-gebaren ondersteunt. Gewone appscroll en ongewijzigde gebaren blijven bestaan.
 7. Super+Tab opent de vensterkaart. Gewoon slepen verplaatst alleen de camera,
    ook als je op een miniatuur begint. Super+slepen verplaatst een app: op het
-   midden van een ander venster wisselen ze van vlak; aan een rand splits je dat
+   midden van een ander venster op dezelfde pagina wisselen ze van tegel; op een andere pagina komt de app ernaast. Aan een rand splits je dat
    vlak. Het oplichtende vak toont het doel. Wiel zoomt, klik kiest een venster.
 8. Super+linkermuis slepen op het scherm zelf werkt hetzelfde: het venster komt
    waar je het loslaat, ook tussen bestaande tegels.
-9. Super+Alt+wiel verkleint de echte desktop tot 25%. Meerdere pagina's zijn
+9. Super+Ctrl+wiel verkleint de echte desktop tot 25%. Meerdere pagina's zijn
    tegelijk zichtbaar; apps blijven klikbaar, ontvangen toetsen en gewone appscroll.
-   Super+wiel verplaatst steeds een hele pagina. Super+Alt+linkermuis sleept vrij.
-   Super+Alt+middelklik gaat terug naar 100%. De zoom geldt per monitor.
+   Super+wiel verplaatst steeds een hele pagina. Super+Ctrl+linkermuis sleept vrij.
+   Super+Ctrl+middelklik gaat terug naar 100%. De zoom geldt per monitor.
 
 Een pagina gebruikt Dwindle-splits in plaats van een vast raster, zonder limiet
 aan het aantal vensters. Super+rechtermuis verandert de verhoudingen; Super+backslash

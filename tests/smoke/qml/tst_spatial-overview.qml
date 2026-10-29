@@ -86,6 +86,12 @@ Item {
             compare(MapLogic.dropEdge(box,990,400),"right");
             compare(MapLogic.dropEdge(box,500,5),"up");
         }
+        function test_drop_on_another_page_inserts_beside_target() {
+            let target={x:0,y:0,w:1000,h:800,col:1,row:0};
+            compare(MapLogic.placementEdge({col:0,row:0},target,500,400),"right");
+            compare(MapLogic.placementEdge({col:1,row:0},target,500,400),"center");
+            compare(MapLogic.placementEdge({col:0,row:0},target,5,400),"left");
+        }
         function test_floating_geometry_stays_on_screen_while_camera_moves() {
             let d=snapshot(300);d.windows[0].floating=true;d.windows[0].x=150;
             let w=MapLogic.entries(d,0,0)[0];

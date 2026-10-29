@@ -435,8 +435,11 @@ test("zoomed drop can reach a neighbouring page outside native screen bounds", f
     equal(spot.edge,"center")
     core.tile_place(state,"A",spot.target,spot.edge,AREA,config)
     local after=core.placements(state,AREA,config)
-    equal(after.A.x,before.B.x)
-    equal(after.B.x,before.A.x)
+    equal(state.positions.A.col,1)
+    equal(state.positions.B.col,1)
+    assert(after.A.x>after.B.x)
+    equal(after.A.h,after.B.h)
+    equal(#core.members(state,0,0),0)
     equal(state.camera.col,0)
 end)
 

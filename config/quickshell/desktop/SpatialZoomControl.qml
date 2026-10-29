@@ -36,17 +36,18 @@ Scope {
                 WlrLayershell.layer: WlrLayer.Overlay
                 WlrLayershell.exclusiveZone: -1
                 WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-                MatugenColors { id: colors }
+                MatugenColors { id: zoomPalette }
+                readonly property color labelColor: zoomPalette.materialOnPrimary
                 Rectangle {
                     anchors.fill: parent
                     radius: height / 2
-                    color: mouse.containsMouse ? colors.surfaceContainerHigh : colors.surfaceContainer
+                    color: mouse.containsMouse ? Qt.lighter(zoomPalette.primary, 1.08) : zoomPalette.primary
                     border.width: 1
-                    border.color: colors.primary
+                    border.color: zoomPalette.primary
                     Text {
                         anchors.centerIn: parent
                         text: Math.round(Number(root.zooms[win.modelData.name] || 1) * 100) + "%  ·  ↺ Reset 100%"
-                        color: colors.onSurface
+                        color: win.labelColor
                         font.pixelSize: 12
                     }
                     MouseArea {

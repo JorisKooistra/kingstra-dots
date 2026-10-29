@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Werkvlak: afzonderlijke schermen en bediening
+- Zoomen, camera slepen en zoom resetten gebruiken nu Super+Ctrl; Super+Alt+wiel scrolt horizontaal. De resetknop heeft een contrasterende accentvulling.
+- Frame-updates van apps op andere fysieke schermen blijven doorlopen terwijl één werkvlak is uitgezoomd; normale overlays zoals de resetknop verversen weer.
+- Nieuwe vensters (zoals Super+Return) laten zowel de werkvlakcamera als de native zoomcamera staan.
+- Een app op een bezette andere pagina laten vallen voegt die naast het doelvenster toe. Alleen binnen dezelfde pagina kan een middendrop tegels verwisselen; de kaart toont het juiste splitdoel.
+- Integratietests controleren een echte resetklik, doorlopende framecallbacks op een tweede output, een nieuwe app tijdens zoom en toevoegen aan een bezette pagina.
+
 ### Werkvlak: Dwindle en vaste camerabediening
 - Lua-runtimefout “expected a dispatcher” bij de native zoom verholpen; de pluginactie werd binnen een sneltoets dubbel uitgevoerd/doorgegeven. Uitgezoomd slepen gebruikt nu de terugvertaalde wereldpositie voor Dwindle-splits en verwisselen.
 - Super+Alt+wiel zoomt de echte desktop uit/in op de monitor onder de muis; apps blijven bedienbaar. Het wiel zoomt circa 25% per stap; de zichtbare Reset 100%-knop of Super+Alt+middelklik herstelt 100%. De updater bouwt de native renderer lokaal voor Hyprland 0.56.2; de Lua-layout blijft de indeling beheren.
