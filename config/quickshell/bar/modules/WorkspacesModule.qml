@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
+import "../../overview/common/functions/HyprDispatch.js" as HyprDispatch
 import "../.."
 
 // Left-bar pill: clickable workspace indicator dots.
@@ -400,7 +401,7 @@ Rectangle {
 
             MouseArea {
                 anchors.fill: parent
-                onClicked: Hyprland.dispatch("togglespecialworkspace " + root.activeSpecialWorkspace)
+                onClicked: Hyprland.dispatch(HyprDispatch.toggleSpecial(root.activeSpecialWorkspace))
             }
         }
     }

@@ -196,6 +196,7 @@ def overview():
     runtime = os.environ.get("XDG_RUNTIME_DIR")
     if not runtime:
         raise RuntimeError("Geen runtime-directory")
+    dispatch("snapshot")
     atomic(Path(runtime) / "kingstra-spatial-overview-request",
            json.dumps({"workspace": int(state["workspace"]), "token": time.time_ns()}) + "\n")
     return True
@@ -220,8 +221,33 @@ def main(args):
         address = args[1]
         if not re.fullmatch(r"0x[0-9a-fA-F]+", address):
             raise ValueError("Ongeldig venster")
-        if any(c.get("address") == address for c in query("clients")):
-            hypr("dispatch", "hl.dsp.focus({window=" + json.dumps("address:" + address) + "})")
+        window = next((c for c in query("clients") if c.get("address") == address), None)
+        if window:
+            workspace = window.get("workspace", {}).get("id")
+            target = None if window.get("floating") else next((w for w in query("workspaces") if w.get("id") == workspace), None)
+            if target and layout_name(target) == "lua:hyprscroll2d":
+                # Het kaartvenster sluiten kan focus naar een andere monitor
+                # teruggeven. Kies daarom de werkruimte van het doelvenster.
+                code = ("hl.dispatch(hl.dsp.focus({workspace=" + json.dumps(str(workspace)) + "})); "
+                        "hl.dispatch(hl.dsp.layout(" + json.dumps("select " + address) + "))")
+                hypr("eval", code)
+            else:
+                hypr("dispatch", "hl.dsp.focus({window=" + json.dumps("address:" + address) + "})")
+    elif command == "movefloating":
+        address, x, y = args[1:4]
+        if not re.fullmatch(r"0x[0-9a-fA-F]+", address) or not all(re.fullmatch(r"-?\d{1,6}",v) for v in (x,y)):
+            raise ValueError("Ongeldige vensterpositie")
+        window = next((w for w in query("clients") if w.get("address")==address), None)
+        if window and window.get("floating"):
+            hypr("dispatch", f"hl.dsp.window.move({{x={int(x)},y={int(y)},relative=false,window={json.dumps('address:'+address)}}})")
+            dispatch("snapshot")
+    elif command == "tileplace":
+        address, target, edge = args[1:4]
+        if (not all(re.fullmatch(r"0x[0-9a-fA-F]+", value) for value in (address, target))
+                or edge not in ("center", "left", "right", "up", "down")):
+            raise ValueError("Ongeldige tegelplek")
+        if current()["layout"] == "lua:hyprscroll2d":
+            dispatch(f"tileplace {address} {target} {edge}")
     elif command == "place":
         # Werkvlakkaart: venster naar een plek slepen.
         # Optioneel vierde getal: tegelplek binnen de plek (0 = eerste).

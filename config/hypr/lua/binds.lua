@@ -1,6 +1,8 @@
 local mod = "SUPER"
 local scripts = "~/.config/hypr/scripts"
 local ok_spatial, spatial = pcall(require, "lua.spatial")
+local ok_zoom, zoom = pcall(require, "lua.native-zoom")
+if not ok_zoom then zoom = {ready=false} end
 if not ok_spatial then
     spatial = { route = function(_, fallback)
         return function() if fallback then fallback() end end
@@ -11,7 +13,7 @@ local function exec(keys, command, options)
     hl.bind(keys, hl.dsp.exec_cmd(command), options)
 end
 local function bind(keys, dispatcher, options)
-    hl.bind(keys, dispatcher, options)
+    return hl.bind(keys, dispatcher, options)
 end
 
 -- Focus and movement
@@ -34,8 +36,23 @@ for _, direction in ipairs({ "left", "right", "up", "down" }) do
         end
     end))
 end
-bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
-bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+local window_drag = bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
+local window_resize = bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+local tile_resize = bind(mod .. " + mouse:273", spatial.resize_start or noop)
+local camera_drag = bind(mod .. " + ALT + mouse:272", spatial.drag_start or noop)
+bind("mouse:272", spatial.drag_stop or noop, { release = true, ignore_mods = true, non_consuming = true })
+bind("mouse:273", spatial.resize_stop or noop, { release = true, ignore_mods = true, non_consuming = true })
+local function update_mouse_binds(window)
+    local map = window and window.title == "Kingstra Werkvlak"
+    local tiled = spatial.active and spatial.active()
+    -- Het overzicht ontvangt Super+klik zelf: nooit het overzichtvenster slepen.
+    window_drag:set_enabled(not map)
+    window_resize:set_enabled(not map and not tiled)
+    tile_resize:set_enabled(not map and tiled or false)
+    camera_drag:set_enabled(not map)
+end
+hl.on("window.active", update_mouse_binds)
+update_mouse_binds(hl.get_active_window())
 -- Duimknop van de Logitech M720: logid (config/system/logid.cfg) laat hem
 -- BTN_TASK sturen, zodat vensters zonder Super te slepen zijn. Dubbelklikken
 -- opent het overzicht (zelfde als Super+Tab).
@@ -66,7 +83,7 @@ for workspace = 1, 10 do
 end
 -- Super+wiel scrolt binnen de werkruimte (ruimtelijk: omhoog/omlaag,
 -- scrollstrook: kolommen), Super+Ctrl+wiel opzij, Super+Shift+wiel wisselt
--- van werkruimte. Super+middelmuis ingedrukt houden sleept het werkvlak vrij.
+-- van werkruimte. Super+Alt+linkermuis sleept het werkvlak vrij.
 local wheel = spatial.wheel or function() return noop end
 bind(mod .. " + mouse_down", wheel("down"))
 bind(mod .. " + mouse_up", wheel("up"))
@@ -74,11 +91,17 @@ bind(mod .. " + mouse_left", wheel("left"))
 bind(mod .. " + mouse_right", wheel("right"))
 bind(mod .. " + CTRL + mouse_down", wheel("right"))
 bind(mod .. " + CTRL + mouse_up", wheel("left"))
+if zoom.ready then
+    bind(mod .. " + ALT + mouse_down", function() zoom.zoom("out") end)
+    bind(mod .. " + ALT + mouse_up", function() zoom.zoom("in") end)
+    bind(mod .. " + ALT + mouse:274", zoom.reset)
+end
 exec(mod .. " + SHIFT + mouse_down", scripts .. "/workspace-scroll.sh next")
 exec(mod .. " + SHIFT + mouse_up", scripts .. "/workspace-scroll.sh prev")
-bind(mod .. " + mouse:274", spatial.drag_start or noop)
-bind("mouse:274", spatial.drag_stop or noop, { release = true, ignore_mods = true, non_consuming = true })
-exec(mod .. " + Tab", scripts .. "/overview-toggle.sh")
+bind(mod .. " + Tab", function()
+    if zoom.ready then zoom.reset() end
+    hl.exec_cmd(scripts .. "/overview-toggle.sh")
+end)
 bind("ALT + Tab", hl.dsp.focus({ workspace = "previous" }))
 
 exec(mod .. " + CTRL + L", "bash " .. scripts .. "/lock.sh")

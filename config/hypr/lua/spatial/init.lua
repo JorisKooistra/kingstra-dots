@@ -24,14 +24,13 @@ do
     if file then
         local text = file:read("a") or ""
         file:close()
-        local tiles = tonumber(text:match('"max_per_cell"%s*:%s*([%d%.]+)'))
         local snap = tonumber(text:match('"snap"%s*:%s*([%d%.]+)'))
-        if tiles and tiles >= 1 and tiles <= 4 then config.max_per_cell = math.floor(tiles) end
         if snap and snap >= 0 and snap <= 0.45 then config.snap = snap end
     end
 end
 _G.__kingstra_spatial_config = config
 local core = load_relative("core.lua")
+local storage = load_relative("storage.lua")
 local workspaces = {}
 
 local function safe_field(value, field)
@@ -58,6 +57,8 @@ local function workspace_key(ctx)
         local name = safe_field(workspace, "name")
         if name then return "workspace-name:" .. tostring(name) end
     end
+    local ok, active = pcall(function() return hl.get_active_workspace() end)
+    if ok and active and safe_field(active,"id") then return "workspace:"..tostring(active.id) end
     return "global"
 end
 
@@ -92,6 +93,20 @@ local function context(ctx)
     local state = workspaces[key]
     if not state then
         state = core.new_state()
+        local available = describe(ctx)
+        -- Bij reload komen targets één voor één terug. Lees alle levende
+        -- vensters, zodat de nog niet aangemelde tegels hun plek behouden.
+        local ok, windows = pcall(function() return hl.get_windows() end)
+        if ok then
+            for _, window in ipairs(windows) do
+                local workspace = safe_field(window, "workspace")
+                if "workspace:" .. tostring(safe_field(workspace,"id")) == key and not safe_field(window,"floating") then
+                    local id = tostring(safe_field(window,"stable_id") or ("address:"..tostring(safe_field(window,"address"))))
+                    available[id] = {address=safe_field(window,"address")}
+                end
+            end
+        end
+        storage.restore(key, state, available, config)
         workspaces[key] = state
     end
 
@@ -120,6 +135,7 @@ end
 
 local snapshot_cache = {}
 local function publish(ctx, state, descriptors, placements)
+    storage.save(workspace_key(ctx), state, descriptors)
     local runtime = os.getenv("XDG_RUNTIME_DIR")
     if not runtime then return end
     local key = workspace_key(ctx):match("^workspace:(%d+)$")
@@ -135,14 +151,30 @@ local function publish(ctx, state, descriptors, placements)
                 p.x, p.y, p.w, p.h, pos.col, pos.row)
         end
     end
+    local ok, all_windows = pcall(function() return hl.get_windows() end)
+    if ok then
+        for _, window in ipairs(all_windows) do
+            local ws = safe_field(window,"workspace")
+            local title = safe_field(window,"title")
+            local at, size = safe_field(window,"at"), safe_field(window,"size")
+            if tostring(safe_field(ws,"id")) == key and safe_field(window,"floating")
+                and safe_field(window,"mapped") ~= false and not safe_field(window,"hidden")
+                and title ~= "Kingstra Werkvlak" and title ~= "qs-master"
+                and at and size and at.x and at.y and size.x and size.y then
+                rows[#rows+1] = string.format(
+                    '{"address":%s,"title":%s,"x":%.3f,"y":%.3f,"w":%.3f,"h":%.3f,"col":%d,"row":%d,"floating":true}',
+                    json_string(safe_field(window,"address")),json_string(title),at.x,at.y,size.x,size.y,state.camera.col,state.camera.row)
+            end
+        end
+    end
     local a = ctx.area
     local c = state.camera
-    local metrics = core.cell_metrics(a, config)
+    local metrics = core.cell_metrics(a, config, state)
     local raw = string.format(
         '{"workspace":%s,"area":{"x":%.3f,"y":%.3f,"w":%.3f,"h":%.3f},'
-        .. '"camera":{"col":%d,"row":%d,"x":%.3f,"y":%.3f},"pitch":{"x":%.3f,"y":%.3f},"max":%d,"windows":[%s]}',
+        .. '"camera":{"col":%d,"row":%d,"x":%.3f,"y":%.3f},"pitch":{"x":%.3f,"y":%.3f},"windows":[%s]}',
         key, a.x, a.y, a.w, a.h, c.col, c.row, c.offset_x or 0, c.offset_y or 0,
-        metrics.pitch_x, metrics.pitch_y, math.max(1, math.floor(config.max_per_cell or 4)), table.concat(rows, ","))
+        metrics.pitch_x, metrics.pitch_y, table.concat(rows, ","))
     if snapshot_cache[key] == raw then return end
     local path = runtime .. "/kingstra-spatial-" .. key .. ".json"
     local file = io.open(path .. ".tmp", "w")
@@ -236,7 +268,14 @@ end
 
 local function recalculate(ctx)
     local state, descriptors = context(ctx)
-    core.resolve_follow(state, ctx.area, config)
+    local zooms = rawget(_G, "__kingstra_native_zoom_workspaces")
+    local id = workspace_key(ctx):match("^workspace:(.+)$")
+    if zooms and zooms[id] then
+        -- Clicking a visible app on a neighbouring page must not move it.
+        state.pending_follow = false
+    else
+        core.resolve_follow(state, ctx.area, config)
+    end
     local placements = core.placements(state, ctx.area, config)
     publish(ctx, state, descriptors, placements)
     announce_pan(ctx, state)
@@ -250,6 +289,60 @@ end
 
 local function layout_msg(ctx, message)
     local state, descriptors = context(ctx)
+
+    local selected_address = message:match("^select%s+(%S+)$")
+    if selected_address then
+        for id, descriptor in pairs(descriptors) do
+            if normalize_address(descriptor.address) == normalize_address(selected_address) then
+                -- Ook een aangrenzende pagina met een zichtbare rand moet
+                -- volledig in beeld komen. Eerst verplaatsen, dan focus geven.
+                state.focused_id = id
+                core.follow(state)
+                local boxes = core.placements(state,ctx.area,config)
+                for other, d in pairs(descriptors) do if boxes[other] then d.target:place(boxes[other]) end end
+                focus_descriptor(descriptor)
+                state.focused_id = id
+                core.follow(state)
+                return true
+            end
+        end
+        return "hyprscroll2d: unknown selected window"
+    end
+
+    -- Native zoom supplies inverse-transformed coordinates, including pages
+    -- outside the ordinary screen. Preserve camera and Dwindle tree.
+    local drop_address, drop_x, drop_y = message:match("^dropat%s+(%S+)%s+(%S+)%s+(%S+)$")
+    if drop_address then
+        local x, y = tonumber(drop_x), tonumber(drop_y)
+        if not x or not y or x~=x or y~=y or math.abs(x)>10000000 or math.abs(y)>10000000 then
+            return "hyprscroll2d: dropat expects finite world coordinates"
+        end
+        for id, descriptor in pairs(descriptors) do
+            if normalize_address(descriptor.address)==normalize_address(drop_address) then
+                local spot=core.spot_at(state,ctx.area,config,x,y,id,true)
+                if spot.target then core.tile_place(state,id,spot.target,spot.edge,ctx.area,config)
+                else core.place(state,id,spot.col,spot.row,config,spot.slot) end
+                state.pending_follow=false
+                return true
+            end
+        end
+        return "hyprscroll2d: unknown drop window"
+    end
+
+    local moving, target, edge = message:match("^tileplace%s+(%S+)%s+(%S+)%s+(%S+)$")
+    if moving then
+        local moving_id, target_id
+        for id, descriptor in pairs(descriptors) do
+            if normalize_address(descriptor.address) == normalize_address(moving) then moving_id = id end
+            if normalize_address(descriptor.address) == normalize_address(target) then target_id = id end
+        end
+        if not moving_id or not target_id then return "hyprscroll2d: unknown drop window" end
+        if edge ~= "center" and edge ~= "left" and edge ~= "right" and edge ~= "up" and edge ~= "down" then
+            return "hyprscroll2d: invalid drop edge"
+        end
+        core.tile_place(state, moving_id, target_id, edge, ctx.area, config)
+        return true
+    end
 
     -- place <adres> <kolom> <rij> [tegelplek]: vanuit de werkvlakkaart.
     local address, col, row, slot = message:match("^place%s+(%S+)%s+(%-?%d+)%s+(%-?%d+)%s*(%d*)$")
@@ -265,10 +358,30 @@ local function layout_msg(ctx, message)
     end
     local command, argument, extra = message:match("^(%S+)%s*(%S*)%s*(%S*)$")
 
-    if command == "panby" then
+    if command == "snapshot" then
+        -- Hyprland roept recalculate niet aan als alle targets zweven.
+        if #(ctx.targets or {}) == 0 then recalculate(ctx) end
+        return true
+    elseif command == "panby" then
         local dx, dy = tonumber(argument), tonumber(extra)
         if not dx or not dy then return "hyprscroll2d: panby expects two numbers" end
         core.pan_by(state, dx, dy, ctx.area, config)
+    elseif command == "togglesplit" then
+        core.toggle_split(state, ctx.area, config)
+    elseif command == "resizestart" then
+        state.resize_id = state.focused_id
+        state.dragging = true
+        state.pending_follow = false
+    elseif command == "resizeend" then
+        state.resize_id = nil
+        state.dragging = false
+        state.pending_follow = false
+    elseif command == "resizeby" then
+        local dx, dy = tonumber(argument), tonumber(extra)
+        if not dx or not dy or dx ~= dx or dy ~= dy or math.abs(dx) > 10000 or math.abs(dy) > 10000 then
+            return "hyprscroll2d: resizeby expects finite pixel deltas"
+        end
+        core.resize_by(state, dx, dy, ctx.area, config, state.resize_id)
     elseif command == "focus" then
         local id = core.focus(state, argument)
         focus_descriptor(id and descriptors[id])
@@ -291,12 +404,12 @@ local function layout_msg(ctx, message)
         if extra ~= "grow" and extra ~= "shrink" then
             return "hyprscroll2d: resize width expects grow or shrink"
         end
-        core.resize_width(state, config, extra == "grow" and 1 or -1)
+        core.resize_width(state, config, extra == "grow" and 1 or -1, ctx.area)
     elseif command == "resize" and argument == "height" then
         if extra ~= "grow" and extra ~= "shrink" then
             return "hyprscroll2d: resize height expects grow or shrink"
         end
-        core.resize_height(state, config, extra == "grow" and 1 or -1)
+        core.resize_height(state, config, extra == "grow" and 1 or -1, ctx.area)
     else
         return "hyprscroll2d: expected focus/move/pan <direction>, panby dx dy, resize width/height grow/shrink, dragstart, dragend or center"
     end

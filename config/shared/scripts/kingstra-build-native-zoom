@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Build the pinned native renderer against this machine's Hyprland headers.
+# Never overwrite a shared library which may already be mapped by Hyprland.
+set -euo pipefail
+repo="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../.." && pwd)"
+pin=a1e8a0806541640d01503ac861a8a39548de8724
+patch_file="$repo/config/hypr/native-zoom/kingstra.patch"
+destination="$repo/config/hypr/native-zoom/kingstra-native-zoom.so"
+for tool in git cmake ninja pkg-config c++; do
+    command -v "$tool" >/dev/null || { echo "Native zoom: $tool ontbreekt" >&2; exit 1; }
+done
+version="$(pkg-config --modversion hyprland)"
+if [[ "$version" != 0.56.2 ]]; then
+    echo "Native zoom: Hyprland $version is nog niet getest (vereist 0.56.2)" >&2
+    rm -f -- "$destination"
+    exit 1
+fi
+headers="$(pkg-config --variable=prefix hyprland)/hyprland/src/version.h"
+abi="$(sed -n 's/^#define GIT_COMMIT_HASH[[:space:]]*"\([a-f0-9]*\)".*/\1/p' "$headers")"
+[[ -n "$abi" ]] || { echo 'Native zoom: Hyprland ABI ontbreekt' >&2; exit 1; }
+digest="$(sha256sum "$patch_file" | cut -d ' ' -f1)"
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/native-zoom/$pin-$abi-${digest:0:16}"
+binary="$cache/build/libspatialoverview.so"
+mkdir -p "$cache"
+# Serialize concurrent installer/update calls.
+exec 9>"$cache/build.lock"
+flock 9
+if [[ ! -s "$binary" ]]; then
+    if [[ ! -d "$cache/source/.git" ]]; then
+        git init -q "$cache/source"
+        git -C "$cache/source" remote add origin https://github.com/kaolti/phantomat.git
+    fi
+    git -C "$cache/source" fetch --depth 1 origin "$pin"
+    git -C "$cache/source" checkout --detach --force FETCH_HEAD
+    [[ "$(git -C "$cache/source" rev-parse HEAD)" == "$pin" ]]
+    git -C "$cache/source" apply "$patch_file"
+    cmake -S "$cache/source" -B "$cache/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
+    cmake --build "$cache/build" --parallel "${KINGSTRA_BUILD_JOBS:-2}"
+fi
+ln -sfn "$binary" "$destination"
+printf '%s\n%s\n' "$abi" "$binary" > "$destination.abi"
+echo "Native zoom gebouwd voor Hyprland $version ($abi)"

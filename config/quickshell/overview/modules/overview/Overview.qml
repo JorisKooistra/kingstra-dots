@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import "../../common/functions/HyprDispatch.js" as HyprDispatch
 import "../../common"
 import "../../services"
 import "."
@@ -198,7 +199,7 @@ Scope {
 
                     if (targetId !== null) {
                         const clampedTarget = Math.max(minWorkspaceId, Math.min(maxWorkspaceId, targetId));
-                        Hyprland.dispatch("workspace " + clampedTarget);
+                        Hyprland.dispatch(HyprDispatch.workspace(clampedTarget));
                         event.accepted = true;
                     }
                 }

@@ -4,6 +4,15 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Werkvlak: Dwindle en vaste camerabediening
+- Lua-runtimefout “expected a dispatcher” bij de native zoom verholpen; de pluginactie werd binnen een sneltoets dubbel uitgevoerd/doorgegeven. Uitgezoomd slepen gebruikt nu de terugvertaalde wereldpositie voor Dwindle-splits en verwisselen.
+- Super+Alt+wiel zoomt de echte desktop uit/in op de monitor onder de muis; apps blijven bedienbaar. Het wiel zoomt circa 25% per stap; de zichtbare Reset 100%-knop of Super+Alt+middelklik herstelt 100%. De updater bouwt de native renderer lokaal voor Hyprland 0.56.2; de Lua-layout blijft de indeling beheren.
+- Camera slepen op het bureaublad: Super+Alt+linkermuis; de middelste muisknop is vrij. Super+wiel verschuift één hele pagina. In de kaart blijft gewoon slepen de camera bedienen.
+- Pagina's gebruiken een blijvende Dwindle-splitsboom (zonder maximum per pagina), met verwisselen op het midden en splitsen aan de rand van een doelvenster. Super+rechtermuis wijzigt de verhoudingen.
+- In de kaart sleept een gewone muisbeweging alleen de camera; Super+slepen verplaatst een app. Miniaturen blijven bestaan tijdens cameraupdates en bewegen direct mee. Zwevende vensters zijn zichtbaar en verplaatsbaar.
+- De muis aan een zichtbare vensterrand laten komen scrolt niet meer automatisch. Scrollen kan ook lege pagina's bereiken. De bestaande Super+pijlen blijven vensters kiezen.
+- Pagina's, camera en Dwindle-verhoudingen worden tijdens de sessie bewaard en bij een Hyprland-reload hersteld, ook terwijl targets één voor één terugkomen.
+
 ### Werkvlak: slepen landt waar je loslaat, kaart met miniaturen
 - Super+slepen van een venster op het ruimtelijk werkvlak zette het venster altijd als laatste tegel neer en liet het beeld verschuiven. Hyprland haalt een gesleept venster even uit de layout; dat werd bij terugkomst als nieuw venster gezien. Nu komt het op de plek en tegelplek onder de muis (buiten beeld: terug naar de oude plek) en blijft de camera staan.
 - In de werkvlakkaart (Super+Tab of 󰊢) sleep je een venster naar een andere plek of tussen tegels; een oplichtend vak toont waar het komt. Op een volle plek ruilt de tegel daar met de oude plek.

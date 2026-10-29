@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "../"
+import "SpatialOverviewLogic.js" as MapLogic
 
 Scope {
     id: root
@@ -20,12 +21,24 @@ Scope {
     property real dragX: 0
     property real dragY: 0
     property bool dragged: false
-    // Een venster verslepen naar een andere plek (alleen op de kaart).
-    property int movingIndex: -1
+    property string movingAddress: ""
     property real moveX: 0
     property real moveY: 0
-    readonly property var camera: snapshot.camera || ({col: 0, row: 0, x: 0, y: 0})
-    readonly property var pitch: snapshot.pitch || ({x: area.w, y: area.h})
+    property real pointerX: 0
+    property real pointerY: 0
+    property bool cameraDragging: false
+    property bool superHeld: false
+    property bool mapReady: false
+    property bool awaitingPan: false
+    property real dragScale: 1
+    property real anchorX: 0
+    property real anchorY: 0
+    property real displayX: 0
+    property real displayY: 0
+    property var bounds: ({x: 0, y: 0, w: 1, h: 1})
+    Behavior on displayX { enabled: root.mapReady && !root.cameraDragging; NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+    Behavior on displayY { enabled: root.mapReady && !root.cameraDragging; NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+    ListModel { id: windowModel; dynamicRoles: true }
     property string errorText: ""
     // Nieuw bij elke keer openen, zodat bewaarde miniaturen opnieuw laden.
     property int thumbStamp: 0
@@ -33,14 +46,6 @@ Scope {
     readonly property string helper: Quickshell.env("HOME") + "/.config/hypr/scripts/workspace-layout.py"
     readonly property var windows: snapshot.windows || []
     readonly property var area: snapshot.area || ({x: 0, y: 0, w: 1, h: 1})
-    readonly property var bounds: {
-        let x = area.x, y = area.y, r = x + area.w, b = y + area.h;
-        for (let w of windows) {
-            x = Math.min(x, w.x); y = Math.min(y, w.y);
-            r = Math.max(r, w.x + w.w); b = Math.max(b, w.y + w.h);
-        }
-        return {x: x, y: y, w: Math.max(1, r - x), h: Math.max(1, b - y)};
-    }
     MatugenColors { id: colors }
     // Wiel zoomt vloeiend: de kaart volgt zoomTarget met een korte animatie.
     property real zoomTarget: 1
@@ -69,6 +74,7 @@ Scope {
             if (shown) { shown = false; return; }
             workspace = Number(d.workspace);
             selected = 0; zoomTarget = 1; errorText = ""; thumbStamp += 1;
+            mapReady = false; awaitingPan = false;
             shown = true;
             snapshotFile.reload();
             focusTimer.restart();
@@ -84,78 +90,112 @@ Scope {
         if (!source) return;
         let best = -1, score = Infinity;
         for (let i = 0; i < windows.length; ++i) {
-            let w = windows[i], x = w.col - source.col, y = w.row - source.row;
+            let w = windows[i], x = (w.x + w.w / 2) - (source.x + source.w / 2), y = (w.y + w.h / 2) - (source.y + source.h / 2);
             if ((dx && x * dx <= 0) || (dy && y * dy <= 0)) continue;
-            let distance = Math.abs(dx ? y : x) * 1000 + Math.abs(x) + Math.abs(y);
+            let distance = Math.abs(dx ? y : x) * 3 + Math.abs(x) + Math.abs(y);
             if (distance < score) { score = distance; best = i; }
         }
         if (best >= 0) selected = best;
     }
-    function beginDrag(x, y) { dragX = x; dragY = y; dragged = false; }
-    // Werkvlakcoördinaat → plek (kolom, rij), met dezelfde maat als de layout.
-    function cellAt(wx, wy) {
-        let px = Math.max(1, Number(pitch.x) || area.w), py = Math.max(1, Number(pitch.y) || area.h);
-        return {
-            col: Number(camera.col) + Math.round((wx - (area.x + area.w / 2) + Number(camera.x)) / px),
-            row: Number(camera.row) + Math.round((wy - (area.y + area.h / 2) + Number(camera.y)) / py)
-        };
-    }
-    function cellBox(cell) {
-        let px = Math.max(1, Number(pitch.x) || area.w), py = Math.max(1, Number(pitch.y) || area.h);
-        let cx = area.x + area.w / 2 + (cell.col - Number(camera.col)) * px - Number(camera.x);
-        let cy = area.y + area.h / 2 + (cell.row - Number(camera.row)) * py - Number(camera.y);
-        return {x: cx - px / 2 + 6, y: cy - py / 2 + 6, w: px - 12, h: py - 12};
-    }
-    // Waar een versleept venster landt: plek, tegelplek (slot) en de vakken
-    // om dat te tonen. Op een bezette plek telt het hele tegelvak.
-    readonly property var dropSpot: {
-        if (movingIndex < 0 || !windows[movingIndex]) return null;
-        let moving = windows[movingIndex];
-        let px = moving.x + moving.w / 2 + moveX / scene.mapScale;
-        let py = moving.y + moving.h / 2 + moveY / scene.mapScale;
-        let cells = {};
-        for (let i = 0; i < windows.length; ++i) {
-            if (i === movingIndex) continue;
-            let w = windows[i], key = w.col + ":" + w.row, c = cells[key];
-            if (!c) cells[key] = c = {col: w.col, row: w.row, x1: w.x, y1: w.y, x2: w.x + w.w, y2: w.y + w.h, count: 0};
-            c.x1 = Math.min(c.x1, w.x); c.y1 = Math.min(c.y1, w.y);
-            c.x2 = Math.max(c.x2, w.x + w.w); c.y2 = Math.max(c.y2, w.y + w.h);
-            c.count += 1;
+    function updateSnapshot(d) {
+        let offset = MapLogic.cameraOffset(d);
+        if (!mapReady) {
+            anchorX = offset.x; anchorY = offset.y;
+            displayX = offset.x; displayY = offset.y;
         }
-        for (let key in cells) {
-            let c = cells[key];
-            if (px < c.x1 || px > c.x2 || py < c.y1 || py > c.y2) continue;
-            let n = Math.min(c.count + 1, Math.max(1, Number(snapshot.max) || 4));
-            let cols = n <= 3 ? n : Math.ceil(n / 2), rows = n <= 3 ? 1 : 2;
-            let fx = Math.min(0.999, (px - c.x1) / Math.max(1, c.x2 - c.x1));
-            let fy = Math.min(0.999, (py - c.y1) / Math.max(1, c.y2 - c.y1));
-            let sc = Math.floor(fx * cols), sr = Math.floor(fy * rows);
-            let slot = Math.min(sr * cols + sc, c.count);
-            let box = {x: c.x1, y: c.y1, w: c.x2 - c.x1, h: c.y2 - c.y1};
-            let tw = box.w / cols, th = box.h / rows;
-            return {col: c.col, row: c.row, slot: slot, box: box,
-                    slotBox: {x: box.x + sc * tw, y: box.y + sr * th, w: tw, h: th}};
+        let rows = MapLogic.entries(d, anchorX, anchorY);
+        let changed = MapLogic.syncWindows(windowModel, rows);
+        if ((!mapReady || changed) && !cameraDragging && movingAddress === "") bounds = MapLogic.bounds(rows, d.area);
+        snapshot = d;
+        if (!cameraDragging && !awaitingPan) { displayX = offset.x; displayY = offset.y; }
+        mapReady = true;
+        selected = Math.min(selected, Math.max(0, windows.length - 1));
+    }
+    function sceneRows() {
+        let rows = [];
+        for (let i = 0; i < windowModel.count; ++i) {
+            let w = windowModel.get(i).entry;
+            rows.push({address:w.address,index:i,floating:w.floating,
+                x:scene.offsetX + (w.x + (w.floating ? 0 : anchorX-displayX) - bounds.x) * scene.mapScale,
+                y:scene.offsetY + (w.y + (w.floating ? 0 : anchorY-displayY) - bounds.y) * scene.mapScale,
+                w:w.w*scene.mapScale,h:w.h*scene.mapScale});
         }
-        let cell = cellAt(px, py);
-        return {col: cell.col, row: cell.row, slot: 0, box: cellBox(cell), slotBox: null};
+        return rows;
+    }
+    function hitAt(x, y) { return MapLogic.hit(sceneRows(), x, y, ""); }
+    function beginMove(index, x, y) {
+        movingAddress = windowModel.get(index).entry.address;
+        dragX = x; dragY = y; pointerX = x; pointerY = y;
+        moveX = 0; moveY = 0; dragged = false;
+    }
+    function move(x, y) {
+        let dx=x-dragX, dy=y-dragY;
+        if (!dragged && dx*dx+dy*dy < 16) return;
+        dragged = true; moveX = dx; moveY = dy; pointerX=x; pointerY=y;
+    }
+    function cancelMove() { movingAddress=""; moveX=0; moveY=0; }
+    readonly property var dropTarget: {
+        // ListModel wijzigingen zijn niet automatisch een JS-bindingdependency.
+        let currentSnapshot = snapshot;
+        if (!movingAddress || !dragged) return null;
+        let rows=sceneRows(), source=rows.find(w => w.address === movingAddress);
+        if (!source) return null;
+        if (source.floating) return {kind:"floating",box:{x:source.x+moveX,y:source.y+moveY,w:source.w,h:source.h}};
+        let tiles=rows.filter(w => !w.floating);
+        let index=MapLogic.hit(tiles,pointerX,pointerY,movingAddress);
+        if (index >= 0) {
+            let w=tiles[index], edge=MapLogic.dropEdge(w,pointerX,pointerY);
+            let box={x:w.x,y:w.y,w:w.w,h:w.h};
+            if (edge==="left" || edge==="right") { box.w/=2; if (edge==="right") box.x+=box.w; }
+            if (edge==="up" || edge==="down") { box.h/=2; if (edge==="down") box.y+=box.h; }
+            return {kind:"tile",address:w.address,edge:edge,box:box};
+        }
+        let pitch=snapshot.pitch || {x:area.w,y:area.h};
+        let wx=(pointerX-scene.offsetX)/scene.mapScale+bounds.x+displayX;
+        let wy=(pointerY-scene.offsetY)/scene.mapScale+bounds.y+displayY;
+        let col=Math.round((wx-area.x-area.w/2)/pitch.x);
+        let row=Math.round((wy-area.y-area.h/2)/pitch.y);
+        return {kind:"page",col:col,row:row,box:{
+            x:scene.offsetX+(area.x+area.w/2+col*pitch.x-displayX-(pitch.x-12)/2-bounds.x)*scene.mapScale,
+            y:scene.offsetY+(area.y+area.h/2+row*pitch.y-displayY-(pitch.y-12)/2-bounds.y)*scene.mapScale,
+            w:(pitch.x-12)*scene.mapScale,h:(pitch.y-12)*scene.mapScale}};
     }
     function finishMove() {
-        let w = windows[movingIndex], spot = dropSpot;
-        if (w && spot)
-            Quickshell.execDetached(["python3", helper, "place", String(w.address),
-                String(spot.col), String(spot.row), String(spot.slot)]);
-        movingIndex = -1; moveX = 0; moveY = 0;
+        let target=dropTarget, address=movingAddress;
+        if (target && dragged && !dropProcess.running) {
+            let command=["python3",helper];
+            if (target.kind==="tile") command.push("tileplace",address,target.address,target.edge);
+            else if (target.kind==="page") command.push("place",address,String(target.col),String(target.row));
+            else {
+                let row=windows.find(w => String(w.address)===address);
+                command.push("movefloating",address,String(Math.round(row.x+moveX/scene.mapScale)),String(Math.round(row.y+moveY/scene.mapScale)));
+            }
+            dropProcess.command=command;
+            dropProcess.running=true;
+        }
+        cancelMove();
+    }
+    function beginDrag(x, y) {
+        dragX = x; dragY = y; dragged = false;
+        dragScale = scene.mapScale;
+        cameraDragging = true;
+        awaitingPan = true;
     }
     function drag(x, y) {
         let dx = x - dragX, dy = y - dragY;
         if (!dragged && dx * dx + dy * dy < 9) return;
         dragged = true; dragX = x; dragY = y;
-        pendingX -= dx / scene.mapScale;
-        pendingY -= dy / scene.mapScale;
+        let px = -dx / dragScale, py = -dy / dragScale;
+        pendingX += px; pendingY += py;
+        displayX += px; displayY += py;
+    }
+    function endDrag() {
+        cameraDragging = false;
+        settleCamera.restart();
     }
     onShownChanged: {
         overviewWindow.visible = shown;
-        if (!shown) { pendingX = 0; pendingY = 0; }
+        if (!shown) { pendingX = 0; pendingY = 0; cameraDragging = false; superHeld = false; cancelMove(); }
     }
     FileView {
         id: requestFile
@@ -173,8 +213,7 @@ Scope {
             try {
                 let d = JSON.parse(text());
                 if (Number(d.workspace) !== root.workspace) return;
-                root.snapshot = d;
-                root.selected = Math.min(root.selected, Math.max(0, root.windows.length - 1));
+                root.updateSnapshot(d);
             } catch (e) {}
         }
     }
@@ -191,7 +230,27 @@ Scope {
     }
     Process {
         id: panProcess
+        onExited: { snapshotFile.reload(); settleCamera.restart(); }
         stderr: StdioCollector { onStreamFinished: if (this.text.trim()) root.errorText = this.text.trim() }
+    }
+    Process {
+        id: dropProcess
+        onExited: snapshotFile.reload()
+        stderr: StdioCollector { onStreamFinished: if (this.text.trim()) root.errorText = this.text.trim() }
+    }
+    Timer {
+        interval: 500; repeat: true; running: root.shown
+        onTriggered: Hyprland.dispatch('hl.dsp.layout("snapshot")')
+    }
+    Timer {
+        id: settleCamera
+        interval: 220
+        onTriggered: {
+            if (root.cameraDragging || panProcess.running || Math.abs(root.pendingX) >= 0.5 || Math.abs(root.pendingY) >= 0.5) return;
+            root.awaitingPan = false;
+            let offset = MapLogic.cameraOffset(root.snapshot);
+            root.displayX = offset.x; root.displayY = offset.y;
+        }
     }
     Timer {
         id: focusTimer
@@ -220,6 +279,14 @@ Scope {
             scale: root.shown ? 1 : 1.04
             Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200); easing.type: Easing.OutCubic } }
             Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(240); easing.type: Easing.OutCubic } }
+            Keys.onPressed: event => {
+                root.superHeld = event.key === Qt.Key_Meta || !!(event.modifiers & Qt.MetaModifier);
+                event.accepted = false;
+            }
+            Keys.onReleased: event => {
+                root.superHeld = event.key !== Qt.Key_Meta && !!(event.modifiers & Qt.MetaModifier);
+                event.accepted = false;
+            }
             Keys.onEscapePressed: root.shown = false
             Keys.onReturnPressed: root.choose(root.selected)
             Keys.onEnterPressed: root.choose(root.selected)
@@ -250,7 +317,7 @@ Scope {
                     }
                 }
                 Text {
-                    text: "Sleep een venster naar een andere plek; op een venster wordt het een tegel. Sleep de achtergrond om je zicht te verschuiven. Wiel zoomt, klik kiest een venster."
+                    text: "Slepen verplaatst je zicht. Super + slepen verplaatst een app: midden wisselt, rand splitst. Wiel zoomt, klik kiest."
                     color: colors.subtext0
                     font.family: ThemeConfig.uiFont
                     font.pixelSize: 12
@@ -268,24 +335,24 @@ Scope {
                     readonly property real offsetX: (width - root.bounds.w * mapScale) / 2
                     readonly property real offsetY: (height - root.bounds.h * mapScale) / 2
 
-                    MouseArea {
+                    // Eén vaste muislaag: camera en vensters delen dezelfde
+                    // coördinaten; de bewegende miniaturen pakken de muis niet af.
+                    SpatialMapInput {
                         anchors.fill: parent
-                        cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-                        onPressed: mouse => root.beginDrag(mouse.x, mouse.y)
-                        onPositionChanged: mouse => { if (pressed) root.drag(mouse.x, mouse.y); }
-                        onWheel: wheel => { root.zoomBy(wheel.angleDelta.y); wheel.accepted = true; }
+                        z: 10
+                        controller: root
                     }
                     Repeater {
-                        model: root.windows
+                        model: windowModel
                         delegate: Rectangle {
                             id: tile
-                            required property var modelData
+                            required property var entry
+                            readonly property var modelData: entry
                             required property int index
-                            readonly property bool moving: root.movingIndex === index
-                            x: scene.offsetX + (modelData.x - root.bounds.x) * scene.mapScale + (moving ? root.moveX : 0)
-                            y: scene.offsetY + (modelData.y - root.bounds.y) * scene.mapScale + (moving ? root.moveY : 0)
-                            z: moving ? 3 : 0
-                            opacity: moving ? 0.85 : 1
+                            readonly property bool moving: root.movingAddress === modelData.address
+                            z: moving ? 6 : modelData.floating ? 5 : 0
+                            x: scene.offsetX + (modelData.x + (modelData.floating ? 0 : root.anchorX - root.displayX) - root.bounds.x) * scene.mapScale + (moving ? root.moveX : 0)
+                            y: scene.offsetY + (modelData.y + (modelData.floating ? 0 : root.anchorY - root.displayY) - root.bounds.y) * scene.mapScale + (moving ? root.moveY : 0)
                             width: Math.max(1, modelData.w * scene.mapScale)
                             height: Math.max(1, modelData.h * scene.mapScale)
                             readonly property bool chosen: root.selected === index
@@ -295,9 +362,8 @@ Scope {
                             border.color: chosen ? colors.primary : colors.shellOutline
                             border.width: chosen ? 2 : 1
                             clip: true
-                            scale: moving ? 0.92 : chosen ? 1.0 : 0.985
-                            Behavior on x { enabled: !tile.moving; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-                            Behavior on y { enabled: !tile.moving; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                            scale: moving ? 0.95 : chosen ? 1.0 : 0.985
+                            opacity: moving ? 0.8 : 1
                             Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(150) } }
                             Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutCubic } }
                             Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
@@ -308,7 +374,7 @@ Scope {
                                 anchors.fill: parent
                                 anchors.margins: tile.border.width
                                 captureSource: tile.toplevel
-                                live: root.shown
+                                live: root.shown && !root.cameraDragging && !root.movingAddress
                                 opacity: hasContent ? 1 : 0
                                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
                             }
@@ -349,7 +415,7 @@ Scope {
                                     anchors.fill: parent
                                     anchors.leftMargin: 10; anchors.rightMargin: 10
                                     verticalAlignment: Text.AlignVCenter
-                                    text: String(tile.modelData.title || "Venster")
+                                    text: (tile.modelData.floating ? "◇  " : "") + String(tile.modelData.title || "Venster")
                                     color: colors.text
                                     font.family: ThemeConfig.uiFont
                                     font.pixelSize: 11
@@ -360,7 +426,7 @@ Scope {
                                 anchors.fill: parent
                                 anchors.margins: 10
                                 visible: !preview.hasContent && still.status !== Image.Ready
-                                text: String(tile.modelData.title || "Venster")
+                                text: (tile.modelData.floating ? "◇  " : "") + String(tile.modelData.title || "Venster")
                                 color: colors.text
                                 font.family: ThemeConfig.uiFont
                                 font.pixelSize: 12
@@ -368,66 +434,24 @@ Scope {
                                 wrapMode: Text.Wrap
                                 maximumLineCount: 3
                             }
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.PointingHandCursor
-                                property real startX: 0
-                                property real startY: 0
-                                onPressed: mouse => {
-                                    let p = mapToItem(scene, mouse.x, mouse.y);
-                                    startX = p.x; startY = p.y;
-                                    root.dragged = false;
-                                    root.selected = tile.index;
-                                }
-                                onPositionChanged: mouse => {
-                                    if (!pressed) return;
-                                    let p = mapToItem(scene, mouse.x, mouse.y);
-                                    let dx = p.x - startX, dy = p.y - startY;
-                                    if (root.movingIndex < 0 && dx * dx + dy * dy < 36) return;
-                                    root.dragged = true;
-                                    root.movingIndex = tile.index;
-                                    root.moveX = dx; root.moveY = dy;
-                                }
-                                onReleased: if (root.movingIndex === tile.index) root.finishMove()
-                                onCanceled: { root.movingIndex = -1; root.moveX = 0; root.moveY = 0; }
-                                onClicked: if (!root.dragged) root.choose(tile.index)
-                                onWheel: wheel => { root.zoomBy(wheel.angleDelta.y); wheel.accepted = true; }
-                            }
                         }
                     }
-                    // Doelplek tijdens het verslepen van een venster, met de
-                    // tegelplek waar het venster precies komt.
                     Rectangle {
-                        z: 1
-                        readonly property var box: root.dropSpot ? root.dropSpot.box : null
+                        z: 7
+                        readonly property var box: root.dropTarget ? root.dropTarget.box : null
                         visible: box !== null
-                        x: box ? scene.offsetX + (box.x - root.bounds.x) * scene.mapScale : 0
-                        y: box ? scene.offsetY + (box.y - root.bounds.y) * scene.mapScale : 0
-                        width: box ? box.w * scene.mapScale : 0
-                        height: box ? box.h * scene.mapScale : 0
-                        radius: 10
-                        color: Qt.alpha(colors.primary, 0.08)
-                        border.color: Qt.alpha(colors.primary, 0.6)
-                        border.width: 1
-                        Behavior on x { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
-                        Behavior on y { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
-                    }
-                    Rectangle {
-                        z: 4
-                        readonly property var box: root.dropSpot ? (root.dropSpot.slotBox || root.dropSpot.box) : null
-                        visible: box !== null
-                        x: box ? scene.offsetX + (box.x - root.bounds.x) * scene.mapScale + 3 : 0
-                        y: box ? scene.offsetY + (box.y - root.bounds.y) * scene.mapScale + 3 : 0
-                        width: box ? Math.max(1, box.w * scene.mapScale - 6) : 0
-                        height: box ? Math.max(1, box.h * scene.mapScale - 6) : 0
+                        x: box ? box.x : 0; y: box ? box.y : 0
+                        width: box ? box.w : 0; height: box ? box.h : 0
                         radius: 8
-                        color: Qt.alpha(colors.primary, 0.22)
+                        color: Qt.alpha(colors.primary,0.18)
                         border.color: colors.primary
                         border.width: 2
-                        Behavior on x { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
-                        Behavior on y { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
-                        Behavior on width { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
-                        Behavior on height { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.dropTarget && root.dropTarget.edge === "center" ? "Wisselen" : ""
+                            color: colors.text
+                            font.family: ThemeConfig.uiFont
+                        }
                     }
                     // Zichtgebied boven de tegels, zodat het kader zichtbaar blijft
                     // ook als een venster precies het hele scherm vult.

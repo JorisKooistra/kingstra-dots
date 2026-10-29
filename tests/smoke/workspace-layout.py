@@ -29,6 +29,38 @@ class LayoutTests(unittest.TestCase):
             self.assertFalse(module.action("panby", "12", "34"))
             dispatch.assert_not_called()
 
+    def test_map_drop_preserves_target_edge_and_address(self):
+        with patch.object(module, "query", return_value=self.state("lua:hyprscroll2d", 8)), \
+             patch.object(module, "dispatch") as dispatch:
+            module.main(["tileplace", "0xABC", "0xDEF", "left"])
+            dispatch.assert_called_once_with("tileplace 0xABC 0xDEF left")
+        with self.assertRaises(ValueError):
+            module.main(["tileplace", "0xABC", "0xDEF", "garbage"])
+
+    def test_floating_window_move_keeps_it_floating(self):
+        with patch.object(module, "query", return_value=[{"address":"0xABC", "floating":True}]), \
+             patch.object(module, "hypr") as hypr, patch.object(module, "dispatch") as dispatch:
+            module.main(["movefloating", "0xABC", "120", "80"])
+            hypr.assert_called_once_with("dispatch", 'hl.dsp.window.move({x=120,y=80,relative=false,window="address:0xABC"})')
+            dispatch.assert_called_once_with("snapshot")
+
+    def test_selecting_a_floating_window_does_not_center_the_tiled_camera(self):
+        with patch.object(module, "query", return_value=[{"address":"0xABC", "floating":True}]), \
+             patch.object(module, "hypr"), patch.object(module, "dispatch") as dispatch:
+            module.main(["select", "0xABC"])
+            dispatch.assert_not_called()
+
+    def test_map_selection_targets_its_workspace_even_if_another_monitor_has_focus(self):
+        def query(name):
+            if name == "clients":
+                return [{"address":"0xABC", "floating":False, "workspace":{"id":2}}]
+            if name == "workspaces":
+                return [{"id":2, "tiledLayout":"lua:hyprscroll2d"}]
+            raise AssertionError("selection must not depend on the active workspace")
+        with patch.object(module, "query", side_effect=query), patch.object(module, "hypr") as hypr:
+            module.main(["select", "0xABC"])
+            hypr.assert_called_once_with("eval", 'hl.dispatch(hl.dsp.focus({workspace="2"})); hl.dispatch(hl.dsp.layout("select 0xABC"))')
+
     def test_diagonal_delta_is_one_message(self):
         with patch.object(module, "query", return_value=self.state("lua:hyprscroll2d")), \
              patch.object(module, "dispatch") as dispatch:

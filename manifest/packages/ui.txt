@@ -8,6 +8,8 @@ aur:quickshell-overview-git
 pacman-contrib
 cmake
 ninja
+gcc
+pkgconf
 qt6-base
 qt6-declarative
 qt6-multimedia

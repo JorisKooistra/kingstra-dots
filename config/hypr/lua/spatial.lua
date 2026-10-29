@@ -40,11 +40,15 @@ if ok and hl.gesture then
         },
     })
 end
--- Vrij slepen met Super+middelmuis. Hyprland kent geen muisbeweging als
+-- Vrij slepen met Super+Alt+linkermuis. Hyprland kent geen muisbeweging als
 -- Lua-gebeurtenis, dus een korte timer leest de cursor en schuift de camera
 -- mee (ruimtelijk) of stapt per kolom (scrollstrook). Bij loslaten klikt het
 -- ruimtelijk werkvlak alleen op een plek vast als je er dichtbij bent.
 local function layout_of_active()
+    if hl.get_active_workspace then
+        local ok, workspace = pcall(hl.get_active_workspace)
+        if ok and workspace and workspace.tiled_layout then return workspace.tiled_layout end
+    end
     local ok, window = pcall(hl.get_active_window)
     local layout = ok and window and window.layout
     return layout and layout.name or ""
@@ -75,7 +79,10 @@ local function drag_tick()
     drag.last = pos
     if dx == 0 and dy == 0 then return end
     if drag.kind == "spatial" then
-        hl.dispatch(hl.dsp.layout(string.format("panby %.4f %.4f", -dx, -dy)))
+        local zooms = rawget(_G, "__kingstra_native_zoom_workspaces")
+        local workspace = zooms and hl.get_active_workspace()
+        local scale = workspace and zooms[tostring(workspace.id)] or 1
+        hl.dispatch(hl.dsp.layout(string.format("panby %.4f %.4f", -dx / scale, -dy / scale)))
     elseif drag.kind == "scrolling" then
         drag.carry = drag.carry + dx
         local ok, monitor = pcall(hl.get_active_monitor)
@@ -104,7 +111,7 @@ local function drag_start()
     end
 end
 
--- Super+wiel binnen de werkruimte: ruimtelijk één plek verder, op een
+-- Super+wiel binnen de werkruimte: ruimtelijk één pagina, op een
 -- scrollstrook één kolom. Tegels hebben niets om te scrollen.
 function M.wheel(direction)
     return function()
@@ -119,4 +126,37 @@ end
 
 M.drag_start = drag_start
 M.drag_stop = drag_stop
+
+-- De Lua-layout-API van Hyprland 0.56 geeft geen resize-delta door.
+-- Lees daarom tijdens Super+rechtermuis dezelfde cursor als bij camera-slepen.
+local resize = { on = false, last = nil, timer = nil, started = 0 }
+function M.resize_stop()
+    if not resize.on then return end
+    resize.on = false
+    if resize.timer then resize.timer:set_enabled(false) end
+    hl.dispatch(hl.dsp.layout("resizeend"))
+end
+local function resize_tick()
+    if not resize.on then return end
+    if os.time() - resize.started > 60 or not active() then return M.resize_stop() end
+    local pos = cursor()
+    if not pos then return end
+    local dx, dy = pos.x - resize.last.x, pos.y - resize.last.y
+    resize.last = pos
+    if dx ~= 0 or dy ~= 0 then
+        hl.dispatch(hl.dsp.layout(string.format("resizeby %.4f %.4f", dx, dy)))
+    end
+end
+function M.resize_start()
+    local pos = cursor()
+    if resize.on or not active() or not pos or not hl.timer then return end
+    resize.on, resize.last, resize.started = true, pos, os.time()
+    hl.dispatch(hl.dsp.layout("resizestart"))
+    if resize.timer then resize.timer:set_enabled(true)
+    else
+        local ok, timer = pcall(hl.timer, resize_tick, {timeout=16,type="repeat"})
+        if not ok then return M.resize_stop() end
+        resize.timer = timer
+    end
+end
 return M

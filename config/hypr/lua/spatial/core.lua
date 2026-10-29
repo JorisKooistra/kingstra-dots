@@ -36,10 +36,6 @@ local function position_key(col, row)
     return tostring(col) .. ":" .. tostring(row)
 end
 
-local function max_per_cell(config)
-    return math.max(1, math.floor((config and config.max_per_cell) or 4))
-end
-
 -- Leden van een cel, in volgorde van binnenkomst.
 local function members(state, col, row, except_id)
     local list = {}
@@ -57,18 +53,97 @@ local function members(state, col, row, except_id)
 end
 M.members = members
 
--- Tegelraster binnen een cel: naast elkaar tot drie, daarna twee rijen.
-local function grid_for(count)
-    if count <= 3 then return math.max(count, 1), 1 end
-    return math.ceil(count / 2), 2
+-- Elke pagina heeft een eigen splitsboom. Bestaande splits en verhoudingen
+-- blijven behouden wanneer je vensters toevoegt, sluit of verplaatst.
+local function tree_has(node, id)
+    if not node or id == nil then return false end
+    return node.id == id or tree_has(node.a, id) or tree_has(node.b, id)
 end
 
-local function find_open_right(state, anchor, config)
-    local col = anchor.col + 1
-    while #members(state, col, anchor.row) >= max_per_cell(config) do
-        col = col + 1
+local function clone_tree(node)
+    if not node then return nil end
+    if node.id then return {id=node.id} end
+    return {axis=node.axis,ratio=node.ratio,a=clone_tree(node.a),b=clone_tree(node.b)}
+end
+
+local function replace_leaf(node, from, to)
+    if not node then return end
+    if node.id == from then node.id = to
+    elseif not node.id then replace_leaf(node.a, from, to); replace_leaf(node.b, from, to) end
+end
+
+local function prune_tree(node, present)
+    if not node then return nil end
+    if node.id then return present[node.id] and node or nil end
+    node.a, node.b = prune_tree(node.a, present), prune_tree(node.b, present)
+    if not node.a then return node.b end
+    if not node.b then return node.a end
+    return node
+end
+
+local function split_box(node, box, config)
+    local horizontal = node.axis == "x"
+    local gap = math.min(horizontal and (config.gap_x or 0) or (config.gap_y or 0),
+        math.max(0, (horizontal and box.w or box.h) - 2))
+    local length = math.max(2, (horizontal and box.w or box.h) - gap)
+    local first = length * (node.ratio or 0.5)
+    if horizontal then
+        return {x=box.x,y=box.y,w=first,h=box.h},
+            {x=box.x+first+gap,y=box.y,w=length-first,h=box.h}
     end
-    return { col = col, row = anchor.row }
+    return {x=box.x,y=box.y,w=box.w,h=first},
+        {x=box.x,y=box.y+first+gap,w=box.w,h=length-first}
+end
+
+local function insert_leaf(node, anchor, id, box, config)
+    if node.id then
+        if node.id ~= anchor then return false end
+        node.a, node.b = {id=node.id}, {id=id}
+        node.id, node.axis, node.ratio = nil, box.w >= box.h and "x" or "y", 0.5
+        return true
+    end
+    local a, b = split_box(node, box, config)
+    return insert_leaf(node.a, anchor, id, a, config) or insert_leaf(node.b, anchor, id, b, config)
+end
+
+local function tile_tree(state, list, box, config)
+    state.cell_trees = state.cell_trees or {}
+    local p = state.positions[list[1]]
+    local key = position_key(p.col, p.row)
+    local present = {}
+    for _, id in ipairs(list) do present[id] = true end
+    for id, position in pairs(state.restore_positions or {}) do
+        if position.col == p.col and position.row == p.row then present[id] = true end
+    end
+    local tree = prune_tree(state.cell_trees[key], present)
+    for index, id in ipairs(list) do
+        if not tree then tree = {id=id}
+        elseif not tree_has(tree, id) then
+            local anchor = state.split_anchor and state.split_anchor[id]
+            if not tree_has(tree, anchor) then anchor = list[math.max(1, index - 1)] end
+            if not tree_has(tree, anchor) then anchor = list[1] end
+            insert_leaf(tree, anchor, id, box, config)
+        end
+    end
+    -- De volgorde van een expliciete drop moet ook in de boom terugkomen.
+    local leaves = {}
+    local function collect(node)
+        if node.id then leaves[#leaves+1] = node else collect(node.a); collect(node.b) end
+    end
+    collect(tree)
+    if state.reorder_cells and state.reorder_cells[key] then
+        for i, leaf in ipairs(leaves) do leaf.id = list[i] end
+        state.reorder_cells[key] = nil
+    end
+    state.cell_trees[key] = tree
+    return tree
+end
+
+local function tree_placements(node, box, config, result)
+    if node.id then result[node.id] = box; return end
+    local a, b = split_box(node, box, config)
+    tree_placements(node.a, a, config, result)
+    tree_placements(node.b, b, config, result)
 end
 
 local function bounds(state)
@@ -82,9 +157,18 @@ local function bounds(state)
     return min_col, max_col, min_row, max_row
 end
 
-local function cell_metrics(area, config)
+local function cell_metrics(area, config, state)
     local peek_x = clamp(config.peek_x or 0, 0, math.max(0, (area.w - 1) / 2))
     local peek_y = clamp(config.peek_y or 0, 0, math.max(0, (area.h - 1) / 2))
+    if state and config.fill_single then
+        local col, row, single
+        single = true
+        for _, p in pairs(state.positions) do
+            if col == nil then col, row = p.col, p.row
+            elseif col ~= p.col or row ~= p.row then single = false; break end
+        end
+        if single then peek_x, peek_y = 0, 0 end
+    end
     local maximum_width = math.max(1, area.w - (peek_x * 2))
     local maximum_height = math.max(1, area.h - (peek_y * 2))
     return {
@@ -103,7 +187,7 @@ M.cell_metrics = cell_metrics
 function M.view_cell(state, area, config)
     local col, row = state.camera.col, state.camera.row
     if area and area.w and area.h then
-        local metrics = cell_metrics(area, config)
+        local metrics = cell_metrics(area, config, state)
         col = col + round((state.camera.offset_x or 0) / metrics.pitch_x)
         row = row + round((state.camera.offset_y or 0) / metrics.pitch_y)
     end
@@ -137,17 +221,8 @@ local function assign_order(state, id)
 end
 
 -- Zet een venster op een bepaalde tegelplek (0 = eerste) in een cel.
--- Is de cel vol, dan schuift de tegel op die plek naar spare (de oude plek
--- van het venster), zodat er nooit meer dan max_per_cell in een cel staan.
 local function insert_at(state, id, col, row, slot, config, spare)
     local list = members(state, col, row, id)
-    if #list >= max_per_cell(config) then
-        local index = clamp(math.floor(slot or #list) + 1, 1, #list)
-        local other = table.remove(list, index)
-        local target = spare or find_open_right(state, { col = col, row = row }, config)
-        state.positions[other] = { col = target.col, row = target.row }
-        assign_order(state, other)
-    end
     local index = clamp(math.floor(slot or #list) + 1, 1, #list + 1)
     table.insert(list, index, id)
     state.positions[id] = { col = col, row = row }
@@ -185,7 +260,9 @@ function M.sync(state, ids, active_id, config, area, drop)
         if not present[id] then
             -- Onthouden: een venster dat je met Super+slepen oppakt, wordt
             -- even zwevend en komt bij loslaten terug (zie drop hieronder).
-            departed[id] = { state = state, col = position.col, row = position.row }
+            departed[id] = { state = state, col = position.col, row = position.row,
+                order = state.order[id], width = state.width_step_by_id[id], height = state.height_step_by_id[id],
+                tree = clone_tree(state.cell_trees and state.cell_trees[position_key(position.col, position.row)]) }
             state.positions[id] = nil
             state.order[id] = nil
             state.width_step_by_id[id] = nil
@@ -197,6 +274,12 @@ function M.sync(state, ids, active_id, config, area, drop)
 
     local added, dropped = {}, {}
     for _, id in ipairs(unique_ids) do
+        local restored = state.restore_positions and state.restore_positions[id]
+        if not state.positions[id] and restored then
+            state.positions[id] = restored
+            state.restore_positions[id] = nil
+            dropped[id] = true
+        end
         local returning = not state.positions[id] and departed[id]
         if returning then departed[id] = nil end
         if returning and returning.state ~= state then returning = nil end
@@ -204,7 +287,17 @@ function M.sync(state, ids, active_id, config, area, drop)
             -- Terug na slepen of zwevend: waar je het loslaat, anders op de
             -- oude plek. De camera blijft staan.
             local spot = drop and area and M.spot_at(state, area, config, drop.x, drop.y, id)
-            if spot then
+            if spot and spot.target then
+                state.positions[id] = {col=returning.col,row=returning.row}
+                state.order[id] = returning.order
+                state.width_step_by_id[id] = returning.width or config.default_width_step
+                state.height_step_by_id[id] = returning.height or config.default_height_step
+                if returning.tree then
+                    state.cell_trees = state.cell_trees or {}
+                    state.cell_trees[position_key(returning.col, returning.row)] = returning.tree
+                end
+                M.tile_place(state, id, spot.target, spot.edge, area, config)
+            elseif spot then
                 insert_at(state, id, spot.col, spot.row, spot.slot, config, returning)
             else
                 insert_at(state, id, returning.col, returning.row, nil, config)
@@ -222,9 +315,8 @@ function M.sync(state, ids, active_id, config, area, drop)
                 local anchor = anchor_id and state.positions[anchor_id]
                 target = anchor and { col = anchor.col, row = anchor.row } or { col = 0, row = 0 }
             end
-            if #members(state, target.col, target.row) >= max_per_cell(config) then
-                target = find_open_right(state, target, config)
-            end
+            state.split_anchor = state.split_anchor or {}
+            state.split_anchor[id] = state.focused_id
             state.positions[id] = target
             assign_order(state, id)
             state.width_step_by_id[id] = config.default_width_step
@@ -265,14 +357,11 @@ end
 local function effective(state, id)
     local p = state.positions[id]
     local list = members(state, p.col, p.row)
-    local cols, rows = grid_for(#list)
-    local index = 0
-    for i, other in ipairs(list) do
-        if other == id then index = i - 1 end
-    end
-    local slot_col = index % cols
-    local slot_row = math.floor(index / cols)
-    return p.col + (slot_col + 0.5) / cols - 0.5, p.row + (slot_row + 0.5) / rows - 0.5
+    local boxes = {}
+    tree_placements(tile_tree(state, list, {x=0,y=0,w=1,h=0.8}, {gap_x=0,gap_y=0}),
+        {x=0,y=0,w=1,h=0.8}, {gap_x=0,gap_y=0}, boxes)
+    local box = boxes[id]
+    return p.col + box.x + box.w / 2 - 0.5, p.row + (box.y + box.h / 2) / 0.8 - 0.5
 end
 
 local function directional_metrics(ox, oy, cx, cy, direction)
@@ -333,7 +422,7 @@ function M.focus(state, direction)
 end
 
 -- Naar de buurcel: een lege cel neemt het venster over, een bezette cel
--- krijgt het als extra tegel. Is die cel vol, dan wisselen de vensters.
+-- krijgt het als extra Dwindle-tegel, zonder limiet per pagina.
 function M.move(state, direction, config)
     local vector = DIRECTIONS[direction]
     local focused_id = state.focused_id
@@ -342,12 +431,6 @@ function M.move(state, direction, config)
 
     local destination_col = focused.col + vector.dc
     local destination_row = focused.row + vector.dr
-    local residents = members(state, destination_col, destination_row, focused_id)
-
-    if #residents >= max_per_cell(config) then
-        local other = state.positions[residents[#residents]]
-        other.col, other.row = focused.col, focused.row
-    end
     focused.col = destination_col
     focused.row = destination_row
     assign_order(state, focused_id)
@@ -357,15 +440,67 @@ function M.move(state, direction, config)
 end
 
 -- Kaart: sleep een venster naar een plek, op tegelplek slot (0 = eerste,
--- leeg = achteraan). Een volle plek stuurt de tegel op die plek naar de
--- oude plek van het venster.
+-- leeg = achteraan). Alleen een expliciete middendrop wisselt vlakken.
 function M.place(state, id, col, row, config, slot)
     local position = state.positions[id]
     if not position or type(col) ~= "number" or type(row) ~= "number" then return false end
     col, row = math.floor(col + 0.5), math.floor(row + 0.5)
     if position.col == col and position.row == row and slot == nil then return false end
     insert_at(state, id, col, row, slot, config, { col = position.col, row = position.row })
+    state.reorder_cells = state.reorder_cells or {}
+    state.reorder_cells[position_key(col, row)] = true
     return true
+end
+
+-- Midden: de volledige vlakken ruilen. Rand: alleen dat vlak splitsen.
+-- De rest van de boom en de camera blijven precies staan.
+function M.tile_place(state, id, target, edge, area, config)
+    local source, dest = state.positions[id], state.positions[target]
+    if not source or not dest or id == target then return false end
+    if edge ~= "center" and not DIRECTIONS[edge] then return false end
+    M.placements(state, area, config)
+    local skey, dkey = position_key(source.col, source.row), position_key(dest.col, dest.row)
+    if edge == "center" then
+        if skey == dkey then
+            local marker = {}
+            replace_leaf(state.cell_trees[skey], id, marker)
+            replace_leaf(state.cell_trees[skey], target, id)
+            replace_leaf(state.cell_trees[skey], marker, target)
+        else
+            replace_leaf(state.cell_trees[skey], id, target)
+            replace_leaf(state.cell_trees[dkey], target, id)
+        end
+        state.positions[id], state.positions[target] = {col=dest.col,row=dest.row}, {col=source.col,row=source.row}
+        state.order[id], state.order[target] = state.order[target], state.order[id]
+    else
+        local present = {}
+        for other in pairs(state.positions) do if other ~= id then present[other] = true end end
+        state.cell_trees[skey] = prune_tree(state.cell_trees[skey], present)
+        local list = members(state, dest.col, dest.row, id)
+        local before = edge == "left" or edge == "up"
+        local slot = #list
+        for i, other in ipairs(list) do if other == target then slot = i - (before and 1 or 0); break end end
+        insert_at(state, id, dest.col, dest.row, slot, config)
+        local function insert(node)
+            if node.id == target then
+                node.id, node.axis, node.ratio = nil, (edge == "left" or edge == "right") and "x" or "y", 0.5
+                node.a, node.b = {id=before and id or target}, {id=before and target or id}
+            elseif not node.id then insert(node.a); insert(node.b) end
+        end
+        insert(state.cell_trees[dkey])
+    end
+    if state.reorder_cells then state.reorder_cells[skey], state.reorder_cells[dkey] = nil, nil end
+    state.pending_follow = false
+    return true
+end
+
+function M.drop_edge(box, x, y)
+    local fx, fy = (x-box.x)/math.max(1,box.w), (y-box.y)/math.max(1,box.h)
+    local edge, distance = "center", 0.25
+    for _, candidate in ipairs({{"left",fx},{"right",1-fx},{"up",fy},{"down",1-fy}}) do
+        if candidate[2] < distance then edge, distance = candidate[1], candidate[2] end
+    end
+    return edge
 end
 
 function M.pan(state, direction)
@@ -374,8 +509,8 @@ function M.pan(state, direction)
     local min_col, max_col, min_row, max_row = bounds(state)
     if not min_col then return false end
     state.camera.offset_x, state.camera.offset_y = 0, 0
-    state.camera.col = clamp(state.camera.col + vector.dc, min_col - 1, max_col + 1)
-    state.camera.row = clamp(state.camera.row + vector.dr, min_row - 1, max_row + 1)
+    state.camera.col = state.camera.col + vector.dc
+    state.camera.row = state.camera.row + vector.dr
     state.pending_follow = false
     return true
 end
@@ -388,12 +523,12 @@ function M.pan_by(state, dx, dy, area, config)
         return false
     end
     local min_col, max_col, min_row, max_row = bounds(state)
-    local metrics = cell_metrics(area, config)
+    local metrics = cell_metrics(area, config, state)
     -- Hooguit anderhalve cel voorbij de buitenste vensters.
-    local low_x = (min_col - 1.5 - state.camera.col) * metrics.pitch_x
-    local high_x = (max_col + 1.5 - state.camera.col) * metrics.pitch_x
-    local low_y = (min_row - 1.5 - state.camera.row) * metrics.pitch_y
-    local high_y = (max_row + 1.5 - state.camera.row) * metrics.pitch_y
+    local low_x = math.min(-1.5, min_col - 1.5 - state.camera.col) * metrics.pitch_x
+    local high_x = math.max(1.5, max_col + 1.5 - state.camera.col) * metrics.pitch_x
+    local low_y = math.min(-1.5, min_row - 1.5 - state.camera.row) * metrics.pitch_y
+    local high_y = math.max(1.5, max_row + 1.5 - state.camera.row) * metrics.pitch_y
     state.camera.offset_x = clamp((state.camera.offset_x or 0) + dx, low_x, high_x)
     state.camera.offset_y = clamp((state.camera.offset_y or 0) + dy, low_y, high_y)
     state.pending_follow = false
@@ -403,7 +538,7 @@ end
 -- Na vrij slepen: de camera rekent zich om naar de dichtstbijzijnde cel en
 -- klikt daar alleen op vast als de rest kleiner is dan config.snap.
 function M.settle(state, area, config)
-    local metrics = cell_metrics(area, config)
+    local metrics = cell_metrics(area, config, state)
     local snap = clamp(config.snap or 0.2, 0, 0.5)
     local function axis(offset, pitch)
         local cells = round(offset / pitch)
@@ -430,16 +565,83 @@ local function resize_step(state, map, steps, delta)
     return next_step ~= current
 end
 
-function M.resize_width(state, config, delta)
+-- Het pad naar een tegel bevat de splits die je met de muis kunt verzetten.
+local function split_path(state, area, config, id)
+    id = id or state.focused_id
+    local p = state.positions[id]
+    if not p then return {} end
+    local boxes = M.placements(state, area, config)
+    local tree = state.cell_trees[position_key(p.col, p.row)]
+    local box
+    for _, other in ipairs(members(state, p.col, p.row)) do
+        local b = boxes[other]
+        if not box then box = {x=b.x,y=b.y,w=b.w,h=b.h}
+        else
+            local right, bottom = math.max(box.x+box.w,b.x+b.w), math.max(box.y+box.h,b.y+b.h)
+            box.x, box.y = math.min(box.x,b.x), math.min(box.y,b.y)
+            box.w, box.h = right-box.x, bottom-box.y
+        end
+    end
+    local path = {}
+    while tree and not tree.id do
+        local side = tree_has(tree.a, id) and "a" or "b"
+        path[#path+1] = {node=tree,box=box,side=side}
+        local a, b = split_box(tree, box, config)
+        box, tree = side == "a" and a or b, tree[side]
+    end
+    return path
+end
+
+function M.resize_by(state, dx, dy, area, config, id)
+    local path, changed = split_path(state, area, config, id), false
+    for _, axis in ipairs({"x", "y"}) do
+        local delta = axis == "x" and dx or dy
+        for i = #path, 1, -1 do
+            local entry = path[i]
+            if entry.node.axis == axis and delta ~= 0 then
+                local length = axis == "x" and entry.box.w or entry.box.h
+                entry.node.ratio = clamp(entry.node.ratio + delta / math.max(1, length), 0.15, 0.85)
+                changed = true
+                break
+            end
+        end
+    end
+    return changed
+end
+
+function M.toggle_split(state, area, config)
+    local path = split_path(state, area, config)
+    local entry = path[#path]
+    if not entry then return false end
+    entry.node.axis = entry.node.axis == "x" and "y" or "x"
+    return true
+end
+
+local function resize_tiled_step(state, config, delta, area, axis)
+    if not area then return false end
+    local path = split_path(state, area, config)
+    for i = #path, 1, -1 do
+        local entry = path[i]
+        if entry.node.axis == axis then
+            entry.node.ratio = clamp(entry.node.ratio + delta * 0.05 * (entry.side == "a" and 1 or -1), 0.15, 0.85)
+            return true
+        end
+    end
+    return false
+end
+
+function M.resize_width(state, config, delta, area)
+    if resize_tiled_step(state, config, delta, area, "x") then return true end
     return resize_step(state, state.width_step_by_id, config.width_steps, delta)
 end
 
-function M.resize_height(state, config, delta)
+function M.resize_height(state, config, delta, area)
+    if resize_tiled_step(state, config, delta, area, "y") then return true end
     return resize_step(state, state.height_step_by_id, config.height_steps, delta)
 end
 
 function M.placements(state, area, config)
-    local metrics = cell_metrics(area, config)
+    local metrics = cell_metrics(area, config, state)
     local maximum_width = metrics.maximum_width
     local maximum_height = metrics.maximum_height
     local gap_x = math.max(0, config.gap_x or 0)
@@ -506,40 +708,14 @@ function M.placements(state, area, config)
             - (row_heights[row + 1] / 2) - gap_y - (row_heights[row] / 2)
     end
 
-    -- Eén bezette cel, recht in beeld: die cel vult het hele werkvlak,
-    -- net als gewone tegels.
-    local fill = config.fill_single and #cell_list == 1
-        and cell_list[1].col == state.camera.col and cell_list[1].row == state.camera.row
-        and math.abs(state.camera.offset_x or 0) < 0.5 and math.abs(state.camera.offset_y or 0) < 0.5
-
     for _, cell in ipairs(cell_list) do
-        local box
-        if fill then
-            box = { x = area.x, y = area.y, w = area.w, h = area.h }
-        else
-            box = {
-                x = column_centers[cell.col] - (cell.w / 2) - (state.camera.offset_x or 0),
-                y = row_centers[cell.row] - (cell.h / 2) - (state.camera.offset_y or 0),
-                w = cell.w,
-                h = cell.h,
-            }
-        end
+        local box = {
+            x = column_centers[cell.col] - cell.w / 2 - (state.camera.offset_x or 0),
+            y = row_centers[cell.row] - cell.h / 2 - (state.camera.offset_y or 0),
+            w = cell.w, h = cell.h,
+        }
         local list = members(state, cell.col, cell.row)
-        local cols, rows = grid_for(#list)
-        for index, id in ipairs(list) do
-            local slot_col = (index - 1) % cols
-            local slot_row = math.floor((index - 1) / cols)
-            -- Een onvolle laatste rij rekt de tegels op over de hele breedte.
-            local in_row = math.min(cols, #list - slot_row * cols)
-            local row_w = (box.w - gap_x * (in_row - 1)) / in_row
-            local tile_h = (box.h - gap_y * (rows - 1)) / rows
-            placements[id] = {
-                x = box.x + slot_col * (row_w + gap_x),
-                y = box.y + slot_row * (tile_h + gap_y),
-                w = row_w,
-                h = tile_h,
-            }
-        end
+        tree_placements(tile_tree(state, list, box, config), box, config, placements)
     end
 
     return placements
@@ -547,9 +723,9 @@ end
 
 -- Plek en tegelplek onder een schermpunt, alsof venster id (dat nu niet
 -- meetelt) erbij komt. Nil als het punt buiten het werkvlak valt.
-function M.spot_at(state, area, config, x, y, id)
+function M.spot_at(state, area, config, x, y, id, allow_outside)
     if type(x) ~= "number" or type(y) ~= "number" then return nil end
-    if x < area.x or y < area.y or x > area.x + area.w or y > area.y + area.h then return nil end
+    if not allow_outside and (x < area.x or y < area.y or x > area.x + area.w or y > area.y + area.h) then return nil end
     local placements = M.placements(state, area, config)
     local boxes = {}
     for other, box in pairs(placements) do
@@ -570,17 +746,24 @@ function M.spot_at(state, area, config, x, y, id)
         if x >= cell.x1 and x <= cell.x2 and y >= cell.y1 and y <= cell.y2 then hit = cell end
     end
     if not hit then
-        local metrics = cell_metrics(area, config)
+        local metrics = cell_metrics(area, config, state)
         local col = state.camera.col + round((x - (area.x + area.w / 2) + (state.camera.offset_x or 0)) / metrics.pitch_x)
         local row = state.camera.row + round((y - (area.y + area.h / 2) + (state.camera.offset_y or 0)) / metrics.pitch_y)
         return { col = col, row = row, slot = 0 }
     end
-    local count = #members(state, hit.col, hit.row, id)
-    local cols, rows = grid_for(math.min(count + 1, max_per_cell(config)))
-    local fx = clamp((x - hit.x1) / math.max(1, hit.x2 - hit.x1), 0, 0.999)
-    local fy = clamp((y - hit.y1) / math.max(1, hit.y2 - hit.y1), 0, 0.999)
-    local slot = math.floor(fy * rows) * cols + math.floor(fx * cols)
-    return { col = hit.col, row = hit.row, slot = clamp(slot, 0, count) }
+    local list = members(state, hit.col, hit.row, id)
+    local slot, target, edge = #list, nil, nil
+    for index, other in ipairs(list) do
+        local box = placements[other]
+        if box and x >= box.x and x <= box.x + box.w and y >= box.y and y <= box.y + box.h then
+            local after = hit.x2 - hit.x1 >= hit.y2 - hit.y1 and x >= box.x + box.w / 2
+                or hit.x2 - hit.x1 < hit.y2 - hit.y1 and y >= box.y + box.h / 2
+            slot = index - (after and 0 or 1)
+            target, edge = other, M.drop_edge(box, x, y)
+            break
+        end
+    end
+    return { col = hit.col, row = hit.row, slot = clamp(slot, 0, #list), target=target, edge=edge }
 end
 
 -- Deel van een venster dat binnen het werkvlak valt (0..1).
@@ -603,7 +786,7 @@ function M.resolve_follow(state, area, config)
     state.pending_follow = false
     local placements = M.placements(state, area, config)
     local box = state.focused_id and placements[state.focused_id]
-    if box and M.visible_fraction(box, area) < (config.follow_min_visible or 0.4) then
+    if box and M.visible_fraction(box, area) <= (config.follow_min_visible or 0) then
         return M.follow(state)
     end
     return false

@@ -5,7 +5,6 @@
     werkvlak-settings.py set SLEUTEL WAARDE  bewaren en meteen toepassen
 
 column_width   breedte van een nieuwe kolom op een scrollstrook (0.333-1.0)
-max_per_cell   hoeveel vensters als tegels op één plek staan (1-4)
 snap           hoe snel slepen op een plek vastklikt (0 = nooit, 0.45 = bijna altijd)
 
 Bewaard in ~/.config/kingstra/werkvlak.json. Hyprland leest het bestand bij het
@@ -20,8 +19,8 @@ import tempfile
 
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "kingstra" / "werkvlak.json"
 HYPR = os.environ.get("HYPRCTL_BIN", "hyprctl")
-DEFAULTS = {"column_width": 1.0, "max_per_cell": 4, "snap": 0.2}
-LIMITS = {"column_width": (0.333, 1.0, float), "max_per_cell": (1, 4, int), "snap": (0.0, 0.45, float)}
+DEFAULTS = {"column_width": 1.0, "snap": 0.2}
+LIMITS = {"column_width": (0.333, 1.0, float), "snap": (0.0, 0.45, float)}
 
 
 def load():

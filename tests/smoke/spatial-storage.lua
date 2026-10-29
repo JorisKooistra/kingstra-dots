@@ -1,0 +1,51 @@
+local core = assert(loadfile('config/hypr/lua/spatial/core.lua'))()
+local config = assert(loadfile('config/hypr/lua/spatial/config.lua'))()
+local storage = assert(loadfile('config/hypr/lua/spatial/storage.lua'))()
+local area={x=0,y=0,w=1000,h=800}
+local state=core.new_state()
+core.sync(state,{'A','B','C'},'B',config,area)
+core.placements(state,area,config)
+core.resize_by(state,90,-25,area,config)
+core.place(state,'C',2,-1,config)
+core.pan_by(state,63,42,area,config)
+local before=core.placements(state,area,config)
+local descriptors={A={address='0xa'},B={address='0xb'},C={address='0xc'}}
+storage.save('workspace:91',state,descriptors)
+local restored=core.new_state()
+local available={AA={address='0xa'},BB={address='0xb'},CC={address='0xc'}}
+assert(storage.restore('workspace:91',restored,available,config))
+-- Hyprland voegt na een reload de targets één voor één opnieuw toe.
+core.sync(restored,{'AA'},'AA',config,area)
+core.placements(restored,area,config)
+storage.save('workspace:91',restored,{AA={address='0xa'}})
+core.sync(restored,{'AA','BB'},'BB',config,area)
+core.placements(restored,area,config)
+core.sync(restored,{'AA','BB','CC'},'CC',config,area)
+local after=core.placements(restored,area,config)
+for old,new in pairs({A='AA',B='BB',C='CC'}) do
+ assert(restored.positions[new].col==state.positions[old].col)
+ assert(restored.positions[new].row==state.positions[old].row)
+ for _,field in ipairs({'x','y','w','h'}) do
+  assert(math.abs(after[new][field]-before[old][field])<0.002,old..'.'..field..' changed on reload: '..after[new][field]..' / '..before[old][field])
+ end
+end
+assert(restored.camera.col==state.camera.col and restored.camera.row==state.camera.row)
+assert(restored.camera.offset_x==state.camera.offset_x and restored.camera.offset_y==state.camera.offset_y)
+assert(next(restored.restore_positions)==nil)
+print('ok - reload restores pages, split ratios, camera and window identity during incremental target registration')
+-- Een gesloten venster komt niet terug als een fantoomtegel.
+local missing=core.new_state()
+assert(storage.restore('workspace:91',missing,{AA={address='0xa'},CC={address='0xc'}},config))
+core.sync(missing,{'AA','CC'},'AA',config,area)
+local boxes=core.placements(missing,area,config)
+assert(boxes.AA and boxes.CC and not boxes.B and not boxes.BB)
+print('ok - closed windows are pruned from restored split trees')
+local f=assert(io.open(os.getenv('XDG_RUNTIME_DIR')..'/kingstra-spatial-92.json','w'))
+f:write('{"camera":{"col":4,"row":-3,"x":12.500,"y":-5.000},"windows":[{"address":"0xa","title":"A","x":0,"y":0,"w":1,"h":1,"col":4,"row":-3}]}')
+f:close()
+local old=core.new_state()
+assert(storage.restore('workspace:92',old,{AA={address='0xa'}},config))
+core.sync(old,{'AA'},'AA',config,area)
+assert(old.positions.AA.col==4 and old.positions.AA.row==-3)
+assert(old.camera.col==4 and old.camera.row==-3 and old.camera.offset_x==12.5)
+print('ok - first migration also preserves pages from the previous snapshot format')

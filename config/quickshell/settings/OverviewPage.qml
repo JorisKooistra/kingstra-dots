@@ -30,7 +30,7 @@ Item {
     property string layoutError: ""
     property string currentWallpaper: ""
     property var wallpapers: []
-    property var werkvlak: ({column_width: 1.0, max_per_cell: 4, snap: 0.2})
+    property var werkvlak: ({column_width: 1.0, snap: 0.2})
     property string werkvlakError: ""
 
     MatugenColors { id: pageColors }
@@ -350,7 +350,7 @@ Item {
 
                 Card {
                     Heading { text: "Scrollen en werkvlak" }
-                    Hint { Layout.fillWidth: true; text: "Super+wiel scrolt binnen de werkruimte, Super+Shift+wiel wisselt van werkruimte, Super+middelmuis sleept vrij." }
+                    Hint { Layout.fillWidth: true; text: "Super+wiel scrolt binnen de werkruimte, Super+Shift+wiel wisselt van werkruimte, Super+Alt+linkermuis sleept vrij." }
                     Hint { text: "Breedte van een nieuw venster op een scrollstrook" }
                     Flow {
                         Layout.fillWidth: true; spacing: 8
@@ -364,19 +364,7 @@ Item {
                             }
                         }
                     }
-                    Hint { text: "Ruimtelijk: vensters per plek" }
-                    Flow {
-                        Layout.fillWidth: true; spacing: 8
-                        Repeater {
-                            model: [1, 2, 3, 4]
-                            delegate: Action {
-                                required property int modelData
-                                label: modelData === 1 ? "1 (geen tegels)" : String(modelData)
-                                chosen: Number(root.werkvlak.max_per_cell) === modelData
-                                onTriggered: root.setWerkvlak("max_per_cell", modelData)
-                            }
-                        }
-                    }
+                    Hint { Layout.fillWidth: true; text: "Ruimtelijk gebruikt Dwindle: splits en verhoudingen vrij aanpassen, zonder maximum per pagina." }
                     Hint { text: "Vastklikken na slepen" }
                     Flow {
                         Layout.fillWidth: true; spacing: 8

@@ -13,10 +13,11 @@ return {
     default_width_step = 4,
     default_height_step = 4,
 
-    -- Kingstra: tegels per plek, vastklikken na vrij slepen en hoeveel van
+    -- Kingstra: vastklikken na vrij slepen en hoeveel van
     -- een venster zichtbaar moet zijn voordat focus via de muis de camera
     -- laat staan.
-    max_per_cell = 4,
     snap = 0.2,
-    follow_min_visible = 0.4,
+    -- Een zichtbare rand aanraken met de muis verschuift de camera nooit.
+    -- Expliciet een volledig onzichtbaar venster kiezen mag het wel tonen.
+    follow_min_visible = 0,
 }

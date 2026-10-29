@@ -152,4 +152,4 @@ do
         if value and value >= 0.333 and value <= 1.0 then column_width = value end
     end
 end
-pcall(hl.config, { scrolling = { fullscreen_on_one_column = true, column_width = column_width } })
+pcall(hl.config, { scrolling = { fullscreen_on_one_column = true, column_width = column_width, follow_min_visible = 0.0 } })

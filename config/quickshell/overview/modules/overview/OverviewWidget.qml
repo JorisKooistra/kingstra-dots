@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import "../../common/functions/HyprDispatch.js" as HyprDispatch
 import "../../common"
 import "../../common/functions"
 import "../../common/widgets"
@@ -333,7 +334,7 @@ Item {
         } else if (targetId > maxWorkspaceId) {
             targetId = minWorkspaceId;
         }
-        Hyprland.dispatch(`workspace ${targetId}`);
+        Hyprland.dispatch(HyprDispatch.workspace(targetId));
     }
 
     function isSpecialWorkspace(windowData) {
@@ -649,7 +650,7 @@ Item {
                                 onClicked: {
                                     if (root.draggingTargetWorkspace === -1) {
                                         GlobalStates.overviewOpen = false
-                                        Hyprland.dispatch(`workspace ${workspaceValue}`)
+                                        Hyprland.dispatch(HyprDispatch.workspace(workspaceValue))
                                     }
                                 }
                             }
@@ -805,7 +806,7 @@ Item {
                                     onClicked: {
                                         if (root.draggingTargetWorkspace === -1 && !root.draggingTargetSpecialWorkspace) {
                                             GlobalStates.overviewOpen = false;
-                                            Hyprland.dispatch(`togglespecialworkspace ${specialWorkspaceTile.specialName}`);
+                                            Hyprland.dispatch(HyprDispatch.toggleSpecial(specialWorkspaceTile.specialName));
                                         }
                                     }
                                 }
@@ -920,19 +921,19 @@ Item {
                                                     root.draggingTargetSpecialWorkspace = ""
                                                     if (targetSpecialWorkspace === root.createSpecialWorkspaceTarget) {
                                                         const createdName = root.nextSpecialWorkspaceName()
-                                                        Hyprland.dispatch(`movetoworkspacesilent special:${createdName}, address:${specialWindow.windowData?.address}`)
+                                                        Hyprland.dispatch(HyprDispatch.moveWindow("special:" + createdName, specialWindow.windowData?.address))
                                                         specialWindow.returnToHomeParent()
                                                         specialWindow.x = specialWindow.initX
                                                         specialWindow.y = specialWindow.initY
                                                     }
                                                     else if (targetSpecialWorkspace && targetSpecialWorkspace !== specialWorkspaceTile.specialName) {
-                                                        Hyprland.dispatch(`movetoworkspacesilent special:${targetSpecialWorkspace}, address:${specialWindow.windowData?.address}`)
+                                                        Hyprland.dispatch(HyprDispatch.moveWindow("special:" + targetSpecialWorkspace, specialWindow.windowData?.address))
                                                         specialWindow.returnToHomeParent()
                                                         specialWindow.x = specialWindow.initX
                                                         specialWindow.y = specialWindow.initY
                                                     }
                                                     else if (targetWorkspace !== -1) {
-                                                        Hyprland.dispatch(`movetoworkspacesilent ${targetWorkspace}, address:${specialWindow.windowData?.address}`)
+                                                        Hyprland.dispatch(HyprDispatch.moveWindow(targetWorkspace, specialWindow.windowData?.address))
                                                         specialWindow.returnToHomeParent()
                                                         specialWindow.x = specialWindow.initX
                                                         specialWindow.y = specialWindow.initY
@@ -948,10 +949,10 @@ Item {
                                                         return;
                                                     if (event.button === Qt.LeftButton) {
                                                         GlobalStates.overviewOpen = false;
-                                                        Hyprland.dispatch(`focuswindow address:${windowData.address}`);
+                                                        Hyprland.dispatch(HyprDispatch.focusWindow(windowData.address));
                                                         event.accepted = true;
                                                     } else if (event.button === Qt.MiddleButton) {
-                                                        Hyprland.dispatch(`closewindow address:${windowData.address}`);
+                                                        Hyprland.dispatch(HyprDispatch.closeWindow(windowData.address));
                                                         event.accepted = true;
                                                     }
                                                 }
@@ -1042,7 +1043,7 @@ Item {
                                 onClicked: {
                                     const createdName = root.nextSpecialWorkspaceName();
                                     GlobalStates.overviewOpen = false;
-                                    Hyprland.dispatch(`togglespecialworkspace ${createdName}`);
+                                    Hyprland.dispatch(HyprDispatch.toggleSpecial(createdName));
                                 }
                             }
 
@@ -1187,11 +1188,11 @@ Item {
                             root.draggingTargetSpecialWorkspace = ""
                             if (targetSpecialWorkspace === root.createSpecialWorkspaceTarget) {
                                 const createdName = root.nextSpecialWorkspaceName()
-                                Hyprland.dispatch(`movetoworkspacesilent special:${createdName}, address:${window.windowData?.address}`)
+                                Hyprland.dispatch(HyprDispatch.moveWindow("special:" + createdName, window.windowData?.address))
                                 updateWindowPosition.restart()
                             }
                             else if (targetSpecialWorkspace && targetSpecialWorkspace !== root.specialWorkspaceName(windowData)) {
-                                Hyprland.dispatch(`movetoworkspacesilent special:${targetSpecialWorkspace}, address:${window.windowData?.address}`)
+                                Hyprland.dispatch(HyprDispatch.moveWindow("special:" + targetSpecialWorkspace, window.windowData?.address))
                                 updateWindowPosition.restart()
                             }
                             else if (targetWorkspace !== -1) {
@@ -1210,10 +1211,10 @@ Item {
 
                             if (event.button === Qt.LeftButton) {
                                 GlobalStates.overviewOpen = false
-                                Hyprland.dispatch(`focuswindow address:${windowData.address}`)
+                                Hyprland.dispatch(HyprDispatch.focusWindow(windowData.address))
                                 event.accepted = true
                             } else if (event.button === Qt.MiddleButton) {
-                                Hyprland.dispatch(`closewindow address:${windowData.address}`)
+                                Hyprland.dispatch(HyprDispatch.closeWindow(windowData.address))
                                 event.accepted = true
                             }
                         }

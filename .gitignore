@@ -88,3 +88,11 @@ config/quickshell/game-launcher/*
 # symlink naar config/kingstra); persoonlijk, hoort niet in git.
 config/kingstra/package-keep.txt
 config/kingstra/overrides.conf
+
+# Native zoom wordt per machine/Hyprland-ABI gebouwd, nooit mee distribueren.
+config/hypr/native-zoom/*.so
+config/hypr/native-zoom/*.so.abi
+
+# Cava installeert deze pakketvoorbeelden zelf.
+config/cava/shaders/
+config/cava/themes/

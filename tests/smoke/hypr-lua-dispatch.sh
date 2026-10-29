@@ -31,4 +31,11 @@ if rg -n 'hyprctl( --batch)? dispatch' "$REPO_ROOT/config" "$REPO_ROOT/installer
     exit 1
 fi
 
+# Quickshell sends dispatch strings over the same IPC interface as hyprctl.
+if rg -n 'Hyprland\.dispatch\(["`]' "$REPO_ROOT/config/quickshell" -g '*.qml' \
+    | rg -v 'Hyprland\.dispatch\(["`]hl\.dsp\.'; then
+    printf 'Oude Quickshell-dispatchsyntax gevonden\n' >&2
+    exit 1
+fi
+
 printf 'Hyprland Lua dispatcher smoke test: OK\n'

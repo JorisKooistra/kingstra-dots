@@ -25,6 +25,9 @@ phase_run() {
     log_step "Intel GPU telemetry-helper bouwen..."
     _phase05_install_intel_gpu_helper
 
+    log_step "Native werkvlakzoom bouwen..."
+    _phase05_install_native_zoom
+
     log_step "UI-autostart aanmaken..."
     _phase05_write_autostart_ui
 
@@ -50,6 +53,15 @@ _phase05_install_packages() {
     # Supplementair icon-font uit de officiële repo; Nerd Fonts komen in fase 8.
     pacman_install ttf-material-icons
     _phase05_enable_paccache_timer
+}
+
+_phase05_install_native_zoom() {
+    if "${DRY_RUN:-false}"; then
+        log_dry "Native zoom zou tegen de lokale Hyprland-headers worden gebouwd"
+        return 0
+    fi
+    bash "$REPO_ROOT/config/shared/scripts/kingstra-build-native-zoom" \
+        || log_warn "Native zoom niet beschikbaar; werkvlak en kaart blijven bruikbaar"
 }
 
 # paccache.timer (pacman-contrib) ruimt wekelijks oude pakketversies uit de

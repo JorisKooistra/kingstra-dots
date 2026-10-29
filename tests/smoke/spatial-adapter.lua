@@ -1,9 +1,11 @@
 local root = "config/hypr/lua/spatial"
 local registered = nil
 local dispatched = {}
+local floating = {address="0xF",title="Floating app",floating=true,mapped=true,workspace={id=9},at={x=120,y=80},size={x=400,y=300}}
 
 _G.__hyprscroll2d_focus_subscription = nil
 _G.hl = {
+    get_windows = function() return {floating} end,
     layout = {
         register = function(name, provider)
             registered = { name = name, provider = provider }
@@ -88,6 +90,23 @@ registered.provider.recalculate(ctx)
 assert(type(registered.provider.layout_msg(ctx, "place 0xZZ 0 0")) == "string", "unknown window should error")
 
 assert(registered.provider.layout_msg(ctx, "place 0xA 3 -2 0") == true, "place with a tile spot was rejected")
+assert(registered.provider.layout_msg(ctx,"tileplace 0xA 0xB center") == true)
+assert(registered.provider.layout_msg(ctx,"tileplace 0xA 0xB left") == true)
+assert(type(registered.provider.layout_msg(ctx,"tileplace 0xA 0xB invalid"))=="string")
+
+-- Expliciete kaartselectie centreert ook een buurpagina waarvan nog een rand
+-- zichtbaar is. Muisfocus alleen mag dat juist niet doen.
+assert(registered.provider.layout_msg(ctx,"place 0xA 0 -1")==true)
+assert(registered.provider.layout_msg(ctx,"place 0xB 1 -1")==true)
+assert(registered.provider.layout_msg(ctx,"select 0xA")==true)
+registered.provider.recalculate(ctx)
+assert(a.placed.x >= ctx.area.x and a.placed.x+a.placed.w <= ctx.area.x+ctx.area.w)
+assert(a.placed.y >= ctx.area.y and a.placed.y+a.placed.h <= ctx.area.y+ctx.area.h)
+assert(registered.provider.layout_msg(ctx,"select 0xB")==true)
+registered.provider.recalculate(ctx)
+assert(b.placed.x >= ctx.area.x and b.placed.x+b.placed.w <= ctx.area.x+ctx.area.w)
+assert(b.placed.y >= ctx.area.y and b.placed.y+b.placed.h <= ctx.area.y+ctx.area.h)
+print('ok - overview selects adjacent pages above and beside the current view')
 
 -- Miniaturen: een venster dat helemaal in beeld staat krijgt na een korte
 -- pauze een plaatje via werkvlak-thumb.sh.
@@ -108,3 +127,8 @@ assert(#commands == 1 and commands[1]:match("werkvlak%-thumb%.sh c '0,0 1000x800
     "unexpected thumbnail command: " .. tostring(commands[1]))
 
 print("ok - mocked Hyprland adapter")
+
+floating.workspace.id=11
+hl.get_active_workspace=function() return {id=11} end
+assert(registered.provider.layout_msg({area=ctx.area,targets={}},"snapshot")==true)
+print('ok - floating-only workspaces can publish an overview without tiled targets')
