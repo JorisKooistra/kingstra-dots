@@ -140,10 +140,21 @@ Item {
         }
 
         // Nerf met een paar noesten, steeds dezelfde.
+        // Altijd op dezelfde grootte getekend en daarna geschaald (met
+        // mipmaps), zodat de kleine speler dezelfde nerf heeft als de grote
+        // in plaats van een dicht opeengepakt patroon.
         Canvas {
             id: grain
-            anchors.fill: parent
-            anchors.margins: 3
+            readonly property real fit: (plinth.width - 6) / width
+            x: 3
+            y: 3
+            width: 900
+            height: Math.max(1, Math.round(900 * (plinth.height - 6) / Math.max(1, plinth.width - 6)))
+            transformOrigin: Item.TopLeft
+            scale: fit
+            layer.enabled: visible
+            layer.mipmap: true
+            layer.smooth: true
             visible: table.look === "wood"
             // Nerf in de donkerste en lichtste themakleur.
             readonly property color dark: table.mocha.crust
@@ -286,6 +297,16 @@ Item {
 
     // 45-toerenadapter linksboven; ligt op de as zolang er een single speelt.
     Rectangle {
+        visible: table.look !== "paper"
+        x: table.width * 0.035 + width * 0.08
+        y: table.height * 0.06 + width * 0.12
+        width: table.height * 0.1
+        height: width
+        radius: width / 2
+        color: Qt.rgba(0, 0, 0, 0.4)
+        opacity: vinyl.shownSingle ? 0 : 1
+    }
+    Rectangle {
         x: table.width * 0.035
         y: table.height * 0.06
         width: table.height * 0.1
@@ -315,14 +336,17 @@ Item {
     }
 
     // Naaldlampje linksonder; brandt tijdens afspelen.
+    // Verder van de draaischijf, vrij van de rand en de gloed.
     Item {
-        x: table.width * 0.04
-        y: table.height * 0.66
-        width: table.height * 0.075
+        id: lamp
+        readonly property color ring: table.look === "wood" ? table.skin.metal : table.look === "paper" ? table.mocha.text : table.mocha.overlay1
+        x: table.width * 0.02
+        y: table.height * 0.70
+        width: table.height * 0.072
         height: width
         Rectangle {
             anchors.centerIn: parent
-            width: parent.width * 1.8
+            width: parent.width * 1.5
             height: width
             radius: width / 2
             color: table.skin.lit
@@ -331,15 +355,38 @@ Item {
             layer.enabled: true
             layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1.0 }
         }
+        // Schaduw en metalen ring, daarin een verzonken lampje.
+        Rectangle {
+            visible: table.look !== "paper"
+            x: parent.width * 0.08
+            y: parent.width * 0.14
+            width: parent.width
+            height: width
+            radius: width / 2
+            color: Qt.rgba(0, 0, 0, 0.4)
+        }
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: table.look === "paper" ? table.mocha.base : table.mocha.crust
-            border.width: table.look === "paper" ? 1.5 : 2
-            border.color: table.look === "wood" ? table.skin.metal : table.look === "paper" ? table.mocha.text : table.mocha.overlay1
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: table.look === "paper" ? table.mocha.base : Qt.lighter(lamp.ring, 1.2) }
+                GradientStop { position: 1.0; color: table.look === "paper" ? table.mocha.base : Qt.darker(lamp.ring, 1.8) }
+            }
+            border.width: table.look === "paper" ? 1.5 : 0
+            border.color: table.mocha.text
             Rectangle {
                 anchors.centerIn: parent
-                width: parent.width * 0.45
+                width: parent.width * 0.72
+                height: width
+                radius: width / 2
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: table.look === "paper" ? table.mocha.base : Qt.darker(table.mocha.crust, 1.4) }
+                    GradientStop { position: 1.0; color: table.look === "paper" ? table.mocha.base : table.mocha.surface0 }
+                }
+            }
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width * 0.4
                 height: width
                 radius: width / 2
                 color: table.playing ? table.skin.lit : Qt.rgba(0.5, 0.5, 0.5, 0.35)
@@ -391,16 +438,45 @@ Item {
         height: table.height * 0.11
         radius: width / 2
         color: table.look === "paper" ? table.mocha.base : Qt.rgba(0, 0, 0, 0.35)
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: table.look === "paper" ? table.mocha.base : Qt.rgba(0, 0, 0, 0.7) }
+            GradientStop { position: 1.0; color: table.look === "paper" ? table.mocha.base : Qt.rgba(0, 0, 0, 0.3) }
+        }
         border.width: 1
         border.color: table.skin.border
-        Rectangle {
+        Item {
+            id: leverKnob
             anchors.horizontalCenter: parent.horizontalCenter
-            y: vinyl.armLift > 0.5 ? parent.height * 0.08 : parent.height * 0.55
+            y: vinyl.armLift > 0.5 ? parent.height * 0.02 : parent.height * 0.5
             Behavior on y { NumberAnimation { duration: ThemeConfig.duration(200); easing.type: Easing.OutCubic } }
             width: parent.width * 1.5
-            height: width * 0.6
-            radius: height / 2
-            color: table.skin.needle
+            height: width * 0.6 * 1.35
+            Rectangle {
+                visible: table.look !== "paper"
+                x: parent.height * 0.2
+                y: parent.height * 0.35
+                width: parent.width
+                height: parent.width * 0.6
+                radius: height / 2
+                color: Qt.rgba(0, 0, 0, 0.4)
+            }
+            Rectangle {
+                y: parent.width * 0.6 * 0.3
+                width: parent.width
+                height: parent.width * 0.6
+                radius: height / 2
+                color: Qt.darker(table.skin.needle, 1.9)
+            }
+            Rectangle {
+                width: parent.width
+                height: parent.width * 0.6
+                radius: height / 2
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Qt.lighter(table.skin.needle, 1.25) }
+                    GradientStop { position: 1.0; color: Qt.darker(table.skin.needle, 1.3) }
+                }
+            }
         }
     }
 
@@ -422,6 +498,12 @@ Item {
             height: parent.height
             radius: width / 2
             color: table.look === "paper" ? table.mocha.base : Qt.rgba(0, 0, 0, 0.55)
+            // Verzonken gleuf: bovenrand donker, onderrand vangt licht.
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: table.look === "paper" ? table.mocha.base : Qt.rgba(0, 0, 0, 0.85) }
+                GradientStop { position: 1.0; color: table.look === "paper" ? table.mocha.base : Qt.rgba(0, 0, 0, 0.45) }
+            }
             border.width: 1
             border.color: table.look === "neon" ? Qt.rgba(table.accent.r, table.accent.g, table.accent.b, 0.6)
                 : table.look === "paper" ? table.mocha.text : Qt.rgba(1, 1, 1, 0.08)
@@ -437,21 +519,49 @@ Item {
                 color: table.skin.brandColor
             }
         }
+        // Schuifkap als blokje: schaduw, zijkant, belichte bovenkant met ribbels.
+        Rectangle {
+            visible: table.look !== "paper"
+            x: faderCap.x + faderCap.height * 0.25
+            y: faderCap.y + faderCap.height * 0.55
+            width: faderCap.width
+            height: faderCap.height
+            radius: faderCap.radius
+            color: Qt.rgba(0, 0, 0, 0.4)
+        }
+        Rectangle {
+            x: faderCap.x
+            y: faderCap.y + faderCap.height * 0.3
+            width: faderCap.width
+            height: faderCap.height
+            radius: faderCap.radius
+            color: table.look === "paper" ? table.mocha.text : table.skin.capSide
+        }
         Rectangle {
             id: faderCap
             anchors.horizontalCenter: parent.horizontalCenter
             width: parent.width * 1.1
             height: parent.width * 0.55
             radius: table.look === "neon" ? 2 : 4
-            y: (1 - pitchFader.shown) * (pitchFader.height - height)
-            color: table.skin.capA
+            y: (1 - pitchFader.shown) * (pitchFader.height - height * 1.3)
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: table.look === "paper" ? table.skin.capA : Qt.lighter(table.skin.capA, 1.12) }
+                GradientStop { position: 1.0; color: table.skin.capB }
+            }
             border.width: 1
             border.color: table.skin.capBorder
-            Rectangle {
+            Column {
                 anchors.centerIn: parent
-                width: parent.width * 0.8
-                height: 2
-                color: table.skin.lit
+                spacing: Math.max(1, faderCap.height * 0.14)
+                Repeater {
+                    model: 3
+                    Rectangle {
+                        required property int index
+                        width: faderCap.width * 0.7
+                        height: Math.max(1, faderCap.height * 0.08)
+                        color: index === 1 ? table.skin.lit : Qt.rgba(0, 0, 0, 0.3)
+                    }
+                }
             }
         }
         MouseArea {

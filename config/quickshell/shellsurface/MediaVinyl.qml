@@ -68,8 +68,10 @@ Item {
     readonly property color platterRim: look === "wood" ? Qt.darker(metal, 1.25)
         : look === "neon" ? accent : look === "paper" ? mocha.text
         : (playing ? accent : mocha.overlay0)
-    readonly property color matColor: look === "wood" ? mocha.crust
-        : look === "neon" ? Qt.darker(mocha.crust, 1.3) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.92)
+    // Rubbermat in een eigen tint, zodat een single er niet in verdwijnt.
+    readonly property color matColor: look === "wood" ? Qt.darker(Qt.tint(mocha.surface1, Qt.rgba(accent.r, accent.g, accent.b, 0.22)), 1.35)
+        : look === "neon" ? Qt.tint(mocha.mantle, Qt.rgba(accent.r, accent.g, accent.b, 0.14))
+        : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.92)
     readonly property color grooveColor: look === "neon" ? accent : mocha.overlay2
     readonly property color discColor: look === "neon" ? Qt.darker(mocha.crust, 1.6)
         : look === "wood" ? Qt.darker(mocha.crust, 1.4) : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
@@ -77,19 +79,18 @@ Item {
     property real spinSpeed: 45
     property real angularVelocity: 0
     property real discAngle: 0
-    property real lastTick: Date.now()
-    Timer {
-        interval: 16
-        repeat: true
+    // Op het ritme van het scherm (FrameAnimation), niet op een losse timer:
+    // die liep niet gelijk met de frames en gaf een schokkerige draai.
+    FrameAnimation {
         running: deck.visible && deck.vinyl > 0.01 && (deck.playing || deck.angularVelocity > 0.05)
-        onRunningChanged: deck.lastTick = Date.now()
         onTriggered: {
-            let now = Date.now(), dt = Math.min(0.1, Math.max(0, (now - deck.lastTick) / 1000));
-            deck.lastTick = now;
+            let dt = Math.min(0.1, Math.max(0, frameTime));
             let target = deck.playing ? deck.spinSpeed : 0;
             deck.angularVelocity += (target - deck.angularVelocity) * (1 - Math.exp(-dt / 0.5));
             if (!deck.playing && deck.angularVelocity < 0.05) deck.angularVelocity = 0;
-            deck.discAngle = (deck.discAngle + deck.angularVelocity * dt) % 360;
+            // Wikkelen op 3600: de stroboscoopring draait op 0,6x mee en zou
+            // bij 360 elke omwenteling een sprong maken.
+            deck.discAngle = (deck.discAngle + deck.angularVelocity * dt) % 3600;
         }
     }
 
@@ -102,6 +103,8 @@ Item {
     property point armPivot: Qt.point(-1, -1)
     property real armReach: 1
     property real armBase: 1
+    // Grootte van headshell en element t.o.v. de buis; groter oogt minder plat.
+    property real headScale: 1.3
     // Begin- en eindhoek volgen uit de geometrie: de naald moet de buitenste
     // groef en de rand van het label raken, waar de voet ook staat.
     readonly property real armStart: solveArmAngle(discRadius * 0.93)
@@ -113,8 +116,8 @@ Item {
     function solveArmAngle(r) {
         let u = width / 220;
         // Naald t.o.v. het draaipunt bij hoek 0 (headshell 28° gedraaid).
-        let vx = -7 * u - 5.87 * u;
-        let vy = 66 * u * armReach + 11.04 * u;
+        let vx = -7 * u - 5.87 * u * headScale;
+        let vy = 66 * u * armReach + 11.04 * u * headScale;
         let px = armPivotX, py = armPivotY;
         let c = width / 2;
         function dist(deg) {
@@ -649,6 +652,26 @@ Item {
             readonly property real pivotX: width - 14.5 * u
             readonly property real pivotY: 13 * u
 
+            // Armvoet als een ronde sokkel: slagschaduw op het hout en een
+            // zijkant, zodat hij boven de plint uitsteekt.
+            Rectangle {
+                readonly property real d: 31 * tonearm.u * tonearm.bs
+                width: d * 1.04
+                height: width
+                radius: width / 2
+                x: tonearm.pivotX - d / 2 + d * 0.06
+                y: tonearm.pivotY - d / 2 + d * 0.09
+                color: Qt.rgba(0, 0, 0, deck.look === "paper" ? 0 : 0.35)
+            }
+            Rectangle {
+                readonly property real d: 31 * tonearm.u * tonearm.bs
+                width: d
+                height: width
+                radius: width / 2
+                x: tonearm.pivotX - d / 2
+                y: tonearm.pivotY - d / 2 + d * 0.05
+                color: deck.look === "paper" ? deck.mocha.text : Qt.darker(deck.baseOuter, 1.9)
+            }
             Rectangle {
                 width: 31 * tonearm.u * tonearm.bs
                 height: width
@@ -699,7 +722,7 @@ Item {
                 readonly property real hubY: (6 + 8 * tonearm.bs) * u
                 readonly property real reach: deck.armReach
                 width: Math.max(34, 16 * tonearm.bs) * u
-                height: hubY + (80 + 66 * (reach - 1)) * u
+                height: hubY + (88 + 66 * (reach - 1)) * u
                 x: tonearm.pivotX - width / 2
                 y: tonearm.pivotY - hubY
                 transform: [
@@ -721,6 +744,43 @@ Item {
                     }
                 ]
 
+                // Schaduw van de arm: één keer getekend en daarna alleen
+                // verschoven. Opnieuw tekenen met vervaging bij elke stap van
+                // het optillen maakte spoelen traag.
+                Canvas {
+                    id: armShadow
+                    readonly property real pad: 10 * arm.u
+                    x: -pad
+                    y: -pad
+                    width: arm.width + 2 * pad
+                    height: arm.height + 2 * pad
+                    opacity: 0.30 - 0.12 * deck.armLift
+                    transform: Translate {
+                        x: (2 + 7 * deck.armLift) * arm.u
+                        y: (2 + 7 * deck.armLift) * arm.u * 1.3
+                    }
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+                    Component.onCompleted: requestPaint()
+                    onPaint: {
+                        let ctx = getContext("2d");
+                        ctx.reset();
+                        let u = arm.u;
+                        ctx.translate(pad, pad);
+                        let cx = arm.width / 2;
+                        let hub = arm.hubY;
+                        let end = { x: cx - 7 * u, y: hub + 66 * u * arm.reach };
+                        ctx.lineCap = "round";
+                        ctx.shadowColor = "black";
+                        ctx.shadowBlur = 4 * u;
+                        armCanvas.tubePath(ctx, u, cx, hub, end);
+                        ctx.lineWidth = Math.max(1.6, 3.6 * u) * 1.1;
+                        ctx.strokeStyle = "black";
+                        ctx.stroke();
+                        armCanvas.headshell(ctx, u, end, "black", null);
+                    }
+                }
+
                 Canvas {
                     id: armCanvas
                     anchors.fill: parent
@@ -732,13 +792,11 @@ Item {
                         : deck.look === "neon" ? deck.accent : deck.mocha.overlay1
                     readonly property bool glow: deck.look === "neon"
                     readonly property color tip: deck.accent
-                    readonly property real lift: deck.armLift
                     onTubeChanged: requestPaint()
                     onEdgeChanged: requestPaint()
                     onGlowChanged: requestPaint()
                     onShellChanged: requestPaint()
                     onTipChanged: requestPaint()
-                    onLiftChanged: requestPaint()
                     onWidthChanged: requestPaint()
                     onHeightChanged: requestPaint()
 
@@ -754,6 +812,7 @@ Item {
                         ctx.save();
                         ctx.translate(end.x, end.y);
                         ctx.rotate(28 * Math.PI / 180);
+                        ctx.scale(deck.headScale, deck.headScale);
                         ctx.beginPath();
                         let w = 10 * u, h = 15 * u, r = 3 * u;
                         ctx.moveTo(-w / 2 + r, -2 * u);
@@ -787,20 +846,6 @@ Item {
                         let tw = Math.max(1.6, 3.6 * u);
                         ctx.lineCap = "round";
                         ctx.lineJoin = "round";
-
-                        // Schaduw: zachter en verder weg naarmate de arm hoger is.
-                        let off = (2 + 7 * lift) * u;
-                        ctx.save();
-                        ctx.translate(off, off * 1.3);
-                        ctx.shadowColor = "black";
-                        ctx.shadowBlur = (2 + 6 * lift) * u;
-                        ctx.globalAlpha = 0.28 - 0.10 * lift;
-                        tubePath(ctx, u, cx, hub, end);
-                        ctx.lineWidth = tw * 1.1;
-                        ctx.strokeStyle = "black";
-                        ctx.stroke();
-                        headshell(ctx, u, end, "black", null);
-                        ctx.restore();
 
                         // Contragewicht achter het draaipunt: een cilinder met
                         // licht van linksboven en twee groeven.
@@ -857,19 +902,58 @@ Item {
                         hg.addColorStop(0.0, Qt.lighter(shell, 1.9));
                         hg.addColorStop(0.45, shell);
                         hg.addColorStop(1.0, Qt.darker(shell, 1.6));
+                        // Dikte van de headshell: dezelfde vorm iets lager, donker.
+                        ctx.save();
+                        ctx.translate(1.1 * u, 1.7 * u);
+                        headshell(ctx, u, end, Qt.darker(shell, 2.6), null);
+                        ctx.restore();
                         headshell(ctx, u, end, hg, Qt.rgba(edge.r, edge.g, edge.b, 0.9));
+
                         ctx.save();
                         ctx.translate(end.x, end.y);
                         ctx.rotate(28 * Math.PI / 180);
+                        ctx.scale(deck.headScale, deck.headScale);
+                        // Vingerlift met schaduw.
+                        ctx.beginPath();
+                        ctx.moveTo(5 * u, 4.2 * u);
+                        ctx.lineTo(10.5 * u, 2.7 * u);
+                        ctx.lineWidth = Math.max(1, 1.4 * u);
+                        ctx.strokeStyle = Qt.rgba(0, 0, 0, 0.45);
+                        ctx.stroke();
                         ctx.beginPath();
                         ctx.moveTo(5 * u, 3 * u);
                         ctx.lineTo(10 * u, 1.5 * u);
-                        ctx.lineWidth = Math.max(1, 1.4 * u);
-                        ctx.strokeStyle = Qt.rgba(edge.r, edge.g, edge.b, 1);
+                        ctx.strokeStyle = Qt.lighter(edge, 1.2);
                         ctx.stroke();
+
+                        // Element onder de headshell: blokje met zijkant,
+                        // belichte bovenkant en een glanslijn.
+                        let cw = 7 * u, ch = 7.5 * u, cy0 = 3.5 * u;
+                        ctx.fillStyle = Qt.darker(tip, 2.4);
                         ctx.beginPath();
-                        ctx.arc(0, 12.5 * u, Math.max(1, 1.8 * u), 0, Math.PI * 2);
-                        ctx.fillStyle = Qt.rgba(tip.r, tip.g, tip.b, 1);
+                        ctx.roundedRect(-cw / 2 + 0.9 * u, cy0 + 1.5 * u, cw, ch, 1.2 * u, 1.2 * u);
+                        ctx.fill();
+                        let cg = ctx.createLinearGradient(-cw / 2, cy0, cw / 2, cy0 + ch);
+                        cg.addColorStop(0.0, Qt.lighter(tip, 1.35));
+                        cg.addColorStop(0.5, tip);
+                        cg.addColorStop(1.0, Qt.darker(tip, 1.5));
+                        ctx.fillStyle = cg;
+                        ctx.beginPath();
+                        ctx.roundedRect(-cw / 2, cy0, cw, ch, 1.2 * u, 1.2 * u);
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.moveTo(-cw / 2 + 1.2 * u, cy0 + 0.6 * u);
+                        ctx.lineTo(cw / 2 - 1.2 * u, cy0 + 0.6 * u);
+                        ctx.lineWidth = Math.max(0.6, 0.6 * u);
+                        ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.55);
+                        ctx.stroke();
+                        // Naaldhouder en naald.
+                        ctx.beginPath();
+                        ctx.moveTo(-1.2 * u, cy0 + ch);
+                        ctx.lineTo(1.2 * u, cy0 + ch);
+                        ctx.lineTo(0, cy0 + ch + 2.6 * u);
+                        ctx.closePath();
+                        ctx.fillStyle = Qt.lighter(edge, 1.3);
                         ctx.fill();
                         ctx.restore();
                     }
@@ -909,14 +993,26 @@ Item {
                 }
             }
 
-            // Kleine pivot bovenop de arm.
+            // Kleine pivot bovenop de arm: een kapje met zijkant en glans.
+            Rectangle {
+                readonly property real d: 18 * tonearm.u * tonearm.bs
+                width: d
+                height: width
+                radius: width / 2
+                x: tonearm.pivotX - d / 2 + d * 0.05
+                y: tonearm.pivotY - d / 2 + d * 0.12
+                color: Qt.rgba(0, 0, 0, deck.look === "paper" ? 0 : 0.4)
+            }
             Rectangle {
                 width: 18 * tonearm.u * tonearm.bs
                 height: width
                 radius: width / 2
                 x: tonearm.pivotX - width / 2
                 y: tonearm.pivotY - height / 2
-                color: deck.look === "" ? deck.mocha.surface0 : deck.baseOuter
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: deck.look === "paper" ? deck.mocha.base : Qt.lighter(deck.look === "" ? deck.mocha.surface0 : deck.baseOuter, 1.9) }
+                    GradientStop { position: 1.0; color: deck.look === "paper" ? deck.mocha.base : Qt.darker(deck.look === "" ? deck.mocha.surface0 : deck.baseOuter, 1.3) }
+                }
                 border.width: 1
                 border.color: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.72)
                 Rectangle {
@@ -924,7 +1020,21 @@ Item {
                     width: parent.width / 3
                     height: width
                     radius: width / 2
-                    color: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.92)
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: Qt.lighter(deck.baseAccent, 1.3) }
+                        GradientStop { position: 1.0; color: Qt.darker(deck.baseAccent, 1.4) }
+                    }
+                }
+                // Glanspuntje linksboven.
+                Rectangle {
+                    visible: deck.look !== "paper"
+                    x: parent.width * 0.2
+                    y: parent.height * 0.14
+                    width: parent.width * 0.22
+                    height: width * 0.6
+                    radius: height / 2
+                    rotation: -35
+                    color: Qt.rgba(1, 1, 1, 0.35)
                 }
             }
         }

@@ -5,6 +5,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- Fix: spoelen haperde. De schaduw van de arm wordt nu één keer getekend en alleen verschoven, in plaats van bij elke stap van het optillen opnieuw met vervaging.
+- Fix: de plaat draaide schokkerig. Hij draait nu op het ritme van het scherm, en de stroboscoopring maakt geen sprong meer bij elke omwenteling.
+- Headshell en element zijn groter en hebben dikte: een zijkant, een belicht element met glanslijn en een naaldhouder. Armvoet, pivotkapje, volumeschuif, armlift, lampje en 45-adapter hebben licht, schaduw en een zijkant.
+- Het lampje staat verder van de draaischijf.
+- De mat heeft een eigen tint, zodat een single niet meer wegvalt tegen een zwarte ondergrond.
+- De houtnerf wordt op één vaste grootte getekend en geschaald, zodat de kleine speler dezelfde nerf heeft als de grote.
 - Organic oogt weer als hout in plaats van futuristisch. De kleuren blijven uit het thema, maar zonder gloed: crèmekleurige knoppen, geborsteld metalen arm en draaischijfrand, een donkere houten rand en duidelijkere nerf.
 - Arm en knoppen hebben meer diepte: de buis is belicht als een cilinder, het contragewicht en de armvoet hebben licht en schaduw, en de knoppen hebben een zijkant en een slagschaduw.
 - START en 33/45 staan nu in de hoek langs de onderrand, niet meer op de draaischijf. Op 45 toeren gaat de lp eraf en komt er een single van 7 inch op, met een groot gat en de adapter op de as.
