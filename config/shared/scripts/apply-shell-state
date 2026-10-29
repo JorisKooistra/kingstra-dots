@@ -544,20 +544,11 @@ if [[ -f "$FIREFOX_COLORS" ]]; then
     touch "$FIREFOX_COLORS" 2>/dev/null || true
 fi
 
-# SDDM draait buiten de usersessie en leest zijn theme uit /usr/share.
-# Matugen schrijft daarom eerst veilig naar de user-cache; synchroniseer die
-# output alleen wanneer de installer de theme-directory schrijfbaar heeft
-# gemaakt. Een ontbrekende SDDM-installatie mag de overige templates niet
-# blokkeren.
-SDDM_COLORS="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/generated/sddm-colors.qml"
-SDDM_THEME_COLORS="/usr/share/sddm/themes/kingstra/Colors.qml"
-if [[ -f "$SDDM_COLORS" && -d "$(dirname "$SDDM_THEME_COLORS")" ]]; then
-    if [[ -w "$(dirname "$SDDM_THEME_COLORS")" ]]; then
-        install -m 0644 "$SDDM_COLORS" "$SDDM_THEME_COLORS" 2>/dev/null \
-            && _log "SDDM meerkleurenpalette bijgewerkt"
-    else
-        _warn "SDDM theme-directory niet schrijfbaar — Colors.qml niet bijgewerkt"
-    fi
+# SDDM leest buiten de usersessie: kopieer ook de wallpaper en schermindeling.
+SDDM_SYNC="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/kingstra-sddm-sync"
+if [[ -f "$SDDM_SYNC" ]]; then
+    python3 "$SDDM_SYNC" --wallpaper "${WALLPAPER:-}" \
+        || _warn "SDDM synchroniseren mislukt"
 fi
 
 # Pywalfox — Firefox UI theming (tabs, toolbar, borders).

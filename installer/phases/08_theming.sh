@@ -152,6 +152,7 @@ _phase08_deploy_state_scripts() {
         ["kingstra-mono-accent"]="kingstra-mono-accent"
         ["kingstra-idle-apply"]="kingstra-idle-apply"
         ["kingstra-idle-inhibit"]="kingstra-idle-inhibit"
+        ["kingstra-sddm-sync"]="kingstra-sddm-sync"
         ["kingstra-touch-detect"]="kingstra-touch-detect"
         ["kingstra-wallhaven-tags"]="kingstra-wallhaven-tags"
         ["kingstra-snapshot"]="kingstra-snapshot"

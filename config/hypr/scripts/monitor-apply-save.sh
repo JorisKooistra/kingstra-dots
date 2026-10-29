@@ -116,4 +116,10 @@ fi
 mv "$tmp_file" "$state_file"
 trap - EXIT
 
+# Bewaar dezelfde volgorde voor de volgende SDDM-login, zonder root-reload.
+sddm_sync="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../shared/scripts/kingstra-sddm-sync"
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" && -f "$sddm_sync" ]]; then
+    python3 "$sddm_sync" || true
+fi
+
 notify "Display Update" "Opgeslagen in monitors-local.lua"

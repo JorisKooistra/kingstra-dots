@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""Synchroniseer SDDM met de usersessie; --install plaatst ook de systeemconfig.
+
+Er wordt nooit een display manager herstart. Voer --install als gewone gebruiker
+uit; alleen het kopiëren van de voorbereide bestanden gebruikt sudo.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import time
+
+SOURCE = Path(__file__).resolve().parents[2] / "sddm"
+THEME = Path("/usr/share/sddm/themes/kingstra")
+XSETUP = Path("/usr/local/libexec/kingstra-sddm-xsetup")
+CONF = Path("/etc/sddm.conf.d/zz-kingstra.conf")
+BACKUPS = Path("/var/backups/kingstra-sddm")
+
+
+def atomic_copy(source, destination):
+    with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as tmp:
+        staged = Path(tmp.name)
+    try:
+        shutil.copyfile(source, staged)
+        staged.chmod(0o644)
+        staged.replace(destination)
+    finally:
+        staged.unlink(missing_ok=True)
+
+
+def hypr_json(command):
+    try:
+        result = subprocess.run(["hyprctl", command, "-j"], capture_output=True,
+                                text=True, timeout=3, check=True)
+        return json.loads(result.stdout)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+def sync(destination, wallpaper=None):
+    config = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
+    cache = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
+    palette = config / "matugen/generated/sddm-colors.qml"
+    if palette.is_file():
+        atomic_copy(palette, destination / "Colors.qml")
+    if not wallpaper:
+        for state in (cache / "skwd-wall/current_wallpaper", cache / "kingstra/last-wallpaper"):
+            if state.is_file() and Path(state.read_text().strip()).is_file():
+                wallpaper = state.read_text().strip()
+                break
+    if wallpaper and Path(wallpaper).is_file():
+        # SDDM kan een privé-homemap niet lezen. Kopieer de echte afbeelding.
+        atomic_copy(wallpaper, destination / "background.img")
+        with tempfile.NamedTemporaryFile(mode="w", dir=destination, delete=False) as tmp:
+            tmp.write("[General]\nbackground=background.img\nInputMethod=\n")
+        Path(tmp.name).chmod(0o644)
+        Path(tmp.name).replace(destination / "theme.conf")
+    monitors = hypr_json("monitors")
+    devices = hypr_json("devices")
+    if monitors:
+        profile = {"monitors": monitors, "keyboard": next(
+            (k for k in (devices or {}).get("keyboards", []) if k.get("main")), {})}
+        with tempfile.NamedTemporaryFile(mode="w", dir=destination, delete=False) as tmp:
+            json.dump(profile, tmp)
+        Path(tmp.name).chmod(0o644)
+        Path(tmp.name).replace(destination / "displays.json")
+
+
+def install_system(stage, uid, gid):
+    if os.geteuid() != 0:
+        raise SystemExit("Systeeminstallatie vereist sudo")
+    backup = BACKUPS / time.strftime("%Y%m%d-%H%M%S")
+    backup.mkdir(parents=True, exist_ok=False)
+    for path in (THEME, CONF, XSETUP):
+        if path.exists():
+            target = backup / path.name
+            if path.is_dir():
+                shutil.copytree(path, target)
+            else:
+                shutil.copy2(path, target)
+    THEME.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(stage / "theme", THEME, dirs_exist_ok=True)
+    for path in [THEME, *THEME.rglob("*")]:
+        os.chown(path, uid, gid)
+        path.chmod(0o755 if path.is_dir() else 0o644)
+    for source, target, mode in ((stage / "Xsetup.py", XSETUP, 0o755),
+                                 (stage / "kingstra.conf", CONF, 0o644)):
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        os.chown(target, 0, 0)
+        target.chmod(mode)
+    print(f"SDDM ingesteld; backup: {backup}. Wordt actief bij de volgende login.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--wallpaper")
+    parser.add_argument("--install", action="store_true")
+    parser.add_argument("--system-install", nargs=3, metavar=("STAGE", "UID", "GID"), help=argparse.SUPPRESS)
+    args = parser.parse_args()
+    if args.system_install:
+        stage, uid, gid = args.system_install
+        install_system(Path(stage), int(uid), int(gid))
+    elif args.install:
+        if os.geteuid() == 0:
+            raise SystemExit("Start --install zonder sudo, vanuit je eigen sessie.")
+        with tempfile.TemporaryDirectory(prefix="kingstra-sddm-") as temp:
+            stage = Path(temp)
+            shutil.copytree(SOURCE / "themes/kingstra", stage / "theme")
+            sync(stage / "theme", args.wallpaper)
+            shutil.copyfile(SOURCE / "Xsetup.py", stage / "Xsetup.py")
+            shutil.copyfile(SOURCE / "kingstra.conf", stage / "kingstra.conf")
+            subprocess.run(["sudo", "/usr/bin/python3", "-I", str(Path(__file__).resolve()),
+                            "--system-install", str(stage), str(os.getuid()), str(os.getgid())], check=True)
+    elif THEME.is_dir() and os.access(THEME, os.W_OK):
+        sync(THEME, args.wallpaper)
+
+
+if __name__ == "__main__":
+    main()

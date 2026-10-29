@@ -115,7 +115,11 @@ Rectangle {
         Keys.onPressed: (event) => {
             if (!root.inputActive) {
                 root.inputActive = true
-                event.accepted   = true
+                passwordField.forceActiveFocus()
+                // De toets die het invoerveld opent hoort bij het wachtwoord.
+                if (event.text && event.text.length > 0 && event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter)
+                    passwordField.insert(passwordField.cursorPosition, event.text)
+                event.accepted = true
             }
         }
     }

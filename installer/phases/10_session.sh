@@ -56,7 +56,6 @@ _phase10_install_sddm() {
 }
 
 _phase10_install_sddm_theme() {
-    local theme_src="$REPO_ROOT/config/sddm/themes/kingstra"
     local theme_dest="/usr/share/sddm/themes/kingstra"
 
     if "${DRY_RUN:-false}"; then
@@ -64,25 +63,10 @@ _phase10_install_sddm_theme() {
         return 0
     fi
 
-    backup_system_path "$theme_dest"
-    sudo mkdir -p "$theme_dest"
-    sudo cp -r "$theme_src/." "$theme_dest/"
-    log_ok "SDDM-theme geïnstalleerd: $theme_dest"
-
-    # Schrijfrechten geven voor matugen (Colors.qml wordt gegenereerd)
-    sudo chmod 777 "$theme_dest"
-    log_ok "Matugen kan Colors.qml schrijven naar $theme_dest"
-
-    # Wallpaper uit kingstra state instellen als theme-achtergrond
-    local state_file="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper"
-    if [[ -f "$state_file" ]]; then
-        local wallpaper
-        wallpaper="$(cat "$state_file")"
-        if [[ -f "$wallpaper" ]]; then
-            sudo sed -i "s|^background=.*|background=$wallpaper|" "$theme_dest/theme.conf"
-            log_ok "SDDM-wallpaper ingesteld: $wallpaper"
-        fi
-    fi
+    # Bereidt wallpaper, palette en displays voor in de usersessie; alleen de
+    # plaatsing vraagt sudo. Geen 777-directory en geen verwijzing naar ~/Pictures.
+    python3 "$REPO_ROOT/config/shared/scripts/kingstra-sddm-sync" --install
+    log_ok "SDDM-theme, wallpaper en schermindeling geïnstalleerd"
 }
 
 _phase10_generate_hyprlock() {
@@ -245,7 +229,7 @@ EOF
 
 _phase10_deploy_sddm_config() {
     local sddm_conf_src="$REPO_ROOT/config/sddm/kingstra.conf"
-    local sddm_conf_dest="/etc/sddm.conf.d/kingstra.conf"
+    local sddm_conf_dest="/etc/sddm.conf.d/zz-kingstra.conf"
 
     if "${DRY_RUN:-false}"; then
         log_dry "SDDM-config zou worden geplaatst: $sddm_conf_dest (vereist sudo)"

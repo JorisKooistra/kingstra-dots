@@ -9,7 +9,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Pam
 import Quickshell.Services.Mpris
-import "../" // Assuming scaler.qml is available here
+import "lock"
 
 ShellRoot {
     id: root
@@ -30,6 +30,17 @@ ShellRoot {
     readonly property color peach: _theme.peach
     readonly property color blue: _theme.blue
     readonly property color green: _theme.green
+    property string wallpaperPath: ""
+
+    Process {
+        command: ["bash", "-c",
+            "for state in \"$1/skwd-wall/current_wallpaper\" \"$1/kingstra/last-wallpaper\"; do if [ -f \"$state\" ]; then IFS= read -r wall < \"$state\"; if [ -f \"$wall\" ]; then printf '%s' \"$wall\"; break; fi; fi; done",
+            "lock-wallpaper", Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: root.wallpaperPath = this.text.trim()
+        }
+    }
 
     // Persistent Settings
     Settings {
@@ -41,129 +52,21 @@ ShellRoot {
         property int revealDuration: 300
     }
 
-    // Shared state across all monitors
-    QtObject {
+    // Shared authentication state; input focus stays local to each screen.
+    LockAuthController {
         id: lockUI
-        property bool failed: false
-        property bool authenticating: false
-        property bool fingerprintAvailable: false
-        property bool fingerprintEnabled: false
-        property bool passwordMode: false
-        property bool switchingAuthMode: false
-        property string pendingPassword: ""
-        property string statusText: "Locked"
-        readonly property string fingerprintStatus: "Touch fingerprint"
-
-        function startFingerprintAuth(preserveFeedback) {
-            pendingPassword = "";
-            passwordMode = false;
-            fingerprintEnabled = fingerprintAvailable;
-            authenticating = false;
-            if (!preserveFeedback) failed = false;
-            pam.config = "hyprlock";
-            pam.start();
-            if (!preserveFeedback) statusText = fingerprintAvailable ? fingerprintStatus : "Locked";
-        }
-
-        function startPasswordAuth(preserveFeedback) {
-            fingerprintEnabled = false;
-            passwordMode = true;
-            authenticating = false;
-            if (!preserveFeedback) failed = false;
-            pam.config = "login";
-            pam.start();
-            if (!preserveFeedback) statusText = "Enter password";
-        }
-
-        function switchToPassword() {
-            if (passwordMode) return;
-            fingerprintEnabled = false;
-            switchingAuthMode = true;
-            statusText = "Enter password";
-
-            if (pam.active) {
-                pam.abort();
-            } else {
-                switchingAuthMode = false;
-                startPasswordAuth();
-            }
-        }
-
-        function submitPassword(password) {
-            if (password.length === 0 || authenticating) return;
-
-            pendingPassword = password;
-            if (!passwordMode && !pam.responseRequired) {
-                switchToPassword();
-                return;
-            }
-
-            if (!passwordMode) {
-                fingerprintEnabled = false;
-                passwordMode = true;
-            }
-
-            authenticating = true;
-            statusText = "Authenticating...";
-            failed = false;
-
-            if (pam.responseRequired) {
-                pam.respond(pendingPassword);
-                pendingPassword = "";
-            }
+        pam: pamContext
+        onUnlocked: {
+            rootLock.locked = false;
+            Qt.quit();
         }
     }
 
-    // System Authentication hook
     PamContext {
-        id: pam
-        config: "hyprlock"
-        
-        Component.onCompleted: pam.start()
-
-        onPamMessage: {
-            if (responseRequired) {
-                lockUI.fingerprintEnabled = false;
-                lockUI.passwordMode = true;
-                if (!lockUI.authenticating) {
-                    lockUI.statusText = "Enter password";
-                }
-            } else if (!lockUI.passwordMode && message.toLowerCase().indexOf("finger") >= 0) {
-                lockUI.fingerprintEnabled = true;
-                lockUI.statusText = lockUI.fingerprintStatus;
-            } else if (!lockUI.passwordMode && message.toLowerCase().indexOf("timed out") >= 0) {
-                lockUI.fingerprintEnabled = false;
-                lockUI.statusText = "Enter password";
-            }
-
-            if (lockUI.passwordMode && responseRequired && lockUI.pendingPassword.length > 0) {
-                lockUI.authenticating = true;
-                lockUI.statusText = "Authenticating...";
-                lockUI.failed = false;
-                pam.respond(lockUI.pendingPassword);
-                lockUI.pendingPassword = "";
-            }
-        }
-
-        onCompleted: (result) => {
-            lockUI.authenticating = false;
-            if (result === PamResult.Success) {
-                rootLock.locked = false;
-                Qt.quit();
-            } else if (lockUI.switchingAuthMode) {
-                lockUI.switchingAuthMode = false;
-                lockUI.startPasswordAuth();
-            } else {
-                lockUI.failed = true;
-                lockUI.statusText = "Access Denied";
-                lockUI.pendingPassword = "";
-                if (lockUI.passwordMode) {
-                    lockUI.startPasswordAuth(true);
-                } else {
-                    lockUI.startFingerprintAuth(true);
-                }
-            }
-        }
+        id: pamContext
+        config: "login"
+        onPamMessage: lockUI.handleMessage()
+        onCompleted: (result) => lockUI.complete(result === PamResult.Success)
     }
 
     Process {
@@ -177,8 +80,7 @@ ShellRoot {
         onExited: (exitCode) => {
             lockUI.fingerprintAvailable = exitCode === 0;
             if (!lockUI.passwordMode) {
-                lockUI.fingerprintEnabled = lockUI.fingerprintAvailable;
-                lockUI.statusText = lockUI.fingerprintAvailable ? lockUI.fingerprintStatus : "Locked";
+                if (lockUI.fingerprintAvailable) lockUI.startFingerprintAuth();
             }
         }
         Component.onCompleted: running = true
@@ -288,7 +190,7 @@ ShellRoot {
                 readonly property real sc: scaler.baseScale
                 // --------------------------------
 
-                property string staticWallpaperPath: "file:///tmp/lock_bg.png"
+                readonly property string staticWallpaperPath: root.wallpaperPath
 
                 property bool hasBattery: false
                 property string batPct: "100"
@@ -349,13 +251,16 @@ ShellRoot {
                 
                 Process {
                     id: kbPoller
-                    command: ["bash", "-c", "hyprctl devices -j | jq -r '.keyboards[] | select(.main == true) | .active_keymap' | head -n1 | cut -c1-2 | tr '[:lower:]' '[:upper:]'"]
+                    command: ["hyprctl", "devices", "-j"]
                     stdout: StdioCollector {
                         onStreamFinished: {
-                            let layout = this.text.trim();
-                            if (layout !== "" && layout !== "null") {
-                                screenRoot.kbLayout = layout;
-                            }
+                            try {
+                                let keyboard = JSON.parse(this.text).keyboards.find(k => k.main);
+                                if (keyboard) screenRoot.kbLayout = keyboard.layout.toUpperCase()
+                                    + (keyboard.variant ? " · " + keyboard.variant : "")
+                                    + (keyboard.capsLock ? " · CAPS" : "")
+                                    + (keyboard.numLock ? " · NUM" : " · Num Lock off");
+                            } catch (e) {}
                         }
                     }
                 }
@@ -862,6 +767,9 @@ ShellRoot {
                                 }
 
                                 Text {
+                                    Layout.maximumWidth: 460 * screenRoot.sc
+                                    wrapMode: Text.WordWrap
+                                    horizontalAlignment: Text.AlignHCenter
                                     font.family: ThemeConfig.textFont
                                     font.pixelSize: 14 * screenRoot.sc
                                     font.weight: Font.Medium
@@ -922,13 +830,9 @@ ShellRoot {
                                     
                                     property string oldText: ""
                                     
-                                    Component.onCompleted: forceActiveFocus()
-                                    
-                                    onActiveFocusChanged: {
-                                        if (!activeFocus && !screenRoot.powerMenuOpen && !screenRoot.isPlayingIntro) {
-                                            forceActiveFocus();
-                                        }
-                                    }
+                                    // Each output owns its focus. Reclaiming it on focus loss
+                                    // makes three lock surfaces fight and splits typed passwords.
+                                    focus: true
 
                                     Keys.onPressed: (event) => {
                                         if (event.key === Qt.Key_Escape) {
@@ -1602,7 +1506,7 @@ ShellRoot {
                         }
 
                         PropertyAction { target: screenRoot; property: "isPlayingIntro"; value: false }
-                        ScriptAction { script: { inputField.text = ""; inputField.forceActiveFocus(); } }
+                        ScriptAction { script: inputField.text = "" }
                     }
                 }
             }
