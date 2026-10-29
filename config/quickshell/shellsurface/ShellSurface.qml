@@ -65,7 +65,7 @@ Scope {
                     visible: chrome.frameEnabled
                     group: chrome.edgeBlobGroup
                     radius: chrome.cornerR
-                    borderLeft: chrome.railWidth - anchors.margins
+                    borderLeft: chrome.railExtent - anchors.margins
                     borderRight: chrome.shellBorderWidth - anchors.margins
                     borderTop: chrome.stripHeight - anchors.margins
                     borderBottom: chrome.shellBorderWidth - anchors.margins
@@ -89,6 +89,7 @@ Scope {
                     shellWindow: surfaceWindow
                     mocha: mocha
                     z: 40
+                    railHold: panelHost.open
                     // Uitgroeiende randpanelen worden als één edge-blob in de
                     // chrome opgenomen. De launcher is nu de eerste gebruiker.
                     edgeBlobOpen: panelHost.visualFromEdge && (panelHost.open || panelHost.width > 1 || panelHost.height > 1)
@@ -136,9 +137,9 @@ Scope {
                     shellWindow: surfaceWindow
                     mocha: mocha
                     activeMode: chrome.activeMode
-                    leftInset: chrome.railWidth
+                    leftInset: chrome.railExtent
                     rightInset: ThemeConfig.barRailEnabled && ThemeConfig.barRailEdge === "right"
-                        ? chrome.railWidth : chrome.shellBorderWidth
+                        ? chrome.railExtent : chrome.shellBorderWidth
                     topInset: chrome.stripHeight
                     // Het eiland toont meldingen zelf; staat dat uit, dan
                     // komen deze kaartjes terug.
@@ -169,9 +170,9 @@ Scope {
                     id: closeDismissLayer
 
                     readonly property int railInset: ThemeConfig.barRailEnabled
-                        && ThemeConfig.barRailEdge === "left" ? chrome.railWidth : 0
+                        && ThemeConfig.barRailEdge === "left" ? Math.ceil(chrome.railExtent) : 0
                     readonly property int rightInset: ThemeConfig.barRailEnabled
-                        && ThemeConfig.barRailEdge === "right" ? chrome.railWidth : 0
+                        && ThemeConfig.barRailEdge === "right" ? Math.ceil(chrome.railExtent) : 0
                     readonly property int topInset: ThemeConfig.barStatusStripEnabled
                         && ThemeConfig.barStatusStripEdge === "top" ? chrome.stripHeight : 0
                     readonly property int bottomInset: ThemeConfig.barStatusStripEnabled
@@ -305,12 +306,14 @@ Scope {
                     anchors.right: ThemeConfig.barRailEdge === "right"
                     anchors.top: true
                     anchors.bottom: true
-                    implicitWidth: ThemeConfig.barRailWidth
+                    // Bij autohide reserveert de rail alleen de dunne rand;
+                    // vensters schuiven dan over de volle breedte.
+                    implicitWidth: Math.max(1, chrome.railReservedWidth)
                     color: "transparent"
                     mask: Region {}
                     WlrLayershell.namespace: "quickshell:kingstra-shell-rail-reservation"
                     WlrLayershell.layer: WlrLayer.Top
-                    WlrLayershell.exclusiveZone: ThemeConfig.barRailWidth
+                    WlrLayershell.exclusiveZone: chrome.railReservedWidth
                     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
                 }
 

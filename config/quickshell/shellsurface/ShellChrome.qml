@@ -383,7 +383,27 @@ Item {
     property int flatpakUpdateCount: 0
     property int dotfilesUpdateCount: 0
     property int dotfilesCommitCount: 0
-    readonly property bool railContentVisible: !barAutoHide || autoHideVisible || railHover.hovered
+    // Houdt de rail uitgeklapt zolang er een paneel open is (gezet door
+    // ShellSurface), anders schuift hij weg onder een paneel dat eraan hangt.
+    property bool railHold: false
+    readonly property bool railContentVisible: !barAutoHide || autoHideVisible || railHover.hovered || railHold
+    // Automatisch verbergen schuift de rail écht weg: wat overblijft is de
+    // dunne omlijsting (even breed als rechts/onder), en de gereserveerde
+    // ruimte krimpt mee zodat vensters de volle breedte krijgen. Bij hover op
+    // die rand klapt de rail er over de vensters heen weer uit.
+    readonly property bool railAutoHidden: railEnabled && barAutoHide
+    readonly property int railHiddenExtent: frameEnabled ? shellBorderWidth : 2
+    property real railReveal: !railAutoHidden || railContentVisible ? 1 : 0
+    Behavior on railReveal {
+        NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
+    }
+    // Zichtbare breedte van de rail, tussen dunne rand en volle rail.
+    readonly property real railExtent: railHiddenExtent + (railWidth - railHiddenExtent) * railReveal
+    // Wat de rail bij de compositor reserveert. Bij autohide alleen de rand:
+    // de uitgeklapte rail ligt dan tijdelijk over de vensters heen.
+    readonly property int railReservedWidth: railAutoHidden
+        ? (frameEnabled ? shellBorderWidth : 0) : railWidth
+    onRailHoldChanged: if (!railHold && barAutoHide) autoHideTimer.restart()
     readonly property bool stripContentVisible: !barAutoHide || autoHideVisible || stripHover.hovered
     // Anker van de laatst getriggerde knop (host-coords), zodat panelen uit
     // de knop groeien i.p.v. uit een vaste schermhoek.
@@ -920,7 +940,7 @@ Item {
         anchors.bottomMargin: root.railBottomOffset
         anchors.left: root.railOnRight ? undefined : parent.left
         anchors.right: root.railOnRight ? parent.right : undefined
-        width: root.railEnabled ? root.railWidth : 0
+        width: root.railEnabled ? Math.ceil(root.railExtent) : 0
 
         HoverHandler {
             id: railHover
@@ -974,24 +994,26 @@ Item {
     Rectangle {
         id: rail
         visible: root.railEnabled
-        anchors.fill: railHitArea
-        // De blob-shader tekent de accentband op de binnenrand van de
+        // Altijd volle breedte, zodat de knoppen niet samengeperst worden; bij
+        // autohide schuift het hele vlak naar buiten tot alleen de rand over
+        // is. De blob-shader tekent de accentband op de binnenrand van de
         // omlijsting; laat die strook vrij in plaats van hem dicht te verven.
-        anchors.rightMargin: root.frameEnabled && !root.railOnRight ? root.frameBandW : 0
-        anchors.leftMargin: root.frameEnabled && root.railOnRight ? root.frameBandW : 0
+        anchors.top: railHitArea.top
+        anchors.bottom: railHitArea.bottom
+        anchors.left: root.railOnRight ? undefined : parent.left
+        anchors.right: root.railOnRight ? parent.right : undefined
+        width: root.railWidth - (root.frameEnabled ? root.frameBandW : 0)
         gradient: Gradient {
             orientation: Gradient.Vertical
             GradientStop { position: 0.0; color: root._diagColor(root.railWidth / 2, 0) }
             GradientStop { position: 1.0; color: root._diagColor(root.railWidth / 2, root.height) }
         }
         border.width: 0
-        opacity: root.railContentVisible ? root.chromePresence : 0.82
+        opacity: root.chromePresence
         transform: Translate {
             id: railSlide
-            x: root.railContentVisible ? 0 : (root.railOnRight ? root.railWidth - 7 : -root.railWidth + 7)
-            Behavior on x {
-                NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
-            }
+            // railExtent is zelf al geanimeerd; geen tweede Behavior nodig.
+            x: root.railOnRight ? root.railWidth - root.railExtent : root.railExtent - root.railWidth
         }
         Behavior on opacity {
             NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
@@ -1022,7 +1044,9 @@ Item {
             anchors.fill: parent
             anchors.margins: 7
             spacing: 7
-            opacity: root.railModulePresence
+            // Knoppen vervagen sneller dan het vlak wegschuift, zodat er in de
+            // dunne rand geen halve iconen blijven hangen.
+            opacity: root.railModulePresence * Math.max(0, Math.min(1, root.railReveal * 1.6 - 0.6))
 
             Behavior on opacity {
                 NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
@@ -1308,9 +1332,9 @@ Item {
         // Tijdens bottom/geen-rail → top/rail kan Qt beide tegenoverliggende
         // anchors een frame vasthouden. Dan rekt deze strip over het hele
         // scherm en bedekt hij alle surfaces onder het layer-shell-venster.
-        x: root.railEnabled && !root.railOnRight ? root.railWidth : 0
+        x: root.railEnabled && !root.railOnRight ? root.railExtent : 0
         y: root.stripOnBottom ? root.height - root.stripHeight : 0
-        width: Math.max(0, root.width - (root.railEnabled ? root.railWidth : 0))
+        width: Math.max(0, root.width - (root.railEnabled ? root.railExtent : 0))
         height: root.stripHeight
 
         Item {
@@ -1569,9 +1593,9 @@ Item {
     Rectangle {
         id: bottomBorder
         visible: root.frameEnabled
-        x: root.railWidth
+        x: root.railExtent
         y: root.height - root.shellBorderWidth + root.frameBandW
-        width: root.width - root.railWidth - root.shellBorderWidth
+        width: root.width - root.railExtent - root.shellBorderWidth
         height: root.shellBorderWidth - root.frameBandW
         gradient: Gradient {
             orientation: Gradient.Horizontal
@@ -1590,7 +1614,7 @@ Item {
         layer.smooth: true
         layer.samples: 4
 
-        readonly property real l: root.railWidth + root.frameBandW + 2
+        readonly property real l: root.railExtent + root.frameBandW + 2
         readonly property real t: root.stripHeight + root.frameBandW + 2
         readonly property real r: root.width - root.shellBorderWidth - root.frameBandW - 2
         readonly property real b: root.height - root.shellBorderWidth - root.frameBandW - 2

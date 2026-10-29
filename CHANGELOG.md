@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Rail: automatisch verbergen verbergt nu echt
+- Met "automatisch verbergen" (per scherm of via de mode) schuift de rail nu helemaal weg tot alleen de dunne omlijsting over is, even breed als rechts en onder. Eerder bleef er een lege railstrook met gereserveerde ruimte tussen de vensters staan.
+- De gereserveerde ruimte krimpt mee: vensters krijgen de volle breedte. Bij hover op de linkerrand klapt de rail er vloeiend over de vensters heen uit en na 2,4 s zonder hover schuift hij weer weg; zolang een paneel open is blijft hij staan.
+- Omlijsting, bovenstrook, onderrand, meldingen en het eiland schuiven mee met de rail, dus de ronde hoeken blijven heel. Knoppen behouden hun breedte en vervagen tijdens het wegschuiven.
+
 ### Bediening: alles in één overlay (Super+A)
 - Nieuwe overlay `control/ControlOverlay.qml`, geopend met Super+A of via het toetsenbordmenu, in dezelfde qs-master als de thema- en modekiezer. Drie kolommen tegelijk zichtbaar: thema (met voorbeelden) en wallpaper (miniaturen, willekeurig, grote kiezer); mode voor de hele desktop, mode per scherm via een schermkaartje, wallpaper-effect en energieprofiel; indeling van de werkruimte, kolombreedte, snap-sterkte als schuif en de rail per scherm (onderdelen, automatisch verbergen, herstellen).
 - Gebruikt dezelfde helpers als Instellingen › Overzicht en › Bediening (`kingstra mode/theme/wallpaper`, `workspace-layout.py`, `werkvlak-settings.py`, `screen-profile.py`, `powerprofilesctl`); die tabbladen en de losse kiezers (Super+Ctrl+T, Super+Ctrl+M) blijven zoals ze waren.
