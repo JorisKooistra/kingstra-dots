@@ -52,6 +52,14 @@ Item {
     property bool hoverRequest: false
     readonly property bool railOnRight: ThemeConfig.barRailEdge === "right"
     readonly property int railWidth: ThemeConfig.barRailWidth
+    // Indeling per thema (RailLayout): volgorde van de hoofdrail en wat op de
+    // tweede rail aan de overkant staat. Die tweede rail verschijnt zodra je
+    // er in Rail-indeling iets op zet.
+    readonly property var mainRailItems: railEnabled ? RailLayout.main : []
+    readonly property var secondRailItems: railEnabled ? RailLayout.second : []
+    readonly property bool secondRailEnabled: secondRailItems.length > 0
+    readonly property bool secondRailOnRight: !railOnRight
+    readonly property int workspaceCount: RailLayout.workspaceCount
     // Als alle statusstrip-content naar de rail is verhuisd, blijft boven alleen
     // de omlijsting over. Die hoort even dun te zijn als de onderrand.
     readonly property int stripHeight: stripControlsEnabled ? ThemeConfig.barStatusStripHeight : shellBorderWidth
@@ -1052,275 +1060,15 @@ Item {
                 NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
             }
 
-            RailButton { tooltip: "Launcher";
-                icon: "󰣇"
-                accent: root.hotColor
-                onTriggered: root.togglePanel("launcher")
-            }
-
-            ColumnLayout {
-                visible: root.moduleEnabled("workspaces")
-                Layout.fillWidth: true
-                spacing: 4
-                Repeater {
-                    model: 8
-                    delegate: Rectangle {
-                        id: workspacePill
-                        required property int index
-                        readonly property int wsId: index + 1
-                        readonly property string tooltipLabel: root.workspaceTooltip(wsId)
-                        readonly property bool active: Hyprland.focusedWorkspace !== null
-                            && Hyprland.focusedWorkspace.id === wsId
-                        readonly property bool occupied: {
-                            var list = Hyprland.workspaces.values;
-                            for (var i = 0; i < list.length; i++) {
-                                if (list[i].id === wsId && list[i].toplevels.values.length > 0) return true;
-                            }
-                            return false;
-                        }
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 30
-                        radius: Math.min(9, ThemeConfig.styleWidgetRadius)
-                        color: active ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.20)
-                            : (wsMouse.containsMouse ? root.pillHoverColor
-                                : (occupied ? Qt.rgba(root.pillColor.r, root.pillColor.g, root.pillColor.b, 0.92) : "transparent"))
-                        border.width: active ? 1 : (occupied ? 1 : 0)
-                        border.color: active ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.84)
-                            : Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.12)
-                        Behavior on color {
-                            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
-                        }
-
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            anchors.verticalCenter: parent.verticalCenter
-                            anchors.horizontalCenterOffset: active ? 2 : 0
-                            text: wsId
-                            font.family: ThemeConfig.textFont
-                            font.pixelSize: 12
-                            font.weight: active ? Font.Black : Font.Bold
-                            color: active ? root.hotColor : root.mocha.text
-                        }
-
-                        Rectangle {
-                            visible: active
-                            width: 3
-                            height: parent.height - 10
-                            radius: width / 2
-                            anchors.left: parent.left
-                            anchors.leftMargin: 5
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: root.hotColor
-                        }
-
-                        Rectangle {
-                            visible: occupied && !active
-                            width: 4
-                            height: width
-                            radius: width / 2
-                            anchors.right: parent.right
-                            anchors.rightMargin: 6
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: root.mocha.accent1
-                            opacity: 0.82
-                        }
-
-                        MouseArea {
-                            id: wsMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onEntered: root.showTooltip(workspacePill, workspacePill.tooltipLabel, true)
-                            onExited: root.hideTooltip(workspacePill.tooltipLabel)
-                            onClicked: root.switchWorkspace(wsId)
-                            onWheel: (wheel) => {
-                                root.handleWorkspaceWheel(wheel.angleDelta.y, 8);
-                                wheel.accepted = true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Special workspaces (scratchpads) — alleen tonen als ze bestaan.
-            ColumnLayout {
-                visible: root.specialWorkspaces.length > 0
-                Layout.fillWidth: true
-                spacing: 4
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 1
-                    Layout.topMargin: 2
-                    Layout.bottomMargin: 2
-                    color: Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.14)
-                }
-
-                Repeater {
-                    model: root.specialWorkspaces
-                    delegate: Rectangle {
-                        id: spPill
-                        required property var modelData
-                        readonly property bool active: root.activeSpecial === modelData.wsName
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 26
-                        radius: Math.min(7, ThemeConfig.styleWidgetRadius)
-                        color: active ? root.hotColor
-                            : (spMouse.containsMouse ? root.pillHoverColor : root.pillColor)
-                        scale: spMouse.containsMouse ? 1.07 : 1.0
-                        Behavior on color {
-                            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
-                        }
-                        Behavior on scale {
-                            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
-                        }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: root.specialIcon(spPill.modelData.wsName)
-                            font.family: ThemeConfig.iconFont
-                            font.pixelSize: 14
-                            color: spPill.active ? root.mocha.base : root.mocha.text
-                        }
-
-                        MouseArea {
-                            id: spMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onEntered: root.showTooltip(spPill, spPill.modelData.wsName, true)
-                            onExited: root.hideTooltip(spPill.modelData.wsName)
-                            onClicked: root.toggleSpecial(spPill.modelData.wsName)
-                        }
-                    }
-                }
-            }
-
-            // Uitzoomen: op het ruimtelijk werkvlak de kaart met al je
-            // vensters, elders het werkruimte-overzicht (zelfde als Super+Tab).
-            RailButton { tooltip: "Uitzoomen";
-                icon: "󰊢"
-                accent: root.mocha.accent3
-                onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/overview-toggle.sh"])
-            }
-
-            // Kleine adem tussen navigatie en de statusgroep.
-            Item { Layout.fillWidth: true; Layout.preferredHeight: 6 }
-
-            // Midden: wat aandacht vraagt. Meldingen staan nu bij de andere
-            // statusknoppen in plaats van tussen launcher en werkruimtes.
-            // Meldingen: teller als er iets ligt, ander icoon bij Niet storen.
-            // Middelklik zet Niet storen aan of uit.
-            RailButton {
-                tooltip: root.notificationTooltip
-                available: root.moduleEnabled("notifications")
-                tucked: root.railTucked("notifications")
-                icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜")
-                badge: NotificationService.dnd ? 0 : NotificationService.count
-                accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2
-                onTriggered: root.togglePanel("notifications")
-                onMiddleClicked: NotificationService.toggleDnd()
-            }
-
-            // Focus (schermtijd) staat nu als kaart in het dashboard en
-            // Monitoren als tegel Beeldschermen in Snelle instellingen.
-            RailButton { tooltip: "Systeem";
-                available: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps"])
-                tucked: root.railTucked("system")
-                icon: "󰍛"
-                accent: root.mocha.accent1
-                onTriggered: root.togglePanel("performance")
-            }
-
-            // Alleen zichtbaar als er iets bij te werken valt; bijwerken kan
-            // altijd via `kingstra update` of Instellingen.
-            RailButton {
-                tooltip: root.updateTooltip()
-                available: root.moduleEnabled("updates") && root.updateCount > 0
-                tucked: root.railTucked("updates")
-                icon: "󰚰"
-                text: root.updateCount.toString()
-                accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0
-                onTriggered: root.openUpdatesTerminal()
-            }
-
-            RailButton {
-                tooltip: "Games"
-                available: root.moduleEnabled("game_launcher")
-                tucked: root.railTucked("games")
-                icon: "󰊴"
-                accent: root.mocha.accent2
-                onTriggered: root.togglePanel("gaming")
-            }
-
-            // Vastgepinde modules uit het controlecentrum: één klik schakelt,
-            // middelklik maakt los (rechtsklik op de pil pint weer vast).
             Repeater {
-                model: root.screenPins
-                delegate: RailButton {
-                    required property string modelData
-                    tucked: root.railTucked("pins")
-                    tooltip: root.pinTooltip(modelData)
-                    icon: root.pinIcon(modelData)
-                    accent: root.pinActive(modelData) ? root.mocha.accent3 : root.mocha.subtext0
-                    onTriggered: root.pinTrigger(modelData)
-                    onMiddleClicked: ScreenProfiles.togglePinOn(root.profileScreen, modelData)
-                }
+                model: root.mainRailItems
+                delegate: RailSlot {}
             }
-
-            // Meer: toont of verbergt wat in Bediening achter Meer staat.
-            RailButton {
-                tooltip: root.railMoreOpen ? "Minder" : "Meer (" + root.railOverflow.length + ")"
-                available: root.railOverflow.length > 0
-                icon: root.railMoreOpen ? "󰅃" : "󰇘"
-                accent: root.mocha.subtext1
-                onTriggered: root.railMoreOpen = !root.railMoreOpen
-            }
-
-            Item { Layout.fillHeight: true }
-
-            // Systeemvak: kwam in de oude bar mee, ontbrak sinds de rail.
-            TrayGrid {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: implicitWidth
-                Layout.preferredHeight: implicitHeight
-                vertical: true
-            }
-
-            // Geluid & media: volume met percentage (scrollen = volume,
-            // middelklik = dempen) en, als er iets speelt, een play/pause-knop
-            // eronder. Klik opent het paneel Geluid & media.
-            AudioTile {
-                visible: root.audioTileVisible
-                onTriggered: root.togglePanel("audiomedia")
-                onWheelDelta: (delta) => root.handleVolumeWheel(delta)
-                onMiddleClicked: root.toggleMute()
-            }
-
-            // Compacte statustegel voor netwerk, bluetooth en batterij. Klik
-            // opent het controlecentrum bovenaan, met doorverwijzing naar elk
-            // detailpaneel.
-            StatusTile {
-                visible: root.statusTileVisible
-                onTriggered: root.togglePanel("tophover")
-            }
-            // Klok onderaan bij de systeemknoppen, zoals in de meeste
-            // verticale balken; bovenaan staat alleen navigatie.
-            RailClock {
-                visible: root.moduleEnabled("clock")
-                onTriggered: root.togglePanel("calendar")
-            }
-
-            RailButton { tooltip: "Afsluitmenu";
-                tucked: root.railTucked("power")
-                icon: "󰐥"
-                accent: root.mocha.red
-                onTriggered: root.togglePanel("power")
-            }
-            RailButton { tooltip: "Instellingen";
-                available: root.activeMode !== "media"
-                tucked: root.railTucked("settings")
-                icon: "󰒓"
-                accent: root.mocha.subtext1
-                onTriggered: root.togglePanel("settings")
+            // Zonder "Duw naar onder" in de indeling blijft alles bovenaan in
+            // plaats van over de hoogte uitgesmeerd te worden.
+            Item {
+                visible: root.mainRailItems.indexOf("fill") === -1
+                Layout.fillHeight: true
             }
         }
     }
@@ -1409,7 +1157,7 @@ Item {
                 spacing: 6
 
                 Repeater {
-                    model: root.railEnabled || !root.moduleEnabled("workspaces") ? 0 : 8
+                    model: root.railEnabled || !root.moduleEnabled("workspaces") ? 0 : root.workspaceCount
                     delegate: Rectangle {
                         required property int index
                         readonly property int wsId: index + 1
@@ -1455,7 +1203,7 @@ Item {
                             hoverEnabled: true
                             onClicked: root.switchWorkspace(wsId)
                             onWheel: (wheel) => {
-                                root.handleWorkspaceWheel(wheel.angleDelta.y, 8);
+                                root.handleWorkspaceWheel(wheel.angleDelta.y, root.workspaceCount);
                                 wheel.accepted = true;
                             }
                         }
@@ -1899,6 +1647,401 @@ Item {
         }
     }
 
+    // --- Railonderdelen ------------------------------------------------------
+    // Elk onderdeel als los Component, zodat RailLayout de volgorde per thema
+    // bepaalt en een onderdeel ook op de tweede rail kan staan. RailSlot laadt
+    // ze; slotShown zegt of een onderdeel nu iets te tonen heeft.
+    Component {
+        id: launcherSlot
+        RailButton { tooltip: "Launcher";
+            icon: "󰣇"
+            accent: root.hotColor
+            onTriggered: root.togglePanel("launcher")
+        }
+    }
+    Component {
+        id: workspacesSlot
+        ColumnLayout {
+            readonly property bool slotShown: root.moduleEnabled("workspaces")
+            spacing: 4
+            Repeater {
+                model: root.workspaceCount
+                delegate: Rectangle {
+                    id: workspacePill
+                    required property int index
+                    readonly property int wsId: index + 1
+                    readonly property string tooltipLabel: root.workspaceTooltip(wsId)
+                    readonly property bool active: Hyprland.focusedWorkspace !== null
+                        && Hyprland.focusedWorkspace.id === wsId
+                    readonly property bool occupied: {
+                        var list = Hyprland.workspaces.values;
+                        for (var i = 0; i < list.length; i++) {
+                            if (list[i].id === wsId && list[i].toplevels.values.length > 0) return true;
+                        }
+                        return false;
+                    }
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 30
+                    radius: Math.min(9, ThemeConfig.styleWidgetRadius)
+                    color: active ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.20)
+                        : (wsMouse.containsMouse ? root.pillHoverColor
+                            : (occupied ? Qt.rgba(root.pillColor.r, root.pillColor.g, root.pillColor.b, 0.92) : "transparent"))
+                    border.width: active ? 1 : (occupied ? 1 : 0)
+                    border.color: active ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.84)
+                        : Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.12)
+                    Behavior on color {
+                        ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.horizontalCenterOffset: active ? 2 : 0
+                        text: wsId
+                        font.family: ThemeConfig.textFont
+                        font.pixelSize: 12
+                        font.weight: active ? Font.Black : Font.Bold
+                        color: active ? root.hotColor : root.mocha.text
+                    }
+
+                    Rectangle {
+                        visible: active
+                        width: 3
+                        height: parent.height - 10
+                        radius: width / 2
+                        anchors.left: parent.left
+                        anchors.leftMargin: 5
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: root.hotColor
+                    }
+
+                    Rectangle {
+                        visible: occupied && !active
+                        width: 4
+                        height: width
+                        radius: width / 2
+                        anchors.right: parent.right
+                        anchors.rightMargin: 6
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: root.mocha.accent1
+                        opacity: 0.82
+                    }
+
+                    MouseArea {
+                        id: wsMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: root.showTooltip(workspacePill, workspacePill.tooltipLabel, true)
+                        onExited: root.hideTooltip(workspacePill.tooltipLabel)
+                        onClicked: root.switchWorkspace(wsId)
+                        onWheel: (wheel) => {
+                            root.handleWorkspaceWheel(wheel.angleDelta.y, root.workspaceCount);
+                            wheel.accepted = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Special workspaces (scratchpads) — alleen tonen als ze bestaan.
+    Component {
+        id: specialsSlot
+        ColumnLayout {
+            readonly property bool slotShown: root.specialWorkspaces.length > 0
+            spacing: 4
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                Layout.topMargin: 2
+                Layout.bottomMargin: 2
+                color: Qt.rgba(root.mocha.text.r, root.mocha.text.g, root.mocha.text.b, 0.14)
+            }
+
+            Repeater {
+                model: root.specialWorkspaces
+                delegate: Rectangle {
+                    id: spPill
+                    required property var modelData
+                    readonly property bool active: root.activeSpecial === modelData.wsName
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 26
+                    radius: Math.min(7, ThemeConfig.styleWidgetRadius)
+                    color: active ? root.hotColor
+                        : (spMouse.containsMouse ? root.pillHoverColor : root.pillColor)
+                    scale: spMouse.containsMouse ? 1.07 : 1.0
+                    Behavior on color {
+                        ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                    }
+                    Behavior on scale {
+                        NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.specialIcon(spPill.modelData.wsName)
+                        font.family: ThemeConfig.iconFont
+                        font.pixelSize: 14
+                        color: spPill.active ? root.mocha.base : root.mocha.text
+                    }
+
+                    MouseArea {
+                        id: spMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: root.showTooltip(spPill, spPill.modelData.wsName, true)
+                        onExited: root.hideTooltip(spPill.modelData.wsName)
+                        onClicked: root.toggleSpecial(spPill.modelData.wsName)
+                    }
+                }
+            }
+        }
+    }
+    // Uitzoomen: op het ruimtelijk werkvlak de kaart met al je
+    // vensters, elders het werkruimte-overzicht (zelfde als Super+Tab).
+    Component {
+        id: overviewSlot
+        RailButton { tooltip: "Uitzoomen";
+            icon: "󰊢"
+            accent: root.mocha.accent3
+            onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/overview-toggle.sh"])
+        }
+    }
+    // Midden: wat aandacht vraagt. Meldingen staan nu bij de andere
+    // statusknoppen in plaats van tussen launcher en werkruimtes.
+    // Meldingen: teller als er iets ligt, ander icoon bij Niet storen.
+    // Middelklik zet Niet storen aan of uit.
+    Component {
+        id: notificationsSlot
+        RailButton {
+            tooltip: root.notificationTooltip
+            available: root.moduleEnabled("notifications")
+            icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜")
+            badge: NotificationService.dnd ? 0 : NotificationService.count
+            accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2
+            onTriggered: root.togglePanel("notifications")
+            onMiddleClicked: NotificationService.toggleDnd()
+        }
+    }
+    Component {
+        id: systemSlot
+        RailButton { tooltip: "Systeem";
+            available: root.anyModuleEnabled(["cpu_temp", "gpu_temp", "ram_usage", "fps"])
+            icon: "󰍛"
+            accent: root.mocha.accent1
+            onTriggered: root.togglePanel("performance")
+        }
+    }
+    // Alleen zichtbaar als er iets bij te werken valt; bijwerken kan
+    // altijd via `kingstra update` of Instellingen.
+    Component {
+        id: updatesSlot
+        RailButton {
+            tooltip: root.updateTooltip()
+            available: root.moduleEnabled("updates") && root.updateCount > 0
+            icon: "󰚰"
+            text: root.updateCount.toString()
+            accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0
+            onTriggered: root.openUpdatesTerminal()
+        }
+    }
+    Component {
+        id: gamesSlot
+        RailButton {
+            tooltip: "Games"
+            available: root.moduleEnabled("game_launcher")
+            icon: "󰊴"
+            accent: root.mocha.accent2
+            onTriggered: root.togglePanel("gaming")
+        }
+    }
+    // Vastgepinde modules uit het controlecentrum: één klik schakelt,
+    // middelklik maakt los (rechtsklik op de pil pint weer vast).
+    Component {
+        id: pinsSlot
+        ColumnLayout {
+            readonly property bool slotShown: root.screenPins.length > 0
+            spacing: 7
+            Repeater {
+                model: root.screenPins
+                delegate: RailButton {
+                    required property string modelData
+                    tooltip: root.pinTooltip(modelData)
+                    icon: root.pinIcon(modelData)
+                    accent: root.pinActive(modelData) ? root.mocha.accent3 : root.mocha.subtext0
+                    onTriggered: root.pinTrigger(modelData)
+                    onMiddleClicked: ScreenProfiles.togglePinOn(root.profileScreen, modelData)
+                }
+            }
+        }
+    }
+    // Meer: toont of verbergt wat in Bediening achter Meer staat.
+    Component {
+        id: moreSlot
+        RailButton {
+            tooltip: root.railMoreOpen ? "Minder" : "Meer (" + root.railOverflow.length + ")"
+            available: root.railOverflow.length > 0
+            icon: root.railMoreOpen ? "󰅃" : "󰇘"
+            accent: root.mocha.subtext1
+            onTriggered: root.railMoreOpen = !root.railMoreOpen
+        }
+    }
+    // Systeemvak: kwam in de oude bar mee, ontbrak sinds de rail.
+    Component {
+        id: traySlot
+        TrayGrid {
+            readonly property bool slotShown: root.trayShownCount > 0
+            vertical: true
+        }
+    }
+    // Geluid & media: volume met percentage (scrollen = volume,
+    // middelklik = dempen) en, als er iets speelt, een play/pause-knop
+    // eronder. Klik opent het paneel Geluid & media.
+    Component {
+        id: audioSlot
+        AudioTile {
+            readonly property bool slotShown: root.audioTileVisible
+            onTriggered: root.togglePanel("audiomedia")
+            onWheelDelta: (delta) => root.handleVolumeWheel(delta)
+            onMiddleClicked: root.toggleMute()
+        }
+    }
+    // Compacte statustegel voor netwerk, bluetooth en batterij. Klik
+    // opent het controlecentrum bovenaan, met doorverwijzing naar elk
+    // detailpaneel.
+    Component {
+        id: statusSlot
+        StatusTile {
+            readonly property bool slotShown: root.statusTileVisible
+            onTriggered: root.togglePanel("tophover")
+        }
+    }
+    // Klok onderaan bij de systeemknoppen, zoals in de meeste
+    // verticale balken; bovenaan staat alleen navigatie.
+    Component {
+        id: clockSlot
+        RailClock {
+            readonly property bool slotShown: root.moduleEnabled("clock")
+            onTriggered: root.togglePanel("calendar")
+        }
+    }
+    Component {
+        id: powerSlot
+        RailButton { tooltip: "Afsluitmenu";
+            icon: "󰐥"
+            accent: root.mocha.red
+            onTriggered: root.togglePanel("power")
+        }
+    }
+    Component {
+        id: settingsSlot
+        RailButton { tooltip: "Instellingen";
+            available: root.activeMode !== "media"
+            icon: "󰒓"
+            accent: root.mocha.subtext1
+            onTriggered: root.togglePanel("settings")
+        }
+    }
+    // Kleine adem, bijvoorbeeld tussen navigatie en de statusgroep.
+    Component {
+        id: gapSlot
+        Item {
+            readonly property bool slotShown: true
+            implicitHeight: 6
+        }
+    }
+    // Rekt mee en duwt alles eronder naar de onderkant van de rail.
+    Component {
+        id: fillSlot
+        Item { readonly property bool slotShown: true }
+    }
+    // Eigen app of launcher uit Rail-indeling. Een icoonnaam uit het
+    // icoonthema (zoals "firefox") wordt een plaatje, een Nerd Font-teken
+    // blijft tekst.
+    Component {
+        id: appSlot
+        RailButton {
+            id: appButton
+            readonly property string appKey: parent && parent.slotId !== undefined ? String(parent.slotId).substring(4) : ""
+            readonly property var appEntry: RailLayout.app(appKey)
+            readonly property string iconText: appEntry ? String(appEntry.icon || "") : ""
+            readonly property bool themedIcon: iconText.length > 2
+            readonly property string themedSource: themedIcon ? Quickshell.iconPath(iconText, true) : ""
+            available: appEntry !== null
+            tooltip: appEntry ? appEntry.name : ""
+            icon: themedSource !== "" ? "" : (themedIcon || iconText === "" ? "󰀻" : iconText)
+            accent: root.mocha.accent2
+            onTriggered: RailLayout.launch(appKey)
+            Image {
+                visible: appButton.themedSource !== ""
+                anchors.centerIn: parent
+                width: 20
+                height: 20
+                sourceSize.width: 40
+                sourceSize.height: 40
+                source: appButton.themedSource
+                smooth: true
+                asynchronous: true
+            }
+        }
+    }
+
+    function railSlotComponent(id) {
+        let key = String(id || "");
+        if (key.indexOf("app:") === 0) return appSlot;
+        switch (key) {
+        case "launcher": return launcherSlot;
+        case "workspaces": return workspacesSlot;
+        case "specials": return specialsSlot;
+        case "overview": return overviewSlot;
+        case "notifications": return notificationsSlot;
+        case "system": return systemSlot;
+        case "updates": return updatesSlot;
+        case "games": return gamesSlot;
+        case "pins": return pinsSlot;
+        case "more": return moreSlot;
+        case "tray": return traySlot;
+        case "audio": return audioSlot;
+        case "status": return statusSlot;
+        case "clock": return clockSlot;
+        case "power": return powerSlot;
+        case "settings": return settingsSlot;
+        case "gap": return gapSlot;
+        case "fill": return fillSlot;
+        }
+        return null;
+    }
+
+    // Eén plek in een rail. Laadt het onderdeel uit RailLayout en regelt voor
+    // elk onderdeel hetzelfde inschuiven achter Meer: hoogte en dekking
+    // animeren eerst, daarna valt de plek uit de kolom.
+    component RailSlot: Loader {
+        id: slot
+        required property string modelData
+        readonly property string slotId: modelData
+        readonly property bool slotTucked: slotId !== "more" && slotId !== "gap" && slotId !== "fill"
+            && root.railTucked(slotId.indexOf("app:") === 0 ? "apps" : slotId)
+        readonly property bool slotShown: item !== null && item.slotShown === true
+        sourceComponent: root.railSlotComponent(slotId)
+        visible: slotShown && (!slotTucked || opacity > 0.01)
+        enabled: !slotTucked
+        opacity: slotTucked ? 0 : 1
+        // Alleen het inschuiven animeert hier; een onderdeel dat zelf groeit
+        // (geluid met speler eronder) houdt zijn eigen animatie.
+        property real tuckFactor: slotTucked ? 0 : 1
+        Layout.fillWidth: slotId !== "tray"
+        Layout.fillHeight: slotId === "fill"
+        Layout.alignment: Qt.AlignHCenter
+        Layout.preferredWidth: slotId === "tray" && item ? item.implicitWidth : -1
+        Layout.preferredHeight: slotId === "fill" ? -1 : (item ? item.implicitHeight * tuckFactor : 0)
+        Behavior on opacity {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+        Behavior on tuckFactor {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+    }
+
     component RailButton: Rectangle {
         id: btn
         property string icon: ""
@@ -1914,6 +2057,9 @@ Item {
         signal middleClicked()
         signal wheelDelta(int delta)
 
+        // RailSlot leest dit: is er nu iets te tonen? Inschuiven achter Meer
+        // regelt de slot zelf, voor elk onderdeel op dezelfde manier.
+        readonly property bool slotShown: available
         visible: available && (!tucked || opacity > 0.01)
         enabled: !tucked
         clip: true
@@ -1921,12 +2067,12 @@ Item {
         Behavior on opacity {
             NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
         }
-        Behavior on Layout.preferredHeight {
+        Behavior on implicitHeight {
             NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
         }
 
         Layout.fillWidth: true
-        Layout.preferredHeight: tucked ? 0 : (text === "" ? 34 : 40)
+        implicitHeight: tucked ? 0 : (text === "" ? 34 : 40)
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: mouse.containsMouse ? root.pillHoverColor : "transparent"
         border.width: 1
@@ -2022,7 +2168,7 @@ Item {
         signal triggered()
 
         Layout.fillWidth: true
-        Layout.preferredHeight: 42
+        implicitHeight: 42
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: clockMouse.containsMouse ? root.pillHoverColor : "transparent"
         border.width: 1
@@ -2213,7 +2359,7 @@ Item {
         onLiveTipChanged: if (audioMouse.containsMouse || mediaMouse.containsMouse) showTip()
 
         Layout.fillWidth: true
-        Layout.preferredHeight: 40 + (showMedia ? 32 : 0)
+        implicitHeight: 40 + (showMedia ? 32 : 0)
         clip: true
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: audioMouse.containsMouse || mediaMouse.containsMouse ? root.pillHoverColor : "transparent"
@@ -2221,7 +2367,7 @@ Item {
         border.color: audioMouse.containsMouse || mediaMouse.containsMouse
             ? Qt.rgba(root.mocha.accent3.r, root.mocha.accent3.g, root.mocha.accent3.b, 0.36) : "transparent"
         scale: audioMouse.containsMouse ? 1.07 : 1.0
-        Behavior on Layout.preferredHeight {
+        Behavior on implicitHeight {
             NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") }
         }
         Behavior on scale {
@@ -2395,7 +2541,7 @@ Item {
         onLiveTipChanged: if (tileMouse.containsMouse) showTip()
 
         Layout.fillWidth: true
-        Layout.preferredHeight: statusGrid.implicitHeight + 12
+        implicitHeight: statusGrid.implicitHeight + 12
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: tileMouse.containsMouse ? root.pillHoverColor : "transparent"
         border.width: 1

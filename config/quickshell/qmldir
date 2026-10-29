@@ -8,3 +8,4 @@ Scaler 1.0 Scaler.qml
 singleton RailPins 1.0 RailPins.qml
 singleton ScreenProfiles 1.0 ScreenProfiles.qml
 singleton GpuMonitor 1.0 GpuMonitor.qml
+singleton RailLayout 1.0 RailLayout.qml

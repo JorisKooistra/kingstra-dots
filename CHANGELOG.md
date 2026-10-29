@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Rail: indeling per thema
+- De rail wordt nu opgebouwd uit een opgeslagen indeling per thema (`RailLayout.qml`, `~/.local/state/kingstra/rail-layout.json`, geschreven via `settings/rail-layout.py`). Zonder eigen keuze blijft de vertrouwde volgorde staan.
+- Elk railonderdeel (launcher, werkruimtes, kladblokken, uitzoomen, meldingen, systeem, updates, games, extra knoppen, Meer, systeemvak, geluid, status, klok, afsluiten, instellingen) is een los blok dat je kunt verplaatsen; "Kleine ruimte" en "Duw naar onder" mogen vaker voorkomen.
+- Eigen apps en launchers (naam, icoon uit het icoonthema of een Nerd Font-teken, commando) kunnen als knop in de rail.
+- Het aantal werkruimtes in rail en strook is per thema in te stellen (1–10); scrollen over de werkruimtes telt hetzelfde aantal.
+- Per scherm en mode blijft alles werken zoals het was: zichtbare onderdelen, Meer, extra knoppen en automatisch verbergen liggen daar bovenop. Inschuiven achter Meer animeert nu voor elk onderdeel op dezelfde manier.
+
 ### Rail: automatisch verbergen verbergt nu echt
 - Met "automatisch verbergen" (per scherm of via de mode) schuift de rail nu helemaal weg tot alleen de dunne omlijsting over is, even breed als rechts en onder. Eerder bleef er een lege railstrook met gereserveerde ruimte tussen de vensters staan.
 - De gereserveerde ruimte krimpt mee: vensters krijgen de volle breedte. Bij hover op de linkerrand klapt de rail er vloeiend over de vensters heen uit en na 2,4 s zonder hover schuift hij weer weg; zolang een paneel open is blijft hij staan.
