@@ -26,7 +26,8 @@ PanelWindow {
     property real reveal: 0
     Component.onCompleted: reveal = Qt.binding(() => win.open ? 1 : 0)
     Behavior on reveal {
-        NumberAnimation { duration: ThemeConfig.duration(620); easing.type: ThemeConfig.easingToken("emphasized") }
+        // Rustig in- en uitlopen: de speler groeit van de mediakaart naar het midden.
+        NumberAnimation { duration: ThemeConfig.duration(760); easing.type: Easing.InOutCubic }
     }
     onRevealChanged: if (!open && reveal <= 0.001) finished()
 
@@ -37,6 +38,8 @@ PanelWindow {
         mocha: mocha
         accent: mocha.primary
         reveal: win.reveal
+        originRect: win.host.stageOrigin
+        Component.onCompleted: vinyl.discAngle = win.host.stageDiscAngle
         readonly property var p: win.host.activePlayer
         title: p ? String(p.trackTitle || "") : ""
         artist: p ? String(p.trackArtist || "") : ""

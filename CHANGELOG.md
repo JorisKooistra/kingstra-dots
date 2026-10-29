@@ -8,6 +8,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - De toonarm is gebogen (S-bocht met schuin headshell, vingerlift en contragewicht) en heeft een schaduw die verder wegvalt als de arm omhoog gaat.
 - Spoelen gaat als op een echte speler: de arm gaat omhoog, zwenkt naar de nieuwe plek en zakt weer. Je kunt de naald zelf slepen (mediakaart op het bureaublad, Geluid & media en de schermvullende weergave).
 - Bij een nieuw album gaat de arm naar zijn steun, schuift de oude plaat eraf en de nieuwe erop.
+- Vorm als een klassieke direct-drive draaitafel (zoals een Technics): grote draaischijf links met stroboscoopstippen, gebogen arm met grote voet rechtsboven, armlift, pitch-schuif rechtsonder (±8 %, dubbelklik zet hem op 0), start/stop en 33/45 linksonder, naaldlampje en 45-adapter. De mediakaart op het bureaublad gebruikt dezelfde speler in het klein.
+- Afwerking per thema: Organic walnoot met nerf en messing arm, Neon zwart glas met raster, lichtrand en gloeiende arm, Paper inkt op papier met harde schaduw, Mono geborsteld en neutraal.
+- De schermvullende speler groeit uit de kleine op de mediakaart: hij komt plat van die plek, kantelt naar achteren en vouwt de voorkant uit; bij sluiten gaat hij weer terug.
+- Screensaver: na 120 s zonder invoer terwijl er muziek speelt opent de draaitafel vanzelf en bij de eerste beweging sluit hij weer. `kingstra vinyl auto <seconden>|uit` of het toetsenbordmenu stelt dit in. Video die het scherm wakker houdt, houdt ook dit tegen.
 - Nieuw: schermvullende draaitafel als screensaver, in voor/bovenaanzicht met langzaam meedraaiende camera. Open hem met de knop rechtsboven op de mediakaart, `kingstra vinyl` of het toetsenbordmenu. De voorkant heeft een display, een spoelbalk met naaldje (slepen tilt de arm op) en werkende knoppen; bovenop zitten 33/45 en start/stop. Spatie speelt/pauzeert, ← → spoelt 10 s, N/P volgend/vorig, Esc of klik ernaast sluit.
 
 ### Rail: indeling per thema

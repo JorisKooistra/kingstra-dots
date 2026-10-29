@@ -70,7 +70,7 @@ Openen
   kladblok [stuur]         kladblok tonen, of het actieve venster erheen sturen
   parkeer [terug|lijst]    actief venster parkeren (minimaliseren) of terughalen
   zen [aan|uit]            zen-modus: balk verbergen, niet storen, rest dimmen
-  vinyl [uit]              draaitafel schermvullend (screensaver); Esc sluit
+  vinyl [uit|auto <s>|auto uit]  draaitafel schermvullend; auto: als screensaver na <s> s stilstand met muziek (standaard 120)
   sessie [aan|uit|bewaar|herstel]  apps na inloggen terugzetten (zonder argument: status)
 
 Overig
@@ -199,6 +199,29 @@ PY
             *) exec "$tool" status ;;
         esac ;;
     vinyl|platenspeler)
+        if [[ "${1:-}" == "auto" || "${1:-}" == "screensaver" ]]; then
+            # Na hoeveel seconden stilstand (met muziek aan) de draaitafel opent; uit = nooit.
+            file="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/desktop-widgets.json"
+            mkdir -p "$(dirname "$file")"
+            exec python3 - "$file" "${2:-}" <<'PY'
+import json, sys
+path, arg = sys.argv[1], sys.argv[2]
+try:
+    data = json.load(open(path))
+except Exception:
+    data = {}
+if arg in ("uit", "off", "0"):
+    data["vinylSaver"] = 0
+elif arg.isdigit():
+    data["vinylSaver"] = max(15, int(arg))
+elif arg == "":
+    print("screensaver: " + (f"na {data.get('vinylSaver', 120)} s" if data.get("vinylSaver", 120) else "uit"))
+    sys.exit(0)
+else:
+    sys.exit("gebruik: kingstra vinyl auto <seconden>|uit")
+json.dump(data, open(path, "w"))
+PY
+        fi
         case "${1:-toggle}" in
             uit|off|close) action=close ;;
             aan|on|open) action=open ;;

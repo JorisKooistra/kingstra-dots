@@ -31,6 +31,12 @@ FocusScope {
 
     // 0 = dicht, 1 = open; het venster animeert dit.
     property real reveal: 1
+    // Plek van de kleine speler op het bureaublad (in schermpixels). Is die
+    // bekend, dan groeit de grote speler daaruit: plat en klein op die plek,
+    // kantelt achterover en vouwt de voorkant uit. Anders vervaagt hij in beeld.
+    property rect originRect: Qt.rect(0, 0, 0, 0)
+    readonly property bool fromOrigin: originRect.width > 0
+    function lerp(a, b, t) { return a + (b - a) * t; }
 
     signal togglePlay()
     signal previous()
@@ -38,7 +44,15 @@ FocusScope {
     signal seek(real fraction)
     signal closeRequested()
 
-    property int rpm: 33
+    // Uitvoering per thema: Organic walnoot met messing, Neon zwart glas met
+    // lichtlijnen, Paper inkt op papier, de rest geborsteld en neutraal.
+    property string look: {
+        let f = ThemeConfig.styleFamily;
+        return f === "organic" ? "wood" : f === "neon" ? "neon" : f === "paper" ? "paper" : "mono";
+    }
+    readonly property var skin: table.skin
+    readonly property var vinyl: table.vinyl
+
     property real sway: 0
     // Langzaam meedraaiende camera zolang er muziek speelt.
     SequentialAnimation {
@@ -74,7 +88,9 @@ FocusScope {
     // --- Achtergrond ---------------------------------------------------------
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(stage.mocha.base.r * 0.5, stage.mocha.base.g * 0.5, stage.mocha.base.b * 0.5, 0.94)
+        color: stage.look === "paper"
+            ? Qt.rgba(stage.mocha.base.r * 0.9, stage.mocha.base.g * 0.9, stage.mocha.base.b * 0.9, 0.96)
+            : Qt.rgba(stage.mocha.base.r * 0.5, stage.mocha.base.g * 0.5, stage.mocha.base.b * 0.5, 0.94)
         opacity: stage.reveal
     }
     Image {
@@ -102,9 +118,9 @@ FocusScope {
         anchors.fill: parent
         opacity: stage.reveal
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.35) }
+            GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, stage.look === "paper" ? 0.06 : 0.35) }
             GradientStop { position: 0.45; color: "transparent" }
-            GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.55) }
+            GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, stage.look === "paper" ? 0.12 : 0.55) }
         }
     }
     // Klik naast de speler sluit.
@@ -114,20 +130,25 @@ FocusScope {
     }
 
     // --- De speler -----------------------------------------------------------
-    readonly property real rigWidth: Math.min(width * 0.62, height * 1.12)
-    readonly property real topDepth: rigWidth * 0.64
+    readonly property real rigWidth: Math.min(width * 0.58, height * 0.9)
+    readonly property real topDepth: rigWidth * 0.78
     readonly property real frontHeight: rigWidth * 0.12
-    readonly property real tilt: 8 + 30 * reveal
+    readonly property real tilt: fromOrigin ? 38 * reveal : 8 + 30 * reveal
+    readonly property real finalX: (width - rigWidth) / 2
+    readonly property real finalY: (height - topDepth - frontHeight) / 2 - height * 0.09
 
     Item {
         id: rig
         width: stage.rigWidth
         height: stage.topDepth + stage.frontHeight
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: -stage.height * 0.09 + (1 - stage.reveal) * 60
-        opacity: stage.reveal
-        scale: 0.9 + 0.1 * stage.reveal
+        x: stage.fromOrigin ? stage.lerp(stage.originRect.x, stage.finalX, stage.reveal) : stage.finalX
+        y: stage.fromOrigin ? stage.lerp(stage.originRect.y, stage.finalY, stage.reveal)
+                            : stage.finalY + (1 - stage.reveal) * 60
+        transformOrigin: stage.fromOrigin ? Item.TopLeft : Item.Center
+        opacity: stage.fromOrigin ? 1 : stage.reveal
+        scale: stage.fromOrigin
+            ? stage.lerp(stage.originRect.width / stage.rigWidth, 1, stage.reveal)
+            : 0.9 + 0.1 * stage.reveal
         transform: Rotation {
             origin.x: rig.width / 2
             origin.y: rig.height
@@ -135,8 +156,36 @@ FocusScope {
             angle: stage.sway
         }
 
+        // Neon: lichtrand rond de hele kast.
+        Rectangle {
+            visible: stage.look === "neon"
+            opacity: stage.reveal
+            anchors.fill: parent
+            anchors.margins: -6
+            radius: stage.skin.radius + 6
+            color: "transparent"
+            border.width: 4
+            border.color: Qt.rgba(stage.accent.r, stage.accent.g, stage.accent.b, stage.playing ? 0.55 : 0.3)
+            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(600) } }
+            layer.enabled: visible
+            layer.effect: MultiEffect { blurEnabled: true; blurMax: 32; blur: 1.0 }
+        }
+        // Paper: harde inktschaduw, zoals een getekende speler.
+        Rectangle {
+            visible: stage.look === "paper"
+            opacity: stage.reveal
+            x: 10
+            y: stage.topDepth + 10
+            width: parent.width
+            height: stage.frontHeight
+            radius: stage.skin.radius
+            color: Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.85)
+        }
+
         // Zachte schaduw onder de kast.
         Rectangle {
+            visible: stage.look !== "paper"
+            opacity: stage.reveal
             width: parent.width * 1.04
             height: stage.frontHeight * 1.2
             anchors.horizontalCenter: parent.horizontalCenter
@@ -162,140 +211,20 @@ FocusScope {
                 angle: stage.tilt
             }
 
-            Rectangle {
-                id: plinth
+            TurntableDeck {
+                id: table
                 anchors.fill: parent
-                radius: Math.max(14, ThemeConfig.styleWidgetRadius + 6)
-                border.width: 1
-                border.color: Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.16)
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: Qt.lighter(stage.mocha.surface0, 1.18) }
-                    GradientStop { position: 1.0; color: stage.mocha.surface0 }
-                }
-
-                // Houtnerf bij Organic, fijne lijnen bij de rest.
-                Repeater {
-                    model: 14
-                    Rectangle {
-                        required property int index
-                        x: 10
-                        y: 10 + index * (plinth.height - 20) / 14
-                        width: plinth.width - 20
-                        height: 1
-                        color: ThemeConfig.theme === "organic"
-                            ? Qt.rgba(stage.mocha.peach.r, stage.mocha.peach.g, stage.mocha.peach.b, index % 2 ? 0.08 : 0.05)
-                            : Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.025)
-                    }
-                }
-                // Schroefjes in de hoeken.
-                Repeater {
-                    model: 4
-                    Rectangle {
-                        required property int index
-                        width: 6; height: 6; radius: 3
-                        x: index % 2 ? plinth.width - 16 : 10
-                        y: index < 2 ? 10 : plinth.height - 16
-                        color: stage.mocha.overlay1
-                    }
-                }
-            }
-
-            MediaVinyl {
-                id: vinyl
-                readonly property real side: stage.topDepth * 0.9
-                width: side
-                height: side
-                x: stage.topDepth * 0.05
-                y: stage.topDepth * 0.05
                 mocha: stage.mocha
                 accent: stage.accent
-                showPlinth: false
-                showArm: true
-                vinylMode: true
-                playerStyle: "vinyl"
+                look: stage.look
                 artUrl: stage.artUrl
                 trackKey: stage.trackKey
                 playing: stage.playing
                 tracking: stage.tracking
                 progress: stage.progress
                 canSeek: stage.canSeek
-                spinSpeed: stage.rpm === 45 ? 64 : 48
-                onSeekRequested: fraction => stage.seek(fraction)
-            }
-
-            // Rechterkant van de bovenplaat: start/stop, toerental, pitch.
-            Item {
-                id: deckSide
-                x: vinyl.x + vinyl.width + stage.topDepth * 0.04
-                y: vinyl.y
-                width: topFace.width - x - stage.topDepth * 0.06
-                height: vinyl.height
-
-                Text {
-                    anchors.top: parent.top
-                    anchors.right: parent.right
-                    text: "KINGSTRA · DIRECT DRIVE"
-                    font.family: ThemeConfig.monoFont
-                    font.pixelSize: Math.max(9, stage.rigWidth * 0.014)
-                    font.letterSpacing: 2
-                    color: Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.45)
-                }
-
-                // Pitch-schuif (sier, zoals op een echte draaitafel).
-                Rectangle {
-                    id: pitchTrack
-                    anchors.right: parent.right
-                    anchors.rightMargin: parent.width * 0.12
-                    y: parent.height * 0.22
-                    width: Math.max(6, stage.rigWidth * 0.012)
-                    height: parent.height * 0.5
-                    radius: width / 2
-                    color: Qt.rgba(stage.mocha.base.r, stage.mocha.base.g, stage.mocha.base.b, 0.8)
-                    border.width: 1
-                    border.color: Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.12)
-                    Rectangle {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        y: parent.height / 2 - height / 2
-                        width: parent.width * 3.2
-                        height: parent.width * 1.6
-                        radius: 3
-                        color: stage.mocha.surface2
-                        border.width: 1
-                        border.color: stage.mocha.overlay1
-                    }
-                }
-
-                ColumnLayout {
-                    anchors.left: parent.left
-                    anchors.bottom: parent.bottom
-                    spacing: stage.rigWidth * 0.014
-
-                    Row {
-                        spacing: stage.rigWidth * 0.012
-                        Repeater {
-                            model: [33, 45]
-                            delegate: DeckKey {
-                                mocha: stage.mocha
-                                accent: stage.accent
-                                required property int modelData
-                                label: String(modelData)
-                                lit: stage.rpm === modelData
-                                keyWidth: stage.rigWidth * 0.06
-                                keyHeight: stage.rigWidth * 0.032
-                                onActivated: stage.rpm = modelData
-                            }
-                        }
-                    }
-                    DeckKey {
-                        mocha: stage.mocha
-                        accent: stage.accent
-                        label: "START · STOP"
-                        lit: stage.playing
-                        keyWidth: stage.rigWidth * 0.17
-                        keyHeight: stage.rigWidth * 0.05
-                        onActivated: stage.togglePlay()
-                    }
-                }
+                onTogglePlay: stage.togglePlay()
+                onSeek: fraction => stage.seek(fraction)
             }
         }
 
@@ -305,26 +234,50 @@ FocusScope {
             y: stage.topDepth
             width: parent.width
             height: stage.frontHeight
+            // Vouwt uit onder de bovenplaat als de speler uit de kleine groeit.
+            opacity: stage.fromOrigin ? Math.min(1, stage.reveal * 1.6) : 1
+            transform: Rotation {
+                origin.x: front.width / 2
+                origin.y: 0
+                axis { x: 1; y: 0; z: 0 }
+                angle: stage.fromOrigin ? (1 - stage.reveal) * 88 : 0
+            }
 
             Rectangle {
                 anchors.fill: parent
-                radius: Math.max(12, ThemeConfig.styleWidgetRadius + 4)
+                radius: stage.skin.radius
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: Qt.darker(stage.mocha.surface0, 1.25) }
-                    GradientStop { position: 1.0; color: Qt.darker(stage.mocha.surface0, 1.7) }
+                    GradientStop { position: 0.0; color: stage.skin.frontA }
+                    GradientStop { position: 1.0; color: stage.skin.frontB }
                 }
-                border.width: 1
-                border.color: Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.10)
+                border.width: stage.look === "paper" ? 2 : 1
+                border.color: stage.look === "paper" ? stage.mocha.text
+                    : stage.look === "neon" ? Qt.rgba(stage.accent.r, stage.accent.g, stage.accent.b, 0.6)
+                    : Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.10)
             }
             // Bovenrand recht, zodat hij naadloos op de bovenplaat aansluit.
             Rectangle {
                 width: parent.width
                 height: parent.height / 2
-                color: Qt.darker(stage.mocha.surface0, 1.25)
+                color: stage.skin.frontA
+                border.width: stage.look === "paper" ? 2 : 0
+                border.color: stage.mocha.text
                 Rectangle {
                     width: parent.width
+                    height: stage.look === "wood" ? 3 : stage.look === "neon" ? 2 : 1
+                    color: stage.skin.frontEdge
+                }
+            }
+            // Neon: scanlijnen over de voorkant.
+            Repeater {
+                model: stage.look === "neon" ? Math.floor(front.height / 4) : 0
+                Rectangle {
+                    required property int index
+                    x: 2
+                    width: front.width - 4
+                    y: 3 + index * 4
                     height: 1
-                    color: Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.18)
+                    color: Qt.rgba(stage.accent.r, stage.accent.g, stage.accent.b, 0.035)
                 }
             }
 
@@ -340,10 +293,10 @@ FocusScope {
                 Rectangle {
                     Layout.fillHeight: true
                     Layout.preferredWidth: stage.rigWidth * 0.27
-                    radius: 8
-                    color: Qt.rgba(0, 0, 0, 0.55)
+                    radius: stage.look === "neon" ? 3 : 8
+                    color: stage.skin.dispBg
                     border.width: 1
-                    border.color: Qt.rgba(stage.accent.r, stage.accent.g, stage.accent.b, 0.25)
+                    border.color: stage.skin.dispBorder
                     clip: true
 
                     Column {
@@ -358,7 +311,7 @@ FocusScope {
                             font.family: ThemeConfig.monoFont
                             font.pixelSize: Math.max(10, stage.frontHeight * 0.2)
                             font.weight: Font.Bold
-                            color: stage.accent
+                            color: stage.skin.dispText
                         }
                         Text {
                             width: parent.width
@@ -368,7 +321,8 @@ FocusScope {
                             elide: Text.ElideRight
                             font.family: ThemeConfig.monoFont
                             font.pixelSize: Math.max(9, stage.frontHeight * 0.16)
-                            color: Qt.rgba(stage.accent.r, stage.accent.g, stage.accent.b, 0.7)
+                            color: stage.skin.dispText
+                            opacity: 0.72
                         }
                     }
                 }
@@ -392,12 +346,12 @@ FocusScope {
                         width: parent.width
                         height: Math.max(4, stage.frontHeight * 0.07)
                         radius: height / 2
-                        color: Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.12)
+                        color: stage.skin.track
                         Rectangle {
                             width: Math.max(height, parent.width * scrub.shown)
                             height: parent.height
                             radius: height / 2
-                            color: stage.accent
+                            color: stage.skin.fill
                         }
                     }
                     // Naaldje boven de balk; gaat omhoog zolang de arm in de lucht is.
@@ -412,7 +366,7 @@ FocusScope {
                             width: Math.max(2, parent.width * 0.16)
                             height: parent.height * 0.7
                             radius: width / 2
-                            color: stage.mocha.overlay2
+                            color: stage.skin.needle
                         }
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -462,6 +416,7 @@ FocusScope {
                     DeckKey {
                         mocha: stage.mocha
                         accent: stage.accent
+                        skin: stage.skin
                         icon: "󰒮"
                         enabled: stage.canPrevious
                         keyWidth: stage.frontHeight * 0.78
@@ -471,6 +426,7 @@ FocusScope {
                     DeckKey {
                         mocha: stage.mocha
                         accent: stage.accent
+                        skin: stage.skin
                         icon: stage.playing ? "󰏤" : "󰐊"
                         lit: stage.playing
                         keyWidth: stage.frontHeight * 1.0
@@ -480,6 +436,7 @@ FocusScope {
                     DeckKey {
                         mocha: stage.mocha
                         accent: stage.accent
+                        skin: stage.skin
                         icon: "󰒭"
                         enabled: stage.canNext
                         keyWidth: stage.frontHeight * 0.78
@@ -490,6 +447,7 @@ FocusScope {
                     DeckKey {
                         mocha: stage.mocha
                         accent: stage.accent
+                        skin: stage.skin
                         icon: "󰅖"
                         keyWidth: stage.frontHeight * 0.56
                         keyHeight: stage.frontHeight * 0.56
@@ -503,7 +461,7 @@ FocusScope {
     // --- Titel en hint -------------------------------------------------------
     Column {
         anchors.horizontalCenter: parent.horizontalCenter
-        y: rig.y + rig.height + stage.height * 0.04
+        y: stage.finalY + rig.height + stage.height * 0.04
         spacing: 4
         opacity: stage.reveal
         Text {
@@ -537,76 +495,6 @@ FocusScope {
         text: "Spatie afspelen  ·  ← → spoelen  ·  sleep de naald of de balk  ·  Esc sluit"
         font.family: ThemeConfig.uiFont
         font.pixelSize: 12
-        color: stage.mocha.subtext0
-    }
-
-    // Knop op de speler: rond, zakt in bij indrukken, licht op als hij aan staat.
-    component DeckKey: Item {
-        id: key
-        // Eigen kleuren: een inline component ziet de ids van dit bestand niet altijd.
-        required property var mocha
-        required property color accent
-        property string label: ""
-        property string icon: ""
-        property bool lit: false
-        property real keyWidth: 40
-        property real keyHeight: 26
-        signal activated()
-        implicitWidth: keyWidth
-        implicitHeight: keyHeight + 3
-        opacity: enabled ? 1 : 0.4
-
-        // Zijkant van de knop; de kap schuift erover bij indrukken.
-        Rectangle {
-            y: 3
-            width: parent.width
-            height: key.keyHeight
-            radius: Math.min(height / 2, 10)
-            color: Qt.darker(key.mocha.surface1, 1.6)
-        }
-        Rectangle {
-            id: cap
-            y: keyMouse.pressed ? 2.5 : 0
-            width: parent.width
-            height: key.keyHeight
-            radius: Math.min(height / 2, 10)
-            Behavior on y { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutCubic } }
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: keyMouse.containsMouse ? Qt.lighter(key.mocha.surface1, 1.25) : Qt.lighter(key.mocha.surface1, 1.1) }
-                GradientStop { position: 1.0; color: key.mocha.surface1 }
-            }
-            border.width: 1
-            border.color: key.lit
-                ? Qt.rgba(key.accent.r, key.accent.g, key.accent.b, 0.8)
-                : Qt.rgba(key.mocha.text.r, key.mocha.text.g, key.mocha.text.b, 0.14)
-            Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
-
-            Text {
-                anchors.centerIn: parent
-                text: key.icon !== "" ? key.icon : key.label
-                font.family: key.icon !== "" ? ThemeConfig.iconFont : ThemeConfig.monoFont
-                font.pixelSize: key.icon !== "" ? Math.max(12, key.keyHeight * 0.48) : Math.max(8, key.keyHeight * 0.34)
-                font.weight: Font.Bold
-                font.letterSpacing: key.icon !== "" ? 0 : 1
-                color: key.lit ? key.accent : key.mocha.text
-                Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
-            }
-            // Ledje.
-            Rectangle {
-                visible: key.label !== ""
-                anchors.right: parent.right
-                anchors.rightMargin: 6
-                anchors.verticalCenter: parent.verticalCenter
-                width: 4; height: 4; radius: 2
-                color: key.lit ? key.accent : Qt.rgba(key.mocha.text.r, key.mocha.text.g, key.mocha.text.b, 0.2)
-            }
-        }
-        MouseArea {
-            id: keyMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: key.activated()
-        }
+        color: stage.skin.hint
     }
 }

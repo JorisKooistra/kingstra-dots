@@ -15,7 +15,7 @@ import "../shellsurface"
 // een lege werkruimte. Kleuren en lettertype volgen het thema.
 //
 // Instellingen in ~/.local/state/kingstra/desktop-widgets.json:
-//   { "enabled": true, "clock": "top-left", "media": true }
+//   { "enabled": true, "clock": "top-left", "media": true, "vinylSaver": 120 }
 // clock: top-left, top-right, center, bottom-left, bottom-right.
 // `kingstra widgets aan|uit|klok <plek>` en het toetsenbordmenu schrijven dit.
 //
@@ -28,6 +28,8 @@ Scope {
     property string clockPos: "top-left"
     property bool showMedia: true
     property bool vinylMode: true
+    // Seconden zonder invoer (met muziek aan) voor de draaitafel-screensaver; 0 = uit.
+    property real saverSeconds: 120
 
     readonly property string stateFile: Quickshell.env("HOME") + "/.local/state/kingstra/desktop-widgets.json"
 
@@ -43,6 +45,7 @@ Scope {
                 root.enabled = data.enabled !== false;
                 root.clockPos = String(data.clock || "top-left");
                 root.showMedia = data.media !== false;
+                root.saverSeconds = data.vinylSaver !== undefined ? Math.max(0, Number(data.vinylSaver) || 0) : 120;
             } catch (e) {}
         }
     }
@@ -125,6 +128,16 @@ Scope {
     // Blijft geladen tot het sluiten is uitgefadet.
     property bool stageAlive: false
     property var stageScreen: null
+    // Waar de kleine speler op het scherm staat; de grote groeit daaruit.
+    property rect stageOrigin: Qt.rect(0, 0, 0, 0)
+    property real stageDiscAngle: 0
+    property var deckItems: ({})
+    function registerDeck(name, item) {
+        let d = Object.assign({}, deckItems);
+        d[name] = item;
+        deckItems = d;
+    }
+    Component.onCompleted: Hyprland.refreshMonitors()
     function openStage() {
         let mon = Hyprland.focusedMonitor;
         let screens = Quickshell.screens;
@@ -133,6 +146,19 @@ Scope {
             if (screens[i].name === mon.name) pick = screens[i];
         }
         stageScreen = pick;
+        stageOrigin = Qt.rect(0, 0, 0, 0);
+        let deck = pick ? deckItems[pick.name] : null;
+        if (deck && deck.visible && deck.opacity > 0.5 && deck.width > 0) {
+            // Het bureaubladvenster begint na gereserveerde ruimte (bar, rail);
+            // het schermvullende venster op 0,0. Hyprland kent die marges.
+            let hm = Hyprland.monitorFor(pick);
+            let ipc = hm ? hm.lastIpcObject : null;
+            let res = ipc && ipc.reserved ? ipc.reserved : [0, 0, 0, 0];
+            let p = deck.mapToItem(null, 0, 0);
+            stageOrigin = Qt.rect(p.x + Number(res[0] || 0), p.y + Number(res[1] || 0), deck.width, deck.height);
+            stageDiscAngle = deck.vinyl.discAngle;
+        }
+        Hyprland.refreshMonitors();
         stageAlive = true;
         stageOpen = true;
     }
@@ -141,6 +167,14 @@ Scope {
         function open() { root.openStage() }
         function close() { root.stageOpen = false }
         function toggle() { if (root.stageOpen) root.stageOpen = false; else root.openStage(); }
+    }
+    LazyLoader {
+        active: root.saverSeconds > 0
+        source: "VinylSaverIdle.qml"
+        onItemChanged: if (item) {
+            item.host = root;
+            item.timeout = Qt.binding(() => root.saverSeconds);
+        }
     }
     LazyLoader {
         active: root.stageAlive
@@ -236,8 +270,9 @@ Scope {
                 Rectangle {
                     id: mediaCard
                     readonly property bool shown: root.showMedia && root.activePlayer !== null && ScreenProfiles.profile(win.screen ? win.screen.name : "").desktopMedia
-                    width: 420
+                    width: deckSlot.turntable ? 460 : 420
                     height: 148
+                    Behavior on width { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }
                     radius: Math.max(16, ThemeConfig.styleWidgetRadius + 6)
                     x: root.clockPos.indexOf("right") !== -1 ? win.width - width - win.margin
                         : (root.clockPos === "center" ? (win.width - width) / 2 : win.margin)
@@ -288,22 +323,52 @@ Scope {
                         anchors.rightMargin: 40
                         spacing: 12
 
-                        MediaVinyl {
-                            Layout.preferredWidth: 120
-                            Layout.preferredHeight: 120
-                            mocha: mocha
-                            accent: mocha.primary
-                            artUrl: root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : ""
-                            playing: root.playing
-                            playerStyle: ScreenProfiles.profile(win.screen ? win.screen.name : "").playerStyle
-                            vinylMode: playerStyle === "cover" ? false : playerStyle === "vinyl" ? true : root.vinylMode
-                            showArm: true
-                            progress: root.mediaProgress
-                            tracking: root.mediaTracking
-                            trackKey: root.mediaTrackKey
-                            canSeek: root.mediaCanSeek
-                            onSeekRequested: fraction => root.mediaSeek(fraction)
-                            coverRadius: 16
+                        // Draaitafel (zelfde vorm als de schermvullende) of de hoes.
+                        Item {
+                            id: deckSlot
+                            readonly property string style: ScreenProfiles.profile(win.screen ? win.screen.name : "").playerStyle
+                            readonly property bool turntable: style === "cover" ? false : style === "vinyl" ? true : root.vinylMode
+                            Layout.preferredWidth: turntable ? 160 : 120
+                            Layout.preferredHeight: 124
+
+                            TurntableDeck {
+                                id: miniDeck
+                                anchors.centerIn: parent
+                                width: 160
+                                height: 124
+                                compact: true
+                                mocha: mocha
+                                accent: mocha.primary
+                                artUrl: root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : ""
+                                trackKey: root.mediaTrackKey
+                                playing: root.playing
+                                tracking: root.mediaTracking
+                                progress: root.mediaProgress
+                                canSeek: root.mediaCanSeek
+                                onTogglePlay: root.mediaToggle()
+                                onSeek: fraction => root.mediaSeek(fraction)
+                                // Onder de schermvullende speler weg, die hier uit groeit.
+                                opacity: !deckSlot.turntable ? 0 : (root.stageAlive && root.stageScreen === win.screen ? 0 : 1)
+                                visible: opacity > 0.01
+                                scale: deckSlot.turntable ? 1 : 0.9
+                                Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }
+                                Component.onCompleted: root.registerDeck(win.screen ? win.screen.name : "", miniDeck)
+                            }
+                            MediaVinyl {
+                                anchors.centerIn: parent
+                                width: 120
+                                height: 120
+                                mocha: mocha
+                                accent: mocha.primary
+                                artUrl: miniDeck.artUrl
+                                playing: root.playing
+                                vinylMode: false
+                                showArm: false
+                                coverRadius: 16
+                                opacity: deckSlot.turntable ? 0 : 1
+                                visible: opacity > 0.01
+                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("normal") } }
+                            }
                         }
 
                         ColumnLayout {

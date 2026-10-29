@@ -37,6 +37,33 @@ Item {
     readonly property bool paperDeck: playerStyle === "theme" && ThemeConfig.theme === "paper"
     readonly property bool woodDeck: playerStyle === "theme" && ThemeConfig.theme === "organic"
     readonly property bool compactDisc: playerStyle === "theme" && ThemeConfig.theme === "neon"
+    // Afwerking van plaat en arm: "wood" (messing arm, vilt), "neon" (lichtgevende
+    // arm, groeven en stroboscoop), "paper" (inkt) of "" (neutraal). Leeg volgt
+    // het thema bij playerStyle "theme"; de schermvullende speler zet hem zelf.
+    property string finish: ""
+    // Stroboscoopstippen op de rand; hout en neon hebben ze altijd.
+    property bool strobe: false
+    readonly property string look: finish !== "" ? finish
+        : woodDeck ? "wood" : paperDeck ? "paper" : compactDisc ? "neon" : ""
+    readonly property color brass: "#c9a55f"
+    readonly property color armTubeColor: look === "wood" ? brass
+        : look === "neon" ? accent : look === "paper" ? mocha.text : mocha.overlay2
+    // Armvoet: buitenring, binnenring en accent (lagerkap).
+    readonly property color baseOuter: look === "wood" ? "#2b1d14" : look === "neon" ? "#05070c"
+        : look === "paper" ? mocha.base : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.96)
+    readonly property color baseInner: look === "wood" ? "#6e5330" : look === "neon" ? "#0b1220"
+        : look === "paper" ? mocha.base : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.92)
+    readonly property color baseAccent: look === "wood" ? brass : look === "paper" ? mocha.text : accent
+    readonly property color armShellColor: look === "wood" ? "#2b1d14"
+        : look === "neon" ? "#05070c" : mocha.base
+    readonly property color platterRim: look === "wood" ? brass
+        : look === "neon" ? accent : look === "paper" ? mocha.text
+        : (playing ? accent : mocha.overlay0)
+    readonly property color matColor: look === "wood" ? "#2a2320"
+        : look === "neon" ? "#04060a" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.92)
+    readonly property color grooveColor: look === "neon" ? accent : mocha.overlay2
+    readonly property color discColor: look === "neon" ? "#07090f"
+        : look === "wood" ? "#151312" : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.98)
     // Graden per seconde tijdens afspelen (gestileerd, niet echt 33 tpm).
     property real spinSpeed: 45
     property real angularVelocity: 0
@@ -60,9 +87,49 @@ Item {
     readonly property bool hasArt: art.status === Image.Ready
 
     // --- Toonarm: stand, optillen en spoelen -------------------------------
-    readonly property real armRest: -15
-    readonly property real armStart: -1
-    readonly property real armSpan: 31
+    // Arm-geometrie. Standaard staat de arm op de plaat (rechtsboven); een
+    // grotere speler kan de voet verplaatsen (armPivot, in pixels t.o.v. dit
+    // item), de arm verlengen (armReach) en de voet groter maken (armBase).
+    property point armPivot: Qt.point(-1, -1)
+    property real armReach: 1
+    property real armBase: 1
+    // Begin- en eindhoek volgen uit de geometrie: de naald moet de buitenste
+    // groef en de rand van het label raken, waar de voet ook staat.
+    readonly property real armStart: solveArmAngle(discRadius * 0.93)
+    readonly property real armSpan: Math.max(8, solveArmAngle(labelRadius * 1.12) - armStart)
+    readonly property real armRest: armStart - 14
+    readonly property real discRadius: (width * 0.85 - 2 * width * 0.06) / 2
+    readonly property real labelRadius: discRadius * (compactDisc ? 0.24 : 0.38)
+    function solveArmAngle(r) {
+        let u = width / 220;
+        // Naald t.o.v. het draaipunt bij hoek 0 (headshell 28° gedraaid).
+        let vx = -7 * u - 5.87 * u;
+        let vy = 66 * u * armReach + 11.04 * u;
+        let px = armPivotX, py = armPivotY;
+        let c = width / 2;
+        function dist(deg) {
+            let a = deg * Math.PI / 180;
+            let tx = px + vx * Math.cos(a) - vy * Math.sin(a);
+            let ty = py + vx * Math.sin(a) + vy * Math.cos(a);
+            return Math.sqrt((tx - c) * (tx - c) + (ty - c) * (ty - c));
+        }
+        let prev = -40;
+        for (let deg = -40; deg <= 90; deg += 1) {
+            if (dist(deg) <= r) {
+                let lo = prev, hi = deg;
+                for (let i = 0; i < 12; i++) {
+                    let mid = (lo + hi) / 2;
+                    if (dist(mid) <= r) hi = mid; else lo = mid;
+                }
+                return hi;
+            }
+            prev = deg;
+        }
+        return 0;
+    }
+    // Draaipunt in item-coördinaten.
+    readonly property real armPivotX: armPivot.x >= 0 ? armPivot.x : width - width * 0.075 - 4 * width / 220 - 14.5 * width / 220
+    readonly property real armPivotY: armPivot.y >= 0 ? armPivot.y : width * 0.075 + 5 * width / 220 + 13 * width / 220
     function angleFor(fraction) {
         return armStart + Math.max(0, Math.min(1, fraction)) * armSpan;
     }
@@ -320,16 +387,53 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: deck.mocha.surface0
+            color: deck.look === "wood" ? "#3a2c22" : deck.look === "neon" ? "#05070c" : deck.mocha.surface0
             border.width: Math.max(2, Math.round(deck.width * 0.022))
-            border.color: deck.playing ? deck.accent : deck.mocha.overlay0
+            border.color: deck.platterRim
             Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
+        }
+        // Neon: gloed rond de draaischijf.
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -deck.width * 0.01
+            radius: width / 2
+            visible: deck.look === "neon"
+            color: "transparent"
+            border.width: Math.max(2, deck.width * 0.012)
+            border.color: Qt.rgba(deck.accent.r, deck.accent.g, deck.accent.b, deck.playing ? 0.55 : 0.25)
+            Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
+            layer.enabled: visible
+            layer.effect: MultiEffect { blurEnabled: true; blurMax: 16; blur: 0.6 }
+        }
+        // Stroboscoopstippen op de rand van de draaischijf (hout en neon).
+        Item {
+            anchors.fill: parent
+            visible: (deck.strobe || deck.look === "wood" || deck.look === "neon") && deck.width >= 200
+            rotation: deck.discAngle * 0.6
+            Repeater {
+                model: 72
+                Rectangle {
+                    required property int index
+                    readonly property real a: index / 72 * Math.PI * 2
+                    readonly property real rr: parent.width / 2 - deck.width * 0.011
+                    width: Math.max(2, deck.width * 0.007)
+                    height: width
+                    radius: width / 2
+                    x: parent.width / 2 + Math.cos(a) * rr - width / 2
+                    y: parent.height / 2 + Math.sin(a) * rr - height / 2
+                    color: deck.look === "neon"
+                        ? Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, index % 2 ? 0.9 : 0.35)
+                        : deck.look === "wood" ? Qt.rgba(0.17, 0.11, 0.07, index % 2 ? 0.85 : 0.35)
+                        : deck.look === "paper" ? Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, index % 2 ? 0.95 : 0.4)
+                        : Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, index % 2 ? 0.8 : 0.3)
+                }
+            }
         }
         Rectangle {
             anchors.fill: parent
             anchors.margins: deck.width * 0.035
             radius: width / 2
-            color: Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, 0.92)
+            color: deck.matColor
             border.width: 1
             border.color: Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.50)
         }
@@ -375,7 +479,7 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
-                color: Qt.rgba(deck.mocha.surface1.r, deck.mocha.surface1.g, deck.mocha.surface1.b, 0.98)
+                color: deck.discColor
                 border.width: 1
                 border.color: Qt.rgba(deck.mocha.text.r, deck.mocha.text.g, deck.mocha.text.b, 0.12)
             }
@@ -391,8 +495,12 @@ Item {
                     radius: width / 2
                     color: "transparent"
                     border.width: 1
-                    border.color: Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b,
-                        index % 2 === 0 ? 0.20 : 0.11)
+                    border.color: deck.look === "neon"
+                        ? (index % 3 === 0
+                            ? Qt.rgba(deck.accent.r, deck.accent.g, deck.accent.b, 0.30)
+                            : Qt.rgba(deck.mocha.pink.r, deck.mocha.pink.g, deck.mocha.pink.b, 0.10))
+                        : Qt.rgba(deck.grooveColor.r, deck.grooveColor.g, deck.grooveColor.b,
+                            index % 2 === 0 ? 0.20 : 0.11)
                 }
             }
 
@@ -469,31 +577,34 @@ Item {
             id: tonearm
             visible: deck.showArm && !deck.compactDisc
             readonly property real u: deck.width / 220
+            readonly property real bs: deck.armBase
             width: 94 * u
             height: 96 * u
-            x: parent.width - width - 4 * u
-            y: 5 * u
+            // Plaats zo dat het draaipunt op deck.armPivot valt (record zit
+            // met een marge in het deck).
+            x: deck.armPivotX - record.x - pivotX
+            y: deck.armPivotY - record.y - pivotY
             // Draaipunt van de arm, in tonearm-coördinaten.
             readonly property real pivotX: width - 14.5 * u
             readonly property real pivotY: 13 * u
 
             Rectangle {
-                width: 31 * tonearm.u
+                width: 31 * tonearm.u * tonearm.bs
                 height: width
                 radius: width / 2
                 x: tonearm.pivotX - width / 2
                 y: tonearm.pivotY - height / 2
-                color: Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, 0.96)
-                border.width: 1
-                border.color: Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.68)
+                color: deck.baseOuter
+                border.width: deck.look === "paper" ? 1.5 : 1
+                border.color: deck.look === "" ? Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.68) : deck.baseAccent
                 Rectangle {
                     anchors.centerIn: parent
                     width: parent.width * 0.7
                     height: width
                     radius: width / 2
-                    color: Qt.rgba(deck.mocha.surface1.r, deck.mocha.surface1.g, deck.mocha.surface1.b, 0.92)
+                    color: deck.baseInner
                     border.width: 1
-                    border.color: Qt.rgba(deck.accent.r, deck.accent.g, deck.accent.b, 0.34)
+                    border.color: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.4)
                 }
             }
 
@@ -502,20 +613,22 @@ Item {
                 width: 9 * tonearm.u
                 height: 6 * tonearm.u
                 radius: 2 * tonearm.u
-                x: tonearm.pivotX + 11.5 * tonearm.u - width / 2
-                y: tonearm.pivotY + 40 * tonearm.u
-                color: deck.mocha.surface2
+                readonly property real d: 44 * tonearm.u * deck.armReach
+                x: tonearm.pivotX - Math.sin(deck.armRest * Math.PI / 180) * d - width / 2
+                y: tonearm.pivotY + Math.cos(deck.armRest * Math.PI / 180) * d - height / 2
+                color: deck.look === "" ? deck.mocha.surface2 : deck.armShellColor
                 border.width: 1
-                border.color: Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.6)
+                border.color: deck.look === "" ? Qt.rgba(deck.mocha.overlay2.r, deck.mocha.overlay2.g, deck.mocha.overlay2.b, 0.6) : deck.baseAccent
             }
 
             Item {
                 id: arm
                 readonly property real u: tonearm.u
                 // Boven het draaipunt zit het contragewicht.
-                readonly property real hubY: 14 * u
-                width: 34 * u
-                height: 94 * u
+                readonly property real hubY: (6 + 8 * tonearm.bs) * u
+                readonly property real reach: deck.armReach
+                width: Math.max(34, 16 * tonearm.bs) * u
+                height: hubY + (80 + 66 * (reach - 1)) * u
                 x: tonearm.pivotX - width / 2
                 y: tonearm.pivotY - hubY
                 transform: [
@@ -541,13 +654,17 @@ Item {
                     id: armCanvas
                     anchors.fill: parent
                     antialiasing: true
-                    readonly property color tube: deck.mocha.overlay2
+                    readonly property color tube: deck.armTubeColor
                     readonly property color shine: deck.mocha.text
-                    readonly property color shell: deck.mocha.base
-                    readonly property color edge: deck.mocha.overlay1
+                    readonly property color shell: deck.armShellColor
+                    readonly property color edge: deck.look === "wood" ? deck.brass
+                        : deck.look === "neon" ? deck.accent : deck.mocha.overlay1
+                    readonly property bool glow: deck.look === "neon"
                     readonly property color tip: deck.accent
                     readonly property real lift: deck.armLift
                     onTubeChanged: requestPaint()
+                    onEdgeChanged: requestPaint()
+                    onGlowChanged: requestPaint()
                     onShellChanged: requestPaint()
                     onTipChanged: requestPaint()
                     onLiftChanged: requestPaint()
@@ -558,8 +675,8 @@ Item {
                         ctx.beginPath();
                         ctx.moveTo(cx, hub - 6 * u);
                         ctx.lineTo(cx, hub + 8 * u);
-                        ctx.bezierCurveTo(cx, hub + 34 * u,
-                                          cx + 4 * u, hub + 50 * u,
+                        ctx.bezierCurveTo(cx, hub + 34 * u * arm.reach,
+                                          cx + 4 * u, hub + 50 * u * arm.reach,
                                           end.x, end.y);
                     }
                     function headshell(ctx, u, end, fill, stroke) {
@@ -594,7 +711,8 @@ Item {
                         let u = arm.u;
                         let cx = width / 2;
                         let hub = arm.hubY;
-                        let end = { x: cx - 7 * u, y: hub + 66 * u };
+                        let end = { x: cx - 7 * u, y: hub + 66 * u * arm.reach };
+                        let bs = tonearm.bs;
                         let tw = Math.max(1.6, 3.6 * u);
                         ctx.lineCap = "round";
                         ctx.lineJoin = "round";
@@ -614,14 +732,20 @@ Item {
                         // Contragewicht achter het draaipunt.
                         ctx.fillStyle = Qt.rgba(edge.r, edge.g, edge.b, 1);
                         ctx.beginPath();
-                        ctx.roundedRect(cx - 5.5 * u, hub - 12 * u, 11 * u, 8 * u, 2.5 * u, 2.5 * u);
+                        ctx.roundedRect(cx - 5.5 * u * bs, hub - (4 + 8 * bs) * u, 11 * u * bs, 8 * u * bs, 2.5 * u * bs, 2.5 * u * bs);
                         ctx.fill();
 
-                        // Buis met een smalle glans erover.
+                        // Buis met een smalle glans erover; neon gloeit.
+                        if (glow) {
+                            ctx.save();
+                            ctx.shadowColor = Qt.rgba(tube.r, tube.g, tube.b, 0.9);
+                            ctx.shadowBlur = 10 * u;
+                        }
                         tubePath(ctx, u, cx, hub, end);
-                        ctx.lineWidth = tw;
+                        ctx.lineWidth = glow ? Math.max(1.2, tw * 0.7) : tw;
                         ctx.strokeStyle = tube;
                         ctx.stroke();
+                        if (glow) ctx.restore();
                         tubePath(ctx, u, cx - tw * 0.18, hub, { x: end.x - tw * 0.18, y: end.y });
                         ctx.lineWidth = Math.max(0.6, tw * 0.28);
                         ctx.strokeStyle = Qt.rgba(shine.r, shine.g, shine.b, 0.35);
@@ -655,7 +779,7 @@ Item {
                     width: 30 * arm.u
                     height: 30 * arm.u
                     x: arm.width / 2 - 7 * arm.u - width / 2
-                    y: arm.hubY + 60 * arm.u - height / 2 + 6 * arm.u
+                    y: arm.hubY + (60 * arm.reach + 6) * arm.u - height / 2
                     hoverEnabled: true
                     preventStealing: true
                     cursorShape: enabled ? (pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor) : Qt.ArrowCursor
@@ -683,20 +807,20 @@ Item {
 
             // Kleine pivot bovenop de arm.
             Rectangle {
-                width: 18 * tonearm.u
+                width: 18 * tonearm.u * tonearm.bs
                 height: width
                 radius: width / 2
                 x: tonearm.pivotX - width / 2
                 y: tonearm.pivotY - height / 2
-                color: deck.mocha.surface0
+                color: deck.look === "" ? deck.mocha.surface0 : deck.baseOuter
                 border.width: 1
-                border.color: Qt.rgba(deck.accent.r, deck.accent.g, deck.accent.b, 0.72)
+                border.color: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.72)
                 Rectangle {
                     anchors.centerIn: parent
                     width: parent.width / 3
                     height: width
                     radius: width / 2
-                    color: Qt.rgba(deck.accent.r, deck.accent.g, deck.accent.b, 0.92)
+                    color: Qt.rgba(deck.baseAccent.r, deck.baseAccent.g, deck.baseAccent.b, 0.92)
                 }
             }
         }
