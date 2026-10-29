@@ -43,9 +43,13 @@ Item {
     // Meer kleuren uit het thema dan alleen het accent: secondary en tertiary
     // (met hun containers) krijgen elk een eigen rol, zodat het geen
     // eenkleurig filter wordt. Ontbreken ze, dan valt het terug op het palet.
-    readonly property color secondary: mocha.secondary !== undefined ? mocha.secondary : mocha.pink
+    // Tweede kleur: accent 2 (uit de wallpaper) als die er is. Matugen's
+    // secondary ligt vaak vlak bij primary en gaf dan weer één tint.
+    readonly property color secondary: mocha.accent2 !== undefined ? mocha.accent2
+        : mocha.secondary !== undefined ? mocha.secondary : mocha.pink
     readonly property color tertiary: mocha.tertiary !== undefined ? mocha.tertiary : mocha.peach
-    readonly property color secondaryContainer: mocha.secondaryContainer !== undefined ? mocha.secondaryContainer : secondary
+    readonly property color secondaryContainer: mocha.accent2Container !== undefined ? mocha.accent2Container
+        : mocha.secondaryContainer !== undefined ? mocha.secondaryContainer : secondary
     readonly property color tertiaryContainer: mocha.tertiaryContainer !== undefined ? mocha.tertiaryContainer : tertiary
     readonly property color primaryContainer: mocha.primaryContainer !== undefined ? mocha.primaryContainer : accent
     function role(name, fallback) {
@@ -60,10 +64,11 @@ Item {
         // Hout: warm en ambachtelijk. Themakleuren, maar geen gloed:
         // crèmekleurige knoppen, geborsteld metaal, een donkere rand.
         if (look === "wood") {
-            // Hout uit surface met secondary-container, crème met een zweem
+            // Hout uit surface met Matugens secondary-container, crème met een zweem
             // tertiary, metaal met secondary; het accent (primary) blijft
             // voor wat aan staat.
-            let wood = Qt.tint(Qt.tint(m.surface1, Qt.rgba(secC.r, secC.g, secC.b, 0.16)), Qt.rgba(a.r, a.g, a.b, 0.05));
+            let woodC = m.secondaryContainer !== undefined ? m.secondaryContainer : secC;
+            let wood = Qt.tint(Qt.tint(m.surface1, Qt.rgba(woodC.r, woodC.g, woodC.b, 0.16)), Qt.rgba(a.r, a.g, a.b, 0.05));
             let cream = Qt.tint(m.text, Qt.rgba(terC.r, terC.g, terC.b, 0.18));
             let metal = Qt.tint(m.subtext1, Qt.rgba(sec.r, sec.g, sec.b, 0.24));
             return {

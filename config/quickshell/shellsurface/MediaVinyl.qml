@@ -461,26 +461,31 @@ Item {
             layer.effect: MultiEffect { blurEnabled: true; blurMax: 16; blur: 0.6 }
         }
         // Stroboscoopstippen op de rand van de draaischijf (hout en neon).
-        Item {
+        // Eén keer getekend en als geheel gedraaid: goedkoper dan 72 losse
+        // rechthoeken die elk frame meedraaien.
+        Canvas {
+            id: strobeRing
             anchors.fill: parent
             visible: (deck.strobe || deck.look === "wood" || deck.look === "neon") && deck.width >= 200
             rotation: deck.discAngle * 0.6
-            Repeater {
-                model: 72
-                Rectangle {
-                    required property int index
-                    readonly property real a: index / 72 * Math.PI * 2
-                    readonly property real rr: parent.width / 2 - deck.width * 0.011
-                    width: Math.max(2, deck.width * 0.007)
-                    height: width
-                    radius: width / 2
-                    x: parent.width / 2 + Math.cos(a) * rr - width / 2
-                    y: parent.height / 2 + Math.sin(a) * rr - height / 2
-                    color: deck.look === "neon"
-                        ? Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, index % 2 ? 0.9 : 0.35)
-                        : deck.look === "wood" ? Qt.rgba(deck.mocha.crust.r, deck.mocha.crust.g, deck.mocha.crust.b, index % 2 ? 0.85 : 0.35)
-                        : deck.look === "paper" ? Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, index % 2 ? 0.95 : 0.4)
-                        : Qt.rgba(deck.mocha.base.r, deck.mocha.base.g, deck.mocha.base.b, index % 2 ? 0.8 : 0.3)
+            readonly property color dot: deck.look === "wood" ? deck.mocha.crust : deck.mocha.base
+            readonly property real strong: deck.look === "wood" ? 0.85 : deck.look === "paper" ? 0.95 : deck.look === "neon" ? 0.9 : 0.8
+            readonly property real weak: deck.look === "wood" ? 0.35 : deck.look === "paper" ? 0.4 : deck.look === "neon" ? 0.35 : 0.3
+            onDotChanged: requestPaint()
+            onStrongChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onVisibleChanged: if (visible) requestPaint()
+            onPaint: {
+                let ctx = getContext("2d");
+                ctx.reset();
+                let rr = width / 2 - deck.width * 0.011;
+                let d = Math.max(2, deck.width * 0.007);
+                for (let i = 0; i < 72; i++) {
+                    let a = i / 72 * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.arc(width / 2 + Math.cos(a) * rr, height / 2 + Math.sin(a) * rr, d / 2, 0, Math.PI * 2);
+                    ctx.fillStyle = Qt.rgba(dot.r, dot.g, dot.b, i % 2 ? strong : weak);
+                    ctx.fill();
                 }
             }
         }
@@ -540,26 +545,6 @@ Item {
                 border.color: Qt.rgba(deck.mocha.text.r, deck.mocha.text.g, deck.mocha.text.b, 0.12)
             }
 
-            // Fijne groeven, zodat de plaat ook zonder hoes echt oogt.
-            Repeater {
-                model: deck.compactDisc ? 3 : Math.max(3, Math.round(deck.width / 16))
-                Rectangle {
-                    required property int index
-                    anchors.centerIn: parent
-                    width: Math.max(disc.width * 0.40, disc.width - 6 - index * (disc.width * 0.07))
-                    height: width
-                    radius: width / 2
-                    color: "transparent"
-                    border.width: 1
-                    border.color: deck.look === "neon"
-                        ? (index % 3 === 0
-                            ? Qt.rgba(deck.accent.r, deck.accent.g, deck.accent.b, 0.30)
-                            : Qt.rgba(deck.mocha.pink.r, deck.mocha.pink.g, deck.mocha.pink.b, 0.10))
-                        : Qt.rgba(deck.grooveColor.r, deck.grooveColor.g, deck.grooveColor.b,
-                            index % 2 === 0 ? 0.20 : 0.11)
-                }
-            }
-
             // Label met de hoes.
             Rectangle {
                 anchors.centerIn: parent
@@ -608,6 +593,39 @@ Item {
 
             rotation: deck.discAngle
         }
+
+            // Fijne groeven, zodat de plaat ook zonder hoes echt oogt. Ringen
+            // zien er gedraaid hetzelfde uit, dus ze staan buiten de draaiing
+            // en worden één keer getekend.
+            Canvas {
+                id: grooves
+                anchors.fill: parent
+                readonly property color line: deck.look === "neon" ? deck.accent : deck.grooveColor
+                readonly property color line2: deck.look === "neon" ? deck.mocha.pink : deck.grooveColor
+                onLineChanged: requestPaint()
+                onLine2Changed: requestPaint()
+                readonly property real labelFrac: deck.labelFrac
+                onLabelFracChanged: requestPaint()
+                onWidthChanged: requestPaint()
+                onPaint: {
+                    let ctx = getContext("2d");
+                    ctx.reset();
+                    let w = width;
+                    let n = deck.compactDisc ? 3 : Math.max(3, Math.round(deck.width / 16));
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i < n; i++) {
+                        let dia = w - 6 - i * (w * 0.07);
+                        if (dia < w * Math.max(0.40, deck.labelFrac + 0.02)) break;
+                        let neon = deck.look === "neon";
+                        let c = neon && i % 3 !== 0 ? line2 : line;
+                        let alpha = neon ? (i % 3 === 0 ? 0.30 : 0.10) : (i % 2 === 0 ? 0.20 : 0.11);
+                        ctx.beginPath();
+                        ctx.arc(w / 2, height / 2, dia / 2 - 0.5, 0, Math.PI * 2);
+                        ctx.strokeStyle = Qt.rgba(c.r, c.g, c.b, alpha);
+                        ctx.stroke();
+                    }
+                }
+            }
 
             // Zachte glans op de lak. Buiten de draaiende plaat: het licht
             // staat stil, de plaat draait eronder door.

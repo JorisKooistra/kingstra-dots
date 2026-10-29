@@ -68,10 +68,10 @@ Item {
     // Zijwanden: laagjes van de voet naar de kap. Op het voorpaneel is dat
     // de bovenkant (licht), bovenop de tafel de voorkant (schaduwzijde).
     Repeater {
-        model: Math.max(2, Math.ceil(key.depth * key.reach))
+        model: Math.max(2, Math.min(12, Math.ceil(key.depth * key.reach)))
         Rectangle {
             required property int index
-            readonly property real t: index / Math.max(1, Math.ceil(key.depth * key.reach))
+            readonly property real t: index / Math.max(1, Math.min(12, Math.ceil(key.depth * key.reach)))
             readonly property color far: key.frontFacing ? Qt.darker(key.skin.capSide, 1.2) : Qt.darker(key.skin.capSide, 1.45)
             readonly property color near: key.frontFacing ? Qt.darker(key.skin.capB, 1.18) : key.skin.capSide
             x: key.baseX + (key.faceX - key.baseX) * t

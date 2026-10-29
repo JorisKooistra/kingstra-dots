@@ -5,6 +5,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- Tweede kleur is nu accent 2 uit de wallpaper (Matugens secondary lag vaak gelijk aan primary); de mat gebruikt de accent-2-container, het hout houdt de secondary-container.
+- Lichter: de stroboscoopring (72 stippen) en de groeven zijn elk één keer getekende canvassen in plaats van tientallen losse rechthoeken; de groeven staan buiten de draaiing (ringen zien er gedraaid hetzelfde uit) en dubbele ringen zijn weg. Zijwanden van knoppen en uitstekende delen hebben hooguit 12 laagjes.
 - De draaitafel gebruikt meer van het thema dan alleen het accent: hout en mat uit de secondary-container, crème knoppen met tertiary-container, metaal met secondary, label en lampje in tertiary, element en 33/45-ledjes in secondary. Op het display zijn titel, artiest en tijd elk een eigen themakleur, en de achtergrond krijgt een zachte gloed uit beide containers.
 - De overgang tussen klein en groot loopt in fases: eerst groeit de platte speler naar zijn plek, dan kantelt hij en vouwt de voorkant uit, en pas aan het eind komen 33/45, merk en volumetekst erbij (bij sluiten andersom). De hoekradius loopt mee, zodat de bovenkant niet ineens verandert. De animatie start pas als het venster een paar frames heeft getekend.
 - Alle uitstekende delen gebruiken nu dezelfde 3D-regels als de knoppen (nieuw `shellsurface/Extruded.qml`): armvoet, pivotkapje, armsteun, volumeschuif, armlift, lampje en 45-adapter hebben echte dikte, een zijkant naar gelang hun plek en een zachte slagschaduw. Display en spoelbalk liggen verzonken in het voorpaneel.

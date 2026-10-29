@@ -55,10 +55,10 @@ Item {
         }
     }
     Repeater {
-        model: ex.flat ? 0 : Math.max(2, Math.ceil(ex.depth * ex.reach))
+        model: ex.flat ? 0 : Math.max(2, Math.min(12, Math.ceil(ex.depth * ex.reach)))
         Rectangle {
             required property int index
-            readonly property real t: index / Math.max(1, Math.ceil(ex.depth * ex.reach))
+            readonly property real t: index / Math.max(1, Math.min(12, Math.ceil(ex.depth * ex.reach)))
             readonly property color far: ex.frontFacing ? Qt.darker(ex.side, 1.2) : Qt.darker(ex.side, 1.45)
             readonly property color near: ex.frontFacing ? Qt.darker(ex.faceBottom, 1.18) : ex.side
             x: ex.dx * t
