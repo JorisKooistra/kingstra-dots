@@ -403,6 +403,7 @@ Item {
         x: table.width * 0.03
         y: table.height * 0.835
         label: "START"
+        lean: -0.85
         lit: table.playing
         keyWidth: table.height * 0.15
         keyHeight: table.height * 0.11
@@ -422,6 +423,7 @@ Item {
                 skin: table.skin
                 required property int modelData
                 label: String(modelData)
+                lean: modelData === 33 ? -0.62 : -0.48
                 lit: table.rpm === modelData
                 keyWidth: table.height * 0.085
                 keyHeight: table.height * 0.045

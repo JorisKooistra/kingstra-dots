@@ -14,40 +14,79 @@ Item {
     property real keyWidth: 40
     property real keyHeight: 26
     signal activated()
-    // Hoogte van de zijkant: de kap staat zichtbaar boven de kast.
-    readonly property real depth: Math.max(2, Math.round(keyHeight * 0.16))
+
+    // Echt 3D: de kap is een uitgetrokken blokje boven een voetafdruk.
+    // Bovenop de tafel (frontFacing uit) kijk je schuin van voren tegen de
+    // kap aan: de kap staat hoger in beeld en je ziet de voorkant eronder.
+    // Op het staande voorpaneel (frontFacing aan) steekt hij naar je toe en
+    // kijk je er van boven op: de kap staat lager en je ziet de bovenkant,
+    // met de schaduw eronder op het paneel. lean (-1..1) is waar de knop
+    // links of rechts van het midden staat; dan zie je ook een zijkant.
+    property bool frontFacing: false
+    property real lean: 0
+    property real depthScale: frontFacing ? 0.24 : 0.16
+    readonly property real depth: Math.max(2, Math.round(keyHeight * depthScale))
     readonly property real capRadius: Math.min(keyHeight / 2, skin.radius < 10 ? 4 : 10)
-    implicitWidth: keyWidth
+    // 0 = uit, 1 = ingedrukt; de kap zakt dan bijna tot in de voet.
+    property real press: keyMouse.pressed ? 1 : 0
+    Behavior on press { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutCubic } }
+    readonly property real reach: 1 - 0.75 * press
+    readonly property real dxFull: lean * depth * 0.6
+    readonly property real baseX: dxFull < 0 ? -dxFull : 0
+    readonly property real baseY: frontFacing ? 0 : depth
+    readonly property real faceX: baseX + dxFull * reach
+    readonly property real faceY: frontFacing ? depth * reach : depth * (1 - reach)
+    implicitWidth: keyWidth + Math.abs(dxFull)
     implicitHeight: keyHeight + depth
     opacity: enabled ? 1 : 0.4
 
-    // Schaduw op de kast.
+    // Uitsparing in de kast rond de voet.
     Rectangle {
-        x: 1
-        y: key.depth + 1
-        width: parent.width
-        height: key.keyHeight
-        radius: key.capRadius
-        color: Qt.rgba(0, 0, 0, 0.35)
+        x: key.baseX - 1.5
+        y: key.baseY - 1.5
+        width: key.keyWidth + 3
+        height: key.keyHeight + 3
+        radius: key.capRadius + 1.5
+        color: Qt.rgba(0, 0, 0, key.skin.capShine === 0 ? 0 : 0.45)
     }
-    // Zijkant van de knop; de kap schuift erover bij indrukken.
-    Rectangle {
-        y: key.depth
-        width: parent.width
-        height: key.keyHeight
-        radius: key.capRadius
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: key.skin.capSide }
-            GradientStop { position: 1.0; color: Qt.darker(key.skin.capSide, 1.4) }
+    // Zachte slagschaduw: licht van boven, dus naar beneden en iets opzij.
+    Repeater {
+        model: key.skin.capShine === 0 ? 0 : 3
+        Rectangle {
+            required property int index
+            readonly property real spread: index * Math.max(1, key.depth * 0.25)
+            x: key.baseX + (key.depth * 0.2 + key.dxFull * 0.5) * key.reach - spread
+            y: key.baseY + (key.frontFacing ? key.depth * 0.9 : key.depth * 0.35) * key.reach - spread * 0.5
+            width: key.keyWidth + spread * 2
+            height: key.keyHeight + spread
+            radius: key.capRadius + spread
+            color: Qt.rgba(0, 0, 0, 0.16 - index * 0.04)
+        }
+    }
+    // Zijwanden: laagjes van de voet naar de kap. Op het voorpaneel is dat
+    // de bovenkant (licht), bovenop de tafel de voorkant (schaduwzijde).
+    Repeater {
+        model: Math.max(2, Math.ceil(key.depth * key.reach))
+        Rectangle {
+            required property int index
+            readonly property real t: index / Math.max(1, Math.ceil(key.depth * key.reach))
+            readonly property color far: key.frontFacing ? Qt.darker(key.skin.capSide, 1.2) : Qt.darker(key.skin.capSide, 1.45)
+            readonly property color near: key.frontFacing ? Qt.darker(key.skin.capB, 1.18) : key.skin.capSide
+            x: key.baseX + (key.faceX - key.baseX) * t
+            y: key.baseY + (key.faceY - key.baseY) * t
+            width: key.keyWidth
+            height: key.keyHeight
+            radius: key.capRadius
+            color: Qt.tint(far, Qt.rgba(near.r, near.g, near.b, t))
         }
     }
     Rectangle {
         id: cap
-        y: keyMouse.pressed ? key.depth * 0.8 : 0
-        width: parent.width
+        x: key.faceX
+        y: key.faceY
+        width: key.keyWidth
         height: key.keyHeight
         radius: key.capRadius
-        Behavior on y { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutCubic } }
         gradient: Gradient {
             GradientStop { position: 0.0; color: keyMouse.containsMouse ? key.skin.capHover : key.skin.capA }
             GradientStop { position: 1.0; color: key.skin.capB }
@@ -58,6 +97,14 @@ Item {
             : key.skin.capBorder
         Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
 
+        // Afgeronde onderrand vangt minder licht.
+        Rectangle {
+            x: key.capRadius * 0.6
+            y: parent.height - 2
+            width: parent.width - key.capRadius * 1.2
+            height: 1
+            color: Qt.rgba(0, 0, 0, key.skin.capShine === 0 ? 0 : 0.18)
+        }
         // Glanslijn langs de bovenrand.
         Rectangle {
             x: key.capRadius * 0.6

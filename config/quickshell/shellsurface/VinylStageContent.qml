@@ -466,6 +466,8 @@ FocusScope {
                         accent: stage.accent
                         skin: stage.skin
                         icon: "󰒮"
+                        frontFacing: true
+                        lean: 0.3
                         enabled: stage.canPrevious
                         keyWidth: stage.frontHeight * 0.78
                         keyHeight: stage.frontHeight * 0.56
@@ -476,6 +478,8 @@ FocusScope {
                         accent: stage.accent
                         skin: stage.skin
                         icon: stage.playing ? "󰏤" : "󰐊"
+                        frontFacing: true
+                        lean: 0.45
                         lit: stage.playing
                         keyWidth: stage.frontHeight * 1.0
                         keyHeight: stage.frontHeight * 0.56
@@ -486,6 +490,8 @@ FocusScope {
                         accent: stage.accent
                         skin: stage.skin
                         icon: "󰒭"
+                        frontFacing: true
+                        lean: 0.62
                         enabled: stage.canNext
                         keyWidth: stage.frontHeight * 0.78
                         keyHeight: stage.frontHeight * 0.56
@@ -497,6 +503,8 @@ FocusScope {
                         accent: stage.accent
                         skin: stage.skin
                         icon: "󰅖"
+                        frontFacing: true
+                        lean: 0.85
                         keyWidth: stage.frontHeight * 0.56
                         keyHeight: stage.frontHeight * 0.56
                         onActivated: stage.closeRequested()
