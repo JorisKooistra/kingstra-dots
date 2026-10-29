@@ -25,10 +25,12 @@ DeviceStage {
     skin: disc.skin
     look: disc.look
     topAspect: 1.0
-    frontRatio: 0.09
+    frontRatio: 0.16
+    camYaw: -24
+    camPitch: 48
+    camDistance: 2.4
     widthShare: look === "wood" ? 0.3 : 0.42
     phonesScale: 1.3
-    maxTilt: 24
     bodyRadius: disc.bodyRadius
     hint: "Spatie afspelen  ·  ⏮ ⏭ vorige/volgende, vasthouden zoekt  ·  sleep over de balk op het scherm  ·  ← → spoelen  ·  Esc sluit"
     onNudge: seconds => seeker.nudge(seconds)
@@ -76,33 +78,28 @@ DeviceStage {
         }
     ]
 
-    // Knoppen en opschrift op de gebogen voorrand: x als deel van de
-    // breedte. Ze staan op de cilinder van de kast: de hoogte volgt de
-    // bovenrand van de band, ze kantelen mee met de helling en worden naar
-    // de zijkant smaller, zoals op een echte ronde rand.
-    function bandX(f) { return frontWidth * f; }
-    function bandY(f, h) { return rimY(frontWidth * f) + (frontHeight - h) / 2; }
-    function bandSin(f) { return Math.max(-0.95, Math.min(0.95, 2 * f - 1)); }
-    function bandScale(f) { return Math.sqrt(1 - bandSin(f) * bandSin(f)); }
-    function bandAngle(f) {
-        let x = frontWidth * f, e = Math.max(1, frontWidth * 0.01);
-        return Math.atan2(rimY(x + e) - rimY(x - e), 2 * e) * 180 / Math.PI;
-    }
-    readonly property real keySize: frontHeight * 0.6
+    // Knoppen en opschrift op de ronde rand: a in graden rond de kast (0 =
+    // midden voor). Ze staan op de cilinder: plek, schuinte en breedte
+    // volgen de camera (sidePoint), naar de zijkant worden ze smaller.
+    readonly property real keySize: boxDepth * 0.5
+    // De rij staat rond het deel van de rand dat het meest naar je toe wijst.
+    readonly property real bandCenter: -camYaw * 0.5
 
     component OnBand: Item {
         id: slot
-        property real f: 0.5
+        property real a: 0
+        readonly property var at: stage.sidePoint(a + stage.bandCenter, 0.52)
         readonly property Item first: children.length > 0 ? children[0] : null
         width: first ? first.width : 0
         height: first ? first.height : 0
-        x: stage.bandX(f) - width / 2
-        y: stage.bandY(f, height)
+        x: at.x - width / 2
+        y: at.y - height / 2
         transform: [
-            Scale { origin.x: slot.width / 2; origin.y: slot.height / 2; xScale: stage.bandScale(slot.f) },
-            Rotation { origin.x: slot.width / 2; origin.y: slot.height / 2; angle: stage.bandAngle(slot.f) }
+            Scale { origin.x: slot.width / 2; origin.y: slot.height / 2; xScale: slot.at.facing * slot.at.s; yScale: slot.at.ys },
+            Rotation { origin.x: slot.width / 2; origin.y: slot.height / 2; angle: slot.at.angle }
         ]
     }
+    function lean(a) { return Math.max(-1, Math.min(1, Math.sin((a + bandCenter) * Math.PI / 180 + yawNow))); }
 
     frontData: [
         Item {
@@ -110,12 +107,12 @@ DeviceStage {
 
             // Koptelefoonaansluiting met opschrift.
             OnBand {
-                f: 0.27
+                a: -40
                 Row {
-                    spacing: stage.frontHeight * 0.1
+                    spacing: stage.boxDepth * 0.1
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: stage.frontHeight * 0.34
+                        width: stage.boxDepth * 0.34
                         height: width
                         radius: width / 2
                         color: stage.look === "paper" ? stage.mocha.base : stage.skin.metal
@@ -134,7 +131,7 @@ DeviceStage {
                         opacity: stage.detailT
                         text: "PHONES"
                         font.family: ThemeConfig.monoFont
-                        font.pixelSize: Math.max(8, stage.frontHeight * 0.13)
+                        font.pixelSize: Math.max(8, stage.boxDepth * 0.13)
                         font.letterSpacing: 1
                         color: stage.skin.brandColor
                     }
@@ -142,7 +139,7 @@ DeviceStage {
             }
 
             OnBand {
-                f: 0.41
+                a: -17
                 DeckKey {
                     id: prevKey
                     mocha: stage.mocha
@@ -151,7 +148,7 @@ DeviceStage {
                     icon: "󰒮"
                     round: true
                     frontFacing: true
-                    lean: stage.bandSin(0.41)
+                    lean: stage.lean(-17)
                     viewLean: stage.viewLean
                     lit: seeker.windDir < 0
                     keyWidth: stage.keySize
@@ -163,7 +160,7 @@ DeviceStage {
                 }
             }
             OnBand {
-                f: 0.5
+                a: 0
                 DeckKey {
                     mocha: stage.mocha
                     accent: stage.accent
@@ -174,7 +171,7 @@ DeviceStage {
                     latched: stage.playing
                     lit: stage.playing
                     frontFacing: true
-                    lean: 0
+                    lean: stage.lean(0)
                     viewLean: stage.viewLean
                     keyWidth: stage.keySize * 1.2
                     keyHeight: stage.keySize
@@ -182,7 +179,7 @@ DeviceStage {
                 }
             }
             OnBand {
-                f: 0.59
+                a: 17
                 DeckKey {
                     id: nextKey
                     mocha: stage.mocha
@@ -191,7 +188,7 @@ DeviceStage {
                     icon: "󰒭"
                     round: true
                     frontFacing: true
-                    lean: stage.bandSin(0.59)
+                    lean: stage.lean(17)
                     viewLean: stage.viewLean
                     lit: seeker.windDir > 0
                     keyWidth: stage.keySize
@@ -203,7 +200,7 @@ DeviceStage {
                 }
             }
             OnBand {
-                f: 0.675
+                a: 32
                 DeckKey {
                     mocha: stage.mocha
                     accent: stage.accent
@@ -211,7 +208,7 @@ DeviceStage {
                     icon: "󰓛"
                     round: true
                     frontFacing: true
-                    lean: stage.bandSin(0.675)
+                    lean: stage.lean(32)
                     viewLean: stage.viewLean
                     keyWidth: stage.keySize * 0.8
                     keyHeight: stage.keySize * 0.8
@@ -221,22 +218,22 @@ DeviceStage {
 
             // Volumewieltje met opschrift.
             OnBand {
-                f: 0.78
+                a: 50
                 Row {
-                    spacing: stage.frontHeight * 0.1
+                    spacing: stage.boxDepth * 0.1
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         opacity: stage.detailT
                         text: "VOL"
                         font.family: ThemeConfig.monoFont
-                        font.pixelSize: Math.max(8, stage.frontHeight * 0.13)
+                        font.pixelSize: Math.max(8, stage.boxDepth * 0.13)
                         font.letterSpacing: 1
                         color: stage.skin.brandColor
                     }
                     VolumeWheel {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: stage.frontHeight * 0.36
-                        height: stage.frontHeight * 0.56
+                        width: stage.boxDepth * 0.36
+                        height: stage.boxDepth * 0.56
                         skin: stage.skin
                         value: stage.volume
                         flat: stage.look === "paper"

@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Cassettespeler en discman naast de draaitafel
+- Eén camera voor speler en koptelefoon: alles staat op dezelfde tafel met echt perspectief, schuin gedraaid en van iets boven. De walkman is nu een echte doos (front via een homografie op de camera, bovenkant met knoppen en zijkant met wiel in hetzelfde perspectief); de discman draait ook schuin, met de knoppen op de rand die meelopen met de ronding en het deel dat naar je toe wijst. De koptelefoon gaat door dezelfde camera. De overgang draait vanuit recht van voren (walkman) of recht van boven (discman) naar de eindstand.
 - Cassettespeler is veel dunner (de kast was zo dik als de doos waar hij in zat), de knoppen bovenop zijn kleiner en het volumewiel zit nu echt in de zijkant: een geribbelde schijf met de as van voor naar achter, waarvan een stuk uit de kast steekt (nieuw `SideWheel.qml`).
 - Discman: knoppen, aansluiting en opschrift op de voorrand volgen de ronding (ze staan hoger naar de zijkant, kantelen mee en worden smaller), en de tekst op het deksel loopt langs de rand.
 - De houten koptelefoon heeft nu een echte verhouding tot de speler (breder dan de walkman of discman, grotere schelpen) en ligt ernaast in plaats van erachter; speler en koptelefoon staan samen in het midden.

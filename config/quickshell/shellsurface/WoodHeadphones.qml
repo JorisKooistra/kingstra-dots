@@ -4,9 +4,10 @@ import QtQuick.Effects
 import ".."
 
 // Houten koptelefoon als versiering naast de walkman of discman (Organic).
-// Hij ligt plat op tafel met de kussens naar beneden, in hetzelfde
-// perspectief als het apparaat: k is hoe plat het tafelblad in beeld staat,
-// v hoe hoog dingen erop worden. Echt 3D: de schelpen zijn cilinders met een
+// Hij ligt plat op tafel met de kussens naar beneden, met dezelfde camera
+// als het apparaat: DeviceStage geeft project(X, Z, H) (tafelplek en hoogte
+// in eenheden van 1/100 koptelefoon, naar beeldpunten en schaal) en k, hoe
+// plat een cirkel op tafel in beeld staat. Echt 3D: de schelpen zijn cilinders met een
 // leren kussen en een houten kap, de beugel is een leren band op zijn kant
 // met metalen schuifstukken en vorken. Alles wordt één keer getekend.
 Item {
@@ -17,9 +18,9 @@ Item {
     property color metal: "#bbbbbb"
     property color leather: "#3a2a20"
     property real k: 0.42
-    property real v: 0.92
-
-    readonly property real u: width / 100
+    // Beeldpunten per eenheid op schaal 1, en de camera.
+    property real u: 4
+    property var project: (X, Z, H) => [X * u, -(Z * k + H) * u, 1]
     // Tafelcoördinaten in u: X naar rechts, Z naar achteren, H omhoog.
     readonly property real cupR: 21
     readonly property real cupX: 27
@@ -30,13 +31,7 @@ Item {
     readonly property real bandZ: cupR * 0.55
     readonly property real band0: 4
     readonly property real band1: 12
-    readonly property real cx: width / 2
-    readonly property real cy: u * ((bandZ + bandB + 4) * k + band1 * v + 3)
-    height: cy + u * (34 * k + 4)
-    // Voorkant van de schelpen op tafel: daarmee zet DeviceStage hem neer.
-    readonly property real tableFront: sy(-cupR, 0)
-    function sx(X) { return cx + X * u; }
-    function sy(Z, H) { return cy - (Z * k + H * v) * u; }
+    function sy(X, Z, H) { return project(X, Z, H)[1]; }
 
     // Ellips: een cirkel, plat gedrukt door het tafelperspectief.
     component Ellipse: Item {
@@ -46,6 +41,10 @@ Item {
         property color colorB: colorA
         property color edge: "transparent"
         property real edgeWidth: 0
+        // Plek op tafel: middelpunt in beeld.
+        property var at: [0, 0, 1]
+        x: at[0] - width / 2
+        y: at[1] - height / 2
         width: 2 * rx
         height: 2 * rx * phones.k
         Rectangle {
@@ -69,22 +68,23 @@ Item {
         property real h0: 0
         property real h1: 5
         property color side: "gray"
-        readonly property real rx: r * phones.u
-        readonly property real yBottom: phones.sy(0, h0)
-        readonly property real yTop: phones.sy(0, h1)
-        x: phones.sx(at) - rx
-        y: yTop - rx * phones.k
-        width: 2 * rx
-        height: yBottom - yTop + 2 * rx * phones.k
+        readonly property var pb: phones.project(at, 0, h0)
+        readonly property var pt: phones.project(at, 0, h1)
+        readonly property real rx: r * phones.u * (pb[2] + pt[2]) / 2
+        x: Math.min(pb[0], pt[0]) - rx
+        y: pt[1] - rx * phones.k
+        width: 2 * rx + Math.abs(pt[0] - pb[0])
+        height: pb[1] - pt[1] + 2 * rx * phones.k
         Ellipse {
-            y: cyl.yBottom - cyl.y - height / 2
+            at: [cyl.pb[0] - cyl.x, cyl.pb[1] - cyl.y, 1]
             rx: cyl.rx
             colorA: Qt.darker(cyl.side, 1.5)
         }
         Rectangle {
+            x: (cyl.pb[0] + cyl.pt[0]) / 2 - cyl.x - cyl.rx
             y: cyl.rx * phones.k
-            width: parent.width
-            height: cyl.yBottom - cyl.yTop
+            width: 2 * cyl.rx
+            height: cyl.pb[1] - cyl.pt[1]
             gradient: Gradient {
                 orientation: Gradient.Horizontal
                 GradientStop { position: 0.0; color: Qt.darker(cyl.side, 1.6) }
@@ -100,7 +100,7 @@ Item {
         let pts = [];
         for (let i = 0; i <= n; i++) {
             let t = t0 + (t1 - t0) * i / n;
-            pts.push([sx((bandA + grow) * Math.cos(t)), sy(bandZ + (bandB + grow) * Math.sin(t), h)]);
+            pts.push(project((bandA + grow) * Math.cos(t), bandZ + (bandB + grow) * Math.sin(t), h));
         }
         return pts;
     }
@@ -122,16 +122,17 @@ Item {
     // Schuifstuk van het eind van de band naar de vork achter de schelp.
     function slider(sign) {
         let t = sign > 0 ? tEnd : Math.PI - tEnd;
-        let x0 = sx((bandA + 1.8) * Math.cos(t)), y0 = sy(bandZ + (bandB + 1.8) * Math.sin(t), band1 - 1.5);
-        let x1 = sx(sign * cupX), y1 = sy(cupR + 1.6, shellH * 0.62);
-        return "M " + x0.toFixed(1) + " " + y0.toFixed(1) + " Q " + sx(sign * (cupX + 3)).toFixed(1) + " " + ((y0 + y1) / 2).toFixed(1) + " " + x1.toFixed(1) + " " + y1.toFixed(1);
+        let a = project((bandA + 1.8) * Math.cos(t), bandZ + (bandB + 1.8) * Math.sin(t), band1 - 1.5);
+        let b = project(sign * cupX, cupR + 1.6, shellH * 0.62);
+        let c = project(sign * (cupX + 3), (bandZ + cupR) / 2 + 2, (band1 + shellH * 0.62) / 2);
+        return "M " + a[0].toFixed(1) + " " + a[1].toFixed(1) + " Q " + c[0].toFixed(1) + " " + c[1].toFixed(1) + " " + b[0].toFixed(1) + " " + b[1].toFixed(1);
     }
     // Vork: metalen boog om de achterkant van een schelp.
     function yoke(sign) {
         let pts = [], r = cupR + 1.6;
         for (let i = 0; i <= 20; i++) {
             let t = Math.PI * i / 20;
-            pts.push([sx(sign * cupX + r * Math.cos(t)), sy(r * Math.sin(t), shellH * 0.62)]);
+            pts.push(project(sign * cupX + r * Math.cos(t), r * Math.sin(t), shellH * 0.62));
         }
         return line(pts);
     }
@@ -145,9 +146,8 @@ Item {
             model: [-1, 1]
             Ellipse {
                 required property int modelData
-                rx: (phones.cupR + 2.4) * phones.u
-                x: phones.sx(modelData * phones.cupX) - rx + phones.u * 2.5
-                y: phones.sy(0, 0) - height / 2 + phones.u * 1.2
+                at: phones.project(modelData * phones.cupX + 2.5, -1.5, 0)
+                rx: (phones.cupR + 2.4) * phones.u * at[2]
                 colorA: Qt.rgba(0, 0, 0, 0.5)
             }
         }
@@ -173,8 +173,8 @@ Item {
             strokeWidth: 1
             strokeColor: Qt.darker(phones.leather, 2)
             fillGradient: LinearGradient {
-                x1: 0; y1: phones.sy(phones.bandZ + phones.bandB, phones.band1)
-                x2: 0; y2: phones.sy(phones.bandZ, phones.band0)
+                x1: 0; y1: phones.sy(0, phones.bandZ + phones.bandB, phones.band1)
+                x2: 0; y2: phones.sy(0, phones.bandZ, phones.band0)
                 GradientStop { position: 0.0; color: Qt.lighter(phones.leather, 1.15) }
                 GradientStop { position: 1.0; color: Qt.darker(phones.leather, 1.6) }
             }
@@ -236,17 +236,15 @@ Item {
                 side: Qt.darker(phones.leather, 1.15)
             }
             Ellipse {
-                rx: phones.cupR * phones.u
-                x: phones.sx(cup.at) - rx
-                y: phones.sy(0, phones.cushionH) - height / 2
+                at: phones.project(cup.at, 0, phones.cushionH)
+                rx: phones.cupR * phones.u * at[2]
                 colorA: Qt.lighter(phones.leather, 1.1)
                 colorB: Qt.darker(phones.leather, 1.2)
             }
             // Metalen sierring tussen kussen en schaal.
             Ellipse {
-                rx: phones.cupR * 0.92 * phones.u
-                x: phones.sx(cup.at) - rx
-                y: phones.sy(0, phones.cushionH + 0.2) - height / 2
+                at: phones.project(cup.at, 0, phones.cushionH + 0.2)
+                rx: phones.cupR * 0.92 * phones.u * at[2]
                 colorA: "transparent"
                 edge: Qt.darker(phones.metal, 1.15)
                 edgeWidth: Math.max(1, phones.u * 0.35)
@@ -261,9 +259,10 @@ Item {
             }
             // Kap met nerf, afgeschuinde rand en een metalen logo.
             Item {
-                readonly property real rx: phones.cupR * 0.9 * phones.u
-                x: phones.sx(cup.at) - rx
-                y: phones.sy(0, phones.shellH) - rx * phones.k
+                readonly property var at: phones.project(cup.at, 0, phones.shellH)
+                readonly property real rx: phones.cupR * 0.9 * phones.u * at[2]
+                x: at[0] - rx
+                y: at[1] - rx * phones.k
                 width: 2 * rx
                 height: 2 * rx
                 transform: Scale { yScale: phones.k }
@@ -313,9 +312,10 @@ Item {
                 model: [-1, 1]
                 Rectangle {
                     required property int modelData
-                    readonly property real rr: Math.max(2, phones.u * 1.3)
-                    x: phones.sx(cup.at + modelData * (phones.cupR + 1.6)) - rr
-                    y: phones.sy(0, phones.shellH * 0.62) - rr
+                    readonly property var at: phones.project(cup.at + modelData * (phones.cupR + 1.6), 0, phones.shellH * 0.62)
+                    readonly property real rr: Math.max(2, phones.u * 1.3 * at[2])
+                    x: at[0] - rr
+                    y: at[1] - rr
                     width: 2 * rr
                     height: 2 * rr
                     radius: rr
@@ -331,10 +331,10 @@ Item {
     // Van de linkerschelp in een losse lus over tafel naar rechtsvoor, met
     // een metalen stekker.
     readonly property var cablePts: [
-        [sx(-cupX - cupR * 0.6), sy(-cupR * 0.55, 1.2)],
-        [sx(-cupX - 12), sy(-cupR - 18, 0.6)],
-        [sx(8), sy(-cupR - 26, 0.6)],
-        [sx(30), sy(-cupR - 10, 0.6)]
+        project(-cupX - cupR * 0.6, -cupR * 0.55, 1.2),
+        project(-cupX - 12, -cupR - 18, 0.6),
+        project(8, -cupR - 26, 0.6),
+        project(30, -cupR - 10, 0.6)
     ]
     Shape {
         anchors.fill: parent

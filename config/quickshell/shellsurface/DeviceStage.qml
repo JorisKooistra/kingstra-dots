@@ -3,20 +3,20 @@ import QtQuick.Shapes
 import QtQuick.Effects
 import ".."
 
-// Gedeeld podium voor de schermvullende cassettespeler en discman, met
-// dezelfde regels als de draaitafel (VinylStageContent): de bovenkant van
-// het apparaat staat in perspectief, de voorkant kijkt naar je en draagt de
-// knoppen. De overgang vanuit de kleine speler op het bureaublad loopt in
-// rustige fases: eerst groeit de platte speler naar zijn plek, dan kantelt
-// hij en vouwt de voorkant uit, pas daarna komen de details erbij.
+// Gedeeld podium voor de schermvullende cassettespeler en discman. Apparaat
+// en koptelefoon staan op één tafel voor één camera met echt perspectief
+// (cam/proj): schuin gedraaid (yaw) en van iets boven (pitch). De overgang
+// vanuit de kleine speler op het bureaublad loopt in rustige fases: eerst
+// groeit de platte speler naar zijn plek, dan draait hij in de camerastand
+// en komt de kast erbij, pas daarna de details.
 //
-// Inhoud: topData (de bovenkant, vult het vlak) en frontData (de knoppen op
-// de voorkant). Alleen QtQuick: het venster eromheen staat in VinylStage.qml.
-//
-// Staand (upright, de cassettespeler): het front kijkt recht naar je en de
-// kast heeft diepte naar achteren. Je kijkt er iets van rechtsboven op, dus
-// je ziet de bovenkant (met de knoppen, shellData) en de rechterzijkant
-// (met het wieltje). Die vouwen uit in de tweede fase van de overgang.
+// Staand (upright, de cassettespeler): je ziet het front (topData), de
+// bovenkant met de knoppen en de rechterzijkant met het wieltje
+// (shellData). Liggend (de discman): je ziet de bovenkant (topData) en de
+// zijkant, met de knoppen op de rand (frontData, via sidePoint). Het vlak
+// van topData wordt met een homografie op de camera gelegd, dus alles erop
+// staat vanzelf in perspectief. Alleen QtQuick: het venster eromheen staat
+// in VinylStage.qml.
 FocusScope {
     id: stage
 
@@ -39,20 +39,23 @@ FocusScope {
     property real widthShare: 0.52
     // Hoekradius van de kast op de uiteindelijke grootte (in pixels).
     property real bodyRadius: 12
-    property real maxTilt: 38
     property bool upright: false
-    // Staand: hoogte van het front en hoe ver de achterkant in beeld
-    // verschuift (naar rechtsboven), beide t.o.v. de breedte.
+    // Staand: hoogte van het front t.o.v. de breedte.
     property real faceAspect: 0.71
-    property real obliqueX: 0.04
-    property real obliqueY: 0.055
+    // Staand: diepte van de kast (liggend is dat frontRatio, de dikte). De
+    // camera in graden; afstand t.o.v. de breedte, kleiner = sterker
+    // perspectief.
+    property real depthRatio: 0.24
+    property real camYaw: -27
+    property real camPitch: 14
+    property real camDistance: 2.6
     // Organic: breedte van de koptelefoon t.o.v. het apparaat (echte maat:
     // een koptelefoon is breder dan een walkman of discman).
     property real phonesScale: 1.4
     readonly property bool hasPhones: look === "wood"
     readonly property real phonesWidth: rigWidth * phonesScale
     // Apparaat en koptelefoon samen in het midden.
-    readonly property real sceneShift: hasPhones ? phonesWidth * 0.5 : 0
+    readonly property real sceneShift: hasPhones ? phonesWidth * 0.55 : 0
 
     // 0 = dicht, 1 = open; het venster animeert dit.
     property real reveal: 1
@@ -70,7 +73,6 @@ FocusScope {
     property alias topData: topFace.data
     property alias frontData: frontContent.data
     property alias shellData: shellLayer.data
-    readonly property alias frontWidth: front.width
 
     signal togglePlay()
     signal previous()
@@ -177,74 +179,183 @@ FocusScope {
     }
 
     // --- Het apparaat ---------------------------------------------------------
-    readonly property real foreshorten: Math.cos(maxTilt * Math.PI / 180)
-    readonly property real rigWidth: upright
-        ? Math.min(width * widthShare, height * 0.64 / (faceAspect + obliqueY))
-        : Math.min(width * widthShare, height * 0.70 / (topAspect * foreshorten + frontRatio))
-    readonly property real topDepth: upright ? rigWidth * faceAspect : rigWidth * topAspect
-    readonly property real frontHeight: upright ? 0 : rigWidth * frontRatio
-    readonly property real tilt: upright ? 0 : fromOrigin ? maxTilt * tiltT : 8 + (maxTilt - 8) * reveal
-    // Staand: diepte van de kast in beeld; groeit mee in de tweede fase.
+    // Eén camera voor apparaat en koptelefoon. Wereld: midden van de rig,
+    // Y omhoog, Z naar je toe, in pixels op de eindgrootte. yaw draait de
+    // tafel, pitch is hoe ver je erop neerkijkt (90 = recht van boven).
+    // Begin van de overgang: staand recht van voren (yaw 0, pitch 0), liggend
+    // recht van boven (pitch 90). Dan valt het front of de bovenkant precies
+    // op de rig en groeit hij naadloos uit de kleine speler.
+    readonly property real camT: extrudeT
     readonly property real extrudeT: fromOrigin ? tiltT : reveal
-    readonly property real offX: upright ? rigWidth * obliqueX * extrudeT : 0
-    readonly property real offY: upright ? rigWidth * obliqueY * extrudeT : 0
-    readonly property real finalX: (upright ? (width - rigWidth * (1 + obliqueX)) / 2 : (width - rigWidth) / 2) + sceneShift
-    readonly property real visibleHeight: upright ? topDepth + rigWidth * obliqueY : topDepth * foreshorten + frontHeight
+    readonly property real yawNow: camYaw * camT * Math.PI / 180
+    readonly property real pitchNow: (upright ? camPitch * camT : 90 + (camPitch - 90) * camT) * Math.PI / 180
+    readonly property real camD: rigWidth * camDistance
+    readonly property real pitchFinal: camPitch * Math.PI / 180
+
+    readonly property real rigWidth: upright
+        ? Math.min(width * widthShare, height * 0.62 / (faceAspect + depthRatio * 0.3))
+        : Math.min(width * widthShare, height * 0.64 / (Math.sin(pitchFinal) + frontRatio * Math.cos(pitchFinal)))
+    readonly property real topDepth: upright ? rigWidth * faceAspect : rigWidth * topAspect
+    // Dikte van de kast: staand naar achteren, liggend naar beneden.
+    readonly property real boxDepth: upright ? rigWidth * depthRatio : rigWidth * frontRatio
+    readonly property real frontHeight: boxDepth
+    readonly property real finalX: (width - rigWidth) / 2 + sceneShift
     readonly property real finalY: upright
-        ? (height - visibleHeight - height * 0.11) / 2 + rigWidth * obliqueY
-        : (height - visibleHeight - height * 0.11) / 2 - topDepth * (1 - foreshorten)
-    // Kast-hoeken in de voorkant: de afronding van de bovenkant, gezien
-    // onder de eindhoek (ellips). Een ronde kast (discman) heeft als
-    // voorkant een gebogen band.
-    readonly property real cornerX: Math.min(bodyRadius, rigWidth * 0.5)
-    readonly property real cornerY: cornerX * foreshorten
-    // Bovenrand van de voorkant op hoogte x (in pixels, t.o.v. de voorkant),
-    // om knoppen op een gebogen band te zetten.
-    function rimY(x) {
-        let p = band.rim;
-        if (p.length === 0) return 0;
-        if (x <= p[0][0]) return p[0][1];
-        for (let i = 1; i < p.length; i++) {
-            if (x <= p[i][0]) {
-                let a = p[i - 1], b = p[i];
-                let t = b[0] > a[0] ? (x - a[0]) / (b[0] - a[0]) : 0;
-                return a[1] + (b[1] - a[1]) * t;
-            }
-        }
-        return p[p.length - 1][1];
+        ? (height * 0.88 - topDepth) / 2 + rigWidth * depthRatio * 0.15
+        : (height * 0.86 - topDepth) / 2 - boxDepth * Math.cos(pitchFinal) * 0.5
+
+    function cam(X, Y, Z) {
+        let cy = Math.cos(yawNow), sy = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+        let x1 = X * cy + Z * sy, z1 = -X * sy + Z * cy;
+        let y2 = Y * cp - z1 * sp, z2 = Y * sp + z1 * cp - (upright ? boxDepth / 2 : 0);
+        let s = camD / Math.max(1, camD - z2);
+        return [rigWidth / 2 + x1 * s, topDepth / 2 - y2 * s, s];
+    }
+    // Staand: x en y zoals op het front (links-boven 0,0), z naar achteren.
+    // Liggend: x en y zoals op de bovenkant, z naar beneden (dikte).
+    function proj(x, y, z) {
+        return upright ? cam(x - rigWidth / 2, topDepth / 2 - y, boxDepth / 2 - z)
+                       : cam(x - rigWidth / 2, -z, y - topDepth / 2);
+    }
+    // Hoe plat een cirkel op het bovenvlak of de tafel in beeld staat.
+    readonly property real tableSquash: Math.max(0.02, Math.sin(pitchNow))
+    // Homografie: legt een rechthoek (w x h) op vier geprojecteerde hoeken.
+    function quadMatrix(w, h, q) {
+        let x0 = q[0][0], y0 = q[0][1], x1 = q[1][0], y1 = q[1][1], x2 = q[2][0], y2 = q[2][1], x3 = q[3][0], y3 = q[3][1];
+        let dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3;
+        let dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+        let den = dx1 * dy2 - dx2 * dy1;
+        let g = Math.abs(den) < 1e-9 ? 0 : (dx3 * dy2 - dx2 * dy3) / den;
+        let hh = Math.abs(den) < 1e-9 ? 0 : (dx1 * dy3 - dx3 * dy1) / den;
+        let a = x1 - x0 + g * x1, b = x3 - x0 + hh * x3, c = x0;
+        let d = y1 - y0 + g * y1, e = y3 - y0 + hh * y3, f = y0;
+        return Qt.matrix4x4(a / w, b / h, 0, c,
+                            d / w, e / h, 0, f,
+                            0, 0, 1, 0,
+                            g / w, hh / h, 0, 1);
+    }
+    readonly property matrix4x4 faceMatrix: quadMatrix(rigWidth, topDepth,
+        [proj(0, 0, 0), proj(rigWidth, 0, 0), proj(rigWidth, topDepth, 0), proj(0, topDepth, 0)])
+
+    // Liggend, ronde kast: een plek op de zijkant. a in graden rond de kast
+    // (0 = midden voor, positief naar rechts), f van boven (0) naar onder
+    // (1). Geeft plek, schaal, hoe veel hij naar je toe staat, hoe schuin
+    // de rand daar in beeld loopt en hoe hoog de zijkant in beeld is.
+    function sidePoint(a, f) {
+        let A = a * Math.PI / 180, R = rigWidth / 2, Y = -boxDepth * f;
+        let p = cam(R * Math.sin(A), Y, R * Math.cos(A));
+        let q = cam(R * Math.sin(A + 0.02), Y, R * Math.cos(A + 0.02));
+        return {
+            x: p[0], y: p[1], s: p[2],
+            facing: Math.max(0.05, Math.cos(A + yawNow)),
+            angle: Math.atan2(q[1] - p[1], q[0] - p[0]) * 180 / Math.PI,
+            ys: Math.cos(pitchNow) * p[2]
+        };
     }
 
-    // Organic: een houten koptelefoon ligt naast het apparaat op tafel, in
-    // hetzelfde perspectief. Komt pas aan het eind van de overgang in beeld.
+    // Omtrek van de kast (liggend): punten op de afgeronde rand met hun
+    // naar buiten wijzende richting.
+    function rimPoints() {
+        let w = rigWidth, h = topDepth, r = Math.min(bodyRadius, w / 2, h / 2), n = Math.max(8, Math.round(r / w * 64));
+        let pts = [];
+        let cs = [[w - r, h - r, 0], [r, h - r, 0.5], [r, r, 1], [w - r, r, 1.5]];
+        for (let c of cs) {
+            for (let i = 0; i <= n; i++) {
+                let a = (c[2] + 0.5 * i / n) * Math.PI;
+                // a: 0 = rechts, pi/2 = voor (y groeit naar voren).
+                pts.push([c[0] + r * Math.cos(a), c[1] + r * Math.sin(a), Math.cos(a), Math.sin(a)]);
+            }
+        }
+        return pts;
+    }
+    function hull(pts) {
+        pts = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+        function cross(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+        let lower = [], upper = [];
+        for (let p of pts) {
+            while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+            lower.push(p);
+        }
+        for (let i = pts.length - 1; i >= 0; i--) {
+            let p = pts[i];
+            while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+            upper.push(p);
+        }
+        upper.pop();
+        lower.pop();
+        return lower.concat(upper);
+    }
+    function svg(pts, close) {
+        if (pts.length === 0) return "M 0 0";
+        let d = "M " + pts[0][0].toFixed(2) + " " + pts[0][1].toFixed(2);
+        for (let i = 1; i < pts.length; i++) d += " L " + pts[i][0].toFixed(2) + " " + pts[i][1].toFixed(2);
+        return close ? d + " Z" : d;
+    }
+    // Liggend: zichtbare zijkant (rand boven, rand onder terug) en het
+    // silhouet. Alleen opnieuw bij een andere camerastand.
+    readonly property var lyingShell: {
+        if (upright) return { side: "M 0 0", top: "M 0 0", outline: "M 0 0" };
+        let rim = rimPoints(), cy = Math.cos(yawNow), sy = Math.sin(yawNow);
+        let vis = rim.map(p => -p[2] * sy + p[3] * cy > 0);
+        // Begin net na een onzichtbaar punt, zodat de zichtbare boog heel blijft.
+        let start = vis.indexOf(false);
+        let topRun = [], botRun = [];
+        if (start >= 0) {
+            for (let k = 1; k <= rim.length; k++) {
+                let i = (start + k) % rim.length;
+                if (!vis[i]) continue;
+                topRun.push(proj(rim[i][0], rim[i][1], 0));
+                botRun.push(proj(rim[i][0], rim[i][1], boxDepth));
+            }
+        }
+        let all = rim.map(p => proj(p[0], p[1], 0)).concat(rim.map(p => proj(p[0], p[1], boxDepth)));
+        return {
+            side: svg(topRun.concat(botRun.reverse()), true),
+            top: svg(topRun, false),
+            outline: svg(hull(all), true)
+        };
+    }
+
+    // Organic: een houten koptelefoon ligt naast het apparaat op tafel, door
+    // dezelfde camera. Komt pas aan het eind van de overgang in beeld.
     WoodHeadphones {
         id: decoration
+        anchors.fill: parent
         visible: stage.hasPhones && stage.detailT > 0.01
         opacity: stage.detailT
         mocha: stage.mocha
-        width: stage.phonesWidth
-        // Tafel in beeld: hoe plat het tafelblad staat en hoe hoog dingen
-        // erop worden.
-        k: stage.upright ? 0.34 : Math.sin(stage.maxTilt * Math.PI / 180) * 0.9 + 0.12
-        v: stage.upright ? 0.94 : Math.cos(stage.maxTilt * Math.PI / 180) * 0.55
-        x: stage.finalX - width - stage.rigWidth * 0.02
-        // Iets achter de voorrand van het apparaat.
-        y: (stage.upright ? stage.finalY + stage.topDepth : stage.finalY + stage.topDepth + stage.frontHeight * 0.4)
-           - tableFront - stage.rigWidth * 0.03
+        u: stage.phonesWidth / 100
+        k: stage.tableSquash
+        project: (X, Z, H) => stage.phonesProject(X, Z, H)
         wood: Qt.tint(Qt.darker(stage.mocha.peach, 1.9), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.35))
         metal: stage.skin.metal || stage.mocha.subtext1
         leather: Qt.tint(Qt.darker(stage.mocha.surface1, 1.2), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.45))
         transform: Rotation {
-            origin.x: decoration.width + stage.rigWidth / 2
-            origin.y: decoration.height
+            origin.x: stage.finalX + stage.rigWidth / 2
+            origin.y: stage.finalY + stage.topDepth
             axis { x: 0; y: 1; z: 0 }
             angle: stage.sway
         }
+    }
+    // Koptelefoon: links naast de speler op tafel, iets gedraaid en iets
+    // naar voren. X en Z in eenheden van de koptelefoon (Z naar achteren).
+    property real phonesTurn: 14
+    property real phonesForward: upright ? 0.3 : -0.15
+    function phonesProject(X, Z, H) {
+        let u = phonesWidth / 100, t = phonesTurn * Math.PI / 180;
+        let ct = Math.cos(t), st = Math.sin(t);
+        let px = (X * ct - Z * st) * u, pz = (X * st + Z * ct) * u;
+        let tableY = upright ? -topDepth / 2 : -boxDepth;
+        let front = upright ? boxDepth / 2 : topDepth / 2;
+        let p = cam(-rigWidth / 2 - phonesWidth * 0.56 + px, tableY + H * u,
+                    front - topDepth * 0.1 + rigWidth * phonesForward - pz);
+        return [finalX + p[0], finalY + p[1], p[2]];
     }
 
     Item {
         id: rig
         width: stage.rigWidth
-        height: stage.topDepth + stage.frontHeight
+        height: stage.topDepth
         x: stage.fromOrigin ? stage.lerp(stage.originRect.x, stage.finalX, stage.growT) : stage.finalX
         y: stage.fromOrigin ? stage.lerp(stage.originRect.y, stage.finalY, stage.growT)
                             : stage.finalY + (1 - stage.reveal) * 60
@@ -260,103 +371,89 @@ FocusScope {
             angle: stage.sway
         }
 
-        // Zachte schaduw onder de kast.
-        Rectangle {
-            visible: stage.look !== "paper" && !stage.upright
-            opacity: stage.reveal
-            width: parent.width * 1.02
-            height: stage.frontHeight * 1.3
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: parent.height - height * 0.4
-            radius: height / 2
-            color: Qt.rgba(0, 0, 0, 0.5)
-            layer.enabled: true
+        // Zachte schaduw op tafel onder de kast.
+        Shape {
+            id: shadow
+            visible: stage.look !== "paper" && stage.camT > 0.01
+            opacity: stage.reveal * stage.camT
+            preferredRendererType: Shape.CurveRenderer
+            layer.enabled: visible
             layer.effect: MultiEffect { blurEnabled: true; blurMax: 48; blur: 1.0 }
-        }
-
-        // Staand: schaduw op tafel, onder de hele kast tot achteren.
-        Rectangle {
-            visible: stage.look !== "paper" && stage.upright
-            opacity: stage.reveal
-            x: -stage.rigWidth * 0.02
-            width: parent.width + stage.offX + stage.rigWidth * 0.06
-            height: stage.offY + stage.rigWidth * 0.07
-            y: parent.height - height + stage.rigWidth * 0.035
-            radius: height / 2
-            color: Qt.rgba(0, 0, 0, 0.55)
-            layer.enabled: true
-            layer.effect: MultiEffect { blurEnabled: true; blurMax: 48; blur: 1.0 }
+            readonly property string path: {
+                let pts = [], n = 28, w = stage.rigWidth, d = stage.boxDepth;
+                for (let i = 0; i < n; i++) {
+                    let a = i / n * Math.PI * 2;
+                    if (stage.upright)
+                        pts.push(stage.proj(w / 2 + Math.cos(a) * w * 0.56, stage.topDepth, d / 2 + Math.sin(a) * d * 0.75));
+                    else
+                        pts.push(stage.proj(w / 2 + Math.cos(a) * w * 0.53, stage.topDepth / 2 + Math.sin(a) * stage.topDepth * 0.53, d));
+                }
+                return stage.svg(pts, true);
+            }
+            ShapePath {
+                strokeWidth: 0
+                strokeColor: "transparent"
+                fillColor: Qt.rgba(0, 0, 0, 0.5)
+                PathSvg { path: shadow.path }
+            }
         }
 
         // Klikken op het apparaat zelf sluit niet.
         MouseArea {
-            x: 0
-            y: -stage.offY
-            width: parent.width + stage.offX
-            height: parent.height + stage.offY
+            x: -parent.width * 0.05
+            y: -parent.height * 0.15
+            width: parent.width * 1.15
+            height: parent.height * 1.35
+        }
+
+        // Paper: harde inktschaduw, zoals een getekend apparaat.
+        Shape {
+            visible: stage.look === "paper"
+            x: 9
+            y: 9
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 0
+                strokeColor: "transparent"
+                fillColor: Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.85)
+                PathSvg { path: stage.upright ? shell.outline : stage.lyingShell.outline }
+            }
         }
 
         // Staand: de kast achter het front. De omtrek is het front plus
-        // dezelfde vorm naar achteren geschoven (convex omhulsel); daarover
-        // de bovenkant lichter en een randje waar licht op valt.
+        // dezelfde vorm naar achteren (convex omhulsel); daarover de
+        // bovenkant lichter.
         Shape {
             id: shell
-            visible: stage.upright && stage.offY > 0.5
+            visible: stage.upright && stage.camT > 0.01
             preferredRendererType: Shape.CurveRenderer
             readonly property real r: Math.min(stage.bodyRadius, stage.rigWidth * 0.2)
-            function corners(ox, oy, w, h, r, top) {
-                let pts = [], n = 6;
-                function arc(cx, cy, a0, a1) {
+            // Hoekpunten van het afgeronde front, alleen de gevraagde hoeken.
+            function corners(which, z) {
+                let pts = [], n = 6, w = stage.rigWidth, h = stage.topDepth;
+                let c = { tr: [w - r, r, 0], tl: [r, r, 0.5], bl: [r, h - r, 1], br: [w - r, h - r, 1.5] };
+                for (let key of which) {
+                    let cc = c[key];
                     for (let i = 0; i <= n; i++) {
-                        let a = a0 + (a1 - a0) * i / n;
-                        pts.push([cx + r * Math.cos(a), cy - r * Math.sin(a)]);
+                        let a = (cc[2] + 0.5 * i / n) * Math.PI;
+                        pts.push(stage.proj(cc[0] + r * Math.cos(a), cc[1] - r * Math.sin(a), z));
                     }
-                }
-                arc(ox + w - r, oy + r, 0, Math.PI / 2);
-                arc(ox + r, oy + r, Math.PI / 2, Math.PI);
-                if (!top) {
-                    arc(ox + r, oy + h - r, Math.PI, 1.5 * Math.PI);
-                    arc(ox + w - r, oy + h - r, 1.5 * Math.PI, 2 * Math.PI);
                 }
                 return pts;
             }
-            function hull(pts) {
-                pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-                function cross(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
-                let lower = [], upper = [];
-                for (let p of pts) {
-                    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-                    lower.push(p);
-                }
-                for (let i = pts.length - 1; i >= 0; i--) {
-                    let p = pts[i];
-                    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-                    upper.push(p);
-                }
-                upper.pop();
-                lower.pop();
-                let out = lower.concat(upper), d = "M " + out[0][0].toFixed(2) + " " + out[0][1].toFixed(2);
-                for (let i = 1; i < out.length; i++) d += " L " + out[i][0].toFixed(2) + " " + out[i][1].toFixed(2);
-                return d + " Z";
-            }
-            readonly property string outline: {
-                if (!stage.upright) return "";
-                let w = stage.rigWidth, h = stage.topDepth;
-                return hull(corners(0, 0, w, h, r, false).concat(corners(stage.offX, -stage.offY, w, h, r, false)));
-            }
-            readonly property string topOutline: {
-                if (!stage.upright) return "";
-                let w = stage.rigWidth;
-                return hull(corners(0, 0, w, 0, r, true).concat(corners(stage.offX, -stage.offY, w, 0, r, true)));
-            }
+            readonly property var all: ["tr", "tl", "bl", "br"]
+            readonly property string outline: stage.upright ? stage.svg(stage.hull(corners(all, 0).concat(corners(all, stage.boxDepth))), true) : "M 0 0"
+            readonly property string topOutline: stage.upright ? stage.svg(stage.hull(corners(["tr", "tl"], 0).concat(corners(["tr", "tl"], stage.boxDepth))), true) : "M 0 0"
+            readonly property var sideA: stage.proj(stage.rigWidth, 0, 0)
+            readonly property var sideB: stage.proj(stage.rigWidth, 0, stage.boxDepth)
             ShapePath {
                 strokeWidth: stage.look === "paper" ? 2 : 1
                 strokeColor: stage.look === "paper" ? stage.mocha.text : stage.skin.shellEdge || Qt.rgba(0, 0, 0, 0.4)
                 fillGradient: LinearGradient {
-                    x1: stage.rigWidth; y1: 0
-                    x2: stage.rigWidth + stage.offX; y2: 0
+                    x1: shell.sideA[0]; y1: 0
+                    x2: shell.sideB[0]; y2: 0
                     GradientStop { position: 0.0; color: stage.skin.shellSide || "#333" }
-                    GradientStop { position: 1.0; color: Qt.darker(stage.skin.shellSide || "#333", stage.look === "paper" ? 1 : 1.25) }
+                    GradientStop { position: 1.0; color: Qt.darker(stage.skin.shellSide || "#333", stage.look === "paper" ? 1 : 1.3) }
                 }
                 PathSvg { path: shell.outline }
             }
@@ -364,157 +461,83 @@ FocusScope {
                 strokeWidth: stage.look === "paper" ? 2 : 0
                 strokeColor: stage.look === "paper" ? stage.mocha.text : "transparent"
                 fillGradient: LinearGradient {
-                    x1: 0; y1: -stage.offY
-                    x2: 0; y2: 0
+                    x1: 0; y1: shell.sideB[1]
+                    x2: 0; y2: shell.sideA[1]
                     GradientStop { position: 0.0; color: Qt.darker(stage.skin.shellTop || "#555", stage.look === "paper" ? 1 : 1.12) }
                     GradientStop { position: 1.0; color: stage.skin.shellTop || "#555" }
                 }
                 PathSvg { path: shell.topOutline }
             }
         }
-        // Neon: gloed langs de achterrand.
+
+        // Liggend: de zichtbare zijkant van de kast, belicht van links.
         Shape {
-            visible: stage.upright && stage.look === "neon" && stage.offY > 0.5
+            id: side
+            visible: !stage.upright && stage.camT > 0.01
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: stage.look === "paper" ? 2 : stage.look === "neon" ? 1.5 : 1
+                strokeColor: stage.look === "paper" ? stage.mocha.text
+                    : stage.look === "neon" ? Qt.rgba(stage.accent.r, stage.accent.g, stage.accent.b, 0.7)
+                    : Qt.rgba(0, 0, 0, 0.35)
+                fillGradient: LinearGradient {
+                    x1: 0; y1: 0
+                    x2: stage.rigWidth; y2: 0
+                    GradientStop { position: 0.0; color: Qt.lighter(stage.skin.frontA || "#333", stage.look === "paper" ? 1 : 1.15) }
+                    GradientStop { position: 0.55; color: stage.skin.frontA || "#333" }
+                    GradientStop { position: 1.0; color: stage.skin.frontB || "#222" }
+                }
+                PathSvg { path: stage.lyingShell.side }
+            }
+            // Lichtrand langs de bovenrand.
+            ShapePath {
+                strokeWidth: stage.look === "wood" ? 2.5 : stage.look === "neon" ? 2 : 1.2
+                strokeColor: stage.skin.frontEdge || "transparent"
+                fillColor: "transparent"
+                PathSvg { path: stage.lyingShell.top }
+            }
+        }
+        // Neon: gloed langs de omtrek.
+        Shape {
+            visible: stage.look === "neon" && stage.camT > 0.01
             preferredRendererType: Shape.CurveRenderer
             opacity: stage.playing ? 0.8 : 0.5
             ShapePath {
                 strokeWidth: 1.5
                 strokeColor: stage.accent
                 fillColor: "transparent"
-                PathSvg { path: shell.outline }
+                PathSvg { path: stage.upright ? shell.outline : stage.lyingShell.outline }
             }
         }
 
-        // Bovenkant, achterover gekanteld rond de voorrand.
+        // Bovenkant (liggend) of front (staand), op de camera gelegd.
         Item {
             id: topFace
             width: parent.width
             height: stage.topDepth
-            transform: Rotation {
-                origin.x: topFace.width / 2
-                origin.y: topFace.height
-                axis { x: 1; y: 0; z: 0 }
-                angle: stage.tilt
-            }
+            transform: Matrix4x4 { matrix: stage.faceMatrix }
         }
-        // Staand: alles op de bovenkant en zijkant (knoppen, wieltje).
+        // Onderdelen op de kast (knoppen, wieltje), in rig-coördinaten.
         Item {
             id: shellLayer
-            visible: stage.upright
         }
-
-        // Voorkant: draait als één kast mee met de bovenkant.
         Item {
-            id: front
-            y: stage.topDepth
-            width: parent.width
-            height: stage.frontHeight
-            opacity: stage.fromOrigin ? stage.clamp01((stage.tiltT - 0.06) * 3) : 1
-            visible: !stage.upright && opacity > 0.01
-            transform: Rotation {
-                origin.x: front.width / 2
-                origin.y: 0
-                axis { x: 1; y: 0; z: 0 }
-                angle: stage.tilt - stage.maxTilt
-            }
-
-            // Paper: harde inktschaduw, zoals een getekend apparaat.
-            Shape {
-                visible: stage.look === "paper"
-                x: 9
-                y: 9
-                preferredRendererType: Shape.CurveRenderer
-                ShapePath {
-                    strokeWidth: 0
-                    strokeColor: "transparent"
-                    fillColor: Qt.rgba(stage.mocha.text.r, stage.mocha.text.g, stage.mocha.text.b, 0.85)
-                    PathSvg { path: band.outline }
-                }
-            }
-            Shape {
-                id: band
-                anchors.fill: parent
-                preferredRendererType: Shape.CurveRenderer
-                // Bovenrand volgt de afgeronde voorrand van de bovenkant, zoals
-                // die onder de eindhoek in perspectief staat (Qt rekent met een
-                // camera op 1024 px); de onderrand is dezelfde rand, een
-                // kastdikte lager. Eén keer berekend, alleen bij een nieuwe maat.
-                readonly property var rim: {
-                    let w = front.width, r = stage.cornerX, t = stage.maxTilt * Math.PI / 180;
-                    let cx = w / 2, d = 1024, pts = [];
-                    function add(x, yy) {
-                        let z = -yy * Math.sin(t), s = d / (d + z);
-                        pts.push([cx + (x - cx) * s, yy * Math.cos(t) * s, s]);
-                    }
-                    // Meer punten bij een grote afronding (ronde kast).
-                    let n = 8 + Math.round(r / Math.max(1, w) * 48);
-                    for (let i = 0; i <= n; i++) {
-                        let a = i / n * Math.PI / 2;
-                        add(r - r * Math.cos(a), -r + r * Math.sin(a));
-                    }
-                    for (let i = n; i >= 0; i--) {
-                        let a = i / n * Math.PI / 2;
-                        add(w - r + r * Math.cos(a), -r + r * Math.sin(a));
-                    }
-                    return pts;
-                }
-                function fmt(p, dy) { return p[0].toFixed(2) + " " + (p[1] + dy * p[2]).toFixed(2); }
-                readonly property string topEdge: {
-                    let p = rim, out = "M " + fmt(p[0], 0);
-                    for (let i = 1; i < p.length; i++) out += " L " + fmt(p[i], 0);
-                    return out;
-                }
-                readonly property string outline: {
-                    let p = rim, f = front.height, out = topEdge;
-                    for (let i = p.length - 1; i >= 0; i--) out += " L " + fmt(p[i], f);
-                    return out + " Z";
-                }
-                readonly property real ry: stage.cornerY
-                readonly property real f: front.height
-                ShapePath {
-                    strokeWidth: stage.look === "paper" ? 2 : stage.look === "neon" ? 1.5 : 1
-                    strokeColor: stage.look === "paper" ? stage.mocha.text
-                        : stage.look === "neon" ? Qt.rgba(stage.accent.r, stage.accent.g, stage.accent.b, 0.7)
-                        : Qt.rgba(0, 0, 0, 0.35)
-                    fillGradient: LinearGradient {
-                        x1: 0; y1: -band.ry
-                        x2: 0; y2: band.f
-                        GradientStop { position: 0.0; color: stage.skin.frontA || "#333" }
-                        GradientStop { position: 1.0; color: stage.skin.frontB || "#222" }
-                    }
-                    PathSvg { path: band.outline }
-                }
-                // Lichtrand langs de bovenkant van de voorkant.
-                ShapePath {
-                    strokeWidth: stage.look === "wood" ? 2.5 : stage.look === "neon" ? 2 : 1.2
-                    strokeColor: stage.skin.frontEdge || "transparent"
-                    fillColor: "transparent"
-                    PathSvg { path: band.topEdge }
-                }
-            }
-            // Neon: scanlijnen over de voorkant.
-            Repeater {
-                model: stage.look === "neon" ? Math.floor(front.height / 4) : 0
-                Rectangle {
-                    required property int index
-                    x: stage.cornerX
-                    width: front.width - 2 * stage.cornerX
-                    y: 3 + index * 4
-                    height: 1
-                    color: Qt.rgba(stage.accent.r, stage.accent.g, stage.accent.b, 0.04)
-                }
-            }
-            Item {
-                id: frontContent
-                anchors.fill: parent
-            }
+            id: frontContent
+            opacity: stage.fromOrigin ? stage.clamp01((stage.camT - 0.3) * 2) : 1
+            visible: opacity > 0.01
         }
     }
+
+    // Laagste punt van het apparaat in beeld, voor de titel eronder.
+    readonly property real imageBottom: upright
+        ? Math.max(proj(0, topDepth, 0)[1], proj(rigWidth, topDepth, 0)[1], proj(rigWidth, topDepth, boxDepth)[1])
+        : proj(rigWidth / 2, topDepth, boxDepth)[1]
+
 
     // --- Titel en hint -------------------------------------------------------
     Column {
         anchors.horizontalCenter: parent.horizontalCenter
-        y: stage.finalY + rig.height + stage.height * 0.035
+        y: stage.finalY + Math.max(stage.topDepth, stage.imageBottom) + stage.height * 0.035
         spacing: 4
         opacity: stage.reveal
         Text {

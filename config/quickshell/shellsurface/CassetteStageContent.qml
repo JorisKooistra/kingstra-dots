@@ -62,14 +62,12 @@ DeviceStage {
         }
     ]
 
-    // Op de bovenkant: midden van de diepte. Alles hier komt in beeld als
-    // de kast is uitgevouwen.
-    readonly property real keyR: rigWidth * 0.043
-    readonly property real keyK: 0.32
-    readonly property real keyH: rigWidth * 0.028
+    // Op de bovenkant: midden van de diepte, door de camera. Alles hier komt
+    // in beeld als de kast is uitgedraaid.
+    readonly property real keyR: rigWidth * 0.045
+    readonly property real keyH: rigWidth * 0.03
     readonly property real shellIn: clamp01((extrudeT - 0.55) / 0.45)
-    function topX(f) { return rigWidth * f + offX * 0.5; }
-    readonly property real topY: -offY * 0.5
+    function onTop(f) { return proj(rigWidth * f, 0, boxDepth * 0.5); }
 
     shellData: [
         Item {
@@ -88,11 +86,12 @@ DeviceStage {
                     required property var modelData
                     readonly property bool isPlay: modelData.kind === "play"
                     readonly property int wind: modelData.kind === "rew" ? -1 : modelData.kind === "ff" ? 1 : 0
-                    r: stage.keyR * (isPlay ? 1.12 : 1)
-                    k: stage.keyK
-                    h: stage.keyH
-                    x: stage.topX(modelData.f) - r
-                    y: stage.topY - baseY
+                    readonly property var at: stage.onTop(modelData.f)
+                    r: stage.keyR * (isPlay ? 1.12 : 1) * at[2]
+                    k: stage.tableSquash
+                    h: stage.keyH * Math.cos(stage.pitchNow) * at[2]
+                    x: at[0] - r
+                    y: at[1] - baseY
                     icon: modelData.icon
                     flat: stage.skin.flat === true
                     latched: isPlay && stage.playing
@@ -123,17 +122,18 @@ DeviceStage {
 
             // Koptelefoonaansluiting bovenop, rechts.
             Item {
-                readonly property real rr: stage.rigWidth * 0.018
-                x: stage.topX(0.92) - rr
-                y: stage.topY - rr * stage.keyK
+                readonly property var at: stage.onTop(0.92)
+                readonly property real rr: stage.rigWidth * 0.018 * at[2]
+                x: at[0] - rr
+                y: at[1] - rr * stage.tableSquash
                 width: 2 * rr
                 height: 2 * rr
-                transform: Scale { yScale: stage.keyK }
+                transform: Scale { yScale: stage.tableSquash }
                 Rectangle {
                     anchors.fill: parent
                     radius: width / 2
                     color: stage.skin.metal
-                    border.width: stage.look === "paper" ? 2 / stage.keyK : 1
+                    border.width: stage.look === "paper" ? 2 / stage.tableSquash : 1
                     border.color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.45)
                     Rectangle {
                         anchors.centerIn: parent
@@ -150,17 +150,27 @@ DeviceStage {
             Item {
                 id: sideSlot
                 readonly property real wheelR: stage.rigWidth * 0.085
-                x: stage.rigWidth + stage.offX * 0.5
-                y: -stage.offY
-                width: wheelR
-                height: stage.topDepth + stage.offY
+                readonly property real cy: stage.topDepth * 0.3
+                readonly property real zm: stage.boxDepth * 0.5
+                readonly property real t: stage.boxDepth * 0.36
+                // Midden van de voor- en achterkant van het wiel, en waar de
+                // zijkant van de kast het wiel doorsnijdt.
+                readonly property var fc: stage.proj(stage.rigWidth - wheelR * 0.42, cy, zm - t / 2)
+                readonly property var bc: stage.proj(stage.rigWidth - wheelR * 0.42, cy, zm + t / 2)
+                readonly property var cut: stage.proj(stage.rigWidth, cy, zm)
+                x: cut[0]
+                y: fc[1] - wheelR * 2
+                width: wheelR * 1.5
+                height: wheelR * 4
                 clip: true
                 SideWheel {
-                    r: sideSlot.wheelR
-                    dx: stage.offX * 0.4
-                    dy: stage.offY * 0.4
-                    x: stage.rigWidth - r * 0.42 + stage.offX * 0.3 - sideSlot.x - r
-                    y: stage.topDepth * 0.3 - stage.offY * 0.3 - sideSlot.y - r - dy
+                    r: sideSlot.wheelR * sideSlot.fc[2]
+                    rx: r * Math.cos(stage.yawNow)
+                    ry: r * Math.cos(stage.pitchNow)
+                    dx: sideSlot.bc[0] - sideSlot.fc[0]
+                    dy: sideSlot.fc[1] - sideSlot.bc[1]
+                    x: sideSlot.fc[0] - rx - sideSlot.x
+                    y: sideSlot.fc[1] - ry - dy - sideSlot.y
                     skin: stage.skin
                     face: stage.look === "paper" ? stage.mocha.base : stage.skin.metal
                     rim: stage.look === "paper" ? stage.mocha.base : stage.skin.metal

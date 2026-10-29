@@ -15,8 +15,11 @@ Item {
     required property var skin
     property real value: -1
     property bool flat: false
-    // Straal en dikte (verschuiving naar achteren, dy omhoog positief).
+    // Straal (in beeld als ellips rx, ry) en dikte (verschuiving naar
+    // achteren in beeld, dy omhoog positief).
     property real r: 30
+    property real rx: r
+    property real ry: r
     property real dx: 6
     property real dy: 8
     signal requested(real value)
@@ -30,17 +33,18 @@ Item {
     enabled: value >= 0
     opacity: enabled ? 1 : 0.5
 
-    width: 2 * r + dx
-    height: 2 * r + dy
+    width: 2 * rx + dx
+    height: 2 * ry + dy
     // Middens van voor- en achterkant.
-    readonly property real fx: r
-    readonly property real fy: r + dy
-    readonly property real bx: r + dx
-    readonly property real by: r
-    // Loodrecht op de as, in beeld.
+    readonly property real fx: rx
+    readonly property real fy: ry + dy
+    readonly property real bx: rx + dx
+    readonly property real by: ry
+    // Raakpunten van de rand evenwijdig aan de as (in beeld).
     readonly property real len: Math.max(0.001, Math.sqrt(dx * dx + dy * dy))
-    readonly property real nx: dy / len
-    readonly property real ny: dx / len
+    readonly property real phi: Math.atan2(-ry * dx, rx * -dy)
+    readonly property real nx: rx * Math.cos(phi)
+    readonly property real ny: ry * Math.sin(phi)
 
     // Metaal of kunststof van het wiel; standaard de knopkleuren.
     property color face: skin.capA
@@ -56,23 +60,23 @@ Item {
             strokeWidth: sideWheel.flat ? 1.5 : 0
             strokeColor: sideWheel.flat ? sideWheel.skin.capBorder : "transparent"
             fillColor: sideWheel.rimB
-            PathAngleArc { centerX: sideWheel.bx; centerY: sideWheel.by; radiusX: sideWheel.r; radiusY: sideWheel.r; startAngle: 0; sweepAngle: 360 }
+            PathAngleArc { centerX: sideWheel.bx; centerY: sideWheel.by; radiusX: sideWheel.rx; radiusY: sideWheel.ry; startAngle: 0; sweepAngle: 360 }
         }
         // Rand: verbindt voor- en achterkant langs de raaklijnen.
         ShapePath {
             strokeWidth: sideWheel.flat ? 1.5 : 0
             strokeColor: sideWheel.flat ? sideWheel.skin.capBorder : "transparent"
             fillGradient: LinearGradient {
-                x1: sideWheel.fx - sideWheel.r * sideWheel.nx; y1: sideWheel.fy - sideWheel.r * sideWheel.ny
-                x2: sideWheel.fx + sideWheel.r * sideWheel.nx; y2: sideWheel.fy + sideWheel.r * sideWheel.ny
+                x1: sideWheel.fx - sideWheel.nx; y1: sideWheel.fy - sideWheel.ny
+                x2: sideWheel.fx + sideWheel.nx; y2: sideWheel.fy + sideWheel.ny
                 GradientStop { position: 0.0; color: sideWheel.rimA }
                 GradientStop { position: 0.5; color: sideWheel.rim }
                 GradientStop { position: 1.0; color: sideWheel.rimB }
             }
-            startX: sideWheel.fx - sideWheel.r * sideWheel.nx; startY: sideWheel.fy - sideWheel.r * sideWheel.ny
-            PathLine { x: sideWheel.bx - sideWheel.r * sideWheel.nx; y: sideWheel.by - sideWheel.r * sideWheel.ny }
-            PathLine { x: sideWheel.bx + sideWheel.r * sideWheel.nx; y: sideWheel.by + sideWheel.r * sideWheel.ny }
-            PathLine { x: sideWheel.fx + sideWheel.r * sideWheel.nx; y: sideWheel.fy + sideWheel.r * sideWheel.ny }
+            startX: sideWheel.fx - sideWheel.nx; startY: sideWheel.fy - sideWheel.ny
+            PathLine { x: sideWheel.bx - sideWheel.nx; y: sideWheel.by - sideWheel.ny }
+            PathLine { x: sideWheel.bx + sideWheel.nx; y: sideWheel.by + sideWheel.ny }
+            PathLine { x: sideWheel.fx + sideWheel.nx; y: sideWheel.fy + sideWheel.ny }
         }
         // Ribbels op de rand: alleen op het deel dat naar je toe staat, en
         // ze draaien mee met het volume.
@@ -87,8 +91,8 @@ Item {
                         let a = (i / n + sideWheel.shown * 0.5) * Math.PI * 2;
                         let cx = Math.cos(a), cy = Math.sin(a);
                         // Zichtbaar als de rand naar de achterkant wijst (kant van de as).
-                        if (cx * ax + cy * ay <= 0.05) continue;
-                        let x = sideWheel.fx + sideWheel.r * cx, y = sideWheel.fy + sideWheel.r * cy;
+                        if (cx / sideWheel.rx * ax + cy / sideWheel.ry * ay <= 0.05 / Math.min(sideWheel.rx, sideWheel.ry)) continue;
+                        let x = sideWheel.fx + sideWheel.rx * cx, y = sideWheel.fy + sideWheel.ry * cy;
                         d += " M " + x.toFixed(1) + " " + y.toFixed(1) + " L " + (x + sideWheel.dx).toFixed(1) + " " + (y - sideWheel.dy).toFixed(1);
                     }
                     return d === "" ? "M 0 0" : d;
@@ -100,18 +104,18 @@ Item {
             strokeWidth: sideWheel.flat ? 1.5 : 1
             strokeColor: sideWheel.skin.capBorder
             fillGradient: LinearGradient {
-                x1: sideWheel.fx - sideWheel.r; y1: sideWheel.fy - sideWheel.r
-                x2: sideWheel.fx + sideWheel.r; y2: sideWheel.fy + sideWheel.r
+                x1: sideWheel.fx - sideWheel.rx; y1: sideWheel.fy - sideWheel.ry
+                x2: sideWheel.fx + sideWheel.rx; y2: sideWheel.fy + sideWheel.ry
                 GradientStop { position: 0.0; color: Qt.lighter(sideWheel.face, sideWheel.flat ? 1 : 1.15) }
                 GradientStop { position: 1.0; color: Qt.darker(sideWheel.face, sideWheel.flat ? 1 : 1.25) }
             }
-            PathAngleArc { centerX: sideWheel.fx; centerY: sideWheel.fy; radiusX: sideWheel.r; radiusY: sideWheel.r; startAngle: 0; sweepAngle: 360 }
+            PathAngleArc { centerX: sideWheel.fx; centerY: sideWheel.fy; radiusX: sideWheel.rx; radiusY: sideWheel.ry; startAngle: 0; sweepAngle: 360 }
         }
         ShapePath {
             strokeWidth: Math.max(1, sideWheel.r * 0.04)
             strokeColor: Qt.rgba(0, 0, 0, 0.25)
             fillColor: "transparent"
-            PathAngleArc { centerX: sideWheel.fx; centerY: sideWheel.fy; radiusX: sideWheel.r * 0.72; radiusY: sideWheel.r * 0.72; startAngle: 0; sweepAngle: 360 }
+            PathAngleArc { centerX: sideWheel.fx; centerY: sideWheel.fy; radiusX: sideWheel.rx * 0.72; radiusY: sideWheel.ry * 0.72; startAngle: 0; sweepAngle: 360 }
         }
     }
     MouseArea {
