@@ -12,6 +12,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Per scherm en mode blijft alles werken zoals het was: zichtbare onderdelen, Meer, extra knoppen en automatisch verbergen liggen daar bovenop. Inschuiven achter Meer animeert nu voor elk onderdeel op dezelfde manier.
 - Tweede rail aan de overkant: zet je onderdelen op de tweede rail, dan verschijnt die rechts (of links als de hoofdrail rechts staat) met hetzelfde vlak, dezelfde knoppen en animaties. Hij reserveert eigen ruimte, schuift bij automatisch verbergen mee weg, en de omlijsting, de bovenstrook, het eiland, meldingen en tooltips houden er rekening mee. Panelen uit de tweede rail groeien aan die kant uit de omlijsting.
 - De rail kan per thema aan of uit, los van wat het thema zelf kiest; zo krijgen ook Paper en Mono een rail (en een tweede rail).
+- Nieuwe pagina Instellingen › Bediening › Rail-indeling (`settings/RailLayoutPage.qml`): kies het thema, sleep blokjes tussen Hoofdrail, Tweede rail en Niet getoond (of gebruik de pijltjes), zet de rail per thema aan/uit, stel het aantal werkruimtes in, en voeg eigen apps toe door een geïnstalleerde app te zoeken of zelf een commando in te vullen. Alles wordt direct bewaard en de rail volgt live.
+- Rechtsklik op een railknop opent Rail-indeling; ook bereikbaar via Bediening en de railkaart in Super+A. Achter Meer kunnen nu ook eigen apps, Uitzoomen, het systeemvak en de klok.
+- Nieuwe smoketest `tests/smoke/rail-layout.sh`: controleert het opslagscript en sleept offline (qmltestrunner met kleine Quickshell-stubs) in de echte editor.
 
 ### Rail: automatisch verbergen verbergt nu echt
 - Met "automatisch verbergen" (per scherm of via de mode) schuift de rail nu helemaal weg tot alleen de dunne omlijsting over is, even breed als rechts en onder. Eerder bleef er een lege railstrook met gereserveerde ruimte tussen de vensters staan.

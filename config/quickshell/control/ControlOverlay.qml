@@ -893,6 +893,7 @@ Item {
                             spacing: overlay.s(6)
                             Chip { glyph: "󰑓"; label: "Herstel voor deze mode"; allowed: !!overlay.screenName && !ScreenProfiles.busy; onTriggered: ScreenProfiles.action(["reset", overlay.screenName]) }
                             Chip { glyph: "󰒓"; label: "Meer en muziek…"; onTriggered: overlay.openSettings("bediening") }
+                            Chip { glyph: "󰕮"; label: "Indeling en tweede rail…"; onTriggered: overlay.openSettings("rail") }
                         }
                     }
                 }

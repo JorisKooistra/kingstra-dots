@@ -16,8 +16,10 @@ MODULES = {"workspaces", "clock", "updates", "cpu_temp", "gpu_temp", "ram_usage"
            "network", "battery", "volume", "bluetooth", "notifications", "brightness",
            "media_controls", "game_launcher"}
 PINS = {"wifi", "bt", "dnd", "power", "media"}
-# Railknoppen die achter Meer kunnen (zie ShellChrome.railTucked).
-OVERFLOW = {"notifications", "system", "updates", "games", "pins", "power", "settings"}
+# Railonderdelen die achter Meer kunnen (zie ShellChrome.railTucked en
+# RailSlot); "apps" staat voor alle eigen apps uit Rail-indeling.
+OVERFLOW = {"notifications", "system", "updates", "games", "pins", "power", "settings",
+            "launcher", "workspaces", "specials", "overview", "tray", "audio", "status", "clock", "apps"}
 
 
 def read(path, default):

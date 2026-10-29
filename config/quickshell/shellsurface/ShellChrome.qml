@@ -527,6 +527,10 @@ Item {
         panelRequested(target, lastTriggerX, lastTriggerY);
     }
 
+    function openRailEditor() {
+        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "open", "settings", "rail"]);
+    }
+
     function updateTooltip() {
         if (updatesPoller.running) return "Updates controleren…";
         let dotfilesText = dotfilesUpdateCount > 0
@@ -2241,12 +2245,18 @@ Item {
             id: mouse
             anchors.fill: parent
             hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
             onEntered: root.showTooltip(btn, btn.tooltip, true)
             onExited: root.hideTooltip(btn.tooltip)
             onClicked: (mouseEvent) => {
                 if (mouseEvent.button === Qt.MiddleButton) {
                     btn.middleClicked();
+                    return;
+                }
+                // Rechtsklik: rail bewerken (volgorde, tweede rail, eigen apps).
+                if (mouseEvent.button === Qt.RightButton) {
+                    root.hideTooltip(btn.tooltip);
+                    root.openRailEditor();
                     return;
                 }
                 let p = btn.mapToItem(root, btn.width / 2, btn.height / 2);

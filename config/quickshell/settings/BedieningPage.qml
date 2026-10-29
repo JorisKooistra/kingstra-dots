@@ -250,6 +250,7 @@ Item {
                 Layout.fillWidth: true; spacing: 8
                 Action { label: root.autohide ? "Automatisch verbergen: aan" : "Automatisch verbergen: uit"; chosen: root.autohide; allowed: !ScreenProfiles.busy; onTriggered: root.set("rail.autohide", !root.autohide) }
                 Action { label: "Herstel keuzes voor deze mode"; allowed: !ScreenProfiles.busy; onTriggered: ScreenProfiles.action(["reset", root.screenName]) }
+                Action { label: "Volgorde, tweede rail en eigen apps…"; onTriggered: root.pageRequested("rail") }
             }
             Hint { text: "Zichtbare onderdelen"; Layout.fillWidth: true }
             Flow {
@@ -269,7 +270,7 @@ Item {
             Flow {
                 Layout.fillWidth: true; spacing: 7
                 Repeater {
-                    model: [{id: "notifications", title: "Meldingen"}, {id: "system", title: "Systeem"}, {id: "updates", title: "Updates"}, {id: "games", title: "Games"}, {id: "pins", title: "Extra knoppen"}, {id: "power", title: "Afsluiten"}, {id: "settings", title: "Instellingen"}]
+                    model: [{id: "notifications", title: "Meldingen"}, {id: "system", title: "Systeem"}, {id: "updates", title: "Updates"}, {id: "games", title: "Games"}, {id: "pins", title: "Extra knoppen"}, {id: "apps", title: "Eigen apps"}, {id: "overview", title: "Uitzoomen"}, {id: "tray", title: "Systeemvak"}, {id: "clock", title: "Klok"}, {id: "power", title: "Afsluiten"}, {id: "settings", title: "Instellingen"}]
                     delegate: Action {
                         required property var modelData
                         label: modelData.title

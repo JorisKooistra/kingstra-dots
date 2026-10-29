@@ -56,8 +56,10 @@ class ProfilesTests(unittest.TestCase):
         self.update(self.a, "set", "rail.overflow", '["settings", "pins"]')
         a = self.data["screens"][profiles.monitor_key(self.a)]
         self.assertEqual(a["modes"]["office"]["rail"]["overflow"], ["settings", "pins"])
+        # Sinds Rail-indeling kan elk railonderdeel achter Meer, ook eigen apps.
+        self.update(self.a, "set", "rail.overflow", '["clock", "apps"]')
         with self.assertRaises(ValueError):
-            self.update(self.a, "set", "rail.overflow", '["workspaces"]')
+            self.update(self.a, "set", "rail.overflow", '["onbekend"]')
 
     def test_corrupt_preferences_are_not_discarded(self):
         with tempfile.TemporaryDirectory() as folder:

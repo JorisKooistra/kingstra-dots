@@ -95,7 +95,7 @@ Item {
     // keuzes die ook in Thema, Bar, Sessie of Snelle instellingen staan.
     property var tabs: [
         { label: "Overzicht", icon: "󰕮", pages: [14], pageLabels: ["Overzicht"], keywords: "overzicht alles mode modus thema indeling scroll scrollen werkvlak wallpaper achtergrond tegels slepen" },
-        { label: "Bediening", icon: "󰍹", pages: [0], pageLabels: ["Bediening"], keywords: "mode modus scherm profiel rail indeling scroll werkvlak wallpaper muziek" },
+        { label: "Bediening", icon: "󰍹", pages: [0, 15], pageLabels: ["Bediening", "Rail-indeling"], keywords: "mode modus scherm profiel rail indeling scroll werkvlak wallpaper muziek volgorde slepen tweede rail apps launcher werkruimtes" },
         { label: "Uiterlijk", icon: "󰏘", pages: [1, 2], pageLabels: ["Thema", "Bar"],
           keywords: "thema kleur kleurschema matugen font lettertype icoon bar topbar positie vorm hoogte breedte rand rondheid blur effecten" },
         { label: "Beeldschermen", icon: "󰍹", pages: [6], pageLabels: ["Beeldschermen"],
@@ -175,6 +175,7 @@ Item {
     readonly property var pageNames: ({
         "overzicht": 14, "overview": 14, "home": 14,
         "bediening": 0, "control": 0,
+        "rail": 15, "rail-indeling": 15, "railindeling": 15,
         "thema": 1, "theme": 1, "bar": 2, "sneltoetsen": 4, "keybinds": 4,
         "invoer": 5, "input": 5, "beeldschermen": 6, "monitors": 6,
         "netwerk": 7, "network": 7, "geluid": 8, "audio": 8,
@@ -2680,6 +2681,12 @@ Item {
                     anchors.fill: parent
                     active: root.currentPage === 14
                     source: "OverviewPage.qml"
+                    onLoaded: item.pageRequested.connect(root.openNamedPage)
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: root.currentPage === 15
+                    source: "RailLayoutPage.qml"
                     onLoaded: item.pageRequested.connect(root.openNamedPage)
                 }
 
