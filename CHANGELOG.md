@@ -5,6 +5,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- Fix: na een plaatwissel of spoelen sprong de naald soms meteen terug op de plaat. De arm zwenkt nu altijd zichtbaar terug.
+- Fix: bij een volgend album verscheen soms eerst de nieuwe hoes op de oude plaat. De hoes wacht nu even, zodat de oude plaat eraf gaat en de nieuwe erop komt.
 - Fix: de kleuren volgen nu het Matugen-thema. Hout (organic) en neon houden hun vormen, nerf en lichtlijnen, maar messing, walnoot en zwart zijn vervangen door accent- en oppervlaktekleuren uit het palet.
 - Fix: bij openen vloog de schermvullende speler eerst van boven binnen. Hyprland animeert die laag niet meer (`no_anim` voor `quickshell:kingstra-vinyl-stage`), zodat alleen de groei vanuit de mediakaart overblijft.
 - Fix: met de schermvullende speler open waren de andere schermen niet klikbaar. Hij vraagt toetsenbordfocus nu op aanvraag in plaats van exclusief.

@@ -149,6 +149,10 @@ Item {
     readonly property real naturalAngle: tracking ? angleFor(shownProgress) : armRest
     // armHeld: de arm volgt heldAngle (spoelen, slepen, plaat wisselen).
     property bool armHeld: false
+    // Zet de Behavior op de armhoek uit. Los van armHeld, zodat hij bij het
+    // loslaten al aan staat voordat de hoek naar de nummerstand springt;
+    // anders wint soms de hoekbinding en staat de naald meteen op de plaat.
+    property bool armSnap: false
     property real heldAngle: armRest
     // 0 = naald op de plaat, 1 = arm opgetild.
     property real armLift: 0
@@ -158,7 +162,12 @@ Item {
     function holdArm() {
         if (armHeld) return;
         heldAngle = armRotation.angle;
+        armSnap = true;
         armHeld = true;
+    }
+    function releaseArm() {
+        armSnap = false;
+        armHeld = false;
     }
     // Arm optillen en boven de plek van `fraction` houden (voor een
     // spoelbalk die nog wordt gesleept). cueTo laat hem daarna zakken.
@@ -194,7 +203,7 @@ Item {
     SequentialAnimation {
         id: dropAnim
         NumberAnimation { target: deck; property: "armLift"; to: 0; duration: ThemeConfig.duration(240); easing.type: Easing.InOutQuad }
-        ScriptAction { script: deck.armHeld = false }
+        ScriptAction { script: deck.releaseArm() }
     }
     SequentialAnimation {
         id: cueAnim
@@ -212,7 +221,7 @@ Item {
                 deck.seekHold = deck.cueTarget;
                 seekHoldTimer.restart();
                 deck.seekRequested(deck.cueTarget);
-                deck.armHeld = false;
+                deck.releaseArm();
             }
         }
     }
@@ -226,7 +235,18 @@ Item {
     property real discLift: 0
     Component.onCompleted: { shownKey = trackKey; shownArt = artUrl; }
     onTrackKeyChanged: maybeSwap()
-    onArtUrlChanged: if (!swapAnim.running && trackKey === shownKey) shownArt = artUrl
+    // Spelers sturen de nieuwe hoes vaak net vóór het nieuwe album. Even
+    // wachten, zodat een wissel de oude plaat afhaalt in plaats van eerst de
+    // nieuwe hoes op de oude plaat te tonen.
+    onArtUrlChanged: {
+        if (shownArt === "") shownArt = artUrl;
+        else artSettle.restart();
+    }
+    Timer {
+        id: artSettle
+        interval: 600
+        onTriggered: if (!swapAnim.running && deck.trackKey === deck.shownKey) deck.shownArt = deck.artUrl
+    }
     function maybeSwap() {
         if (trackKey === shownKey || swapAnim.running) return;
         if (shownKey === "" || trackKey === "" || vinyl < 0.5 || !visible) {
@@ -260,10 +280,15 @@ Item {
         NumberAnimation { target: deck; property: "armLift"; to: 1; duration: ThemeConfig.duration(160); easing.type: Easing.OutCubic }
         // Loslaten terwijl hij omhoog is: de Behavior op de armhoek zwenkt
         // hem naar de stand van het nieuwe nummer (die nu pas bekend is).
-        ScriptAction { script: deck.armHeld = false }
+        ScriptAction { script: deck.releaseArm() }
         PauseAnimation { duration: ThemeConfig.duration(560) }
         NumberAnimation { target: deck; property: "armLift"; to: 0; duration: ThemeConfig.duration(260); easing.type: Easing.InOutQuad }
-        ScriptAction { script: deck.maybeSwap() }
+        ScriptAction {
+            script: {
+                if (deck.trackKey === deck.shownKey) deck.shownArt = deck.artUrl;
+                deck.maybeSwap();
+            }
+        }
     }
     // 0 = hoes, 1 = plaat. Hierop hangen alle overgangen.
     property real vinyl: vinylMode ? 1 : 0
@@ -644,7 +669,7 @@ Item {
                         origin.y: arm.hubY
                         angle: deck.armHeld ? deck.heldAngle : deck.naturalAngle
                         Behavior on angle {
-                            enabled: !deck.armHeld
+                            enabled: !deck.armSnap
                             NumberAnimation { duration: ThemeConfig.duration(520); easing.type: Easing.OutCubic }
                         }
                     }
