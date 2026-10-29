@@ -8,7 +8,7 @@ import ".."
 // voorkant kijkt recht naar je en draagt een display, de spoelbalk en echte
 // knoppen. Spoelen tilt de naald op, zwenkt hem en laat hem weer zakken.
 //
-// Alleen QtQuick: het venster eromheen staat in desktop/VinylStage.qml.
+// Alleen QtQuick: het venster eromheen staat in VinylStage.qml.
 FocusScope {
     id: stage
 

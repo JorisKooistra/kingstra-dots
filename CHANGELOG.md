@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Draaitafel: gedetailleerder en schermvullend
+- Fix: klok, mediakaart en draaitafel bleven weg ("VinylStage is not a type"). VinylStage staat nu in shellsurface/; `tests/smoke/qml-unscanned-dirs.sh` vangt typen uit een map die Quickshell geen qmldir geeft.
 - De toonarm is gebogen (S-bocht met schuin headshell, vingerlift en contragewicht) en heeft een schaduw die verder wegvalt als de arm omhoog gaat.
 - Spoelen gaat als op een echte speler: de arm gaat omhoog, zwenkt naar de nieuwe plek en zakt weer. Je kunt de naald zelf slepen (mediakaart op het bureaublad, Geluid & media en de schermvullende weergave).
 - Bij een nieuw album gaat de arm naar zijn steun, schuift de oude plaat eraf en de nieuwe erop.

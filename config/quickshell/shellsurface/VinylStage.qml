@@ -1,12 +1,16 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
-import "../"
-import "../shellsurface"
+import ".."
 
 // Venster om VinylStageContent: schermvullend op de Overlay-laag, boven de
 // bar, met toetsenbordfocus zolang hij open is. DesktopWidgets laadt dit
 // alleen terwijl de weergave open is of nog wegfadet.
+//
+// Staat in shellsurface/ en niet naast DesktopWidgets: Quickshell maakt alleen
+// een qmldir voor mappen die een gescand bestand importeert. desktop/ wordt
+// via een LazyLoader-pad geladen, dus typen daar zijn onderling niet bekend
+// ("VinylStage is not a type").
 PanelWindow {
     id: win
 
