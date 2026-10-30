@@ -37,14 +37,14 @@ Item {
     readonly property real cupRz: 22.5
     readonly property real cushionH: 5
     readonly property real shellH: 11.5
-    readonly property real band0: 3.5
-    readonly property real band1: 10.5
+    readonly property real band0: 4.5
+    readonly property real band1: 9.5
     readonly property real yokeH: shellH * 0.6
     // Net neergelegd: de linkerschelp ligt bijna recht, de rechter is
     // weggedraaid en iets naar voren geschoven.
     readonly property var cups: [
         { cx: -27, cz: 4, yaw: 9, seed: 2 },
-        { cx: 29, cz: -4, yaw: -26, seed: 8 }
+        { cx: 28, cz: -4, yaw: -19, seed: 8 }
     ]
     // Plek op de schelp (lokaal lx dwars, lz in de lengte) naar tafel.
     function onCup(c, lx, lz) {
@@ -171,13 +171,13 @@ Item {
     // De vork ligt om het achtereind van elke schelp; het schuifstuk loopt
     // er recht van weg en de leren band buigt in een boog van het ene
     // schuifstuk naar het andere. De band ligt op zijn kant.
-    readonly property real slide: 7
+    readonly property real slide: 3.5
     function yokeBack(c) { return onCup(c, 0, cupRz + 1.6); }
     function bandEnd(c) { return onCup(c, 0, cupRz + 1.6 + slide); }
     function cupDir(c) { let a = c.yaw * Math.PI / 180; return [-Math.sin(a), Math.cos(a)]; }
     readonly property var bandCtl: {
         let a = bandEnd(cups[0]), b = bandEnd(cups[1]), da = cupDir(cups[0]), db = cupDir(cups[1]);
-        let len = Math.hypot(b[0] - a[0], b[1] - a[1]) * 0.62;
+        let len = Math.hypot(b[0] - a[0], b[1] - a[1]) * 0.3;
         return [a, [a[0] + da[0] * len, a[1] + da[1] * len], [b[0] + db[0] * len, b[1] + db[1] * len], b];
     }
     // Punt op de boog (s van 0 tot 1), grow naar buiten.
@@ -199,9 +199,9 @@ Item {
         return pts;
     }
     readonly property string ribbon: svg(bandPath(0, 1, band1, 0, 32), bandPath(0, 1, band0, 0, 32))
-    readonly property string ribbonTop: svg(bandPath(0, 1, band1, 3.2, 32), bandPath(0, 1, band1, 0, 32))
-    readonly property string stitch: line(bandPath(0.03, 0.97, band1, 1.6, 30))
-    readonly property string rail: line(bandPath(-0.02, 1.02, band1 + 0.6, 3.6, 32))
+    readonly property string ribbonTop: svg(bandPath(0, 1, band1, 2.6, 32), bandPath(0, 1, band1, 0, 32))
+    readonly property string stitch: line(bandPath(0.03, 0.97, band1, 1.3, 30))
+    readonly property string rail: line(bandPath(-0.02, 1.02, band1 + 0.6, 3, 32))
     function slider(c, s) {
         let a = bandAt(s, 1.8), b = yokeBack(c);
         let p = project(a[0], a[1], band1 - 1.5), q = project(b[0], b[1], yokeH);
@@ -219,12 +219,17 @@ Item {
 
     // --- Snoer -------------------------------------------------------------------
     // Uit de onderkant van de linkerschelp, een losse krul op tafel en dan in
-    // een lange zwaai naar voren langs de speler. Punten op tafel (X, Z, H),
-    // vloeiend verbonden (Catmull-Rom).
+    // een zwaai voor de speler langs, omhoog naar de aansluiting (jack:
+    // [punt, richting naar buiten] in koptelefoon-coördinaten, van
+    // DeviceStage). Zonder aansluiting eindigt hij in een losse stekker op
+    // tafel. Punten (X, Z, H), vloeiend verbonden (Catmull-Rom).
+    property var jack: null
+    // Lengte van stekker zonder pin: knikbeschermer en huls.
+    readonly property real plugBody: 15.5
     readonly property var cableKeys: {
         let s = onCup(cups[0], -cupRx * 0.35, -cupRz * 0.9);
         let o = onCup(cups[0], -cupRx * 0.5, -cupRz - 6), d = cableDepth;
-        return [
+        let keys = [
             [s[0], s[1], cushionH + 1.5],
             [o[0], o[1], 1.1],
             [-50, -30 * d, 1.1],
@@ -236,11 +241,26 @@ Item {
             [-57, -50 * d, 1.1],
             [-44, -64 * d, 1.1],
             [-20, -74 * d, 1.1],
-            [0, -62 * d, 1.1],
-            [18, -70 * d, 1.1],
-            [31, -63 * d, 1.1],
-            [42, -58 * d, 1.1]
+            [0, -62 * d, 1.1]
         ];
+        if (!jack)
+            return keys.concat([[18, -70 * d, 1.1], [31, -63 * d, 1.1], [42, -58 * d, 1.1]]);
+        // Van tafel omhoog naar de stekker: het snoer hangt eerst van de
+        // speler af en buigt dan recht de stekker in.
+        let j = jack[0], v = jack[1], hl = Math.hypot(v[0], v[1]);
+        let e = [0, 1, 2].map(n => j[n] + v[n] * plugBody), m, n, t;
+        if (hl > 0.4) {
+            let w = [v[0] / hl, v[1] / hl];
+            m = [e[0] + w[0] * 4, e[1] + w[1] * 4, e[2] * 0.85];
+            n = [e[0] + w[0] * 8 - 2, e[1] + w[1] * 8, e[2] * 0.35];
+            t = [e[0] + w[0] * 10 - 8, e[1] + w[1] * 10 + 1, 1.1];
+        } else {
+            let w = [-0.85, -0.5];
+            m = [e[0] + w[0] * 5, e[1] + w[1] * 5, e[2] + 3.5];
+            n = [j[0] + w[0] * 17, j[1] + w[1] * 17, j[2] * 0.75];
+            t = [j[0] + w[0] * 25, j[1] + w[1] * 25, 1.1];
+        }
+        return keys.concat([[t[0] - 12, t[1] - 3, 1.1], t, n, m, e]);
     }
     readonly property var cableWorld: {
         let p = cableKeys, out = [];
@@ -256,18 +276,28 @@ Item {
         return out;
     }
     readonly property var cableEnd: cableWorld[cableWorld.length - 1]
-    readonly property var cableDir: {
+    // As van de stekker (van het snoer naar de punt), in 3D.
+    readonly property var plugDir: {
+        if (jack) return jack[1].map(n => -n);
         let a = cableWorld[cableWorld.length - 4], b = cableEnd, l = Math.max(0.001, Math.hypot(b[0] - a[0], b[1] - a[1]));
-        return [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+        return [(b[0] - a[0]) / l, (b[1] - a[1]) / l, 0];
     }
-    function cableAlong(d, h) { return project(cableEnd[0] + cableDir[0] * d, cableEnd[1] + cableDir[1] * d, h); }
+    // Licht van linksboven: glans boven op een liggende stekker, links op een
+    // staande.
+    readonly property var plugShine: Math.hypot(plugDir[0], plugDir[1]) > 0.5 ? [0, 0, 1] : [-0.8, 0.3, 0]
+    function plugAt(d, lift) {
+        let b = jack ? 0 : 1.1;
+        return project(cableEnd[0] + plugDir[0] * d + plugShine[0] * lift,
+                       cableEnd[1] + plugDir[1] * d + plugShine[1] * lift,
+                       cableEnd[2] + plugDir[2] * d + plugShine[2] * lift + b);
+    }
     readonly property string cablePath: line(cableWorld.map(p => project(p[0], p[1], p[2])))
-    readonly property string cableShadow: line(cableWorld.map(p => project(p[0] + 1.4, p[1] - 0.8, 0)))
+    readonly property string cableShadow: line(cableWorld.map(p => project(p[0] + 1.4 + p[2] * 0.25, p[1] - 0.8, 0)))
     readonly property string cableShine: line(cableWorld.map(p => project(p[0] - 0.3, p[1] + 0.2, p[2] + 0.7)))
-    // 3,5 mm-stekker: knikbeschermer, huls en pin, langs de richting van het
-    // snoer.
-    function seg(d0, d1, h) {
-        let a = cableAlong(d0, h), b = cableAlong(d1, h);
+    // 3,5 mm-stekker: knikbeschermer, huls en pin langs de as; in de
+    // aansluiting zit de pin erin.
+    function seg(d0, d1, lift) {
+        let a = plugAt(d0, lift), b = plugAt(d1, lift);
         return "M " + a[0].toFixed(1) + " " + a[1].toFixed(1) + " L " + b[0].toFixed(1) + " " + b[1].toFixed(1);
     }
 
@@ -516,8 +546,9 @@ Item {
             capStyle: ShapePath.RoundCap
             PathSvg {
                 path: {
+                    if (phones.jack) return "M 0 0";
                     let a = phones.project(phones.cableEnd[0] + 1.5, phones.cableEnd[1] - 1, 0);
-                    let b = phones.project(phones.cableEnd[0] + phones.cableDir[0] * 22 + 1.5, phones.cableEnd[1] + phones.cableDir[1] * 22 - 1, 0);
+                    let b = phones.project(phones.cableEnd[0] + phones.plugDir[0] * 22 + 1.5, phones.cableEnd[1] + phones.plugDir[1] * 22 - 1, 0);
                     return "M " + a[0].toFixed(1) + " " + a[1].toFixed(1) + " L " + b[0].toFixed(1) + " " + b[1].toFixed(1);
                 }
             }
@@ -527,34 +558,34 @@ Item {
             strokeColor: Qt.darker(phones.leather, 1.6)
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
-            PathSvg { path: phones.seg(0, 4, 1.8) }
+            PathSvg { path: phones.seg(0, 4, 0) }
         }
         ShapePath {
             strokeWidth: phones.u * 4.4
             strokeColor: Qt.darker(phones.metal, 1.35)
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
-            PathSvg { path: phones.seg(4.5, 15, 2.2) }
+            PathSvg { path: phones.seg(4.5, 15, 0) }
         }
         ShapePath {
             strokeWidth: phones.u * 1.8
             strokeColor: phones.metal
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
-            PathSvg { path: phones.seg(15.5, 23, 1.2) }
+            PathSvg { path: phones.jack ? "M 0 0" : phones.seg(15.5, 23, -0.6) }
         }
         ShapePath {
             strokeWidth: phones.u * 1.4
             strokeColor: Qt.lighter(phones.metal, 1.35)
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
-            PathSvg { path: phones.seg(5, 14.5, 3.6) }
+            PathSvg { path: phones.seg(5, 14.5, 1.3) }
         }
         ShapePath {
             strokeWidth: phones.u * 0.5
             strokeColor: Qt.darker(phones.metal, 1.8)
             fillColor: "transparent"
-            PathSvg { path: phones.seg(18.5, 19.2, 1.4) + " " + phones.seg(20.5, 21.2, 1.4) }
+            PathSvg { path: phones.jack ? "M 0 0" : phones.seg(18.5, 19.2, -0.4) + " " + phones.seg(20.5, 21.2, -0.4) }
         }
     }
 }

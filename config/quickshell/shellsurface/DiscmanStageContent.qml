@@ -85,6 +85,12 @@ DeviceStage {
     // De rij staat rond het deel van de rand dat het meest naar je toe wijst.
     readonly property real bandCenter: -camYaw * 0.5
 
+    readonly property real jackA: -45
+    jackAt: {
+        let A = (jackA + bandCenter) * Math.PI / 180, R = rigWidth / 2;
+        return [[R * Math.sin(A), -boxDepth * 0.52, R * Math.cos(A)], [Math.sin(A), 0, Math.cos(A)]];
+    }
+
     component OnBand: Item {
         id: slot
         property real a: 0
@@ -105,36 +111,35 @@ DeviceStage {
         Item {
             anchors.fill: parent
 
-            // Koptelefoonaansluiting met opschrift.
+            // Koptelefoonaansluiting met opschrift; de koptelefoon (Organic)
+            // zit erin.
             OnBand {
-                a: -40
-                Row {
-                    spacing: stage.boxDepth * 0.1
+                a: stage.jackA
+                Rectangle {
+                    width: stage.boxDepth * 0.34
+                    height: width
+                    radius: width / 2
+                    color: stage.look === "paper" ? stage.mocha.base : stage.skin.metal
+                    border.width: stage.look === "paper" ? 1.5 : 1
+                    border.color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.5)
                     Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: stage.boxDepth * 0.34
+                        anchors.centerIn: parent
+                        width: parent.width * 0.5
                         height: width
                         radius: width / 2
-                        color: stage.look === "paper" ? stage.mocha.base : stage.skin.metal
-                        border.width: stage.look === "paper" ? 1.5 : 1
-                        border.color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.5)
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: parent.width * 0.5
-                            height: width
-                            radius: width / 2
-                            color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.85)
-                        }
+                        color: stage.look === "paper" ? stage.mocha.text : Qt.rgba(0, 0, 0, 0.85)
                     }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        opacity: stage.detailT
-                        text: "PHONES"
-                        font.family: ThemeConfig.monoFont
-                        font.pixelSize: Math.max(8, stage.boxDepth * 0.13)
-                        font.letterSpacing: 1
-                        color: stage.skin.brandColor
-                    }
+                }
+            }
+            OnBand {
+                a: -36
+                Text {
+                    opacity: stage.detailT
+                    text: "PHONES"
+                    font.family: ThemeConfig.monoFont
+                    font.pixelSize: Math.max(8, stage.boxDepth * 0.13)
+                    font.letterSpacing: 1
+                    color: stage.skin.brandColor
                 }
             }
 

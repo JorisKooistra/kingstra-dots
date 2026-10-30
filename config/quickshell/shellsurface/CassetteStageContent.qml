@@ -67,6 +67,8 @@ DeviceStage {
     readonly property real keyR: rigWidth * 0.045
     readonly property real keyH: rigWidth * 0.03
     readonly property real shellIn: clamp01((extrudeT - 0.55) / 0.45)
+    readonly property real jackF: 0.07
+    jackAt: [[rigWidth * (jackF - 0.5), topDepth / 2, 0], [0, 1, 0]]
     function onTop(f) { return proj(rigWidth * f, 0, boxDepth * 0.5); }
 
     shellData: [
@@ -120,9 +122,10 @@ DeviceStage {
                 }
             }
 
-            // Koptelefoonaansluiting bovenop, rechts.
+            // Koptelefoonaansluiting bovenop, links; de koptelefoon (Organic)
+            // zit erin.
             Item {
-                readonly property var at: stage.onTop(0.92)
+                readonly property var at: stage.onTop(stage.jackF)
                 readonly property real rr: stage.rigWidth * 0.018 * at[2]
                 x: at[0] - rr
                 y: at[1] - rr * stage.tableSquash

@@ -323,6 +323,7 @@ FocusScope {
         anchors.fill: parent
         part: "body"
         cableDepth: stage.upright ? 0.5 : 0.6
+        jack: stage.phonesJack
         visible: stage.hasPhones && stage.detailT > 0.01
         opacity: stage.detailT
         // Tijdens het infaden als één geheel, anders schijnen de delen
@@ -346,6 +347,24 @@ FocusScope {
     // naar voren. X en Z in eenheden van de koptelefoon (Z naar achteren).
     property real phonesTurn: 14
     property real phonesForward: upright ? 0.3 : -0.15
+    // Aansluiting voor het snoer: [punt, richting naar buiten] in
+    // cameracoördinaten (zoals cam()); null = losse stekker.
+    property var jackAt: null
+    // Terug van camera- naar koptelefoon-coördinaten (X, Z, H), het
+    // omgekeerde van phonesProject vóór de camera.
+    function toPhones(c, dir) {
+        let u = phonesWidth / 100, t = phonesTurn * Math.PI / 180;
+        let ct = Math.cos(t), st = Math.sin(t);
+        let tableY = upright ? -topDepth / 2 : -boxDepth;
+        let front = upright ? boxDepth / 2 : topDepth / 2;
+        let px = dir ? c[0] : c[0] + rigWidth / 2 + phonesWidth * 0.56;
+        let pz = dir ? -c[2] : front - topDepth * 0.1 + rigWidth * phonesForward - c[2];
+        let h = dir ? c[1] : c[1] - tableY;
+        // Een richting blijft een eenheidsvector, een punt gaat naar u.
+        let d = dir ? 1 : u;
+        return [(px * ct + pz * st) / d, (-px * st + pz * ct) / d, h / d];
+    }
+    readonly property var phonesJack: jackAt ? [toPhones(jackAt[0], false), toPhones(jackAt[1], true)] : null
     function phonesProject(X, Z, H) {
         let u = phonesWidth / 100, t = phonesTurn * Math.PI / 180;
         let ct = Math.cos(t), st = Math.sin(t);
@@ -538,6 +557,7 @@ FocusScope {
         anchors.fill: parent
         part: "cable"
         cableDepth: decoration.cableDepth
+        jack: decoration.jack
         visible: decoration.visible
         opacity: decoration.opacity
         layer.enabled: decoration.layer.enabled
