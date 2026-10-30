@@ -48,6 +48,7 @@ DeviceStage {
             accent: stage.accent
             title: stage.title
             artist: stage.artist
+            trackKey: stage.trackKey
             playing: stage.playing
             tracking: stage.tracking
             length: stage.length
@@ -96,8 +97,10 @@ DeviceStage {
                     y: at[1] - baseY
                     icon: modelData.icon
                     flat: stage.skin.flat === true
-                    latched: isPlay && stage.playing
-                    lit: isPlay ? stage.playing : wind !== 0 && seeker.windDir === wind
+                    // Eject gaat omlaag terwijl de cassette wisselt.
+                    readonly property bool ejecting: modelData.kind === "eject" && cassette.swapping
+                    latched: (isPlay && stage.playing) || ejecting
+                    lit: isPlay ? stage.playing : ejecting || (wind !== 0 && seeker.windDir === wind)
                     capA: isPlay ? stage.skin.playA : stage.skin.keyA
                     capB: isPlay ? stage.skin.playB : stage.skin.keyB
                     side: isPlay ? stage.skin.playSide : stage.skin.keySide

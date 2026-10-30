@@ -11,6 +11,8 @@ import ".."
 // Door het venster: het label met titel (lopend) en artiest, en twee
 // spoelen. Het tapepakket links krimpt en rechts groeit met de voortgang;
 // bij spoelen winden de spoelen zichtbaar snel door. Kleuren per thema.
+// Bij een nieuw album (trackKey) gaat de oude cassette omhoog het venster
+// uit en zakt de nieuwe erin, met het label van het nieuwe album.
 Item {
     id: deck
 
@@ -20,6 +22,8 @@ Item {
     property string artist: ""
     property bool playing: false
     property bool tracking: false
+    // Album of hoes-URL; verandert dit, dan wisselt de cassette.
+    property string trackKey: ""
     // Waar de tape staat (0..1); tijdens spoelen het doel.
     property real position: 0
     // In seconden, voor de teller.
@@ -121,7 +125,12 @@ Item {
     property real reelAngleL: 0
     property real reelAngleR: 0
     property real motor: 0
-    Component.onCompleted: tapePos = Math.max(0, Math.min(1, position))
+    Component.onCompleted: {
+        tapePos = Math.max(0, Math.min(1, position));
+        shownKey = trackKey;
+        shownTitle = title;
+        shownArtist = artist;
+    }
     function spinState() { return { a: reelAngleL, b: reelAngleR, t: tapePos }; }
     function applySpinState(s) {
         if (s && s.a !== undefined) { reelAngleL = s.a; reelAngleR = s.b; tapePos = s.t; }
@@ -153,6 +162,65 @@ Item {
             deck.reelAngleR = (deck.reelAngleR + wr * dt) % 360;
         }
     }
+    // --- Cassette wisselen bij een nieuw album ------------------------------------
+    // Het label houdt titel en artiest van de cassette die erin zit; spelers
+    // sturen de nieuwe titel vaak net vóór het nieuwe album, dus even
+    // wachten voordat het label meeloopt.
+    property string shownKey: ""
+    property string shownTitle: ""
+    property string shownArtist: ""
+    // 0 = cassette zit erin, 1 = boven het venster uit.
+    property real swapOut: 0
+    readonly property bool swapping: swapAnim.running
+    onTrackKeyChanged: maybeSwap()
+    onTitleChanged: labelSettle.restart()
+    onArtistChanged: labelSettle.restart()
+    Timer {
+        id: labelSettle
+        interval: 450
+        onTriggered: {
+            if (deck.swapping) return;
+            if (deck.trackKey !== deck.shownKey) { deck.maybeSwap(); return; }
+            deck.shownTitle = deck.title;
+            deck.shownArtist = deck.artist;
+        }
+    }
+    function maybeSwap() {
+        if (trackKey === shownKey || swapping) return;
+        if (shownKey === "" || trackKey === "" || !visible) {
+            shownKey = trackKey;
+            shownTitle = title;
+            shownArtist = artist;
+            return;
+        }
+        labelSettle.stop();
+        swapAnim.restart();
+    }
+    SequentialAnimation {
+        id: swapAnim
+        PauseAnimation { duration: ThemeConfig.duration(140) }
+        NumberAnimation { target: deck; property: "swapOut"; to: 1; duration: ThemeConfig.duration(420); easing.type: Easing.InCubic }
+        ScriptAction {
+            script: {
+                deck.shownKey = deck.trackKey;
+                deck.shownTitle = deck.title;
+                deck.shownArtist = deck.artist;
+                // Nieuwe cassette staat aan het begin van zijn eigen tape.
+                deck.tapePos = Math.max(0, Math.min(1, deck.position));
+                deck.reelAngleL = Math.random() * 360;
+                deck.reelAngleR = Math.random() * 360;
+            }
+        }
+        PauseAnimation { duration: ThemeConfig.duration(90) }
+        NumberAnimation { target: deck; property: "swapOut"; to: 0; duration: ThemeConfig.duration(520); easing.type: Easing.OutBack; easing.overshoot: 0.9 }
+        ScriptAction {
+            script: {
+                if (deck.trackKey === deck.shownKey) { deck.shownTitle = deck.title; deck.shownArtist = deck.artist; }
+                deck.maybeSwap();
+            }
+        }
+    }
+
     function clock(sec) {
         let s = Math.max(0, Math.floor(Number(sec) || 0));
         let m = Math.floor(s / 60);
@@ -304,101 +372,131 @@ Item {
     // elkaar, op de hoogte van het midden van het venster.
     readonly property real c: u * 0.76
     readonly property real hubY: winY + winH * 0.55
-    TapeReel {
-        x: deck.width / 2 - deck.c * 21.25 - hubRadius
-        y: deck.hubY - hubRadius
-        hubRadius: deck.c * deck.hubR
-        packRadius: deck.c * deck.packL
-        angle: deck.reelAngleL
-        tape: deck.skin.tape
-        hub: deck.skin.hub
-        hubShade: deck.skin.hubShade
-        flat: deck.look === "paper"
-        ink: deck.mocha.text
-    }
-    TapeReel {
-        x: deck.width / 2 + deck.c * 21.25 - hubRadius
-        y: deck.hubY - hubRadius
-        hubRadius: deck.c * deck.hubR
-        packRadius: deck.c * deck.packR
-        angle: deck.reelAngleR
-        tape: deck.skin.tape
-        hub: deck.skin.hub
-        hubShade: deck.skin.hubShade
-        flat: deck.look === "paper"
-        ink: deck.mocha.text
-    }
-    // Kijkvenstertje van de cassette tussen de spoelen, en de tape onderin.
-    Rectangle {
-        x: deck.width / 2 - deck.c * 12
-        y: deck.hubY - deck.c * 7
-        width: deck.c * 24
-        height: deck.c * 14
-        radius: deck.c * 1.5
-        color: "transparent"
-        border.width: Math.max(1, deck.c * 0.4)
-        border.color: Qt.rgba(deck.skin.hub.r, deck.skin.hub.g, deck.skin.hub.b, 0.35)
-    }
-    Rectangle {
-        x: deck.u * 27
-        y: deck.winY + deck.winH - deck.u * 3.2
-        width: deck.u * 46
-        height: Math.max(1, deck.u * 0.6)
-        color: deck.skin.tape
-        opacity: 0.9
-    }
-    // Label bovenin het venster, met titel en artiest.
-    Rectangle {
-        id: label
-        x: deck.u * 26
-        y: deck.winY + deck.u * 1.4
-        width: deck.u * 48
-        height: deck.u * 8.2
-        radius: deck.u * 0.8
-        color: deck.skin.label
-        border.width: deck.look === "paper" ? 1.5 : 0
-        border.color: deck.mocha.text
+    // De cassette zelf (spoelen, tape, label): schuift bij een wissel omhoog
+    // het venster uit; buiten de pilvorm valt hij weg (masker alleen tijdens
+    // de wissel).
+    Item {
+        id: cassetteBody
+        width: deck.width
+        height: deck.height
+        transform: Translate { y: -deck.swapOut * (deck.winH + deck.u * 4) }
+        opacity: 1 - Math.max(0, deck.swapOut) * 0.35
+        layer.enabled: Math.abs(deck.swapOut) > 0.001
+        layer.effect: MultiEffect {
+            maskEnabled: true
+            maskSource: winMask
+        }
+
+        TapeReel {
+            x: deck.width / 2 - deck.c * 21.25 - hubRadius
+            y: deck.hubY - hubRadius
+            hubRadius: deck.c * deck.hubR
+            packRadius: deck.c * deck.packL
+            angle: deck.reelAngleL
+            tape: deck.skin.tape
+            hub: deck.skin.hub
+            hubShade: deck.skin.hubShade
+            flat: deck.look === "paper"
+            ink: deck.mocha.text
+        }
+        TapeReel {
+            x: deck.width / 2 + deck.c * 21.25 - hubRadius
+            y: deck.hubY - hubRadius
+            hubRadius: deck.c * deck.hubR
+            packRadius: deck.c * deck.packR
+            angle: deck.reelAngleR
+            tape: deck.skin.tape
+            hub: deck.skin.hub
+            hubShade: deck.skin.hubShade
+            flat: deck.look === "paper"
+            ink: deck.mocha.text
+        }
+        // Kijkvenstertje van de cassette tussen de spoelen, en de tape onderin.
         Rectangle {
-            y: parent.height - height * 2.2
-            width: parent.width
-            height: parent.height * 0.1
-            color: deck.skin.stripe
+            x: deck.width / 2 - deck.c * 12
+            y: deck.hubY - deck.c * 7
+            width: deck.c * 24
+            height: deck.c * 14
+            radius: deck.c * 1.5
+            color: "transparent"
+            border.width: Math.max(1, deck.c * 0.4)
+            border.color: Qt.rgba(deck.skin.hub.r, deck.skin.hub.g, deck.skin.hub.b, 0.35)
         }
         Rectangle {
-            y: parent.height - height * 1.1
-            width: parent.width
-            height: parent.height * 0.08
-            color: deck.skin.stripe2
+            x: deck.u * 27
+            y: deck.winY + deck.winH - deck.u * 3.2
+            width: deck.u * 46
+            height: Math.max(1, deck.u * 0.6)
+            color: deck.skin.tape
+            opacity: 0.9
         }
-        Text {
-            x: deck.u * 1
-            y: parent.height * 0.06
-            text: "A"
-            font.family: ThemeConfig.displayFont
-            font.pixelSize: Math.max(4, parent.height * 0.42)
-            font.weight: Font.Black
-            color: deck.skin.stripe
+        // Label bovenin het venster, met titel en artiest.
+        Rectangle {
+            id: label
+            x: deck.u * 26
+            y: deck.winY + deck.u * 1.4
+            width: deck.u * 48
+            height: deck.u * 8.2
+            radius: deck.u * 0.8
+            color: deck.skin.label
+            border.width: deck.look === "paper" ? 1.5 : 0
+            border.color: deck.mocha.text
+            Rectangle {
+                y: parent.height - height * 2.2
+                width: parent.width
+                height: parent.height * 0.1
+                color: deck.skin.stripe
+            }
+            Rectangle {
+                y: parent.height - height * 1.1
+                width: parent.width
+                height: parent.height * 0.08
+                color: deck.skin.stripe2
+            }
+            Text {
+                x: deck.u * 1
+                y: parent.height * 0.06
+                text: "A"
+                font.family: ThemeConfig.displayFont
+                font.pixelSize: Math.max(4, parent.height * 0.42)
+                font.weight: Font.Black
+                color: deck.skin.stripe
+            }
+            MarqueeText {
+                x: deck.u * 4.4
+                y: parent.height * 0.05
+                width: parent.width - deck.u * 5.6
+                text: deck.shownTitle !== "" ? deck.shownTitle : "Geen nummer"
+                color: deck.skin.labelText
+                fontFamily: ThemeConfig.uiFont
+                pixelSize: Math.max(4, parent.height * 0.36)
+                fontWeight: Font.Bold
+                running: deck.marquee && !deck.compact
+            }
+            Text {
+                x: deck.u * 4.4
+                y: parent.height * 0.46
+                width: parent.width - deck.u * 5.6
+                text: deck.shownArtist
+                elide: Text.ElideRight
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: Math.max(4, parent.height * 0.26)
+                color: deck.skin.labelText2
+            }
         }
-        MarqueeText {
-            x: deck.u * 4.4
-            y: parent.height * 0.05
-            width: parent.width - deck.u * 5.6
-            text: deck.title !== "" ? deck.title : "Geen nummer"
-            color: deck.skin.labelText
-            fontFamily: ThemeConfig.uiFont
-            pixelSize: Math.max(4, parent.height * 0.36)
-            fontWeight: Font.Bold
-            running: deck.marquee && !deck.compact
-        }
-        Text {
-            x: deck.u * 4.4
-            y: parent.height * 0.46
-            width: parent.width - deck.u * 5.6
-            text: deck.artist
-            elide: Text.ElideRight
-            font.family: ThemeConfig.uiFont
-            font.pixelSize: Math.max(4, parent.height * 0.26)
-            color: deck.skin.labelText2
+    }
+    Item {
+        id: winMask
+        width: deck.width
+        height: deck.height
+        visible: false
+        layer.enabled: true
+        Rectangle {
+            x: deck.winX
+            y: deck.winY
+            width: deck.winW
+            height: deck.winH
+            radius: height / 2
         }
     }
     // Glas: vaste reflectie bovenin (het licht staat stil), schaduw van de

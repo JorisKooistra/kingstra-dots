@@ -17,6 +17,9 @@ Item {
     property string title: ""
     property string artist: ""
     property string artUrl: ""
+    // Album of hoes-URL; verandert dit, dan wisselt de cd: hij draait uit,
+    // het deksel springt op, de oude cd schuift eruit en de nieuwe erin.
+    property string trackKey: ""
     property bool playing: false
     property bool tracking: false
     // Waar de cd staat (0..1), en de lengte in seconden voor de tijd.
@@ -164,13 +167,73 @@ Item {
     function spinState() { return { a: discAngle }; }
     function applySpinState(s) { if (s && s.a !== undefined) discAngle = s.a; }
     FrameAnimation {
-        running: deck.visible && (deck.playing || deck.searching || deck.angularVelocity > 0.05)
+        running: deck.visible && ((deck.playing && !deck.swapHold) || deck.searching || deck.angularVelocity > 0.05)
         onTriggered: {
             let dt = Math.min(0.1, Math.max(0, frameTime));
-            let target = deck.searching ? deck.spinSpeed * 2.6 : deck.playing ? deck.spinSpeed : 0;
+            let target = deck.swapHold ? 0 : deck.searching ? deck.spinSpeed * 2.6 : deck.playing ? deck.spinSpeed : 0;
             deck.angularVelocity += (target - deck.angularVelocity) * (1 - Math.exp(-dt / 0.4));
             if (target === 0 && deck.angularVelocity < 0.05) deck.angularVelocity = 0;
             deck.discAngle = (deck.discAngle + deck.angularVelocity * dt) % 360;
+        }
+    }
+
+    // --- Cd wisselen bij een nieuw album ------------------------------------------
+    property string shownKey: ""
+    property string shownArt: ""
+    // De motor staat stil tijdens de wissel.
+    property bool swapHold: false
+    // 0..1: deksel van de vergrendeling (steekt verder uit).
+    property real lidPop: 0
+    // -1..1: cd schuift naar rechts weg (1) en komt van links terug (-1).
+    property real discShift: 0
+    readonly property bool swapping: swapAnim.running
+    Component.onCompleted: { shownKey = trackKey; shownArt = artUrl; }
+    onTrackKeyChanged: maybeSwap()
+    // Net als bij de draaitafel: de nieuwe hoes komt vaak vóór het nieuwe
+    // album binnen; even wachten, zodat hij niet eerst op de oude cd staat.
+    onArtUrlChanged: {
+        if (shownArt === "") shownArt = artUrl;
+        else artSettle.restart();
+    }
+    Timer {
+        id: artSettle
+        interval: 600
+        onTriggered: if (!deck.swapping && deck.trackKey === deck.shownKey) deck.shownArt = deck.artUrl
+    }
+    function maybeSwap() {
+        if (trackKey === shownKey || swapping) return;
+        if (shownKey === "" || trackKey === "" || !visible) {
+            shownKey = trackKey;
+            shownArt = artUrl;
+            return;
+        }
+        swapAnim.restart();
+    }
+    SequentialAnimation {
+        id: swapAnim
+        ScriptAction { script: deck.swapHold = true }
+        // Uitdraaien terwijl het deksel opspringt.
+        ParallelAnimation {
+            NumberAnimation { target: deck; property: "lidPop"; to: 1; duration: ThemeConfig.duration(260); easing.type: Easing.OutBack; easing.overshoot: 1.6 }
+            PauseAnimation { duration: ThemeConfig.duration(520) }
+        }
+        NumberAnimation { target: deck; property: "discShift"; to: 1; duration: ThemeConfig.duration(400); easing.type: Easing.InCubic }
+        ScriptAction {
+            script: {
+                deck.shownKey = deck.trackKey;
+                deck.shownArt = deck.artUrl;
+                deck.discAngle = Math.random() * 360;
+                deck.discShift = -1;
+            }
+        }
+        NumberAnimation { target: deck; property: "discShift"; to: 0; duration: ThemeConfig.duration(480); easing.type: Easing.OutCubic }
+        NumberAnimation { target: deck; property: "lidPop"; to: 0; duration: ThemeConfig.duration(200); easing.type: Easing.InQuad }
+        ScriptAction {
+            script: {
+                deck.swapHold = false;
+                if (deck.trackKey === deck.shownKey) deck.shownArt = deck.artUrl;
+                deck.maybeSwap();
+            }
         }
     }
 
@@ -217,7 +280,7 @@ Item {
         width: deck.u * 88
         height: width
         radius: width / 2
-        depth: Math.max(1.5, deck.u * 1.2)
+        depth: Math.max(1.5, deck.u * (1.2 + 1.6 * deck.lidPop))
         lean: Math.max(-1, Math.min(1, deck.viewLean))
         flat: deck.look === "paper"
         faceTop: deck.skin.lidA
@@ -289,126 +352,138 @@ Item {
             // De cd: vaste spiegelring (het licht staat stil), daarover
             // de draaiende opdruk.
             Item {
-                id: cd
-                anchors.centerIn: parent
-                width: parent.width * 0.94
-                height: width
-
-                Canvas {
-                    id: mirror
-                    anchors.fill: parent
-                    readonly property color a: deck.skin.mirrorA
-                    readonly property color b: deck.skin.mirrorB
-                    readonly property color hue1: deck.secondary
-                    readonly property color hue2: deck.tertiary
-                    readonly property bool flat: deck.look === "paper"
-                    onAChanged: requestPaint()
-                    onBChanged: requestPaint()
-                    onWidthChanged: requestPaint()
-                    onPaint: {
-                        let ctx = getContext("2d");
-                        ctx.reset();
-                        let c = width / 2;
-                        ctx.beginPath();
-                        ctx.arc(c, c, c - 0.5, 0, Math.PI * 2);
-                        if (flat) {
-                            ctx.fillStyle = a;
-                        } else {
-                            let g = ctx.createConicalGradient(c, c, Math.PI / 4);
-                            g.addColorStop(0.0, a);
-                            g.addColorStop(0.12, Qt.rgba(hue1.r, hue1.g, hue1.b, 0.85));
-                            g.addColorStop(0.25, b);
-                            g.addColorStop(0.5, a);
-                            g.addColorStop(0.62, Qt.rgba(hue2.r, hue2.g, hue2.b, 0.85));
-                            g.addColorStop(0.75, b);
-                            g.addColorStop(1.0, a);
-                            ctx.fillStyle = g;
-                        }
-                        ctx.fill();
-                        ctx.lineWidth = 1;
-                        ctx.strokeStyle = Qt.rgba(0, 0, 0, 0.35);
-                        ctx.stroke();
-                    }
+                id: tray
+                anchors.fill: parent
+                layer.enabled: Math.abs(deck.discShift) > 0.001
+                layer.effect: MultiEffect {
+                    maskEnabled: true
+                    maskSource: wellMask
                 }
-                // Draaiende opdruk: de hoes, of anders een eigen ontwerp.
                 Item {
-                    id: printLayer
-                    anchors.fill: parent
-                    rotation: deck.discAngle
+                    id: cd
+                    anchors.centerIn: parent
+                    width: parent.width * 0.94
+                    height: width
+                    // Opgetild uit de lade: iets groter, en naar opzij.
+                    transform: Translate { x: deck.discShift * well.width * 1.02 }
+                    scale: 1 + 0.04 * Math.abs(deck.discShift)
+
                     Canvas {
-                        id: printCanvas
+                        id: mirror
                         anchors.fill: parent
-                        visible: !deck.hasArt
-                        readonly property color p1: deck.skin.print
-                        readonly property color p2: deck.skin.print2
-                        readonly property color tx: deck.skin.printText
-                        onP1Changed: requestPaint()
-                        onP2Changed: requestPaint()
+                        readonly property color a: deck.skin.mirrorA
+                        readonly property color b: deck.skin.mirrorB
+                        readonly property color hue1: deck.secondary
+                        readonly property color hue2: deck.tertiary
+                        readonly property bool flat: deck.look === "paper"
+                        onAChanged: requestPaint()
+                        onBChanged: requestPaint()
                         onWidthChanged: requestPaint()
                         onPaint: {
                             let ctx = getContext("2d");
                             ctx.reset();
                             let c = width / 2;
                             ctx.beginPath();
-                            ctx.arc(c, c, c * 0.97, 0, Math.PI * 2);
-                            ctx.arc(c, c, c * 0.36, 0, Math.PI * 2, true);
-                            let g = ctx.createRadialGradient(c, c, c * 0.36, c, c, c * 0.97);
-                            g.addColorStop(0, Qt.lighter(p1, 1.25));
-                            g.addColorStop(1, p1);
-                            ctx.fillStyle = g;
-                            ctx.fill();
-                            // Een zachte baan in de tweede kleur, zodat je het draaien ziet.
-                            ctx.beginPath();
-                            ctx.arc(c, c, c * 0.97, -0.5, 1.0);
-                            ctx.arc(c, c, c * 0.36, 1.0, -0.5, true);
-                            ctx.closePath();
-                            ctx.fillStyle = Qt.rgba(p2.r, p2.g, p2.b, 0.75);
-                            ctx.fill();
-                            // Dunne ringen in de themakleuren.
-                            let rings = [[0.9, deck.accent], [0.86, deck.secondary], [0.82, deck.tertiary]];
-                            for (let r of rings) {
-                                ctx.beginPath();
-                                ctx.arc(c, c, c * r[0], 0, Math.PI * 2);
-                                ctx.lineWidth = Math.max(1, c * 0.012);
-                                ctx.strokeStyle = Qt.rgba(r[1].r, r[1].g, r[1].b, 0.75);
-                                ctx.stroke();
+                            ctx.arc(c, c, c - 0.5, 0, Math.PI * 2);
+                            if (flat) {
+                                ctx.fillStyle = a;
+                            } else {
+                                let g = ctx.createConicalGradient(c, c, Math.PI / 4);
+                                g.addColorStop(0.0, a);
+                                g.addColorStop(0.12, Qt.rgba(hue1.r, hue1.g, hue1.b, 0.85));
+                                g.addColorStop(0.25, b);
+                                g.addColorStop(0.5, a);
+                                g.addColorStop(0.62, Qt.rgba(hue2.r, hue2.g, hue2.b, 0.85));
+                                g.addColorStop(0.75, b);
+                                g.addColorStop(1.0, a);
+                                ctx.fillStyle = g;
                             }
-                            ctx.fillStyle = tx;
-                            ctx.font = "bold " + Math.round(c * 0.11) + "px sans-serif";
-                            ctx.textAlign = "center";
-                            ctx.fillText("KINGSTRA", c, c * 0.32);
-                            ctx.font = Math.round(c * 0.07) + "px sans-serif";
-                            ctx.fillText("DIGITAL AUDIO", c, c * 1.78);
+                            ctx.fill();
+                            ctx.lineWidth = 1;
+                            ctx.strokeStyle = Qt.rgba(0, 0, 0, 0.35);
+                            ctx.stroke();
                         }
                     }
-                    MultiEffect {
+                    // Draaiende opdruk: de hoes, of anders een eigen ontwerp.
+                    Item {
+                        id: printLayer
                         anchors.fill: parent
-                        visible: deck.hasArt
-                        source: art
-                        maskEnabled: true
-                        maskSource: ringMask
+                        rotation: deck.discAngle
+                        Canvas {
+                            id: printCanvas
+                            anchors.fill: parent
+                            visible: !deck.hasArt
+                            readonly property color p1: deck.skin.print
+                            readonly property color p2: deck.skin.print2
+                            readonly property color tx: deck.skin.printText
+                            onP1Changed: requestPaint()
+                            onP2Changed: requestPaint()
+                            onWidthChanged: requestPaint()
+                            onPaint: {
+                                let ctx = getContext("2d");
+                                ctx.reset();
+                                let c = width / 2;
+                                ctx.beginPath();
+                                ctx.arc(c, c, c * 0.97, 0, Math.PI * 2);
+                                ctx.arc(c, c, c * 0.36, 0, Math.PI * 2, true);
+                                let g = ctx.createRadialGradient(c, c, c * 0.36, c, c, c * 0.97);
+                                g.addColorStop(0, Qt.lighter(p1, 1.25));
+                                g.addColorStop(1, p1);
+                                ctx.fillStyle = g;
+                                ctx.fill();
+                                // Een zachte baan in de tweede kleur, zodat je het draaien ziet.
+                                ctx.beginPath();
+                                ctx.arc(c, c, c * 0.97, -0.5, 1.0);
+                                ctx.arc(c, c, c * 0.36, 1.0, -0.5, true);
+                                ctx.closePath();
+                                ctx.fillStyle = Qt.rgba(p2.r, p2.g, p2.b, 0.75);
+                                ctx.fill();
+                                // Dunne ringen in de themakleuren.
+                                let rings = [[0.9, deck.accent], [0.86, deck.secondary], [0.82, deck.tertiary]];
+                                for (let r of rings) {
+                                    ctx.beginPath();
+                                    ctx.arc(c, c, c * r[0], 0, Math.PI * 2);
+                                    ctx.lineWidth = Math.max(1, c * 0.012);
+                                    ctx.strokeStyle = Qt.rgba(r[1].r, r[1].g, r[1].b, 0.75);
+                                    ctx.stroke();
+                                }
+                                ctx.fillStyle = tx;
+                                ctx.font = "bold " + Math.round(c * 0.11) + "px sans-serif";
+                                ctx.textAlign = "center";
+                                ctx.fillText("KINGSTRA", c, c * 0.32);
+                                ctx.font = Math.round(c * 0.07) + "px sans-serif";
+                                ctx.fillText("DIGITAL AUDIO", c, c * 1.78);
+                            }
+                        }
+                        MultiEffect {
+                            anchors.fill: parent
+                            visible: deck.hasArt
+                            source: art
+                            maskEnabled: true
+                            maskSource: ringMask
+                        }
                     }
-                }
-                // Middenstuk: as met de klem, draait niet zichtbaar.
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width * 0.2
-                    height: width
-                    radius: width / 2
-                    color: deck.look === "paper" ? deck.mocha.base : Qt.darker(deck.skin.ring, 1.25)
-                    border.width: deck.look === "paper" ? 1.5 : 1
-                    border.color: deck.look === "paper" ? deck.mocha.text : Qt.rgba(0, 0, 0, 0.4)
+                    // Middenstuk: as met de klem, draait niet zichtbaar.
                     Rectangle {
                         anchors.centerIn: parent
-                        width: parent.width * 0.5
+                        width: parent.width * 0.2
                         height: width
                         radius: width / 2
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: deck.look === "paper" ? deck.mocha.base : Qt.lighter(deck.skin.ring, 1.25) }
-                            GradientStop { position: 1.0; color: deck.look === "paper" ? deck.mocha.base : Qt.darker(deck.skin.ring, 1.4) }
+                        color: deck.look === "paper" ? deck.mocha.base : Qt.darker(deck.skin.ring, 1.25)
+                        border.width: deck.look === "paper" ? 1.5 : 1
+                        border.color: deck.look === "paper" ? deck.mocha.text : Qt.rgba(0, 0, 0, 0.4)
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: parent.width * 0.5
+                            height: width
+                            radius: width / 2
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: deck.look === "paper" ? deck.mocha.base : Qt.lighter(deck.skin.ring, 1.25) }
+                                GradientStop { position: 1.0; color: deck.look === "paper" ? deck.mocha.base : Qt.darker(deck.skin.ring, 1.4) }
+                            }
+                            border.width: deck.look === "paper" ? 1 : 0
+                            border.color: deck.mocha.text
                         }
-                        border.width: deck.look === "paper" ? 1 : 0
-                        border.color: deck.mocha.text
                     }
                 }
             }
@@ -480,7 +555,7 @@ Item {
     readonly property bool hasArt: art.status === Image.Ready
     Image {
         id: art
-        source: deck.artUrl
+        source: deck.shownArt
         asynchronous: true
         fillMode: Image.PreserveAspectCrop
         sourceSize.width: 384
@@ -607,7 +682,7 @@ Item {
                 width: lcd.width - x - lcd.px * 1.2
                 visible: deck.detail > 0.01
                 opacity: deck.detail
-                text: deck.title !== "" ? deck.title : "Geen nummer"
+                text: deck.swapHold ? "OPEN" : deck.title !== "" ? deck.title : "Geen nummer"
                 color: deck.skin.lcdText
                 pixelSize: lcd.px * 3
                 fontWeight: Font.Bold
@@ -620,7 +695,7 @@ Item {
                 x: lcd.px * 1.2
                 y: lcd.px * 4.2
                 width: lcd.width * 0.62
-                text: deck.artist
+                text: deck.swapHold ? "" : deck.artist
                 elide: Text.ElideRight
                 font.family: ThemeConfig.monoFont
                 font.pixelSize: lcd.px * 2.5

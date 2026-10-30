@@ -61,6 +61,7 @@ DeviceStage {
             title: stage.title
             artist: stage.artist
             artUrl: stage.artUrl
+            trackKey: stage.trackKey
             playing: stage.playing
             tracking: stage.tracking
             position: stage.tracking ? seeker.shown : 0

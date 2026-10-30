@@ -446,6 +446,7 @@ Scope {
                                 accent: mocha.primary
                                 title: root.activePlayer ? String(root.activePlayer.trackTitle || "") : ""
                                 artist: root.activePlayer ? String(root.activePlayer.trackArtist || "") : ""
+                                trackKey: root.mediaTrackKey
                                 playing: root.playing
                                 position: root.mediaTracking ? root.mediaProgress : 0
                                 onTogglePlay: root.mediaToggle()
@@ -463,6 +464,7 @@ Scope {
                                 mocha: mocha
                                 accent: mocha.primary
                                 artUrl: miniDeck.artUrl
+                                trackKey: root.mediaTrackKey
                                 playing: root.playing
                                 tracking: root.mediaTracking
                                 position: root.mediaProgress
