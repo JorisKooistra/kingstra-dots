@@ -657,6 +657,17 @@ Item {
                         }
                     }
 
+                    // Speler op de mediakaart en schermvullend, per thema.
+                    Card {
+                        Heading { glyph: "󰝚"; label: "Speler  ·  dit thema" }
+                        Segmented {
+                            options: [{id: "theme", title: "Thema"}, {id: "vinyl", title: "Plaat"}, {id: "cassette", title: "Cassette"}, {id: "discman", title: "Discman"}, {id: "cover", title: "Hoes"}]
+                            current: PlayerChoice.current !== "" ? PlayerChoice.current : "theme"
+                            onPicked: (value) => PlayerChoice.set(value)
+                        }
+                        Hint { text: "Klik op de speler op je bureaublad voor de grote weergave; daar kun je ook wisselen."; Layout.fillWidth: true }
+                    }
+
                     Card {
                         Heading { glyph: "󰍹"; label: overlay.screenName ? "Scherm  ·  " + overlay.screenName : "Schermen" }
                         Item {

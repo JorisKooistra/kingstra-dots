@@ -36,10 +36,7 @@ Item {
 
     // Uitvoering per thema: Organic walnoot met messing, Neon zwart glas met
     // lichtlijnen, Paper inkt op papier, de rest geborsteld en neutraal.
-    property string look: {
-        let f = ThemeConfig.styleFamily;
-        return f === "organic" ? "wood" : f === "neon" ? "neon" : f === "paper" ? "paper" : "mono";
-    }
+    property string look: ThemeConfig.deviceLook
     // Meer kleuren uit het thema dan alleen het accent: secondary en tertiary
     // (met hun containers) krijgen elk een eigen rol, zodat het geen
     // eenkleurig filter wordt. Ontbreken ze, dan valt het terug op het palet.

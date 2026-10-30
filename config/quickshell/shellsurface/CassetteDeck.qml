@@ -37,10 +37,7 @@ Item {
     readonly property real u: width / 100
     readonly property real bodyRadius: u * (look === "neon" ? 2.5 : 4)
 
-    property string look: {
-        let f = ThemeConfig.styleFamily;
-        return f === "organic" ? "wood" : f === "neon" ? "neon" : f === "paper" ? "paper" : "mono";
-    }
+    property string look: ThemeConfig.deviceLook
     readonly property color secondary: mocha.accent2 !== undefined ? mocha.accent2
         : mocha.secondary !== undefined ? mocha.secondary : mocha.pink
     readonly property color tertiary: mocha.tertiary !== undefined ? mocha.tertiary : mocha.peach

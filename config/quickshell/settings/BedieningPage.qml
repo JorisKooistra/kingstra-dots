@@ -325,6 +325,7 @@ Item {
                     }
                 }
             }
+            Hint { text: "Speler voor dit thema (ook in Super+A en in de grote weergave):"; Layout.fillWidth: true }
             Flow {
                 Layout.fillWidth: true; spacing: 8
                 Repeater {
@@ -332,9 +333,8 @@ Item {
                     delegate: Action {
                         required property var modelData
                         label: modelData.title
-                        chosen: root.profile.playerStyle === modelData.id
-                        allowed: !ScreenProfiles.busy
-                        onTriggered: root.set("playerStyle", modelData.id)
+                        chosen: PlayerChoice.effective(root.profile.playerStyle) === modelData.id
+                        onTriggered: PlayerChoice.set(modelData.id)
                     }
                 }
             }

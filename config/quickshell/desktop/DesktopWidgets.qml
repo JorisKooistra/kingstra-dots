@@ -22,9 +22,9 @@ import "../shellsurface"
 //
 // De knop op de mediakaart (of `kingstra vinyl`) opent VinylStage: de speler
 // van de kaart schermvullend in perspectief, als een screensaver. Welke
-// speler (draaitafel, cassettespeler of discman) kies je per scherm in
-// Super+A (playerStyle); `kingstra cassette` en `kingstra discman` openen
-// die meteen groot.
+// speler (draaitafel, cassettespeler of discman) kies je per thema in
+// Super+A of in de grote weergave (PlayerChoice); `kingstra cassette` en
+// `kingstra discman` openen die meteen groot.
 Scope {
     id: root
 
@@ -197,18 +197,36 @@ Scope {
         stageDevice = kind ? kind : (shown !== "" ? shown : "vinyl");
         let deck = slot && shown === stageDevice ? slot.activeDeck : null;
         if (deck && deck.visible && deck.opacity > 0.5 && deck.width > 0 && slot.parentCard.shown) {
-            // Het bureaubladvenster begint na gereserveerde ruimte (bar, rail);
-            // het schermvullende venster op 0,0. Hyprland kent die marges.
-            let hm = Hyprland.monitorFor(pick);
-            let ipc = hm ? hm.lastIpcObject : null;
-            let res = ipc && ipc.reserved ? ipc.reserved : [0, 0, 0, 0];
-            let p = deck.mapToItem(null, 0, 0);
-            stageOrigin = Qt.rect(p.x + Number(res[0] || 0), p.y + Number(res[1] || 0), deck.width, deck.height);
+            stageOrigin = originOf(pick, deck);
             stageSpin = stageDevice === "vinyl" ? { a: deck.vinyl.discAngle } : deck.spinState();
         }
         Hyprland.refreshMonitors();
         stageAlive = true;
         stageOpen = true;
+    }
+    // Waar een kleine speler op het scherm staat. Het bureaubladvenster
+    // begint na gereserveerde ruimte (bar, rail); het schermvullende venster
+    // op 0,0. Hyprland kent die marges.
+    function originOf(screen, deck) {
+        let hm = Hyprland.monitorFor(screen);
+        let ipc = hm ? hm.lastIpcObject : null;
+        let res = ipc && ipc.reserved ? ipc.reserved : [0, 0, 0, 0];
+        let p = deck.mapToItem(null, 0, 0);
+        return Qt.rect(p.x + Number(res[0] || 0), p.y + Number(res[1] || 0), deck.width, deck.height);
+    }
+    // Wisselen in de schermvullende speler: bewaart de keuze voor dit thema
+    // (de mediakaart wisselt mee) en zet de nieuwe speler neer. Bij sluiten
+    // krimpt hij terug in de kleine van dezelfde soort.
+    function switchStage(kind) {
+        if (kind !== "vinyl" && kind !== "cassette" && kind !== "discman") return;
+        PlayerChoice.set(kind);
+        stageSpin = ({});
+        stageDevice = kind;
+        Qt.callLater(() => {
+            let slot = stageScreen ? deckItems[stageScreen.name] : null;
+            let deck = slot && slot.device === kind ? slot.activeDeck : null;
+            stageOrigin = deck && deck.width > 0 && slot.parentCard.shown ? originOf(stageScreen, deck) : Qt.rect(0, 0, 0, 0);
+        });
     }
     IpcHandler {
         target: "vinyl"
@@ -382,7 +400,7 @@ Scope {
                         // de schermvullende), of de hoes.
                         Item {
                             id: deckSlot
-                            readonly property string style: ScreenProfiles.profile(win.screen ? win.screen.name : "").playerStyle
+                            readonly property string style: PlayerChoice.effective(ScreenProfiles.profile(win.screen ? win.screen.name : "").playerStyle)
                             readonly property string device: root.deviceFor(style)
                             readonly property bool turntable: device === "vinyl"
                             readonly property var activeDeck: device === "cassette" ? miniCassette : device === "discman" ? miniDisc : miniDeck

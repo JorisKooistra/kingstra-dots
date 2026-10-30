@@ -72,10 +72,7 @@ Item {
     }
     readonly property alias bodyRadius: body.radius
 
-    property string look: {
-        let f = ThemeConfig.styleFamily;
-        return f === "organic" ? "wood" : f === "neon" ? "neon" : f === "paper" ? "paper" : "mono";
-    }
+    property string look: ThemeConfig.deviceLook
     readonly property color secondary: mocha.accent2 !== undefined ? mocha.accent2
         : mocha.secondary !== undefined ? mocha.secondary : mocha.pink
     readonly property color tertiary: mocha.tertiary !== undefined ? mocha.tertiary : mocha.peach

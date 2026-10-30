@@ -71,6 +71,79 @@ PanelWindow {
         anchors.fill: parent
         focus: true
         sourceComponent: win.device === "cassette" ? cassetteStage : win.device === "discman" ? discmanStage : vinylStage
+        // Tab wisselt naar de volgende speler.
+        Keys.onTabPressed: win.switchTo(win.kinds[(win.kinds.indexOf(win.device) + 1) % win.kinds.length])
+    }
+
+    // --- Wisselen van speler -------------------------------------------------
+    // Rechtsboven: platenspeler, cassettespeler of discman. De keuze geldt
+    // voor dit thema en de mediakaart wisselt mee. Kort uit- en infaden, zodat
+    // de nieuwe speler niet ineens verspringt.
+    readonly property var kinds: ["vinyl", "cassette", "discman"]
+    property string pendingKind: ""
+    function switchTo(kind) {
+        if (kind === device || swap.running || !open) return;
+        pendingKind = kind;
+        swap.restart();
+    }
+    SequentialAnimation {
+        id: swap
+        NumberAnimation { target: content; property: "opacity"; to: 0; duration: ThemeConfig.duration(140); easing.type: Easing.InQuad }
+        ScriptAction { script: win.host.switchStage(win.pendingKind) }
+        NumberAnimation { target: content; property: "opacity"; to: 1; duration: ThemeConfig.duration(260); easing.type: Easing.OutQuad }
+        ScriptAction { script: content.forceActiveFocus() }
+    }
+    Rectangle {
+        id: switcher
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 24
+        width: switchRow.implicitWidth + 8
+        height: 36
+        radius: height / 2
+        color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.62)
+        border.width: 1
+        border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.14)
+        opacity: win.reveal > 0.9 ? (win.reveal - 0.9) * 10 : 0
+        visible: opacity > 0.01
+        Row {
+            id: switchRow
+            anchors.centerIn: parent
+            spacing: 2
+            Repeater {
+                model: [{ id: "vinyl", title: "Platenspeler" }, { id: "cassette", title: "Cassette" }, { id: "discman", title: "Discman" }]
+                Rectangle {
+                    id: pick
+                    required property var modelData
+                    readonly property bool chosen: win.device === modelData.id
+                    width: pickText.implicitWidth + 24
+                    height: 28
+                    radius: height / 2
+                    color: chosen ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.24)
+                        : pickMouse.containsMouse ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08) : "transparent"
+                    border.width: chosen ? 1 : 0
+                    border.color: mocha.primary
+                    scale: pickMouse.pressed ? 0.96 : 1
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(180) } }
+                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutQuart } }
+                    Text {
+                        id: pickText
+                        anchors.centerIn: parent
+                        text: pick.modelData.title
+                        color: pick.chosen ? mocha.primary : mocha.text
+                        font.family: ThemeConfig.uiFont
+                        font.pixelSize: 12
+                    }
+                    MouseArea {
+                        id: pickMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: win.switchTo(pick.modelData.id)
+                    }
+                }
+            }
+        }
     }
 
     Component {

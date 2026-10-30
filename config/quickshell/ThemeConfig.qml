@@ -72,6 +72,13 @@ Item {
     property real materialGlowIntensity: 0.0
 
     property string styleFamily: "organic"
+    // Uitvoering van de spelers (draaitafel, walkman, discman, koptelefoon):
+    // volgt het gekozen thema, en alleen bij een onbekend thema de stijl-
+    // familie. Eén plek, zodat kleine en grote speler altijd hetzelfde zijn.
+    readonly property string deviceLook: theme === "organic" ? "wood"
+        : theme === "neon" ? "neon" : theme === "paper" ? "paper"
+        : theme === "mono" || theme === "mono-accent" ? "mono"
+        : styleFamily === "organic" ? "wood" : styleFamily === "neon" ? "neon" : styleFamily === "paper" ? "paper" : "mono"
     property string styleDensity: "comfortable"
     property string styleSurfaceMode: "soft-glass"
     property string styleMotion: "gentle"

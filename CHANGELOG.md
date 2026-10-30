@@ -5,6 +5,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Cassettespeler en discman naast de draaitafel
+- Spelerkeuze per thema (nieuw `PlayerChoice`, opgeslagen in `~/.local/state/kingstra/player-style`): te kiezen in Super+A (kaart ‘Speler · dit thema’), in Instellingen › Bediening en in de schermvullende speler zelf, met wisselknoppen rechtsboven (of Tab); de mediakaart wisselt mee. De oude keuze per scherm geldt alleen nog als er voor het thema niets gekozen is.
+- Alle spelers bepalen hun uitvoering nu op één plek (`ThemeConfig.deviceLook`), naar het gekozen thema; de kleine speler keek naar het thema en de grote naar de stijlfamilie, waardoor de grote live een andere uitvoering kon tonen dan Organic.
 - Elk thema heeft nu een koptelefoon naast de speler, in de eigen stijl: Neon donker met een gloeiende lijn, Paper vlak papier met inktlijnen, Mono mat kunststof; Organic houdt de houten kappen. De Organic-spelers zijn niet meer altijd bruin maar volgen de themakleuren (walkman en discman allebei in de primary container).
 - Hoofdband opnieuw naar een echte koptelefoon: de schuifstukken lopen recht in het verlengde van de schelpen en de band maakt een smalle U (zo breed als de afstand tussen de schelpen, ongeveer even lang als breed), staand op zijn kant. De schelpen liggen dichter bij elkaar en zijn nog maar een klein beetje gedraaid.
 - Koptelefoon is aangesloten: het snoer loopt van tafel omhoog en de stekker zit in de aansluiting (discman: in de rand bij PHONES, walkman: bovenop, die aansluiting zit nu links). De band is kleiner en strakker, zodat hij weer in verhouding is met de schelpen.

@@ -59,10 +59,7 @@ FocusScope {
 
     // Uitvoering per thema: Organic walnoot met messing, Neon zwart glas met
     // lichtlijnen, Paper inkt op papier, de rest geborsteld en neutraal.
-    property string look: {
-        let f = ThemeConfig.styleFamily;
-        return f === "organic" ? "wood" : f === "neon" ? "neon" : f === "paper" ? "paper" : "mono";
-    }
+    property string look: ThemeConfig.deviceLook
     readonly property var skin: table.skin
     readonly property var vinyl: table.vinyl
 
