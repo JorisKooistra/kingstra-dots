@@ -321,6 +321,8 @@ FocusScope {
     WoodHeadphones {
         id: decoration
         anchors.fill: parent
+        part: "body"
+        cableDepth: stage.upright ? 0.5 : 0.6
         visible: stage.hasPhones && stage.detailT > 0.01
         opacity: stage.detailT
         // Tijdens het infaden als één geheel, anders schijnen de delen
@@ -528,6 +530,29 @@ FocusScope {
             id: frontContent
             opacity: stage.fromOrigin ? stage.clamp01((stage.camT - 0.3) * 2) : 1
             visible: opacity > 0.01
+        }
+    }
+
+    // Het snoer ligt voor het apparaat langs, dus erover heen getekend.
+    WoodHeadphones {
+        anchors.fill: parent
+        part: "cable"
+        cableDepth: decoration.cableDepth
+        visible: decoration.visible
+        opacity: decoration.opacity
+        layer.enabled: decoration.layer.enabled
+        mocha: decoration.mocha
+        u: decoration.u
+        k: decoration.k
+        project: decoration.project
+        wood: decoration.wood
+        metal: decoration.metal
+        leather: decoration.leather
+        transform: Rotation {
+            origin.x: stage.finalX + stage.rigWidth / 2
+            origin.y: stage.finalY + stage.topDepth
+            axis { x: 0; y: 1; z: 0 }
+            angle: stage.sway
         }
     }
 
