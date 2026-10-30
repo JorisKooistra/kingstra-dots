@@ -77,7 +77,7 @@ Item {
     // familie. Eén plek, zodat kleine en grote speler altijd hetzelfde zijn.
     readonly property string deviceLook: theme === "organic" ? "wood"
         : theme === "neon" ? "neon" : theme === "paper" ? "paper"
-        : theme === "mono" || theme === "mono-accent" ? "mono"
+        : theme === "mono" || theme === "mono-accent" || theme === "matte" ? "mono"
         : styleFamily === "organic" ? "wood" : styleFamily === "neon" ? "neon" : styleFamily === "paper" ? "paper" : "mono"
     property string styleDensity: "comfortable"
     property string styleSurfaceMode: "soft-glass"
@@ -101,16 +101,18 @@ Item {
     property string rawJson: ""
 
     readonly property int fontWeight: mapFontWeight(fontWeightName)
+    readonly property int headingWeight: theme === "matte" ? Font.Medium : Font.Black
+    readonly property int emphasisWeight: theme === "matte" ? Font.Medium : Font.Bold
 
     // ---- Ontwerptokens voor panelen en popups ------------------------------
     // Afgeleid van het actieve thema; panelen gebruiken deze in plaats van
     // vaste waarden, zodat een thema overal doorwerkt. Beweging loopt via
     // duration()/durationToken()/easingToken() hieronder.
 
-    // Tekst in panelen volgt het mono-lettertype van het thema als dat
-    // geïnstalleerd is; anders JetBrains Mono, zoals het altijd was.
+    // Matte gebruikt het rustige UI-lettertype; andere thema's behouden hun
+    // mono-lettertype voor paneeltekst.
     readonly property var installedFontFamilies: Qt.fontFamilies()
-    readonly property string textFont: fontInstalled(monoFont) ? monoFont : "JetBrains Mono"
+    readonly property string textFont: theme === "matte" && fontInstalled(uiFont) ? uiFont : fontInstalled(monoFont) ? monoFont : "JetBrains Mono"
     // Nerd Font-iconen: vast, want alleen deze familie heeft alle glyphs.
     readonly property string iconFont: "Iosevka Nerd Font"
 
@@ -196,7 +198,7 @@ Item {
 
     function canonicalTheme(value) {
         let normalized = String(value || "organic").toLowerCase();
-        if (normalized === "paper" || normalized === "organic" || normalized === "neon" || normalized === "mono" || normalized === "mono-accent") return normalized;
+        if (normalized === "paper" || normalized === "organic" || normalized === "neon" || normalized === "mono" || normalized === "mono-accent" || normalized === "matte") return normalized;
         // Oude themanamen uit bestaande state omzetten naar de huidige thema's.
         if (normalized === "botanical" || normalized === "animated") return "organic";
         if (normalized === "modern" || normalized === "cyber" || normalized === "space" || normalized === "ocean") return "neon";

@@ -26,7 +26,7 @@ Item {
         "notifications", "system", "updates", "games", "pins", "more", "fill",
         "tray", "audio", "status", "clock", "power", "settings"]
     readonly property var themes: [{id: "organic", title: "Organic"}, {id: "neon", title: "Neon"},
-        {id: "paper", title: "Paper"}, {id: "mono", title: "Mono"}, {id: "mono-accent", title: "Mono accent"}]
+        {id: "matte", title: "Matte"}, {id: "paper", title: "Paper"}, {id: "mono", title: "Mono"}, {id: "mono-accent", title: "Mono accent"}]
 
     readonly property var meta: ({
         launcher: {title: "Launcher", icon: "󰣇"},

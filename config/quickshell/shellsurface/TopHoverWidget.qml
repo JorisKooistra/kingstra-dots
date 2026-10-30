@@ -434,7 +434,7 @@ Item {
                                 text: root.timeText
                                 font.family: ThemeConfig.displayFont
                                 font.pixelSize: 46
-                                font.weight: Font.Black
+                                font.weight: ThemeConfig.headingWeight
                                 color: mocha.text
                             }
                             Text {
@@ -467,7 +467,7 @@ Item {
                                 text: root.weatherIcon + "  " + root.weatherTemp
                                 font.family: ThemeConfig.iconFont
                                 font.pixelSize: 13
-                                font.weight: Font.Bold
+                                font.weight: ThemeConfig.emphasisWeight
                                 color: mocha.text
                             }
 
@@ -501,7 +501,7 @@ Item {
                                 text: root.now.toLocaleDateString(root.nl, "MMMM yyyy")
                                 font.family: ThemeConfig.uiFont
                                 font.pixelSize: 12
-                                font.weight: Font.Bold
+                                font.weight: ThemeConfig.emphasisWeight
                                 color: mocha.text
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -663,7 +663,7 @@ Item {
                                         text: root.hasMedia ? root.activePlayer.trackTitle : "Geen media actief"
                                         font.family: ThemeConfig.displayFont
                                         font.pixelSize: 15
-                                        font.weight: Font.Bold
+                                        font.weight: ThemeConfig.emphasisWeight
                                         color: mocha.text
                                         elide: Text.ElideRight
                                     }
@@ -822,7 +822,7 @@ Item {
                                             text: String(notifRow.modelData.app || "") + (notifRow.modelData.count > 1 ? "  ·  " + notifRow.modelData.count : "")
                                             font.family: ThemeConfig.uiFont
                                             font.pixelSize: 10
-                                            font.weight: Font.Bold
+                                            font.weight: ThemeConfig.emphasisWeight
                                             color: mocha.subtext1
                                             elide: Text.ElideRight
                                         }
@@ -1095,7 +1095,7 @@ Item {
                                     text: Number(modelData.cpu).toFixed(1) + "%"
                                     font.family: ThemeConfig.monoFont
                                     font.pixelSize: 11
-                                    font.weight: Font.Bold
+                                    font.weight: ThemeConfig.emphasisWeight
                                     color: mocha.peach
                                 }
                                 Text {
@@ -1264,7 +1264,7 @@ Item {
             text: header.title
             font.family: ThemeConfig.uiFont
             font.pixelSize: 12
-            font.weight: Font.Bold
+            font.weight: ThemeConfig.emphasisWeight
             color: mocha.text
             elide: Text.ElideRight
         }
@@ -1329,7 +1329,7 @@ Item {
             text: stat.value
             font.family: ThemeConfig.monoFont
             font.pixelSize: 11
-            font.weight: Font.Bold
+            font.weight: ThemeConfig.emphasisWeight
             color: mocha.text
             elide: Text.ElideLeft
         }
@@ -1418,7 +1418,7 @@ Item {
                 text: meter.value + "%" + (meter.suffix !== "" ? "  " + meter.suffix : "")
                 font.family: ThemeConfig.monoFont
                 font.pixelSize: 11
-                font.weight: Font.Bold
+                font.weight: ThemeConfig.emphasisWeight
                 color: mocha.text
             }
         }

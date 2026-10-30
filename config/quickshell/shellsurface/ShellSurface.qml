@@ -291,6 +291,9 @@ Scope {
                     Region { item: chrome.railHitRegion }
                     Region { item: chrome.secondRailHitRegion }
                     Region { item: chrome.stripHitRegion }
+                    Region { item: chrome.matteLeftHitRegion }
+                    Region { item: chrome.matteCenterHitRegion }
+                    Region { item: chrome.matteRightHitRegion }
                     Region { item: chrome.topHoverHitRegion }
                     Region { item: closeDismissLayer }
                     Region { item: panelHost }

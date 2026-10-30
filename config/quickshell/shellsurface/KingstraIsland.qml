@@ -36,11 +36,14 @@ Item {
     property bool notificationsEnabled: true
     property bool liveEnabled: true
     readonly property bool handlesNotifications: notificationsEnabled
+    // Matte houdt muziek achter het kleine bar-icoon. OSD, meldingen en
+    // privacy-indicatoren blijven kort zichtbaar als losse afgeronde kaart.
+    readonly property bool floatingIsland: ThemeConfig.theme === "matte"
     readonly property string stateFile: Quickshell.env("HOME") + "/.local/state/kingstra/island.json"
 
     // Plaats: onder de statusstrook, of erboven als die onderaan staat.
     readonly property bool fromBottom: ThemeConfig.barStatusStripEnabled && ThemeConfig.barStatusStripEdge === "bottom"
-    readonly property int edgeInset: chrome.stripHeight
+    readonly property int edgeInset: chrome.stripHeight + (floatingIsland ? 8 : 0)
     readonly property real railLeftInset: chrome.leftEdgeExtent
     readonly property real railRightInset: chrome.rightEdgeExtent
     readonly property real centerX: railLeftInset + (parent.width - railLeftInset - railRightInset) / 2
@@ -66,7 +69,7 @@ Item {
         }
         return null;
     }
-    readonly property bool mediaLive: liveEnabled && activePlayer !== null && ScreenProfiles.musicVisible(shellWindow.screen ? shellWindow.screen.name : "")
+    readonly property bool mediaLive: liveEnabled && !floatingIsland && activePlayer !== null && ScreenProfiles.musicVisible(shellWindow.screen ? shellWindow.screen.name : "")
     readonly property bool privacyLive: liveEnabled && (privacyMic || privacyCamera || privacyRecording)
     readonly property bool hasLive: mediaLive || privacyLive
 
@@ -298,7 +301,7 @@ Item {
 
     // --- Vorm -----------------------------------------------------------
     readonly property real cornerR: Math.min(height / 2, 22)
-    readonly property real filletR: Math.min(14, height)
+    readonly property real filletR: floatingIsland ? 0 : Math.min(14, height)
 
     // Holle overgang links en rechts, zodat het eiland uit de strook groeit.
     Repeater {
@@ -337,10 +340,10 @@ Item {
         id: body
         anchors.fill: parent
         color: root.fill
-        topLeftRadius: root.fromBottom ? root.cornerR : 0
-        topRightRadius: root.fromBottom ? root.cornerR : 0
-        bottomLeftRadius: root.fromBottom ? 0 : root.cornerR
-        bottomRightRadius: root.fromBottom ? 0 : root.cornerR
+        topLeftRadius: root.fromBottom || root.floatingIsland ? root.cornerR : 0
+        topRightRadius: root.fromBottom || root.floatingIsland ? root.cornerR : 0
+        bottomLeftRadius: root.fromBottom && !root.floatingIsland ? 0 : root.cornerR
+        bottomRightRadius: root.fromBottom && !root.floatingIsland ? 0 : root.cornerR
         clip: true
 
         // Dunne accentlijn langs de vrije rand.
@@ -508,7 +511,7 @@ Item {
                 text: root.osdMuted ? "—" : String(root.osdValue)
                 font.family: ThemeConfig.monoFont
                 font.pixelSize: 12
-                font.weight: Font.Bold
+                font.weight: ThemeConfig.emphasisWeight
                 color: root.mocha.text
             }
         }
@@ -550,7 +553,7 @@ Item {
                     text: String(notifContent.n && notifContent.n.appName ? notifContent.n.appName : "?").charAt(0).toUpperCase()
                     font.family: ThemeConfig.displayFont
                     font.pixelSize: 15
-                    font.weight: Font.Black
+                    font.weight: ThemeConfig.headingWeight
                     color: root.mocha.primary
                 }
             }
@@ -565,7 +568,7 @@ Item {
                         elide: Text.ElideRight
                         font.family: ThemeConfig.displayFont
                         font.pixelSize: 13
-                        font.weight: Font.Bold
+                        font.weight: ThemeConfig.emphasisWeight
                         color: root.mocha.text
                     }
                     Text {
@@ -632,7 +635,7 @@ Item {
                         elide: Text.ElideRight
                         font.family: ThemeConfig.displayFont
                         font.pixelSize: 15
-                        font.weight: Font.Bold
+                        font.weight: ThemeConfig.emphasisWeight
                         color: root.mocha.text
                     }
                     Text {

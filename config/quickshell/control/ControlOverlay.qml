@@ -501,7 +501,7 @@ Item {
                             spacing: overlay.s(10)
                             readonly property real tileWidth: (width - spacing * 2) / 3
                             Repeater {
-                                model: [{id: "mono", title: "Mono", preview: "mono"}, {id: "mono-accent", title: "Mono accent", preview: "mono"}, {id: "neon", title: "Neon", preview: "neon"}, {id: "organic", title: "Organic", preview: "organic"}, {id: "paper", title: "Paper", preview: "paper"}]
+                                model: [{id: "matte", title: "Matte", preview: "matte"}, {id: "mono", title: "Mono", preview: "mono"}, {id: "mono-accent", title: "Mono accent", preview: "mono"}, {id: "neon", title: "Neon", preview: "neon"}, {id: "organic", title: "Organic", preview: "organic"}, {id: "paper", title: "Paper", preview: "paper"}]
                                 delegate: Item {
                                     id: themeTile
                                     required property var modelData

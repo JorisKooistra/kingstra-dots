@@ -27,6 +27,7 @@ Rectangle {
     property var blobGroup: null
     readonly property string _styleFamily: String(ThemeConfig.styleFamily || "").toLowerCase()
     readonly property bool _paperStyle: _styleFamily === "paper"
+    readonly property bool _matteStyle: _styleFamily === "matte"
     readonly property bool _monoStyle: _styleFamily === "mono"
     readonly property bool _neonStyle: _styleFamily === "neon"
     readonly property color _paperBase: "#f6ecd6"
@@ -48,21 +49,21 @@ Rectangle {
                        a.b + (b.b - a.b) * t,
                        1.0);
     }
-    readonly property color _baseFill: _paperStyle ? _paperBase
+    readonly property color _baseFill: _matteStyle ? mocha.mantle : _paperStyle ? _paperBase
         : (_monoStyle || _neonStyle ? mocha.crust : mocha.mantle)
     readonly property color _tintColor: _paperStyle ? (mocha.accent2Container || mocha.accent2)
         : (_monoStyle ? mocha.text : (_neonStyle ? mocha.blue : (mocha.accent3Container || mocha.primary)))
-    readonly property color _tinted: _mix(_baseFill, _tintColor, _paperStyle ? 0.06 : (_monoStyle ? 0.0 : (_neonStyle ? 0.22 : 0.18)))
+    readonly property color _tinted: _mix(_baseFill, _tintColor, _matteStyle ? 0.0 : _paperStyle ? 0.06 : (_monoStyle ? 0.0 : (_neonStyle ? 0.22 : 0.18)))
     readonly property color _defaultFill: fillOverride.a > 0
         ? fillOverride
         : Qt.rgba(_tinted.r, _tinted.g, _tinted.b, _monoStyle ? 1.0 : ThemeConfig.popupOpacity)
     readonly property color _fillStart: fillStartOverride.a > 0 ? fillStartOverride : _defaultFill
     readonly property color _fillEnd: fillEndOverride.a > 0 ? fillEndOverride : _defaultFill
-    readonly property color _borderColor: _monoStyle ? mocha.text
+    readonly property color _borderColor: (_matteStyle || _monoStyle) ? mocha.text
         : (_paperStyle ? (mocha.accent2Container || mocha.text) : (_neonStyle ? mocha.teal : mocha.accent1))
     readonly property color _defaultBorder: borderOverride.a > 0
         ? borderOverride
-        : Qt.rgba(_borderColor.r, _borderColor.g, _borderColor.b, _monoStyle ? 0.34 : (_paperStyle ? 0.30 : (_neonStyle ? 0.54 : 0.32)))
+        : Qt.rgba(_borderColor.r, _borderColor.g, _borderColor.b, _matteStyle ? 0.08 : _monoStyle ? 0.34 : (_paperStyle ? 0.30 : (_neonStyle ? 0.54 : 0.32)))
     readonly property color _borderStart: borderStartOverride.a > 0 ? borderStartOverride : _defaultBorder
     readonly property color _borderEnd: borderEndOverride.a > 0 ? borderEndOverride : _defaultBorder
     readonly property int _strokeW: (flushBottom || nativeBlob) ? 2 : border.width
@@ -76,7 +77,7 @@ Rectangle {
     anchors.topMargin: edge === "top" || (nativeBlob && frameSnap === "top") ? -edgeOverlap : 0
     anchors.bottomMargin: (edge === "bottom" || flushBottom || (nativeBlob && frameSnap === "bottom")) ? -edgeOverlap : 0
     radius: squareCorners || _monoStyle ? 0
-        : (_paperStyle ? Math.max(8, ThemeConfig.styleWidgetRadius + 2)
+        : (_matteStyle ? ThemeConfig.styleWidgetRadius : _paperStyle ? Math.max(8, ThemeConfig.styleWidgetRadius + 2)
             : Math.max(14, ThemeConfig.styleWidgetRadius + 8))
     topLeftRadius: radius
     topRightRadius: radius

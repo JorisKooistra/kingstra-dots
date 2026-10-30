@@ -37,6 +37,7 @@ Item {
     // Uitvoering per thema: Organic walnoot met messing, Neon zwart glas met
     // lichtlijnen, Paper inkt op papier, de rest geborsteld en neutraal.
     property string look: ThemeConfig.deviceLook
+    readonly property bool matteFinish: ThemeConfig.theme === "matte" && look === "mono"
     // Meer kleuren uit het thema dan alleen het accent: secondary en tertiary
     // (met hun containers) krijgen elk een eigen rol, zodat het geen
     // eenkleurig filter wordt. Ontbreken ze, dan valt het terug op het palet.
@@ -103,6 +104,22 @@ Item {
             brand: "kingstra — platenspeler", brandColor: Qt.rgba(ink.r, ink.g, ink.b, 0.7),
             screw: ink, track: Qt.rgba(ink.r, ink.g, ink.b, 0.15), fill: ink,
             needle: ink, hint: ink
+        };
+        if (matteFinish) return {
+            plinthA: m.surface0, plinthB: m.surface0,
+            border: Qt.rgba(m.text.r, m.text.g, m.text.b, 0.06), borderW: 1,
+            radius: ThemeConfig.styleWidgetRadius,
+            frontA: m.mantle, frontB: m.mantle,
+            frontEdge: Qt.rgba(m.text.r, m.text.g, m.text.b, 0.06),
+            capA: m.surface1, capB: m.surface1, capHover: m.surface2,
+            capSide: m.mantle, capText: m.text, capShine: 0,
+            capBorder: Qt.rgba(m.text.r, m.text.g, m.text.b, 0.06), lit: a,
+            litAlt: sec, litWarm: ter, faderLit: a, needleMark: sec,
+            dispBg: m.mantle, dispText: m.text, dispText2: sec, dispText3: ter,
+            dispBorder: Qt.rgba(m.text.r, m.text.g, m.text.b, 0.06),
+            brand: "KINGSTRA · MATTE", brandColor: m.subtext0,
+            screw: m.overlay0, metal: m.overlay0,
+            track: m.mantle, fill: a, needle: m.subtext0, hint: m.subtext0
         };
         return {
             plinthA: Qt.tint(Qt.lighter(m.surface0, 1.18), Qt.rgba(secC.r, secC.g, secC.b, 0.06)), plinthB: m.surface0,
@@ -271,7 +288,7 @@ Item {
 
         // Fijne lijnen bij de neutrale uitvoering.
         Repeater {
-            model: table.look === "mono" ? 14 : 0
+            model: table.look === "mono" && !table.matteFinish ? 14 : 0
             Rectangle {
                 required property int index
                 x: 10
@@ -314,7 +331,7 @@ Item {
         playerStyle: "vinyl"
         finish: table.look === "mono" ? "" : table.look
         strobe: true
-        halo: table.look === "neon" || table.look === "mono"
+        halo: table.look === "neon" || (table.look === "mono" && !table.matteFinish)
         single: table.rpm === 45
         armPivot: Qt.point(table.width * 0.835 - x, table.height * 0.2 - y)
         armReach: 2.05

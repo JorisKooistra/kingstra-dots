@@ -11,7 +11,7 @@ Personal Hyprland rice for Arch Linux. Modular, reproducible, fully automated in
 | Compositor | Hyprland 0.55+ with a Lua config (`config/hypr/hyprland.lua`) |
 | Shell UI | Quickshell (QML): bar, shell frame, panels, launcher, notifications, lockscreen |
 | Colors | Matugen (Material You palette from the wallpaper) |
-| Themes | `organic`, `paper`, `neon`, `mono`, `mono-accent` |
+| Themes | `organic`, `paper`, `neon`, `mono`, `mono-accent`, `matte` |
 | Wallpaper | skwd-wall (static), mpvpaper (optional video) |
 | Terminal / shell | kitty, zsh + oh-my-posh |
 | Login / lock | SDDM (Kingstra greeter), Quickshell lock with hyprlock fallback, hypridle |
@@ -156,7 +156,7 @@ Firefox has two layers: the Matugen website CSS above, and browser chrome stylin
 
 ## Themes
 
-Five themes, defined in `config/kingstra/themes/*.toml`. Each theme sets its Matugen scheme,
+Six themes, defined in `config/kingstra/themes/*.toml`. Each theme sets its Matugen scheme,
 radius, gaps, blur, opacity, fonts, icon theme, bar layout and shape, widget style, motion,
 particles and terminal look.
 
@@ -165,6 +165,7 @@ particles and terminal look.
 | `organic` (default) | Dark, warm, tactile; soft shapes | `scheme-content`, dark | Top + left rail | Fireflies, organic glow |
 | `paper` | Warm e-reader; light matte paper, minimal motion | `scheme-fidelity`, light | Top | Sketch wallpaper effect |
 | `neon` | Futuristic cockpit; black glass, cyan/magenta | `scheme-rainbow`, dark | Top + left rail | Neon grid, specks, glass-tint wallpaper |
+| `matte` | Muted wallpaper colours, charcoal surfaces, quiet controls | `scheme-content`, dark | Three floating pills: clock, workspace dots, status | Soft blur/shadows; no window borders, album-art glow or permanent music island |
 | `mono` | Monochrome, flat, angular, compact | `scheme-monochrome`, dark | Bottom | Grayscale wallpaper |
 | `mono-accent` | Mono with a single wallpaper accent hue | `scheme-fidelity`, dark | Bottom | Color-splash wallpaper |
 
@@ -278,9 +279,10 @@ Keybinds: `Super + Shift + W` (random) and `Super + Ctrl + W` (visual picker).
 
 ## Other components
 
-- **Launcher** — Quickshell launcher panel (`Super + Ctrl + Return`) with usage-based ordering
-  and up to three pinned apps; the search buttons open it too. Walker is still installed as a
-  standalone command but no longer runs as a background service.
+- **Launcher** — Compact search field and app list (`Super + Ctrl + Return`) with usage-based
+  ordering and up to three pinned apps. Extra search modes and shell actions are available
+  through the help button or `F1`; arrow keys and Enter also select and run shell actions.
+  Background refreshes preserve the selected app. Walker remains a standalone command.
 - **Notifications** — Quickshell pop-ups next to the rail and a center grouped per app
   (`Super + N`), clear (`Super + Shift + N`), do-not-disturb (keyboard menu, or middle-click
   the rail bell). Do-not-disturb keeps notifications silently and survives a restart.

@@ -20,7 +20,7 @@ import tempfile
 
 STATE = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "kingstra"
 FILE = STATE / "rail-layout.json"
-THEMES = {"organic", "neon", "paper", "mono", "mono-accent"}
+THEMES = {"organic", "neon", "paper", "mono", "mono-accent", "matte"}
 # Houd gelijk met RailLayout.qml (known/repeatable).
 ITEMS = {"launcher", "workspaces", "specials", "overview", "notifications", "system", "updates",
          "games", "pins", "more", "tray", "audio", "status", "clock", "power", "settings"}

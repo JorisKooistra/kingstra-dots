@@ -51,6 +51,7 @@ FocusScope {
         ] },
         { icon: "󰏘", label: "Uiterlijk", children: [
             { icon: "󰏘", label: "Thema", children: [
+                { icon: "󰝤", label: "Matte", cmd: kingstra("theme matte") },
                 { icon: "󰝤", label: "Mono", cmd: kingstra("theme mono") },
                 { icon: "󰝤", label: "Mono accent", cmd: kingstra("theme mono-accent") },
                 { icon: "󰝤", label: "Neon", cmd: kingstra("theme neon") },

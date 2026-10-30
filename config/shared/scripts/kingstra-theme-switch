@@ -393,7 +393,7 @@ bool_json() {
 
 canonical_theme_name() {
     case "${1,,}" in
-        paper|organic|neon|mono|mono-accent) printf '%s\n' "${1,,}" ;;
+        paper|organic|neon|mono|mono-accent|matte) printf '%s\n' "${1,,}" ;;
         botanical|animated) printf '%s\n' "organic" ;;
         modern|cyber|space|ocean) printf '%s\n' "neon" ;;
         rocky) printf '%s\n' "mono" ;;
@@ -588,7 +588,7 @@ fi
 REQUESTED_THEME="${1:?Gebruik: kingstra-theme-switch <theme_naam>}"
 THEME_NAME="$(canonical_theme_name "$REQUESTED_THEME")"
 if [[ -z "$THEME_NAME" ]]; then
-    _warn "Onbekend thema: $REQUESTED_THEME (beschikbaar: paper, organic, neon, mono, mono-accent)"
+    _warn "Onbekend thema: $REQUESTED_THEME (beschikbaar: paper, organic, neon, mono, mono-accent, matte)"
     exit 1
 fi
 if [[ "$THEME_NAME" != "${REQUESTED_THEME,,}" ]]; then
@@ -734,6 +734,17 @@ case "$THEME_NAME" in
         STYLE_WIDGET_RADIUS=5
         STYLE_PANEL_PADDING=9
         ;;
+    matte)
+        STYLE_FAMILY="matte"
+        STYLE_DENSITY="comfortable"
+        STYLE_SURFACE_MODE="solid"
+        STYLE_MOTION="calm"
+        STYLE_PANEL_SHADOW=0.06
+        STYLE_OUTLINE_STRENGTH=0.06
+        STYLE_GLASS_STRENGTH=0.0
+        STYLE_WIDGET_RADIUS=10
+        STYLE_PANEL_PADDING=14
+        ;;
     mono|mono-accent)
         STYLE_FAMILY="mono"
         STYLE_DENSITY="compact"
@@ -759,7 +770,7 @@ case "$THEME_NAME" in
 esac
 
 STYLE_FAMILY=$(pick_enum "${STYLE_PROFILE_FAMILY:-$STYLE_FAMILY}" "$STYLE_FAMILY" "style_profile.family" \
-    paper organic neon mono mono-accent)
+    paper organic neon mono mono-accent matte)
 STYLE_DENSITY=$(pick_enum "${STYLE_PROFILE_DENSITY:-$STYLE_DENSITY}" "$STYLE_DENSITY" "style_profile.density" \
     compact comfortable airy)
 STYLE_SURFACE_MODE=$(pick_enum "${STYLE_PROFILE_SURFACE_MODE:-$STYLE_SURFACE_MODE}" "$STYLE_SURFACE_MODE" "style_profile.surface_mode" \
@@ -771,6 +782,12 @@ STYLE_OUTLINE_STRENGTH=$(sanitize_float "${STYLE_PROFILE_OUTLINE_STRENGTH:-$STYL
 STYLE_GLASS_STRENGTH=$(sanitize_float "${STYLE_PROFILE_GLASS_STRENGTH:-$STYLE_GLASS_STRENGTH}" "$STYLE_GLASS_STRENGTH" "0.0" "0.5" "style_profile.glass_strength")
 STYLE_WIDGET_RADIUS=$(sanitize_int "${STYLE_PROFILE_WIDGET_RADIUS:-$STYLE_WIDGET_RADIUS}" "$STYLE_WIDGET_RADIUS" "0" "48" "style_profile.widget_radius")
 STYLE_PANEL_PADDING=$(sanitize_int "${STYLE_PROFILE_PANEL_PADDING:-$STYLE_PANEL_PADDING}" "$STYLE_PANEL_PADDING" "6" "28" "style_profile.panel_padding")
+
+# Window shadows belong to the theme, not to the wallpaper colour template.
+# Defaults match lua/config.lua, so leaving Matte restores the regular shadow.
+WINDOW_SHADOW_RANGE=$(sanitize_int "${APPEARANCE_SHADOW_RANGE:-12}" "12" "0" "40" "appearance.shadow_range")
+WINDOW_SHADOW_OPACITY=$(sanitize_float "${APPEARANCE_SHADOW_OPACITY:-0.8}" "0.8" "0.0" "1.0" "appearance.shadow_opacity")
+WINDOW_SHADOW_HEX=$(python3 -c 'import sys; print(f"{round(float(sys.argv[1]) * 255):02x}")' "$WINDOW_SHADOW_OPACITY")
 
 SCREEN_SHADER="[[EMPTY]]"
 if [[ "$THEME_NAME" == "mono" ]]; then
@@ -821,6 +838,7 @@ function M.apply()
         decoration = {
             rounding = ${APPEARANCE_BORDER_RADIUS:-12},
             screen_shader = "${SCREEN_SHADER_LUA}",
+            shadow = { range = ${WINDOW_SHADOW_RANGE}, color = "rgba(000000${WINDOW_SHADOW_HEX})" },
             blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3} },
         },
     })
@@ -1000,7 +1018,7 @@ _log "Walker theme override gegenereerd"
 # Step 4 — Apply Hyprland changes live through the Lua API.
 # ---------------------------------------------------------------------------
 if command -v hyprctl &>/dev/null; then
-    hyprctl eval "hl.config({ general = { gaps_in = ${APPEARANCE_GAPS_IN:-5}, gaps_out = ${APPEARANCE_GAPS_OUT:-10}, border_size = ${APPEARANCE_BORDER_WIDTH:-2} }, decoration = { rounding = ${APPEARANCE_BORDER_RADIUS:-12}, blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3} } } })" 2>/dev/null || true
+    hyprctl eval "hl.config({ general = { gaps_in = ${APPEARANCE_GAPS_IN:-5}, gaps_out = ${APPEARANCE_GAPS_OUT:-10}, border_size = ${APPEARANCE_BORDER_WIDTH:-2} }, decoration = { rounding = ${APPEARANCE_BORDER_RADIUS:-12}, shadow = { range = ${WINDOW_SHADOW_RANGE}, color = \"rgba(000000${WINDOW_SHADOW_HEX})\" }, blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3} } } })" 2>/dev/null || true
     _log "Hyprland live bijgewerkt"
 fi
 

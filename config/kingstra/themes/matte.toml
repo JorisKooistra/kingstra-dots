@@ -1,0 +1,110 @@
+# Geïnspireerd op de matte Modern-look van https://github.com/elifouts/Dotfiles
+# Eigen Kingstra-theme; geen externe shell of configuratie nodig.
+[meta]
+name = "Matte"
+description = "Rustig en mat - zachte donkere vlakken, gedempte wallpaperkleuren en subtiele accenten"
+icon = "󰏘"
+preview_image = "matte.jpg"
+
+[matugen]
+scheme_type = "scheme-content"
+color_index = 0
+contrast = 0.0
+mode = "dark"
+
+[appearance]
+border_radius = 10
+border_width = 0
+gaps_in = 4
+gaps_out = 10
+bar_opacity = 0.98
+popup_opacity = 0.98
+blur_size = 3
+blur_passes = 4
+shadow_range = 8
+shadow_opacity = 0.28
+animation_speed = 1.0
+
+[fonts]
+ui_font = "IBM Plex Sans"
+ui_font_size = 13
+mono_font = "IBM Plex Mono"
+mono_font_size = 12
+display_font = "IBM Plex Mono"
+font_weight = "regular"
+letter_spacing = 0
+
+[icons]
+icon_theme = "Papirus-Dark"
+
+[quickshell]
+bar_height = 36
+bar_position = "top"
+bar_rail_enabled = false
+bar_rail_edge = "left"
+bar_rail_width = 48
+bar_status_strip_enabled = true
+bar_status_strip_edge = "top"
+bar_status_strip_height = 44
+
+[color_transform]
+hue_shift = 0
+saturation_adjust = 0.0
+lightness_adjust = 0.0
+thematic_mix = 0.0
+
+[material]
+texture = "fine-noise"
+overlay_opacity = 0.015
+glow_intensity = 0.0
+
+[terminal]
+bg_opacity = 0.94
+blur = false
+padding = 14
+cursor_style = "block"
+
+[bar]
+shape = "rounded"
+template = "horizontal"
+width_mode = "floating"
+floating = true
+attach_to_screen_edge = false
+top_edge_style = "hard"
+bottom_edge_style = "soft"
+clock_style = "digital"
+topbar_loose_blocks = true
+
+[widgets]
+shape = "rounded"
+surface = "solid"
+
+[style_profile]
+family = "matte"
+density = "comfortable"
+surface_mode = "solid"
+motion = "calm"
+panel_shadow = 0.06
+outline_strength = 0.06
+glass_strength = 0.0
+widget_radius = 10
+panel_padding = 14
+
+[effects]
+particles = "none"
+particle_count = 0
+particle_speed = 0.0
+ambient_effect = "none"
+effect_intensity = 0.0
+effect_cycle_ms = 0
+hover_reactivity = 0.12
+
+[bar_dynamics]
+drawer_style = "context-card"
+module_density = "balanced"
+workspace_preview = "hybrid"
+rail_accent = "none"
+
+[terminal_visual]
+overlay_asset = ""
+overlay_opacity = 0.0

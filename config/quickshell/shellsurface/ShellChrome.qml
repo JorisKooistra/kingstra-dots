@@ -106,6 +106,9 @@ Item {
     readonly property bool paperStyle: styleFamily === "paper"
     readonly property bool organicStyle: styleFamily === "organic"
     readonly property bool neonStyle: styleFamily === "neon"
+    readonly property bool matteStyle: styleFamily === "matte"
+    readonly property bool matteFloatingBar: matteStyle && !railEnabled
+        && ThemeConfig.barFloating && !ThemeConfig.barAttachToScreenEdge
     readonly property bool monoStyle: styleFamily === "mono"
     readonly property color paperBase: "#f1e3c6"
     readonly property color paperSurface: "#f6ecd6"
@@ -126,7 +129,7 @@ Item {
     }
     // Materiaalvloer per familie. Paper mag juist licht en warm lezen; mono
     // blijft vlak en bijna kleurloos; neon/organic mogen op donker tinten.
-    readonly property color barFloor: paperStyle ? paperBase
+    readonly property color barFloor: matteStyle ? mocha.mantle : paperStyle ? paperBase
         : (neonStyle || monoStyle ? mocha.crust : mocha.base)
     // De schermrand-chrome zit direct op de wallpaper. Elke transparantie in
     // deze laag laat vooral in de afgeronde schermhoeken de wallpaper-hoek
@@ -143,7 +146,7 @@ Item {
         : (paperStyle ? (mocha.surfaceContainer || mocha.surface1) : (mocha.accent3Container || mocha.accent3))
     readonly property color barHueC: monoStyle ? mocha.overlay0
         : (paperStyle ? (mocha.primaryContainer || mocha.accent1Container) : (mocha.accent2Container || mocha.accent2))
-    readonly property real barTintK: monoStyle ? 0.0 : (paperStyle ? 0.055 : (neonStyle ? 0.38 : 0.30))
+    readonly property real barTintK: matteStyle ? 0.0 : monoStyle ? 0.0 : (paperStyle ? 0.055 : (neonStyle ? 0.38 : 0.30))
     readonly property color barGradStart: {
         let c = _mix(barFloor, barHueA, barTintK);
         return Qt.rgba(c.r, c.g, c.b, barFillAlpha);
@@ -158,7 +161,7 @@ Item {
     }
     readonly property color barGradCenter: barGradMid
     readonly property color barHueCenter: barHueB
-    readonly property real chromeAccentAlpha: monoStyle ? 0.62 : (paperStyle ? 0.42 : 1.0)
+    readonly property real chromeAccentAlpha: matteStyle ? 0.08 : monoStyle ? 0.62 : (paperStyle ? 0.42 : 1.0)
 
     // Accentrand-kleuren. De rauwe wallpaper-samples (barHueA/B/C) zijn prima
     // als subtiele tint ín de vulling, maar als lijn kunnen ze vrijwel
@@ -185,11 +188,11 @@ Item {
     }
 
     readonly property real edgeAccentMinLum: paperStyle ? 0.34 : (neonStyle ? 0.68 : 0.55)
-    readonly property color edgeAccentA: monoStyle ? mocha.text
+    readonly property color edgeAccentA: (matteStyle || monoStyle) ? mocha.text
         : _ensureLum(paperStyle ? barHueA : (mocha.accent1 || barHueA), edgeAccentMinLum)
-    readonly property color edgeAccentB: monoStyle ? mocha.subtext0
+    readonly property color edgeAccentB: matteStyle ? mocha.text : monoStyle ? mocha.subtext0
         : _ensureLum(paperStyle ? barHueB : (mocha.accent3 || barHueB), edgeAccentMinLum)
-    readonly property color edgeAccentC: monoStyle ? mocha.overlay0
+    readonly property color edgeAccentC: matteStyle ? mocha.text : monoStyle ? mocha.overlay0
         : _ensureLum(paperStyle ? barHueC : (mocha.accent2 || barHueC), edgeAccentMinLum)
     // Geometrie van een paneel dat uit een schermrand groeit. Dit volgt de
     // Caelestia-blobgroep-benadering: de rand en het paneel worden als één
@@ -298,7 +301,7 @@ Item {
             let p = _mix(paperSurface, barHueA, 0.055);
             return Qt.rgba(p.r, p.g, p.b, 1.0);
         }
-        if (monoStyle) return Qt.rgba(barFloor.r, barFloor.g, barFloor.b, 1.0);
+        if (matteStyle || monoStyle) return Qt.rgba(barFloor.r, barFloor.g, barFloor.b, 1.0);
         let c = _mix(barFloor, barHueCenter, barTintK * 0.6);
         return Qt.rgba(c.r, c.g, c.b, barFillAlpha);
     }
@@ -308,13 +311,13 @@ Item {
             return Qt.rgba(p.r, p.g, p.b, 0.92);
         }
         if (neonStyle) return Qt.rgba(mocha.crust.r, mocha.crust.g, mocha.crust.b, 0.72);
-        if (monoStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06);
+        if (matteStyle || monoStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06);
         return Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.58);
     }
     readonly property color pillHoverColor: {
         if (paperStyle) return Qt.rgba(barHueA.r, barHueA.g, barHueA.b, 0.24);
         if (neonStyle) return Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.34);
-        if (monoStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.14);
+        if (matteStyle || monoStyle) return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.14);
         return Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, paperStyle ? 0.64 : 0.86);
     }
     readonly property color borderColor: {
@@ -324,6 +327,7 @@ Item {
         return Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06 + ThemeConfig.styleOutlineStrength);
     }
     readonly property color hotColor: {
+        if (matteStyle) return mocha.accent1;
         if (monoStyle) return mocha.text;
         if (neonStyle) return mocha.teal;
         if (paperStyle) return mocha.accent2Container;
@@ -368,6 +372,9 @@ Item {
     readonly property Item railHitRegion: railHitArea
     readonly property Item secondRailHitRegion: secondRailHitArea
     readonly property bool anyRailHovered: railHover.hovered || secondRailHover.hovered
+    readonly property Item matteLeftHitRegion: matteBar.leftHitRegion
+    readonly property Item matteCenterHitRegion: matteBar.centerHitRegion
+    readonly property Item matteRightHitRegion: matteBar.rightHitRegion
     readonly property Item stripHitRegion: stripHitArea
     readonly property Item topHoverHitRegion: topHoverHitArea
     readonly property bool topHoverHovered: topHover.hovered
@@ -429,7 +436,7 @@ Item {
     readonly property int railReservedWidth: railAutoHidden
         ? (frameEnabled ? shellBorderWidth : 0) : railWidth
     onRailHoldChanged: if (!railHold && barAutoHide) autoHideTimer.restart()
-    readonly property bool stripContentVisible: !barAutoHide || autoHideVisible || stripHover.hovered
+    readonly property bool stripContentVisible: !barAutoHide || autoHideVisible || stripHover.hovered || matteBar.hovered
     // Anker van de laatst getriggerde knop (host-coords), zodat panelen uit
     // de knop groeien i.p.v. uit een vaste schermhoek.
     property real lastTriggerX: 0
@@ -713,7 +720,7 @@ Item {
         id: autoHideTimer
         interval: 2400
         repeat: false
-        onTriggered: if (root.barAutoHide && !root.anyRailHovered && !stripHover.hovered) root.autoHideVisible = false
+        onTriggered: if (root.barAutoHide && !root.anyRailHovered && !stripHover.hovered && !matteBar.hovered) root.autoHideVisible = false
     }
 
     readonly property bool hasWifi: {
@@ -1180,9 +1187,24 @@ Item {
         }
     }
 
+    MatteBar {
+        id: matteBar
+        width: root.width
+        height: root.stripHeight
+        active: root.matteFloatingBar && root.stripControlsEnabled
+        revealed: root.stripContentVisible
+        y: root.stripOnBottom ? root.height - root.stripHeight : 0
+        onHoveredChanged: {
+            if (hovered) { root.autoHideVisible = true; autoHideTimer.stop(); }
+            else if (root.barAutoHide) autoHideTimer.restart();
+        }
+        chrome: root
+        mocha: root.mocha
+    }
+
     Item {
         id: statusStripZone
-        visible: root.stripEnabled
+        visible: root.stripEnabled && !root.matteFloatingBar
         // Wissel hier niet dynamisch tussen top/bottom- of left/right-anchors.
         // Tijdens bottom/geen-rail → top/rail kan Qt beide tegenoverliggende
         // anchors een frame vasthouden. Dan rekt deze strip over het hele
@@ -1194,13 +1216,13 @@ Item {
 
         Item {
             id: stripHitArea
-            visible: root.stripControlsEnabled
-            anchors.left: root.stripControlsEnabled ? parent.left : undefined
-            anchors.right: root.stripControlsEnabled ? parent.right : undefined
-            anchors.top: root.stripControlsEnabled ? parent.top : undefined
-            anchors.bottom: root.stripControlsEnabled ? parent.bottom : undefined
-            width: root.stripControlsEnabled ? parent.width : 0
-            height: root.stripControlsEnabled ? parent.height : 0
+            visible: root.stripControlsEnabled && !root.matteFloatingBar
+            anchors.left: root.stripControlsEnabled && !root.matteFloatingBar ? parent.left : undefined
+            anchors.right: root.stripControlsEnabled && !root.matteFloatingBar ? parent.right : undefined
+            anchors.top: root.stripControlsEnabled && !root.matteFloatingBar ? parent.top : undefined
+            anchors.bottom: root.stripControlsEnabled && !root.matteFloatingBar ? parent.bottom : undefined
+            width: root.stripControlsEnabled && !root.matteFloatingBar ? parent.width : 0
+            height: root.stripControlsEnabled && !root.matteFloatingBar ? parent.height : 0
 
             HoverHandler {
                 id: stripHover

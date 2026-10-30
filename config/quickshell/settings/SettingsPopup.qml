@@ -509,7 +509,7 @@ Item {
     property var clockStyleOptions: ["digital", "analog", "hybrid"]
     property var fontWeightOptions: ["light", "regular", "medium", "bold"]
     property var particleTypeOptions: ["none", "fireflies", "space-specks", "space-specks-layered", "sparkles", "rain", "snow", "dust"]
-    property var styleFamilyOptions: ["paper", "organic", "neon", "mono"]
+    property var styleFamilyOptions: ["paper", "organic", "neon", "mono", "matte"]
     property var styleDensityOptions: ["compact", "comfortable", "airy"]
     property var surfaceModeOptions: ["paper-glass", "soft-glass", "hard-surface", "solid"]
     property var styleMotionOptions: ["calm", "gentle", "snappy", "firm"]

@@ -22,9 +22,6 @@ function M.apply()
                 inactive_border = "rgba({{colors.outline.default.hex_stripped}}99)",
             },
         },
-        decoration = {
-            shadow = { color = "rgba(000000cc)" },
-        },
         -- Tabbalk van vensters in een groep: actieve tab in de accentkleur.
         group = {
             col = {

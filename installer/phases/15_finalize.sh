@@ -100,6 +100,7 @@ _phase15_validate_configs() {
     validate_file "$HOME/.local/bin/kingstra-theme-apply"              "kingstra-theme-apply"
     validate_file "$HOME/.local/bin/kingstra-matugen-run"              "kingstra-matugen-run"
     validate_file "$HOME/.local/bin/kingstra-mono-accent"              "kingstra-mono-accent"
+    validate_file "$HOME/.local/bin/kingstra-matte-palette"              "kingstra-matte-palette"
     validate_file "$HOME/.local/bin/kingstra-session-start"            "kingstra-session-start"
     validate_file "$HOME/.local/bin/kingstra-theme-update"             "kingstra-theme-update"
     validate_file "$HOME/.local/bin/kingstra-touch-detect"             "kingstra-touch-detect"
@@ -138,6 +139,8 @@ _phase15_validate_links() {
                   "$cfg/shared/scripts/kingstra-matugen-run"  "kingstra-matugen-run"
     validate_link "$HOME/.local/bin/kingstra-mono-accent" \
                   "$cfg/shared/scripts/kingstra-mono-accent"  "kingstra-mono-accent"
+    validate_link "$HOME/.local/bin/kingstra-matte-palette" \
+                  "$cfg/shared/scripts/kingstra-matte-palette"  "kingstra-matte-palette"
     validate_link "$HOME/.local/bin/kingstra-session-start" \
                   "$cfg/shared/scripts/kingstra-session-start"  "kingstra-session-start"
     validate_link "$HOME/.local/bin/kingstra-idle-apply" \

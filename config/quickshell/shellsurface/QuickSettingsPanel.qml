@@ -196,7 +196,7 @@ Item {
                     text: "Snelle instellingen"
                     font.family: ThemeConfig.displayFont
                     font.pixelSize: 17
-                    font.weight: Font.Black
+                    font.weight: ThemeConfig.headingWeight
                     color: mocha.text
                 }
                 Text {

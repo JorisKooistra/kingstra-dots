@@ -20,6 +20,7 @@ Item {
     id: root
 
     MatugenColors { id: mocha }
+    readonly property bool matteStyle: ThemeConfig.styleFamily === "matte"
     // Voor PanelSliders binnen een inline component: daar zou `mocha: mocha`
     // naar de eigen (lege) property van de slider wijzen in plaats van de id.
     readonly property var mochaPalette: mocha
@@ -489,7 +490,7 @@ Item {
                     text: "Geluid & media"
                     font.family: ThemeConfig.displayFont
                     font.pixelSize: 17
-                    font.weight: Font.Black
+                    font.weight: ThemeConfig.headingWeight
                     color: mocha.text
                 }
                 Text {
@@ -539,7 +540,7 @@ Item {
                                     text: root.hardwareNoticeTitle
                                     font.family: ThemeConfig.uiFont
                                     font.pixelSize: 12
-                                    font.weight: Font.Bold
+                                    font.weight: ThemeConfig.emphasisWeight
                                     color: mocha.text
                                     elide: Text.ElideRight
                                 }
@@ -569,9 +570,9 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: mediaColumn.implicitHeight + 24
                 radius: root.itemRadius
-                color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.26)
+                color: root.matteStyle ? mocha.shellRaisedFill : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.26)
                 border.width: 1
-                border.color: root.playing
+                border.color: root.matteStyle ? mocha.shellOutline : root.playing
                     ? Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.30)
                     : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
                 Behavior on border.color {
@@ -593,7 +594,7 @@ Item {
                     Image {
                         id: backdropArt
                         anchors.fill: parent
-                        source: root.artUrl
+                        source: root.matteStyle ? "" : root.artUrl
                         asynchronous: true
                         fillMode: Image.PreserveAspectCrop
                         sourceSize.width: 128
@@ -609,13 +610,14 @@ Item {
                     saturation: 0.15
                     maskEnabled: true
                     maskSource: mediaCardMask
-                    opacity: backdropArt.status === Image.Ready ? (root.playing ? 0.42 : 0.26) : 0
+                    opacity: !root.matteStyle && backdropArt.status === Image.Ready ? (root.playing ? 0.42 : 0.26) : 0
                     Behavior on opacity {
                         NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("standard") }
                     }
                 }
                 // Leesbaarheid boven de wazige hoes.
                 Rectangle {
+                    visible: !root.matteStyle
                     anchors.fill: parent
                     radius: mediaCard.radius
                     gradient: Gradient {
@@ -706,7 +708,7 @@ Item {
                                             text: !root.hasPlayer ? "Stil" : (root.playing ? "Speelt" : "Gepauzeerd")
                                             font.family: ThemeConfig.uiFont
                                             font.pixelSize: 9
-                                            font.weight: Font.Bold
+                                            font.weight: ThemeConfig.emphasisWeight
                                             font.capitalization: Font.AllUppercase
                                             font.letterSpacing: 0.6
                                             color: mocha.accent3
@@ -1126,7 +1128,7 @@ Item {
         Layout.fillWidth: true
         font.family: ThemeConfig.uiFont
         font.pixelSize: 10
-        font.weight: Font.Bold
+        font.weight: ThemeConfig.emphasisWeight
         font.capitalization: Font.AllUppercase
         font.letterSpacing: 0.6
         color: mocha.subtext0
@@ -1186,7 +1188,7 @@ Item {
                 text: toggle.label
                 font.family: ThemeConfig.uiFont
                 font.pixelSize: 12
-                font.weight: Font.Bold
+                font.weight: ThemeConfig.emphasisWeight
                 color: mocha.text
             }
             Text {
@@ -1194,7 +1196,7 @@ Item {
                 text: toggle.detail
                 font.family: ThemeConfig.monoFont
                 font.pixelSize: 9
-                font.weight: Font.Bold
+                font.weight: ThemeConfig.emphasisWeight
                 color: mocha.subtext0
                 elide: Text.ElideRight
             }
@@ -1330,7 +1332,7 @@ Item {
                             text: row.node ? String(row.node.description || "") : ""
                             font.family: ThemeConfig.uiFont
                             font.pixelSize: 12
-                            font.weight: Font.Bold
+                            font.weight: ThemeConfig.emphasisWeight
                             color: mocha.text
                             elide: Text.ElideRight
                         }
@@ -1372,7 +1374,7 @@ Item {
                             text: row.isDefault ? "Standaard" : "Kiezen"
                             font.family: ThemeConfig.uiFont
                             font.pixelSize: 9
-                            font.weight: Font.Bold
+                            font.weight: ThemeConfig.emphasisWeight
                             color: row.isDefault ? row.accent : mocha.text
                         }
                     }
@@ -1647,7 +1649,7 @@ Item {
             text: marquee.text
             font.family: ThemeConfig.displayFont
             font.pixelSize: 15
-            font.weight: Font.Bold
+            font.weight: ThemeConfig.emphasisWeight
             color: mocha.text
         }
 
@@ -1687,7 +1689,7 @@ Item {
             text: (band.shown > 0 ? "+" : "") + Math.round(band.shown)
             font.family: ThemeConfig.monoFont
             font.pixelSize: 8
-            font.weight: Font.Bold
+            font.weight: ThemeConfig.emphasisWeight
             color: band.shown === 0 ? mocha.subtext0 : mocha.text
             opacity: area.pressed || area.containsMouse || band.glow > 0.1 ? 1 : 0.55
             Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }

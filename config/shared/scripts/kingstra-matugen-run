@@ -170,7 +170,7 @@ _valid_scheme() {
 
 _canonical_theme_name() {
     case "${1,,}" in
-        paper|organic|neon|mono|mono-accent) printf '%s\n' "${1,,}" ;;
+        paper|organic|neon|mono|mono-accent|matte) printf '%s\n' "${1,,}" ;;
         botanical|animated) printf '%s\n' "organic" ;;
         modern|cyber|space|ocean) printf '%s\n' "neon" ;;
         rocky) printf '%s\n' "mono" ;;
@@ -784,7 +784,7 @@ SECONDARY_HEX="${WALLPAPER_PALETTE[1]:-}"
 TERTIARY_HEX="${WALLPAPER_PALETTE[2]:-}"
 
 SOURCE_HEX=""
-if (( COLOR_INDEX > 0 )) || [[ "$THEME_ID" == "mono-accent" ]]; then
+if (( COLOR_INDEX > 0 )) || [[ "$THEME_ID" == "mono-accent" || "$THEME_ID" == "matte" ]]; then
     SOURCE_HEX="$PALETTE_SEED_HEX"
     if [[ ! "$SOURCE_HEX" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
         _warn "Kon dominante kleur #$COLOR_INDEX niet bepalen — fallback naar image-modus"
@@ -797,6 +797,20 @@ if [[ ! "$SECONDARY_HEX" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
 fi
 if [[ ! "$TERTIARY_HEX" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
     TERTIARY_HEX="$SECONDARY_HEX"
+fi
+if [[ "$THEME_ID" == "matte" ]]; then
+    mapfile -t MATTE_ACCENTS < <(python3 - "$SECONDARY_HEX" "$TERTIARY_HEX" <<'PYCOLORS'
+import colorsys
+import sys
+for value in sys.argv[1:]:
+    rgb = tuple(int(value[i:i+2], 16) / 255 for i in (1, 3, 5))
+    h, l, s = colorsys.rgb_to_hls(*rgb)
+    rgb = colorsys.hls_to_rgb(h, l, min(s, 0.22))
+    print("#" + "".join(f"{round(c * 255):02x}" for c in rgb))
+PYCOLORS
+    )
+    SECONDARY_HEX="${MATTE_ACCENTS[0]}"
+    TERTIARY_HEX="${MATTE_ACCENTS[1]}"
 fi
 SECONDARY_BLEND=true
 if [[ "$THEME_ID" == "mono" || "$THEME_ID" == "mono-accent" ]]; then
@@ -832,7 +846,7 @@ fi
 MATUGEN_BASE_ARGS=("${MATUGEN_ARGS[@]}")
 MATUGEN_ARGS+=("${EXTRA_ARGS[@]}")
 
-if [[ "$THEME_ID" == "mono-accent" ]]; then
+if [[ "$THEME_ID" == "mono-accent" || "$THEME_ID" == "matte" ]]; then
     JSON_REQUESTED=false
     for arg in "${EXTRA_ARGS[@]}"; do
         case "$arg" in
@@ -843,15 +857,20 @@ if [[ "$THEME_ID" == "mono-accent" ]]; then
     RAW_PALETTE="$(matugen "${MATUGEN_BASE_ARGS[@]}" --dry-run --json hex)"
     ACTUAL_OUTPUT="$(matugen "${MATUGEN_ARGS[@]}")"
     MONO_ACCENT_HELPER="$(_mono_accent_helper)"
+    PALETTE_ARGS=(palette --config "$MATUGEN_CONF" --mode "$MODE")
+    if [[ "$THEME_ID" == "matte" ]]; then
+        MONO_ACCENT_HELPER="$REPO_ROOT/config/shared/scripts/kingstra-matte-palette"
+        PALETTE_ARGS=(--config "$MATUGEN_CONF" --mode "$MODE")
+    fi
 
-    if TRANSFORMED_PALETTE="$(printf '%s\n' "$RAW_PALETTE" | _run_helper "$MONO_ACCENT_HELPER" palette --config "$MATUGEN_CONF" --mode "$MODE")"; then
+    if TRANSFORMED_PALETTE="$(printf '%s\n' "$RAW_PALETTE" | _run_helper "$MONO_ACCENT_HELPER" "${PALETTE_ARGS[@]}")"; then
         if $JSON_REQUESTED; then
             printf '%s\n' "$TRANSFORMED_PALETTE"
         elif [[ -n "$ACTUAL_OUTPUT" ]]; then
             printf '%s\n' "$ACTUAL_OUTPUT"
         fi
     else
-        _warn "Mono Accent palette-normalisatie mislukt — onbewerkte Matugen-output behouden"
+        _warn "$THEME_ID palette-normalisatie mislukt — onbewerkte Matugen-output behouden"
         [[ -z "$ACTUAL_OUTPUT" ]] || printf '%s\n' "$ACTUAL_OUTPUT"
     fi
 else

@@ -63,6 +63,7 @@ Item {
     }
 
     readonly property string skinSource: {
+        if (activeTheme === "matte") return "skins/MatteBar.qml";
         if (activeTheme === "paper") return "skins/PaperBar.qml";
         if (activeTheme === "neon") return "skins/NeonBar.qml";
         if (activeTheme === "mono" || activeTheme === "mono-accent") return "skins/MonoBar.qml";
