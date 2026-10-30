@@ -28,7 +28,7 @@ DeviceStage {
     frontRatio: 0.16
     camYaw: -24
     camPitch: 48
-    camDistance: 2.4
+    camDistance: 4.5
     widthShare: look === "wood" ? 0.3 : 0.42
     phonesScale: 1.3
     bodyRadius: disc.bodyRadius

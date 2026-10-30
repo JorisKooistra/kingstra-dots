@@ -33,65 +33,104 @@ Item {
     readonly property real band1: 12
     function sy(X, Z, H) { return project(X, Z, H)[1]; }
 
-    // Ellips: een cirkel, plat gedrukt door het tafelperspectief.
-    component Ellipse: Item {
-        id: ell
-        property real rx: 10
+    // Homografie: legt een plat getekend vlak (w x h) op vier punten in
+    // beeld. Zo staat alles op tafel in precies hetzelfde perspectief als de
+    // speler.
+    function quad(w, h, q) {
+        let x0 = q[0][0], y0 = q[0][1], x1 = q[1][0], y1 = q[1][1], x2 = q[2][0], y2 = q[2][1], x3 = q[3][0], y3 = q[3][1];
+        let dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3;
+        let dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+        let den = dx1 * dy2 - dx2 * dy1;
+        let g = Math.abs(den) < 1e-9 ? 0 : (dx3 * dy2 - dx2 * dy3) / den;
+        let hh = Math.abs(den) < 1e-9 ? 0 : (dx1 * dy3 - dx3 * dy1) / den;
+        let a = x1 - x0 + g * x1, b = x3 - x0 + hh * x3, c = x0;
+        let d = y1 - y0 + g * y1, e = y3 - y0 + hh * y3, f = y0;
+        return Qt.matrix4x4(a / w, b / h, 0, c, d / w, e / h, 0, f, 0, 0, 1, 0, g / w, hh / h, 0, 1);
+    }
+    // Liggende schijf op tafelplek (cx, cz), hoogte h, straal r: plat
+    // getekend en met de homografie op tafel gelegd. Kinderen liggen erop.
+    component Disc: Item {
+        id: disc
+        property real cx: 0
+        property real cz: 0
+        property real h: 0
+        property real r: 10
         property color colorA: "gray"
         property color colorB: colorA
         property color edge: "transparent"
         property real edgeWidth: 0
-        // Plek op tafel: middelpunt in beeld.
-        property var at: [0, 0, 1]
-        x: at[0] - width / 2
-        y: at[1] - height / 2
-        width: 2 * rx
-        height: 2 * rx * phones.k
+        width: 2 * r * phones.u
+        height: width
+        transform: Matrix4x4 {
+            matrix: phones.quad(disc.width, disc.height, [
+                phones.project(disc.cx - disc.r, disc.cz + disc.r, disc.h),
+                phones.project(disc.cx + disc.r, disc.cz + disc.r, disc.h),
+                phones.project(disc.cx + disc.r, disc.cz - disc.r, disc.h),
+                phones.project(disc.cx - disc.r, disc.cz - disc.r, disc.h)
+            ])
+        }
         Rectangle {
-            width: ell.width
-            height: ell.width
+            anchors.fill: parent
             radius: width / 2
-            border.width: ell.edgeWidth / phones.k
-            border.color: ell.edge
+            border.width: disc.edgeWidth
+            border.color: disc.edge
             gradient: Gradient {
-                GradientStop { position: 0.0; color: ell.colorA }
-                GradientStop { position: 1.0; color: ell.colorB }
+                GradientStop { position: 0.0; color: disc.colorA }
+                GradientStop { position: 1.0; color: disc.colorB }
             }
-            transform: Scale { yScale: phones.k }
         }
     }
-    // Staande cilinder van hoogte h0 tot h1 op tafelplek (at, 0).
-    component Cylinder: Item {
+    // Staande cilinder van hoogte h0 tot h1 op tafelplek (at, 0): de
+    // omtrek van onder- en bovenrand door de camera, rond belicht.
+    function hull(pts) {
+        pts = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+        function cross(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+        let lower = [], upper = [];
+        for (let p of pts) {
+            while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+            lower.push(p);
+        }
+        for (let i = pts.length - 1; i >= 0; i--) {
+            let p = pts[i];
+            while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+            upper.push(p);
+        }
+        upper.pop();
+        lower.pop();
+        return lower.concat(upper);
+    }
+    component Cylinder: Shape {
         id: cyl
         property real at: 0
         property real r: 10
         property real h0: 0
         property real h1: 5
         property color side: "gray"
-        readonly property var pb: phones.project(at, 0, h0)
-        readonly property var pt: phones.project(at, 0, h1)
-        readonly property real rx: r * phones.u * (pb[2] + pt[2]) / 2
-        x: Math.min(pb[0], pt[0]) - rx
-        y: pt[1] - rx * phones.k
-        width: 2 * rx + Math.abs(pt[0] - pb[0])
-        height: pb[1] - pt[1] + 2 * rx * phones.k
-        Ellipse {
-            at: [cyl.pb[0] - cyl.x, cyl.pb[1] - cyl.y, 1]
-            rx: cyl.rx
-            colorA: Qt.darker(cyl.side, 1.5)
+        anchors.fill: parent
+        preferredRendererType: Shape.CurveRenderer
+        readonly property var outline: {
+            let pts = [];
+            for (let i = 0; i < 32; i++) {
+                let a = i / 32 * Math.PI * 2;
+                pts.push(phones.project(at + r * Math.cos(a), r * Math.sin(a), h0));
+                pts.push(phones.project(at + r * Math.cos(a), r * Math.sin(a), h1));
+            }
+            return phones.hull(pts);
         }
-        Rectangle {
-            x: (cyl.pb[0] + cyl.pt[0]) / 2 - cyl.x - cyl.rx
-            y: cyl.rx * phones.k
-            width: 2 * cyl.rx
-            height: cyl.pb[1] - cyl.pt[1]
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
+        readonly property real x0: Math.min(...outline.map(p => p[0]))
+        readonly property real x1: Math.max(...outline.map(p => p[0]))
+        ShapePath {
+            strokeWidth: 0
+            strokeColor: "transparent"
+            fillGradient: LinearGradient {
+                x1: cyl.x0; y1: 0
+                x2: cyl.x1; y2: 0
                 GradientStop { position: 0.0; color: Qt.darker(cyl.side, 1.6) }
                 GradientStop { position: 0.3; color: Qt.lighter(cyl.side, 1.25) }
                 GradientStop { position: 0.55; color: cyl.side }
                 GradientStop { position: 1.0; color: Qt.darker(cyl.side, 1.9) }
             }
+            PathSvg { path: phones.line(cyl.outline) + " Z" }
         }
     }
 
@@ -144,10 +183,11 @@ Item {
         layer.effect: MultiEffect { blurEnabled: true; blurMax: 32; blur: 0.8 }
         Repeater {
             model: [-1, 1]
-            Ellipse {
+            Disc {
                 required property int modelData
-                at: phones.project(modelData * phones.cupX + 2.5, -1.5, 0)
-                rx: (phones.cupR + 2.4) * phones.u * at[2]
+                cx: modelData * phones.cupX + 2.5
+                cz: -1.5
+                r: phones.cupR + 2.4
                 colorA: Qt.rgba(0, 0, 0, 0.5)
             }
         }
@@ -235,16 +275,18 @@ Item {
                 h1: phones.cushionH
                 side: Qt.darker(phones.leather, 1.15)
             }
-            Ellipse {
-                at: phones.project(cup.at, 0, phones.cushionH)
-                rx: phones.cupR * phones.u * at[2]
+            Disc {
+                cx: cup.at
+                h: phones.cushionH
+                r: phones.cupR
                 colorA: Qt.lighter(phones.leather, 1.1)
                 colorB: Qt.darker(phones.leather, 1.2)
             }
             // Metalen sierring tussen kussen en schaal.
-            Ellipse {
-                at: phones.project(cup.at, 0, phones.cushionH + 0.2)
-                rx: phones.cupR * 0.92 * phones.u * at[2]
+            Disc {
+                cx: cup.at
+                h: phones.cushionH + 0.2
+                r: phones.cupR * 0.92
                 colorA: "transparent"
                 edge: Qt.darker(phones.metal, 1.15)
                 edgeWidth: Math.max(1, phones.u * 0.35)
@@ -258,19 +300,11 @@ Item {
                 side: phones.wood
             }
             // Kap met nerf, afgeschuinde rand en een metalen logo.
-            Item {
-                readonly property var at: phones.project(cup.at, 0, phones.shellH)
-                readonly property real rx: phones.cupR * 0.9 * phones.u * at[2]
-                x: at[0] - rx
-                y: at[1] - rx * phones.k
-                width: 2 * rx
-                height: 2 * rx
-                transform: Scale { yScale: phones.k }
-                Rectangle {
-                    anchors.fill: parent
-                    radius: width / 2
-                    color: phones.wood
-                }
+            Disc {
+                cx: cup.at
+                h: phones.shellH
+                r: phones.cupR * 0.9
+                colorA: phones.wood
                 WoodGrain {
                     anchors.fill: parent
                     anchors.margins: parent.width * 0.04

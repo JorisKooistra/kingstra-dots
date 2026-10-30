@@ -48,7 +48,7 @@ FocusScope {
     property real depthRatio: 0.24
     property real camYaw: -27
     property real camPitch: 14
-    property real camDistance: 2.6
+    property real camDistance: 4.5
     // Organic: breedte van de koptelefoon t.o.v. het apparaat (echte maat:
     // een koptelefoon is breder dan een walkman of discman).
     property real phonesScale: 1.4
@@ -323,6 +323,9 @@ FocusScope {
         anchors.fill: parent
         visible: stage.hasPhones && stage.detailT > 0.01
         opacity: stage.detailT
+        // Tijdens het infaden als één geheel, anders schijnen de delen
+        // door elkaar heen.
+        layer.enabled: visible && opacity < 0.99
         mocha: stage.mocha
         u: stage.phonesWidth / 100
         k: stage.tableSquash
