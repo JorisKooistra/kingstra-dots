@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Cassettespeler en discman naast de draaitafel
+- Hout blijft hout: de Organic-koptelefoon is weer naturel walnoot (en het leer donkerbruin), met hooguit een zweem van de themakleur, ook als het palet paars is. Openen en sluiten is rustiger: de koptelefoon wordt niet meer elk beeldje opnieuw berekend maar staat vast in de eindstand en fade pas in als de speler stilstaat; tijdens de beweging tekenen de vormen met de goedkopere renderer.
 - Fix: de schermvullende speler was live zwart-wit en zonder arm of nerf. Sinds de speler in een Loader zit, bond `mocha: mocha` in de Component aan zijn eigen (lege) property in plaats van aan de kleuren van het venster. De id heet nu `stageColors`; nieuwe smoke-test `qml-self-binding.sh` vangt dit soort bindingen.
 - Spelerkeuze per thema (nieuw `PlayerChoice`, opgeslagen in `~/.local/state/kingstra/player-style`): te kiezen in Super+A (kaart ‘Speler · dit thema’), in Instellingen › Bediening en in de schermvullende speler zelf, met wisselknoppen rechtsboven (of Tab); de mediakaart wisselt mee. De oude keuze per scherm geldt alleen nog als er voor het thema niets gekozen is.
 - Alle spelers bepalen hun uitvoering nu op één plek (`ThemeConfig.deviceLook`), naar het gekozen thema; de kleine speler keek naar het thema en de grote naar de stijlfamilie, waardoor de grote live een andere uitvoering kon tonen dan Organic.

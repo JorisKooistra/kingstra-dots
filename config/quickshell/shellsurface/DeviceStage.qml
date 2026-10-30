@@ -69,6 +69,9 @@ FocusScope {
     readonly property real tiltT: fromOrigin ? ease((reveal - 0.38) / 0.62) : reveal
     readonly property real detailT: fromOrigin ? clamp01((reveal - 0.75) / 0.25) : 1
     readonly property bool settled: reveal > 0.99
+    // Koptelefoon: rustig infaden als de speler staat, snel weg bij sluiten.
+    property real phonesT: settled ? 1 : 0
+    Behavior on phonesT { NumberAnimation { duration: ThemeConfig.duration(stage.settled ? 380 : 160); easing.type: Easing.OutQuad } }
 
     property alias topData: topFace.data
     property alias frontData: frontContent.data
@@ -204,8 +207,13 @@ FocusScope {
         ? (height * 0.88 - topDepth) / 2 + rigWidth * depthRatio * 0.15
         : (height * 0.86 - topDepth) / 2 - boxDepth * Math.cos(pitchFinal) * 0.5
 
-    function cam(X, Y, Z) {
-        let cy = Math.cos(yawNow), sy = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+    function cam(X, Y, Z) { return camAt(X, Y, Z, yawNow, pitchNow); }
+    // Eindstand van de camera: de koptelefoon komt pas in beeld als de
+    // camera stilstaat en hoeft dus niet elk frame opnieuw berekend te worden.
+    readonly property real yawFinal: camYaw * Math.PI / 180
+    function camFinal(X, Y, Z) { return camAt(X, Y, Z, yawFinal, pitchFinal); }
+    function camAt(X, Y, Z, yaw, pitch) {
+        let cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
         let x1 = X * cy + Z * sy, z1 = -X * sy + Z * cy;
         let y2 = Y * cp - z1 * sp, z2 = Y * sp + z1 * cp - (upright ? boxDepth / 2 : 0);
         let s = camD / Math.max(1, camD - z2);
@@ -324,14 +332,14 @@ FocusScope {
         part: "body"
         cableDepth: stage.upright ? 0.5 : 0.6
         jack: stage.phonesJack
-        visible: stage.hasPhones && stage.detailT > 0.01
-        opacity: stage.detailT
+        visible: stage.hasPhones && opacity > 0.01
+        opacity: stage.phonesT
         // Tijdens het infaden als één geheel, anders schijnen de delen
         // door elkaar heen.
         layer.enabled: visible && opacity < 0.99
         mocha: stage.mocha
         u: stage.phonesWidth / 100
-        k: stage.tableSquash
+        k: Math.max(0.02, Math.sin(stage.pitchFinal))
         project: (X, Z, H) => stage.phonesProject(X, Z, H)
         look: stage.look
         ink: stage.mocha.text
@@ -340,12 +348,12 @@ FocusScope {
         // papier (Paper) of mat kunststof (Mono).
         wood: stage.look === "neon" ? Qt.darker(stage.mocha.crust, 1.1)
             : stage.look === "paper" ? stage.mocha.base
-            : stage.look === "wood" ? Qt.tint(Qt.darker(stage.mocha.peach, 1.9), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.35))
+            : stage.look === "wood" ? Qt.tint("#7a4e2d", Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.06))
             : stage.mocha.surface1
         metal: stage.look === "paper" ? stage.mocha.text : stage.skin.metal || stage.mocha.subtext1
         leather: stage.look === "neon" ? Qt.darker(stage.mocha.base, 1.25)
             : stage.look === "paper" ? stage.mocha.base
-            : stage.look === "wood" ? Qt.tint(Qt.darker(stage.mocha.surface1, 1.2), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.45))
+            : stage.look === "wood" ? Qt.tint("#2e2520", Qt.rgba(stage.mocha.surface1.r, stage.mocha.surface1.g, stage.mocha.surface1.b, 0.12))
             : Qt.darker(stage.mocha.surface0, 1.35)
         transform: Rotation {
             origin.x: stage.finalX + stage.rigWidth / 2
@@ -382,7 +390,7 @@ FocusScope {
         let px = (X * ct - Z * st) * u, pz = (X * st + Z * ct) * u;
         let tableY = upright ? -topDepth / 2 : -boxDepth;
         let front = upright ? boxDepth / 2 : topDepth / 2;
-        let p = cam(-rigWidth / 2 - phonesWidth * 0.56 + px, tableY + H * u,
+        let p = camFinal(-rigWidth / 2 - phonesWidth * 0.56 + px, tableY + H * u,
                     front - topDepth * 0.1 + rigWidth * phonesForward - pz);
         return [finalX + p[0], finalY + p[1], p[2]];
     }
@@ -411,7 +419,7 @@ FocusScope {
             id: shadow
             visible: stage.look !== "paper" && stage.camT > 0.01
             opacity: stage.reveal * stage.camT
-            preferredRendererType: Shape.CurveRenderer
+            preferredRendererType: stage.settled ? Shape.CurveRenderer : Shape.GeometryRenderer
             layer.enabled: visible
             layer.effect: MultiEffect { blurEnabled: true; blurMax: 48; blur: 1.0 }
             readonly property string path: {
@@ -446,7 +454,7 @@ FocusScope {
             visible: stage.look === "paper"
             x: 9
             y: 9
-            preferredRendererType: Shape.CurveRenderer
+            preferredRendererType: stage.settled ? Shape.CurveRenderer : Shape.GeometryRenderer
             ShapePath {
                 strokeWidth: 0
                 strokeColor: "transparent"
@@ -461,7 +469,7 @@ FocusScope {
         Shape {
             id: shell
             visible: stage.upright && stage.camT > 0.01
-            preferredRendererType: Shape.CurveRenderer
+            preferredRendererType: stage.settled ? Shape.CurveRenderer : Shape.GeometryRenderer
             readonly property real r: Math.min(stage.bodyRadius, stage.rigWidth * 0.2)
             // Hoekpunten van het afgeronde front, alleen de gevraagde hoeken.
             function corners(which, z) {
@@ -509,7 +517,7 @@ FocusScope {
         Shape {
             id: side
             visible: !stage.upright && stage.camT > 0.01
-            preferredRendererType: Shape.CurveRenderer
+            preferredRendererType: stage.settled ? Shape.CurveRenderer : Shape.GeometryRenderer
             ShapePath {
                 strokeWidth: stage.look === "paper" ? 2 : stage.look === "neon" ? 1.5 : 1
                 strokeColor: stage.look === "paper" ? stage.mocha.text
@@ -535,7 +543,7 @@ FocusScope {
         // Neon: gloed langs de omtrek.
         Shape {
             visible: stage.look === "neon" && stage.camT > 0.01
-            preferredRendererType: Shape.CurveRenderer
+            preferredRendererType: stage.settled ? Shape.CurveRenderer : Shape.GeometryRenderer
             opacity: stage.playing ? 0.8 : 0.5
             ShapePath {
                 strokeWidth: 1.5
