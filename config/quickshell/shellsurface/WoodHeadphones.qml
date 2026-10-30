@@ -33,18 +33,18 @@ Item {
     // Tafelcoördinaten in u: X naar rechts, Z naar achteren, H omhoog.
     // Schelpen: ovaal (rx dwars, rz in de lengte), kussen en houten schaal
     // die naar boven iets smaller wordt.
-    readonly property real cupRx: 18
-    readonly property real cupRz: 22.5
+    readonly property real cupRx: 17
+    readonly property real cupRz: 21.5
     readonly property real cushionH: 5
     readonly property real shellH: 11.5
-    readonly property real band0: 4.5
-    readonly property real band1: 9.5
+    readonly property real band0: 2.5
+    readonly property real band1: 11
     readonly property real yokeH: shellH * 0.6
     // Net neergelegd: de linkerschelp ligt bijna recht, de rechter is
     // weggedraaid en iets naar voren geschoven.
     readonly property var cups: [
-        { cx: -27, cz: 4, yaw: 9, seed: 2 },
-        { cx: 28, cz: -4, yaw: -19, seed: 8 }
+        { cx: -24, cz: 3, yaw: 6, seed: 2 },
+        { cx: 24, cz: -3, yaw: -8, seed: 8 }
     ]
     // Plek op de schelp (lokaal lx dwars, lz in de lengte) naar tafel.
     function onCup(c, lx, lz) {
@@ -171,13 +171,13 @@ Item {
     // De vork ligt om het achtereind van elke schelp; het schuifstuk loopt
     // er recht van weg en de leren band buigt in een boog van het ene
     // schuifstuk naar het andere. De band ligt op zijn kant.
-    readonly property real slide: 3.5
+    readonly property real slide: 9
     function yokeBack(c) { return onCup(c, 0, cupRz + 1.6); }
     function bandEnd(c) { return onCup(c, 0, cupRz + 1.6 + slide); }
     function cupDir(c) { let a = c.yaw * Math.PI / 180; return [-Math.sin(a), Math.cos(a)]; }
     readonly property var bandCtl: {
         let a = bandEnd(cups[0]), b = bandEnd(cups[1]), da = cupDir(cups[0]), db = cupDir(cups[1]);
-        let len = Math.hypot(b[0] - a[0], b[1] - a[1]) * 0.3;
+        let len = Math.hypot(b[0] - a[0], b[1] - a[1]) * 0.72;
         return [a, [a[0] + da[0] * len, a[1] + da[1] * len], [b[0] + db[0] * len, b[1] + db[1] * len], b];
     }
     // Punt op de boog (s van 0 tot 1), grow naar buiten.

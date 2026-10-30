@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Cassettespeler en discman naast de draaitafel
+- Hoofdband opnieuw naar een echte koptelefoon: de schuifstukken lopen recht in het verlengde van de schelpen en de band maakt een smalle U (zo breed als de afstand tussen de schelpen, ongeveer even lang als breed), staand op zijn kant. De schelpen liggen dichter bij elkaar en zijn nog maar een klein beetje gedraaid.
 - Koptelefoon is aangesloten: het snoer loopt van tafel omhoog en de stekker zit in de aansluiting (discman: in de rand bij PHONES, walkman: bovenop, die aansluiting zit nu links). De band is kleiner en strakker, zodat hij weer in verhouding is met de schelpen.
 - Koptelefoon ligt erbij alsof iemand hem net heeft neergelegd: ovale schelpen (8 x 10 cm, de houten schaal loopt iets taps toe, bol kussen), elke schelp anders gedraaid en de band buigt mee. Het snoer is langer, krult in een lus over tafel en zwaait voor de speler langs naar een echte 3,5 mm-stekker; het snoer wordt over de speler heen getekend.
 - Koptelefoon in exact hetzelfde perspectief als de speler: schelpen, kussens en de houten kap liggen via een homografie op tafel en de zijkanten komen uit de camera; het perspectief is minder sterk, zodat dingen aan de rand van het beeld niet meer scheeftrekken. Faden gebeurt als één geheel.
