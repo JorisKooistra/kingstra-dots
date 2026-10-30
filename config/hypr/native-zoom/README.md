@@ -7,6 +7,10 @@ Super+wiel gaat een hele pagina verder; Super+Ctrl+linkermuis bedient de Lua-cam
 Elke wielstap zoomt ongeveer 25%. Uitgezoomd verschijnt een knop Reset 100%.
 
 Focus volgt de muis, zowel in het uitgezoomde werkvlak als op andere monitors.
+Op Hyprland 0.57 behouden ook transparante apps hun volledige beeld bij zoomen;
+het tekengebied voor blur blijft in schermcoördinaten. Super+wiel wordt volledig
+opgevangen, ook bij snelle stappen binnen de sneltoetsvertraging, zodat een
+onderliggende webpagina niet tegelijk scrolt.
 Tijdens zoomen blijft het uitstekende deel van een zwevend venster verborgen
 op andere fysieke monitors en vangt het daar geen muisinput. Op 100% geldt weer
 het normale gedrag over monitorranden. De opgeslagen zwevende/getegelde stand
@@ -53,6 +57,11 @@ de echte gebruikersvensters worden niet aangestuurd.
 De test controleert ook scrollen in een echt GTK-document en, wanneer Firefox
 aanwezig is, in een apart Firefox-profiel met een lokaal document. Daarbij worden
 zowel het bewegen van de inhoud als de Wayland-wielwaarden gecontroleerd.
+Een transparante app met één primaire buffer controleert afsnijding op pagina's
+boven, naast en onder het zicht. Snelle Super+wiel-reeksen mogen op 100% en
+uitgezoomd alleen het werkvlak bewegen. De test vereist ook `wayland-protocols`
+en `pkg-config` voor de kleine Wayland-testapp.
+Met `KINGSTRA_TEST_RENDER_ONLY=1` stopt de test na de beeldcontroles.
 Met `KINGSTRA_TEST_SCROLL_ONLY=1` stopt de test na deze inputcontroles.
 Met `KINGSTRA_TEST_HYPRLAND=/pad/naar/Hyprland` kan die test een afzonderlijke
 binary gebruiken die overeenkomt met de plugin wanneer de lopende sessie nog

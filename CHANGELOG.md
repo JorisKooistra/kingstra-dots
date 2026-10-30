@@ -79,6 +79,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Vensters zien er overal hetzelfde uit: ronde hoek, live beeld (of het bewaarde plaatje), en een titel-label met app-icoon onderin. Zonder beeld krijg je het app-icoon in plaats van tekst. Hover, keuze en sleepdoel gebruiken dezelfde accentkleur, rand en overgangen. De kaart toont nu ook hover.
 - Beide overzichten hebben dezelfde kop: een titel in kleine hoofdletters met een uitlegregel in een afgeronde pil. De actieve werkruimte en het zicht-kader gebruiken dezelfde accentrand.
 
+### Werkvlak: volledig appbeeld en Super-scroll
+- Transparante apps worden tijdens uitzoomen niet meer tot een strook afgeknipt. De 0.57-renderer behoudt het volledige tekengebied in plaats van het blur-tekengebied nogmaals te verkleinen.
+- Snelle Super+wiel-stappen lekken niet meer door naar de webpagina onder de muis, ook niet binnen Hyprlands sneltoetsvertraging of op 100%.
+- De praktijktest controleert een transparante app met één primaire buffer op aangrenzende pagina's en snelle Super-scrollreeksen naast gewoon documentscrollen.
+
 ### Werkvlak: Hyprland 0.57 en updates tijdens een sessie
 - Native desktopzoom ondersteunt nu ook Hyprland 0.57.0, met de nieuwe scene-renderer en directe muisinput op aangrenzende pagina's.
 - De updater bewaart een aparte pluginbuild per Hyprland-ABI. Een lopende 0.56.2-sessie behoudt zijn eigen build na de pakketupdate; de volgende sessie laadt de nieuwe 0.57-build.

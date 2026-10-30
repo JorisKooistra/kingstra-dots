@@ -16,6 +16,9 @@ if not (pointer_tools/'vpointer.c').exists():raise SystemExit('Virtual pointer t
 run=Path(tempfile.mkdtemp(prefix='kz',dir='/tmp'));run.chmod(0o700)
 parent=dict(os.environ);env=dict(parent,AQ_BACKEND='wayland',WAYLAND_DISPLAY=str(Path(parent['XDG_RUNTIME_DIR'])/parent['WAYLAND_DISPLAY']),XDG_RUNTIME_DIR=str(run),XDG_CONFIG_HOME=str(run/'config'),XDG_STATE_HOME=str(run/'state'),XDG_CACHE_HOME=str(run/'cache'),KINGSTRA_NATIVE_ZOOM_PLUGIN=str(plugin))
 env['HOME']=str(run/'home');Path(env['HOME']).mkdir()
+# Keep window content in the primary buffer, like Electron/XWayland. GPU GTK
+# offloading can put only its titlebar in the primary surface's blur path.
+env['GSK_RENDERER']='cairo'
 if abi:=os.getenv('KINGSTRA_TEST_ABI_INDEX'):
  stamp=Path(env['XDG_CONFIG_HOME'])/'hypr/native-zoom/kingstra-native-zoom.so'
  stamp.parent.mkdir(parents=True)
@@ -41,6 +44,8 @@ hl.bind("SUPER + CTRL + mouse_down",function() zoom.zoom("out") end)
 hl.bind("SUPER + CTRL + mouse_up",function() zoom.zoom("in") end)
 hl.bind("SUPER + CTRL + mouse:274",function() zoom.reset() end)
 _G.spatial=require("lua.spatial")
+hl.bind("SUPER + mouse_down",spatial.wheel("down"))
+hl.bind("SUPER + mouse_up",spatial.wheel("up"))
 hl.bind("SUPER + CTRL + mouse:272",spatial.drag_start)
 hl.bind("SUPER + mouse:272",hl.dsp.window.drag(),{mouse=true})
 hl.bind("mouse:272",spatial.drag_stop,{release=true,ignore_mods=true,non_consuming=true})
@@ -52,7 +57,7 @@ if os.getenv('KINGSTRA_TEST_UNLINK_BINARY'):
  shutil.copy2(shutil.which(binary) or binary,run/'Hyprland');binary=str(run/'Hyprland')
 log=(run/'log').open('w');proc=subprocess.Popen([binary,'-c',str(config)],env=env,stdout=log,stderr=subprocess.STDOUT)
 if os.getenv('KINGSTRA_TEST_UNLINK_BINARY'):Path(binary).unlink()
-sig=None;qs=None;qs_config=None;qs_log=None;browser=None;browser_log=None
+sig=None;qs=None;qs_config=None;qs_log=None;browser=None;browser_log=None;blur_app=None
 pointer_build=run/'pointer';pointer_build.mkdir()
 xml=pointer_tools/'wlr-virtual-pointer-unstable-v1.xml'
 pointer_source=(pointer_tools/'vpointer.c').read_text()
@@ -65,6 +70,10 @@ subprocess.run(['wayland-scanner','client-header',str(xml),str(pointer_build/'wl
 subprocess.run(['wayland-scanner','private-code',str(xml),str(pointer_build/'protocol.c')],check=True)
 subprocess.run(['cc','-O2','-I'+str(pointer_build),str(pointer_build/'vpointer.c'),str(pointer_build/'protocol.c'),'-lwayland-client','-lm','-o',str(pointer_build/'vpointer')],check=True)
 vpointer=str(pointer_build/'vpointer')
+xdg_xml=Path(subprocess.check_output(['pkg-config','--variable=pkgdatadir','wayland-protocols'],text=True).strip())/'stable/xdg-shell/xdg-shell.xml'
+subprocess.run(['wayland-scanner','client-header',str(xdg_xml),str(pointer_build/'xdg-shell-client-protocol.h')],check=True)
+subprocess.run(['wayland-scanner','private-code',str(xdg_xml),str(pointer_build/'xdg-protocol.c')],check=True)
+subprocess.run(['cc','-O2','-I'+str(pointer_build),str(root/'tests/integration/tools/zoom-buffer.c'),str(pointer_build/'xdg-protocol.c'),'-lwayland-client','-o',str(pointer_build/'zoom-buffer')],check=True)
 def ctl(*args):
  r=subprocess.run(['hyprctl','-i',sig,*args],env=env,capture_output=True,text=True,timeout=2)
  if r.returncode or r.stdout.startswith('error'):raise RuntimeError(str(args)+': '+r.stdout+r.stderr)
@@ -72,6 +81,18 @@ def ctl(*args):
 def check(ok,name):
  print(('PASS ' if ok else 'FAIL ')+name,flush=True)
  if not ok:raise AssertionError(name)
+def hold_modifiers(mods):
+ ctl('eval','_G.test_mods_ready=false')
+ cmd=['wtype']
+ for mod in mods:cmd+=['-M',mod]
+ cmd+=['-k','F24','-s','2500']
+ for mod in reversed(mods):cmd+=['-m',mod]
+ keys=subprocess.Popen(cmd,env=env)
+ for _ in range(30):
+  if ctl('repl','return test_mods_ready')=='true':return keys
+  if keys.poll()!=None:break
+  time.sleep(.03)
+ raise AssertionError('virtual keyboard did not arm drag modifiers')
 try:
  for i in range(20):
   instances=list((run/'hypr').glob('*/.socket.sock'))
@@ -134,6 +155,37 @@ try:
   point=[int((window['at'][i]+window['size'][i]/2-view[i])*[ww,hh][i]/view[i+2]) for i in (0,1)]
   pixel=image.getpixel(tuple(point))
   check(pixel[channel]>max(pixel[j] for j in range(3) if j!=channel)+40,name+' renders its complete offscreen buffer')
+ # Opaque GTK buffers miss the blur-damage path used by translucent desktop
+ # apps. Check neighbouring pages above, beside and below the native viewport.
+ ctl('eval','hl.config({decoration={active_opacity=0.82,inactive_opacity=0.82,blur={enabled=true}}})')
+ for window in (a,b,c,a):
+  ctl('dispatch','hl.dsp.focus({window="address:'+window['address']+'"})')
+ blur_app=subprocess.Popen([str(pointer_build/'zoom-buffer')],env=env)
+ for _ in range(50):
+  blurred=next((w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-blur'),None)
+  if blurred:break
+  time.sleep(.1)
+ check(bool(blurred),'single-buffer translucent app starts')
+ for row in (-1,1):
+  ctl('dispatch','hl.dsp.layout("place '+c['address']+' 0 '+str(row)+'")')
+  ctl('dispatch','hl.dsp.layout("place '+blurred['address']+' 1 '+str(row)+'")')
+  time.sleep(.35)
+  subprocess.run(['grim',str(run/('translucent-'+str(row)+'.png'))],env=env,check=True)
+  image=Image.open(run/('translucent-'+str(row)+'.png')).convert('RGB')
+  windows=json.loads(ctl('clients','-j'))
+  for name,channel in [('zoom-A',0),('zoom-B',1),('zoom-C',2),('zoom-blur',2)]:
+   window=next(w for w in windows if w['title']==name)
+   for fraction in (.15,.5,.85):
+    point=[int((window['at'][i]+window['size'][i]*fraction-view[i])*[ww,hh][i]/view[i+2]) for i in (0,1)]
+    pixel=image.getpixel(tuple(point))
+    check(pixel[channel]>max(pixel[j] for j in range(3) if j!=channel)+40,name+' translucent buffer stays complete at '+str(fraction)+' on row '+str(row))
+ blur_app.terminate();blur_app.wait(timeout=3);blur_app=None
+ ctl('dispatch','hl.dsp.layout("place '+c['address']+' 0 -1")')
+ ctl('eval','hl.config({decoration={active_opacity=1,inactive_opacity=1}})')
+ for window in (a,b,c,a):
+  ctl('dispatch','hl.dsp.focus({window="address:'+window['address']+'"})')
+ if os.getenv('KINGSTRA_TEST_RENDER_ONLY'):
+  print('RUNTIME',run,flush=True);sys.exit(0)
  view=state['screens'][0]['view'];target=next(w for w in windows if w['title']=='zoom-B')
  tx=max(view[0]+10,target['at'][0])+min(target['size'][0]/3,100)
  ty=max(view[1]+10,target['at'][1])+min(target['size'][1]/3,100)
@@ -202,6 +254,31 @@ user_pref("general.smoothScroll", false);
   check(firefox_offset()<firefox_down,'Firefox scrolls document back up while zoomed')
   browser.terminate();browser.wait(timeout=5);browser=None
   time.sleep(.3)
+ # Rapid steps inside binds:scroll_event_delay must still be consumed. Both
+ # the scaled direct-input route and ordinary desktop must keep the document.
+ for zoomed in (True,False):
+  if not zoomed:
+   ctl('eval','zoom.reset()')
+   ctl('dispatch','hl.dsp.layout("pan right")')
+  time.sleep(.2)
+  monitor=json.loads(ctl('monitors','-j'))[0]
+  target=next(w for w in json.loads(ctl('clients','-j')) if w['title']=='zoom-B')
+  screens=json.loads(ctl('spatialoverview'))['screens']
+  viewport=screens[0]['view'] if screens else [monitor['x'],monitor['y'],monitor['width'],monitor['height']]
+  point=[int((target['at'][i]+target['size'][i]/2-viewport[i])*monitor[['width','height'][i]]/viewport[i+2]) for i in (0,1)]
+  initial_camera=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
+  initial_offset=document_offset()
+  keys=hold_modifiers(['logo'])
+  subprocess.run([vpointer,str(monitor['width']),str(monitor['height']),'abs',*map(str,point),'sleep','100',*(['wheel','1']*5),'sleep','250'],env=env,check=True)
+  keys.wait(timeout=3)
+  camera=json.loads((run/'kingstra-spatial-1.json').read_text())['camera']
+  check(camera['row']>initial_camera['row'],'Super+wheel moves the workspace at '+('zoom' if zoomed else '100%'))
+  check(document_offset()==initial_offset,'rapid Super+wheel never scrolls the document at '+('zoom' if zoomed else '100%'))
+  for _ in range(camera['row']-initial_camera['row']):ctl('dispatch','hl.dsp.layout("pan up")')
+ if not zoomed:
+  ctl('dispatch','hl.dsp.layout("pan left")')
+  for _ in range(7):ctl('eval','zoom.zoom("out")')
+ time.sleep(.2)
  if os.getenv('KINGSTRA_TEST_SCROLL_ONLY'):
   print('RUNTIME',run,flush=True)
   sys.exit(0)
@@ -211,18 +288,6 @@ user_pref("general.smoothScroll", false);
   outputs=json.loads(ctl('monitors','-j'))
   pw=max(m['x']+m['width']/m['scale'] for m in outputs);ph=max(m['y']+m['height']/m['scale'] for m in outputs)
   subprocess.run([vpointer,str(int(pw)),str(int(ph)),*map(str,commands)],env=env,check=True)
- def hold_modifiers(mods):
-  ctl('eval','_G.test_mods_ready=false')
-  cmd=['wtype']
-  for mod in mods:cmd+=['-M',mod]
-  cmd+=['-k','F24','-s','2500']
-  for mod in reversed(mods):cmd+=['-m',mod]
-  keys=subprocess.Popen(cmd,env=env)
-  for _ in range(30):
-   if ctl('repl','return test_mods_ready')=='true':return keys
-   if keys.poll()!=None:break
-   time.sleep(.03)
-  raise AssertionError('virtual keyboard did not arm drag modifiers')
  def modified_drag(mods,x1,y1,x2,y2):
   keys=hold_modifiers(mods)
   pointer('abs',x1,y1,'sleep',100,'down','sleep',150,'abs',x2,y2,'sleep',350,'up','sleep',150)
@@ -455,6 +520,7 @@ user_pref("general.smoothScroll", false);
  check('Lua error' not in (run/'hypr'/sig/'hyprland.log').read_text(),'no Lua runtime errors during real input')
  print('RUNTIME',run,flush=True)
 finally:
+ if blur_app and blur_app.poll()==None:blur_app.terminate();blur_app.wait(timeout=3)
  if browser and browser.poll()==None:
   browser.terminate()
   try:browser.wait(timeout=5)

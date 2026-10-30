@@ -17,6 +17,7 @@
 #include <hyprland/src/render/Renderer.hpp>
 #undef protected
 #include <hyprland/src/render/scene/SceneSelection.hpp>
+#include <hyprland/src/render/pass/TexPassElement.hpp>
 #include <hyprland/src/desktop/view/window/Window.hpp>
 #include <hyprland/src/desktop/view/window/WindowPresentation.hpp>
 #include <hyprland/src/desktop/view/LayerSurface.hpp>
@@ -30,6 +31,7 @@
 #include <hyprland/src/layout/space/Space.hpp>
 #include <hyprland/src/managers/SeatManager.hpp>
 #include <hyprland/src/managers/SessionLockManager.hpp>
+#include <hyprland/src/keybinds/Manager.hpp>
 #include <hyprland/src/protocols/LayerShell.hpp>
 #include <hyprland/src/state/MonitorState.hpp>
 #include <hyprland/src/workspace/HLWorkspace.hpp>
@@ -56,13 +58,14 @@ std::set<uint32_t> pointerButtons;
 std::set<uint32_t> heldButtons;
 std::vector<CHyprSignalListener> listeners;
 CFunctionHook *windowsHook, *fullscreenHook, *shouldRenderHook, *windowAtHook,
-              *damageHook, *beginDragHook, *endDragHook;
+              *damageHook, *beginDragHook, *endDragHook, *textureHook;
 using WindowsFn=void (*)(void*,Render::CRenderContext&,PHLMONITOR,PHLWORKSPACE,const Time::steady_tp&,Render::eSceneMode);
 using RenderableFn=bool (*)(void*,PHLWINDOW,PHLMONITOR);
 using HitFn=PHLWINDOW (*)(const void*,const Vector2D&,uint16_t,PHLWINDOW);
 using DamageFn=void (*)(void*,SP<CWLSurfaceResource>,double,double,double);
 using BeginFn=void (*)(void*,SP<Layout::ITarget>,eMouseBindMode,std::optional<Layout::eRectCorner>,bool);
 using EndFn=bool (*)(void*);
+using TextureFn=void (*)(void*,Render::CRenderContext&,WP<CTexPassElement>,const CRegion&);
 
 Zoom* zoomFor(PHLMONITOR monitor) {
     if (!monitor) return nullptr;
@@ -123,6 +126,24 @@ void transform(Render::CRenderContext& ctx,double factor,const Vector2D& offset)
 }
 void resetTransform(Render::CRenderContext& ctx) {
     Render::IHyprRenderer::addPassElement(ctx,makeUnique<ZoomHint>(Render::SRenderModifData{},false));
+}
+void drawTexture(void* self,Render::CRenderContext& ctx,WP<CTexPassElement> element,const CRegion& damage) {
+    const auto texture=element.get();
+    const bool transformed=texture && ctx.m_data.renderingTransformedSource && !zooms.empty() &&
+        texture->m_data.blur && !texture->m_data.useProvidedDamage;
+    CRegion previousDamage;
+    if (transformed) {
+        // The blur path otherwise transforms output-space damage a second
+        // time, clipping translucent apps to the shrunken native viewport.
+        previousDamage=texture->m_data.damage;
+        texture->m_data.damage=damage;
+        texture->m_data.useProvidedDamage=true;
+    }
+    reinterpret_cast<TextureFn>(textureHook->m_original)(self,ctx,element,damage);
+    if (transformed) {
+        texture->m_data.damage=previousDamage;
+        texture->m_data.useProvidedDamage=false;
+    }
 }
 void drawPreview(Render::CRenderContext& ctx,PHLMONITOR monitor,const Time::steady_tp& now,Render::eSceneMode mode) {
     if (!grab.window || grab.resize || monitorAt(g_pInputManager->getMouseCoordsInternal())!=monitor || mode!=Render::eSceneMode::MONITOR) return;
@@ -327,7 +348,15 @@ void mouseButton(IPointer::SButtonEvent event,Event::SCallbackInfo& info) {
     if (event.state==WL_POINTER_BUTTON_STATE_RELEASED && pointerButtons.empty()) g_pInputManager->releaseAllMouseButtons();
 }
 void mouseAxis(IPointer::SAxisEvent event,Event::SCallbackInfo& info) {
-    if (info.cancelled || (g_pInputManager->getModsFromAllKBs()&Input::HL_MODIFIER_META)) return;
+    if (info.cancelled || g_pSessionLockManager->isSessionLocked()) return;
+    if ((g_pInputManager->getModsFromAllKBs()&Input::HL_MODIFIER_META) && event.source==WL_POINTER_AXIS_SOURCE_WHEEL) {
+        // The keybind manager forwards events within scroll_event_delay.
+        // Keep running the binding, but consume every reserved Super detent,
+        // including throttled ones, before it reaches the focused document.
+        (void)Keybinds::mgr()->onAxisEvent(event,g_pSeatManager->m_mouse.lock());
+        info.cancelled=true;
+        return;
+    }
     const auto monitor=monitorAt(g_pInputManager->getMouseCoordsInternal());
     if (!zoomFor(monitor) || topLayerAt(monitor,g_pInputManager->getMouseCoordsInternal()) || !forwardMotion(monitor,event.timeMs)) return;
     // Hyprland stores wheel detents in 120ths. Wayland v8+ clients consume
@@ -422,6 +451,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE owner) {
     hook(damageHook,damageSurfaceSymbol,reinterpret_cast<void*>(damageSurface));
     hook(beginDragHook,beginDragSymbol,reinterpret_cast<void*>(beginDrag));
     hook(endDragHook,endDragSymbol,reinterpret_cast<void*>(endDrag));
+    hook(textureHook,drawTextureSymbol,reinterpret_cast<void*>(drawTexture));
     HyprlandAPI::addLuaFunction(handle,"spatialoverview","_dispatch",dispatch);
     HyprlandAPI::addLuaFunction(handle,"spatialoverview","_backend",[](lua_State* l) { lua_pushstring(l,"kingstra-0.57"); return 1; });
     HyprlandAPI::addLuaFunction(handle,"spatialoverview","_button_down",[](lua_State* l) {
