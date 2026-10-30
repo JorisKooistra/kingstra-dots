@@ -71,6 +71,7 @@ Openen
   parkeer [terug|lijst]    actief venster parkeren (minimaliseren) of terughalen
   zen [aan|uit]            zen-modus: balk verbergen, niet storen, rest dimmen
   vinyl [uit|auto <s>|auto uit]  draaitafel schermvullend; auto: als screensaver na <s> s stilstand met muziek (standaard 120)
+  cassette | discman      cassettespeler of discman schermvullend (aan/uit); welke speler op de mediakaart staat kies je per scherm in Super+A
   sessie [aan|uit|bewaar|herstel]  apps na inloggen terugzetten (zonder argument: status)
 
 Overig
@@ -228,6 +229,10 @@ PY
             *) action=toggle ;;
         esac
         exec qs ipc -p "$CONFIG_HOME/quickshell/TopBar.qml" call vinyl "$action" ;;
+    cassette|cassettespeler|walkman)
+        exec qs ipc -p "$CONFIG_HOME/quickshell/TopBar.qml" call vinyl cassette ;;
+    discman|cdspeler|cd)
+        exec qs ipc -p "$CONFIG_HOME/quickshell/TopBar.qml" call vinyl discman ;;
     quick|snel) panel tophover ;;
     welcome|welkom) run kingstra-welcome --force ;;
     version|versie|--version|-v)

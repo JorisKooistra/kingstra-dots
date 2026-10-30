@@ -3,7 +3,9 @@ import Quickshell
 import Quickshell.Wayland
 import ".."
 
-// Venster om VinylStageContent: schermvullend op de Overlay-laag, boven de
+// Venster om de schermvullende speler: VinylStageContent (draaitafel),
+// CassetteStageContent (walkman) of DiscmanStageContent (discman), naar
+// host.stageDevice. Schermvullend op de Overlay-laag, boven de
 // bar, met toetsenbordfocus op aanvraag zolang hij open is: Exclusive
 // blokkeerde klikken op de andere schermen. DesktopWidgets laadt dit
 // alleen terwijl de weergave open is of nog wegfadet.
@@ -57,36 +59,113 @@ PanelWindow {
     // Dicht voordat de animatie begon: meteen klaar.
     onOpenChanged: if (!open && !started) finished()
 
-    VinylStageContent {
+    // Welke speler groot wordt: dezelfde als op de mediakaart.
+    readonly property string device: win.host.stageDevice === "cassette" || win.host.stageDevice === "discman" ? win.host.stageDevice : "vinyl"
+    readonly property var p: win.host.activePlayer
+    // Stand van plaat, spoelen of cd van de kleine speler, zodat er bij de
+    // overgang niets verspringt.
+    readonly property var spin: win.host.stageSpin
+
+    Loader {
         id: content
         anchors.fill: parent
         focus: true
-        mocha: mocha
-        accent: mocha.primary
-        reveal: win.reveal
-        originRect: win.host.stageOrigin
-        Component.onCompleted: vinyl.discAngle = win.host.stageDiscAngle
-        readonly property var p: win.host.activePlayer
-        title: p ? String(p.trackTitle || "") : ""
-        artist: p ? String(p.trackArtist || "") : ""
-        album: p ? String(p.trackAlbum || "") : ""
-        artUrl: p && p.trackArtUrl ? String(p.trackArtUrl) : ""
-        trackKey: win.host.mediaTrackKey
-        playing: win.host.playing
-        tracking: win.host.mediaTracking
-        progress: win.host.mediaProgress
-        length: p && p.lengthSupported ? Number(p.length || 0) : 0
-        canSeek: win.host.mediaCanSeek
-        canPrevious: p !== null && p.canGoPrevious
-        canNext: p !== null && p.canGoNext
-        volume: win.host.mediaVolume
-        onVolumeRequested: value => win.host.setMediaVolume(value)
-        rpm: win.host.vinylRpm
-        onRpmRequested: value => win.host.setVinylRpm(value)
-        onTogglePlay: win.host.mediaToggle()
-        onPrevious: if (p && p.canGoPrevious) p.previous()
-        onNext: if (p && p.canGoNext) p.next()
-        onSeek: fraction => win.host.mediaSeek(fraction)
-        onCloseRequested: win.host.stageOpen = false
+        sourceComponent: win.device === "cassette" ? cassetteStage : win.device === "discman" ? discmanStage : vinylStage
+    }
+
+    Component {
+        id: vinylStage
+        VinylStageContent {
+            anchors.fill: parent
+            focus: true
+            mocha: mocha
+            accent: mocha.primary
+            reveal: win.reveal
+            originRect: win.host.stageOrigin
+            title: win.p ? String(win.p.trackTitle || "") : ""
+            artist: win.p ? String(win.p.trackArtist || "") : ""
+            album: win.p ? String(win.p.trackAlbum || "") : ""
+            artUrl: win.p && win.p.trackArtUrl ? String(win.p.trackArtUrl) : ""
+            trackKey: win.host.mediaTrackKey
+            playing: win.host.playing
+            tracking: win.host.mediaTracking
+            progress: win.host.mediaProgress
+            length: win.p && win.p.lengthSupported ? Number(win.p.length || 0) : 0
+            canSeek: win.host.mediaCanSeek
+            canPrevious: win.p !== null && win.p.canGoPrevious
+            canNext: win.p !== null && win.p.canGoNext
+            volume: win.host.mediaVolume
+            onVolumeRequested: value => win.host.setMediaVolume(value)
+            onTogglePlay: win.host.mediaToggle()
+            onPrevious: if (win.p && win.p.canGoPrevious) win.p.previous()
+            onNext: if (win.p && win.p.canGoNext) win.p.next()
+            onSeek: fraction => win.host.mediaSeek(fraction)
+            onCloseRequested: win.host.stageOpen = false
+            rpm: win.host.vinylRpm
+            onRpmRequested: value => win.host.setVinylRpm(value)
+            Component.onCompleted: if (win.spin && win.spin.a !== undefined) vinyl.discAngle = win.spin.a
+        }
+    }
+    Component {
+        id: cassetteStage
+        CassetteStageContent {
+            anchors.fill: parent
+            focus: true
+            mocha: mocha
+            accent: mocha.primary
+            reveal: win.reveal
+            originRect: win.host.stageOrigin
+            title: win.p ? String(win.p.trackTitle || "") : ""
+            artist: win.p ? String(win.p.trackArtist || "") : ""
+            album: win.p ? String(win.p.trackAlbum || "") : ""
+            artUrl: win.p && win.p.trackArtUrl ? String(win.p.trackArtUrl) : ""
+            trackKey: win.host.mediaTrackKey
+            playing: win.host.playing
+            tracking: win.host.mediaTracking
+            progress: win.host.mediaProgress
+            length: win.p && win.p.lengthSupported ? Number(win.p.length || 0) : 0
+            canSeek: win.host.mediaCanSeek
+            canPrevious: win.p !== null && win.p.canGoPrevious
+            canNext: win.p !== null && win.p.canGoNext
+            volume: win.host.mediaVolume
+            onVolumeRequested: value => win.host.setMediaVolume(value)
+            onTogglePlay: win.host.mediaToggle()
+            onPrevious: if (win.p && win.p.canGoPrevious) win.p.previous()
+            onNext: if (win.p && win.p.canGoNext) win.p.next()
+            onSeek: fraction => win.host.mediaSeek(fraction)
+            onCloseRequested: win.host.stageOpen = false
+            Component.onCompleted: deck.applySpinState(win.spin)
+        }
+    }
+    Component {
+        id: discmanStage
+        DiscmanStageContent {
+            anchors.fill: parent
+            focus: true
+            mocha: mocha
+            accent: mocha.primary
+            reveal: win.reveal
+            originRect: win.host.stageOrigin
+            title: win.p ? String(win.p.trackTitle || "") : ""
+            artist: win.p ? String(win.p.trackArtist || "") : ""
+            album: win.p ? String(win.p.trackAlbum || "") : ""
+            artUrl: win.p && win.p.trackArtUrl ? String(win.p.trackArtUrl) : ""
+            trackKey: win.host.mediaTrackKey
+            playing: win.host.playing
+            tracking: win.host.mediaTracking
+            progress: win.host.mediaProgress
+            length: win.p && win.p.lengthSupported ? Number(win.p.length || 0) : 0
+            canSeek: win.host.mediaCanSeek
+            canPrevious: win.p !== null && win.p.canGoPrevious
+            canNext: win.p !== null && win.p.canGoNext
+            volume: win.host.mediaVolume
+            onVolumeRequested: value => win.host.setMediaVolume(value)
+            onTogglePlay: win.host.mediaToggle()
+            onPrevious: if (win.p && win.p.canGoPrevious) win.p.previous()
+            onNext: if (win.p && win.p.canGoNext) win.p.next()
+            onSeek: fraction => win.host.mediaSeek(fraction)
+            onCloseRequested: win.host.stageOpen = false
+            Component.onCompleted: deck.applySpinState(win.spin)
+        }
     }
 }

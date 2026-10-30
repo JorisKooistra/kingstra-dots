@@ -19,6 +19,8 @@ Item {
     property real keyWidth: 40
     property real keyHeight: 26
     signal activated()
+    // Ingedrukt (voor vasthouden, zoals spoelen op een walkman).
+    readonly property alias down: keyMouse.pressed
 
     // Echt 3D: de kap is een uitgetrokken blokje boven een voetafdruk.
     // Bovenop de tafel (frontFacing uit) kijk je schuin van voren tegen de
@@ -31,7 +33,9 @@ Item {
     property real lean: 0
     property real depthScale: frontFacing ? 0.24 : 0.16
     readonly property real depth: Math.max(2, Math.round(keyHeight * depthScale))
-    readonly property real capRadius: Math.min(keyHeight / 2, skin.radius < 10 ? 4 : 10)
+    // Ronde knop (discman): de kap is een cirkel.
+    property bool round: false
+    readonly property real capRadius: round ? Math.min(keyWidth, keyHeight) / 2 : Math.min(keyHeight / 2, skin.radius < 10 ? 4 : 10)
     // 0 = uit, 1 = ingedrukt; de kap zakt dan bijna tot in de voet.
     property real press: keyMouse.pressed ? 1 : latched ? 0.65 : 0
     Behavior on press { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutCubic } }
