@@ -548,6 +548,7 @@ cmd_set() {
     file="$(_prepare_static_for_active_theme "$file")"
 
     _set_static "$file"
+    [[ "${KINGSTRA_PICKER_EVENTS:-}" != "1" ]] || printf 'KINGSTRA_PICKER_WALLPAPER_SET\n'
     _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
 
     # Kleuren genereren + apps herladen

@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 from PIL import Image
@@ -37,7 +38,7 @@ class PickerTests(unittest.TestCase):
     def capture(self, function, *args):
         with contextlib.redirect_stdout(io.StringIO()) as output:
             function(*args)
-        return [json.loads(line) for line in output.getvalue().splitlines()]
+        return [event for line in output.getvalue().splitlines() if (event := json.loads(line))["event"] != "progress"]
 
     def image(self, name="plaatje.jpg", size=(2400, 1600), color="#bbaa66"):
         path = self.folder / name
@@ -225,11 +226,100 @@ class PickerTests(unittest.TestCase):
 
     def test_apply_preserves_filename_as_single_argument(self):
         image = self.image('Bos "één" $(niet uitvoeren).jpg')
-        with patch.object(picker.subprocess, "run") as run:
-            run.return_value.returncode = 0
-            self.capture(picker.apply, str(image))
+        with patch.object(picker.subprocess, "Popen") as run:
+            run.return_value.wait.return_value = 0
+            run.return_value.stdout = ["KINGSTRA_PICKER_WALLPAPER_SET\n", "KINGSTRA_PICKER_PALETTE_READY\n"]
+            events = self.capture(picker.apply, str(image))
             self.assertEqual(run.call_args.args[0][-2:], ["set", str(image)])
             self.assertNotIn("shell", run.call_args.kwargs)
+            self.assertEqual(run.call_args.kwargs["env"]["KINGSTRA_PICKER_EVENTS"], "1")
+            self.assertEqual([event["event"] for event in events], ["wallpaper-set", "applied"])
+
+    def test_save_after_hd_preview_needs_no_network_requests(self):
+        path = picker.CACHE / "previews/wallhaven-abc123.jpg"
+        path.parent.mkdir(parents=True)
+        Image.new("RGB", (160, 90), "blue").save(path)
+        picker.remember_wallhaven("abc123", {"path": "https://w.wallhaven.cc/full/ab/wallhaven-abc123.jpg", "tags": [{"name": "landscape"}]}, path)
+        with patch.object(picker, "remote_json") as api, patch.object(picker.urllib.request, "urlopen") as image:
+            event = self.capture(picker.download, "abc123")[0]
+            api.assert_not_called()
+            image.assert_not_called()
+        self.assertEqual(Path(event["path"]).read_bytes(), path.read_bytes())
+        self.assertEqual(picker.read_json(picker.metadata_file(event["path"]))["tag_names"], ["landscape"])
+
+    def test_nasa_search_preview_save_and_offline_tags(self):
+        original = "PIA14417"
+        identifier = "nasa-" + picker.hashlib.sha256(original.encode()).hexdigest()[:24]
+        url = "https://images-assets.nasa.gov/image/PIA14417/PIA14417~orig.jpg"
+        data = {"collection": {"metadata": {"total_hits": 80}, "items": [dict(data=[dict(nasa_id=original, media_type="image", title="Nebula", keywords=["stars"], secondary_creator="NASA/JPL")], links=[dict(href=url,render="image",rel="canonical",width=2000,height=1200), dict(href=url.replace("orig", "thumb"),render="image",rel="preview")])]}}
+        args = argparse.Namespace(query="nebula", page=1)
+        with patch.object(picker, "remote_json", return_value=data) as api, patch.object(picker, "remote_thumbnail", return_value=dict(path=identifier,thumb="file:///tmp/test.jpg")):
+            event = self.capture(picker.search_nasa, args)[0]
+            self.assertEqual(event["lastPage"], 4)
+            self.assertEqual(event["items"][0]["id"], identifier)
+            self.assertFalse(api.call_args.kwargs["authenticated"])
+        cached = picker.CACHE / "previews" / (identifier + ".jpg")
+        cached.parent.mkdir(parents=True)
+        Image.new("RGB", (2000, 1200), "blue").save(cached)
+        with patch.object(picker, "remote_json") as api, patch.object(picker.urllib.request, "urlopen") as request:
+            preview = self.capture(picker.download, identifier, True)[0]
+            event = self.capture(picker.download, identifier)[0]
+            api.assert_not_called()
+            request.assert_not_called()
+        self.assertEqual(preview["uploader"], "NASA/JPL")
+        self.assertEqual(Path(event["path"]).parent, self.folder)
+        self.assertEqual(picker.read_json(picker.metadata_file(event["path"]))["source"], "nasa")
+        item = self.capture(picker.catalog)[0]["items"][0]
+        self.assertEqual(item["tags"], ["stars"])
+        self.assertEqual(item["credit"], "NASA/JPL")
+        with self.assertRaises(ValueError): picker.download("nasa-../../bad")
+
+    def test_interrupted_download_never_publishes_short_content(self):
+        payload = io.BytesIO()
+        Image.new("RGB", (160, 90), "blue").save(payload, "JPEG")
+        response = io.BytesIO(payload.getvalue())
+        response.url = "https://w.wallhaven.cc/full/ab/wallhaven-abc123.jpg"
+        response.headers = {"Content-Length": str(len(payload.getvalue()) + 5)}
+        target = self.folder / "test.jpg"
+        with patch.object(picker.urllib.request, "urlopen", return_value=response):
+            with self.assertRaisesRegex(ValueError, "onderbroken"):
+                self.capture(picker.transfer_image, response.url, target, {"w.wallhaven.cc"})
+        self.assertFalse(target.exists())
+
+    def test_coverflow_preference_is_persisted(self):
+        self.capture(picker.preferences, "mode", "coverflow")
+        self.assertEqual(self.capture(picker.catalog)[0]["settings"]["mode"], "coverflow")
+
+    def test_first_save_fetches_image_and_tag_metadata_in_parallel(self):
+        url = "https://w.wallhaven.cc/full/ab/wallhaven-abc123.jpg"
+        picker.atomic_json(picker.CACHE / "search/wallhaven-abc123.json", {"id": "abc123", "path": url})
+        transfer_started = threading.Event()
+        payload = io.BytesIO()
+        Image.new("RGB", (160, 90), "blue").save(payload, "JPEG")
+        def metadata(*args):
+            self.assertTrue(transfer_started.wait(2), "image waited for the metadata response")
+            return {"data": {"path": url, "tags": [{"name": "landscape"}]}}
+        def image_request(*args, **kwargs):
+            transfer_started.set()
+            response = io.BytesIO(payload.getvalue())
+            response.url = url
+            return response
+        with patch.object(picker, "remote_json", side_effect=metadata), patch.object(picker.urllib.request, "urlopen", side_effect=image_request) as request:
+            event = self.capture(picker.download, "abc123")[0]
+        self.assertEqual(request.call_count, 1)
+        self.assertEqual(event["tags"], ["landscape"])
+
+    def test_legacy_hd_preview_saves_without_fetching_metadata_again(self):
+        path = picker.CACHE / "previews/wallhaven-abc123.jpg"
+        path.parent.mkdir(parents=True)
+        Image.new("RGB", (160, 90), "blue").save(path)
+        picker.atomic_json(picker.CACHE / "metadata/abc123.json", dict(id="abc123", source="wallhaven", path=str(path), tag_names=["forest"]))
+        with patch.object(picker, "remote_json") as api, patch.object(picker.urllib.request, "urlopen") as request:
+            event = self.capture(picker.download, "abc123")[0]
+            api.assert_not_called()
+            request.assert_not_called()
+        self.assertEqual(event["tags"], ["forest"])
+
 
 
 if __name__ == "__main__": unittest.main()

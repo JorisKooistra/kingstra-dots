@@ -40,6 +40,13 @@ PanelWindow {
     property string sortMode: "color"
     property var pickerLayout: ({})
     property string sourceTab: "local"
+    readonly property bool online: sourceTab !== "local"
+    readonly property string sourceName: sourceTab === "nasa" ? "NASA" : "Wallhaven"
+    property string operationLabel: "Even geduld…"
+    property string operationStage: ""
+    property int operationPercent: -1
+    property string waitingDownloadId: ""
+    readonly property string operationButtonLabel: operationStage === "download" || operationStage === "metadata" ? (operationPercent < 0 ? "Downloaden…" : operationPercent + "%") : operationStage === "colors" ? "Kleuren…" : operationStage === "apps" ? "Afronden…" : "Instellen…"
     property string currentPath: ""
     property string folder: ""
     property var localItems: []
@@ -74,8 +81,8 @@ PanelWindow {
     readonly property bool previewLoading: previewProcess.running
     property double startedMs: Date.now()
     readonly property var chosen: selected >= 0 && selected < items.length ? items[selected] : ({})
-    readonly property bool busy: downloadProcess.running || applyProcess.running || removeProcess.running
-    readonly property bool loading: sourceTab === "wallhaven" ? searchProcess.running : (catalogProcess.running || catalogDelay.running)
+    readonly property bool busy: !!waitingDownloadId || downloadProcess.running || applyProcess.running || removeProcess.running
+    readonly property bool loading: online ? searchProcess.running : (catalogProcess.running || catalogDelay.running)
     readonly property var wallhavenColors: ["cc0000", "ff6600", "ffcc33", "77cc33", "669900", "66cccc", "0099cc", "0066cc", "333399", "663399", "993399", "ea4c88", "999999"]
     readonly property var localColors: ["dd3333", "dd9933", "c1d635", "76ce36", "33bb55", "33b88c", "33aabd", "3377cc", "6655cc", "aa55cc", "cc55bb", "cc557d", "999999"]
     readonly property var colorNames: ["Rood", "Oranje", "Geel", "Lichtgroen", "Groen", "Turkoois", "Lichtblauw", "Blauw", "Donkerblauw", "Paars", "Purper", "Roze", "Grijs"]
@@ -110,7 +117,7 @@ PanelWindow {
     function filter(appendOnly) {
         let previous = identity(chosen);
         let query = sourceTab === "local" ? searchField.text.toLowerCase().trim() : "";
-        let next = (sourceTab === "local" ? localItems : remoteItems).filter(item => (!favoritesOnly || item.favorite) && (sourceTab !== "local" || localHue < 0 || (thumbnailFor(item).hue === undefined ? item.hue : thumbnailFor(item).hue) === localHue) && (!query || (item.name + " " + (item.folder || "") + " " + (item.tags || []).join(" ") + " " + (item.tagAliases || []).join(" ")).toLowerCase().includes(query)));
+        let next = (sourceTab === "local" ? localItems : remoteItems).filter(item => (!favoritesOnly || item.favorite) && (sourceTab !== "local" || localHue < 0 || (thumbnailFor(item).hue === undefined ? item.hue : thumbnailFor(item).hue) === localHue) && (!query || (item.name + " " + (item.displayName || "") + " " + (item.folder || "") + " " + (item.tags || []).join(" ") + " " + (item.tagAliases || []).join(" ")).toLowerCase().includes(query)));
         if (sourceTab === "local") {
             if (sortMode === "name")
                 next.sort((a, b) => a.name.localeCompare(b.name));
@@ -144,7 +151,7 @@ PanelWindow {
     function navigate(delta) {
         if (!items.length)
             return;
-        selected = sourceTab === "wallhaven" ? Math.max(0, Math.min(items.length - 1, selected + delta)) : Logic.modulo(selected + delta, items.length);
+        selected = online ? Math.max(0, Math.min(items.length - 1, selected + delta)) : Logic.modulo(selected + delta, items.length);
         position(true);
     }
     function navigateVertical(delta) {
@@ -179,7 +186,7 @@ PanelWindow {
         selected = index;
         if (views.item && views.item.pause)
             views.item.pause();
-        if (sourceTab === "wallhaven")
+        if (online)
             openPreview(index);
         else
             applyPath(items[index].path);
@@ -197,6 +204,13 @@ PanelWindow {
         if (views.item && views.item.pause)
             views.item.pause();
         pendingPreviewId = chosen.id;
+        if (previewProcess.running) {
+            if (activePreviewId === pendingPreviewId)
+                pendingPreviewId = "";
+            else if (!waitingDownloadId)
+                previewProcess.running = false;
+            return;
+        }
         drainPreview();
     }
     function drainPreview() {
@@ -216,6 +230,7 @@ PanelWindow {
     onPreviewOpenChanged: {
         if (!previewOpen) {
             pendingPreviewId = "";
+            if (previewProcess.running && !waitingDownloadId) previewProcess.running = false;
             position(true);
             viewport.forceActiveFocus();
         }
@@ -258,8 +273,14 @@ PanelWindow {
         focusBrowser();
         if (value === "local")
             reloadCatalog();
-        if (value === "wallhaven" && !remoteItems.length)
-            search(1);
+        if (value !== "local") {
+            remoteItems = [];
+            remotePage = 1;
+            remoteLastPage = 1;
+            remoteTopic.currentIndex = value === "nasa" ? 1 : 0;
+            filter();
+            search(1, true);
+        }
     }
     function reloadCatalog() {
         if (sourceTab !== "local")
@@ -272,18 +293,18 @@ PanelWindow {
             catalogProcess.running = true;
     }
     function scheduleSearch() {
-        if (sourceTab === "wallhaven")
+        if (online)
             remoteSearchDelay.restart();
     }
     function maybeLoadMore() {
-        if (sourceTab !== "wallhaven" || searchProcess.running || remoteLoadFailed || remotePage >= remoteLastPage || pendingSearchPage)
+        if (!online || searchProcess.running || remoteLoadFailed || remotePage >= remoteLastPage || pendingSearchPage)
             return;
         let near = previewOpen ? selected >= items.length - 6 : (views.item && views.item.nearEnd ? views.item.nearEnd() : false);
         if (near)
             search(remotePage + 1);
     }
     function search(page, force) {
-        let signature = JSON.stringify([searchField.text, remoteSort.currentIndex, categoryBox.currentIndex, purityBox.currentIndex, colorFilter, resolutionField.text, ratioField.text]);
+        let signature = JSON.stringify([sourceTab, remoteTopic.currentIndex, searchField.text, remoteSort.currentIndex, categoryBox.currentIndex, purityBox.currentIndex, colorFilter, resolutionField.text, ratioField.text]);
         if (page === 1 && !force && signature === lastSearchSignature && remoteItems.length && !remoteLoadFailed)
             return;
         if (searchProcess.running) {
@@ -300,26 +321,45 @@ PanelWindow {
         remoteLoadFailed = false;
         activeSearchPage = page;
         message = "";
-        searchProcess.command = worker(["search", "--query", searchField.text, "--page", String(page), "--sort", ["toplist", "date_added", "random", "favorites", "views"][remoteSort.currentIndex], "--categories", ["111", "100", "010", "001"][categoryBox.currentIndex], "--purity", ["100", "110", "111"][purityBox.currentIndex], "--color", colorFilter, "--atleast", resolutionField.text.trim(), "--ratios", ratioField.text.trim(), "--seed", page > 1 ? remoteSeed : ""]);
+        let topic = (sourceTab === "nasa" ? ["", "nebula", "galaxy", "earth", "moon", "mars", "jupiter"] : ["", "nature", "landscape", "space", "abstract", "minimalism", "architecture", "cyberpunk", "digital art"])[remoteTopic.currentIndex] || "";
+        let query = [searchField.text.trim(), topic].filter(Boolean).join(" ");
+        searchProcess.command = worker(["search", "--source", sourceTab, "--query", query, "--page", String(page), "--sort", ["toplist", "date_added", "random", "favorites", "views"][remoteSort.currentIndex], "--categories", ["111", "100", "010", "001"][categoryBox.currentIndex], "--purity", ["100", "110", "111"][purityBox.currentIndex], "--color", colorFilter, "--atleast", resolutionField.text.trim(), "--ratios", ratioField.text.trim(), "--seed", page > 1 ? remoteSeed : ""]);
         searchProcess.running = true;
     }
     function applyChosen() {
         if (busy || !items.length)
             return;
-        message = "";
+        showMessage("");
+        operationLabel = chosen.path ? "Wallpaper instellen…" : "Download voorbereiden…";
+        operationStage = chosen.path ? "apply" : "metadata";
+        operationPercent = -1;
         if (chosen.path)
             applyPath(chosen.path);
         else {
             pendingApply = true;
-            downloadProcess.command = worker(["download", chosen.id]);
-            downloadProcess.running = true;
+            requestDownload(chosen.id);
         }
     }
     function downloadChosen() {
         if (busy || !chosen.id)
             return;
         pendingApply = false;
-        downloadProcess.command = worker(["download", chosen.id]);
+        showMessage("");
+        operationLabel = "Download voorbereiden…";
+        operationStage = "metadata";
+        operationPercent = -1;
+        requestDownload(chosen.id);
+    }
+    function requestDownload(identifier, ready) {
+        // A pending HD preview already downloads these exact bytes. Reuse its
+        // published file instead of racing it with a second full-size request.
+        if (!ready && previewProcess.running && activePreviewId === identifier) {
+            waitingDownloadId = identifier;
+            operationStage = "download";
+            operationLabel = "Volledige afbeelding laden…";
+            return;
+        }
+        downloadProcess.command = worker(["download", identifier]);
         downloadProcess.running = true;
     }
     function downloadAt(index) {
@@ -330,6 +370,18 @@ PanelWindow {
             views.item.pause();
         showMessage("");
         downloadChosen();
+    }
+    function applyAt(index) {
+        if (busy || !items[index]) return;
+        selected = index;
+        if (views.item && views.item.pause) views.item.pause();
+        applyChosen();
+    }
+    function operationProgress(event) {
+        if (event.event !== "progress") return;
+        operationStage = event.stage;
+        operationPercent = event.percent === undefined ? -1 : event.percent;
+        operationLabel = event.label + (operationPercent >= 0 ? " " + operationPercent + "%" : "");
     }
     function canRemove(item) {
         return !!item.path && item.path !== currentPath;
@@ -342,10 +394,15 @@ PanelWindow {
         if (views.item && views.item.pause)
             views.item.pause();
         showMessage("");
+        operationLabel = "Naar prullenbak…";
         removeProcess.command = worker(["remove", item.id]);
         removeProcess.running = true;
     }
     function applyPath(path) {
+        showMessage("");
+        operationLabel = "Wallpaper instellen…";
+        operationStage = "apply";
+        operationPercent = -1;
         applyProcess.command = worker(["apply", path]);
         applyProcess.running = true;
     }
@@ -391,7 +448,7 @@ PanelWindow {
             root.close();
         }
         function view(mode: string): void {
-            if (["hex", "slices", "wall", "mosaic"].includes(mode))
+            if (["hex", "slices", "wall", "mosaic", "coverflow"].includes(mode))
                 root.setMode(mode);
         }
         function move(delta: int): void {
@@ -408,7 +465,7 @@ PanelWindow {
             return JSON.stringify(views.item && views.item.frameSamples ? views.item.frameSamples : []);
         }
         function browse(query: string): void {
-            root.sourceTab = "wallhaven";
+            if (root.sourceTab !== "wallhaven") root.switchSource("wallhaven");
             root.favoritesOnly = false;
             searchField.text = query;
             root.search(1);
@@ -456,6 +513,8 @@ PanelWindow {
                     height: viewport.height
                 },
                 motion: views.item && views.item.inspect ? views.item.inspect() : {},
+                operation: root.operationLabel,
+                operationPercent: root.operationPercent,
                 busy: root.busy,
                 loading: root.loading,
                 message: root.message
@@ -508,7 +567,7 @@ PanelWindow {
                     root.remoteLastPage = event.lastPage;
                     root.remoteSeed = event.seed || "";
                     root.filter(append);
-                    if (!append && root.sourceTab === "wallhaven" && root.mode !== "wall") {
+                    if (!append && root.online && root.mode !== "wall") {
                         let rows = root.mode === "hex" ? Math.max(1, Math.min(5, root.pickerLayout.hexRows || 2)) : (root.mode === "mosaic" ? 2 : 1);
                         root.selected = Math.min(root.items.length - 1, Math.floor((root.pickerLayout.hexCols || 9) / 2) * rows);
                         Qt.callLater(function () {
@@ -522,7 +581,7 @@ PanelWindow {
             if (code !== 0)
                 root.remoteLoadFailed = true;
             if (code !== 0 && !root.pendingSearchPage && !root.message)
-                root.showMessage("Wallhaven kon niet worden geladen. Probeer opnieuw.");
+                root.showMessage(root.sourceName + " kon niet worden geladen. Probeer opnieuw.");
             if (root.pendingSearchPage) {
                 let page = root.pendingSearchPage, force = root.pendingSearchForce;
                 root.pendingSearchPage = 0;
@@ -538,6 +597,12 @@ PanelWindow {
         stdout: SplitParser {
             onRead: data => {
                 let event = root.parse(data);
+                if (root.waitingDownloadId === root.activePreviewId) root.operationProgress(event);
+                if (event.event === "preview" && event.id === root.waitingDownloadId) {
+                    root.waitingDownloadId = "";
+                    root.requestDownload(event.id, true);
+                }
+
                 if (event.event === "error" && root.previewOpen && root.activePreviewId === root.chosen.id)
                     root.previewMessage = event.message;
                 if (event.event === "preview" && root.previewOpen && event.id === root.chosen.id) {
@@ -548,6 +613,11 @@ PanelWindow {
             }
         }
         onExited: code => {
+            if (root.waitingDownloadId && root.waitingDownloadId === root.activePreviewId) {
+                root.waitingDownloadId = "";
+                root.showMessage("Afbeelding laden mislukt. Probeer opnieuw.");
+                Qt.callLater(root.finishClose);
+            }
             if (code !== 0 && root.previewOpen && root.activePreviewId === root.chosen.id && !root.previewMessage)
                 root.previewMessage = "Preview laden mislukt. Probeer opnieuw.";
             Qt.callLater(root.drainPreview);
@@ -558,6 +628,7 @@ PanelWindow {
         stdout: SplitParser {
             onRead: data => {
                 let event = root.parse(data);
+                root.operationProgress(event);
                 if (event.event === "error")
                     root.showMessage(event.message);
                 if (event.event === "download") {
@@ -583,6 +654,7 @@ PanelWindow {
         stdout: SplitParser {
             onRead: data => {
                 let event = root.parse(data);
+                root.operationProgress(event);
                 if (event.event === "error")
                     root.showMessage(event.message);
                 if (event.event === "removed") {
@@ -602,8 +674,10 @@ PanelWindow {
         stdout: SplitParser {
             onRead: data => {
                 let event = root.parse(data);
+                root.operationProgress(event);
                 if (event.event === "error")
                     root.showMessage(event.message);
+                if (event.event === "wallpaper-set") root.currentPath = event.path;
                 if (event.event === "applied") {
                     root.currentPath = event.path;
                     root.showMessage("Wallpaper ingesteld");
@@ -648,7 +722,7 @@ PanelWindow {
     Timer {
         interval: 250
         repeat: true
-        running: root.sourceTab === "wallhaven"
+        running: root.online
         onTriggered: root.maybeLoadMore()
     }
 
@@ -681,7 +755,7 @@ PanelWindow {
                 }
                 PickerText {
                     Layout.fillWidth: true
-                    text: root.sourceTab === "local" ? root.folder : "Wallhaven"
+                    text: root.sourceTab === "local" ? root.folder : (root.sourceTab === "nasa" ? "NASA Image and Video Library · bronvermelding bij elke afbeelding" : "Wallhaven")
                     font.pixelSize: 12
                     color: c.onSurfaceVariant
                     elide: Text.ElideMiddle
@@ -703,6 +777,13 @@ PanelWindow {
                 onClicked: root.switchSource("wallhaven")
             }
             PickerButton {
+                objectName: "source-nasa"
+                colors: c
+                text: "NASA"
+                selected: root.sourceTab === "nasa"
+                onClicked: root.switchSource("nasa")
+            }
+            PickerButton {
                 colors: c
                 text: "×"
                 onClicked: root.close()
@@ -716,7 +797,7 @@ PanelWindow {
                 objectName: "search"
                 Layout.fillWidth: true
                 Layout.preferredHeight: 36
-                placeholderText: root.sourceTab === "local" ? "Zoeken in je collectie…" : "Zoeken op Wallhaven…"
+                placeholderText: root.sourceTab === "local" ? "Zoeken in je collectie…" : "Zoeken op " + root.sourceName + "…"
                 color: c.text
                 placeholderTextColor: c.onSurfaceVariant
                 selectionColor: c.primary
@@ -731,7 +812,7 @@ PanelWindow {
                         root.scheduleSearch();
                 }
                 onAccepted: {
-                    if (root.sourceTab === "wallhaven")
+                    if (root.online)
                         root.search(1, true);
                     else
                         viewport.forceActiveFocus();
@@ -770,7 +851,7 @@ PanelWindow {
             PickerButton {
                 colors: c
                 text: "Zoeken"
-                visible: root.sourceTab === "wallhaven"
+                visible: root.online
                 onClicked: root.search(1, true)
             }
         }
@@ -788,7 +869,15 @@ PanelWindow {
                 id: categoryBox
                 visible: root.sourceTab === "wallhaven"
                 colors: c
-                model: ["Alle categorieën", "Algemeen", "Anime", "Personen"]
+                model: ["Alle hoofdcategorieën", "Algemeen", "Anime", "Personen"]
+                onActivated: root.scheduleSearch()
+            }
+            PickerCombo {
+                id: remoteTopic
+                objectName: "remote-topic"
+                visible: root.online
+                colors: c
+                model: root.sourceTab === "nasa" ? ["Alle onderwerpen", "Nevels", "Sterrenstelsels", "Aarde", "Maan", "Mars", "Jupiter"] : ["Alle onderwerpen", "Natuur", "Landschappen", "Ruimte", "Abstract", "Minimalisme", "Architectuur", "Cyberpunk", "Digitale kunst"]
                 onActivated: root.scheduleSearch()
             }
             PickerCombo {
@@ -829,6 +918,7 @@ PanelWindow {
                 }
             }
             PickerButton {
+                visible: root.sourceTab !== "nasa"
                 objectName: root.sourceTab === "local" ? "local-colour-all" : "remote-colour-all"
                 colors: c
                 text: "Alle kleuren"
@@ -845,6 +935,7 @@ PanelWindow {
                 }
             }
             Row {
+                visible: root.sourceTab !== "nasa"
                 spacing: 8
                 height: 36
                 Repeater {
@@ -893,6 +984,10 @@ PanelWindow {
                     {
                         key: "mosaic",
                         label: "Mozaïek"
+                    },
+                    {
+                        key: "coverflow",
+                        label: "Coverflow"
                     }
                 ]
                 PickerButton {
@@ -917,13 +1012,13 @@ PanelWindow {
             Keys.onUpPressed: root.navigateVertical(-1)
             Keys.onDownPressed: root.navigateVertical(1)
             Keys.onReturnPressed: {
-                if (root.sourceTab === "wallhaven")
+                if (root.online)
                     root.openPreview(root.selected);
                 else
                     root.applyChosen();
             }
             Keys.onEnterPressed: {
-                if (root.sourceTab === "wallhaven")
+                if (root.online)
                     root.openPreview(root.selected);
                 else
                     root.applyChosen();
@@ -971,7 +1066,7 @@ PanelWindow {
                 spacing: 3
                 PickerText {
                     Layout.fillWidth: true
-                    text: root.chosen.name || ""
+                    text: root.chosen.displayName || root.chosen.name || ""
                     elide: Text.ElideMiddle
                     color: c.text
                     font.pixelSize: 15
@@ -985,7 +1080,7 @@ PanelWindow {
                 }
             }
             PickerText {
-                visible: root.sourceTab === "wallhaven"
+                visible: root.online
                 text: root.remoteItems.length + " resultaten"
                 color: c.onSurfaceVariant
             }
@@ -993,13 +1088,13 @@ PanelWindow {
                 objectName: "remote-retry"
                 colors: c
                 text: "Opnieuw laden"
-                visible: root.sourceTab === "wallhaven" && root.remoteLoadFailed
+                visible: root.online && root.remoteLoadFailed
                 onClicked: root.search(root.activeSearchPage || 1)
             }
             PickerButton {
                 colors: c
                 text: "Vergroten"
-                visible: root.sourceTab === "wallhaven"
+                visible: root.online
                 available: !!root.chosen.id
                 onClicked: root.openPreview(root.selected)
             }
@@ -1014,13 +1109,13 @@ PanelWindow {
             PickerButton {
                 colors: c
                 text: root.chosen.path ? "Opgeslagen" : "Downloaden"
-                visible: root.sourceTab === "wallhaven"
+                visible: root.online
                 available: !root.busy && !!root.chosen.id && !root.chosen.path
                 onClicked: root.downloadChosen()
             }
             PickerButton {
                 colors: c
-                text: root.busy ? "Even geduld…" : "Instellen"
+                text: root.busy ? root.operationButtonLabel : "Instellen"
                 selected: true
                 available: !root.busy && root.items.length > 0
                 onClicked: root.applyChosen()
@@ -1029,7 +1124,7 @@ PanelWindow {
         RowLayout {
             Layout.fillWidth: true
             PickerText {
-                text: root.message || (root.sourceTab === "local" ? "Klik of Enter instellen    ← → kiezen    F favoriet    Esc sluiten" : "Klik of Enter bekijken    Scroll voor meer resultaten    Esc sluiten")
+                text: (root.busy ? root.operationLabel : root.message) || (root.sourceTab === "local" ? "Klik of Enter instellen    ← → kiezen    F favoriet    Esc sluiten" : "Klik of Enter bekijken    Scroll voor meer resultaten    Esc sluiten")
                 color: c.onSurfaceVariant
                 font.pixelSize: 12
                 Layout.fillWidth: true
@@ -1101,7 +1196,7 @@ PanelWindow {
                 width: grid.cellWidth - 12
                 height: grid.cellHeight - 12
                 itemData: root.items[index] || ({})
-                remote: root.sourceTab === "wallhaven"
+                remote: root.online
                 actionBusy: root.busy
                 removable: root.canRemove(itemData)
                 shaderSource: root.cardShader
@@ -1112,6 +1207,7 @@ PanelWindow {
                 fontFamily: root.uiFont
                 current: !!itemData.path && itemData.path === root.currentPath
                 onPicked: root.activate(index)
+                onApplyRequested: root.applyAt(index)
                 onDownloadRequested: root.downloadAt(index)
                 onRemoveRequested: root.removeAt(index)
                 onFavoriteRequested: root.favorite(index)

@@ -83,6 +83,11 @@ Item {
             signalName: "removeRequested"
         }
         SignalSpy {
+            id: applySpy
+            target: hoverCard
+            signalName: "applyRequested"
+        }
+        SignalSpy {
             id: pickedSpy
             target: hoverCard
             signalName: "picked"
@@ -93,6 +98,8 @@ Item {
             fakeController.wheelFactor = 1;
             hoverCard.visible = false;
             hoverCard.remote = false;
+            hoverCard.width = 220;
+            hoverCard.height = 160;
             hoverCard.itemData = ({
                     name: "Hover test",
                     path: "/fake/hover"
@@ -100,6 +107,7 @@ Item {
             downloadSpy.clear();
             removeSpy.clear();
             pickedSpy.clear();
+            applySpy.clear();
             fakeController.mode = "hex";
             fakeController.sourceTab = "local";
             fakeController.activations = 0;
@@ -227,7 +235,7 @@ Item {
             compare(fakeController.selected, 9);
         }
         function test_hover_lights_and_labels_all_shapes_without_changing_selection() {
-            for (let shape of ["slices", "hex", "wall", "mosaic"]) {
+            for (let shape of ["slices", "hex", "wall", "mosaic", "coverflow"]) {
                 hoverCard.shape = shape;
                 hoverCard.visible = true;
                 mouseMove(hoverCard, hoverCard.width / 2, hoverCard.height / 2);
@@ -253,7 +261,10 @@ Item {
                 });
             hoverCard.visible = true;
             mouseMove(hoverCard, 110, 80);
-            let action = findChild(hoverCard, "wallpaper-action");
+            let action = findChild(hoverCard, "wallpaper-download");
+            let apply = findChild(hoverCard, "wallpaper-apply");
+            mouseClick(apply, 16, 16);
+            compare(applySpy.count, 1);
             verify(action.visible);
             mouseMove(action, 17, 17);
             verify(action.visible);
@@ -266,11 +277,13 @@ Item {
                     path: "/library/remote.jpg"
                 });
             hoverCard.removable = true;
-            mouseClick(action, 17, 17);
+            let trash = findChild(hoverCard, "wallpaper-remove");
+            verify(trash.visible);
+            mouseClick(trash, 16, 16);
             compare(removeSpy.count, 1);
             compare(pickedSpy.count, 0);
             hoverCard.removable = false;
-            mouseClick(action, 17, 17);
+            mouseClick(trash, 16, 16);
             compare(removeSpy.count, 1);
         }
         function test_high_resolution_wheel_does_not_drop_events() {
@@ -288,6 +301,24 @@ Item {
                 });
             wait(550);
             compare(fakeController.selected, 2);
+        }
+        function test_narrow_slices_keep_all_action_icons_clickable() {
+            hoverCard.width = 112;
+            hoverCard.height = 220;
+            hoverCard.shape = "slices";
+            hoverCard.remote = true;
+            hoverCard.removable = true;
+            hoverCard.itemData = ({name: "Saved slice", id: "abc123", path: "/library/remote.jpg"});
+            hoverCard.visible = true;
+            mouseMove(hoverCard, 56, 110);
+            let apply = findChild(hoverCard, "wallpaper-apply");
+            let trash = findChild(hoverCard, "wallpaper-remove");
+            verify(apply.visible && trash.visible);
+            mouseClick(apply, 16, 16);
+            mouseClick(trash, 16, 16);
+            compare(applySpy.count, 1);
+            compare(removeSpy.count, 1);
+            compare(pickedSpy.count, 0);
         }
         function test_dense_wheel_burst_keeps_all_steps() {
             for (let i = 0; i < 6; i++)
@@ -401,7 +432,7 @@ Item {
             verify(!carousel.moving);
         }
         function test_slices_and_mosaic_keep_animated_navigation() {
-            for (let mode of ["slices", "mosaic"]) {
+            for (let mode of ["slices", "mosaic", "coverflow"]) {
                 fakeController.mode = mode;
                 fakeController.selected = 0;
                 carousel.positionSelected(false);
@@ -491,6 +522,24 @@ Item {
             wait(150);
             fuzzyCompare(carousel.contentX, camera, 0.2);
             compare(fakeController.selected, selected);
+        }
+        function test_nasa_is_bounded_and_preserves_camera_on_append() {
+            fakeController.sourceTab = "nasa";
+            fakeController.mode = "coverflow";
+            fakeController.items = fakeController.items.slice(0, 12);
+            carousel.positionSelected(false);
+            wait(100);
+            fakeController.navigateColumns(-1);
+            wait(500);
+            fuzzyCompare(carousel.contentX, 0, .2);
+            fakeController.navigateColumns(5);
+            wait(500);
+            let camera = carousel.contentX;
+            let next = fakeController.items.slice();
+            next.push({ name: "extra", id: "nasa-extra" });
+            fakeController.items = next;
+            wait(100);
+            fuzzyCompare(carousel.contentX, camera, .2);
         }
         function test_colour_order_uses_hue_saturation_and_monochrome_last() {
             let walls = [

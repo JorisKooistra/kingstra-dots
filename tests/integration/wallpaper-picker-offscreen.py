@@ -54,6 +54,14 @@ ShellRoot {
         function text(value: string): void {
             let field=named(picker.contentItem,"search"); field.text=value; field.forceActiveFocus();
         }
+        function previewGeometry(): string {
+            let image=named(picker.contentItem,"preview-image");
+            let p=image.mapToItem(picker.contentItem,0,0);
+            return JSON.stringify({x:p.x,y:p.y,width:image.width,height:image.height,paintedWidth:image.paintedWidth,paintedHeight:image.paintedHeight,status:image.status});
+        }
+        function topic(index: int): void {
+            let field=named(picker.contentItem,"remote-topic");field.currentIndex=index;field.activated(index);
+        }
         function capture(path: string): void { picker.contentItem.grabToImage(result=>result.saveToFile(path)); }
         function resize(w: int, h: int): void { picker.width=w;picker.height=h; }
     }
@@ -90,6 +98,8 @@ def setup(base):
         draw.polygon([(0, 600), (480, 100), (960, 600)], fill=tuple(c // 2 for c in color))
         draw.text((100, 100), f"Wallpaper {index}", fill="white", font_size=44)
         image.save(library / f"fixture-{index:02}.jpg")
+    (base / "config/quickshell").mkdir(parents=True)
+    (base / "config/quickshell/colors.json").write_text('{"primary":"#88aaff"}')
     palette = base / "config/kingstra/state/matugen-palette.json"
     palette.parent.mkdir(parents=True)
     palette.write_text("{}")
@@ -131,8 +141,15 @@ class Picker:
             self.server = subprocess.Popen([str(xvfb), "-displayfd", str(write_fd), "-screen", "0", "1920x1080x24", "-nolisten", "tcp", "-noreset"],
                                            pass_fds=(write_fd,), stdout=self.server_log, stderr=subprocess.STDOUT)
             os.close(write_fd)
-            ready = select.select([read_fd], [], [], 8)[0]
-            display = os.read(read_fd, 64).decode().strip() if ready else ""
+            # X servers may write the number and newline separately. Closing
+            # the read end after only the first byte makes Xvfb exit on EPIPE.
+            payload, deadline = b"", time.monotonic() + 8
+            while b"\n" not in payload and time.monotonic() < deadline:
+                if not select.select([read_fd], [], [], max(0, deadline - time.monotonic()))[0]: break
+                chunk = os.read(read_fd, 64)
+                if not chunk: break
+                payload += chunk
+            display = payload.decode().strip() if b"\n" in payload else ""
             os.close(read_fd)
             if not display:
                 self.server.terminate()
@@ -184,13 +201,16 @@ class Picker:
         v, p = state["viewport"], state["motion"]["selectionPoint"]
         self.ipc("harness", "click", round(v["x"] + p["x"]), round(v["y"] + p["y"]))
 
-    def tile_action(self):
+    def tile_action(self, action="download"):
         state=self.state()
         v,point=state["viewport"],state["motion"]["selectionPoint"]
         if state["mode"]=="hex":height=state["motion"]["hexHeight"]
         elif state["mode"]=="wall":height=v["width"]/state["motion"]["columns"]*.62-12
-        else:raise AssertionError("action geometry fixture expects hex or grid")
-        x,y=round(v["x"]+point["x"]),round(v["y"]+point["y"]-height/2+27)
+        elif state["mode"]=="coverflow":height=state["motion"]["currentWidth"]*.64
+        else:raise AssertionError("action geometry fixture expects hex/grid/coverflow")
+        width = 104 if state["chosenPath"] else 68
+        offset = {"apply":16,"download":52,"remove":88}[action] - width/2
+        x,y=round(v["x"]+point["x"]+offset),round(v["y"]+point["y"]-height/2+26)
         self.ipc("harness","hover",x,y)
         self.ipc("harness","click",x,y)
 
@@ -239,7 +259,7 @@ def exercise(picker):
     p.click("source-local")
     p.wait(lambda s: s["source"] == "local" and not s["loading"], "source switch waits for pending preference write")
     assert p.state()["chosenFavorite"], "catalog replaced favorite with old disk state"
-    for mode in ["slices", "mosaic", "hex"]:
+    for mode in ["slices", "mosaic", "coverflow", "hex"]:
         p.click("mode-" + mode)
         p.wait(lambda s: s["mode"] == mode and not s["motion"].get("moving"), mode)
         p.wheel(p.state(), -120)
@@ -276,7 +296,7 @@ def exercise(picker):
     assert not downloaded["preview"]
     downloaded_path=Path(downloaded["chosenPath"])
     assert downloaded_path.is_file()
-    p.tile_action()
+    p.tile_action("remove")
     removed=p.wait(lambda s:not s["chosenPath"] and not s["busy"],"hover remove updates downloaded state")
     assert not removed["preview"] and not downloaded_path.exists()
     (p.base / "fail-next-preview").touch()
@@ -313,6 +333,19 @@ def exercise(picker):
     state=p.wait(lambda s: s["previewMessage"]=="Wallpaper ingesteld" and not s["busy"],"direct apply downloads and applies")
     assert Path(state["current"]).parent==p.base/"library",state
     assert Path(state["current"]+".json").is_file(),"download lost tags sidecar"
+    # Applying before HD is ready must use the pending transfer, even after
+    # closing the preview. It must neither download twice nor abandon the apply.
+    (p.base / "slow-next-preview").touch()
+    (p.base / "expect-preview-before-save").touch()
+    p.click("preview-next")
+    p.click("preview-apply")
+    assert p.state()["busy"]
+    p.click("preview-close")
+    state=p.wait(lambda s:s["message"]=="Wallpaper ingesteld" and not s["busy"],"apply waits for pending HD while preview is closed")
+    assert not state["preview"]
+    (p.base / "expect-preview-before-save").unlink()
+    p.picture()
+    p.wait(lambda s:s["preview"] and bool(s["previewInfo"].get("id")),"reopen after queued apply")
     p.ipc("harness", "key", 0x01000000)  # Escape
     p.wait(lambda s: not s["preview"], "Escape returns to browsing")
     p.click("remote-colour-0066cc")
@@ -332,7 +365,38 @@ def exercise(picker):
     p.capture("grid")
     p.picture()
     p.wait(lambda s: s["preview"] and bool(s["previewInfo"].get("id")), "grid click opens preview")
+    # Both side margins must close without closing the picker itself.
+    for side in ["left", "right"]:
+        image=json.loads(p.ipc("harness","previewGeometry"))
+        assert image["paintedWidth"] < image["width"]-10,image
+        x=image["x"]+(5 if side=="left" else image["width"]-5)
+        p.ipc("harness","click",round(x),round(image["y"]+image["height"]/2))
+        p.wait(lambda s:not s["preview"],side+" margin closes preview")
+        p.picture()
+        p.wait(lambda s:s["preview"] and bool(s["previewInfo"].get("id")),"reopen after "+side)
     p.click("preview-close")
+    p.click("mode-coverflow")
+    p.wait(lambda s:s["mode"]=="coverflow" and not s["motion"].get("moving"),"coverflow")
+    p.capture("coverflow")
+    p.tile_action("apply")
+    state=p.wait(lambda s:s["message"]=="Wallpaper ingesteld" and not s["busy"],"tile apply downloads and sets")
+    assert not state["preview"]
+    assert Path(state["current"]).parent==p.base/"library"
+    p.click("source-nasa")
+    state=p.wait(lambda s:s["source"]=="nasa" and s.get("chosenId", "").startswith("nasa-") and not s["loading"],"NASA source")
+    p.ipc("harness","topic",3)
+    p.wait(lambda s:"earth" in s["chosen"] and not s["loading"],"NASA topic filter")
+    p.picture()
+    p.wait(lambda s:s["preview"] and s["previewInfo"].get("id")==s["chosenId"],"NASA preview")
+    p.click("preview-apply")
+    state=p.wait(lambda s:s["previewMessage"]=="Wallpaper ingesteld" and not s["busy"],"NASA apply")
+    assert Path(state["current"]).name.startswith("nasa-")
+    assert json.loads(Path(state["current"]+".json").read_text())["source"]=="nasa"
+    p.click("preview-close")
+    p.click("source-wallhaven")
+    p.wait(lambda s:s["source"]=="wallhaven" and s["count"]>0 and not s["loading"],"return to Wallhaven")
+    p.ipc("harness","topic",1)
+    p.wait(lambda s:"nature" in s["chosen"] and not s["loading"],"Wallhaven tag topic")
     p.ipc("harness", "resize", 1280, 720)
     time.sleep(.3)
     p.capture("compact")
@@ -350,7 +414,7 @@ def exercise(picker):
 
 
 def exercise_paging(p):
-    for mode in ["wall","slices","hex","mosaic"]:
+    for mode in ["wall","slices","hex","mosaic","coverflow"]:
         p.click("mode-"+mode)
         p.ipc("picker","browse","paging-"+mode)
         state=p.wait(lambda s:s["count"]>=24 and not s["loading"],"initial "+mode+" results")
@@ -389,8 +453,36 @@ def exercise_live(p):
     with Image.open(state["previewInfo"]["path"]) as image:
         assert image.width > 768 or image.height > 480, "preview is only a thumbnail"
     p.capture("wallhaven-live-preview")
-    (p.base / "live-result.json").write_text(json.dumps(state, indent=2))
+    started=time.monotonic()
+    p.click("preview-download")
+    state=p.wait(lambda s:bool(s.get("chosenPath")) and not s["busy"],"save actual cached Wallhaven preview",timeout=20)
+    elapsed=time.monotonic()-started
+    record=json.loads(Path(state["chosenPath"]+".json").read_text())
+    assert record["source"]=="wallhaven" and record["tag_names"]
+    (p.base / "live-result.json").write_text(json.dumps(dict(state=state,saveSeconds=elapsed,metadata=record), indent=2))
+    print("ok: cached Wallhaven save with tags",round(elapsed,3),"s")
     print("ok: actual Wallhaven search, colour filtering and full resolution preview")
+
+
+def exercise_live_nasa(p):
+    p.click("source-nasa")
+    state=p.wait(lambda s:s["source"]=="nasa" and s["count"]>0 and not s["loading"],"actual NASA search",timeout=55)
+    p.click("mode-coverflow")
+    time.sleep(.3)
+    p.capture("nasa-live-coverflow")
+    p.picture()
+    state=p.wait(lambda s:s["previewInfo"].get("id")==s.get("chosenId") and not s["previewLoading"] and bool(s["previewSource"]),"actual NASA HD preview",timeout=55)
+    p.capture("nasa-live-preview")
+    with Image.open(state["previewInfo"]["path"]) as image:
+        assert image.width>768 or image.height>480
+    started=time.monotonic()
+    p.click("preview-download")
+    state=p.wait(lambda s:bool(s.get("chosenPath")) and not s["busy"],"save cached NASA full image",timeout=20)
+    elapsed=time.monotonic()-started
+    record=json.loads(Path(state["chosenPath"]+".json").read_text())
+    assert record["source"]=="nasa" and record["uploader"]
+    (p.base/"live-result.json").write_text(json.dumps(dict(state=state,saveSeconds=elapsed,metadata=record),indent=2))
+    print("ok: actual NASA search, HD preview and cached save with attribution",round(elapsed,3),"s")
 
 
 def main():
@@ -398,6 +490,7 @@ def main():
     parser.add_argument("--output", type=Path, help="Keep screenshots, logs and isolated fixtures in this new directory")
     parser.add_argument("--xvfb", type=Path, default=shutil.which("Xvfb"), help="Xvfb binary for shader/image verification; detected automatically if installed")
     parser.add_argument("--live-wallhaven", action="store_true", help="Use actual Wallhaven search/preview instead of deterministic remote fixtures; never applies to the desktop")
+    parser.add_argument("--live-nasa", action="store_true", help="Exercise the actual NASA API with all files kept in the private test directory")
     parser.add_argument("--paging-only", action="store_true", help="Check real wheel pagination in all four views")
     args = parser.parse_args()
     temp = None
@@ -409,8 +502,10 @@ def main():
         base = Path(temp.name)
     picker = None
     try:
-        picker = Picker(base, args.xvfb, args.live_wallhaven)
-        if args.live_wallhaven:
+        picker = Picker(base, args.xvfb, args.live_wallhaven or args.live_nasa)
+        if args.live_nasa:
+            exercise_live_nasa(picker)
+        elif args.live_wallhaven:
             exercise_live(picker)
         elif args.paging_only:
             exercise_paging(picker)

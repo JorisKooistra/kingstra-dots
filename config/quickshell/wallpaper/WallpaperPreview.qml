@@ -69,7 +69,7 @@ Rectangle {
                 onClicked: preview.controller.previewOpen = false
             }
             PickerText {
-                text: preview.controller.chosen.name || "Wallpaper"
+                text: preview.controller.chosen.displayName || preview.controller.chosen.name || "Wallpaper"
                 color: preview.colors.text
                 font.pixelSize: 22
                 font.bold: true
@@ -104,6 +104,7 @@ Rectangle {
         }
         Item {
             id: imageArea
+            objectName: "preview-image-area"
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -115,6 +116,7 @@ Rectangle {
                 boundsBehavior: Flickable.StopAtBounds
                 Image {
                     id: fullImage
+                    objectName: "preview-image"
                     width: pan.contentWidth
                     height: pan.contentHeight
                     source: preview.controller.previewSource
@@ -126,6 +128,12 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
+                    onClicked: event => {
+                        let left = (fullImage.width - fullImage.paintedWidth) / 2;
+                        let top = (fullImage.height - fullImage.paintedHeight) / 2;
+                        if (fullImage.status !== Image.Ready || event.x < left || event.x > left + fullImage.paintedWidth || event.y < top || event.y > top + fullImage.paintedHeight)
+                            preview.controller.previewOpen = false;
+                    }
                     onDoubleClicked: event => preview.zoomTo(preview.zoom > 1 ? 1 : 2, event.x - pan.contentX, event.y - pan.contentY)
                 }
             }
@@ -146,6 +154,7 @@ Rectangle {
         PickerText {
             Layout.fillWidth: true
             text: (preview.controller.previewInfo.dimensions || preview.controller.chosen.dimensions || "") + (preview.controller.previewInfo.uploader ? "   ·   " + preview.controller.previewInfo.uploader : "") + (preview.controller.previewLoading ? "   ·   Volledige afbeelding laden…" : "")
+            elide: Text.ElideRight
             color: preview.colors.onSurfaceVariant
             textFormat: Text.PlainText
         }
@@ -186,7 +195,7 @@ Rectangle {
             }
             PickerText {
                 Layout.fillWidth: true
-                text: preview.controller.previewMessage
+                text: preview.controller.busy ? preview.controller.operationLabel : preview.controller.previewMessage
                 color: preview.colors.onSurfaceVariant
                 elide: Text.ElideRight
                 textFormat: Text.PlainText
@@ -201,8 +210,8 @@ Rectangle {
             }
             PickerButton {
                 colors: preview.colors
-                text: "Wallhaven-pagina"
-                onClicked: Qt.openUrlExternally("https://wallhaven.cc/w/" + preview.controller.chosen.id)
+                text: preview.controller.sourceTab === "nasa" ? "NASA-bron" : "Wallhaven-pagina"
+                onClicked: Qt.openUrlExternally(preview.controller.previewInfo.page || preview.controller.chosen.page || "https://wallhaven.cc/w/" + preview.controller.chosen.id)
             }
             PickerButton {
                 objectName: "preview-download"
@@ -222,7 +231,7 @@ Rectangle {
             PickerButton {
                 objectName: "preview-apply"
                 colors: preview.colors
-                text: preview.controller.busy ? "Even geduld…" : "Instellen"
+                text: preview.controller.busy ? preview.controller.operationButtonLabel : "Instellen"
                 selected: true
                 available: !preview.controller.busy
                 onClicked: preview.controller.applyChosen()

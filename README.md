@@ -188,13 +188,25 @@ when `ENABLE_VIDEO_WALLPAPER=true`. Everything goes through `kingstra-wallpaper`
 same `apply-shell-state` pipeline so colors stay in sync.
 
 `Super + Ctrl + W` opens our native Quickshell picker on the focused monitor.
-It has slices, hexagons, a grid and a mosaic, local search, colour filters and
+It has slices, hexagons, a grid, a mosaic and Coverflow, local search, colour filters and
 favorites, plus Wallhaven search using the existing API key in `skwd-wall/config.json`.
+Wallhaven has three main categories (General, Anime, People); the subject selector adds
+quick tag searches such as Nature, Space, Abstract and Cyberpunk, combined with free text.
+A second source uses the free [NASA Image Library API](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf)
+without an API key. It offers topic search, automatic pagination, HD previews, download,
+apply and trash; downloaded sidecars retain the original title, keywords, credit and
+source page. NASA does not expose Wallhaven's colour, purity or resolution filters.
+The NASA tab starts on Nebulae; choose All subjects to search the entire library.
 Wallhaven loads more results as you scroll. Click a remote image to inspect a
 full-resolution preview, zoom with the wheel or +/−, and drag to pan. The preview
 loads the full image directly, with previous/next, download, apply and clear back/close
-controls. Hover offers download or move-to-trash actions; the active wallpaper is
+controls. Clicking any empty margin around the image also closes its preview.
+Hover exposes separate vector icons for apply, download and (when saved) trash; the active wallpaper is
 protected from removal. Applying a remote image downloads it to the library first.
+A loaded HD preview and its metadata are reused without another request. Applying while
+HD is still loading waits for that transfer, including when the preview is closed;
+first downloads fetch image bytes and tag details concurrently. Download percentages and
+renderer/palette/app refresh milestones explain progress without blocking browsing.
 Wallhaven tags are saved automatically in an adjacent `<image>.json` file and included
 in local searches. A local image applies with one click. Loading further Wallhaven
 pages appends model rows without resetting the current position in any of the views.
@@ -212,7 +224,10 @@ The implementation keeps its own source; the upstream MIT notice is included in
 `config/quickshell/wallpaper/SKWD-LICENSE.txt`.
 Wheel ticks compensate for Hyprland's scroll multiplier so each tick advances one
 column; pixel gestures remain continuous. Hover highlights a tile and its name
-independently of keyboard selection.
+independently of keyboard selection. Coverflow uses the same virtualized camera and
+thumbnail cache, with a large center card and perspective-rotated neighboring cards;
+its visual inspiration comes from the [wallpaperCarousel unixporn example](https://www.reddit.com/r/unixporn/comments/1ro14ur/niri_wallpaper_carousel_from_uilyamiro1_in_a_dms/),
+with an independent implementation.
 
 Picker verification runs without changing the desktop wallpaper:
 
@@ -222,7 +237,7 @@ python3 tests/smoke/wallpaper-colours.py
 python3 tests/integration/palette-refresh.py
 python3 tests/integration/wallpaper-picker-offscreen.py --output /tmp/picker-test
 # With Xvfb installed, the integration test also verifies actual shader images.
-# Add --live-wallhaven to check the real API, filters and full-size previews.
+# Add --live-wallhaven or --live-nasa for real API/HD preview/save checks.
 # Add --paging-only to verify scroll position through page loads in every view.
 ```
 

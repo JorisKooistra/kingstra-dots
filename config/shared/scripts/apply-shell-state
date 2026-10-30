@@ -505,6 +505,10 @@ if [[ -x "$COLOR_TRANSFORM" ]]; then
     _log "Color transform toegepast"
 fi
 
+if $PALETTE_APPLIED && [[ "${KINGSTRA_PICKER_EVENTS:-}" == "1" ]]; then
+    printf 'KINGSTRA_PICKER_PALETTE_READY\n'
+fi
+
 # ---------------------------------------------------------------------------
 # Stap 5 — Mode profiel laden en mode.json uitbreiden
 # ---------------------------------------------------------------------------

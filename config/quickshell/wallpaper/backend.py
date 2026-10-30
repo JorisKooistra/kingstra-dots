@@ -12,6 +12,7 @@ import datetime
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -68,7 +69,7 @@ def preferences(key, value):
             favorites.symmetric_difference_update([value])
             data[key] = sorted(favorites)
         elif key == "mode":
-            if value not in {"slices", "hex", "wall", "mosaic"}:
+            if value not in {"slices", "hex", "wall", "mosaic", "coverflow"}:
                 raise ValueError("Onbekende weergave")
             data[key] = value
         else:
@@ -134,14 +135,16 @@ def metadata_file(path):
 def local_metadata(path, index):
     record = read_json(metadata_file(path))
     if not isinstance(record, dict): record = {}
-    if record.get("source") != "wallhaven":
+    if record.get("source") not in {"wallhaven", "nasa"}:
         identifier = wallhaven_id(path)
         record = index.get(identifier) or read_json(CACHE / "metadata" / (identifier + ".json")) if identifier else {}
         if record and not metadata_file(path).exists():
             atomic_json(metadata_file(path), dict(record, path=str(path)))
     return dict(tags=record.get("tag_names", []),
                 tagAliases=[tag.get("alias", "") for tag in record.get("tags", []) if isinstance(tag, dict)],
-                wallhavenId=record.get("id", ""), wallhavenColors=record.get("colors", []))
+                wallhavenId=record.get("id", "") if record.get("source") == "wallhaven" else "",
+                wallhavenColors=record.get("colors", []), source=record.get("source", ""),
+                sourcePage=record.get("url", ""), credit=record.get("uploader", ""), displayName=record.get("name", ""))
 
 
 def remember_wallhaven(identifier, data, path, save_sidecar=False):
@@ -151,6 +154,7 @@ def remember_wallhaven(identifier, data, path, save_sidecar=False):
                   colors=data.get("colors", []), resolution=data.get("resolution", ""),
                   purity=data.get("purity", ""), category=data.get("category", ""),
                   uploader=(data.get("uploader") or {}).get("username", ""),
+                  download_url=data.get("path", ""), data=data,
                   fetched_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
     atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
     if save_sidecar:
@@ -212,7 +216,7 @@ def catalog():
     folder = library()
     settings = read_json(SETTINGS)
     upstream_mode = skwd_config().get("components", {}).get("wallpaperSelector", {}).get("displayMode", "hex")
-    settings.setdefault("mode", upstream_mode if upstream_mode in {"hex", "slices", "wall", "mosaic"} else "hex")
+    settings.setdefault("mode", upstream_mode if upstream_mode in {"hex", "slices", "wall", "mosaic", "coverflow"} else "hex")
     settings.setdefault("sort", "color")
     layout = skwd_config().get("components", {}).get("wallpaperSelector", {})
     settings["layout"] = {key: layout.get(key, default) for key, default in
@@ -263,9 +267,9 @@ def catalog():
 def remote_json(url, authenticated=True):
     wallhaven = skwd_config().get("wallhaven", {})
     key = wallhaven.get("apiKey") or wallhaven.get("api_key", "")
-    if authenticated and key:
+    if authenticated and key and urllib.parse.urlparse(url).hostname == "wallhaven.cc":
         url += ("&" if "?" in url else "?") + urllib.parse.urlencode({"apikey": key})
-    request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.0"})
+    request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.1 (https://github.com/JorisKooistra/kingstra-dots)"})
     with urllib.request.urlopen(request, timeout=25) as response:
         return json.load(response)
 
@@ -319,7 +323,7 @@ def trim_previews(keep, budget=256 * 1024 * 1024):
     # Full images are much larger than thumbnails. Bound them immediately,
     # while keeping the file currently being handed to the preview window.
     entries = []
-    for path in (CACHE / "previews").glob("wallhaven-*"):
+    for path in (CACHE / "previews").glob("*"):
         with contextlib.suppress(OSError):
             if path.is_file(): entries.append((path, path.stat()))
     total = sum(stat.st_size for _, stat in entries)
@@ -333,11 +337,14 @@ def trim_previews(keep, budget=256 * 1024 * 1024):
 
 def saved_wallhaven(identifier):
     folder = library()
-    return next((str(folder / ("wallhaven-" + identifier + suffix)) for suffix in sorted(IMAGES)
-                 if (folder / ("wallhaven-" + identifier + suffix)).is_file()), "")
+    stem = identifier if identifier.startswith("nasa-") else "wallhaven-" + identifier
+    return next((str(folder / (stem + suffix)) for suffix in sorted(IMAGES)
+                 if (folder / (stem + suffix)).is_file()), "")
 
 
 def search(args):
+    if getattr(args, "source", "wallhaven") == "nasa":
+        return search_nasa(args)
     params = dict(q=args.query, page=args.page, sorting=args.sort, categories=args.categories,
                   purity=args.purity, order="desc", topRange="1M")
     if args.color:
@@ -364,6 +371,10 @@ def search(args):
         thumb = wall.get("thumbs", {}).get("large", "")
         if not valid_url(thumb, {"th.wallhaven.cc"}):
             continue
+        if valid_url(wall.get("path", ""), {"w.wallhaven.cc"}):
+            # Search already tells us where the full image lives. Its bytes and
+            # the richer tag metadata can be fetched concurrently on first save.
+            atomic_json(CACHE / "search" / ("wallhaven-" + identifier + ".json"), wall)
         local_thumb = CACHE / "remote" / (identifier + ".jpg")
         items.append(dict(id=identifier, name="wallhaven-" + identifier,
                           thumb=local_thumb.as_uri() if local_thumb.is_file() else "", remoteThumb=thumb,
@@ -380,12 +391,137 @@ def search(args):
     trim_cache()
 
 
+def search_nasa(args):
+    params = dict(media_type="image", page=args.page, page_size=24)
+    if args.query.strip(): params["q"] = args.query.strip()
+    cache_key = hashlib.sha256(json.dumps(params, sort_keys=True).encode()).hexdigest()
+    cached = CACHE / "search" / ("nasa-" + cache_key + ".json")
+    data = read_json(cached)
+    if not data or time.time() - cached.stat().st_mtime > 300:
+        data = remote_json("https://images-api.nasa.gov/search?" + urllib.parse.urlencode(params), authenticated=False)
+        atomic_json(cached, data)
+    collection = data.get("collection", {})
+    items = []
+    for entry in collection.get("items", []):
+        metadata = next((row for row in entry.get("data", []) if row.get("media_type") == "image"), {})
+        original_id = metadata.get("nasa_id", "")
+        if not original_id: continue
+        identifier = "nasa-" + hashlib.sha256(original_id.encode()).hexdigest()[:24]
+        links = [link for link in entry.get("links", []) if link.get("render") == "image"
+                 and valid_url(link.get("href", ""), {"images-assets.nasa.gov"})]
+        if not links: continue
+        # Legacy NASA thumbnails can be only 75px wide. Use a sized alternate
+        # for the large center card, without fetching the full original.
+        alternates = [link for link in links if link.get("rel") != "canonical"]
+        usable = [link for link in alternates if link.get("width", 0) >= 768]
+        thumb = min(usable, key=lambda link: link["width"]) if usable else max(alternates or links, key=lambda link: link.get("width", 0))
+        original = next((link for link in links if link.get("rel") == "canonical" and Path(urllib.parse.urlparse(link["href"]).path).suffix.lower() in IMAGES), {})
+        local = saved_wallhaven(identifier)
+        previous = read_json(CACHE / "metadata" / (identifier + ".json"))
+        width, height = original.get("width", 0), original.get("height", 0)
+        record = dict(source="nasa", id=identifier, nasa_id=original_id,
+                      name=metadata.get("title", original_id), path=local or previous.get("path", ""),
+                      url="https://images.nasa.gov/details/" + urllib.parse.quote(original_id, safe=""),
+                      download_url=original.get("href", "") or previous.get("download_url", ""),
+                      tag_names=metadata.get("keywords", []), uploader=metadata.get("secondary_creator") or metadata.get("photographer") or metadata.get("center", "NASA"),
+                      resolution=f"{width} × {height}" if width and height else previous.get("resolution", ""),
+                      description=metadata.get("description", ""), colors=[],
+                      fetched_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
+        atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
+        local_thumb = CACHE / "remote" / (identifier + ".jpg")
+        items.append(dict(id=identifier, name=record["name"], source="nasa", page=record["url"],
+                          path=local, type="static", favorite=False, dimensions=record["resolution"],
+                          thumb=local_thumb.as_uri() if local_thumb.is_file() else "", remoteThumb=thumb["href"]))
+    total = collection.get("metadata", {}).get("total_hits", 0)
+    emit("search", items=items, page=args.page, lastPage=max(args.page, math.ceil(total / 24)))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        tasks = [pool.submit(remote_thumbnail, item) for item in items if not item["thumb"]]
+        for task in concurrent.futures.as_completed(tasks):
+            try: emit("thumbnail", **task.result())
+            except Exception: pass
+    trim_cache()
+
+
+def download_nasa(identifier, preview=False):
+    if not re.fullmatch(r"nasa-[a-f0-9]{24}", identifier): raise ValueError("Ongeldig NASA-ID")
+    record = read_json(CACHE / "metadata" / (identifier + ".json"))
+    if record.get("source") != "nasa" or record.get("id") != identifier:
+        raise ValueError("Zoek deze NASA-afbeelding opnieuw op")
+    url = record.get("download_url", "")
+    if not url:
+        manifest = remote_json("https://images-api.nasa.gov/asset/" + urllib.parse.quote(record["nasa_id"], safe=""), authenticated=False)
+        candidates = [item.get("href", "") for item in manifest.get("collection", {}).get("items", [])]
+        candidates = [value for value in candidates if valid_url(value, {"images-assets.nasa.gov"}) and Path(urllib.parse.urlparse(value).path).suffix.lower() in IMAGES]
+        url = next((value for value in candidates if "~orig." in value), next(iter(candidates), ""))
+        record["download_url"] = url
+    if not valid_url(url, {"images-assets.nasa.gov"}): raise ValueError("Ongeldig NASA-downloadadres")
+    suffix = Path(urllib.parse.urlparse(url).path).suffix.lower()
+    if suffix not in IMAGES: raise ValueError("Onbekend afbeeldingsformaat")
+    saved = saved_wallhaven(identifier)
+    folder = CACHE / "previews" if preview else library()
+    folder.mkdir(parents=True, exist_ok=True)
+    target = Path(saved) if saved else folder / (identifier + suffix)
+    transfer_image(url, target, {"images-assets.nasa.gov"}, CACHE / "previews" / (identifier + suffix))
+    from PIL import Image
+    with Image.open(target) as image: record["resolution"] = f"{image.width} × {image.height}"
+    record["path"] = str(target)
+    atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
+    if not preview: atomic_json(metadata_file(target), record)
+    if preview:
+        os.utime(target, None)
+        trim_previews(target)
+        emit("preview", id=identifier, path=str(target), url=target.as_uri(), dimensions=record["resolution"],
+             uploader=record.get("uploader", "NASA"), tags=record.get("tag_names", []), page=record["url"], source="nasa")
+    else: emit("download", id=identifier, path=str(target), tags=record.get("tag_names", []))
+
+
+def transfer_image(url, target, hosts, cached=None):
+    """Publish only verified, complete images; reuse a verified HD preview."""
+    from PIL import Image
+    if target.is_file():
+        try:
+            with Image.open(target) as image: image.verify()
+            return
+        except (OSError, ValueError): target.unlink()
+    fd, temp = tempfile.mkstemp(dir=target.parent, prefix=".picker-", suffix=target.suffix)
+    try:
+        with os.fdopen(fd, "wb") as output:
+            reuse = False
+            if cached and cached.is_file() and cached != target:
+                try:
+                    with Image.open(cached) as image: image.verify()
+                    with cached.open("rb") as source: shutil.copyfileobj(source, output)
+                    reuse = True
+                except (OSError, ValueError): output.seek(0); output.truncate()
+            if not reuse:
+                emit("progress", stage="download", label="Afbeelding downloaden…", percent=-1)
+                request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.1"})
+                with urllib.request.urlopen(request, timeout=45) as response:
+                    if not valid_url(response.url, hosts): raise ValueError("Onverwachte downloadredirect")
+                    expected = int(response.headers.get("Content-Length", 0)) if hasattr(response, "headers") else 0
+                    total, last = 0, 0
+                    while chunk := response.read(256 * 1024):
+                        total += len(chunk)
+                        if total > 100 * 1024 * 1024: raise ValueError("Afbeelding is groter dan 100 MB")
+                        output.write(chunk)
+                        if time.monotonic() - last > .12:
+                            last = time.monotonic()
+                            emit("progress", stage="download", label="Afbeelding downloaden…", percent=min(100, round(total * 100 / expected)) if expected else -1, bytes=total)
+                    if expected and total != expected: raise ValueError("Download onderbroken; probeer opnieuw")
+        with Image.open(temp) as image: image.verify()
+        os.replace(temp, target)
+    finally:
+        with contextlib.suppress(FileNotFoundError): os.unlink(temp)
+
+
 def valid_url(url, hosts):
     parsed = urllib.parse.urlparse(url)
     return parsed.scheme == "https" and parsed.hostname in hosts and parsed.port in (None, 443)
 
 
 def download(identifier, preview=False):
+    if identifier.startswith("nasa-"):
+        return download_nasa(identifier, preview)
     if not re.fullmatch(r"[a-z0-9]{6}", identifier):
         raise ValueError("Ongeldig Wallhaven-ID")
     if preview:
@@ -403,7 +539,36 @@ def download(identifier, preview=False):
                          colors=record.get("colors", []), page="https://wallhaven.cc/w/" + identifier)
                     return
                 except (OSError, ValueError): pass
-    data = remote_json("https://wallhaven.cc/api/v1/w/" + identifier)["data"]
+    record = read_json(CACHE / "metadata" / (identifier + ".json"))
+    data = record.get("data", {}) if record.get("id") == identifier else {}
+    candidate = Path(record.get("path") or "/nonexistent")
+    if not preview and not data.get("path") and record.get("id") == identifier and candidate.is_file() and candidate.parent == CACHE / "previews" and candidate.stem == "wallhaven-" + identifier and candidate.suffix.lower() in IMAGES:
+        # Also reuse previews cached by the previous picker version, whose
+        # sidecars contain normalized tags but no raw detail response.
+        target = library() / candidate.name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        transfer_image("", target, {"w.wallhaven.cc"}, candidate)
+        atomic_json(metadata_file(target), dict(record, path=str(target)))
+        atomic_json(CACHE / "metadata" / (identifier + ".json"), dict(record, path=str(target)))
+        emit("download", id=identifier, path=str(target), tags=record.get("tag_names", []))
+        return
+    seed = read_json(CACHE / "search" / ("wallhaven-" + identifier + ".json"))
+    # A small, provider-validated search record lets an image transfer run at
+    # the same time as the detail request, instead of waiting for it to finish.
+    if not data.get("path") and valid_url(seed.get("path", ""), {"w.wallhaven.cc"}):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            details = pool.submit(remote_json, "https://wallhaven.cc/api/v1/w/" + identifier)
+            url = seed["path"]
+            suffix = Path(urllib.parse.urlparse(url).path).suffix.lower()
+            if suffix not in IMAGES: raise ValueError("Onbekend afbeeldingsformaat")
+            folder = CACHE / "previews" if preview else library()
+            folder.mkdir(parents=True, exist_ok=True)
+            transfer_image(url, folder / ("wallhaven-" + identifier + suffix), {"w.wallhaven.cc"},
+                           CACHE / "previews" / ("wallhaven-" + identifier + suffix))
+            data = details.result()["data"]
+    if not data.get("path"):
+        emit("progress", stage="metadata", label="Wallhaven-gegevens ophalen…", percent=-1)
+        data = remote_json("https://wallhaven.cc/api/v1/w/" + identifier)["data"]
     url = data["path"]
     if not valid_url(url, {"w.wallhaven.cc"}):
         raise ValueError("Ongeldig downloadadres")
@@ -413,41 +578,7 @@ def download(identifier, preview=False):
     folder = CACHE / "previews" if preview else library()
     folder.mkdir(parents=True, exist_ok=True)
     target = folder / ("wallhaven-" + identifier + suffix)
-    if preview and target.is_file():
-        from PIL import Image
-        try:
-            with Image.open(target) as image:
-                image.verify()
-        except (OSError, ValueError):
-            target.unlink()
-    if not target.is_file():
-        fd, temp = tempfile.mkstemp(dir=folder, prefix=".wallhaven-", suffix=suffix)
-        try:
-            cached = CACHE / "previews" / target.name
-            with os.fdopen(fd, "wb") as output:
-                if not preview and cached.is_file():
-                    # Inspecting a full image should not require downloading
-                    # the same bytes again when the user chooses to keep it.
-                    with cached.open("rb") as source:
-                        shutil.copyfileobj(source, output)
-                else:
-                    request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.0"})
-                    with urllib.request.urlopen(request, timeout=45) as response:
-                        if not valid_url(response.url, {"w.wallhaven.cc"}):
-                            raise ValueError("Onverwachte downloadredirect")
-                        total = 0
-                        while chunk := response.read(256 * 1024):
-                            total += len(chunk)
-                            if total > 100 * 1024 * 1024:
-                                raise ValueError("Afbeelding is groter dan 100 MB")
-                            output.write(chunk)
-            from PIL import Image
-            with Image.open(temp) as image:
-                image.verify()
-            os.replace(temp, target)
-        finally:
-            with contextlib.suppress(FileNotFoundError):
-                os.unlink(temp)
+    transfer_image(url, target, {"w.wallhaven.cc"}, CACHE / "previews" / target.name)
     record = remember_wallhaven(identifier, data, target, save_sidecar=not preview)
     if preview:
         os.utime(target, None)
@@ -462,8 +593,8 @@ def download(identifier, preview=False):
 
 
 def remove(identifier):
-    if not re.fullmatch(r"[a-z0-9]{6}", identifier):
-        raise ValueError("Ongeldig Wallhaven-ID")
+    if not re.fullmatch(r"(?:[a-z0-9]{6}|nasa-[a-f0-9]{24})", identifier):
+        raise ValueError("Ongeldig wallpaper-ID")
     saved = saved_wallhaven(identifier)
     if not saved:
         emit("removed", id=identifier, path="", remaining="")
@@ -489,10 +620,21 @@ def apply(path):
     helper = Path(__file__).resolve().parents[2] / "wallpaper/kingstra-wallpaper"
     env = dict(os.environ, PATH=str(HOME / ".local/bin") + ":" + os.environ.get("PATH", ""))
     mode = "video" if path.suffix.lower() in VIDEOS else "set"
-    # Separate process group: finishing a theme apply survives closing the picker.
-    result = subprocess.run(["bash", str(helper), mode, str(path)], env=env,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
-    if result.returncode:
+    # Stream renderer/palette milestones while slower app refreshes finish.
+    # The separate process group lets closing the picker finish the apply.
+    env["KINGSTRA_PICKER_EVENTS"] = "1"
+    emit("progress", stage="apply", label="Wallpaper instellen…", percent=-1)
+    process = subprocess.Popen(["bash", str(helper), mode, str(path)], env=env,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               text=True, start_new_session=True)
+    for line in process.stdout:
+        marker = line.strip()
+        if marker == "KINGSTRA_PICKER_WALLPAPER_SET":
+            emit("wallpaper-set", path=str(path))
+            emit("progress", stage="colors", label="Kleuren bijwerken…", percent=-1)
+        elif marker == "KINGSTRA_PICKER_PALETTE_READY":
+            emit("progress", stage="apps", label="Wallpaper ingesteld · apps bijwerken…", percent=-1)
+    if process.wait():
         raise ValueError("Wallpaper toepassen is niet afgerond. Probeer opnieuw.")
     emit("applied", path=str(path))
 
@@ -505,6 +647,7 @@ def main():
     prefs.add_argument("key")
     prefs.add_argument("value")
     find = sub.add_parser("search")
+    find.add_argument("--source", choices=["wallhaven", "nasa"], default="wallhaven")
     find.add_argument("--query", default="")
     find.add_argument("--page", type=int, default=1)
     find.add_argument("--sort", choices=["toplist", "date_added", "random", "favorites", "views"], default="toplist")
@@ -528,9 +671,10 @@ def main():
         elif args.command == "remove": remove(args.id)
         elif args.command == "apply": apply(args.path)
     except urllib.error.HTTPError as error:
+        provider = "NASA" if getattr(args, "source", "") == "nasa" or str(getattr(args, "id", "")).startswith("nasa-") else "Wallhaven"
         messages = {401: "Wallhaven: controleer je API-sleutel", 403: "Wallhaven weigert de aanvraag",
                     429: "Wallhaven-limiet bereikt; probeer het straks opnieuw"}
-        emit("error", message=messages.get(error.code, f"Wallhaven geeft HTTP {error.code}"))
+        emit("error", message=messages.get(error.code, f"{provider} geeft HTTP {error.code}") if provider == "Wallhaven" else f"NASA geeft HTTP {error.code}; probeer straks opnieuw")
         return 1
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         # Never include authenticated request URLs in errors.

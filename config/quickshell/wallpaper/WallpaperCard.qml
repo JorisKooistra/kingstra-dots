@@ -19,12 +19,13 @@ Item {
     property bool remote: false
     property bool actionBusy: false
     property bool removable: false
-    readonly property bool hovered: interactiveHover && (input.containsMouse || actionInput.containsMouse)
+    readonly property bool hovered: interactiveHover && (input.containsMouse || applyButton.hovered || downloadButton.hovered || removeButton.hovered)
     readonly property bool highlighted: selected || hovered
     readonly property bool captionVisible: highlighted || current || itemData.favorite === true
     property string fontFamily: "Sans Serif"
     signal picked
     signal favoriteRequested
+    signal applyRequested
     signal downloadRequested
     signal removeRequested
     readonly property string imageSource: thumbnail.thumb || itemData.thumb || ""
@@ -103,48 +104,44 @@ Item {
         // The first click has already activated this picture. A double click
         // must not submit a second download or wallpaper change.
         onDoubleClicked: event => event.accepted = true
-        Rectangle {
-            id: action
-            objectName: "wallpaper-action"
+        Grid {
             x: (card.width - width) / 2
             y: 10 + card.bend(card.width / 2) - input.y
-            width: 34
-            height: 34
-            radius: 10
+            columns: card.width < 150 ? 1 : (card.itemData.path ? 3 : 2)
+            spacing: 4
             visible: card.remote && (card.hovered || card.selected)
-            color: card.colors.surface
-            border.width: 1
-            border.color: card.colors.primary
-            opacity: card.actionBusy || (card.itemData.path && !card.removable) ? 0.4 : 1
-            Accessible.role: Accessible.Button
-            Accessible.name: card.itemData.path ? "Naar prullenbak" : "Downloaden"
-            ToolTip.visible: actionInput.containsMouse
-            ToolTip.text: card.itemData.path ? (card.removable ? "Naar prullenbak" : "Deze wallpaper is actief") : "Downloaden"
-            Text {
-                anchors.centerIn: parent
-                text: card.itemData.path ? "⌫" : "↓"
-                color: card.colors.primary
-                font.pixelSize: 20
-                font.family: card.fontFamily
+            PickerIconButton {
+                id: applyButton
+                objectName: "wallpaper-apply"
+                colors: card.colors
+                icon: "apply"
+                label: card.current ? "Al ingesteld" : "Instellen"
+                available: !card.actionBusy && !card.current
+                selected: card.current
+                onClicked: card.applyRequested()
             }
-            MouseArea {
-                id: actionInput
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: event => {
-                    event.accepted = true;
-                    if (card.actionBusy)
-                        return;
-                    if (card.itemData.path) {
-                        if (card.removable)
-                            card.removeRequested();
-                    } else
-                        card.downloadRequested();
-                }
+            PickerIconButton {
+                id: downloadButton
+                objectName: "wallpaper-download"
+                colors: card.colors
+                icon: card.itemData.path ? "check" : "download"
+                label: card.itemData.path ? "Opgeslagen in je collectie" : "Downloaden"
+                available: !card.actionBusy && !card.itemData.path
+                onClicked: card.downloadRequested()
+            }
+            PickerIconButton {
+                id: removeButton
+                objectName: "wallpaper-remove"
+                colors: card.colors
+                icon: "trash"
+                label: card.removable ? "Naar prullenbak" : "Deze wallpaper is actief"
+                visible: !!card.itemData.path
+                available: !card.actionBusy && card.removable
+                onClicked: card.removeRequested()
             }
         }
     }
+
     Rectangle {
         anchors.horizontalCenter: card.horizontalCenter
         anchors.bottom: card.bottom
@@ -158,7 +155,7 @@ Item {
             id: caption
             anchors.centerIn: parent
             width: Math.min(implicitWidth, parent.width - 16)
-            text: (card.current ? "✓  " : "") + (card.itemData.favorite ? "♥  " : "") + card.itemData.name
+            text: (card.current ? "✓  " : "") + (card.itemData.favorite ? "♥  " : "") + (card.itemData.displayName || card.itemData.name)
             textFormat: Text.PlainText
             color: card.colors.text
             elide: Text.ElideMiddle
