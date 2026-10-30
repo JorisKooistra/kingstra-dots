@@ -224,7 +224,7 @@ Rectangle {
             PickerButton {
                 objectName: "preview-download"
                 colors: preview.colors
-                text: preview.controller.chosen.path ? "Opgeslagen" : (preview.controller.sourceTab === "zedge" ? "Voorbeeld opslaan" : "Downloaden")
+                text: preview.controller.chosen.path ? "Opgeslagen" : "Downloaden"
                 available: !preview.controller.busy && !preview.controller.chosen.path
                 onClicked: preview.controller.downloadChosen()
             }

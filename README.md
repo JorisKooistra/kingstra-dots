@@ -211,15 +211,23 @@ kept in the image sidecar and shown in the preview.
 
 Additional source tabs provide [Wallpapers.com](https://wallpapers.com/api/),
 [Alpha Coders](https://alphacoders.com/), [backiee](https://backiee.com/),
-[WallpapersCraft](https://wallpaperscraft.com/), [Zedge](https://www.zedge.net/),
+[WallpapersCraft](https://wallpaperscraft.com/), [GoodFon](https://www.goodfon.com/),
+[WallpapersWide](https://wallpaperswide.com/),
 [Pexels](https://www.pexels.com/api/) and [Pixabay](https://pixabay.com/api/docs/).
 Wallpapers.com uses its public API (up to 60 results per topic); Pexels and Pixabay
-require a key. The other four use publicly available site data rather than a supported
-developer API. Zedge exposes only free, unlicensed site previews: these are explicitly
-labelled, and the original remains available through the source-page button. No premium
-or rewarded download routes are used. Public site parsers may need maintenance when
+require a key. Pexels is hidden from the source selector until a key is configured;
+its key field remains available. Removing its key while browsing Pexels returns to
+the local collection. The other five use publicly available site data rather than a
+supported developer API. GoodFon resolves its original image, creator and license from
+the published ImageObject data. WallpapersWide searches its native tags and uses its
+published main HD download link. Public site parsers may need maintenance when
 their markup changes. Published original images, titles, tags and credit are retained
 where the source supplies them; unsupported source-specific filters stay hidden.
+
+[HDQwalls](https://hdqwalls.com/) is a clearly labelled external source: its Cloudflare
+challenge currently prevents automated access. Its picker page opens the official
+website and does not invent search results or attempt to bypass the challenge.
+Zedge is no longer offered; existing downloaded files and their metadata remain usable.
 
 The **API-sleutels** button contains masked local key fields for Wallhaven (optional),
 Wallpapers.com (optional), Pexels and Pixabay, with request links and remove controls.
@@ -294,7 +302,9 @@ python3 tests/integration/wallpaper-picker-offscreen.py --output /tmp/picker-tes
 # Add --live-wallhaven, --live-nasa or --live-commons for real API checks.
 # Add --paging-only to verify scroll position through page loads in every view.
 python3 tests/integration/wallpaper-providers-live.py --output /tmp/picker-live-sources
-# Explicit network check of the five new keyless sources; private files, no apply.
+# Explicit network check of the six keyless sources; private files, no apply.
+# Use --live-source goodfon or --live-source wallpaperswide with the graphical
+# integration test for a real website search, HD preview and private download.
 ```
 
 The integration test uses actual Qt click, wheel and keyboard events, private

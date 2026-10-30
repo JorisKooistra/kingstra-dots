@@ -483,6 +483,8 @@ def exercise(picker):
 
 
 def exercise_sources(p):
+    assert 'pexels' not in p.state()['availableSources'], 'Pexels shown without a key'
+    assert 'zedge' not in p.state()['availableSources'], 'Removed Zedge source is still shown'
     # Keys travel through a real masked field and stdin into isolated storage.
     p.click("sources-settings")
     p.wait(lambda s:s["credentialsOpen"], "key settings")
@@ -496,17 +498,18 @@ def exercise_sources(p):
     keys=p.base/"config/kingstra/wallpaper-sources.json"
     assert keys.stat().st_mode & 0o777 == 0o600
     assert set(json.loads(keys.read_text()))=={"wallhaven","wallpaperscom","pixabay","pexels"}
+    p.click("sources-close")
+    p.click("source-pexels")
+    p.wait(lambda s:s['source']=='pexels' and s['count']>0 and not s['loading'], 'configured Pexels is available')
+    p.click("sources-settings")
     p.click("remove-key-pexels")
     p.wait(lambda s:any(v["id"]=="pexels" and not v["configured"] for v in s["credentials"]), "remove key")
-    p.ipc("harness", "key", 0x01000000)
-    p.wait(lambda s:not s["credentialsOpen"], "Escape closes key dialog")
-    p.click("source-pexels")
-    p.wait(lambda s:s["credentialsOpen"] and not s["loading"], "missing key opens settings")
+    assert p.state()['source']=='local' and 'pexels' not in p.state()['availableSources'], 'removing the active key left a hidden source selected'
     p.ipc("harness", "keyText", "key-pexels", "test-private-pexels-123456")
     p.click("save-key-pexels")
-    p.wait(lambda s:s["count"]>0 and not s["loading"] and s["credentialMessage"], "key unlocks source")
+    p.wait(lambda s:'pexels' in s['availableSources'] and s["credentialMessage"], "key unlocks source")
     p.click("sources-close")
-    for source in ["wallpaperscom","alphacoders","backiee","wallpaperscraft","zedge","pexels","pixabay"]:
+    for source in ["wallpaperscom","alphacoders","backiee","wallpaperscraft","goodfon","wallpaperswide","pexels","pixabay"]:
         p.click("source-"+source)
         p.wait(lambda s:s["source"]==source and s.get("chosenId", "").startswith(source+"-") and not s["loading"], "source " + source)
         p.picture()
@@ -533,7 +536,11 @@ def exercise_sources(p):
     p.click("pixabay-safe")
     p.wait(lambda s:s["safeSearch"] and not s["loading"], "Pixabay safe search checkbox on")
     p.capture("pixabay-filters")
-    print("ok: API fields, masked secrets via stdin, private storage, delete/unlock and seven sources preview/save/apply")
+    p.click("source-hdqwalls")
+    state=p.wait(lambda s:s['externalSource'] and not s['loading'] and s['count']==0, 'honest HDQwalls external fallback')
+    assert 'browsercontrole' in state['notice']
+    p.capture('hdqwalls-external')
+    print("ok: API fields, masked secrets, Pexels hidden/unlocked/removed, eight sources preview/save/apply and HDQwalls external fallback")
 
 
 def exercise_filters(p):
@@ -650,6 +657,27 @@ def exercise_live_commons(p):
     print("ok: actual Commons API, photo palette, tags, HD preview, save, author and license")
 
 
+def exercise_live_source(p, source):
+    p.click('source-'+source)
+    p.ipc('harness','text','nature')
+    state=p.wait(lambda s:s['source']==source and s['count']>0 and not s['loading'], 'actual '+source+' search', timeout=70)
+    p.click('mode-wall')
+    time.sleep(.4)
+    p.capture(source+'-live-grid')
+    p.picture()
+    p.wait(lambda s:s['preview'] and s['previewInfo'].get('id')==s.get('chosenId') and bool(s['previewSource']), 'actual '+source+' HD preview', timeout=60)
+    p.capture(source+'-live-preview')
+    p.click('preview-download')
+    state=p.wait(lambda s:bool(s.get('chosenPath')) and not s['busy'], 'save '+source+' image', timeout=20)
+    path=Path(state['chosenPath'])
+    record=json.loads(Path(str(path)+'.json').read_text())
+    assert path.parent==p.base/'library' and record['source']==source and record['tag_names'] and record['uploader'],record
+    with Image.open(path) as image:
+        assert image.width>=1920 and image.height>=1080, image.size
+    (p.base/'live-result.json').write_text(json.dumps(dict(state=state,metadata=record),indent=2))
+    print('ok: actual '+source+' search, native HD preview, download, tags and credit')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, help="Keep screenshots, logs and isolated fixtures in this new directory")
@@ -657,6 +685,7 @@ def main():
     parser.add_argument("--live-wallhaven", action="store_true", help="Use actual Wallhaven search/preview instead of deterministic remote fixtures; never applies to the desktop")
     parser.add_argument("--live-commons", action="store_true", help="Check real Commons search, metadata, HD preview and save in private files")
     parser.add_argument("--live-nasa", action="store_true", help="Exercise the actual NASA API with all files kept in the private test directory")
+    parser.add_argument("--live-source", choices=['goodfon','wallpaperswide'], help="Exercise a new website source with real Qt input, HD preview and private download")
     parser.add_argument("--paging-only", action="store_true", help="Check real wheel pagination in all four views")
     args = parser.parse_args()
     temp = None
@@ -668,8 +697,10 @@ def main():
         base = Path(temp.name)
     picker = None
     try:
-        picker = Picker(base, args.xvfb, args.live_wallhaven or args.live_nasa or args.live_commons)
-        if args.live_commons:
+        picker = Picker(base, args.xvfb, args.live_wallhaven or args.live_nasa or args.live_commons or bool(args.live_source))
+        if args.live_source:
+            exercise_live_source(picker,args.live_source)
+        elif args.live_commons:
             exercise_live_commons(picker)
         elif args.live_nasa:
             exercise_live_nasa(picker)

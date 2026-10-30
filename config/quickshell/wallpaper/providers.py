@@ -9,6 +9,7 @@ import html
 from html.parser import HTMLParser
 import json
 import re
+from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urljoin, urlparse
 
 SOURCES = {
@@ -16,10 +17,15 @@ SOURCES = {
     "alphacoders": dict(label="Alpha Coders", url="https://alphacoders.com/", kind="site"),
     "backiee": dict(label="backiee", url="https://backiee.com/", kind="site"),
     "wallpaperscraft": dict(label="WallpapersCraft", url="https://wallpaperscraft.com/", kind="site"),
-    "zedge": dict(label="Zedge", url="https://www.zedge.net/", kind="site"),
+    "goodfon": dict(label="GoodFon", url="https://www.goodfon.com/", kind="site"),
+    "hdqwalls": dict(label="HDQwalls", url="https://hdqwalls.com/", kind="external", externalOnly=True,
+                     notice="HDQwalls vraagt een browsercontrole. Open de website om daar wallpapers te bekijken en te downloaden."),
+    "wallpaperswide": dict(label="WallpapersWide", url="https://wallpaperswide.com/", kind="site", tagSearch=True),
     "pexels": dict(label="Pexels", url="https://www.pexels.com/", keyUrl="https://www.pexels.com/api/", needsKey=True, kind="api"),
     "pixabay": dict(label="Pixabay", url="https://pixabay.com/", keyUrl="https://pixabay.com/api/docs/", needsKey=True, kind="api"),
 }
+# Preserve the metadata of images already saved from a removed source.
+LEGACY_SOURCES = {"zedge"}
 PIXABAY_CATEGORIES = ["backgrounds", "fashion", "nature", "science", "education", "feelings", "health", "people", "religion", "places", "animals", "industry", "computer", "food", "sports", "transportation", "travel", "buildings", "business", "music"]
 SOURCES["pixabay"]["categories"] = PIXABAY_CATEGORIES
 IMAGE_HOSTS = {
@@ -27,7 +33,9 @@ IMAGE_HOSTS = {
     "alphacoders": {"images.alphacoders.com", *{f"images{i}.alphacoders.com" for i in range(1, 10)}},
     "backiee": {"backiee.com"},
     "wallpaperscraft": {"images.wallpaperscraft.com"},
-    "zedge": {"is.zobj.net", "fsb.zobj.net", "fs-test.zobj.net"},
+    "goodfon": {"img.goodfon.com"},
+    "hdqwalls": set(),
+    "wallpaperswide": {"wallpaperswide.com", "hd.wallpaperswide.com"},
     "pexels": {"images.pexels.com"},
     "pixabay": {"pixabay.com", "cdn.pixabay.com"},
 }
@@ -36,7 +44,9 @@ PAGE_HOSTS = {
     "alphacoders": {"alphacoders.com", "wall.alphacoders.com"},
     "backiee": {"backiee.com"},
     "wallpaperscraft": {"wallpaperscraft.com"},
-    "zedge": {"www.zedge.net", "zedge.net"},
+    "goodfon": {"www.goodfon.com", "goodfon.com"},
+    "hdqwalls": {"hdqwalls.com", "www.hdqwalls.com"},
+    "wallpaperswide": {"wallpaperswide.com", "www.wallpaperswide.com"},
     "pexels": {"www.pexels.com", "api.pexels.com"},
     "pixabay": {"pixabay.com"},
 }
@@ -124,7 +134,7 @@ def slug(query):
 def page_has_next(doc, page):
     for link in doc.all("a"):
         href = html.unescape(link.attrs.get("href", ""))
-        if link.attrs.get("rel") == "next" or re.search(r"(?:[?&]page=|/page)" + str(page + 1) + r"(?:$|[&#/])", href):
+        if link.attrs.get("rel") == "next" or re.search(r"(?:[?&]page=|/page/?|(?:^|/)index-)" + str(page + 1) + r"(?=$|[&#/.])", href):
             return True
     return False
 
@@ -236,25 +246,43 @@ def search(source, args, fetch, key=""):
                                       href, image.attrs.get("src", "")))
             more = page_has_next(doc, page)
         notice = "backiee · openbare websitebron"
-    elif source == "zedge":
-        # Only the freely available, unlicensed site images. Never follow
-        # premium, rewarded-video or purchase routes.
-        url = "https://www.zedge.net/find/wallpapers/" + quote(query, safe="") if query else "https://www.zedge.net/wallpapers"
-        doc = fetch(url, as_json=False)
-        seen = set()
-        for row in zedge_items(doc):
-            if row.get("paymentMethod", {}).get("type") != "NONE" or row.get("licensed"): continue
-            if row["id"] in seen: continue
-            seen.add(row["id"])
-            info = row.get("meta", {})
-            item = record(source, row["id"], row.get("title", ""), "https://www.zedge.net/wallpapers/" + row["id"],
-                          info.get("thumbUrl", ""), info.get("previewUrl", ""))
-            item.update(uploader=row.get("profile", {}).get("name", "Zedge"))
-            item["asset_note"] = "Openbaar sitevoorbeeld · origineel via Zedge"
+    elif source == "goodfon":
+        url = "https://www.goodfon.com/search/?" + urlencode(dict(q=query, page=page)) if query else ("https://www.goodfon.com/" if page == 1 else f"https://www.goodfon.com/index-{page}.html")
+        doc = Document(fetch(url, as_json=False)).root
+        for tile in doc.all("div", "wallpapers__item__wall"):
+            image = next(tile.all("img", "wallpapers__item__img"), None)
+            if image is None: continue
+            link = image.parent
+            href = urljoin(url, link.attrs.get("href", ""))
+            if not re.search(r"/wallpaper-[^/]+\.html$", urlparse(href).path): continue
+            item = record(source, href, image.attrs.get("alt") or link.attrs.get("title", ""), href, urljoin(url, image.attrs.get("src", "")))
+            size = next(tile.all("div", "wallpapers__item__size"), None)
+            match = re.search(r"([0-9]+)x([0-9]+)", size.text()) if size else None
+            if match: item["resolution"] = dimension(match[1], match[2])
+            author = next(tile.all("a", "wallpapers__item__user_block"), None)
+            if author: item["uploader"] = author.attrs.get("title") or item["uploader"]
+            item["is_ai"] = urlparse(href).path.startswith("/ai-art/")
             records.append(item)
-        # The public server-rendered page has one batch and no stable public
-        # pagination API. Do not fake endlessly repeating pages.
-        notice = "Zedge · vrije sitevoorbeelden, veelal staand · origineel via de bronpagina"
+        more = page_has_next(doc, page)
+        notice = "GoodFon · originele wallpaper en brongegevens via de openbare website"
+    elif source == "wallpaperswide":
+        term = quote(query.lower(), safe="").replace("%20", "+")
+        if query: url = f"https://wallpaperswide.com/tag/{term}.html" if page == 1 else f"https://wallpaperswide.com/tag/{term}/page/{page}"
+        else: url = "https://wallpaperswide.com/" if page == 1 else f"https://wallpaperswide.com/page/{page}"
+        try: body = fetch(url, as_json=False)
+        except HTTPError as error:
+            if error.code != 404: raise
+            error.close()
+            body = ""
+        doc = Document(body).root
+        for image in doc.all("img", "thumb_img"):
+            link = image.parent
+            href = urljoin(url, link.attrs.get("href", ""))
+            if not re.search(r"/[^/]+-wallpapers\.html$", urlparse(href).path): continue
+            name = re.split(r" (?:4K UHD|UltraHD|HD) Wallpaper", image.attrs.get("alt", ""))[0]
+            records.append(record(source, href, name, href, urljoin(url, image.attrs.get("src", ""))))
+        more = page_has_next(doc, page)
+        notice = "WallpapersWide · zoeken op de eigen brontags · gepubliceerde HD-downloads"
     else:
         raise ValueError("Onbekende bron")
     # Preserve pagination even when a whole page consists of excluded labels.
@@ -263,26 +291,9 @@ def search(source, args, fetch, key=""):
     return dict(records=records, page=page, lastPage=last_page, notice=notice)
 
 
-def zedge_items(body):
-    def walk(value):
-        if isinstance(value, dict):
-            if value.get("id") and value.get("type") == "WALLPAPER": yield value
-            for child in value.values(): yield from walk(child)
-        elif isinstance(value, list):
-            for child in value: yield from walk(child)
-    for raw in re.findall(r"self\.__next_f\.push\((\[.*?\])\)</script>", body):
-        try: chunk = json.loads(raw)
-        except ValueError: continue
-        if len(chunk) < 2 or not isinstance(chunk[1], str): continue
-        for line in chunk[1].splitlines():
-            try: value = json.loads(line.split(":", 1)[1])
-            except (ValueError, IndexError): continue
-            yield from walk(value)
-
-
 def details(item, fetch):
     source = item["source"]
-    if source not in {"wallpaperscom", "alphacoders", "backiee", "wallpaperscraft", "zedge"}: return item
+    if source not in {"wallpaperscom", "alphacoders", "backiee", "wallpaperscraft", "goodfon", "wallpaperswide"}: return item
     body = fetch(item["url"], as_json=False, ttl=3600)
     doc = Document(body).root
     result = dict(item)
@@ -342,11 +353,29 @@ def details(item, fetch):
                 result["tag_names"] = [part.strip() for part in str(data.get("keywords", "")).split(",") if part.strip()] or result["tag_names"]
                 author = data.get("author", {})
                 if isinstance(author, dict): result["uploader"] = author.get("name", result["uploader"])
-    elif source == "zedge":
-        found = next((row for row in zedge_items(body) if row["id"] == item["remote_id"]), None)
-        if not found or found.get("paymentMethod", {}).get("type") != "NONE" or found.get("licensed"):
-            raise ValueError("Deze Zedge-afbeelding is niet vrij beschikbaar")
-        result.update(download_url=found.get("meta", {}).get("previewUrl", ""), tag_names=found.get("tags", []),
-                      uploader=found.get("profile", {}).get("name", "Zedge"))
+    elif source == "goodfon":
+        image_tags = next(doc.all("div", "wallpaper__tags"), None)
+        if image_tags: result["tag_names"] = tags(image_tags)
+        for node in doc.all("script"):
+            if node.attrs.get("type") != "application/ld+json": continue
+            try: data = json.loads("".join(node.parts))
+            except ValueError: continue
+            if not isinstance(data, dict) or data.get("@type") != "ImageObject": continue
+            result["download_url"] = data.get("contentUrl", "")
+            result["license_url"] = data.get("license", "")
+            result["resolution"] = dimension(data.get("width"), data.get("height"))
+            if data.get("keywords"):
+                result["tag_names"] = [part.strip() for part in data["keywords"].split(",") if part.strip()][:24]
+            creator = data.get("creator", {})
+            if isinstance(creator, dict): result["uploader"] = creator.get("name", result["uploader"])
+        if not result.get("download_url"): raise ValueError("De originele GoodFon-download ontbreekt op de bronpagina")
+    elif source == "wallpaperswide":
+        published = next((node for node in doc.all("a") if "contentUrl" in node.attrs.get("itemprop", "").split()), None)
+        if not published or not re.search(r"/download/[^/]+-wallpaper-[0-9]+x[0-9]+\.[a-z]+$", published.attrs.get("href", "")):
+            raise ValueError("De HD-download ontbreekt op de WallpapersWide-bronpagina")
+        result["download_url"] = urljoin(item["url"], published.attrs["href"])
+        author = next((node for node in doc.all("a") if node.attrs.get("rel") == "author"), None)
+        if author: result["uploader"] = author.text().removeprefix("More wallpapers posted by ")
+        result["tag_names"] = list(dict.fromkeys(node.text() for node in doc.all("a") if node.attrs.get("rel") == "tag" and "/tag/" in node.attrs.get("href", "")))[:24]
     result["details_ready"] = True
     return result

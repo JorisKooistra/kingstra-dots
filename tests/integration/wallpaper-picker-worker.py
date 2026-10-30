@@ -45,6 +45,9 @@ def main():
         source = args.get("--source", "wallhaven")
         prefix = hashlib.sha256((query + color + source).encode()).hexdigest()[:2]
         backend=runpy.run_path(str(ROOT / "config/quickshell/wallpaper/backend.py"),run_name="fixture")
+        if backend["providers"].SOURCES.get(source, {}).get("externalOnly"):
+            emit("search", items=[], page=1, lastPage=1, notice=backend["providers"].SOURCES[source]["notice"])
+            return
         if backend["providers"].SOURCES.get(source, {}).get("needsKey") and not backend["provider_keys"]().get(source):
             emit("error", message="Voeg je sleutel toe via API-sleutels", needsKey=True)
             return

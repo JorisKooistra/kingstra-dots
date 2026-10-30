@@ -192,18 +192,79 @@ class ProviderTests(unittest.TestCase):
         p.search('backiee',args('backiee',2),lambda url,**kwargs:calls.append(url) or '')
         self.assertIn('page=2',calls[0])
 
-    def test_zedge_only_free_unlicensed_public_preview_and_rechecks_detail(self):
-        def row(identifier,payment='NONE',licensed=False):
-            return dict(id=identifier,type='WALLPAPER',title='Art',paymentMethod=dict(type=payment),licensed=licensed,
-                        meta=dict(thumbUrl='https://is.zobj.net/thumb',previewUrl='https://fsb.zobj.net/preview'),tags=['art'])
-        def body(rows):
-            return '<script>self.__next_f.push('+json.dumps([1,'a:'+json.dumps(dict(items=rows))+'\n'])+')</script>'
-        free=row('free-id')
-        result=p.search('zedge',args('zedge'),lambda url,**kwargs:body([free,row('paid','PREMIUM'),row('licensed',licensed=True)]))
-        self.assertEqual([i['remote_id'] for i in result['records']],['free-id'])
+    def test_removed_zedge_source_preserves_saved_image_metadata(self):
+        self.assertNotIn('zedge',p.SOURCES)
+        path=self.base/'library/zedge-old.jpg'
+        path.parent.mkdir()
+        Image.new('RGB',(100,100),'blue').save(path)
+        picker.atomic_json(picker.metadata_file(path),dict(source='zedge',tag_names=['sky'],uploader='Creator',name='Old wallpaper'))
+        metadata=picker.local_metadata(path,{})
+        self.assertEqual(metadata['tags'],['sky'])
+        self.assertEqual(metadata['displayName'],'Old wallpaper')
+        self.assertTrue(path.is_file())
+
+    def test_hdqwalls_external_fallback_has_no_network_or_fake_results(self):
+        self.assertTrue(p.SOURCES['hdqwalls']['externalOnly'])
+        with patch.object(picker,'provider_fetch') as request:
+            result=self.capture(picker.search,args('hdqwalls'))[0]
+            request.assert_not_called()
+        self.assertEqual(result['items'],[])
         self.assertEqual(result['lastPage'],1)
-        self.assertIn('sitevoorbeeld',result['records'][0]['asset_note'])
-        with self.assertRaises(ValueError): p.details(result['records'][0],lambda url,**kwargs:body([row('free-id','PREMIUM')]))
+        self.assertIn('browsercontrole',result['notice'])
+
+    def test_goodfon_search_pagination_original_credit_tags_and_ai_marker(self):
+        body='''<div class="wallpapers__item__wall"><a href="/nature/wallpaper-forest.html"><img class="wallpapers__item__img" alt="Forest" src="https://img.goodfon.com/wallpaper/big/forest.webp"></a>
+        <div class="wallpapers__item__size">3840x2160</div><a class="wallpapers__item__user_block" title="Alice"></a></div>
+        <div class="wallpapers__item__wall"><a href="/ai-art/wallpaper-other.html"><img class="wallpapers__item__img" alt="Forest" src="https://img.goodfon.com/wallpaper/big/other.webp"></a></div><a href="index-2.html">Next</a>'''
+        query=args('goodfon',query='');query.exclude_ai=True
+        result=p.search('goodfon',query,lambda url,**kwargs:body)
+        self.assertEqual(len(result['records']),1)
+        self.assertEqual(result['lastPage'],2)
+        item=result['records'][0]
+        self.assertEqual(item['resolution'],'3840 × 2160')
+        original=dict(**{'@type':'ImageObject'},contentUrl='https://img.goodfon.com/original/3840x2160/forest.jpg',creator=dict(name='Bob'),width=3840,height=2160,license='https://creativecommons.org/licenses/by-nc/4.0/')
+        detail='<script type="application/ld+json">'+json.dumps(original)+'</script><div class="wallpaper__tags"><a href="/tags/forest/">forest</a></div><a href="/tags/unrelated/">unrelated</a>'
+        enriched=p.details(item,lambda url,**kwargs:detail)
+        self.assertEqual(enriched['tag_names'],['forest'])
+        self.assertIn('/original/',enriched['download_url'])
+        self.assertEqual(enriched['uploader'],'Bob')
+        with self.assertRaisesRegex(ValueError,'originele'):p.details(item,lambda url,**kwargs:'<p>not found</p>')
+
+    def test_wallpaperswide_native_tag_search_pages_and_published_hd(self):
+        calls=[]
+        body='''<a href="/forest-wallpapers.html"><img class="thumb_img" alt="Forest 4K UHD Wallpaper for Desktop" src="https://hd.wallpaperswide.com/thumbs/forest-t1.jpg"></a><a href="/tag/dark+contrast/page/2">Next</a>'''
+        def fetch(url,**kwargs):calls.append(url);return body
+        result=p.search('wallpaperswide',args('wallpaperswide',query='dark contrast'),fetch)
+        self.assertEqual(calls[0],'https://wallpaperswide.com/tag/dark+contrast.html')
+        self.assertEqual(result['lastPage'],2)
+        item=result['records'][0]
+        self.assertEqual(item['name'],'Forest')
+        p.search('wallpaperswide',args('wallpaperswide',2,'dark contrast'),fetch)
+        self.assertTrue(calls[-1].endswith('/tag/dark+contrast/page/2'))
+        detail='''<a itemprop="url contentUrl" href="/download/forest-wallpaper-3840x2160.jpg">4K</a><a rel="author">More wallpapers posted by Alice</a><a rel="tag" href="/nature-desktop-wallpapers.html">Seasons/Autumn</a><a rel="tag" href="/tag/forest.html">Forest</a>'''
+        enriched=p.details(item,lambda url,**kwargs:detail)
+        self.assertEqual(enriched['download_url'],'https://wallpaperswide.com/download/forest-wallpaper-3840x2160.jpg')
+        self.assertEqual(enriched['uploader'],'Alice')
+        self.assertEqual(enriched['tag_names'],['Forest'])
+        with self.assertRaisesRegex(ValueError,'HD-download'):p.details(item,lambda url,**kwargs:'<img src="small.jpg">')
+
+    def test_wallpaperswide_unknown_tag_is_empty_but_network_failures_are_not_hidden(self):
+        def request(url,**kwargs):raise picker.urllib.error.HTTPError(url,404,'not found',{},None)
+        self.assertEqual(p.search('wallpaperswide',args('wallpaperswide'),request)['records'],[])
+        error=picker.urllib.error.HTTPError('https://wallpaperswide.com/',403,'forbidden',{},io.BytesIO())
+        self.addCleanup(error.close)
+        def forbidden(url,**kwargs):raise error
+        with self.assertRaises(picker.urllib.error.HTTPError):p.search('wallpaperswide',args('wallpaperswide'),forbidden)
+
+    def test_search_refresh_preserves_enriched_credit_license_and_ai_metadata(self):
+        item=p.record('goodfon',1,'Forest','https://www.goodfon.com/nature/wallpaper-forest.html','https://img.goodfon.com/thumb.jpg')
+        enriched=dict(item,details_ready=True,detail_time=picker.time.time(),download_url='https://img.goodfon.com/original/forest.jpg',
+                      license_url='https://creativecommons.org/licenses/by-nc/4.0/',tag_names=['forest'],uploader='Alice',attribution='By Alice',is_ai=False)
+        picker.atomic_json(picker.CACHE/'metadata'/(item['id']+'.json'),enriched)
+        with patch.object(p,'search',return_value=dict(records=[item],page=1,lastPage=1)),patch.object(picker,'remote_thumbnail',return_value=dict(path=item['id'],thumb='file:///thumb.jpg')):
+            self.capture(picker.search,args('goodfon'))
+        record=picker.read_json(picker.CACHE/'metadata'/(item['id']+'.json'))
+        for field in ['license_url','attribution','uploader','is_ai','tag_names','download_url']:self.assertEqual(record[field],enriched[field])
 
     def test_repeated_site_page_stops_pagination(self):
         item=p.record('alphacoders',1,'Image','https://wall.alphacoders.com/big.php?i=1','https://images8.alphacoders.com/thumb.jpg')
@@ -216,6 +277,7 @@ class ProviderTests(unittest.TestCase):
 
     def test_all_sources_save_cached_full_preview_and_metadata_without_second_request(self):
         for source in p.SOURCES:
+            if p.SOURCES[source].get('externalOnly'):continue
             with self.subTest(source=source):
                 host=sorted(p.IMAGE_HOSTS[source])[0]
                 item=p.record(source,123,'Image','https://'+sorted(p.PAGE_HOSTS[source])[0]+'/image','https://'+host+'/thumb.jpg','https://'+host+'/full.jpg')

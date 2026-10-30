@@ -214,7 +214,7 @@ def metadata_file(path):
 def local_metadata(path, index):
     record = read_json(metadata_file(path))
     if not isinstance(record, dict): record = {}
-    if record.get("source") not in {"wallhaven", "nasa", "commons", *providers.SOURCES}:
+    if record.get("source") not in {"wallhaven", "nasa", "commons", *providers.SOURCES, *providers.LEGACY_SOURCES}:
         identifier = wallhaven_id(path)
         record = index.get(identifier) or read_json(CACHE / "metadata" / (identifier + ".json")) if identifier else {}
         if record and not metadata_file(path).exists():
@@ -528,6 +528,9 @@ def search(args):
 def search_extra(args):
     source = args.source
     info = providers.SOURCES[source]
+    if info.get("externalOnly"):
+        emit("search", items=[], page=1, lastPage=1, notice=info["notice"])
+        return
     key = provider_keys().get(source, "")
     if info.get("needsKey") and not key:
         emit("error", message="Voeg je " + info["label"] + "-sleutel toe via API-sleutels", needsKey=True)
@@ -552,9 +555,9 @@ def search_extra(args):
         if record.get("download_url") and not valid_url(record["download_url"], providers.IMAGE_HOSTS[source]): continue
         previous = read_json(CACHE / "metadata" / (identifier + ".json"))
         if previous.get("details_ready") and time.time() - previous.get("detail_time", 0) < 3600:
-            for field in ["tag_names", "uploader", "license", "resolution", "details_ready", "detail_time"]:
+            for field in ["tag_names", "uploader", "license", "license_url", "attribution", "is_ai", "resolution", "details_ready", "detail_time"]:
                 if field in previous: record[field] = previous[field]
-            if previous.get("download_url") and source != "zedge": record["download_url"] = previous["download_url"]
+            if previous.get("download_url"): record["download_url"] = previous["download_url"]
         record["path"] = saved_wallhaven(identifier) or previous.get("path", "")
         atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
         if getattr(args, "exclude_ai", False) and providers.is_ai(record): continue
@@ -711,7 +714,6 @@ def download_public(identifier, preview=False, exclude_ai=False):
         record["download_url"] = url
     if not valid_url(url, hosts): raise ValueError("Ongeldig downloadadres")
     suffix = Path(urllib.parse.urlparse(url).path).suffix.lower()
-    if source == "zedge" and suffix not in IMAGES: suffix = ".jpg"
     if suffix not in IMAGES: raise ValueError("Onbekend afbeeldingsformaat")
     saved = saved_wallhaven(identifier)
     candidate = Path(record.get("path") or "/nonexistent")

@@ -42,10 +42,12 @@ PanelWindow {
     property string sourceTab: "local"
     readonly property bool online: sourceTab !== "local"
     property var extraSources: []
-    readonly property var allSources: [{id: "local", label: "Collectie"}, {id: "wallhaven", label: "Wallhaven", url: "https://wallhaven.cc/"}, {id: "nasa", label: "NASA", url: "https://images.nasa.gov/"}, {id: "commons", label: "Commons", url: "https://commons.wikimedia.org/"}].concat(extraSources.filter(source => source.id !== "wallhaven"))
+    readonly property var allSources: [{id: "local", label: "Collectie"}, {id: "wallhaven", label: "Wallhaven", url: "https://wallhaven.cc/"}, {id: "nasa", label: "NASA", url: "https://images.nasa.gov/"}, {id: "commons", label: "Commons", url: "https://commons.wikimedia.org/"}].concat(extraSources.filter(source => source.id !== "wallhaven" && (source.id !== "pexels" || source.configured)))
+    readonly property var sourceInfo: allSources.find(source => source.id === sourceTab) || ({})
+    readonly property bool externalSource: sourceInfo.externalOnly === true
     readonly property string sourceName: (allSources.find(source => source.id === sourceTab) || {}).label || "Wallpapers"
     readonly property bool hasRemoteColors: ["wallhaven", "pexels", "pixabay"].includes(sourceTab)
-    readonly property string safetyNote: online && !["wallhaven", "pixabay"].includes(sourceTab) ? "Geen instelbaar SFW-filter bij deze bron" : ""
+    readonly property string safetyNote: online && !externalSource && !["wallhaven", "pixabay"].includes(sourceTab) ? "Geen instelbaar SFW-filter bij deze bron" : ""
     readonly property var pixabayCategories: [""].concat((extraSources.find(source => source.id === "pixabay") || {}).categories || [])
     property var wallhavenPurity: [true, false, false]
     readonly property string purityMask: wallhavenPurity.map(checked => checked ? "1" : "0").join("")
@@ -449,7 +451,7 @@ PanelWindow {
     function handleCatalog(event) {
         if (event.event === "catalog") {
             localItems = event.items;
-            if (event.sources) extraSources = event.sources;
+            if (event.sources) setSources(event.sources);
             folder = event.folder;
             currentPath = event.current;
             if (!catalogInitialized) {
@@ -471,6 +473,11 @@ PanelWindow {
                 filter();
         } else if (event.event === "error")
             showMessage(event.message);
+    }
+    function setSources(sources) {
+        extraSources = sources;
+        if (sourceTab === "pexels" && !sources.some(source => source.id === "pexels" && source.configured))
+            switchSource("local");
     }
     function searchTag(tag) {
         previewOpen = false;
@@ -557,6 +564,8 @@ PanelWindow {
                 safeSearch: root.safeSearch,
                 excludeAi: root.excludeAi,
                 credentials: root.extraSources.map(source => ({id: source.id, configured: source.configured})),
+                availableSources: root.allSources.map(source => source.id),
+                externalSource: root.externalSource,
                 credentialsOpen: root.credentialsOpen,
                 credentialMessage: root.credentialsMessage,
                 notice: root.sourceNotice,
@@ -624,7 +633,7 @@ PanelWindow {
             onRead: line => {
                 let event = root.parse(line);
                 if (event.event === "providers") {
-                    root.extraSources = event.sources;
+                    root.setSources(event.sources);
                     root.credentialsMessage = "Sleutelinstelling opgeslagen";
                 } else if (event.event === "error") root.credentialsMessage = event.message;
             }
@@ -878,7 +887,7 @@ PanelWindow {
                 objectName: "source-selector"
                 visible: root.width < 1450
                 colors: c
-                model: root.allSources.map(source => source.label)
+                model: root.allSources.map(source => source.label + (source.externalOnly ? " ↗" : ""))
                 currentIndex: Math.max(0, root.allSources.findIndex(source => source.id === root.sourceTab))
                 onActivated: root.switchSource(root.allSources[currentIndex].id)
             }
@@ -905,7 +914,7 @@ PanelWindow {
                     required property var modelData
                     objectName: "source-" + modelData.id
                     colors: c
-                    text: modelData.label
+                    text: modelData.label + (modelData.externalOnly ? " ↗" : "")
                     selected: root.sourceTab === modelData.id
                     onClicked: root.switchSource(modelData.id)
                 }
@@ -914,12 +923,13 @@ PanelWindow {
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
+            visible: !root.externalSource
             TextField {
                 id: searchField
                 objectName: "search"
                 Layout.fillWidth: true
                 Layout.preferredHeight: 36
-                placeholderText: root.sourceTab === "local" ? "Zoeken in je collectie…" : "Zoeken op " + root.sourceName + "…"
+                placeholderText: root.sourceTab === "local" ? "Zoeken in je collectie…" : (root.sourceInfo.tagSearch ? "Tag op " : "Zoeken op ") + root.sourceName + "…"
                 color: c.text
                 placeholderTextColor: c.onSurfaceVariant
                 selectionColor: c.primary
@@ -980,6 +990,7 @@ PanelWindow {
         Flow {
             Layout.fillWidth: true
             spacing: 8
+            visible: !root.externalSource
             PickerCombo {
                 id: remoteSort
                 objectName: "remote-sort"
@@ -1148,7 +1159,7 @@ PanelWindow {
         }
         PickerText {
             Layout.fillWidth: true
-            visible: root.online && (!!root.sourceNotice || !!root.safetyNote || !!root.aiNote)
+            visible: root.online && !root.externalSource && (!!root.sourceNotice || !!root.safetyNote || !!root.aiNote)
             text: [root.sourceNotice, root.safetyNote, root.aiNote].filter(Boolean).join(" · ")
             color: c.onSurfaceVariant
             font.pixelSize: 12
@@ -1158,6 +1169,7 @@ PanelWindow {
         }
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
+            visible: !root.externalSource
             spacing: 8
             Repeater {
                 model: [
@@ -1219,13 +1231,17 @@ PanelWindow {
             Keys.onUpPressed: root.navigateVertical(-1)
             Keys.onDownPressed: root.navigateVertical(1)
             Keys.onReturnPressed: {
-                if (root.online)
+                if (root.externalSource)
+                    Qt.openUrlExternally(root.sourceInfo.url);
+                else if (root.online)
                     root.openPreview(root.selected);
                 else
                     root.applyChosen();
             }
             Keys.onEnterPressed: {
-                if (root.online)
+                if (root.externalSource)
+                    Qt.openUrlExternally(root.sourceInfo.url);
+                else if (root.online)
                     root.openPreview(root.selected);
                 else
                     root.applyChosen();
@@ -1247,15 +1263,37 @@ PanelWindow {
             }
             PickerText {
                 anchors.centerIn: parent
-                visible: root.items.length === 0
+                visible: root.items.length === 0 && !root.externalSource
                 text: root.loading ? "Wallpapers laden…" : (root.message || (root.sourceTab === "local" ? "Geen wallpapers gevonden" : "Geen resultaten"))
                 color: c.onSurfaceVariant
                 font.pixelSize: 18
+            }
+            Column {
+                anchors.centerIn: parent
+                width: Math.min(620, parent.width - 40)
+                spacing: 20
+                visible: root.externalSource
+                PickerText {
+                    width: parent.width
+                    text: root.sourceInfo.notice || ""
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+                    color: c.text
+                    font.pixelSize: 18
+                }
+                PickerButton {
+                    objectName: "external-source-open"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    colors: c
+                    text: "Open " + root.sourceName + " ↗"
+                    onClicked: Qt.openUrlExternally(root.sourceInfo.url)
+                }
             }
         }
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 7
+            visible: !root.externalSource
             WallpaperPalette {
                 objectName: "image-palette"
                 Layout.fillWidth: true
@@ -1277,6 +1315,7 @@ PanelWindow {
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
+            visible: !root.externalSource
             PickerButton {
                 colors: c
                 text: "←"
@@ -1352,7 +1391,7 @@ PanelWindow {
         RowLayout {
             Layout.fillWidth: true
             PickerText {
-                text: (root.busy ? root.operationLabel : root.message) || (root.sourceTab === "local" ? "Klik of Enter instellen    ← → kiezen    F favoriet    Esc sluiten" : "Klik of Enter bekijken    Scroll voor meer resultaten    Esc sluiten")
+                text: (root.busy ? root.operationLabel : root.message) || (root.externalSource ? "Enter opent " + root.sourceName + " in je browser    Esc sluiten" : (root.sourceTab === "local" ? "Klik of Enter instellen    ← → kiezen    F favoriet    Esc sluiten" : "Klik of Enter bekijken    Scroll voor meer resultaten    Esc sluiten"))
                 color: c.onSurfaceVariant
                 font.pixelSize: 12
                 Layout.fillWidth: true

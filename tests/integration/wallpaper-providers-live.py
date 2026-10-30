@@ -19,7 +19,7 @@ def main():
     cli=argparse.ArgumentParser(description=__doc__)
     cli.add_argument('--output',type=Path,required=True,help='New private test directory')
     cli.add_argument('--query',default='nature')
-    cli.add_argument('--sources',nargs='+',default=['wallpaperscom','alphacoders','backiee','wallpaperscraft','zedge'])
+    cli.add_argument('--sources',nargs='+',default=['wallpaperscom','alphacoders','backiee','wallpaperscraft','goodfon','wallpaperswide'])
     args=cli.parse_args()
     base=args.output.resolve()
     base.mkdir(parents=True,exist_ok=False)
@@ -54,7 +54,7 @@ def main():
                     preview=preview['path'],saved=str(path),tags=metadata['tag_names'],credit=metadata['uploader'])
         results.append(result)
         print(json.dumps(result,ensure_ascii=False),flush=True)
-        if response['lastPage']>1 and source in {'alphacoders','backiee'}:
+        if response['lastPage']>1 and source in {'alphacoders','backiee','goodfon','wallpaperswide'}:
             query.page=2
             page=p.providers.search(source,query,fetch)
             assert page['records'] and [i['id'] for i in page['records']] != [i['id'] for i in response['records']],source+' repeats first page'
