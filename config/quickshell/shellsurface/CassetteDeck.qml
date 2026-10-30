@@ -288,8 +288,34 @@ Item {
     property real cassetteOut: 0
     readonly property real slideOut: cassetteOut * (cassH + u * 8)
     readonly property real liftOut: u * 16 * ease01((cassetteOut - 0.45) / 0.55)
+    readonly property var cassO: [0, doorO[1] - slideOut * doorEy[1] + liftOut * doorN[1], doorO[2] - slideOut * doorEy[2] + liftOut * doorN[2]]
     readonly property matrix4x4 cassetteMatrix: doorOpen === 0 && cassetteOut === 0 ? identity
-        : planeMatrix([0, doorO[1] - slideOut * doorEy[1] + liftOut * doorN[1], doorO[2] - slideOut * doorEy[2] + liftOut * doorN[2]], [1, 0, 0], doorEy)
+        : planeMatrix(cassO, [1, 0, 0], doorEy)
+    // Zijkanten van de cassette (12 mm dik, naar achteren vanaf het front).
+    // Elke kant in volgorde zodat hij van buiten met de klok mee loopt; een
+    // kant die in beeld andersom loopt, kijkt van je af en valt weg.
+    function cassPt(x, y, d) {
+        return viewPt(x, cassO[1] + y * doorEy[1] + d * doorN[1], cassO[2] + y * doorEy[2] + d * doorN[2]);
+    }
+    readonly property string cassetteSides: {
+        if (doorOpen === 0 && cassetteOut === 0) return "M 0 0";
+        let r = c * 3, T = c * 12;
+        let x0 = cassX, x1 = cassX + cassW, y0 = cassY, y1 = cassY + cassH;
+        let faces = [
+            [[x0 + r, y0, -T], [x1 - r, y0, -T], [x1 - r, y0, 0], [x0 + r, y0, 0]],
+            [[x0 + r, y1, 0], [x1 - r, y1, 0], [x1 - r, y1, -T], [x0 + r, y1, -T]],
+            [[x1, y0 + r, -T], [x1, y1 - r, -T], [x1, y1 - r, 0], [x1, y0 + r, 0]],
+            [[x0, y0 + r, 0], [x0, y1 - r, 0], [x0, y1 - r, -T], [x0, y0 + r, -T]]
+        ];
+        let out = "";
+        for (let f of faces) {
+            let p = f.map(q => cassPt(q[0], q[1], q[2]));
+            let cr = (p[1][0] - p[0][0]) * (p[2][1] - p[1][1]) - (p[1][1] - p[0][1]) * (p[2][0] - p[1][0]);
+            if (cr <= 0) continue;
+            out += "M " + p[0][0] + " " + p[0][1] + " L " + p[1][0] + " " + p[1][1] + " L " + p[2][0] + " " + p[2][1] + " L " + p[3][0] + " " + p[3][1] + " Z ";
+        }
+        return out === "" ? "M 0 0" : out;
+    }
 
     function clock(sec) {
         let s = Math.max(0, Math.floor(Number(sec) || 0));
@@ -495,6 +521,19 @@ Item {
     readonly property real cassH: c * 63.8
     readonly property real cassX: width / 2 - cassW / 2
     readonly property real cassY: hubY - cassH * 0.48
+    Shape {
+        anchors.fill: parent
+        visible: deck.cassetteSides !== "M 0 0" && cassetteBody.visible
+        opacity: cassetteBody.opacity
+        preferredRendererType: Shape.CurveRenderer
+        ShapePath {
+            fillColor: deck.look === "paper" ? deck.mocha.base : Qt.darker(Qt.rgba(deck.skin.cassette.r, deck.skin.cassette.g, deck.skin.cassette.b, 1), 1.15)
+            strokeColor: deck.look === "paper" ? deck.mocha.text : Qt.rgba(1, 1, 1, 0.12)
+            strokeWidth: deck.look === "paper" ? 1.5 : 1
+            joinStyle: ShapePath.RoundJoin
+            PathSvg { path: deck.cassetteSides }
+        }
+    }
     Item {
         id: cassetteBody
         width: deck.width
