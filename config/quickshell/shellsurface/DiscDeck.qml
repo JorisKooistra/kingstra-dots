@@ -93,9 +93,9 @@ Item {
         let ink = m.text;
         if (look === "wood") {
             // Organic: mat kunststof (geen hout: een walkman of discman is
-            // van plastic) in de themakleur, de tweede accentcontainer met
-            // een vleugje tertiary, en geborsteld metaal.
-            let wood = Qt.tint(Qt.tint(Qt.lighter(m.surface2, 1.25), Qt.rgba(secC.r, secC.g, secC.b, 0.62)), Qt.rgba(terC.r, terC.g, terC.b, 0.1));
+            // van plastic) in dezelfde themakleur als de walkman (primary
+            // container, een vleugje tertiary), en geborsteld metaal.
+            let wood = Qt.tint(Qt.tint(Qt.lighter(m.surface2, 1.25), Qt.rgba(priC.r, priC.g, priC.b, 0.68)), Qt.rgba(terC.r, terC.g, terC.b, 0.1));
             let cream = Qt.tint(m.text, Qt.rgba(terC.r, terC.g, terC.b, 0.18));
             let metal = Qt.tint(m.subtext1, Qt.rgba(sec.r, sec.g, sec.b, 0.24));
             let lcd = Qt.tint(Qt.darker(cream, 1.18), Qt.rgba(ter.r, ter.g, ter.b, 0.22));
