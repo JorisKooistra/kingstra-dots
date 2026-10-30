@@ -27,11 +27,13 @@ def fixture_index(identifier):
 
 def main():
     command = sys.argv[1]
-    if command in {"catalog", "preferences"} or (os.environ.get("KINGSTRA_PICKER_LIVE_API") == "1" and command in {"search", "preview", "download"}):
+    if command in {"catalog", "preferences", "credential", "providers"} or (os.environ.get("KINGSTRA_PICKER_LIVE_API") == "1" and command in {"search", "preview", "download"}):
         if command == "preferences": time.sleep(.6)
         runpy.run_path(str(ROOT / "config/quickshell/wallpaper/backend.py"), run_name="__main__")
     elif command == "search":
-        args = dict(zip(sys.argv[2::2], sys.argv[3::2]))
+        arguments = [value for value in sys.argv[2:] if value != "--exclude-ai"]
+        args = dict(zip(arguments[::2], arguments[1::2]))
+        args["--exclude-ai"] = "--exclude-ai" in sys.argv
         query, color, page = args["--query"], args["--color"], int(args["--page"])
         with (BASE / "searches.jsonl").open("a") as output:
             output.write(json.dumps(args) + "\n")
@@ -43,11 +45,15 @@ def main():
         source = args.get("--source", "wallhaven")
         prefix = hashlib.sha256((query + color + source).encode()).hexdigest()[:2]
         backend=runpy.run_path(str(ROOT / "config/quickshell/wallpaper/backend.py"),run_name="fixture")
+        if backend["providers"].SOURCES.get(source, {}).get("needsKey") and not backend["provider_keys"]().get(source):
+            emit("error", message="Voeg je sleutel toe via API-sleutels", needsKey=True)
+            return
         items = []
         for index in range((page - 1) * 24, page * 24):
             identifier = prefix + f"{index:04}"
             if source == "nasa": identifier = "nasa-" + hashlib.sha256(identifier.encode()).hexdigest()[:24]
             elif source == "commons": identifier = "commons-" + str(int(prefix,16)*10000 + index + 1)
+            elif source not in {"wallhaven", "nasa", "commons"}: identifier = source + "-" + hashlib.sha256(identifier.encode()).hexdigest()[:24]
             image = LIBRARY / f"fixture-{index % 48:02}.jpg"
             thumb = image.as_uri()
             details = backend["cached_visuals"](backend["CACHE"] / "thumbs" / (backend["thumbnail_key"](image) + ".jpg"))
@@ -78,17 +84,17 @@ def main():
         identifier = sys.argv[2]
         if (BASE / "expect-preview-before-save").exists():
             assert (BASE / ("preview-ready-" + identifier)).is_file(), "save raced the pending HD preview"
-        path = LIBRARY / ((identifier if identifier.startswith(("nasa-", "commons-")) else "wallhaven-" + identifier) + ".jpg")
+        path = LIBRARY / ((identifier if "-" in identifier else "wallhaven-" + identifier) + ".jpg")
         shutil.copyfile(LIBRARY / f"fixture-{fixture_index(identifier):02}.jpg", path)
         backend=runpy.run_path(str(ROOT / "config/quickshell/wallpaper/backend.py"),run_name="fixture")
-        if identifier.startswith(("nasa-", "commons-")):
-            backend["atomic_json"](backend["metadata_file"](path), dict(source="commons" if identifier.startswith("commons-") else "nasa",tag_names=["fixture-tag"],uploader="Fixture author",license="CC BY 4.0"))
+        if "-" in identifier:
+            backend["atomic_json"](backend["metadata_file"](path), dict(source=identifier.split("-",1)[0],tag_names=["fixture-tag"],uploader="Fixture author",license="CC BY 4.0"))
         else:
             backend["remember_wallhaven"](identifier,{"tags":[{"name":"fixture-tag"}],"resolution":"960x600"},path,True)
         emit("download", id=identifier, path=str(path),tags=["fixture-tag"])
     elif command == "remove":
         identifier=sys.argv[2]
-        path=LIBRARY/((identifier if identifier.startswith(("nasa-", "commons-")) else "wallhaven-"+identifier)+".jpg")
+        path=LIBRARY/((identifier if "-" in identifier else "wallhaven-"+identifier)+".jpg")
         path.unlink(missing_ok=True)
         Path(str(path)+".json").unlink(missing_ok=True)
         emit("removed",id=identifier,path=str(path),remaining="")

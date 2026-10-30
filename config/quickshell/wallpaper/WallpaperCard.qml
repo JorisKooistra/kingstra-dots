@@ -19,6 +19,9 @@ Item {
     property bool remote: false
     property bool actionBusy: false
     property bool removable: false
+    readonly property int actionSize: width < 150 ? (shape === "hex" ? 24 : 26) : 32
+    readonly property int actionRows: width < 150 && shape !== "hex" ? (itemData.path ? 3 : 2) : 1
+    readonly property int actionsHeight: actionRows * actionSize + (actionRows - 1) * 4
     readonly property bool hovered: interactiveHover && (input.containsMouse || applyButton.hovered || downloadButton.hovered || removeButton.hovered)
     readonly property bool highlighted: selected || hovered
     readonly property bool captionVisible: highlighted || current || itemData.favorite === true
@@ -107,11 +110,15 @@ Item {
         Grid {
             x: (card.width - width) / 2
             y: 10 + card.bend(card.width / 2) - input.y
-            columns: card.width < 150 ? 1 : (card.itemData.path ? 3 : 2)
+            columns: card.width < 150 && card.shape !== "hex" ? 1 : (card.itemData.path ? 3 : 2)
             spacing: 4
-            visible: card.remote && (card.hovered || card.selected)
+            // Keep the centre of small cards clickable. The persistent footer
+            // and preview provide the same actions when inline icons won't fit.
+            visible: card.remote && card.height > 2 * (10 + card.actionsHeight) + 16 && (card.hovered || card.selected)
             PickerIconButton {
                 id: applyButton
+                width: card.actionSize
+                height: width
                 objectName: "wallpaper-apply"
                 colors: card.colors
                 icon: "apply"
@@ -122,6 +129,8 @@ Item {
             }
             PickerIconButton {
                 id: downloadButton
+                width: card.actionSize
+                height: width
                 objectName: "wallpaper-download"
                 colors: card.colors
                 icon: card.itemData.path ? "check" : "download"
@@ -131,6 +140,8 @@ Item {
             }
             PickerIconButton {
                 id: removeButton
+                width: card.actionSize
+                height: width
                 objectName: "wallpaper-remove"
                 colors: card.colors
                 icon: "trash"

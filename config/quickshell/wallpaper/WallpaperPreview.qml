@@ -153,7 +153,7 @@ Rectangle {
         }
         PickerText {
             Layout.fillWidth: true
-            text: (preview.controller.previewInfo.dimensions || preview.controller.chosen.dimensions || "") + (preview.controller.previewInfo.uploader ? "   ·   " + preview.controller.previewInfo.uploader : "") + (preview.controller.previewInfo.license ? "   ·   " + preview.controller.previewInfo.license : "") + (preview.controller.previewLoading ? "   ·   Volledige afbeelding laden…" : "")
+            text: (preview.controller.previewInfo.dimensions || preview.controller.chosen.dimensions || "") + (preview.controller.previewInfo.uploader ? "   ·   " + preview.controller.previewInfo.uploader : "") + (preview.controller.previewInfo.license ? "   ·   " + preview.controller.previewInfo.license : "") + (preview.controller.previewInfo.notice ? "   ·   " + preview.controller.previewInfo.notice : "") + (preview.controller.previewLoading ? "   ·   Volledige afbeelding laden…" : "")
             elide: Text.ElideRight
             color: preview.colors.onSurfaceVariant
             textFormat: Text.PlainText
@@ -224,7 +224,7 @@ Rectangle {
             PickerButton {
                 objectName: "preview-download"
                 colors: preview.colors
-                text: preview.controller.chosen.path ? "Opgeslagen" : "Downloaden"
+                text: preview.controller.chosen.path ? "Opgeslagen" : (preview.controller.sourceTab === "zedge" ? "Voorbeeld opslaan" : "Downloaden")
                 available: !preview.controller.busy && !preview.controller.chosen.path
                 onClicked: preview.controller.downloadChosen()
             }

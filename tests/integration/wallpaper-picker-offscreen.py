@@ -54,6 +54,19 @@ ShellRoot {
         function text(value: string): void {
             let field=named(picker.contentItem,"search"); field.text=value; field.forceActiveFocus();
         }
+        function keyText(name: string, value: string): void {
+            let field=named(picker.contentItem,name); field.text=value; field.forceActiveFocus();
+        }
+        function source(id: string): string {
+            let control=named(picker.contentItem,"source-selector");
+            if (!control.visible) return "tabs";
+            let index=picker.allSources.findIndex(source=>source.id===id);
+            input.mouseClick(control,control.width/2,control.height/2,Qt.LeftButton,Qt.NoModifier);
+            input.keyClick(Qt.Key_Home,Qt.NoModifier);
+            for (let i=0;i<index;i++) input.keyClick(Qt.Key_Down,Qt.NoModifier);
+            input.keyClick(Qt.Key_Return,Qt.NoModifier);
+            return "compact";
+        }
         function previewGeometry(): string {
             let image=named(picker.contentItem,"preview-image");
             let p=image.mapToItem(picker.contentItem,0,0);
@@ -61,6 +74,9 @@ ShellRoot {
         }
         function topic(index: int): void {
             let field=named(picker.contentItem,"remote-topic");field.currentIndex=index;field.activated(index);
+        }
+        function combo(name: string, index: int): void {
+            let field=named(picker.contentItem,name);field.currentIndex=index;field.activated(index);
         }
         function capture(path: string): void { picker.contentItem.grabToImage(result=>result.saveToFile(path)); }
         function resize(w: int, h: int): void { picker.width=w;picker.height=h; }
@@ -197,6 +213,8 @@ class Picker:
         raise AssertionError(f"Timeout: {label}\n{state}\n{(self.base / 'quickshell.log').read_text()[-3000:]}")
 
     def click(self, name):
+        if name.startswith("source-") and self.ipc("harness", "source", name.removeprefix("source-")) == "compact":
+            return {}
         result = self.ipc("harness", "clickNamed", name)
         assert not result.startswith("missing"), result
         return json.loads(result)
@@ -307,6 +325,7 @@ def exercise(picker):
     assert (p.base / "applied.log").read_text() == applied["current"]
     p.click("source-wallhaven")
     p.wait(lambda s: s["source"] == "wallhaven" and s["count"] >= 24 and not s["loading"], "Wallhaven initial search")
+    exercise_filters(p)
     before = p.state()["motion"]["contentX"]
     for _ in range(7):
         p.wheel(p.state(), -120)
@@ -386,6 +405,16 @@ def exercise(picker):
     assert "nieuw" in p.state()["chosen"], "stale query overwrote new results"
     p.click("mode-wall")
     p.wait(lambda s: s["mode"] == "wall", "grid")
+    before = p.state()["motion"]["contentY"]
+    row = p.state()["motion"]["rowHeight"]
+    p.wheel(p.state(), -120)
+    state=p.wait(lambda s:not s["motion"]["moving"], "grid row wheel settles")
+    assert abs(state["motion"]["contentY"] - before - row) < 1, state["motion"]
+    for _ in range(3): p.wheel(p.state(), -120)
+    state=p.wait(lambda s:not s["motion"]["moving"], "grid burst settles")
+    position=state["motion"]["contentY"]
+    time.sleep(.5)
+    assert abs(p.state()["motion"]["contentY"] - position) < .5, "grid scroll moved after idle"
     p.capture("grid")
     p.picture()
     p.wait(lambda s: s["preview"] and bool(s["previewInfo"].get("id")), "grid click opens preview")
@@ -445,11 +474,89 @@ def exercise(picker):
     p.ipc("harness", "resize", 1024, 768)
     time.sleep(.4)
     p.capture("compact-hexagons")
+    exercise_sources(p)
     # No warnings about QML exceptions, invalid shader bindings or test reloads.
     log = (p.base / "quickshell.log").read_text()
     for error in ["ReferenceError", "TypeError", "Binding loop", "Failed to create", "ERROR:"]:
         assert error not in log, log
     print("ok: full UI clicks, all layouts, wheel, append, filters, preview, zoom, download/apply, Escape, errors/retry and search races")
+
+
+def exercise_sources(p):
+    # Keys travel through a real masked field and stdin into isolated storage.
+    p.click("sources-settings")
+    p.wait(lambda s:s["credentialsOpen"], "key settings")
+    p.capture("api-settings-compact")
+    for source in ["wallhaven", "wallpaperscom", "pixabay", "pexels"]:
+        secret="test-private-" + source + "-123456"
+        p.ipc("harness", "keyText", "key-" + source, secret)
+        p.click("save-key-" + source)
+        p.wait(lambda s:any(v["id"]==source and v["configured"] for v in s["credentials"]), "key saved " + source)
+        assert secret not in json.dumps(p.state())
+    keys=p.base/"config/kingstra/wallpaper-sources.json"
+    assert keys.stat().st_mode & 0o777 == 0o600
+    assert set(json.loads(keys.read_text()))=={"wallhaven","wallpaperscom","pixabay","pexels"}
+    p.click("remove-key-pexels")
+    p.wait(lambda s:any(v["id"]=="pexels" and not v["configured"] for v in s["credentials"]), "remove key")
+    p.ipc("harness", "key", 0x01000000)
+    p.wait(lambda s:not s["credentialsOpen"], "Escape closes key dialog")
+    p.click("source-pexels")
+    p.wait(lambda s:s["credentialsOpen"] and not s["loading"], "missing key opens settings")
+    p.ipc("harness", "keyText", "key-pexels", "test-private-pexels-123456")
+    p.click("save-key-pexels")
+    p.wait(lambda s:s["count"]>0 and not s["loading"] and s["credentialMessage"], "key unlocks source")
+    p.click("sources-close")
+    for source in ["wallpaperscom","alphacoders","backiee","wallpaperscraft","zedge","pexels","pixabay"]:
+        p.click("source-"+source)
+        p.wait(lambda s:s["source"]==source and s.get("chosenId", "").startswith(source+"-") and not s["loading"], "source " + source)
+        p.picture()
+        p.wait(lambda s:s["preview"] and s["previewInfo"].get("id")==s["chosenId"], "preview " + source)
+        p.click("preview-apply")
+        state=p.wait(lambda s:s["previewMessage"]=="Wallpaper ingesteld" and not s["busy"], "save/apply " + source)
+        assert Path(state["current"]).name.startswith(source+"-")
+        metadata=json.loads(Path(state["current"]+".json").read_text())
+        assert metadata["source"]==source and metadata["tag_names"]
+        p.click("preview-close")
+    assert "test-private-" not in (p.base/"quickshell.log").read_text()
+    p.click("pixabay-safe")
+    p.wait(lambda s:not s["safeSearch"] and not s["loading"], "Pixabay safe search checkbox off")
+    p.ipc("harness", "combo", "pixabay-category", 3)
+    p.ipc("harness", "combo", "remote-sort", 1)
+    p.click("remote-colour-all")
+    p.click("remote-colour-0066cc")
+    p.ipc("harness", "keyText", "remote-resolution", "2560x1440")
+    p.ipc("harness", "text", "pixabay-filter-contract")
+    p.wait(lambda s:"pixabay-filter-contract" in s.get("chosen","") and not s["loading"], "Pixabay filters delivered")
+    searches=[json.loads(line) for line in (p.base/"searches.jsonl").read_text().splitlines()]
+    query=next(row for row in reversed(searches) if row.get("--query")=="pixabay-filter-contract")
+    assert query["--purity"]=="111" and query["--category"]=="nature" and query["--atleast"]=="2560x1440" and query["--color"]=="0066cc",query
+    p.click("pixabay-safe")
+    p.wait(lambda s:s["safeSearch"] and not s["loading"], "Pixabay safe search checkbox on")
+    p.capture("pixabay-filters")
+    print("ok: API fields, masked secrets via stdin, private storage, delete/unlock and seven sources preview/save/apply")
+
+
+def exercise_filters(p):
+    assert p.state()["purity"]=="100" and p.state()["safeSearch"]
+    for name,expected in [("purity-2","101"),("purity-0","001"),("purity-1","011"),("purity-2","010")]:
+        p.click(name)
+        p.wait(lambda s:s["purity"]==expected and not s["loading"], "independent purity " + expected)
+        time.sleep(.5)
+        rows=[json.loads(line) for line in (p.base/"searches.jsonl").read_text().splitlines()]
+        assert rows[-1]["--purity"]==expected,rows[-1]
+    p.click("purity-1")
+    p.wait(lambda s:s["purity"]=="000" and not s["count"] and "Vink" in s["message"], "no purity selected")
+    p.click("purity-0")
+    p.wait(lambda s:s["purity"]=="100" and s["count"]>=24 and not s["loading"], "restore SFW only")
+    p.click("exclude-ai")
+    p.wait(lambda s:s["excludeAi"] and not s["loading"], "no AI option")
+    time.sleep(.7)
+    rows=[json.loads(line) for line in (p.base/"searches.jsonl").read_text().splitlines()]
+    assert rows[-1]["--exclude-ai"], rows[-1]
+    p.capture("wallhaven-filter-checkboxes")
+    p.click("exclude-ai")
+    p.wait(lambda s:not s["excludeAi"] and s["count"]>=24 and not s["loading"], "restore AI filter")
+    print("ok: independent SFW/Sketchy/NSFW checkboxes, empty selection, SFW default and no AI search flag")
 
 
 def exercise_paging(p):

@@ -30,7 +30,8 @@ class PickerTests(unittest.TestCase):
         self.env.start()
         self.addCleanup(self.env.stop)
         for name, value in {"CONFIG": self.base / "config", "CACHE": self.base / "cache/kingstra/wallpaper-picker",
-                            "SETTINGS": self.base / "config/kingstra/wallpaper-picker.json"}.items():
+                            "SETTINGS": self.base / "config/kingstra/wallpaper-picker.json",
+                            "CREDENTIALS": self.base / "config/kingstra/wallpaper-sources.json"}.items():
             replacement = patch.object(picker, name, value)
             replacement.start()
             self.addCleanup(replacement.stop)

@@ -3,6 +3,7 @@
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 python3 "$root/tests/smoke/wallpaper-picker.py"
+python3 "$root/tests/smoke/wallpaper-providers.py"
 qml_runner="${QMLTESTRUNNER:-/usr/lib/qt6/bin/qmltestrunner}"
 [[ -x "$qml_runner" ]] || qml_runner="$(command -v qmltestrunner6 || true)"
 if [[ -x "$qml_runner" ]]; then

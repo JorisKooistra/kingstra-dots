@@ -1,5 +1,11 @@
 .pragma library
 
+function isAi(item) {
+    if (item.isAi || item.is_ai) return true;
+    let values = [item.name || "", item.displayName || ""].concat(item.tags || []);
+    return /\b(ai[-_ ]+(art|generated|generative|wallpapers?)|generative[-_ ]+ai|midjourney|stable[-_ ]*diffusion|dall[-_ ]?e)\b/i.test(values.join(" "));
+}
+
 // skwd v1 groups colours by hue, then saturation (MIT; see SKWD-LICENSE.txt).
 function compareColors(a, b) {
     let hueA = a.hue === undefined || a.hue === 99 ? 100 : a.hue;

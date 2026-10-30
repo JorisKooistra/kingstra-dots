@@ -13,6 +13,9 @@ import fcntl
 import hashlib
 import html
 from html.parser import HTMLParser
+import gzip
+import importlib.util
+import io
 import json
 import math
 import os
@@ -33,6 +36,77 @@ CACHE = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache")) / "kingstra/wall
 SETTINGS = CONFIG / "kingstra/wallpaper-picker.json"
 IMAGES = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".avif"}
 VIDEOS = {".mp4", ".webm", ".mkv", ".mov"}
+_provider_spec = importlib.util.spec_from_file_location("kingstra_wallpaper_providers", Path(__file__).with_name("providers.py"))
+providers = importlib.util.module_from_spec(_provider_spec)
+_provider_spec.loader.exec_module(providers)
+CREDENTIALS = CONFIG / "kingstra/wallpaper-sources.json"
+
+
+class ExcludedAI(ValueError):
+    pass
+
+
+def provider_keys():
+    data = read_json(CREDENTIALS)
+    return data if isinstance(data, dict) else {}
+
+
+def source_status():
+    keys = provider_keys()
+    wallhaven = skwd_config().get("wallhaven", {})
+    existing = keys.get("wallhaven") or wallhaven.get("apiKey") or wallhaven.get("api_key")
+    return [dict(id="wallhaven", label="Wallhaven", optionalKey=True, configured=bool(existing), hasLocalKey=bool(keys.get("wallhaven")),
+                 url="https://wallhaven.cc/", keyUrl="https://wallhaven.cc/settings/account")] + [dict(id=key, configured=bool(keys.get(key)), **value) for key, value in providers.SOURCES.items()]
+
+
+def credential(payload):
+    source, key = payload.get("provider", ""), payload.get("key", "")
+    if source not in {"wallhaven", "pexels", "pixabay", "wallpaperscom"} or not isinstance(key, str):
+        raise ValueError("Onbekende broninstelling")
+    key = key.strip()
+    if key and not re.fullmatch(r"[A-Za-z0-9_./:+-]{6,512}", key): raise ValueError("Ongeldige API-sleutel")
+    CREDENTIALS.parent.mkdir(parents=True, exist_ok=True)
+    with CREDENTIALS.with_suffix(".lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        data = provider_keys()
+        if key: data[source] = key
+        else: data.pop(source, None)
+        atomic_json(CREDENTIALS, data)
+        CREDENTIALS.chmod(0o600)
+    # Configuration state only; keys never go back into the UI or logs.
+    emit("providers", sources=source_status())
+
+
+class SafeRedirect(urllib.request.HTTPRedirectHandler):
+    def __init__(self, hosts): self.hosts = hosts
+    def redirect_request(self, request, response, code, message, headers, url):
+        if not valid_url(url, self.hosts): raise ValueError("Onverwachte bronredirect")
+        return super().redirect_request(request, response, code, message, headers, url)
+
+
+def provider_fetch(source, url, headers=None, as_json=True, ttl=300):
+    parsed = urllib.parse.urlparse(url)
+    hosts = providers.PAGE_HOSTS[source]
+    if not valid_url(url, hosts): raise ValueError("Ongeldig bronadres")
+    # Hash authenticated queries/headers without persisting their credentials.
+    key = hashlib.sha256(json.dumps([url, headers or {}], sort_keys=True).encode()).hexdigest()
+    target = CACHE / "search" / ("provider-" + key + ".json")
+    cached = read_json(target)
+    if cached and time.time() - target.stat().st_mtime < ttl: return cached["data"]
+    request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.3 (https://github.com/JorisKooistra/kingstra-dots)", **(headers or {})})
+    # Keys in either headers or query parameters must stay on that exact host.
+    redirect_hosts = {parsed.hostname} if headers or source == "pixabay" else hosts
+    opener = urllib.request.build_opener(SafeRedirect(redirect_hosts))
+    limit = 4 * 1024 * 1024
+    with opener.open(request, timeout=25) as response:
+        payload = response.read(limit + 1)
+        if payload[:2] == b"\x1f\x8b":
+            with gzip.GzipFile(fileobj=io.BytesIO(payload)) as compressed: payload = compressed.read(limit + 1)
+        if len(payload) > limit: raise ValueError("Het bronantwoord is te groot")
+        text = payload.decode("utf-8", errors="replace")
+    data = json.loads(text) if as_json else text
+    atomic_json(target, {"data": data})
+    return data
 
 
 def read_json(path, fallback=None):
@@ -59,7 +133,7 @@ def atomic_json(path, data):
 
 
 def preferences(key, value):
-    if key not in {"mode", "favorites", "sort", "backdrop"}:
+    if key not in {"mode", "favorites", "sort", "backdrop", "excludeAi"}:
         raise ValueError("Onbekende instelling")
     SETTINGS.parent.mkdir(parents=True, exist_ok=True)
     with SETTINGS.with_suffix(".lock").open("a") as lock:
@@ -74,7 +148,7 @@ def preferences(key, value):
             if value not in {"slices", "hex", "wall", "mosaic", "coverflow", "orbit"}:
                 raise ValueError("Onbekende weergave")
             data[key] = value
-        elif key == "backdrop":
+        elif key in {"backdrop", "excludeAi"}:
             if value not in {"true", "false"}: raise ValueError("Ongeldige achtergrondinstelling")
             data[key] = value == "true"
         else:
@@ -140,7 +214,7 @@ def metadata_file(path):
 def local_metadata(path, index):
     record = read_json(metadata_file(path))
     if not isinstance(record, dict): record = {}
-    if record.get("source") not in {"wallhaven", "nasa", "commons"}:
+    if record.get("source") not in {"wallhaven", "nasa", "commons", *providers.SOURCES}:
         identifier = wallhaven_id(path)
         record = index.get(identifier) or read_json(CACHE / "metadata" / (identifier + ".json")) if identifier else {}
         if record and not metadata_file(path).exists():
@@ -150,7 +224,7 @@ def local_metadata(path, index):
                 wallhavenId=record.get("id", "") if record.get("source") == "wallhaven" else "",
                 wallhavenColors=record.get("colors", []), source=record.get("source", ""),
                 sourcePage=record.get("url", ""), credit=record.get("uploader", ""),
-                license=record.get("license", ""), displayName=record.get("name", ""))
+                license=record.get("license", ""), displayName=record.get("name", ""), isAi=providers.is_ai(record))
 
 
 def remember_wallhaven(identifier, data, path, save_sidecar=False):
@@ -299,7 +373,7 @@ def catalog():
                 except OSError:
                     continue
     items.sort(key=lambda i: (-i["mtime"], i["name"]))
-    emit("catalog", items=items, folder=str(folder), current=current_wallpaper(), settings=settings)
+    emit("catalog", items=items, folder=str(folder), current=current_wallpaper(), settings=settings, sources=source_status())
     missing = [item for item in items if not item.get("thumb") or not item.get("palette") or not item.get("backdrop")]
     # Exactly two decoders; thumbnails arrive incrementally, after the UI opens.
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
@@ -315,7 +389,7 @@ def catalog():
 
 def remote_json(url, authenticated=True):
     wallhaven = skwd_config().get("wallhaven", {})
-    key = wallhaven.get("apiKey") or wallhaven.get("api_key", "")
+    key = provider_keys().get("wallhaven") or wallhaven.get("apiKey") or wallhaven.get("api_key", "")
     if authenticated and key and urllib.parse.urlparse(url).hostname == "wallhaven.cc":
         url += ("&" if "?" in url else "?") + urllib.parse.urlencode({"apikey": key})
     request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.1 (https://github.com/JorisKooistra/kingstra-dots)"})
@@ -390,17 +464,21 @@ def trim_previews(keep, budget=256 * 1024 * 1024):
 
 def saved_wallhaven(identifier):
     folder = library()
-    stem = identifier if identifier.startswith(("nasa-", "commons-")) else "wallhaven-" + identifier
+    stem = identifier if identifier.startswith(("nasa-", "commons-", *(source + "-" for source in providers.SOURCES))) else "wallhaven-" + identifier
     return next((str(folder / (stem + suffix)) for suffix in sorted(IMAGES)
                  if (folder / (stem + suffix)).is_file()), "")
 
 
 def search(args):
+    if getattr(args, "source", "wallhaven") in providers.SOURCES:
+        return search_extra(args)
     if getattr(args, "source", "wallhaven") == "commons":
         return search_commons(args)
     if getattr(args, "source", "wallhaven") == "nasa":
         return search_nasa(args)
-    params = dict(q=args.query, page=args.page, sorting=args.sort, categories=args.categories,
+    query = args.query
+    if getattr(args, "exclude_ai", False): query = (query + " -id:133451").strip()
+    params = dict(q=query, page=args.page, sorting=args.sort, categories=args.categories,
                   purity=args.purity, order="desc", topRange="1M")
     if args.color:
         params["colors"] = args.color
@@ -411,7 +489,7 @@ def search(args):
     if getattr(args,"seed",""):
         params["seed"] = args.seed
     # Cache authenticated searches separately without storing keys in filenames.
-    auth = skwd_config().get("wallhaven", {})
+    auth = dict(skwd_config().get("wallhaven", {}), pickerKey=provider_keys().get("wallhaven", ""))
     cache_key = hashlib.sha256((json.dumps(params, sort_keys=True) + json.dumps(auth, sort_keys=True)).encode()).hexdigest()
     cached = CACHE / "search" / (cache_key + ".json")
     data = read_json(cached)
@@ -444,6 +522,53 @@ def search(args):
         for task in concurrent.futures.as_completed(tasks):
             try: emit("thumbnail", **task.result())
             except Exception: pass  # A failed preview must not hide the results.
+    trim_cache()
+
+
+def search_extra(args):
+    source = args.source
+    info = providers.SOURCES[source]
+    key = provider_keys().get(source, "")
+    if info.get("needsKey") and not key:
+        emit("error", message="Voeg je " + info["label"] + "-sleutel toe via API-sleutels", needsKey=True)
+        return
+    fetch = lambda url, **kwargs: provider_fetch(source, url, **kwargs)
+    data = providers.search(source, args, fetch, key)
+    # Some public sites clamp an out-of-range page back to their last page.
+    # Detect that response instead of requesting duplicate pages forever.
+    query_key = hashlib.sha256(json.dumps([{name: value for name, value in vars(args).items() if name != "page"}, key], sort_keys=True).encode()).hexdigest()
+    page_cache = CACHE / "search" / ("page-" + query_key + "-" + str(args.page) + ".json")
+    ids = [record["id"] for record in data["records"]]
+    previous_page = CACHE / "search" / ("page-" + query_key + "-" + str(args.page - 1) + ".json")
+    if args.page > 1 and ids and ids == read_json(previous_page, []):
+        data["records"] = []
+        data["lastPage"] = args.page
+    atomic_json(page_cache, ids)
+    items = []
+    for record in data["records"]:
+        identifier = record["id"]
+        if not re.fullmatch(re.escape(source) + r"-[a-f0-9]{24}", identifier): continue
+        if not valid_url(record["url"], providers.PAGE_HOSTS[source]) or not valid_url(record["thumb_url"], providers.IMAGE_HOSTS[source]): continue
+        if record.get("download_url") and not valid_url(record["download_url"], providers.IMAGE_HOSTS[source]): continue
+        previous = read_json(CACHE / "metadata" / (identifier + ".json"))
+        if previous.get("details_ready") and time.time() - previous.get("detail_time", 0) < 3600:
+            for field in ["tag_names", "uploader", "license", "resolution", "details_ready", "detail_time"]:
+                if field in previous: record[field] = previous[field]
+            if previous.get("download_url") and source != "zedge": record["download_url"] = previous["download_url"]
+        record["path"] = saved_wallhaven(identifier) or previous.get("path", "")
+        atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
+        if getattr(args, "exclude_ai", False) and providers.is_ai(record): continue
+        local = CACHE / "remote" / (identifier + ".jpg")
+        items.append(dict(id=identifier, source=source, name=record["name"], page=record["url"],
+                          path=saved_wallhaven(identifier), type="static", favorite=False, dimensions=record.get("resolution", ""),
+                          tags=record.get("tag_names", []), credit=record.get("uploader", ""),
+                          thumb=local.as_uri() if local.is_file() else "", remoteThumb=record["thumb_url"], **cached_visuals(local)))
+    emit("search", items=items, page=data["page"], lastPage=data["lastPage"], notice=data.get("notice", ""))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        tasks = [pool.submit(remote_thumbnail, item) for item in items if not item["thumb"] or not item.get("palette") or not item.get("backdrop")]
+        for task in concurrent.futures.as_completed(tasks):
+            try: emit("thumbnail", **task.result())
+            except Exception: pass
     trim_cache()
 
 
@@ -547,13 +672,14 @@ def search_commons(args):
                       uploader=field("Artist"), license=field("LicenseShortName"), license_url=field("LicenseUrl"),
                       tag_names=tags, categories=categories, resolution=f"{info.get('width', 0)} × {info.get('height', 0)}",
                       fetched_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
+        if getattr(args, "exclude_ai", False) and providers.is_ai(record): continue
         atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
         local_thumb = CACHE / "remote" / (identifier + ".jpg")
         items.append(dict(id=identifier, name=record["name"], source="commons", page=record["url"],
                           path=saved, type="static", favorite=False, dimensions=record["resolution"],
                           tags=tags, credit=record["uploader"], license=record["license"], remoteThumb=thumb,
                           thumb=local_thumb.as_uri() if local_thumb.is_file() else "", **cached_visuals(local_thumb)))
-    emit("search", items=items, page=args.page, lastPage=args.page + (1 if items and "gsroffset" in data.get("continue", {}) else 0))
+    emit("search", items=items, page=args.page, lastPage=args.page + (1 if "gsroffset" in data.get("continue", {}) else 0))
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         tasks = [pool.submit(remote_thumbnail, item) for item in items if not item["thumb"] or not item.get("palette") or not item.get("backdrop")]
         for task in concurrent.futures.as_completed(tasks):
@@ -562,13 +688,20 @@ def search_commons(args):
     trim_cache()
 
 
-def download_public(identifier, preview=False):
-    if not re.fullmatch(r"(?:nasa-[a-f0-9]{24}|commons-[1-9][0-9]{0,11})", identifier): raise ValueError("Ongeldig afbeelding-ID")
-    source = "commons" if identifier.startswith("commons-") else "nasa"
-    hosts = {"upload.wikimedia.org"} if source == "commons" else {"images-assets.nasa.gov"}
+def download_public(identifier, preview=False, exclude_ai=False):
+    source = identifier.split("-", 1)[0]
+    pattern = r"commons-[1-9][0-9]{0,11}" if source == "commons" else re.escape(source) + r"-[a-f0-9]{24}"
+    if source not in {"nasa", "commons", *providers.SOURCES} or not re.fullmatch(pattern, identifier): raise ValueError("Ongeldig afbeelding-ID")
+    hosts = providers.IMAGE_HOSTS[source] if source in providers.SOURCES else ({"upload.wikimedia.org"} if source == "commons" else {"images-assets.nasa.gov"})
     record = read_json(CACHE / "metadata" / (identifier + ".json"))
     if record.get("source") != source or record.get("id") != identifier:
         raise ValueError("Zoek deze afbeelding opnieuw op")
+    if source in providers.SOURCES and not record.get("details_ready"):
+        record = providers.details(record, lambda url, **kwargs: provider_fetch(source, url, **kwargs))
+        record["detail_time"] = time.time()
+        record["details_ready"] = True
+        atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
+    if exclude_ai and providers.is_ai(record): raise ExcludedAI("AI-label gevonden; deze afbeelding is uitgesloten")
     url = record.get("download_url", "")
     if not url and source == "nasa":
         manifest = remote_json("https://images-api.nasa.gov/asset/" + urllib.parse.quote(record["nasa_id"], safe=""), authenticated=False)
@@ -578,14 +711,24 @@ def download_public(identifier, preview=False):
         record["download_url"] = url
     if not valid_url(url, hosts): raise ValueError("Ongeldig downloadadres")
     suffix = Path(urllib.parse.urlparse(url).path).suffix.lower()
+    if source == "zedge" and suffix not in IMAGES: suffix = ".jpg"
     if suffix not in IMAGES: raise ValueError("Onbekend afbeeldingsformaat")
     saved = saved_wallhaven(identifier)
+    candidate = Path(record.get("path") or "/nonexistent")
+    cached = candidate if candidate.is_file() and candidate.parent == CACHE / "previews" and candidate.stem == identifier else CACHE / "previews" / (identifier + suffix)
+    if cached.is_file(): suffix = cached.suffix
     folder = CACHE / "previews" if preview else library()
     folder.mkdir(parents=True, exist_ok=True)
     target = Path(saved) if saved else folder / (identifier + suffix)
-    transfer_image(url, target, hosts, CACHE / "previews" / (identifier + suffix))
+    transfer_image(url, target, hosts, cached)
     from PIL import Image
-    with Image.open(target) as image: record["resolution"] = f"{image.width} × {image.height}"
+    with Image.open(target) as image:
+        record["resolution"] = f"{image.width} × {image.height}"
+        actual = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp", "GIF": ".gif", "BMP": ".bmp", "AVIF": ".avif"}.get(image.format, suffix)
+    if not saved and actual != target.suffix:
+        new_target = target.with_suffix(actual)
+        os.replace(target, new_target)
+        target = new_target
     record["path"] = str(target)
     atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
     if not preview: atomic_json(metadata_file(target), record)
@@ -594,7 +737,7 @@ def download_public(identifier, preview=False):
         trim_previews(target)
         emit("preview", id=identifier, path=str(target), url=target.as_uri(), dimensions=record["resolution"],
              uploader=record.get("uploader", ""), tags=record.get("tag_names", []), page=record["url"],
-             source=source, license=record.get("license", ""))
+             source=source, license=record.get("license", ""), notice=record.get("asset_note", ""))
     else: emit("download", id=identifier, path=str(target), tags=record.get("tag_names", []))
 
 
@@ -642,11 +785,13 @@ def valid_url(url, hosts):
     return parsed.scheme == "https" and parsed.hostname in hosts and parsed.port in (None, 443)
 
 
-def download(identifier, preview=False):
-    if identifier.startswith(("nasa-", "commons-")):
-        return download_public(identifier, preview)
+def download(identifier, preview=False, exclude_ai=False):
+    if identifier.startswith(("nasa-", "commons-", *(source + "-" for source in providers.SOURCES))):
+        return download_public(identifier, preview, exclude_ai)
     if not re.fullmatch(r"[a-z0-9]{6}", identifier):
         raise ValueError("Ongeldig Wallhaven-ID")
+    if exclude_ai and providers.is_ai(read_json(CACHE / "metadata" / (identifier + ".json"))):
+        raise ExcludedAI("AI-label gevonden; deze afbeelding is uitgesloten")
     if preview:
         record = read_json(CACHE / "metadata" / (identifier + ".json"))
         candidate = saved_wallhaven(identifier) or record.get("path", "")
@@ -678,7 +823,7 @@ def download(identifier, preview=False):
     seed = read_json(CACHE / "search" / ("wallhaven-" + identifier + ".json"))
     # A small, provider-validated search record lets an image transfer run at
     # the same time as the detail request, instead of waiting for it to finish.
-    if not data.get("path") and valid_url(seed.get("path", ""), {"w.wallhaven.cc"}):
+    if not exclude_ai and not data.get("path") and valid_url(seed.get("path", ""), {"w.wallhaven.cc"}):
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             details = pool.submit(remote_json, "https://wallhaven.cc/api/v1/w/" + identifier)
             url = seed["path"]
@@ -692,6 +837,7 @@ def download(identifier, preview=False):
     if not data.get("path"):
         emit("progress", stage="metadata", label="Wallhaven-gegevens ophalen…", percent=-1)
         data = remote_json("https://wallhaven.cc/api/v1/w/" + identifier)["data"]
+    if exclude_ai and providers.is_ai(data): raise ExcludedAI("AI-label gevonden; deze afbeelding is uitgesloten")
     url = data["path"]
     if not valid_url(url, {"w.wallhaven.cc"}):
         raise ValueError("Ongeldig downloadadres")
@@ -716,7 +862,7 @@ def download(identifier, preview=False):
 
 
 def remove(identifier):
-    if not re.fullmatch(r"(?:[a-z0-9]{6}|nasa-[a-f0-9]{24}|commons-[1-9][0-9]{0,11})", identifier):
+    if not re.fullmatch(r"(?:[a-z0-9]{6}|nasa-[a-f0-9]{24}|commons-[1-9][0-9]{0,11}|(?:" + "|".join(map(re.escape, providers.SOURCES)) + r")-[a-f0-9]{24})", identifier):
         raise ValueError("Ongeldig wallpaper-ID")
     saved = saved_wallhaven(identifier)
     if not saved:
@@ -770,39 +916,49 @@ def main():
     prefs.add_argument("key")
     prefs.add_argument("value")
     find = sub.add_parser("search")
-    find.add_argument("--source", choices=["wallhaven", "nasa", "commons"], default="wallhaven")
+    find.add_argument("--source", choices=["wallhaven", "nasa", "commons", *providers.SOURCES], default="wallhaven")
     find.add_argument("--query", default="")
     find.add_argument("--page", type=int, default=1)
     find.add_argument("--sort", choices=["toplist", "date_added", "random", "favorites", "views"], default="toplist")
     find.add_argument("--categories", choices=["111", "100", "010", "001"], default="111")
-    find.add_argument("--purity", choices=["100", "110", "111"], default="100")
+    find.add_argument("--purity", choices=["100", "010", "001", "110", "101", "011", "111"], default="100")
     find.add_argument("--color", default="")
     find.add_argument("--atleast", default="")
     find.add_argument("--ratios", default="")
     find.add_argument("--seed", default="")
-    sub.add_parser("download").add_argument("id")
-    sub.add_parser("preview").add_argument("id")
+    find.add_argument("--category", choices=["", *providers.PIXABAY_CATEGORIES], default="")
+    find.add_argument("--size", choices=["", "small", "medium", "large"], default="")
+    find.add_argument("--exclude-ai", action="store_true")
+    for command in ["download", "preview"]:
+        transfer = sub.add_parser(command)
+        transfer.add_argument("id")
+        transfer.add_argument("--exclude-ai", action="store_true")
     sub.add_parser("remove").add_argument("id")
     sub.add_parser("apply").add_argument("path")
+    sub.add_parser("providers")
+    sub.add_parser("credential")
     args = parser.parse_args()
     try:
         if args.command == "catalog": catalog()
         elif args.command == "preferences": preferences(args.key, args.value)
         elif args.command == "search": search(args)
-        elif args.command == "download": download(args.id)
-        elif args.command == "preview": download(args.id, preview=True)
+        elif args.command == "download": download(args.id, exclude_ai=args.exclude_ai)
+        elif args.command == "preview": download(args.id, preview=True, exclude_ai=args.exclude_ai)
         elif args.command == "remove": remove(args.id)
         elif args.command == "apply": apply(args.path)
+        elif args.command == "providers": emit("providers", sources=source_status())
+        elif args.command == "credential": credential(json.loads(sys.stdin.readline(2048)))
     except urllib.error.HTTPError as error:
         source = getattr(args, "source", "") or str(getattr(args, "id", "")).split("-")[0]
-        provider = {"nasa": "NASA", "commons": "Commons"}.get(source, "Wallhaven")
-        messages = {401: "Wallhaven: controleer je API-sleutel", 403: "Wallhaven weigert de aanvraag",
-                    429: "Wallhaven-limiet bereikt; probeer het straks opnieuw"}
-        emit("error", message=messages.get(error.code, f"{provider} geeft HTTP {error.code}") if provider == "Wallhaven" else f"{provider} geeft HTTP {error.code}; probeer straks opnieuw")
+        provider = providers.SOURCES.get(source, {}).get("label") or {"nasa": "NASA", "commons": "Commons"}.get(source, "Wallhaven")
+        messages = {401: f"{provider}: controleer je API-sleutel", 403: f"{provider} weigert de aanvraag; controleer je toegang",
+                    429: f"{provider}-limiet bereikt; probeer het straks opnieuw"}
+        emit("error", message=messages.get(error.code, f"{provider} geeft HTTP {error.code}; probeer straks opnieuw"))
         return 1
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         # Never include authenticated request URLs in errors.
-        emit("error", message=str(error) if isinstance(error, ValueError) else "Kon de aanvraag niet afronden. Probeer opnieuw.")
+        emit("error", message=str(error) if isinstance(error, ValueError) else "Kon de aanvraag niet afronden. Probeer opnieuw.",
+             aiExcluded=isinstance(error, ExcludedAI), id=getattr(args, "id", ""))
         return 1
     return 0
 

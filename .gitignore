@@ -101,3 +101,7 @@ config/hypr/native-zoom/*.so.abi.tmp
 # Cava installeert deze pakketvoorbeelden zelf.
 config/cava/shaders/
 config/cava/themes/
+
+# Persoonlijke API-sleutels voor wallpaperbronnen
+config/kingstra/wallpaper-sources.json
+config/kingstra/wallpaper-sources.lock

@@ -193,6 +193,12 @@ It has slices, hexagons, a grid, a mosaic, Coverflow and Orbit, local search, co
 favorites, plus Wallhaven search using the existing API key in `skwd-wall/config.json`.
 Wallhaven has three main categories (General, Anime, People); the subject selector adds
 quick tag searches such as Nature, Space, Abstract and Cyberpunk, combined with free text.
+The subject control is explicitly labelled **Zoekonderwerp**: these are prepared search
+terms, not shared categories supplied by every source. Wallhaven's SFW, Sketchy and NSFW
+are independent checkboxes; only SFW is checked on startup. Pixabay has a separate
+safe-search checkbox, enabled by default, plus its own actual API categories, colour,
+minimum dimensions and popular/latest filters. Pexels supports colour and minimum
+megapixel size. Sources without an adjustable safety filter say so in the picker.
 A second source uses the free [NASA Image Library API](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf)
 without an API key. It offers topic search, automatic pagination, HD previews, download,
 apply and trash; downloaded sidecars retain the original title, keywords, credit and
@@ -202,6 +208,36 @@ The NASA tab starts on Nebulae; choose All subjects to search the entire library
 source without a key, with minimum resolution, automatic pagination and original-image
 preview/download. Categories become searchable tags; author, license and source URL are
 kept in the image sidecar and shown in the preview.
+
+Additional source tabs provide [Wallpapers.com](https://wallpapers.com/api/),
+[Alpha Coders](https://alphacoders.com/), [backiee](https://backiee.com/),
+[WallpapersCraft](https://wallpaperscraft.com/), [Zedge](https://www.zedge.net/),
+[Pexels](https://www.pexels.com/api/) and [Pixabay](https://pixabay.com/api/docs/).
+Wallpapers.com uses its public API (up to 60 results per topic); Pexels and Pixabay
+require a key. The other four use publicly available site data rather than a supported
+developer API. Zedge exposes only free, unlicensed site previews: these are explicitly
+labelled, and the original remains available through the source-page button. No premium
+or rewarded download routes are used. Public site parsers may need maintenance when
+their markup changes. Published original images, titles, tags and credit are retained
+where the source supplies them; unsupported source-specific filters stay hidden.
+
+The **API-sleutels** button contains masked local key fields for Wallhaven (optional),
+Wallpapers.com (optional), Pexels and Pixabay, with request links and remove controls.
+Keys are stored with mode `0600` in `~/.config/kingstra/wallpaper-sources.json`, which
+is ignored by git. They are sent to the worker through stdin and never returned in
+UI state or logs. Existing Wallhaven keys in the skwd config remain supported.
+Pixabay responses are cached for 24 hours; original/Full HD access requires separate
+full API approval (normal keys return images up to 1280 px, shown in the picker).
+Pexels currently pauses new API key issuance; an existing key can be entered.
+On smaller screens the source tabs become a dropdown to leave more room for images.
+
+**Geen AI** is a remembered option: Wallhaven excludes its AI art tag (`133451`),
+backiee's unqueried catalog requests `is_ai=no` and checks its `AIGenerated` flag.
+Other adapters and the local collection filter explicit AI labels/tags, without treating
+all anime, illustration or digital art as AI. On these sources the UI explains that
+missing labels cannot be filtered. AI labels discovered on a detail page also prevent
+the full preview/download while this option is enabled. This is label filtering,
+not an image classifier. No unsupported API parameters are presented as working filters.
 
 Inspired by [elifouts/Dotfiles](https://github.com/elifouts/Dotfiles/tree/5895c44f32a7d6d35a8e6c2321eb6ab81fe37c75/.config/hypr/Modern/utilities/wallpaper-picker),
 the selected image supplies a softly blurred, crossfading background (toggle with Sfeer),
@@ -239,7 +275,8 @@ input without an idle snap. The default HSL hue/saturation colour order is based
 The implementation keeps its own source; the upstream MIT notice is included in
 `config/quickshell/wallpaper/SKWD-LICENSE.txt`.
 Wheel ticks compensate for Hyprland's scroll multiplier so each tick advances one
-column; pixel gestures remain continuous. Hover highlights a tile and its name
+column, or one full row in the grid with a short animation; pixel gestures remain continuous.
+Hover highlights a tile and its name
 independently of keyboard selection. Coverflow uses the same virtualized camera and
 thumbnail cache, with a large center card and perspective-rotated neighboring cards;
 its visual inspiration comes from the [wallpaperCarousel unixporn example](https://www.reddit.com/r/unixporn/comments/1ro14ur/niri_wallpaper_carousel_from_uilyamiro1_in_a_dms/),
@@ -256,6 +293,8 @@ python3 tests/integration/wallpaper-picker-offscreen.py --output /tmp/picker-tes
 # With Xvfb installed, the integration test also verifies actual shader images.
 # Add --live-wallhaven, --live-nasa or --live-commons for real API checks.
 # Add --paging-only to verify scroll position through page loads in every view.
+python3 tests/integration/wallpaper-providers-live.py --output /tmp/picker-live-sources
+# Explicit network check of the five new keyless sources; private files, no apply.
 ```
 
 The integration test uses actual Qt click, wheel and keyboard events, private

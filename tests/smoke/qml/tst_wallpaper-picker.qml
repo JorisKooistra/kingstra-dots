@@ -98,6 +98,10 @@ Item {
             fakeController.wheelFactor = 1;
             hoverCard.visible = false;
             hoverCard.remote = false;
+            hoverCard.selected = false;
+            hoverCard.current = false;
+            hoverCard.removable = false;
+            hoverCard.shape = "wall";
             hoverCard.width = 220;
             hoverCard.height = 160;
             hoverCard.itemData = ({
@@ -120,6 +124,7 @@ Item {
             fakeController.items = next;
             fakeController.selected = 0;
             carousel.positionSelected(false);
+            mouseMove(carousel, 5, 5);
             wait(100);
         }
         function test_honeycomb_edges_share_the_same_slope() {
@@ -320,6 +325,37 @@ Item {
             compare(applySpy.count, 1);
             compare(removeSpy.count, 1);
             compare(pickedSpy.count, 0);
+        }
+        function test_small_hexagon_centre_opens_image_instead_of_apply() {
+            hoverCard.width = 84;
+            hoverCard.height = 72;
+            hoverCard.shape = "hex";
+            hoverCard.remote = true;
+            hoverCard.selected = true;
+            hoverCard.itemData = ({name: "Compact remote", id: "abc123", path: ""});
+            hoverCard.visible = true;
+            mouseMove(hoverCard, 42, 36);
+            verify(!findChild(hoverCard, "wallpaper-apply").visible);
+            mouseClick(hoverCard, 42, 36);
+            compare(pickedSpy.count, 1);
+            compare(applySpy.count, 0);
+        }
+        function test_hexagon_keeps_hover_actions_and_centre_click_separate() {
+            hoverCard.width = 140;
+            hoverCard.height = 122;
+            hoverCard.shape = "hex";
+            hoverCard.remote = true;
+            hoverCard.selected = true;
+            hoverCard.itemData = ({name: "Saved remote", id: "abc123", path: "/library/remote.jpg"});
+            hoverCard.visible = true;
+            mouseMove(hoverCard, 70, 61);
+            verify(findChild(hoverCard, "wallpaper-apply").visible);
+            verify(findChild(hoverCard, "wallpaper-remove").visible);
+            mouseClick(hoverCard, 70, 61);
+            compare(pickedSpy.count, 1);
+            compare(applySpy.count, 0);
+            mouseClick(findChild(hoverCard, "wallpaper-apply"), 12, 12);
+            compare(applySpy.count, 1);
         }
         function test_dense_wheel_burst_keeps_all_steps() {
             for (let i = 0; i < 6; i++)
