@@ -350,7 +350,7 @@ Item {
 
                 Card {
                     Heading { text: "Scrollen en werkvlak" }
-                    Hint { Layout.fillWidth: true; text: "Super+wiel scrolt binnen de werkruimte, Super+Shift+wiel wisselt van werkruimte, Super+Ctrl+linkermuis sleept vrij." }
+                    Hint { Layout.fillWidth: true; text: "Super+wiel scrolt binnen de werkruimte, Super+Shift+wiel wisselt van werkruimte, Super+Ctrl+linkermuis sleept vrij. Touchpad: vier vingers schuiven, knijpen zoomt. Aanraakscherm: twee vingers." }
                     Hint { text: "Breedte van een nieuw venster op een scrollstrook" }
                     Flow {
                         Layout.fillWidth: true; spacing: 8

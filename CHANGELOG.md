@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Werkvlak: touchpad en aanraakscherm
+- Op een ruimtelijk werkvlak schuiven vier vingers het beeld vrij in beide richtingen; knijpen zoomt uit (vingers naar elkaar) of terug naar 100%. Super+drie vingers blijft hetzelfde schuiven doen. Tweevingerscroll blijft bij de app zolang het beeld op 100% staat, en drie vingers blijven werkruimte, overzicht en controlecentrum.
+- Uitgezoomd schuift een tweevingerscroll één pagina naar het volgende venster, dezelfde stap als Super+wiel, in plaats van de inhoud van het verkleinde venster te scrollen. Super+twee vingers doet die stap ook op 100%. Knijpen zoomt nog; een kleine vingertrilling verandert de schaal niet meer. Het muiswiel blijft in het document scrollen.
+- Buiten het ruimtelijk werkvlak togglet een verticale viervingerveeg nog steeds de magische werkruimte.
+- Op een aanraakscherm (Hyprland 0.57) schuiven twee vingers het beeld en knijpen ze om te zoomen. Eén vinger blijft de app bedienen. Een veeg vanaf de rand, de balk en de kaart zelf worden niet overgenomen.
+- In de werkvlakkaart sleept één vinger het zicht, lang indrukken verplaatst een app, en twee vingers zoomen. De resetknop is groot genoeg om te tikken.
+
 ### Cassettespeler en discman naast de draaitafel
 - De cassette heeft nu echte dikte (12 mm): als hij uit het klepje komt zie je de bovenkant en zijkanten, in het perspectief van de speler; kanten die van je af kijken vallen weg.
 - Album wisselen gaat nu zoals bij de echte apparaten, op de mediakaart en schermvullend (in hetzelfde camera-perspectief als de speler). Walkman: eject, het klepje (bijna het hele front, scharnier onderaan) kantelt naar je toe, de cassette schuift omhoog uit het klepje en verdwijnt, je ziet het vak met spoelassen, koppen en aandrukrollen, de nieuwe cassette schuift erin en het klepje klikt dicht. De cassette is een hele cassette met schroefjes en koppenopening. Discman: OPEN schuift, de motor remt af, het deksel klapt om het scharnier achter omhoog (schermvullend zie je dan de onderkant), de cd gaat van de as omhoog en weg, je ziet de lade met as en laserlens, de nieuwe cd gaat erop en het deksel gaat dicht. De cd heeft nu de echte maat (bijna zo groot als het deksel, het venster toont het midden) met een gat voor de as. Fix: de opdruk en het hoesmasker van de cd hadden geen binnengat (Canvas tekent geen volle cirkel tegen de klok in).
@@ -85,12 +92,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Tweede rail aan de overkant: zet je onderdelen op de tweede rail, dan verschijnt die rechts (of links als de hoofdrail rechts staat) met hetzelfde vlak, dezelfde knoppen en animaties. Hij reserveert eigen ruimte, schuift bij automatisch verbergen mee weg, en de omlijsting, de bovenstrook, het eiland, meldingen en tooltips houden er rekening mee. Panelen uit de tweede rail groeien aan die kant uit de omlijsting.
 - De rail kan per thema aan of uit, los van wat het thema zelf kiest; zo krijgen ook Paper en Mono een rail (en een tweede rail).
 - Nieuwe pagina Instellingen › Bediening › Rail-indeling (`settings/RailLayoutPage.qml`): kies het thema, sleep blokjes tussen Hoofdrail, Tweede rail en Niet getoond (of gebruik de pijltjes), zet de rail per thema aan/uit, stel het aantal werkruimtes in, en voeg eigen apps toe door een geïnstalleerde app te zoeken of zelf een commando in te vullen. Alles wordt direct bewaard en de rail volgt live.
-- Rechtsklik op een railknop opent Rail-indeling; ook bereikbaar via Bediening en de railkaart in Super+A. Achter Meer kunnen nu ook eigen apps, Uitzoomen, het systeemvak en de klok.
+- Rechtsklik op een railknop opent Rail-indeling; ook bereikbaar via Bediening en de railkaart in Super+A. Lang indrukken doet hetzelfde, ook op de klok, de geluidstegel en de statustegel. Lang indrukken op een systeemvak-icoon opent het menu, en op de afspeelknop het volgende nummer. Achter Meer kunnen nu ook eigen apps, Uitzoomen, het systeemvak en de klok.
 - Nieuwe smoketest `tests/smoke/rail-layout.sh`: controleert het opslagscript en sleept offline (qmltestrunner met kleine Quickshell-stubs) in de echte editor.
 
 ### Rail: automatisch verbergen verbergt nu echt
 - Met "automatisch verbergen" (per scherm of via de mode) schuift de rail nu helemaal weg tot alleen de dunne omlijsting over is, even breed als rechts en onder. Eerder bleef er een lege railstrook met gereserveerde ruimte tussen de vensters staan.
 - De gereserveerde ruimte krimpt mee: vensters krijgen de volle breedte. Bij hover op de linkerrand klapt de rail er vloeiend over de vensters heen uit en na 2,4 s zonder hover schuift hij weer weg; zolang een paneel open is blijft hij staan.
+- De ingeklapte rand is 2 of 8 px, te smal voor een vinger. De invoerzone wordt dan 16 px (22 px op een aanraakscherm) zonder dat vensters die ruimte verliezen. Tikken of klikken op die rand, op de strook, op de Matte-pillen of op de tweede rail klapt de rail uit, net als hover. Een tik op de bovenrand zet het controlecentrum vast. Op een aanraakscherm blijven de transportknoppen van de muziekpil zichtbaar, en railknoppen zijn iets hoger.
 - Omlijsting, bovenstrook, onderrand, meldingen en het eiland schuiven mee met de rail, dus de ronde hoeken blijven heel. Knoppen behouden hun breedte en vervagen tijdens het wegschuiven.
 
 ### Bediening: alles in één overlay (Super+A)

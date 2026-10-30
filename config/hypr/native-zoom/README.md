@@ -4,6 +4,11 @@ Super+Ctrl+wiel zoomt de echte desktop tussen 100% en 25%; Super+Ctrl+middelklik
 herstelt 100%. Werkt alleen bij `lua:hyprscroll2d`, per monitor. Appbuffers blijven
 op hun eigen afmetingen; klikken en scrollen worden naar de geschaalde app geleid.
 Super+wiel gaat een hele pagina verder; Super+Ctrl+linkermuis bedient de Lua-camera.
+Op een aanraakscherm doen twee vingers hetzelfde schuiven en zoomt knijpen,
+zolang het beeld op 100% staat. Uitgezoomd schuift een tweevingerscroll of
+Super+twee vingers één pagina (zelfde stap als Super+wiel); het muiswiel
+blijft in het document scrollen. Een kleine vingertrilling zoomt niet mee;
+één vinger blijft naar de app gaan.
 Elke wielstap zoomt ongeveer 25%. Uitgezoomd verschijnt een knop Reset 100%.
 
 Focus volgt de muis, zowel in het uitgezoomde werkvlak als op andere monitors.

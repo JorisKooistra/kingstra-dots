@@ -79,6 +79,12 @@ Item {
             mouseClick(input,100,100,Qt.LeftButton,Qt.NoModifier);
             compare(controls.chooses,1);
         }
+        function test_touch_layer_does_not_take_the_mouse() {
+            let touch = findChild(input, "touch");
+            verify(touch !== null);
+            compare(touch.maximumTouchPoints, 2);
+            compare(touch.mouseEnabled, false);
+        }
         function test_center_swaps_and_edges_split() {
             let box={x:0,y:0,w:1000,h:800};
             compare(MapLogic.dropEdge(box,500,400),"center");

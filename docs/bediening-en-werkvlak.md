@@ -26,12 +26,17 @@ railknoppen, Meer-lijst) gaat "Meer en muziek…" naar Instellingen › Bedienin
    een app; Super+wiel, Super+Alt+wiel of Super+Ctrl+Alt+pijlen verplaatst het zicht.
    Houd Super+Ctrl+linkermuis ingedrukt om vrij te slepen. Een app die je op een lege
    plek opent, komt op die plek.
-6. Super+drievingerveeg verwerkt X en Y tegelijk waar de compositor live
-   Lua-gebaren ondersteunt. Gewone appscroll en ongewijzigde gebaren blijven bestaan.
+6. Vier vingers op het touchpad schuiven het beeld vrij. Knijpen zoomt uit of
+   terug in. Op een aanraakscherm doen twee vingers hetzelfde; één vinger blijft
+   de app bedienen. Super+drievingerveeg doet het schuiven ook, als de vierde
+   vinger niet past. Gewone appscroll en de drievingergebaren (werkruimte,
+   overzicht, controlecentrum) blijven bestaan. Uitgezoomd schuift een
+   tweevingerscroll één pagina, net als Super+wiel; Super+twee vingers doet
+   die stap ook op 100%. Het muiswiel blijft in het document scrollen.
 7. Super+Tab opent de vensterkaart. Gewoon slepen verplaatst alleen de camera,
-   ook als je op een miniatuur begint. Super+slepen verplaatst een app: op het
-   midden van een ander venster op dezelfde pagina wisselen ze van tegel; op een andere pagina komt de app ernaast. Aan een rand splits je dat
-   vlak. Het oplichtende vak toont het doel. Wiel zoomt, klik kiest een venster.
+   ook als je op een miniatuur begint. Super+slepen, of op een aanraakscherm
+   lang indrukken, verplaatst een app: op het midden van een ander venster op dezelfde pagina wisselen ze van tegel; op een andere pagina komt de app ernaast. Aan een rand splits je dat
+   vlak. Het oplichtende vak toont het doel. Wiel of knijpen zoomt, tik kiest een venster.
 8. Super+linkermuis slepen op het scherm zelf werkt hetzelfde: het venster komt
    waar je het loslaat, ook tussen bestaande tegels.
 9. Super+Ctrl+wiel verkleint de echte desktop tot 25%. Meerdere pagina's zijn
@@ -66,7 +71,15 @@ of Matugen-thema. Thema en wallpaper-picker hebben een ingang onder Hele desktop
 De extra railknoppen kunnen per mode op een scherm in volgorde worden gezet.
 Knoppen die je weinig gebruikt zet je onder "Achter Meer": ze schuiven uit de
 rail tot je op Meer klikt. De vaste navigatiegroepen zijn nog niet vrij te
-verslepen.
+verslepen. Rechtsklik of lang indrukken op een railknop opent Rail-indeling.
+Lang indrukken op een systeemvak-icoon opent het menu.
+
+Automatisch verbergen schuift de rail weg tot de rand. Hover, of een tik of
+klik op die rand, klapt hem weer uit. De invoerzone is iets breder dan de
+zichtbare rand, zodat een vinger of touchpad hem raakt, zonder dat vensters
+die ruimte kwijtraken. Een tik op de bovenrand zet het controlecentrum vast.
+Op een aanraakscherm blijven vorige, afspelen en volgende in de muziekpil
+zichtbaar.
 
 De muziekpill gebruikt standaard één stabiel mediascherm; tonen/verbergen kan
 per scherm worden overschreven. Desktopmedia kan apart aan/uit.
@@ -115,6 +128,9 @@ belasting.
 - Nieuwe lege ruimtelijke werkruimte: eerste venster staat volledig in beeld.
 - Tweede app naar de rij erboven verplaatsen, diagonaal bewegen, kaart openen en
   een venster kiezen; normale appscroll blijft normaal.
+- Touchpad: vier vingers schuiven diagonaal, knijpen zoomt uit en terug; drie
+  vingers wisselen nog van werkruimte. Aanraakscherm: twee vingers doen hetzelfde
+  en één vinger klikt in de app. In de kaart verplaatst lang indrukken een app.
 - Scroll uitzetten: geen fout bij wiel of kolombreedteactie; ook leeg doet niets.
 - Muziekpill beweegt niet als geheel; pauze/afspelen werkt in alle gebruikte themes.
 - Systeem toont beschikbare GPU-metingen; ontbrekende data is geen 0%.

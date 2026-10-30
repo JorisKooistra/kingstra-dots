@@ -87,8 +87,9 @@ if hl.get_config and hl.get_config("binds:drag_center_window") ~= nil then
 end
 
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
-hl.gesture({ fingers = 4, direction = "up", action = "special", workspace_name = "magic" })
-hl.gesture({ fingers = 4, direction = "down", action = "special", workspace_name = "magic" })
+-- Vier vingers hoort bij het ruimtelijk werkvlak (lua/spatial.lua): daar schuift
+-- het beeld in beide richtingen. Buiten die indeling togglet een verticale
+-- viervingerveeg nog steeds de magische werkruimte.
 -- Vensters in een groep (Super+G) krijgen een tabbalk met afgeronde
 -- pillen in plaats van dunne streepjes. Kleuren komen uit lua.colors.
 pcall(hl.config, { group = { groupbar = {

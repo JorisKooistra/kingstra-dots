@@ -45,6 +45,12 @@ Item {
     readonly property bool stripOnBottom: ThemeConfig.barStatusStripEdge === "bottom"
     readonly property bool topHoverHitEnabled: stripEnabled && !stripControlsEnabled && !stripOnBottom
     readonly property int topHoverHitWidth: Math.min(420, Math.max(0, width - railWidth - shellBorderWidth))
+    // Op een aanraakscherm is 8 px geen tikdoel. Een touchpad houdt de dunne
+    // rand: de aanwijzer blijft aan de schermrand hangen.
+    readonly property int topHoverHitHeight: !topHoverHitEnabled ? 0
+        : (TouchProfile.isTouchscreen
+            ? Math.round(20 * TouchProfile.hitTargetScale)
+            : Math.max(shellBorderWidth, 8))
     readonly property int topHoverOpenDelay: 500
     // Waar tijdens panelRequested("tophover") om gevraagd werd: true bij
     // hover op de bovenrand, false bij een klik. Hover sluit weer bij
@@ -52,6 +58,10 @@ Item {
     property bool hoverRequest: false
     readonly property bool railOnRight: ThemeConfig.barRailEdge === "right"
     readonly property int railWidth: ThemeConfig.barRailWidth
+    // Alleen op een aanraakscherm: knoppen in de rail iets hoger, zonder de
+    // dichtheid op een gewone laptop te veranderen.
+    readonly property real railHitScale: TouchProfile.isTouchscreen ? TouchProfile.hitTargetScale : 1
+    function railPx(px) { return Math.round(px * railHitScale); }
     // Indeling per thema (RailLayout): volgorde van de hoofdrail en wat op de
     // tweede rail aan de overkant staat. Die tweede rail verschijnt zodra je
     // er in Rail-indeling iets op zet.
@@ -375,6 +385,7 @@ Item {
     readonly property Item matteLeftHitRegion: matteBar.leftHitRegion
     readonly property Item matteCenterHitRegion: matteBar.centerHitRegion
     readonly property Item matteRightHitRegion: matteBar.rightHitRegion
+    readonly property Item matteEdgeHitRegion: matteEdgeHit
     readonly property Item stripHitRegion: stripHitArea
     readonly property Item topHoverHitRegion: topHoverHitArea
     readonly property bool topHoverHovered: topHover.hovered
@@ -421,8 +432,8 @@ Item {
     readonly property bool railContentVisible: !barAutoHide || autoHideVisible || anyRailHovered || railHold
     // Automatisch verbergen schuift de rail écht weg: wat overblijft is de
     // dunne omlijsting (even breed als rechts/onder), en de gereserveerde
-    // ruimte krimpt mee zodat vensters de volle breedte krijgen. Bij hover op
-    // die rand klapt de rail er over de vensters heen weer uit.
+    // ruimte krimpt mee zodat vensters de volle breedte krijgen. Hover, een
+    // tik of een klik op die rand klapt de rail er over de vensters heen weer uit.
     readonly property bool railAutoHidden: railEnabled && barAutoHide
     readonly property int railHiddenExtent: frameEnabled ? shellBorderWidth : 2
     property real railReveal: !railAutoHidden || railContentVisible ? 1 : 0
@@ -435,7 +446,29 @@ Item {
     // de uitgeklapte rail ligt dan tijdelijk over de vensters heen.
     readonly property int railReservedWidth: railAutoHidden
         ? (frameEnabled ? shellBorderWidth : 0) : railWidth
-    onRailHoldChanged: if (!railHold && barAutoHide) autoHideTimer.restart()
+    // De zichtbare rand is 2 of 8 px. Zolang de rail ingeklapt is, is de
+    // invoerzone breder (zonder die pixels van vensters af te pakken), zodat
+    // een vinger of touchpad hem raakt.
+    readonly property int railPeekWidth: railAutoHidden && railReveal < 0.85
+        ? Math.max(railHiddenExtent, Math.round((TouchProfile.isTouchscreen ? 22 : 16) * TouchProfile.hitTargetScale))
+        : 0
+    property int edgeHolds: 0
+    function showAutoHide() {
+        autoHideVisible = true;
+        autoHideTimer.stop();
+    }
+    function scheduleAutoHide() {
+        if (barAutoHide && edgeHolds === 0) autoHideTimer.restart();
+    }
+    function beginEdgeHold() {
+        edgeHolds += 1;
+        showAutoHide();
+    }
+    function endEdgeHold() {
+        edgeHolds = Math.max(0, edgeHolds - 1);
+        scheduleAutoHide();
+    }
+    onRailHoldChanged: if (!railHold) scheduleAutoHide()
     readonly property bool stripContentVisible: !barAutoHide || autoHideVisible || stripHover.hovered || matteBar.hovered
     // Anker van de laatst getriggerde knop (host-coords), zodat panelen uit
     // de knop groeien i.p.v. uit een vaste schermhoek.
@@ -720,7 +753,7 @@ Item {
         id: autoHideTimer
         interval: 2400
         repeat: false
-        onTriggered: if (root.barAutoHide && !root.anyRailHovered && !stripHover.hovered && !matteBar.hovered) root.autoHideVisible = false
+        onTriggered: if (root.barAutoHide && root.edgeHolds === 0 && !root.anyRailHovered && !stripHover.hovered && !matteBar.hovered) root.autoHideVisible = false
     }
 
     readonly property bool hasWifi: {
@@ -978,17 +1011,18 @@ Item {
         anchors.bottomMargin: root.railBottomOffset
         anchors.left: root.railOnRight ? undefined : parent.left
         anchors.right: root.railOnRight ? parent.right : undefined
-        width: root.railEnabled ? Math.ceil(root.railExtent) : 0
+        width: root.railEnabled ? Math.max(Math.ceil(root.railExtent), root.railPeekWidth) : 0
 
         HoverHandler {
             id: railHover
-            onHoveredChanged: {
-                if (hovered) {
-                    root.autoHideVisible = true;
-                } else if (root.barAutoHide) {
-                    autoHideTimer.restart();
-                }
-            }
+            onHoveredChanged: hovered ? root.showAutoHide() : root.scheduleAutoHide()
+        }
+        // Tik of klik op de dunne rand, ook als er geen hover is.
+        MouseArea {
+            anchors.fill: parent
+            onPressed: root.beginEdgeHold()
+            onReleased: root.endEdgeHold()
+            onCanceled: root.endEdgeHold()
         }
     }
 
@@ -999,7 +1033,7 @@ Item {
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
         width: root.topHoverHitEnabled ? root.topHoverHitWidth : 0
-        height: root.topHoverHitEnabled ? Math.max(root.shellBorderWidth, 8) : 0
+        height: root.topHoverHitHeight
         z: 30
 
         Timer {
@@ -1025,6 +1059,18 @@ Item {
                     topHoverOpenTimer.stop();
                     root.panelCloseRequested("tophover");
                 }
+            }
+        }
+        // Een tik zet het controlecentrum vast, in plaats van het alleen te
+        // tonen zolang de aanwijzer erop staat.
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                topHoverOpenTimer.stop();
+                root.lastTriggerX = root.width / 2;
+                root.lastTriggerY = 0;
+                root.hoverRequest = false;
+                root.panelRequested("tophover", root.lastTriggerX, root.lastTriggerY);
             }
         }
     }
@@ -1114,17 +1160,17 @@ Item {
         anchors.bottom: parent.bottom
         anchors.left: root.secondRailOnRight ? undefined : parent.left
         anchors.right: root.secondRailOnRight ? parent.right : undefined
-        width: root.secondRailEnabled ? Math.ceil(root.secondRailExtent) : 0
+        width: root.secondRailEnabled ? Math.max(Math.ceil(root.secondRailExtent), root.railPeekWidth) : 0
 
         HoverHandler {
             id: secondRailHover
-            onHoveredChanged: {
-                if (hovered) {
-                    root.autoHideVisible = true;
-                } else if (root.barAutoHide) {
-                    autoHideTimer.restart();
-                }
-            }
+            onHoveredChanged: hovered ? root.showAutoHide() : root.scheduleAutoHide()
+        }
+        MouseArea {
+            anchors.fill: parent
+            onPressed: root.beginEdgeHold()
+            onReleased: root.endEdgeHold()
+            onCanceled: root.endEdgeHold()
         }
     }
 
@@ -1187,6 +1233,25 @@ Item {
         }
     }
 
+    // De Matte-pillen schuiven bijna helemaal van het scherm. Deze strook
+    // blijft liggen zolang ze weg zijn, zodat een tik ze terug haalt.
+    Item {
+        id: matteEdgeHit
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: root.matteFloatingBar && root.barAutoHide && (!root.stripContentVisible || root.edgeHolds > 0)
+            ? Math.round((TouchProfile.isTouchscreen ? 22 : 16) * TouchProfile.hitTargetScale)
+            : 0
+        y: root.stripOnBottom ? parent.height - height : 0
+        MouseArea {
+            anchors.fill: parent
+            enabled: parent.height > 0
+            onPressed: root.beginEdgeHold()
+            onReleased: root.endEdgeHold()
+            onCanceled: root.endEdgeHold()
+        }
+    }
+
     MatteBar {
         id: matteBar
         width: root.width
@@ -1194,10 +1259,7 @@ Item {
         active: root.matteFloatingBar && root.stripControlsEnabled
         revealed: root.stripContentVisible
         y: root.stripOnBottom ? root.height - root.stripHeight : 0
-        onHoveredChanged: {
-            if (hovered) { root.autoHideVisible = true; autoHideTimer.stop(); }
-            else if (root.barAutoHide) autoHideTimer.restart();
-        }
+        onHoveredChanged: hovered ? root.showAutoHide() : root.scheduleAutoHide()
         chrome: root
         mocha: root.mocha
     }
@@ -1226,13 +1288,13 @@ Item {
 
             HoverHandler {
                 id: stripHover
-                onHoveredChanged: {
-                    if (hovered) {
-                        root.autoHideVisible = true;
-                    } else if (root.barAutoHide) {
-                        autoHideTimer.restart();
-                    }
-                }
+                onHoveredChanged: hovered ? root.showAutoHide() : root.scheduleAutoHide()
+            }
+            MouseArea {
+                anchors.fill: parent
+                onPressed: root.beginEdgeHold()
+                onReleased: root.endEdgeHold()
+                onCanceled: root.endEdgeHold()
             }
         }
 
@@ -1625,12 +1687,13 @@ Item {
         readonly property string artUrl: player && player.trackArtUrl ? String(player.trackArtUrl) : ""
         // HoverHandler i.p.v. de MouseArea: die ligt onder de knoppen, zodat
         // vorige/afspelen/volgende hun eigen klik krijgen en het paneel niet
-        // openen.
-        readonly property bool expanded: mpHover.hovered
+        // openen. Op een aanraakscherm is er geen hover; de knoppen blijven
+        // dan zichtbaar.
+        readonly property bool expanded: mpHover.hovered || TouchProfile.isTouchscreen
 
         visible: root.mediaVisible
         Layout.preferredWidth: expanded ? 300 : 176
-        Layout.preferredHeight: 26
+        Layout.preferredHeight: root.railPx(26)
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: expanded ? root.pillHoverColor : root.pillColor
         border.width: 1
@@ -1756,8 +1819,8 @@ Item {
         id: mc
         property string icon: ""
         signal triggered()
-        width: 22
-        height: 22
+        width: root.railPx(22)
+        height: width
         radius: 5
         color: mcMouse.containsMouse
             ? Qt.rgba(root.barHueA.r, root.barHueA.g, root.barHueA.b, 0.28)
@@ -1811,7 +1874,7 @@ Item {
                         return false;
                     }
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 30
+                    Layout.preferredHeight: root.railPx(30)
                     radius: Math.min(9, ThemeConfig.styleWidgetRadius)
                     color: active ? Qt.rgba(root.hotColor.r, root.hotColor.g, root.hotColor.b, 0.20)
                         : (wsMouse.containsMouse ? root.pillHoverColor
@@ -1895,7 +1958,7 @@ Item {
                     required property var modelData
                     readonly property bool active: root.activeSpecial === modelData.wsName
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 26
+                    Layout.preferredHeight: root.railPx(26)
                     radius: Math.min(7, ThemeConfig.styleWidgetRadius)
                     color: active ? root.hotColor
                         : (spMouse.containsMouse ? root.pillHoverColor : root.pillColor)
@@ -2202,7 +2265,7 @@ Item {
         }
 
         Layout.fillWidth: true
-        implicitHeight: tucked ? 0 : (text === "" ? 34 : 40)
+        implicitHeight: tucked ? 0 : root.railPx(text === "" ? 34 : 40)
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: mouse.containsMouse ? root.pillHoverColor : "transparent"
         border.width: 1
@@ -2268,9 +2331,21 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+            property bool heldForEdit: false
+            pressAndHoldInterval: 450
             onEntered: root.showTooltip(btn, btn.tooltip, true)
             onExited: root.hideTooltip(btn.tooltip)
+            // Lang indrukken is de tikvariant van rechtsklik.
+            onPressAndHold: {
+                heldForEdit = true;
+                root.hideTooltip(btn.tooltip);
+                root.openRailEditor();
+            }
             onClicked: (mouseEvent) => {
+                if (heldForEdit) {
+                    heldForEdit = false;
+                    return;
+                }
                 if (mouseEvent.button === Qt.MiddleButton) {
                     btn.middleClicked();
                     return;
@@ -2304,7 +2379,7 @@ Item {
         signal triggered()
 
         Layout.fillWidth: true
-        implicitHeight: 42
+        implicitHeight: root.railPx(42)
         radius: Math.min(7, ThemeConfig.styleWidgetRadius)
         color: clockMouse.containsMouse ? root.pillHoverColor : "transparent"
         border.width: 1
@@ -2367,9 +2442,26 @@ Item {
             id: clockMouse
             anchors.fill: parent
             hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            property bool heldForEdit: false
+            pressAndHoldInterval: 450
             onEntered: root.showTooltip(clock, clock.tooltip, true)
             onExited: root.hideTooltip(clock.tooltip)
-            onClicked: {
+            onPressAndHold: {
+                heldForEdit = true;
+                root.hideTooltip(clock.tooltip);
+                root.openRailEditor();
+            }
+            onClicked: (mouseEvent) => {
+                if (heldForEdit) {
+                    heldForEdit = false;
+                    return;
+                }
+                if (mouseEvent.button === Qt.RightButton) {
+                    root.hideTooltip(clock.tooltip);
+                    root.openRailEditor();
+                    return;
+                }
                 let p = clock.mapToItem(root, clock.width / 2, clock.height / 2);
                 root.lastTriggerX = p.x;
                 root.lastTriggerY = p.y;
@@ -2517,10 +2609,26 @@ Item {
             id: audioMouse
             anchors.fill: parent
             hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+            property bool heldForEdit: false
+            pressAndHoldInterval: 450
             onEntered: audio.showTip()
             onExited: if (!mediaMouse.containsMouse) root.hideTooltip(audio.shownTip)
+            onPressAndHold: {
+                heldForEdit = true;
+                root.hideTooltip(audio.shownTip);
+                root.openRailEditor();
+            }
             onClicked: (mouse) => {
+                if (heldForEdit) {
+                    heldForEdit = false;
+                    return;
+                }
+                if (mouse.button === Qt.RightButton) {
+                    root.hideTooltip(audio.shownTip);
+                    root.openRailEditor();
+                    return;
+                }
                 if (mouse.button === Qt.MiddleButton) {
                     audio.middleClicked();
                     return;
@@ -2561,8 +2669,8 @@ Item {
         }
 
         // Ronde afspeelknop met een voortgangsring: de ring loopt rond met
-        // de track. Linksklik = afspelen/pauzeren, rechtsklik = volgende,
-        // scrollen = volume (zoals de rest van de tegel).
+        // de track. Linksklik = afspelen/pauzeren, rechtsklik of lang
+        // indrukken = volgende, scrollen = volume (zoals de rest van de tegel).
         Item {
             id: mediaButton
             anchors.horizontalCenter: parent.horizontalCenter
@@ -2637,9 +2745,20 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
+                property bool heldForNext: false
+                pressAndHoldInterval: 450
                 onEntered: audio.showTip()
                 onExited: if (!audioMouse.containsMouse) root.hideTooltip(audio.shownTip)
+                onPressAndHold: {
+                    heldForNext = true;
+                    let player = root.activePlayer;
+                    if (player && player.canGoNext) player.next();
+                }
                 onClicked: (mouse) => {
+                    if (heldForNext) {
+                        heldForNext = false;
+                        return;
+                    }
                     let player = root.activePlayer;
                     if (!player) return;
                     if (mouse.button === Qt.RightButton) {
@@ -2730,9 +2849,26 @@ Item {
             id: tileMouse
             anchors.fill: parent
             hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            property bool heldForEdit: false
+            pressAndHoldInterval: 450
             onEntered: tile.showTip()
             onExited: root.hideTooltip(tile.shownTip)
+            onPressAndHold: {
+                heldForEdit = true;
+                root.hideTooltip(tile.shownTip);
+                root.openRailEditor();
+            }
             onClicked: (mouse) => {
+                if (heldForEdit) {
+                    heldForEdit = false;
+                    return;
+                }
+                if (mouse.button === Qt.RightButton) {
+                    root.hideTooltip(tile.shownTip);
+                    root.openRailEditor();
+                    return;
+                }
                 let p = tile.mapToItem(root, tile.width / 2, tile.height / 2);
                 root.lastTriggerX = p.x;
                 root.lastTriggerY = p.y;
@@ -2895,7 +3031,7 @@ Item {
     component TrayGrid: Grid {
         id: tray
         property bool vertical: true
-        readonly property int cell: 24
+        readonly property int cell: Math.min(railInnerWidth, root.railPx(24))
         visible: root.trayShownCount > 0
         // Kolommen volgen de binnenbreedte van de rail (marge 7 aan elke kant),
         // niet de eigen breedte: zo is de grid precies zo breed als zijn
@@ -2950,9 +3086,21 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                    property bool heldForMenu: false
+                    pressAndHoldInterval: 450
                     onEntered: root.showTooltip(trayCell, trayCell.label, tray.vertical)
                     onExited: root.hideTooltip(trayCell.label)
+                    onPressAndHold: {
+                        heldForMenu = true;
+                        let item = trayCell.modelData;
+                        if (item.hasMenu) trayMenu.open();
+                        else item.secondaryActivate();
+                    }
                     onClicked: (mouse) => {
+                        if (heldForMenu) {
+                            heldForMenu = false;
+                            return;
+                        }
                         let item = trayCell.modelData;
                         // Shift+klik: de app echt afsluiten in plaats van naar de tray.
                         if (mouse.modifiers & Qt.ShiftModifier) {

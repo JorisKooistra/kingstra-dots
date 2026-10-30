@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <dlfcn.h>
 #include <format>
 #include <map>
@@ -347,9 +348,30 @@ void mouseButton(IPointer::SButtonEvent event,Event::SCallbackInfo& info) {
     info.cancelled=true;
     if (event.state==WL_POINTER_BUTTON_STATE_RELEASED && pointerButtons.empty()) g_pInputManager->releaseAllMouseButtons();
 }
+bool spatialMonitor(PHLMONITOR monitor);
+void layoutMessage(PHLMONITOR monitor,const std::string& message);
+// One finger-scroll gesture moves a single page. High-resolution pad events
+// keep arriving after the step, so further deltas wait until the fingers lift.
+struct FingerPage { double x=0,y=0; bool sent=false; std::chrono::steady_clock::time_point last{}; };
+FingerPage fingerPage;
+void fingerPageSnap(PHLMONITOR monitor,const IPointer::SAxisEvent& event) {
+    const auto now=std::chrono::steady_clock::now();
+    if (fingerPage.last.time_since_epoch().count() && now-fingerPage.last>std::chrono::milliseconds(220)) fingerPage={};
+    fingerPage.last=now;
+    if (event.axis==WL_POINTER_AXIS_VERTICAL_SCROLL) fingerPage.y+=event.delta;
+    else fingerPage.x+=event.delta;
+    if (fingerPage.sent) return;
+    if (std::max(std::abs(fingerPage.x),std::abs(fingerPage.y))<64) return;
+    fingerPage.sent=true;
+    // Same direction as Super+wheel: positive is down/right, after natural scroll.
+    const char* dir=std::abs(fingerPage.y)>=std::abs(fingerPage.x)
+        ?(fingerPage.y>0?"down":"up"):(fingerPage.x>0?"right":"left");
+    layoutMessage(monitor,std::string("pan ")+dir);
+}
 void mouseAxis(IPointer::SAxisEvent event,Event::SCallbackInfo& info) {
     if (info.cancelled || g_pSessionLockManager->isSessionLocked()) return;
-    if ((g_pInputManager->getModsFromAllKBs()&Input::HL_MODIFIER_META) && event.source==WL_POINTER_AXIS_SOURCE_WHEEL) {
+    const auto mods=g_pInputManager->getModsFromAllKBs();
+    if ((mods&Input::HL_MODIFIER_META) && event.source==WL_POINTER_AXIS_SOURCE_WHEEL) {
         // The keybind manager forwards events within scroll_event_delay.
         // Keep running the binding, but consume every reserved Super detent,
         // including throttled ones, before it reaches the focused document.
@@ -358,6 +380,15 @@ void mouseAxis(IPointer::SAxisEvent event,Event::SCallbackInfo& info) {
         return;
     }
     const auto monitor=monitorAt(g_pInputManager->getMouseCoordsInternal());
+    // Two-finger scroll is an axis, not a swipe. While zoomed out it used to
+    // scroll the shrunken app (and a touch pinch wobbled the scale). Super+
+    // two fingers, or any two-finger scroll while zoomed, steps one page.
+    if (event.source==WL_POINTER_AXIS_SOURCE_FINGER && spatialMonitor(monitor)
+        && ((mods&Input::HL_MODIFIER_META) || zoomFor(monitor))) {
+        fingerPageSnap(monitor,event);
+        info.cancelled=true;
+        return;
+    }
     if (!zoomFor(monitor) || topLayerAt(monitor,g_pInputManager->getMouseCoordsInternal()) || !forwardMotion(monitor,event.timeMs)) return;
     // Hyprland stores wheel detents in 120ths. Wayland v8+ clients consume
     // value120 instead of legacy discrete ticks; zero loses the wheel step.
@@ -394,6 +425,233 @@ bool endDrag(void* self) {
         damageAll();
     }
     return result;
+}
+// Touchscreens do not emit trackpad gestures. Two fingers pan and pinch the
+// spatial workspace; one finger still goes to the app under it. Fingers that
+// start on a layer, the overview map or a screen edge stay with Hyprland.
+struct Contact { Vector2D pos; bool blocked=false; };
+std::map<int32_t,Contact> contacts;
+bool touchCaptured=false, touchArmed=false, touchStartedZoomed=false, touchPinched=false;
+PHLMONITORREF touchMonitor;
+PHLWORKSPACE touchWorkspace;
+Vector2D touchCentroid, touchStartCentroid;
+double touchSpan=0, touchZoomSpan=0;
+bool spatialMonitor(PHLMONITOR monitor) {
+    if (!monitor || monitor->m_activeSpecialWorkspace) return false;
+    const auto workspace=monitor->m_activeWorkspace;
+    if (!workspace || !workspace->space() || !workspace->space()->algorithm()) return false;
+    const auto& algo=workspace->space()->algorithm()->tiledAlgo();
+    if (!algo) return false;
+    const auto name=algo->layoutName().value_or("");
+    return name=="hyprscroll2d" || name=="lua:hyprscroll2d";
+}
+PHLMONITOR touchOutput(const SP<ITouch>& device) {
+    if (device && !device->m_boundOutput.empty())
+        if (const auto named=State::monitorState()->query().name(device->m_boundOutput).run()) return named;
+    return Desktop::focusState()->monitor();
+}
+void layoutMessage(PHLMONITOR monitor,const std::string& message) {
+    if (!monitor || !monitor->m_activeWorkspace || !monitor->m_activeWorkspace->space()) return;
+    const auto algorithm=monitor->m_activeWorkspace->space()->algorithm();
+    if (algorithm) (void)algorithm->layoutMsg(message);
+}
+bool safeMonitorName(const std::string& name) {
+    return !name.empty() && name.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_:.-")==std::string::npos;
+}
+std::string zoomStateJson() {
+    std::string body="{";
+    bool first=true;
+    for (const auto& [name,z]:zooms) {
+        if (!safeMonitorName(name)) continue;
+        if (!first) body+=",";
+        first=false;
+        body+=std::format("\"{}\":{:.6f}",name,z.factor);
+    }
+    return body+"}";
+}
+void endTouchGesture();
+void publishZoomFile() {
+    const auto runtime=getenv("XDG_RUNTIME_DIR");
+    if (!runtime || !*runtime) return;
+    const auto path=std::string(runtime)+"/kingstra-native-zoom.json";
+    const auto tmp=path+".tmp";
+    if (FILE* file=std::fopen(tmp.c_str(),"w")) {
+        std::fputs((zoomStateJson()+"\n").c_str(),file);
+        std::fclose(file);
+        std::rename(tmp.c_str(),path.c_str());
+    }
+}
+void closeStaleZooms() {
+    std::vector<std::string> drop;
+    for (const auto& [name,z]:zooms) {
+        const auto monitor=z.monitor.lock();
+        if (!monitor || monitor->m_activeWorkspace!=z.workspace) drop.push_back(name);
+    }
+    if (drop.empty()) return;
+    bool gestureDropped=false;
+    for (const auto& name:drop) {
+        if (grab.monitor && grab.monitor->m_name==name) grab={};
+        if (const auto monitor=touchMonitor.lock(); monitor && monitor->m_name==name) gestureDropped=true;
+        zooms.erase(name);
+    }
+    if (gestureDropped) endTouchGesture();
+    publishZoomFile();
+    damageAll();
+}
+void scaleTouchZoom(PHLMONITOR monitor,double ratio) {
+    if (!monitor || !(ratio>0) || std::abs(ratio-1)<0.004) return;
+    if (ratio<1 && !zoomFor(monitor)) {
+        const auto workspace=monitor->m_activeWorkspace;
+        if (!workspace) return;
+        zooms[monitor->m_name]={monitor,workspace,1};
+    }
+    auto z=zoomFor(monitor);
+    if (!z) return;
+    z->factor=std::clamp(z->factor*ratio,0.25,1.0);
+    if (z->factor>=0.97) zooms.erase(monitor->m_name);
+    publishZoomFile();
+    damageAll();
+}
+Vector2D touchCentroidPx(PHLMONITOR monitor) {
+    Vector2D sum;
+    int count=0;
+    for (const auto& [id,contact]:contacts) { sum+=contact.pos; ++count; }
+    if (!count || !monitor) return {};
+    const double x=sum.x/count, y=sum.y/count;
+    return monitor->m_position+Vector2D{x*monitor->m_size.x,y*monitor->m_size.y};
+}
+double touchSpanPx(PHLMONITOR monitor) {
+    if (contacts.size()<2 || !monitor) return 0;
+    auto it=contacts.begin();
+    const auto a=it->second.pos;
+    const auto b=(++it)->second.pos;
+    return std::hypot((a.x-b.x)*monitor->m_size.x,(a.y-b.y)*monitor->m_size.y);
+}
+void endTouchGesture() {
+    touchArmed=false;
+    if (touchCaptured && touchStartedZoomed && !touchPinched) {
+        const auto travel=touchCentroid-touchStartCentroid;
+        if (std::max(std::abs(travel.x),std::abs(travel.y))>=48 && touchWorkspace && touchWorkspace->space() && touchWorkspace->space()->algorithm()) {
+            // Fingers drag the canvas: down reveals the page above.
+            const char* dir=std::abs(travel.y)>=std::abs(travel.x)
+                ?(travel.y>0?"up":"down"):(travel.x>0?"left":"right");
+            (void)touchWorkspace->space()->algorithm()->layoutMsg(std::string("pan ")+dir);
+        }
+    } else if (touchCaptured) {
+        if (touchWorkspace && touchWorkspace->space() && touchWorkspace->space()->algorithm())
+            (void)touchWorkspace->space()->algorithm()->layoutMsg("dragend");
+    }
+    touchCaptured=false;
+    touchStartedZoomed=false;
+    touchPinched=false;
+    touchWorkspace.reset();
+    touchMonitor.reset();
+}
+bool touchBlocked(PHLMONITOR monitor,const Vector2D& pos) {
+    if (!monitor || g_pSessionLockManager->isSessionLocked() || !spatialMonitor(monitor)) return true;
+    const double marginX=28.0/std::max(1.0,monitor->m_size.x), marginY=28.0/std::max(1.0,monitor->m_size.y);
+    if (pos.x<marginX || pos.y<marginY || pos.x>1-marginX || pos.y>1-marginY) return true;
+    const auto global=monitor->m_position+pos*monitor->m_size;
+    if (topLayerAt(monitor,global)) return true;
+    const auto window=Desktop::viewState()->hitTest().windowAt(global,ALLOW_FLOATING|INPUT_EXTENTS|RESERVED_EXTENTS);
+    return window && window->metadata().title()=="Kingstra Werkvlak";
+}
+void beginTouchGesture(PHLMONITOR monitor) {
+    g_pSeatManager->sendTouchCancel();
+    touchCaptured=true;
+    touchMonitor=monitor;
+    touchWorkspace=monitor?monitor->m_activeWorkspace:nullptr;
+    // Arm recorded the span and centroid before this gesture crossed the
+    // threshold. Keep that baseline so the opening pinch still counts and a
+    // one-percent wobble does not multiply the zoom on every frame.
+    const double armedSpan=touchSpan;
+    touchStartCentroid=touchCentroid;
+    touchCentroid=touchCentroidPx(monitor);
+    touchSpan=touchSpanPx(monitor);
+    touchZoomSpan=armedSpan>24?armedSpan:std::max(1.0,touchSpan);
+    touchStartedZoomed=zoomFor(monitor)!=nullptr;
+    touchPinched=false;
+    if (!touchStartedZoomed) layoutMessage(monitor,"dragstart");
+    damageAll();
+}
+void updateTouchGesture(PHLMONITOR monitor) {
+    const auto centroid=touchCentroidPx(monitor);
+    const auto span=touchSpanPx(monitor);
+    const auto delta=centroid-touchCentroid;
+    // Already zoomed: free panning fights the scale and looks like the page
+    // slides under the fingers. A real pinch still zooms; a swipe snaps later.
+    if (!touchStartedZoomed) {
+        const auto z=zoomFor(monitor);
+        const double factor=z&&z->factor>0?z->factor:1;
+        if (std::hypot(delta.x,delta.y)>=0.4 && std::hypot(delta.x,delta.y)<4000)
+            layoutMessage(monitor,std::format("panby {:.4f} {:.4f}",-delta.x/factor,-delta.y/factor));
+    }
+    if (touchZoomSpan>24 && span>24) {
+        const double ratio=span/touchZoomSpan;
+        if (ratio<=0.92 || ratio>=1.08) {
+            scaleTouchZoom(monitor,std::clamp(ratio,0.5,2.0));
+            touchZoomSpan=span;
+            touchPinched=true;
+        }
+    }
+    touchCentroid=centroid;
+    touchSpan=span;
+    damageAll();
+}
+bool touchEligible() {
+    if (contacts.size()<2) return false;
+    for (const auto& [id,contact]:contacts) if (contact.blocked) return false;
+    return true;
+}
+void touchDown(ITouch::SDownEvent event,Event::SCallbackInfo& info) {
+    if (g_pSessionLockManager->isSessionLocked()) return;
+    const auto monitor=touchOutput(event.device);
+    contacts[event.touchID]={event.pos,touchBlocked(monitor,event.pos)};
+    if (touchCaptured) {
+        info.cancelled=true;
+        if (monitor) touchMonitor=monitor;
+        return;
+    }
+    touchArmed=false;
+}
+void touchMove(ITouch::SMotionEvent event,Event::SCallbackInfo& info) {
+    auto found=contacts.find(event.touchID);
+    if (found==contacts.end()) return;
+    found->second.pos=event.pos;
+    auto monitor=touchMonitor.lock();
+    if (!monitor) monitor=Desktop::focusState()->monitor();
+    if (touchCaptured) {
+        info.cancelled=true;
+        if (monitor && spatialMonitor(monitor)) updateTouchGesture(monitor);
+        else endTouchGesture();
+        return;
+    }
+    if (!touchEligible() || !monitor) { touchArmed=false; return; }
+    if (!touchArmed) {
+        touchArmed=true;
+        touchCentroid=touchCentroidPx(monitor);
+        touchSpan=std::max(1.0,touchSpanPx(monitor));
+        return;
+    }
+    const auto now=touchCentroidPx(monitor);
+    const auto travel=std::hypot(now.x-touchCentroid.x,now.y-touchCentroid.y);
+    const auto span=touchSpanPx(monitor);
+    if (travel<16 && std::abs(span/touchSpan-1)<=0.12) return;
+    beginTouchGesture(monitor);
+    info.cancelled=true;
+}
+void touchUp(ITouch::SUpEvent event,Event::SCallbackInfo& info) {
+    contacts.erase(event.touchID);
+    if (!touchCaptured) {
+        if (contacts.size()<2) touchArmed=false;
+        return;
+    }
+    info.cancelled=true;
+    if (contacts.size()<2) endTouchGesture();
+}
+void touchCancel(ITouch::SCancelEvent event,Event::SCallbackInfo&) {
+    contacts.erase(event.touchID);
+    if (touchCaptured && contacts.size()<2) endTouchGesture();
 }
 std::pair<std::string,std::string> split(const std::string& text) {
     const auto i=text.find(' ');
@@ -457,14 +715,27 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE owner) {
     HyprlandAPI::addLuaFunction(handle,"spatialoverview","_button_down",[](lua_State* l) {
         lua_pushboolean(l,heldButtons.contains(static_cast<uint32_t>(luaL_checkinteger(l,1)))); return 1;
     });
+    HyprlandAPI::addLuaFunction(handle,"spatialoverview","_zoom",[](lua_State* l) {
+        const auto zoom=zoomFor(monitorAt(g_pInputManager->getMouseCoordsInternal()));
+        lua_pushnumber(l,zoom?zoom->factor:1); return 1;
+    });
+    HyprlandAPI::addLuaFunction(handle,"spatialoverview","_state_json",[](lua_State* l) {
+        lua_pushstring(l,zoomStateJson().c_str()); return 1;
+    });
     HyprlandAPI::addConfigValueV2(handle,makeShared<Config::Values::CBoolValue>("plugin:spatialoverview:canvas:hover_focus","Focus follows the mouse while zoomed",true));
     HyprlandAPI::registerHyprCtlCommand(handle,{.name="spatialoverview",.handler=[](const auto&) { return IPC::Socket1::SResponse{status()}; }});
     listeners.push_back(Event::bus()->m_events.input.mouse.move.listen(mouseMove));
     listeners.push_back(Event::bus()->m_events.input.mouse.button.listen(mouseButton));
     listeners.push_back(Event::bus()->m_events.input.mouse.axis.listen(mouseAxis));
+    listeners.push_back(Event::bus()->m_events.input.touch.down.listen(touchDown));
+    listeners.push_back(Event::bus()->m_events.input.touch.motion.listen(touchMove));
+    listeners.push_back(Event::bus()->m_events.input.touch.up.listen(touchUp));
+    listeners.push_back(Event::bus()->m_events.input.touch.cancel.listen(touchCancel));
+    listeners.push_back(Event::bus()->m_events.workspace.active.listen([](PHLWORKSPACE){ closeStaleZooms(); }));
     return {"spatialoverview","Kingstra native workspace zoom for Hyprland 0.57","Kingstra","0.57.0"};
 }
 APICALL EXPORT void PLUGIN_EXIT() {
     listeners.clear(); zooms.clear(); grab={}; pointerButtons.clear(); heldButtons.clear(); pointerWindow.reset(); pointerSurface.reset();
+    contacts.clear(); touchCaptured=false; touchArmed=false; touchStartedZoomed=false; touchPinched=false; touchMonitor.reset(); touchWorkspace.reset(); fingerPage={};
     damageAll();
 }

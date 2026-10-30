@@ -68,17 +68,58 @@ end
 local function publish()
     local runtime = os.getenv("XDG_RUNTIME_DIR")
     if not runtime then return end
-    local rows = {}
-    for name, id in pairs(monitors) do
-        if zooms[id] and name:match("^[%w_:%.%-]+$") then
-            rows[#rows+1] = string.format('"%s":%.6f', name, zooms[id])
-        end
+    local native = hl.plugin and hl.plugin.spatialoverview
+    local body
+    -- Aanraken schrijft de zoom in de plugin. Die blijft de bron voor de knop,
+    -- ook als Lua het gebaar niet zelf heeft bijgehouden.
+    if native and type(native._state_json) == "function" then
+        local read_ok, raw = pcall(native._state_json)
+        if read_ok and type(raw) == "string" then body = raw end
     end
+    if not body then
+        local rows = {}
+        for name, id in pairs(monitors) do
+            if zooms[id] and name:match("^[%w_:%.%-]+$") then
+                rows[#rows+1] = string.format('"%s":%.6f', name, zooms[id])
+            end
+        end
+        body = "{" .. table.concat(rows, ",") .. "}"
+    end
+    if body:sub(-1) ~= "\n" then body = body .. "\n" end
     local path = runtime .. "/kingstra-native-zoom.json"
     local file = io.open(path .. ".tmp", "w")
     if not file then return end
-    file:write("{" .. table.concat(rows, ",") .. "}\n"); file:close()
+    file:write(body); file:close()
     os.rename(path .. ".tmp", path)
+end
+
+local function plugin_factor()
+    local native = hl.plugin and hl.plugin.spatialoverview
+    if not native or type(native._zoom) ~= "function" then return nil end
+    local read_ok, value = pcall(native._zoom)
+    if read_ok and type(value) == "number" and value > 0 and value == value then return value end
+end
+
+-- steps = 2 voor een wielstap (ongeveer 25%), 1 voor een knijpstap (ongeveer 12%).
+-- Openen zet de plugin terug op 100%, dus een al uitgezoomd scherm niet opnieuw openen.
+local function change_zoom(direction, steps)
+    if not M.ready or hl.get_active_special_workspace() then return end
+    local monitor = hl.get_monitor_at_cursor() or hl.get_active_monitor()
+    local workspace = monitor and monitor.active_workspace or hl.get_active_workspace()
+    if not monitor or not workspace or workspace.tiled_layout ~= "lua:hyprscroll2d" then return end
+    if (monitor.width and monitor.width<=0) or (monitor.height and monitor.height<=0) then return end
+    local id = tostring(workspace.id)
+    local current = plugin_factor() or zooms[id] or 1.0
+    if direction == "in" and current >= 0.999 then return M.reset() end
+    if direction == "out" and current <= 0.251 then return end
+    local factor = 1.12 ^ steps
+    local next_zoom = math.max(0.25, math.min(1.0, current * (direction == "in" and factor or 1 / factor)))
+    if next_zoom >= 0.999 then return M.reset() end
+    if current >= 0.999 then dispatch("overview", "open " .. monitor.name) end
+    monitors[monitor.name] = id
+    zooms[id] = next_zoom
+    for _ = 1, steps do dispatch("canvas", "zoom " .. direction) end
+    publish()
 end
 
 function M.reset(name)
@@ -92,27 +133,8 @@ function M.reset(name)
     publish()
 end
 
-function M.zoom(direction)
-    if not M.ready or hl.get_active_special_workspace() then return end
-    local monitor = hl.get_monitor_at_cursor() or hl.get_active_monitor()
-    local workspace = monitor and monitor.active_workspace or hl.get_active_workspace()
-    if not monitor or not workspace or workspace.tiled_layout ~= "lua:hyprscroll2d" then return end
-    if (monitor.width and monitor.width<=0) or (monitor.height and monitor.height<=0) then return end
-    local id, current = tostring(workspace.id), zooms[tostring(workspace.id)] or 1.0
-    if direction == "in" and current >= 0.999 then return M.reset() end
-    if direction == "out" and current <= 0.251 then return end
-    if not zooms[id] then
-        dispatch("overview", "open " .. monitor.name)
-        monitors[monitor.name] = id
-    end
-    local factor = 1.12 * 1.12 -- about 25% per notch
-    local next_zoom = math.max(0.25, math.min(1.0, current * (direction == "in" and factor or 1 / factor)))
-    if next_zoom >= 0.999 then return M.reset() end
-    zooms[id] = next_zoom
-    dispatch("canvas", "zoom " .. direction)
-    dispatch("canvas", "zoom " .. direction)
-    publish()
-end
+function M.zoom(direction) change_zoom(direction, 2) end
+function M.nudge(direction) change_zoom(direction, 1) end
 
 -- A reload or workspace switch returns to the ordinary desktop.
 local function reset_all()

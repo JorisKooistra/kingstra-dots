@@ -79,6 +79,8 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Shift + -` | Laatst geparkeerde venster terug op zijn eigen werkruimte |
 | `Super + W` | Vensterlijst: geparkeerde vensters staan onderaan, Enter haalt terug |
 | 3 vingers omlaag / omhoog | Controlecentrum / overzicht |
+| 4 vingers slepen | Ruimtelijk werkvlak vrij schuiven; daarbuiten omhoog/omlaag de magische werkruimte |
+| Knijpen (2 vingers) | Ruimtelijk werkvlak uit- of inzoomen |
 
 ---
 
@@ -208,9 +210,17 @@ worden bij een update niet automatisch omgezet.
   staan er al vensters, dan komt het erbij als Dwindle-tegel, zonder maximum per pagina.
 - **Super+Ctrl+Alt+pijlen:** het zichtgebied verplaatsen, zonder vensters te verplaatsen.
   Op een scrollstrook schuift links/rechts één kolom; zo betekent deze toets overal "verder kijken".
-- **Super+drievingerveeg:** vrij in beide richtingen bewegen, ook diagonaal
-  (vereist live Lua-gebaren).
+- **Vier vingers slepen** schuift het beeld vrij, ook diagonaal. **Knijpen** zoomt
+  uit (vingers naar elkaar) of terug in, tot 100%. Een verticale viervingerveeg
+  buiten dit werkvlak togglet nog steeds de magische werkruimte.
+- **Aanraakscherm:** twee vingers slepen schuift het beeld, knijpen zoomt. Eén
+  vinger blijft de app bedienen. Een veeg vanaf de schermrand wisselt nog van
+  werkruimte. In de kaart: één vinger sleept het zicht, lang indrukken verplaatst
+  een app, twee vingers knijpen.
+- **Super+drievingerveeg:** hetzelfde vrije schuiven als je geen vier vingers
+  kwijt kunt (vereist live Lua-gebaren).
 - **Super+wiel:** één pagina omhoog/omlaag; **Super+Alt+wiel** of een kantelwiel: links/rechts.
+- **Super+twee vingers** op touchpad of aanraakscherm doet diezelfde paginastap. Uitgezoomd doet een gewone tweevingerscroll dat ook, zodat het verkleinde venster niet van binnenuit wegschiet. Het muiswiel blijft in het document scrollen. Knijpen zoomt nog.
 - **Super+Ctrl+linkermuis ingedrukt:** het werkvlak vrij slepen, ook diagonaal. Bij loslaten
   klikt het alleen op een plek vast als je er dichtbij bent.
 - **Nieuwe vensters** komen waar je kijkt: op een lege plek vult het venster die plek,
@@ -225,8 +235,8 @@ worden bij een update niet automatisch omgezet.
 - **Super+linkermuis slepen** van een venster: het komt precies waar je loslaat,
   op een lege plek of op de tegelplek onder de muis. Het beeld schuift niet mee.
 - **Super+Tab:** kaart openen; gewoon slepen verplaatst alleen de camera,
-  **Super+slepen** verplaatst een app. Op het midden van een ander venster wisselen
-  ze van tegel binnen dezelfde pagina; vanaf een andere pagina komt de app ernaast. Aan een rand splits je dat vlak. Wiel zoomt, klik kiest een venster.
+  **Super+slepen** of lang indrukken verplaatst een app. Op het midden van een ander venster wisselen
+  ze van tegel binnen dezelfde pagina; vanaf een andere pagina komt de app ernaast. Aan een rand splits je dat vlak. Wiel of knijpen zoomt, tik kiest een venster.
   Zwevende vensters staan er ook bij; vensters buiten beeld tonen hun laatste miniatuur.
 - **Super+rechtermuis:** Dwindle-verhoudingen veranderen binnen de pagina.
 - **Super+backslash:** richting van de geselecteerde Dwindle-splitsing wisselen.

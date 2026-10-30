@@ -868,7 +868,7 @@ Item {
                                 onCanceled: snapSlider.dragging = false
                             }
                         }
-                        Hint { Layout.fillWidth: true; text: "Super+wiel scrolt binnen de werkruimte, Super+Shift+wiel wisselt van werkruimte, Super+Ctrl+linkermuis sleept vrij." }
+                        Hint { Layout.fillWidth: true; text: "Super+wiel scrolt binnen de werkruimte, Super+Shift+wiel wisselt van werkruimte, Super+Ctrl+linkermuis sleept vrij. Touchpad: vier vingers schuiven, knijpen zoomt. Aanraakscherm: twee vingers." }
                         Hint { text: overlay.werkvlakError; visible: text !== ""; color: overlay.c.red; Layout.fillWidth: true }
                     }
 

@@ -54,4 +54,8 @@ zoom.zoom('out');zoom.zoom('in')
 assert(not next(_G.__kingstra_native_zoom_workspaces),'zooming back to 100% closes native rendering')
 zoom.zoom('out');events['config.reloaded']()
 assert(not next(_G.__kingstra_native_zoom_workspaces) and sent[#sent]=='overview close all')
+local before=#sent
+zoom.nudge('out')
+assert(#sent==before+2 and sent[before+1]=='overview open A' and sent[before+2]=='canvas zoom out')
+assert(math.abs(_G.__kingstra_native_zoom_workspaces['4']-1/1.12)<0.001,'a pinch step is one notch, a wheel step stays two')
 print('ok - native zoom preserves tiling, redeclares on reload and handles monitors independently')

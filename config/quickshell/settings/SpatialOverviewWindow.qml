@@ -308,7 +308,7 @@ Scope {
                     Layout.maximumWidth: parent.width
                     look: mapLook
                     heading: "Werkvlak  ·  werkruimte " + root.workspace
-                    hint: "Slepen verplaatst je zicht  ·  Super + slepen verplaatst een app  ·  wiel zoomt, klik kiest"
+                    hint: "Slepen verplaatst je zicht  ·  Super + slepen of lang indrukken verplaatst een app  ·  knijpen of wiel zoomt, tik kiest"
                 }
                 Rectangle {
                     id: scene
@@ -432,7 +432,7 @@ Scope {
                     Layout.fillWidth: true
                     Text {
                         Layout.fillWidth: true
-                        text: root.errorText || "Pijltjes kiezen  ·  Enter terug naar venster  ·  Esc sluit"
+                        text: root.errorText || "Pijltjes kiezen  ·  Enter terug naar venster  ·  Esc sluit  ·  één vinger sleept, twee vingers knijpen"
                         color: root.errorText ? mapLook.red : mapLook.subtext0
                         font.family: mapLook.uiFont
                         font.pixelSize: 12

@@ -22,6 +22,7 @@ print("ok - floating-only workspace snapshot contains the floating app")
 PY
 python3 tests/smoke/workspace-layout.py
 lua tests/smoke/spatial-drag.lua
+lua tests/smoke/spatial-touch.lua
 lua tests/smoke/spatial-storage.lua
 lua tests/smoke/spatial-binds.lua
 lua tests/smoke/native-zoom.lua

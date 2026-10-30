@@ -18,25 +18,126 @@ local ok = pcall(function()
 end)
 M.available = ok
 
--- Ordinary app scroll and unmodified gestures remain available.
--- Versions without live Lua gestures retain keyboard and overview-drag control.
-if ok and hl.gesture then
+-- Schaal van de echte desktopzoom, zodat een vingerbeweging even ver
+-- schuift als wat je op het scherm ziet. Zonder zoom blijft dat 1.
+local function zoom_scale()
+    local native = hl.plugin and hl.plugin.spatialoverview
+    if native and type(native._zoom) == "function" then
+        local read_ok, value = pcall(native._zoom)
+        if read_ok and type(value) == "number" and value > 0 and value == value then return value end
+    end
+    local zooms = rawget(_G, "__kingstra_native_zoom_workspaces")
+    if zooms and hl.get_active_workspace then
+        local read_ok, workspace = pcall(hl.get_active_workspace)
+        local scale = read_ok and workspace and zooms[tostring(workspace.id)]
+        if type(scale) == "number" and scale > 0 and scale == scale then return scale end
+    end
+    return 1
+end
+
+-- Inhoud volgt de hand: een beweging naar rechts schuift het beeld mee.
+local function pan_pixels(dx, dy)
+    if type(dx) ~= "number" or type(dy) ~= "number" or dx ~= dx or dy ~= dy then return end
+    local scale = zoom_scale()
+    hl.dispatch(hl.dsp.layout(string.format("panby %.4f %.4f", -dx / scale, -dy / scale)))
+end
+
+-- Knijpen zoomt in stappen van ongeveer 12%. De schaal van het gebaar is
+-- absoluut vanaf het begin (1 = start), niet een stap per update.
+local pinch_base = 1
+local function follow_pinch(scale)
+    if type(scale) ~= "number" or scale ~= scale or scale <= 0.2 or scale >= 5 then return end
+    local zoom = package.loaded["lua.native-zoom"]
+    if not zoom or type(zoom.nudge) ~= "function" then return end
+    local target = math.max(0.25, math.min(1, pinch_base * scale))
+    for _ = 1, 6 do
+        local current = zoom_scale()
+        local before = current
+        if current < target / 1.06 then zoom.nudge("in")
+        elseif current > target * 1.06 then zoom.nudge("out")
+        else break end
+        if math.abs(zoom_scale() - before) < 0.001 then break end
+    end
+end
+
+-- Gewone tweevingerscroll blijft bij de app. Drie vingers blijven werkruimte,
+-- overzicht en controlecentrum. Het ruimtelijk werkvlak gebruikt daarom
+-- vier vingers om te schuiven en knijpen om te zoomen, plus Super+drie vingers
+-- als de vierde vinger niet past. Zonder live Lua-gebaren blijven toetsen,
+-- wiel en de kaart werken.
+if hl.gesture then
     local swiping = false
     pcall(hl.gesture, {
         fingers = 3, direction = "swipe", mods = "SUPER",
         action = {
             start = function(e)
                 swiping = active()
-                if swiping and e.delta then
-                    hl.dispatch(hl.dsp.layout(string.format("panby %.4f %.4f", -e.delta.x, -e.delta.y)))
-                end
+                if not swiping then return end
+                hl.dispatch(hl.dsp.layout("dragstart"))
+                if e.delta then pan_pixels(e.delta.x, e.delta.y) end
             end,
             update = function(e)
-                if swiping and active() and e.delta then
-                    hl.dispatch(hl.dsp.layout(string.format("panby %.4f %.4f", -e.delta.x, -e.delta.y)))
+                if swiping and active() and e.delta then pan_pixels(e.delta.x, e.delta.y) end
+            end,
+            finish = function()
+                if swiping then hl.dispatch(hl.dsp.layout("dragend")) end
+                swiping = false
+            end,
+        },
+    })
+    local pinching = false
+    pcall(hl.gesture, {
+        fingers = 2, direction = "pinch",
+        action = {
+            start = function(e)
+                pinching = active()
+                if not pinching then return end
+                pinch_base = zoom_scale()
+                hl.dispatch(hl.dsp.layout("dragstart"))
+                if e.delta then pan_pixels(e.delta.x, e.delta.y) end
+                follow_pinch(e.scale)
+            end,
+            update = function(e)
+                if not pinching or not active() then return end
+                if e.delta then pan_pixels(e.delta.x, e.delta.y) end
+                follow_pinch(e.scale)
+            end,
+            finish = function()
+                if pinching then hl.dispatch(hl.dsp.layout("dragend")) end
+                pinching = false
+            end,
+        },
+    })
+    -- Vier vingers schuiven het ruimtelijk werkvlak. Buiten die indeling blijft
+    -- een verticale veeg de magische werkruimte togglen, zoals voorheen.
+    local hand = { on = false, x = 0, y = 0 }
+    pcall(hl.gesture, {
+        fingers = 4, direction = "swipe",
+        action = {
+            start = function(e)
+                hand.on, hand.x, hand.y = active(), 0, 0
+                if e.delta then hand.x, hand.y = e.delta.x or 0, e.delta.y or 0 end
+                if not hand.on then return end
+                hl.dispatch(hl.dsp.layout("dragstart"))
+                if e.delta then pan_pixels(e.delta.x, e.delta.y) end
+            end,
+            update = function(e)
+                if not e.delta then return end
+                hand.x, hand.y = hand.x + (e.delta.x or 0), hand.y + (e.delta.y or 0)
+                if hand.on and active() then pan_pixels(e.delta.x, e.delta.y) end
+            end,
+            finish = function(e)
+                local panned = hand.on
+                hand.on = false
+                if panned then
+                    hl.dispatch(hl.dsp.layout("dragend"))
+                    return
+                end
+                if e and e.cancelled then return end
+                if math.abs(hand.y) >= math.abs(hand.x) and math.abs(hand.y) >= 24 then
+                    hl.dispatch(hl.dsp.workspace.toggle_special("magic"))
                 end
             end,
-            finish = function() swiping = false end,
         },
     })
 end
@@ -85,10 +186,7 @@ local function drag_tick()
     drag.last = pos
     if dx == 0 and dy == 0 then return end
     if drag.kind == "spatial" then
-        local zooms = rawget(_G, "__kingstra_native_zoom_workspaces")
-        local workspace = zooms and hl.get_active_workspace()
-        local scale = workspace and zooms[tostring(workspace.id)] or 1
-        hl.dispatch(hl.dsp.layout(string.format("panby %.4f %.4f", -dx / scale, -dy / scale)))
+        pan_pixels(dx, dy)
     elseif drag.kind == "scrolling" then
         drag.carry = drag.carry + dx
         local ok, monitor = pcall(hl.get_active_monitor)

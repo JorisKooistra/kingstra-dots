@@ -29,8 +29,8 @@ Scope {
                 visible: Number(root.zooms[modelData.name] || 1) < 0.999
                 anchors { bottom: true; right: true }
                 margins { bottom: 56; right: 84 }
-                implicitWidth: 174
-                implicitHeight: 36
+                implicitWidth: 196
+                implicitHeight: 44
                 color: "transparent"
                 WlrLayershell.namespace: "quickshell:kingstra-native-zoom"
                 WlrLayershell.layer: WlrLayer.Overlay
