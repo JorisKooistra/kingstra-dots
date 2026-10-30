@@ -244,6 +244,21 @@ FocusScope {
     }
     readonly property matrix4x4 faceMatrix: quadMatrix(rigWidth, topDepth,
         [proj(0, 0, 0), proj(rigWidth, 0, 0), proj(rigWidth, topDepth, 0), proj(0, topDepth, 0)])
+    // Voor wat op het front of de bovenkant beweegt (klepje, deksel, cassette,
+    // cd): een punt op het vlak (x, y) met h naar je toe (staand) of omhoog
+    // (liggend), door de camera, terug in de coördinaten van dat vlak. Zo
+    // staat wat open- en dichtgaat in exact hetzelfde perspectief.
+    function deckView(x, y, h) {
+        let p = proj(x, y, -h);
+        let m = faceMatrix;
+        let a = m.m11, b = m.m12, c = m.m14, d = m.m21, e = m.m22, f = m.m24, g = m.m41, k = m.m42, i = m.m44;
+        let A = e * i - f * k, B = c * k - b * i, C = b * f - c * e;
+        let D = f * g - d * i, E = a * i - c * g, F = c * d - a * f;
+        let G = d * k - e * g, H = b * g - a * k, I = a * e - b * d;
+        let w = G * p[0] + H * p[1] + I;
+        if (Math.abs(w) < 1e-9) w = 1e-9;
+        return [(A * p[0] + B * p[1] + C) / w, (D * p[0] + E * p[1] + F) / w];
+    }
 
     // Liggend, ronde kast: een plek op de zijkant. a in graden rond de kast
     // (0 = midden voor, positief naar rechts), f van boven (0) naar onder

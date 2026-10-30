@@ -62,6 +62,7 @@ DeviceStage {
             artist: stage.artist
             artUrl: stage.artUrl
             trackKey: stage.trackKey
+            view: (x, y, h) => stage.deckView(x, y, h)
             playing: stage.playing
             tracking: stage.tracking
             position: stage.tracking ? seeker.shown : 0
