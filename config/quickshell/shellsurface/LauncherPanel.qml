@@ -27,6 +27,12 @@ FocusScope {
     property int maxPinnedApps: 3
     property string query: ""
     property int selectedIndex: 0
+    property string selectedResultKey: ""
+    property string selectionContext: ""
+    property bool helpOpen: false
+    readonly property int preferredPanelWidth: 540
+    readonly property int preferredPanelHeight: 28 + 44 + 10 + Math.min(7, Math.max(1, results.length)) * 46
+    property alias searchText: searchInput.text
     // Een stilstaande muis mag de toetsenbordselectie niet overnemen. De
     // lijst schuift tijdens het typen onder de cursor door en vuurt dan
     // onEntered, alsof je die rij bewust aanwees. Alleen echte beweging telt.
@@ -120,10 +126,6 @@ FocusScope {
         }
         return [];
     }
-    onPrefixResultsChanged: {
-        if (prefix !== "") selectedIndex = 0;
-        pointerLive = false;
-    }
     onPrefixChanged: if (prefix === "@" && !windowProc.running) windowProc.running = true
     onTermChanged: if (prefix === ":") emojiDebounce.restart()
 
@@ -201,9 +203,26 @@ FocusScope {
         if (item.kind !== "setting") closePanel();
     }
 
+    function activateResult(result) {
+        if (!result) return;
+        if (result.kind === "app") launch(result.app);
+        else if (result.kind === "action") runQuickAction(result.action);
+        else if (result.kind === "mode") {
+            helpOpen = false;
+            searchInput.text = result.value;
+            searchInput.forceActiveFocus();
+        } else runPrefixResult(result);
+    }
+
     function activateSelected() {
-        if (prefix !== "") runPrefixResult(prefixResults[selectedIndex]);
-        else launch(filtered[selectedIndex]);
+        activateResult(results[selectedIndex]);
+    }
+
+    function toggleHelp() {
+        helpOpen = !helpOpen;
+        selectedIndex = 0;
+        pointerLive = false;
+        searchInput.forceActiveFocus();
     }
 
     Timer {
@@ -235,19 +254,10 @@ FocusScope {
         }
     }
 
-    readonly property color surfaceColor: {
-        let f = mocha.crust;
-        let a = mocha.primary;
-        return Qt.rgba(f.r + (a.r - f.r) * 0.18,
-                       f.g + (a.g - f.g) * 0.18,
-                       f.b + (a.b - f.b) * 0.18,
-                       1.0);
-    }
-    readonly property color rowHover: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.16)
-    readonly property color rowActive: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.28)
-    readonly property int panelCornerRadius: Math.max(18, ThemeConfig.styleWidgetRadius + 8)
-    readonly property int controlCornerRadius: Math.max(12, Math.round(panelCornerRadius * 0.62))
-    readonly property int rowCornerRadius: Math.max(12, Math.round(panelCornerRadius * 0.56))
+    readonly property color rowHover: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05)
+    readonly property color rowActive: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.14)
+    readonly property int controlCornerRadius: Math.max(6, Math.min(12, ThemeConfig.styleWidgetRadius))
+    readonly property int rowCornerRadius: Math.max(4, Math.min(10, ThemeConfig.styleWidgetRadius))
 
     readonly property var filtered: {
         let q = root.normalizeSearch(query);
@@ -284,8 +294,41 @@ FocusScope {
         return scored.map(result => result.action);
     }
 
-    onFilteredChanged: {
-        selectedIndex = 0;
+    readonly property var results: {
+        if (helpOpen) {
+            return prefixModes.map(mode => ({kind: "mode", icon: mode.icon,
+                label: mode.label.charAt(0).toUpperCase() + mode.label.slice(1),
+                detail: "Begin met " + mode.key, value: mode.key}))
+                .concat(quickActions.map(action => ({kind: "action", icon: action.icon,
+                    label: action.label, detail: action.detail, action: action})));
+        }
+        if (prefix !== "") return prefixResults;
+        let apps = filtered.map(app => ({kind: "app", label: app.name, app: app}));
+        if (query.trim() === "") return apps;
+        return apps.concat(filteredActions.map(action => ({kind: "action", icon: action.icon,
+            label: action.label, detail: action.detail, action: action})));
+    }
+
+    function resultKey(result) {
+        if (!result) return "";
+        if (result.kind === "app") return "app:" + result.app.id;
+        if (result.kind === "action") return "action:" + result.action.target + ":" + (result.action.page || "");
+        return result.kind + ":" + String(result.value || result.label || "");
+    }
+
+    function selectIndex(index) {
+        selectedIndex = index;
+        selectedResultKey = resultKey(results[index]);
+    }
+
+    onResultsChanged: {
+        // Een poll of gewijzigde gebruiksvolgorde is geen nieuwe zoekopdracht.
+        // Bewaar de app/actie zelf, ook als die naar een andere rij verschuift.
+        let context = JSON.stringify([query, helpOpen]);
+        let next = context === selectionContext && selectedResultKey !== ""
+            ? results.findIndex(result => resultKey(result) === selectedResultKey) : 0;
+        selectionContext = context;
+        selectIndex(Math.max(0, next));
         pointerLive = false;
     }
 
@@ -403,23 +446,20 @@ FocusScope {
     }
 
     function applyLauncherState(data) {
-        if (!data || typeof data !== "object") {
-            usageCounts = ({});
-            lastLaunchTimes = ({});
-            pinnedIds = [];
-            return;
-        }
-        usageCounts = data.counts && typeof data.counts === "object" ? data.counts : ({});
-        lastLaunchTimes = data.lastLaunched && typeof data.lastLaunched === "object" ? data.lastLaunched : ({});
-        pinnedIds = Array.isArray(data.pins) ? data.pins.slice(0, maxPinnedApps) : [];
+        if (!data || typeof data !== "object") return;
+        let counts = data.counts && typeof data.counts === "object" ? data.counts : ({});
+        let launches = data.lastLaunched && typeof data.lastLaunched === "object" ? data.lastLaunched : ({});
+        let pins = Array.isArray(data.pins) ? data.pins.slice(0, maxPinnedApps) : [];
+        // Nieuwe JS-objecten uit dezelfde JSON mogen de lijst niet verversen.
+        if (JSON.stringify(usageCounts) !== JSON.stringify(counts)) usageCounts = counts;
+        if (JSON.stringify(lastLaunchTimes) !== JSON.stringify(launches)) lastLaunchTimes = launches;
+        if (JSON.stringify(pinnedIds) !== JSON.stringify(pins)) pinnedIds = pins;
     }
 
     function applyLauncherStateJson(text) {
         try {
             applyLauncherState(JSON.parse(String(text || "{}")));
-        } catch (e) {
-            applyLauncherState({});
-        }
+        } catch (e) {} // Behoud de laatste geldige gegevens bij een mislukte read.
     }
 
     Process {
@@ -525,16 +565,16 @@ FocusScope {
     }
 
     function move(delta) {
-        let n = prefix !== "" ? prefixResults.length : filtered.length;
+        let n = results.length;
         if (n === 0) return;
         pointerLive = false;
-        selectedIndex = (selectedIndex + delta + n) % n;
-        if (prefix !== "") prefixList.positionViewAtIndex(selectedIndex, ListView.Contain);
-        else appList.positionViewAtIndex(selectedIndex, ListView.Contain);
+        selectIndex((selectedIndex + delta + n) % n);
+        appList.positionViewAtIndex(selectedIndex, ListView.Contain);
     }
 
     Keys.onEscapePressed: event => {
-        root.closePanel();
+        if (root.helpOpen) root.toggleHelp();
+        else root.closePanel();
         event.accepted = true;
     }
     Keys.onDownPressed: event => { root.move(1); event.accepted = true; }
@@ -542,33 +582,31 @@ FocusScope {
     Keys.onReturnPressed: event => { root.activateSelected(); event.accepted = true; }
     Keys.onEnterPressed: event => { root.activateSelected(); event.accepted = true; }
 
+    Shortcut { sequence: "F1"; onActivated: root.toggleHelp() }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 14
         spacing: 10
 
-        // --- Zoekveld --------------------------------------------------------
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 42
+            Layout.preferredHeight: 44
             radius: root.controlCornerRadius
-            color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.10)
-            border.width: 1
-            border.color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.35)
+            color: mocha.shellRaisedFill
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 14
-                anchors.rightMargin: 14
+                anchors.leftMargin: 12
+                anchors.rightMargin: 8
                 spacing: 10
 
                 Text {
-                    text: "󱒟"
+                    text: "󰍉"
                     font.family: ThemeConfig.iconFont
-                    font.pixelSize: 16
-                    color: mocha.primary
+                    font.pixelSize: 17
+                    color: mocha.subtext0
                 }
-
                 TextInput {
                     id: searchInput
                     Layout.fillWidth: true
@@ -577,355 +615,172 @@ FocusScope {
                     font.family: ThemeConfig.uiFont
                     font.pixelSize: 15
                     selectByMouse: true
-                    selectionColor: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.35)
-                    onTextChanged: root.query = text
+                    selectionColor: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.25)
+                    onTextChanged: {
+                        root.helpOpen = false;
+                        root.query = text;
+                    }
                     Component.onCompleted: forceActiveFocus()
-
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: searchInput.text === ""
-                        text: "Zoek apps, of begin met = > : / ? @"
+                        text: "Zoek een app…"
                         font: searchInput.font
                         color: mocha.subtext0
                     }
                 }
-
-                Text {
-                    text: root.prefix !== ""
-                        ? root.prefixResults.filter(r => r.kind !== "none").length + ""
-                        : (root.filtered.length + root.filteredActions.length) + ""
-                    font.family: ThemeConfig.monoFont
-                    font.pixelSize: 12
-                    color: mocha.subtext0
-                }
-            }
-        }
-
-        // Een lege zoekopdracht is ook een rustig commandocentrum. De acties
-        // gaan via dezelfde scripts als de railknoppen, dus er ontstaat geen
-        // tweede pad voor shell-state of focusafhandeling.
-        Flow {
-            Layout.fillWidth: true
-            // Empty query: a calm dashboard. Typed query: only matching
-            // commands survive, directly above matching apps.
-            visible: root.prefix === "" && (root.query === "" || root.filteredActions.length > 0)
-            spacing: 8
-
-            Repeater {
-                model: root.query === "" ? root.quickActions : root.filteredActions
-
-                delegate: Rectangle {
-                    required property var modelData
-                    width: Math.max(136, Math.min(178, actionContent.implicitWidth + 28))
-                    height: 52
-                    radius: root.rowCornerRadius
-                    color: actionMouse.containsMouse
-                        ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.22)
-                        : Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.10)
-                    border.width: 1
-                    border.color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b,
-                                          actionMouse.containsMouse ? 0.55 : 0.24)
-
-                    Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
-
-                    RowLayout {
-                        id: actionContent
-                        anchors.centerIn: parent
-                        spacing: 8
-
-                        Text {
-                            text: modelData.icon
-                            color: mocha.primary
-                            font.family: ThemeConfig.iconFont
-                            font.pixelSize: 17
-                        }
-                        ColumnLayout {
-                            spacing: 0
-                            Text {
-                                text: modelData.label
-                                color: mocha.text
-                                font.family: ThemeConfig.uiFont
-                                font.pixelSize: 12
-                                font.weight: Font.DemiBold
-                            }
-                            Text {
-                                text: modelData.detail
-                                color: mocha.subtext0
-                                font.family: ThemeConfig.uiFont
-                                font.pixelSize: 10
-                            }
-                        }
-                    }
-
-                    MouseArea {
-                        id: actionMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.runQuickAction(modelData)
-                    }
-                }
-            }
-        }
-
-        // Voorvoegsels als kleine chips: klik zet het teken in het zoekveld.
-        Flow {
-            Layout.fillWidth: true
-            visible: root.query === ""
-            spacing: 6
-
-            Repeater {
-                model: root.prefixModes
-                delegate: Rectangle {
-                    required property var modelData
-                    width: chipRow.implicitWidth + 18
-                    height: 26
-                    radius: 13
-                    color: chipMouse.containsMouse
-                        ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.20)
-                        : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
-                    Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
-                    Row {
-                        id: chipRow
-                        anchors.centerIn: parent
-                        spacing: 6
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.key
-                            font.family: ThemeConfig.monoFont
-                            font.pixelSize: 12
-                            font.weight: Font.Bold
-                            color: mocha.primary
-                        }
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.label
-                            font.family: ThemeConfig.uiFont
-                            font.pixelSize: 11
-                            color: mocha.subtext1
-                        }
-                    }
-                    MouseArea {
-                        id: chipMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            searchInput.text = modelData.key;
-                            searchInput.forceActiveFocus();
-                        }
-                    }
-                }
-            }
-        }
-
-        // --- Resultaten van een voorvoegsel ----------------------------------
-        ListView {
-            id: prefixList
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            visible: root.prefix !== ""
-            clip: true
-            model: root.prefixResults
-            spacing: 2
-            currentIndex: root.selectedIndex
-            boundsBehavior: Flickable.StopAtBounds
-
-            delegate: Rectangle {
-                id: prow
-                required property int index
-                required property var modelData
-                readonly property bool current: index === root.selectedIndex && modelData.kind !== "none"
-
-                width: prefixList.width
-                height: 46
-                radius: root.rowCornerRadius
-                color: current ? root.rowActive : (prowMouse.containsMouse && modelData.kind !== "none" ? root.rowHover : "transparent")
-                Behavior on color {
-                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
-                }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
-                    spacing: 12
-
+                Rectangle {
+                    id: helpButton
+                    Layout.preferredWidth: 28
+                    Layout.preferredHeight: 28
+                    radius: 6
+                    color: helpMouse.containsMouse || root.helpOpen ? mocha.shellHoverFill : "transparent"
                     Text {
-                        Layout.preferredWidth: 26
-                        horizontalAlignment: Text.AlignHCenter
-                        text: prow.modelData.icon
-                        font.family: prow.modelData.emoji ? ThemeConfig.textFont : ThemeConfig.iconFont
-                        font.pixelSize: prow.modelData.emoji ? 20 : 17
-                        color: mocha.primary
+                        anchors.centerIn: parent
+                        text: root.helpOpen ? "󰅖" : "󰋗"
+                        font.family: ThemeConfig.iconFont
+                        font.pixelSize: 16
+                        color: mocha.subtext0
                     }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-                        Text {
-                            Layout.fillWidth: true
-                            text: prow.modelData.label
-                            elide: Text.ElideRight
-                            font.family: prow.modelData.kind === "copy" && !prow.modelData.emoji ? ThemeConfig.monoFont : ThemeConfig.uiFont
-                            font.pixelSize: 14
-                            font.weight: prow.current ? Font.Bold : Font.DemiBold
-                            color: prow.modelData.kind === "none" ? mocha.subtext0 : mocha.text
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            visible: text !== ""
-                            text: prow.modelData.detail || ""
-                            elide: Text.ElideRight
-                            font.family: ThemeConfig.uiFont
-                            font.pixelSize: 11
-                            color: mocha.subtext0
-                        }
+                    ToolTip.visible: helpMouse.containsMouse
+                    ToolTip.text: "Meer mogelijkheden · F1"
+                    ToolTip.delay: 600
+                    MouseArea {
+                        id: helpMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.toggleHelp()
                     }
-                }
-
-                MouseArea {
-                    id: prowMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: prow.modelData.kind === "none" ? Qt.ArrowCursor : Qt.PointingHandCursor
-                    onPositionChanged: mouse => {
-                        let p = mapToItem(root, mouse.x, mouse.y);
-                        if (root.notePointer(p.x, p.y))
-                            root.selectedIndex = prow.index;
-                    }
-                    onEntered: if (root.pointerLive) root.selectedIndex = prow.index
-                    onClicked: root.runPrefixResult(prow.modelData)
                 }
             }
         }
 
-        // --- Resultaten ------------------------------------------------------
         ListView {
             id: appList
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.prefix === ""
             clip: true
-            model: root.filtered
+            model: root.results
             spacing: 2
             currentIndex: root.selectedIndex
             boundsBehavior: Flickable.StopAtBounds
+            keyNavigationEnabled: false
+
+            Text {
+                anchors.centerIn: parent
+                visible: appList.count === 0
+                text: "Geen resultaten"
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 14
+                color: mocha.subtext0
+            }
 
             delegate: Rectangle {
                 id: row
                 required property int index
                 required property var modelData
                 readonly property bool current: index === root.selectedIndex
-
+                readonly property bool isApp: modelData.kind === "app"
+                readonly property bool selectable: modelData.kind !== "none"
                 width: appList.width
-                height: 46
+                height: 44
                 radius: root.rowCornerRadius
-                color: current ? root.rowActive : (rowMouse.containsMouse ? root.rowHover : "transparent")
-
-                Behavior on color {
-                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
-                }
+                color: current && selectable ? root.rowActive : (rowMouse.containsMouse && selectable ? root.rowHover : "transparent")
+                Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 8
                     spacing: 12
                     z: 1
 
                     Item {
-                        Layout.preferredWidth: 26
-                        Layout.preferredHeight: 26
-
+                        Layout.preferredWidth: 24
+                        Layout.preferredHeight: 24
                         Image {
                             id: appIcon
                             anchors.fill: parent
-                            source: row.modelData.icon ? Quickshell.iconPath(row.modelData.icon, true) : ""
-                            visible: status === Image.Ready
-                            sourceSize.width: 26
-                            sourceSize.height: 26
+                            source: row.isApp && row.modelData.app.icon ? Quickshell.iconPath(row.modelData.app.icon, true) : ""
+                            visible: row.isApp && status === Image.Ready
+                            sourceSize.width: 24
+                            sourceSize.height: 24
                             smooth: true
                         }
                         Text {
                             anchors.centerIn: parent
-                            visible: appIcon.status !== Image.Ready
-                            text: "󰄋"
-                            font.family: ThemeConfig.iconFont
-                            font.pixelSize: 17
-                            color: mocha.primary
+                            visible: !appIcon.visible
+                            text: row.modelData.icon || "󰄋"
+                            font.family: row.modelData.emoji ? ThemeConfig.textFont : ThemeConfig.iconFont
+                            font.pixelSize: row.modelData.emoji ? 21 : 17
+                            color: mocha.subtext0
                         }
                     }
-
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 0
-
+                        spacing: 1
                         Text {
                             Layout.fillWidth: true
-                            text: row.modelData.name
+                            text: row.modelData.label
                             elide: Text.ElideRight
                             font.family: ThemeConfig.uiFont
                             font.pixelSize: 14
-                            font.weight: row.current ? Font.Bold : Font.DemiBold
-                            color: mocha.text
+                            font.weight: row.current ? Font.Medium : Font.Normal
+                            color: row.selectable ? mocha.text : mocha.subtext0
                         }
                         Text {
                             Layout.fillWidth: true
-                            visible: String(row.modelData.comment || "") !== ""
-                            text: row.modelData.comment
+                            visible: !row.isApp && text !== ""
+                            text: row.modelData.detail || ""
                             elide: Text.ElideRight
                             font.family: ThemeConfig.uiFont
                             font.pixelSize: 11
                             color: mocha.subtext0
                         }
                     }
-
                     Rectangle {
-                        Layout.preferredWidth: 30
-                        Layout.preferredHeight: 30
-                        Layout.alignment: Qt.AlignVCenter
-                        radius: 9
-                        color: root.isPinned(row.modelData)
-                            ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.24)
-                            : (pinMouse.containsMouse ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.14) : "transparent")
-                        border.width: root.isPinned(row.modelData) ? 1 : 0
-                        border.color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.45)
-                        opacity: root.isPinned(row.modelData) || root.pinnedIds.length < root.maxPinnedApps ? 1.0 : 0.38
-
+                        id: pinButton
+                        Layout.preferredWidth: 28
+                        Layout.preferredHeight: 28
+                        visible: row.isApp
+                        readonly property bool pinned: row.isApp && root.isPinned(row.modelData.app)
+                        opacity: pinned || rowMouse.containsMouse || pinMouse.containsMouse ? 1 : 0
+                        radius: 6
+                        color: pinMouse.containsMouse ? mocha.shellHoverFill : "transparent"
+                        ToolTip.visible: pinMouse.containsMouse
+                        ToolTip.text: pinned ? "Losmaken" : "Vastzetten"
+                        ToolTip.delay: 600
                         Text {
                             anchors.centerIn: parent
-                            text: root.isPinned(row.modelData) ? "󰓎" : "󰐃"
+                            text: pinButton.pinned ? "󰓎" : "󰐃"
                             font.family: ThemeConfig.iconFont
-                            font.pixelSize: 15
-                            color: root.isPinned(row.modelData) ? mocha.primary : mocha.subtext0
+                            font.pixelSize: 13
+                            color: pinButton.pinned ? mocha.primary : mocha.subtext0
                         }
-
                         MouseArea {
                             id: pinMouse
                             anchors.fill: parent
                             hoverEnabled: true
-                            cursorShape: root.isPinned(row.modelData) || root.pinnedIds.length < root.maxPinnedApps
-                                         ? Qt.PointingHandCursor : Qt.ForbiddenCursor
-                            onClicked: mouse => {
-                                mouse.accepted = true;
-                                root.togglePin(row.modelData);
-                            }
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.togglePin(row.modelData.app)
                         }
                     }
                 }
-
                 MouseArea {
                     id: rowMouse
                     anchors.fill: parent
                     z: 0
                     hoverEnabled: true
+                    cursorShape: row.selectable ? Qt.PointingHandCursor : Qt.ArrowCursor
                     onPositionChanged: mouse => {
-                        let p = mapToItem(root, mouse.x, mouse.y);
-                        if (root.notePointer(p.x, p.y))
-                            root.selectedIndex = row.index;
+                        // Scènecoördinaten blijven gelijk als het paneel tijdens
+                        // openen of zoeken onder een stilstaande muis beweegt.
+                        let p = mapToItem(null, mouse.x, mouse.y);
+                        if (root.notePointer(p.x, p.y)) root.selectIndex(row.index);
                     }
-                    onEntered: if (root.pointerLive) root.selectedIndex = row.index
-                    onClicked: root.launch(row.modelData)
+                    onEntered: if (root.pointerLive) root.selectIndex(row.index)
+                    onClicked: root.activateResult(row.modelData)
                 }
             }
         }

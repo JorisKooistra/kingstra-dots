@@ -229,7 +229,7 @@ Item {
         if (entryId === holdEntryId && holdW > 0 && !contentReady(entryId)) return holdW;
         let contentWidth = contentPreferredSize(entryId, "preferredPanelWidth");
         if (contentWidth > 0) return Math.min(contentWidth, availableW);
-        if (entryId === "launcher") return Math.min(680, availableW);
+        if (entryId === "launcher") return Math.min(540, availableW);
         if (entryId === "menu") return Math.min(560, availableW);
         if (entryId === "clipboard") return Math.min(680, availableW);
         if (entryId === "windows") return Math.min(620, availableW);
@@ -250,7 +250,7 @@ Item {
         if (entryId === holdEntryId && holdH > 0 && !contentReady(entryId)) return holdH;
         let contentHeight = contentPreferredSize(entryId, "preferredPanelHeight");
         if (contentHeight > 0) return Math.min(contentHeight, availableH);
-        if (entryId === "launcher") return Math.min(610, availableH);
+        if (entryId === "launcher") return Math.min(404, availableH);
         if (entryId === "menu") return Math.min(520, availableH);
         if (entryId === "clipboard") return Math.min(570, availableH);
         // De atlas heeft vaak maar enkele regels. Een hoge vaste popup liet
