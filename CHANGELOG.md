@@ -5,6 +5,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Cassettespeler en discman naast de draaitafel
+- Fix: de schermvullende speler was live zwart-wit en zonder arm of nerf. Sinds de speler in een Loader zit, bond `mocha: mocha` in de Component aan zijn eigen (lege) property in plaats van aan de kleuren van het venster. De id heet nu `stageColors`; nieuwe smoke-test `qml-self-binding.sh` vangt dit soort bindingen.
 - Spelerkeuze per thema (nieuw `PlayerChoice`, opgeslagen in `~/.local/state/kingstra/player-style`): te kiezen in Super+A (kaart ‘Speler · dit thema’), in Instellingen › Bediening en in de schermvullende speler zelf, met wisselknoppen rechtsboven (of Tab); de mediakaart wisselt mee. De oude keuze per scherm geldt alleen nog als er voor het thema niets gekozen is.
 - Alle spelers bepalen hun uitvoering nu op één plek (`ThemeConfig.deviceLook`), naar het gekozen thema; de kleine speler keek naar het thema en de grote naar de stijlfamilie, waardoor de grote live een andere uitvoering kon tonen dan Organic.
 - Elk thema heeft nu een koptelefoon naast de speler, in de eigen stijl: Neon donker met een gloeiende lijn, Paper vlak papier met inktlijnen, Mono mat kunststof; Organic houdt de houten kappen. De Organic-spelers zijn niet meer altijd bruin maar volgen de themakleuren (walkman en discman allebei in de primary container).

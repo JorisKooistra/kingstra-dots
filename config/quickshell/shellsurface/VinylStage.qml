@@ -28,7 +28,7 @@ PanelWindow {
     WlrLayershell.exclusiveZone: -1
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
-    MatugenColors { id: mocha }
+    MatugenColors { id: stageColors }
 
     // De animatie start pas als het venster echt op het scherm staat. Begint
     // hij eerder, dan mist hij de eerste frames (schokken) en is de kleine
@@ -101,9 +101,9 @@ PanelWindow {
         width: switchRow.implicitWidth + 8
         height: 36
         radius: height / 2
-        color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.62)
+        color: Qt.rgba(stageColors.base.r, stageColors.base.g, stageColors.base.b, 0.62)
         border.width: 1
-        border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.14)
+        border.color: Qt.rgba(stageColors.text.r, stageColors.text.g, stageColors.text.b, 0.14)
         opacity: win.reveal > 0.9 ? (win.reveal - 0.9) * 10 : 0
         visible: opacity > 0.01
         Row {
@@ -119,10 +119,10 @@ PanelWindow {
                     width: pickText.implicitWidth + 24
                     height: 28
                     radius: height / 2
-                    color: chosen ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.24)
-                        : pickMouse.containsMouse ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08) : "transparent"
+                    color: chosen ? Qt.rgba(stageColors.primary.r, stageColors.primary.g, stageColors.primary.b, 0.24)
+                        : pickMouse.containsMouse ? Qt.rgba(stageColors.text.r, stageColors.text.g, stageColors.text.b, 0.08) : "transparent"
                     border.width: chosen ? 1 : 0
-                    border.color: mocha.primary
+                    border.color: stageColors.primary
                     scale: pickMouse.pressed ? 0.96 : 1
                     Behavior on color { ColorAnimation { duration: ThemeConfig.duration(180) } }
                     Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutQuart } }
@@ -130,7 +130,7 @@ PanelWindow {
                         id: pickText
                         anchors.centerIn: parent
                         text: pick.modelData.title
-                        color: pick.chosen ? mocha.primary : mocha.text
+                        color: pick.chosen ? stageColors.primary : stageColors.text
                         font.family: ThemeConfig.uiFont
                         font.pixelSize: 12
                     }
@@ -151,8 +151,8 @@ PanelWindow {
         VinylStageContent {
             anchors.fill: parent
             focus: true
-            mocha: mocha
-            accent: mocha.primary
+            mocha: stageColors
+            accent: stageColors.primary
             reveal: win.reveal
             originRect: win.host.stageOrigin
             title: win.p ? String(win.p.trackTitle || "") : ""
@@ -184,8 +184,8 @@ PanelWindow {
         CassetteStageContent {
             anchors.fill: parent
             focus: true
-            mocha: mocha
-            accent: mocha.primary
+            mocha: stageColors
+            accent: stageColors.primary
             reveal: win.reveal
             originRect: win.host.stageOrigin
             title: win.p ? String(win.p.trackTitle || "") : ""
@@ -215,8 +215,8 @@ PanelWindow {
         DiscmanStageContent {
             anchors.fill: parent
             focus: true
-            mocha: mocha
-            accent: mocha.primary
+            mocha: stageColors
+            accent: stageColors.primary
             reveal: win.reveal
             originRect: win.host.stageOrigin
             title: win.p ? String(win.p.trackTitle || "") : ""
