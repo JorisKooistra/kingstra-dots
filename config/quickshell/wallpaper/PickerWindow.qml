@@ -754,7 +754,7 @@ PanelWindow {
         color: Qt.rgba(c.surface.r, c.surface.g, c.surface.b, Math.max(0.9, Math.min(1, ThemeConfig.popupOpacity)))
         MouseArea {
             anchors.fill: parent
-            onClicked: root.close()
+            onClicked: root.focusBrowser()
         }
     }
     WallpaperBackdrop {
