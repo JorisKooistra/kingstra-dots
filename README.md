@@ -188,7 +188,7 @@ when `ENABLE_VIDEO_WALLPAPER=true`. Everything goes through `kingstra-wallpaper`
 same `apply-shell-state` pipeline so colors stay in sync.
 
 `Super + Ctrl + W` opens our native Quickshell picker on the focused monitor.
-It has slices, hexagons, a grid, a mosaic and Coverflow, local search, colour filters and
+It has slices, hexagons, a grid, a mosaic, Coverflow and Orbit, local search, colour filters and
 favorites, plus Wallhaven search using the existing API key in `skwd-wall/config.json`.
 Wallhaven has three main categories (General, Anime, People); the subject selector adds
 quick tag searches such as Nature, Space, Abstract and Cyberpunk, combined with free text.
@@ -197,6 +197,21 @@ without an API key. It offers topic search, automatic pagination, HD previews, d
 apply and trash; downloaded sidecars retain the original title, keywords, credit and
 source page. NASA does not expose Wallhaven's colour, purity or resolution filters.
 The NASA tab starts on Nebulae; choose All subjects to search the entire library.
+[Wikimedia Commons](https://www.mediawiki.org/wiki/API:Imageinfo) is available as a third online
+source without a key, with minimum resolution, automatic pagination and original-image
+preview/download. Categories become searchable tags; author, license and source URL are
+kept in the image sidecar and shown in the preview.
+
+Inspired by [elifouts/Dotfiles](https://github.com/elifouts/Dotfiles/tree/5895c44f32a7d6d35a8e6c2321eb6ab81fe37c75/.config/hypr/Modern/utilities/wallpaper-picker),
+the selected image supplies a softly blurred, crossfading background (toggle with Sfeer),
+a bar of sampled image colours and clickable tag chips. The small backdrop and colour
+samples are cached beside the thumbnail by the worker, without generating a theme while
+browsing. Clicking a swatch copies its hex code. Local folders supplement existing tags;
+there is no inferred image-content tagging. The reference's category chips are folder names.
+The existing three-accent Matugen pipeline remains: independent sampled wallpaper hues
+feed accents 2 and 3 alongside the main palette. The photo-colour bar is separate from
+the three current theme accents. A real Matugen regression checks a blue/orange/green
+fixture for three distinct accent hues and wallpaper-derived secondary/tertiary sources.
 Wallhaven loads more results as you scroll. Click a remote image to inspect a
 full-resolution preview, zoom with the wheel or +/−, and drag to pan. The preview
 loads the full image directly, with previous/next, download, apply and clear back/close
@@ -227,7 +242,8 @@ column; pixel gestures remain continuous. Hover highlights a tile and its name
 independently of keyboard selection. Coverflow uses the same virtualized camera and
 thumbnail cache, with a large center card and perspective-rotated neighboring cards;
 its visual inspiration comes from the [wallpaperCarousel unixporn example](https://www.reddit.com/r/unixporn/comments/1ro14ur/niri_wallpaper_carousel_from_uilyamiro1_in_a_dms/),
-with an independent implementation.
+with an independent implementation. Orbit adds a curved depth arrangement to the same
+virtualized camera and keeps the selection visible throughout scrolling.
 
 Picker verification runs without changing the desktop wallpaper:
 
@@ -237,7 +253,7 @@ python3 tests/smoke/wallpaper-colours.py
 python3 tests/integration/palette-refresh.py
 python3 tests/integration/wallpaper-picker-offscreen.py --output /tmp/picker-test
 # With Xvfb installed, the integration test also verifies actual shader images.
-# Add --live-wallhaven or --live-nasa for real API/HD preview/save checks.
+# Add --live-wallhaven, --live-nasa or --live-commons for real API checks.
 # Add --paging-only to verify scroll position through page loads in every view.
 ```
 

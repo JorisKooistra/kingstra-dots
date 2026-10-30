@@ -153,17 +153,25 @@ Rectangle {
         }
         PickerText {
             Layout.fillWidth: true
-            text: (preview.controller.previewInfo.dimensions || preview.controller.chosen.dimensions || "") + (preview.controller.previewInfo.uploader ? "   ·   " + preview.controller.previewInfo.uploader : "") + (preview.controller.previewLoading ? "   ·   Volledige afbeelding laden…" : "")
+            text: (preview.controller.previewInfo.dimensions || preview.controller.chosen.dimensions || "") + (preview.controller.previewInfo.uploader ? "   ·   " + preview.controller.previewInfo.uploader : "") + (preview.controller.previewInfo.license ? "   ·   " + preview.controller.previewInfo.license : "") + (preview.controller.previewLoading ? "   ·   Volledige afbeelding laden…" : "")
             elide: Text.ElideRight
             color: preview.colors.onSurfaceVariant
             textFormat: Text.PlainText
         }
-        PickerText {
+        WallpaperPalette {
             Layout.fillWidth: true
-            text: (preview.controller.previewInfo.tags || []).join("  ·  ")
-            color: preview.colors.onSurfaceVariant
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
+            colors: preview.colors
+            swatches: preview.controller.selectedPalette
+            onCopied: hex => preview.controller.copyColor(hex)
+        }
+        PickerTagBar {
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.min(55, implicitHeight)
+            visible: values.length > 0
+            clip: true
+            colors: preview.colors
+            values: preview.controller.previewInfo.tags || preview.controller.selectedTags
+            onPicked: tag => preview.controller.searchTag(tag)
         }
         PickerText {
             Layout.fillWidth: true
@@ -210,7 +218,7 @@ Rectangle {
             }
             PickerButton {
                 colors: preview.colors
-                text: preview.controller.sourceTab === "nasa" ? "NASA-bron" : "Wallhaven-pagina"
+                text: preview.controller.sourceName + "-bron"
                 onClicked: Qt.openUrlExternally(preview.controller.previewInfo.page || preview.controller.chosen.page || "https://wallhaven.cc/w/" + preview.controller.chosen.id)
             }
             PickerButton {

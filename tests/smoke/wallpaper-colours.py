@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Colour-pipeline regressions with private config, fake reloads and no live apply."""
+import colorsys
 import json
 import os
 from pathlib import Path
@@ -161,6 +162,32 @@ output_path = "unused"
         changed = subprocess.run(command, env=self.env, capture_output=True, text=True, check=True).stdout
         self.assertGreater(len((self.base / "histograms").read_text().splitlines()), len(calls))
         self.assertNotEqual(json.loads(first), json.loads(changed))
+
+    @unittest.skipUnless(shutil.which("matugen") and shutil.which("magick"), "requires Matugen and ImageMagick")
+    def test_three_accent_theme_keeps_separate_wallpaper_hues(self):
+        config = self.config
+        (config / "matugen").mkdir()
+        (config / "quickshell").mkdir()
+        (config / "quickshell/theme.json").write_text('{"theme":"organic"}')
+        (config / "kingstra/themes").mkdir()
+        shutil.copy2(ROOT / "config/kingstra/themes/organic.toml", config / "kingstra/themes/organic.toml")
+        (config / "matugen/templates").symlink_to(ROOT / "config/matugen/templates")
+        (config / "matugen/config.toml").write_text('scheme_type="scheme-content"\nmode="dark"\ncolor_index=0\n[templates.quickshell]\ninput_path="'+str(config / 'matugen/templates/quickshell-colors.json')+'"\noutput_path="unused"\n[templates.hyprland]\ninput_path="'+str(config / 'matugen/templates/hypr-colors.lua')+'"\noutput_path="unused"\n')
+        image=Image.new("RGB",(600,400),"#17389f")
+        image.paste("#dd4c22",(0,0,250,400))
+        image.paste("#1cb887",(400,0,600,400))
+        image.save(self.wallpaper)
+        subprocess.run([str(SCRIPTS / "kingstra-matugen-run"),"--wallpaper",str(self.wallpaper),"--json","hex"],env=self.env,capture_output=True,check=True)
+        colors=json.loads((config / "quickshell/colors.json").read_text())
+        def hue(color):
+            rgb=[int(color[i:i+2],16)/255 for i in (1,3,5)]
+            return colorsys.rgb_to_hsv(*rgb)[0]*360
+        def distance(a,b): return abs((hue(a)-hue(b)+180)%360-180)
+        accents=[colors[key] for key in ["accent1","accent2","accent3"]]
+        self.assertGreater(min(distance(a,b) for i,a in enumerate(accents) for b in accents[i+1:]),35,accents)
+        sources=[colors["accent2_source"],colors["accent3_source"]]
+        for source in sources:
+            self.assertLess(min(distance(source,actual) for actual in ["#17389f","#dd4c22","#1cb887"]),12,source)
 
 
 if __name__ == "__main__":

@@ -320,6 +320,58 @@ class PickerTests(unittest.TestCase):
             request.assert_not_called()
         self.assertEqual(event["tags"], ["forest"])
 
+    def test_photo_palette_keeps_multiple_real_colours_and_caches_backdrop(self):
+        image = Image.new("RGB", (600, 300), "#ff0000")
+        image.paste("#00ff00", (200, 0, 400, 300))
+        image.paste("#0000ff", (400, 0, 600, 300))
+        path = self.folder / "three.png"
+        image.save(path)
+        events = self.capture(picker.catalog)
+        event = next(event for event in events if event["event"] == "thumbnail")
+        for actual in ["#ff0000", "#00ff00", "#0000ff"]:
+            self.assertIn(actual, event["palette"])
+        backdrop = Path(picker.urllib.parse.unquote(picker.urllib.parse.urlparse(event["backdrop"]).path))
+        with Image.open(backdrop) as background:
+            self.assertLessEqual(background.width, 320)
+        warm = self.capture(picker.catalog)
+        self.assertFalse(any(event["event"] == "thumbnail" for event in warm))
+        backdrop.unlink()
+        repaired = self.capture(picker.catalog)
+        self.assertTrue(any(event["event"] == "thumbnail" for event in repaired))
+        self.assertTrue(backdrop.is_file())
+
+    def test_commons_search_download_preserves_tags_credit_and_license(self):
+        url = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Mountain.jpg"
+        data = {"continue": {"gsroffset": 24}, "query": {"pages": [dict(pageid=12345, index=1, title="File:Mountain.jpg", imageinfo=[dict(url=url, thumburl=url, width=3000, height=2000, size=50000,
+                    extmetadata={"ObjectName": {"value": "A mountain"}, "Artist": {"value": '<a href="test">Alice &amp; Bob</a>'}, "LicenseShortName": {"value": "CC BY 4.0"}, "Categories": {"value": "Mountain landscapes|Self-published work|Blue skies"}})])]}}
+        args = argparse.Namespace(query="mountain", page=1, atleast="")
+        with patch.object(picker, "remote_json", return_value=data), patch.object(picker, "remote_thumbnail", return_value=dict(path="commons-12345",thumb="file:///tmp/a.jpg")):
+            event = self.capture(picker.search_commons, args)[0]
+        self.assertEqual(event["lastPage"], 2)
+        self.assertEqual(event["items"][0]["credit"], "Alice & Bob")
+        self.assertEqual(event["items"][0]["tags"], ["Mountain landscapes", "Blue skies"])
+        cached = picker.CACHE / "previews/commons-12345.jpg"
+        cached.parent.mkdir(parents=True)
+        Image.new("RGB", (3000, 2000), "blue").save(cached)
+        with patch.object(picker, "remote_json") as api, patch.object(picker.urllib.request, "urlopen") as request:
+            preview = self.capture(picker.download, "commons-12345", True)[0]
+            saved = self.capture(picker.download, "commons-12345")[0]
+            api.assert_not_called()
+            request.assert_not_called()
+        self.assertEqual(preview["license"], "CC BY 4.0")
+        sidecar = picker.read_json(picker.metadata_file(saved["path"]))
+        self.assertEqual(sidecar["uploader"], "Alice & Bob")
+        self.assertEqual(sidecar["source"], "commons")
+        self.assertEqual(self.capture(picker.catalog)[0]["items"][0]["license"], "CC BY 4.0")
+        with self.assertRaises(ValueError): picker.download("commons-../../bad")
+
+    def test_backdrop_toggle_and_orbit_are_remembered(self):
+        self.capture(picker.preferences, "backdrop", "false")
+        self.capture(picker.preferences, "mode", "orbit")
+        settings = self.capture(picker.catalog)[0]["settings"]
+        self.assertFalse(settings["backdrop"])
+        self.assertEqual(settings["mode"], "orbit")
+
 
 
 if __name__ == "__main__": unittest.main()

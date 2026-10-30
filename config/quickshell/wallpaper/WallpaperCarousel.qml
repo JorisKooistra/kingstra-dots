@@ -13,6 +13,7 @@ Item {
     readonly property var layout: controller.pickerLayout || ({})
     readonly property bool hex: mode === "hex"
     readonly property bool coverflow: mode === "coverflow"
+    readonly property bool orbit: mode === "orbit"
     readonly property bool looping: controller.sourceTab === "local"
     readonly property int rows: hex ? Math.max(1, Math.min(5, layout.hexRows || 2)) : (mode === "mosaic" ? 2 : 1)
     readonly property int baseColumns: Math.ceil(controller.items.length / rows)
@@ -29,9 +30,9 @@ Item {
     readonly property real hexY: (height - gridHeight + arcHeight) / 2
     readonly property real sliceExpanded: Math.min(width * 0.48, 680)
     readonly property real mosaicHeight: Math.min(height * 0.44, 245)
-    readonly property real coverWidth: Math.min(680, width * 0.48, height * 1.5)
-    readonly property real pitch: hex ? stepX : (coverflow ? coverWidth * 0.46 : (mode === "slices" ? 112 + (layout.sliceSpacing === undefined ? -30 : layout.sliceSpacing) : Math.min(370, width * 0.3) + 12))
-    readonly property real cardWidth: hex ? hexWidth : (coverflow ? coverWidth : (mode === "slices" ? 112 : Math.min(370, width * 0.3)))
+    readonly property real coverWidth: orbit ? Math.min(490, width * 0.38, height * 1.1) : Math.min(680, width * 0.48, height * 1.5)
+    readonly property real pitch: hex ? stepX : (coverflow || orbit ? coverWidth * 0.46 : (mode === "slices" ? 112 + (layout.sliceSpacing === undefined ? -30 : layout.sliceSpacing) : Math.min(370, width * 0.3) + 12))
+    readonly property real cardWidth: hex ? hexWidth : (coverflow || orbit ? coverWidth : (mode === "slices" ? 112 : Math.min(370, width * 0.3)))
     readonly property real origin: (width - cardWidth) / 2
     readonly property int visualIndex: Math.round(cameraX / pitch)
     readonly property int poolSize: Math.ceil(width / pitch) + 10
@@ -242,12 +243,12 @@ Item {
             required property int index
             readonly property int virtualIndex: carousel.firstColumn + Logic.modulo(index - carousel.firstColumn, carousel.poolSize)
             readonly property int baseIndex: carousel.looping ? Logic.modulo(virtualIndex, carousel.baseColumns) : virtualIndex
-            visible: baseIndex >= 0 && baseIndex < carousel.baseColumns
-            x: carousel.origin + virtualIndex * carousel.pitch - carousel.cameraX
-            width: carousel.coverflow ? carousel.cardWidth : carousel.pitch
+            visible: baseIndex >= 0 && baseIndex < carousel.baseColumns && (!carousel.orbit || Math.abs(distance) < 6)
+            x: carousel.orbit ? carousel.origin + Math.sin(distance * 0.53) * carousel.width * 0.37 : carousel.origin + virtualIndex * carousel.pitch - carousel.cameraX
+            width: carousel.coverflow || carousel.orbit ? carousel.cardWidth : carousel.pitch
             height: carousel.height
             readonly property real distance: virtualIndex - carousel.cameraX / carousel.pitch
-            z: carousel.coverflow ? 100 - Math.abs(distance) : 0
+            z: carousel.coverflow || carousel.orbit ? 100 - Math.abs(distance) : 0
             readonly property real centerX: x + carousel.hexWidth / 2
             readonly property real spacingOffset: carousel.screenOffset(centerX)
             readonly property real side: centerX < carousel.width / 2 ? -1 : 1
@@ -255,17 +256,17 @@ Item {
             readonly property real coreHalf: carousel.width / 2 - carousel.hexWidth * 0.7
             readonly property real flight: carousel.hex ? Math.max(0, Math.min(1, (edgeDistance - coreHalf) / (carousel.hexWidth * 0.9))) : 0
             readonly property real flightEase: flight * flight * (3 - 2 * flight)
-            scale: carousel.coverflow ? 1 - Math.min(0.35, Math.abs(distance) * 0.14) : 1 - flightEase
-            opacity: carousel.coverflow ? Math.max(0, 1 - Math.max(0, Math.abs(distance) - 2) * 0.25) : 1 - flightEase
-            transformOrigin: carousel.coverflow ? Item.Center : (side < 0 ? Item.Left : Item.Right)
+            scale: carousel.orbit ? 1 - Math.min(0.48, Math.abs(distance) * 0.12) : (carousel.coverflow ? 1 - Math.min(0.35, Math.abs(distance) * 0.14) : 1 - flightEase)
+            opacity: carousel.coverflow || carousel.orbit ? Math.max(0, 1 - Math.max(0, Math.abs(distance) - 2) * 0.25) : 1 - flightEase
+            transformOrigin: carousel.coverflow || carousel.orbit ? Item.Center : (side < 0 ? Item.Left : Item.Right)
             transform: [Translate {
                 x: column.spacingOffset + column.side * column.flightEase * carousel.radius * 0.4
-                y: -column.flightEase * carousel.radius * 0.25
+                y: carousel.orbit ? -(1 - Math.cos(column.distance * 0.53)) * carousel.height * 0.18 : -column.flightEase * carousel.radius * 0.25
             }, Rotation {
                 origin.x: carousel.cardWidth / 2
                 origin.y: carousel.height / 2
                 axis { x: 0; y: 1; z: 0 }
-                angle: carousel.coverflow ? -Math.max(-1, Math.min(1, column.distance)) * 52 : 0
+                angle: carousel.orbit ? -Math.max(-65, Math.min(65, column.distance * 24)) : (carousel.coverflow ? -Math.max(-1, Math.min(1, column.distance)) * 52 : 0)
             }]
             property real visualWidth: carousel.mode === "slices" && virtualIndex === carousel.visualIndex ? carousel.sliceExpanded : carousel.cardWidth
             property real cardOffset: carousel.mode === "slices" ? (virtualIndex <= carousel.visualIndex ? -1 : 1) * (carousel.sliceExpanded - 112) / 2 : 0
@@ -310,12 +311,12 @@ Item {
                     current: !!itemData.path && itemData.path === carousel.controller.currentPath
                     width: column.visualWidth
                     x: column.cardOffset
-                    height: carousel.hex ? carousel.hexHeight : (carousel.coverflow ? carousel.cardWidth * 0.64 : (carousel.mode === "slices" ? Math.min(carousel.height * 0.85, 560) : carousel.mosaicHeight * (index === 0 ? (column.virtualIndex % 2 ? 0.8 : 1.2) : (column.virtualIndex % 2 ? 1.2 : 0.8))))
-                    y: carousel.hex ? carousel.cellY(column.virtualIndex, index) : (carousel.coverflow || carousel.mode === "slices" ? (carousel.height - height) / 2 : (carousel.height - carousel.mosaicHeight * 2 - 12) / 2 + (index === 0 ? 0 : carousel.mosaicHeight * (column.virtualIndex % 2 ? 0.8 : 1.2) + 12))
+                    height: carousel.hex ? carousel.hexHeight : (carousel.coverflow || carousel.orbit ? carousel.cardWidth * 0.64 : (carousel.mode === "slices" ? Math.min(carousel.height * 0.85, 560) : carousel.mosaicHeight * (index === 0 ? (column.virtualIndex % 2 ? 0.8 : 1.2) : (column.virtualIndex % 2 ? 1.2 : 0.8))))
+                    y: carousel.hex ? carousel.cellY(column.virtualIndex, index) : (carousel.coverflow || carousel.orbit || carousel.mode === "slices" ? (carousel.height - height) / 2 : (carousel.height - carousel.mosaicHeight * 2 - 12) / 2 + (index === 0 ? 0 : carousel.mosaicHeight * (column.virtualIndex % 2 ? 0.8 : 1.2) + 12))
                     curveX: column.x + x + column.spacingOffset
                     curveViewportWidth: carousel.hex ? carousel.width : 0
                     curveAmount: carousel.arcHeight
-                    interactiveHover: carousel.coverflow ? Math.abs(column.distance) < 3.5 : (!carousel.hex || column.flight < 0.8)
+                    interactiveHover: carousel.coverflow || carousel.orbit ? Math.abs(column.distance) < 3.5 : (!carousel.hex || column.flight < 0.8)
                     onPicked: carousel.controller.activate(flatIndex)
                     onApplyRequested: carousel.controller.applyAt(flatIndex)
                     onDownloadRequested: carousel.controller.downloadAt(flatIndex)

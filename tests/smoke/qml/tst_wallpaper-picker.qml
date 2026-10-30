@@ -235,11 +235,12 @@ Item {
             compare(fakeController.selected, 9);
         }
         function test_hover_lights_and_labels_all_shapes_without_changing_selection() {
-            for (let shape of ["slices", "hex", "wall", "mosaic", "coverflow"]) {
+            for (let shape of ["slices", "hex", "wall", "mosaic", "coverflow", "orbit"]) {
                 hoverCard.shape = shape;
                 hoverCard.visible = true;
-                mouseMove(hoverCard, hoverCard.width / 2, hoverCard.height / 2);
-                tryCompare(hoverCard, "hovered", true);
+                wait(25); // Let the exposed item reach the offscreen scene first.
+                mouseMove(hoverCard, hoverCard.width / 2, hoverCard.height / 2, 5);
+                tryCompare(hoverCard, "hovered", true, 1000, shape);
                 verify(hoverCard.highlighted);
                 verify(hoverCard.captionVisible);
                 verify(!hoverCard.selected);
@@ -432,7 +433,7 @@ Item {
             verify(!carousel.moving);
         }
         function test_slices_and_mosaic_keep_animated_navigation() {
-            for (let mode of ["slices", "mosaic", "coverflow"]) {
+            for (let mode of ["slices", "mosaic", "coverflow", "orbit"]) {
                 fakeController.mode = mode;
                 fakeController.selected = 0;
                 carousel.positionSelected(false);
@@ -465,6 +466,20 @@ Item {
             fakeController.items = next;
             wait(100);
             verify(carousel.inspect().delegates < 80);
+        }
+        function test_orbit_keeps_selection_visible_through_continuous_motion() {
+            fakeController.mode = "orbit";
+            carousel.positionSelected(false);
+            wait(80);
+            fakeController.navigateColumns(12);
+            for (let i = 0; i < 35; i++) {
+                let point = carousel.selectionPoint();
+                verify(point.x >= 0 && point.x <= carousel.width, JSON.stringify(point));
+                verify(point.y >= 0 && point.y <= carousel.height, JSON.stringify(point));
+                wait(20);
+            }
+            compare(fakeController.selected, 12);
+            verify(!carousel.moving);
         }
         function test_selection_is_on_screen_throughout_a_fast_scroll() {
             for (let i = 0; i < 12; i++)

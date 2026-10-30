@@ -42,13 +42,17 @@ def main():
         time.sleep(1.3 if query == "traag" else (.8 if query.startswith("paging-") and page>1 else .2))
         source = args.get("--source", "wallhaven")
         prefix = hashlib.sha256((query + color + source).encode()).hexdigest()[:2]
+        backend=runpy.run_path(str(ROOT / "config/quickshell/wallpaper/backend.py"),run_name="fixture")
         items = []
         for index in range((page - 1) * 24, page * 24):
             identifier = prefix + f"{index:04}"
             if source == "nasa": identifier = "nasa-" + hashlib.sha256(identifier.encode()).hexdigest()[:24]
-            thumb = (LIBRARY / f"fixture-{index % 48:02}.jpg").as_uri()
+            elif source == "commons": identifier = "commons-" + str(int(prefix,16)*10000 + index + 1)
+            image = LIBRARY / f"fixture-{index % 48:02}.jpg"
+            thumb = image.as_uri()
+            details = backend["cached_visuals"](backend["CACHE"] / "thumbs" / (backend["thumbnail_key"](image) + ".jpg"))
             items.append(dict(id=identifier, name=f"{query or 'wallhaven'}-{color}-{identifier}",
-                              path="", source=source, page="https://images.nasa.gov/details/fixture" if source=="nasa" else "", thumb=thumb, dimensions="960x600", type="static", favorite=False))
+                              path="", source=source, page="https://images.nasa.gov/details/fixture" if source=="nasa" else "", thumb=thumb, dimensions="960x600", type="static", favorite=False,tags=["landscape", "colorful"], **details))
         emit("search", items=items, page=page, lastPage=6, seed="fixedseed")
     elif command == "preview":
         slow = BASE / "slow-next-preview"
@@ -74,17 +78,17 @@ def main():
         identifier = sys.argv[2]
         if (BASE / "expect-preview-before-save").exists():
             assert (BASE / ("preview-ready-" + identifier)).is_file(), "save raced the pending HD preview"
-        path = LIBRARY / ((identifier if identifier.startswith("nasa-") else "wallhaven-" + identifier) + ".jpg")
+        path = LIBRARY / ((identifier if identifier.startswith(("nasa-", "commons-")) else "wallhaven-" + identifier) + ".jpg")
         shutil.copyfile(LIBRARY / f"fixture-{fixture_index(identifier):02}.jpg", path)
         backend=runpy.run_path(str(ROOT / "config/quickshell/wallpaper/backend.py"),run_name="fixture")
-        if identifier.startswith("nasa-"):
-            backend["atomic_json"](backend["metadata_file"](path), dict(source="nasa",tag_names=["fixture-tag"],uploader="NASA fixture"))
+        if identifier.startswith(("nasa-", "commons-")):
+            backend["atomic_json"](backend["metadata_file"](path), dict(source="commons" if identifier.startswith("commons-") else "nasa",tag_names=["fixture-tag"],uploader="Fixture author",license="CC BY 4.0"))
         else:
             backend["remember_wallhaven"](identifier,{"tags":[{"name":"fixture-tag"}],"resolution":"960x600"},path,True)
         emit("download", id=identifier, path=str(path),tags=["fixture-tag"])
     elif command == "remove":
         identifier=sys.argv[2]
-        path=LIBRARY/((identifier if identifier.startswith("nasa-") else "wallhaven-"+identifier)+".jpg")
+        path=LIBRARY/((identifier if identifier.startswith(("nasa-", "commons-")) else "wallhaven-"+identifier)+".jpg")
         path.unlink(missing_ok=True)
         Path(str(path)+".json").unlink(missing_ok=True)
         emit("removed",id=identifier,path=str(path),remaining="")

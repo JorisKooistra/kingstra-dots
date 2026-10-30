@@ -41,7 +41,10 @@ PanelWindow {
     property var pickerLayout: ({})
     property string sourceTab: "local"
     readonly property bool online: sourceTab !== "local"
-    readonly property string sourceName: sourceTab === "nasa" ? "NASA" : "Wallhaven"
+    readonly property string sourceName: sourceTab === "nasa" ? "NASA" : (sourceTab === "commons" ? "Commons" : "Wallhaven")
+    property bool backdropEnabled: true
+    readonly property var selectedPalette: thumbnailFor(chosen).palette || chosen.palette || []
+    readonly property var selectedTags: Array.from(new Set((chosen.tags || []).concat(sourceTab === "local" ? (chosen.folder || "").split("/") : []).filter(Boolean)))
     property string operationLabel: "Even geduld…"
     property string operationStage: ""
     property int operationPercent: -1
@@ -418,6 +421,7 @@ PanelWindow {
                 mode = event.settings.mode;
                 sortMode = event.settings.sort || "color";
                 pickerLayout = event.settings.layout || ({});
+                backdropEnabled = event.settings.backdrop !== false;
                 catalogInitialized = true;
             }
             filter();
@@ -431,6 +435,19 @@ PanelWindow {
                 filter();
         } else if (event.event === "error")
             showMessage(event.message);
+    }
+    function searchTag(tag) {
+        previewOpen = false;
+        remoteTopic.currentIndex = 0;
+        searchField.text = tag;
+        if (online) search(1, true);
+        else filter();
+        focusBrowser();
+    }
+    function copyColor(hex) {
+        if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+        Quickshell.execDetached(["wl-copy", hex]);
+        showMessage("Gekopieerd: " + hex);
     }
     function readPalette() {
         let data = parse(paletteFile.text());
@@ -448,7 +465,7 @@ PanelWindow {
             root.close();
         }
         function view(mode: string): void {
-            if (["hex", "slices", "wall", "mosaic", "coverflow"].includes(mode))
+            if (["hex", "slices", "wall", "mosaic", "coverflow", "orbit"].includes(mode))
                 root.setMode(mode);
         }
         function move(delta: int): void {
@@ -493,6 +510,10 @@ PanelWindow {
                 current: root.currentPath,
                 filter: root.localHue,
                 remoteColor: root.colorFilter,
+                backdrop: root.backdropEnabled,
+                backdropSource: wallpaperBackdrop.source,
+                imagePalette: root.selectedPalette,
+                tags: root.selectedTags,
                 previewZoom: previewPane.zoom,
                 previewPan: previewPane.panPosition,
                 previewMessage: root.previewMessage,
@@ -608,6 +629,8 @@ PanelWindow {
                 if (event.event === "preview" && root.previewOpen && event.id === root.chosen.id) {
                     root.previewInfo = event;
                     root.previewSource = event.url;
+                    root.remoteItems = root.remoteItems.map(item => item.id === event.id ? Object.assign({}, item, {tags: event.tags || [], credit: event.uploader || "", license: event.license || ""}) : item);
+                    root.filter(true);
                     root.previewMessage = "";
                 }
             }
@@ -734,6 +757,13 @@ PanelWindow {
             onClicked: root.close()
         }
     }
+    WallpaperBackdrop {
+        id: wallpaperBackdrop
+        anchors.fill: parent
+        source: root.thumbnailFor(root.chosen).backdrop || root.chosen.backdrop || ""
+        veil: c.surface
+        shown: root.backdropEnabled
+    }
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Math.max(24, Math.min(root.width, root.height) * 0.045)
@@ -755,7 +785,7 @@ PanelWindow {
                 }
                 PickerText {
                     Layout.fillWidth: true
-                    text: root.sourceTab === "local" ? root.folder : (root.sourceTab === "nasa" ? "NASA Image and Video Library · bronvermelding bij elke afbeelding" : "Wallhaven")
+                    text: root.sourceTab === "local" ? root.folder : (root.sourceTab === "nasa" ? "NASA Image and Video Library" : (root.sourceTab === "commons" ? "Wikimedia Commons · foto’s en illustraties" : "Wallhaven"))
                     font.pixelSize: 12
                     color: c.onSurfaceVariant
                     elide: Text.ElideMiddle
@@ -782,6 +812,13 @@ PanelWindow {
                 text: "NASA"
                 selected: root.sourceTab === "nasa"
                 onClicked: root.switchSource("nasa")
+            }
+            PickerButton {
+                objectName: "source-commons"
+                colors: c
+                text: "Commons"
+                selected: root.sourceTab === "commons"
+                onClicked: root.switchSource("commons")
             }
             PickerButton {
                 colors: c
@@ -890,7 +927,7 @@ PanelWindow {
             TextField {
                 id: resolutionField
                 objectName: "remote-resolution"
-                visible: root.sourceTab === "wallhaven"
+                visible: root.sourceTab === "wallhaven" || root.sourceTab === "commons"
                 width: 160
                 height: 36
                 placeholderText: "Min. 2560x1440"
@@ -918,7 +955,7 @@ PanelWindow {
                 }
             }
             PickerButton {
-                visible: root.sourceTab !== "nasa"
+                visible: root.sourceTab === "local" || root.sourceTab === "wallhaven"
                 objectName: root.sourceTab === "local" ? "local-colour-all" : "remote-colour-all"
                 colors: c
                 text: "Alle kleuren"
@@ -935,7 +972,7 @@ PanelWindow {
                 }
             }
             Row {
-                visible: root.sourceTab !== "nasa"
+                visible: root.sourceTab === "local" || root.sourceTab === "wallhaven"
                 spacing: 8
                 height: 36
                 Repeater {
@@ -988,6 +1025,10 @@ PanelWindow {
                     {
                         key: "coverflow",
                         label: "Coverflow"
+                    },
+                    {
+                        key: "orbit",
+                        label: "Orbit"
                     }
                 ]
                 PickerButton {
@@ -997,6 +1038,17 @@ PanelWindow {
                     text: modelData.label
                     selected: root.mode === modelData.key
                     onClicked: root.setMode(modelData.key)
+                }
+            }
+            PickerButton {
+                objectName: "backdrop-toggle"
+                colors: c
+                text: "Sfeer"
+                selected: root.backdropEnabled
+                onClicked: {
+                    root.backdropEnabled = !root.backdropEnabled;
+                    root.savePreference("backdrop", String(root.backdropEnabled));
+                    root.focusBrowser();
                 }
             }
         }
@@ -1044,6 +1096,27 @@ PanelWindow {
                 text: root.loading ? "Wallpapers laden…" : (root.message || (root.sourceTab === "local" ? "Geen wallpapers gevonden" : "Geen resultaten"))
                 color: c.onSurfaceVariant
                 font.pixelSize: 18
+            }
+        }
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            WallpaperPalette {
+                objectName: "image-palette"
+                Layout.fillWidth: true
+                colors: c
+                swatches: root.selectedPalette
+                onCopied: hex => root.copyColor(hex)
+            }
+            PickerTagBar {
+                objectName: "image-tags"
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(55, implicitHeight)
+                visible: root.selectedTags.length > 0
+                clip: true
+                colors: c
+                values: root.selectedTags
+                onPicked: tag => root.searchTag(tag)
             }
         }
         RowLayout {

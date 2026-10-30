@@ -74,12 +74,15 @@ def setup(base):
     farm.mkdir()
     for entry in SOURCE.iterdir():
         if entry.name != "wallpaper":
-            (farm / entry.name).symlink_to(entry)
+            if entry.is_file(): shutil.copy2(entry, farm / entry.name)
+            else: (farm / entry.name).symlink_to(entry)
     wallpaper = farm / "wallpaper"
     wallpaper.mkdir()
     for entry in (SOURCE / "wallpaper").iterdir():
         if entry.name not in {"PickerWindow.qml", "backend.py"}:
-            (wallpaper / entry.name).symlink_to(entry)
+            # Snapshot the production sources so unrelated live edits cannot
+            # hot-reload QtTest's singleton halfway through an input sequence.
+            if entry.is_file(): shutil.copy2(entry, wallpaper / entry.name)
     source = (SOURCE / "wallpaper/PickerWindow.qml").read_text()
     source = source.replace("import QtQuick\n", "import QtQuick\nimport QtQuick.Window\n", 1)
     start = source.index("PanelWindow {")
@@ -109,6 +112,12 @@ def setup(base):
                XDG_CACHE_HOME=str(base / "cache"), KINGSTRA_WALLPAPER_DIR=str(library),
                KINGSTRA_PICKER_TEST_DIR=str(base), QT_QPA_PLATFORM="offscreen", QSG_RHI_BACKEND="opengl",
                QT_QPA_OFFSCREEN_NO_GLX="1", LIBGL_ALWAYS_SOFTWARE="1")
+    test_bin = base / "bin"
+    test_bin.mkdir()
+    clipboard = test_bin / "wl-copy"
+    clipboard.write_text("#!/usr/bin/env python3\nimport os,sys\nfrom pathlib import Path\n(Path(os.environ['KINGSTRA_PICKER_TEST_DIR'])/'clipboard.txt').write_text(sys.argv[1])\n")
+    clipboard.chmod(0o755)
+    env["PATH"] = str(test_bin) + ":" + env["PATH"]
     env.pop("WAYLAND_DISPLAY", None)
     env.pop("DISPLAY", None)
     env["QT_QUICK_BACKEND"] = "software"
@@ -249,6 +258,18 @@ class Picker:
 
 def exercise(picker):
     p = picker
+    state = p.state()
+    assert state["imagePalette"] and state["backdropSource"], state
+    first_color = state["imagePalette"][0]
+    p.click("swatch-" + first_color)
+    p.wait(lambda s:s["message"]=="Gekopieerd: "+first_color,"copy photo colour")
+    deadline=time.monotonic()+3
+    while not (p.base/"clipboard.txt").exists() and time.monotonic()<deadline:time.sleep(.02)
+    assert (p.base/"clipboard.txt").read_text()==first_color
+    p.click("backdrop-toggle")
+    assert not p.state()["backdrop"]
+    p.click("backdrop-toggle")
+    assert p.state()["backdrop"]
     p.click("local-colour-0")
     p.wait(lambda s: 0 < s["count"] < 48 and s["filter"] == 0, "local colour filter")
     p.click("local-colour-all")
@@ -259,7 +280,7 @@ def exercise(picker):
     p.click("source-local")
     p.wait(lambda s: s["source"] == "local" and not s["loading"], "source switch waits for pending preference write")
     assert p.state()["chosenFavorite"], "catalog replaced favorite with old disk state"
-    for mode in ["slices", "mosaic", "coverflow", "hex"]:
+    for mode in ["slices", "mosaic", "coverflow", "orbit", "hex"]:
         p.click("mode-" + mode)
         p.wait(lambda s: s["mode"] == mode and not s["motion"].get("moving"), mode)
         p.wheel(p.state(), -120)
@@ -277,7 +298,10 @@ def exercise(picker):
     frames = sorted(sample["dt"] for sample in samples)
     (p.base / "scroll-metrics.json").write_text(json.dumps(dict(frames=len(frames), medianMs=frames[len(frames)//2],
                                                              p95Ms=frames[int(len(frames)*.95)], maxMs=max(frames), backwardSteps=0), indent=2))
-    p.capture("hexagons")
+    p.click("backdrop-toggle")
+    time.sleep(.3)
+    p.capture("hexagons")  # Verify card shaders without the photo layer behind them.
+    p.click("backdrop-toggle")
     p.picture()
     applied = p.wait(lambda s: s["message"] == "Wallpaper ingesteld", "one click applies local image")
     assert (p.base / "applied.log").read_text() == applied["current"]
@@ -393,6 +417,21 @@ def exercise(picker):
     assert Path(state["current"]).name.startswith("nasa-")
     assert json.loads(Path(state["current"]+".json").read_text())["source"]=="nasa"
     p.click("preview-close")
+    p.click("source-commons")
+    state=p.wait(lambda s:s["source"]=="commons" and s.get("chosenId","").startswith("commons-") and not s["loading"],"Commons source")
+    p.click("tag-landscape")
+    p.wait(lambda s:"landscape" in s.get("chosen","") and not s["loading"],"tag click searches source")
+    p.click("mode-orbit")
+    p.wait(lambda s:s["mode"]=="orbit" and not s["motion"].get("moving"),"Orbit")
+    p.capture("orbit")
+    assert p.state()["imagePalette"] and p.state()["tags"]
+    p.picture()
+    p.wait(lambda s:s["preview"] and s["previewInfo"].get("id")==s.get("chosenId"),"Commons full preview")
+    p.click("preview-apply")
+    state=p.wait(lambda s:s["previewMessage"]=="Wallpaper ingesteld" and not s["busy"],"Commons apply")
+    assert Path(state["current"]).name.startswith("commons-")
+    assert json.loads(Path(state["current"]+".json").read_text())["license"]=="CC BY 4.0"
+    p.click("preview-close")
     p.click("source-wallhaven")
     p.wait(lambda s:s["source"]=="wallhaven" and s["count"]>0 and not s["loading"],"return to Wallhaven")
     p.ipc("harness","topic",1)
@@ -414,7 +453,7 @@ def exercise(picker):
 
 
 def exercise_paging(p):
-    for mode in ["wall","slices","hex","mosaic","coverflow"]:
+    for mode in ["wall","slices","hex","mosaic","coverflow","orbit"]:
         p.click("mode-"+mode)
         p.ipc("picker","browse","paging-"+mode)
         state=p.wait(lambda s:s["count"]>=24 and not s["loading"],"initial "+mode+" results")
@@ -485,11 +524,31 @@ def exercise_live_nasa(p):
     print("ok: actual NASA search, HD preview and cached save with attribution",round(elapsed,3),"s")
 
 
+def exercise_live_commons(p):
+    p.click("source-commons")
+    p.ipc("harness", "text", "mountain")
+    state=p.wait(lambda s:s["source"]=="commons" and s["count"]>0 and not s["loading"],"actual Commons search",timeout=70)
+    p.click("mode-orbit")
+    time.sleep(.5)
+    p.capture("commons-live-orbit")
+    assert state["imagePalette"] and state["tags"],state
+    p.picture()
+    state=p.wait(lambda s:s["previewInfo"].get("id")==s.get("chosenId") and bool(s["previewSource"]),"actual Commons full preview",timeout=60)
+    p.capture("commons-live-preview")
+    p.click("preview-download")
+    state=p.wait(lambda s:bool(s.get("chosenPath")) and not s["busy"],"save Commons image",timeout=20)
+    record=json.loads(Path(state["chosenPath"]+".json").read_text())
+    assert record["source"]=="commons" and record["license"] and record["uploader"]
+    (p.base/"live-result.json").write_text(json.dumps(dict(state=state,metadata=record),indent=2))
+    print("ok: actual Commons API, photo palette, tags, HD preview, save, author and license")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, help="Keep screenshots, logs and isolated fixtures in this new directory")
     parser.add_argument("--xvfb", type=Path, default=shutil.which("Xvfb"), help="Xvfb binary for shader/image verification; detected automatically if installed")
     parser.add_argument("--live-wallhaven", action="store_true", help="Use actual Wallhaven search/preview instead of deterministic remote fixtures; never applies to the desktop")
+    parser.add_argument("--live-commons", action="store_true", help="Check real Commons search, metadata, HD preview and save in private files")
     parser.add_argument("--live-nasa", action="store_true", help="Exercise the actual NASA API with all files kept in the private test directory")
     parser.add_argument("--paging-only", action="store_true", help="Check real wheel pagination in all four views")
     args = parser.parse_args()
@@ -502,8 +561,10 @@ def main():
         base = Path(temp.name)
     picker = None
     try:
-        picker = Picker(base, args.xvfb, args.live_wallhaven or args.live_nasa)
-        if args.live_nasa:
+        picker = Picker(base, args.xvfb, args.live_wallhaven or args.live_nasa or args.live_commons)
+        if args.live_commons:
+            exercise_live_commons(picker)
+        elif args.live_nasa:
             exercise_live_nasa(picker)
         elif args.live_wallhaven:
             exercise_live(picker)
