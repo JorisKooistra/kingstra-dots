@@ -136,6 +136,11 @@ Every wallpaper or theme change runs one pipeline, `apply-shell-state`:
    the colors themselves.
 3. Matugen writes the generated files and the affected apps are reloaded.
 
+The shell shares one palette reader across its widgets, with a 250 ms polling
+fallback for missed file notifications. Seed/accent extraction is cached by image
+identity and algorithm, preserving the same colours. Wallhaven metadata loads after
+colour publication; concurrent renderer/orchestrator applies are coalesced.
+
 Templates live in `config/matugen/templates/`. Phase 08 creates `~/.config/matugen/config.toml`
 with these targets:
 
@@ -181,6 +186,50 @@ kingstra-theme-switch --current
 skwd-wall is the only wallpaper renderer (`skwd-daemon.service`). Video wallpapers use mpvpaper
 when `ENABLE_VIDEO_WALLPAPER=true`. Everything goes through `kingstra-wallpaper`, which calls the
 same `apply-shell-state` pipeline so colors stay in sync.
+
+`Super + Ctrl + W` opens our native Quickshell picker on the focused monitor.
+It has slices, hexagons, a grid and a mosaic, local search, colour filters and
+favorites, plus Wallhaven search using the existing API key in `skwd-wall/config.json`.
+Wallhaven loads more results as you scroll. Click a remote image to inspect a
+full-resolution preview, zoom with the wheel or +/−, and drag to pan. The preview
+loads the full image directly, with previous/next, download, apply and clear back/close
+controls. Hover offers download or move-to-trash actions; the active wallpaper is
+protected from removal. Applying a remote image downloads it to the library first.
+Wallhaven tags are saved automatically in an adjacent `<image>.json` file and included
+in local searches. A local image applies with one click. Loading further Wallhaven
+pages appends model rows without resetting the current position in any of the views.
+The picker uses its own thumbnail cache and exits when closed. No upstream QML
+overlay or patcher is used. Settings live in `~/.config/kingstra/wallpaper-picker.json`.
+Use arrow keys to choose and F to favorite local images. Enter applies locally,
+opens a Wallhaven preview, or applies the image inside that preview. Escape returns
+from a preview, then closes the picker.
+Keyboard focus is on demand, so other screens remain usable while it is open.
+The hexagons follow a shared curved surface, with gradually wider spacing toward
+the sides and flying edge columns. One smoothed camera handles wheel and gesture
+input without an idle snap. The default HSL hue/saturation colour order is based on
+[skwd v1](https://github.com/liixini/skwd-wall/tree/49a2f5c0bdc711cde5b70f145ff659380954882a).
+The implementation keeps its own source; the upstream MIT notice is included in
+`config/quickshell/wallpaper/SKWD-LICENSE.txt`.
+Wheel ticks compensate for Hyprland's scroll multiplier so each tick advances one
+column; pixel gestures remain continuous. Hover highlights a tile and its name
+independently of keyboard selection.
+
+Picker verification runs without changing the desktop wallpaper:
+
+```bash
+bash tests/smoke/wallpaper-picker.sh
+python3 tests/smoke/wallpaper-colours.py
+python3 tests/integration/palette-refresh.py
+python3 tests/integration/wallpaper-picker-offscreen.py --output /tmp/picker-test
+# With Xvfb installed, the integration test also verifies actual shader images.
+# Add --live-wallhaven to check the real API, filters and full-size previews.
+# Add --paging-only to verify scroll position through page loads in every view.
+```
+
+The integration test uses actual Qt click, wheel and keyboard events, private
+state and library fixtures, and mocked wallpaper application. When requested,
+`--live-wallhaven` reads the existing API settings but keeps downloads and cache
+inside the test directory. Xvfb is a development dependency, not a runtime requirement.
 
 ```bash
 kingstra-wallpaper set ~/Pictures/photo.png    # static
@@ -279,7 +328,7 @@ An AUR helper is not a manual prerequisite: `bootstrap.sh` installs `yay-bin` wh
 | 06 | `06_notifications` | Quickshell notifications (stops legacy SwayNC) |
 | 07 | `07_launcher` | Walker + Elephant providers, weather API setup |
 | 08 | `08_theming` | Matugen, templates, themes/modes/state, `kingstra-*` scripts, game launcher, first color run |
-| 09 | `09_wallpaper` | skwd-wall + Kingstra overlay, optional mpvpaper, `kingstra-wallpaper` |
+| 09 | `09_wallpaper` | skwd-wall renderer + native Kingstra picker, optional mpvpaper, `kingstra-wallpaper` |
 | 10 | `10_session` | Lockscreen, hypridle, SDDM and the Kingstra greeter |
 | 11 | `11_apps_tools` | Nautilus, yazi, cliphist, playerctl, screenshot tools, polkit, optional apps |
 | 12 | `12_network_resume_fixes` | NetworkManager, Bluetooth, resume and lid-lock services |

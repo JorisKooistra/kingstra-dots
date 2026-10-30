@@ -4,6 +4,7 @@
 
 # Beeldverwerking voor matugen + thumbnails
 imagemagick
+python-pillow
 ffmpeg
 curl
 sqlite
@@ -12,7 +13,7 @@ chafa
 # Bestandssysteembewaking (wallpaper dir)
 inotify-tools
 
-# Wallpaper selector / engine
+# Wallpaper renderer (picker is native Kingstra Quickshell)
 aur:skwd-wall
 
 # --- Optioneel (video wallpapers) ---

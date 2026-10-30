@@ -57,6 +57,8 @@ config/kingstra/state/theme.json
 config/kingstra/state/wallpaper.json
 config/kingstra/state/primary-display.json
 config/kingstra/state/wallhaven-tags.json
+config/kingstra/wallpaper-picker.json
+config/kingstra/wallpaper-picker.lock
 config/kingstra/state/wallpaper-tags.json
 config/kingstra/state/fingerprint-enroll.*
 

@@ -22,6 +22,7 @@ LOG_PREFIX="[apply-shell-state]"
 VERBOSE=false
 WALLPAPER_ARG=""
 THEME_ARG=""
+RENDERER_HOOK=false
 
 _log()  { echo "$LOG_PREFIX $*"; }
 _warn() { echo "$LOG_PREFIX WARN: $*" >&2; }
@@ -302,7 +303,7 @@ _sync_skwd_config() {
          | .postProcessing = (
              [(.postProcessing // [])[] | select((.type // "") != "static")]
              + [{
-                 "command": "case \"%path%\" in \"$HOME\"/.cache/kingstra/theme-wallpapers/*) ;; *) ~/.local/bin/apply-shell-state --wallpaper \"%path%\" ;; esac; skwd wall unsuppress",
+                 "command": "case \"%path%\" in \"$HOME\"/.cache/kingstra/theme-wallpapers/*) ;; *) ~/.local/bin/apply-shell-state --renderer-hook --wallpaper \"%path%\" ;; esac; skwd wall unsuppress",
                  "type": "static"
                }]
            )' \
@@ -345,6 +346,10 @@ while [[ $# -gt 0 ]]; do
                 _warn "Optie --theme verwacht een naam"
             fi
             ;;
+        --renderer-hook)
+            RENDERER_HOOK=true
+            shift
+            ;;
         *)
             shift
             ;;
@@ -355,12 +360,15 @@ done
 # Lockfile — voorkom race conditions bij gelijktijdige aanroepen
 # ---------------------------------------------------------------------------
 LOCK_FILE="/tmp/apply-shell-state.lock"
+REQUEST_STARTED_US="${EPOCHREALTIME/./}"
 exec 9>"$LOCK_FILE"
 if ! flock -w 20 9; then
     _warn "apply-shell-state lock timeout (20s) — afgebroken"
     exit 1
 fi
-trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT
+# Keep the inode: removing it while another caller waits allows a third caller
+# to lock a new file and run concurrently with that waiter.
+trap 'flock -u 9' EXIT
 
 # ---------------------------------------------------------------------------
 # Stap 1 — Resolve inputs via centrale matugen-runner
@@ -410,6 +418,23 @@ if [[ ! "$SESSION_MODE" =~ ^[a-z0-9_-]+$ || ! -f "$MODES_DIR/${SESSION_MODE}.tom
     SESSION_MODE="office"
 fi
 
+# skwd's post-processing hook and kingstra-wallpaper can request the same apply
+# concurrently. Coalesce only requests that were already waiting when an
+# identical successful run finished. A deliberate later refresh still runs.
+RESOLVED_THEME_FILE="$(printf '%s' "$RESOLVED_JSON" | jq -r '.theme_file // ""')"
+APPLY_KEY="$(printf '%s\0' "$THEME_NAME" "$SCHEME" "$MODE" "$COLOR_IDX" "$SESSION_MODE" "$WALLPAPER" \
+    "$(stat -c '%y:%s' -- "${WALLPAPER:-/nonexistent}" 2>/dev/null || true)" \
+    "$(stat -c '%y:%s' -- "$RESOLVED_THEME_FILE" 2>/dev/null || true)" | sha256sum | cut -d' ' -f1)"
+LAST_APPLY="$CACHE_DIR/last-shell-apply"
+last_key=""; last_finished=""
+if [[ -f "$LAST_APPLY" ]]; then read -r last_key last_finished < "$LAST_APPLY" || true; fi
+if [[ "$last_key" == "$APPLY_KEY" && "$last_finished" =~ ^[0-9]+$ ]]; then
+    if (( REQUEST_STARTED_US <= last_finished )) || { $RENDERER_HOOK && (( REQUEST_STARTED_US - last_finished < 5000000 )); }; then
+        _log "Identieke renderer/apply-aanvraag al voltooid"
+        exit 0
+    fi
+fi
+
 # Houd wallpaper state/cache gelijk met de centrale apply-run.
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
     mkdir -p "$CACHE_DIR" "$STATE_DIR"
@@ -419,8 +444,6 @@ if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
         --arg path "$WALLPAPER" \
         '{"name":$name,"path":$path}' \
         > "$STATE_DIR/wallpaper.json"
-
-    _run_helper "$TAGS_SCRIPT" "$WALLPAPER" >/dev/null 2>&1 || true
 
     jq -n \
         --arg name "$THEME_NAME" \
@@ -439,6 +462,7 @@ _log "Mode: $SESSION_MODE"
 # Stap 3 — Matugen draaien (altijd via kingstra-matugen-run)
 # ---------------------------------------------------------------------------
 COLORS_JSON="{}"
+PALETTE_APPLIED=false
 
 if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
     if [[ -x "$MATUGEN_RUNNER" ]]; then
@@ -452,6 +476,7 @@ if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
         if [[ "$COLORS_JSON" == "{}" ]]; then
             _warn "matugen runner mislukt"
         else
+            PALETTE_APPLIED=true
             _log "Matugen templates gegenereerd"
         fi
         if $VERBOSE; then
@@ -510,9 +535,9 @@ fi
 # Lua-theme-module en past de relevante opties direct live toe.
 _log "Hyprland runtime atomair bijgewerkt (geen extra reload)"
 
-# Quickshell hoeft niet herstart te worden: MatugenColors.qml en ThemeConfig.qml
-# pollen colors.json en theme.json elke seconde en passen kleuren/instellingen
-# automatisch aan zonder herstart.
+# Quickshell hoeft niet herstart te worden: de gedeelde Colors-service publiceert
+# alle MatugenColors-instanties tegelijk (watcher + 250 ms poll als vangnet).
+# ThemeConfig bewaakt de overige instellingen zelf.
 
 if pgrep -x kitty &>/dev/null; then
     pkill -USR1 kitty 2>/dev/null || true
@@ -651,4 +676,16 @@ if [[ -f "$VSCODE_MATUGEN" && -f "$VSCODE_SETTINGS" ]] && command -v jq &>/dev/n
     fi
 fi
 
+# Metadata is optional and may require a slow network request. It must never
+# delay the palette, the shell or application colour publication.
+if [[ -n "$WALLPAPER" && -f "$WALLPAPER" ]]; then
+    _run_helper "$TAGS_SCRIPT" "$(_theme_wallpaper_source "$WALLPAPER")" >/dev/null 2>&1 || true
+fi
+
+if $PALETTE_APPLIED; then
+    mkdir -p "$CACHE_DIR"
+    apply_stamp="$(mktemp "$CACHE_DIR/.last-shell-apply.XXXXXX")"
+    printf '%s %s\n' "$APPLY_KEY" "${EPOCHREALTIME/./}" > "$apply_stamp"
+    mv -f -- "$apply_stamp" "$LAST_APPLY"
+fi
 _log "Klaar"

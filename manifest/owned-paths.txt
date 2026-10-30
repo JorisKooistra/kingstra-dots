@@ -57,6 +57,7 @@
 ~/.local/bin/apply-shell-state|symlink
 ~/.local/bin/kingstra-settings|symlink
 ~/.local/share/applications/kingstra-settings.desktop|file
+~/.local/share/applications/kingstra-wallpaper-picker.desktop|file
 
 ~/.config/systemd/user/kingstra-resume.service|symlink
 ~/.config/systemd/user/kingstra-lid-lock.service|symlink

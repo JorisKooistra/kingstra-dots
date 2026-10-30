@@ -1,73 +1,42 @@
 #!/usr/bin/env bash
-set -u
+# Eigen Kingstra-picker; skwd blijft uitsluitend de renderer.
+set -euo pipefail
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+picker="$config_home/quickshell/WallpaperPicker.qml"
+runtime="${XDG_RUNTIME_DIR:-/tmp}"
 
-# Zet config.monitor van skwd-wall op de momenteel gefocuste monitor, zodat de
-# picker op het actieve scherm opent i.p.v. op een verouderde waarde. De picker
-# bindt zijn PanelWindow.screen aan dit veld (WallpaperSelector.qml) en leest het
-# uit ${SKWD_CONFIG:-~/.config/skwd-wall}/config.json — hetzelfde pad als Config.qml.
-# Best-effort: faalt dit, dan opent de picker gewoon op zijn vorige scherm.
-_sync_skwd_monitor() {
-    command -v hyprctl >/dev/null 2>&1 || return 0
-    command -v jq      >/dev/null 2>&1 || return 0
-
-    local cfg monitor current tmp
-    cfg="${SKWD_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/skwd-wall}/config.json"
-    [[ -f "$cfg" ]] || return 0
-
-    # Eerste niet-lege regel = gefocuste monitor, met alle monitors als fallback.
-    monitor="$(hyprctl monitors -j 2>/dev/null | jq -r '
-        (.[] | select(.focused == true) | .name),
-        (.[] | .name)
-    ' | awk 'NF { print; exit }')"
-    [[ -n "$monitor" ]] || return 0
-
-    current="$(jq -r '.monitor // ""' "$cfg" 2>/dev/null || echo "")"
-    [[ "$current" == "$monitor" ]] && return 0
-
-    tmp="$(mktemp)" || return 0
-    if jq --arg monitor "$monitor" '.monitor = $monitor' "$cfg" > "$tmp" 2>/dev/null; then
-        mv "$tmp" "$cfg"
-    else
-        rm -f "$tmp"
-    fi
-}
-
-_active_theme() {
-    local active_file="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/active-theme"
-    local theme_json="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
-    local theme=""
-
-    if [[ -f "$active_file" ]]; then
-        theme="$(cat "$active_file" 2>/dev/null || true)"
-    fi
-    if [[ -z "$theme" && -f "$theme_json" ]] && command -v jq >/dev/null 2>&1; then
-        theme="$(jq -r '.theme // ""' "$theme_json" 2>/dev/null || true)"
-    fi
-
-    printf '%s\n' "${theme,,}"
-}
-
-if command -v skwd >/dev/null 2>&1; then
-    systemctl --user start skwd-daemon.service >/dev/null 2>&1 || true
-    _sync_skwd_monitor
-    active_theme="$(_active_theme)"
-    if [[ "$active_theme" == "mono" || "$active_theme" == "mono-accent" || "$active_theme" == "paper" || "$active_theme" == "neon" ]]; then
-        skwd wall suppress >/dev/null 2>&1 || true
-        (
-            sleep 90
-            skwd wall unsuppress >/dev/null 2>&1 || true
-        ) >/dev/null 2>&1 &
-    fi
-    if skwd wall toggle >/dev/null 2>&1; then
-        exit 0
-    fi
-    skwd wall unsuppress >/dev/null 2>&1 || true
+[[ -f "$picker" ]] || { echo "WallpaperPicker.qml ontbreekt: $picker" >&2; exit 1; }
+# Serialiseer ook twee bijna gelijktijdige sneltoetsen vóór het IPC klaarstaat.
+exec 9>"$runtime/kingstra-wallpaper-picker-$UID.lock"
+flock -n 9 || exit 0
+if quickshell ipc -p "$picker" call picker close >/dev/null 2>&1; then
+    exit 0
 fi
 
-if command -v kingstra-wallpaper >/dev/null 2>&1; then
-    kingstra-wallpaper pick
-    exit $?
-fi
+# Compile our own shader when its source changes; generated binaries stay in
+# the cache, never alongside the symlinked source files in the repository.
+shader_dir="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/wallpaper-picker"
+export KINGSTRA_PICKER_SHADER="$shader_dir/card.frag.qsb"
+export KINGSTRA_PICKER_VERTEX_SHADER="$shader_dir/card.vert.qsb"
+for shader_name in card.frag card.vert; do
+    shader_source="$config_home/quickshell/wallpaper/$shader_name"
+    shader_target="$shader_dir/$shader_name.qsb"
+    if [[ ! -s "$shader_target" || "$shader_source" -nt "$shader_target" ]]; then
+        mkdir -p "$shader_dir"
+        shader_tmp="$(mktemp "$shader_dir/.card.XXXXXX.qsb")"
+        qsb_bin="$(command -v qsb || printf '%s' /usr/lib/qt6/bin/qsb)"
+        if ! "$qsb_bin" --glsl '100 es,120,150' -o "$shader_tmp" "$shader_source"; then
+            rm -f -- "$shader_tmp"
+            exit 1
+        fi
+        mv -- "$shader_tmp" "$shader_target"
+    fi
+done
 
-notify-send "Wallpaper" "Geen wallpaper-picker gevonden (skwd of kingstra-wallpaper)" 2>/dev/null || true
-exit 1
+export KINGSTRA_PICKER_MONITOR="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | .name' | head -1 || true)"
+# Qt receives Hyprland's already-scaled angle delta (e.g. 162 instead of 120).
+# Undo that scale for discrete tile steps; touchpad pixel gestures stay continuous.
+export KINGSTRA_PICKER_SCROLL_FACTOR="$(hyprctl getoption input:scroll_factor -j 2>/dev/null | jq -r '.float | select(type == "number" and . > 0)' || true)"
+export QML_IMPORT_PATH="$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+export QS_APP_ID=kingstra-wallpaper-picker
+setsid nohup quickshell --no-duplicate -p "$picker" >"$runtime/kingstra-wallpaper-picker.log" 2>&1 < /dev/null 9>&- &

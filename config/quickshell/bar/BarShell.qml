@@ -144,6 +144,7 @@ Variants {
             MatugenColors {
                 id: mocha
             }
+            readonly property var colorPalette: mocha
 
             // User settings (date/time format)
             property var _settingsData: ({})
@@ -750,7 +751,7 @@ Variants {
                 id: barSurfaceComponent
                 BarSurface {
                     shell: barWindow
-                    mocha: mocha
+                    mocha: barWindow.colorPalette
                 }
             }
         }

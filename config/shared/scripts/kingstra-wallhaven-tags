@@ -120,7 +120,23 @@ main() {
         return 0
     fi
 
-    local api_key url api_json fetched_at record
+    # Serialise cache merges and reuse successful metadata for a day. The
+    # renderer hook and orchestrator must not fetch the same tags twice.
+    mkdir -p "$STATE_DIR" "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+    exec 8>"${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/wallhaven-tags.lock"
+    flock -w 20 8 || return 0
+    local cached cached_time now record
+    cached="$(jq -c --arg id "$id" '.[$id] // empty' "$KINGSTRA_INDEX" 2>/dev/null || true)"
+    cached_time="$(date -d "$(jq -r '.fetched_at // empty' <<< "$cached" 2>/dev/null)" +%s 2>/dev/null || echo 0)"
+    now="$(date +%s)"
+    if [[ -n "$cached" && "$cached_time" =~ ^[0-9]+$ ]] && (( now >= cached_time && now - cached_time < 86400 )); then
+        record="$(jq --arg path "$WALLPAPER" '.path = $path' <<< "$cached")"
+        _write_record "$record" "$id"
+        _update_wallpaper_state "$record"
+        return 0
+    fi
+
+    local api_key url api_json fetched_at
     api_key="$(_read_api_key)"
     url="https://wallhaven.cc/api/v1/w/$id"
     if [[ -n "$api_key" ]]; then

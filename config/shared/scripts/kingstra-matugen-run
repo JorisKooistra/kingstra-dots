@@ -498,18 +498,42 @@ _extract_wallpaper_palette() {
         return 1
     fi
 
-    python3 - "$magick_bin" "$image" "$index" <<'PY'
+    python3 - "$magick_bin" "$image" "$index" "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/wallpaper-palettes" "$SCRIPT_REALPATH" <<'PY'
 import colorsys
+import hashlib
+import json
 import math
+import os
+from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 
 magick_bin, image, raw_index = sys.argv[1:4]
 try:
     color_index = max(0, int(raw_index))
 except Exception:
     color_index = 0
+
+# Cache the exact seed/accent calculation, independent of the active scheme.
+# File identity, the algorithm source and ImageMagick updates invalidate it.
+cache_file = None
+try:
+    source = Path(image).resolve()
+    stat = source.stat()
+    binary = Path(shutil.which(magick_bin)).resolve().stat()
+    identity = [str(source), stat.st_mtime_ns, stat.st_size, color_index,
+                hashlib.sha256(Path(sys.argv[5]).read_bytes()).hexdigest(), binary.st_mtime_ns]
+    key = hashlib.sha256(json.dumps(identity).encode()).hexdigest()
+    cache_file = Path(sys.argv[4]) / (key + ".json")
+    cached = json.loads(cache_file.read_text())
+    if len(cached) == 3 and all(isinstance(c, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}", c) for c in cached):
+        print("\n".join(cached))
+        sys.exit(0)
+except (OSError, ValueError, TypeError):
+    pass
 
 
 def histogram(resize, ncolors):
@@ -706,8 +730,18 @@ else:
         a2, a3 = a3, a2
     picked = [seed, a2, a3]
 
-for c in picked[:3]:
-    print(c["hex"])
+result = [c["hex"] for c in picked[:3]]
+if cache_file is not None:
+    temp = None
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(mode="w", dir=cache_file.parent, delete=False) as output:
+            temp = Path(output.name)
+            json.dump(result, output)
+        temp.replace(cache_file)
+    except OSError:
+        if temp is not None: temp.unlink(missing_ok=True)
+print("\n".join(result))
 PY
 }
 

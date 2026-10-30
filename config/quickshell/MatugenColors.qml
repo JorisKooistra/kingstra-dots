@@ -1,6 +1,4 @@
 import QtQuick
-import Quickshell
-import Quickshell.Io
 
 Item {
     id: root
@@ -109,88 +107,77 @@ Item {
         Math.max(0.10, Math.min(0.22, 0.08 + ThemeConfig.styleOutlineStrength * 0.42)))
     readonly property color shellDivider: Qt.rgba(text.r, text.g, text.b, 0.10)
 
-    property string rawJson: ""
+    // All legacy instances share the singleton's reader and polling timer.
+    // Publishing one valid palette updates every widget in the same event loop.
+    readonly property string rawJson: Colors.rawJson
+    onRawJsonChanged: applyColors(Colors._data)
+    Component.onCompleted: applyColors(Colors._data)
 
-    FileView {
-        id: colorsFileView
-        path: Quickshell.env("HOME") + "/.config/quickshell/colors.json"
-        watchChanges: true
-        preload: true
-        onInternalTextChanged: {
-            let txt = __text.trim();
-            if (txt === "" || txt === root.rawJson) return;
-
-            root.rawJson = txt;
-            try {
-                let c = JSON.parse(txt);
-                if (c.base) root.base = c.base;
-                if (c.mantle) root.mantle = c.mantle;
-                if (c.crust) root.crust = c.crust;
-                if (c.text) root.text = c.text;
-                if (c.subtext0) root.subtext0 = c.subtext0;
-                if (c.subtext1) root.subtext1 = c.subtext1;
-                if (c.surface0) root.surface0 = c.surface0;
-                if (c.surface1) root.surface1 = c.surface1;
-                if (c.surface2) root.surface2 = c.surface2;
-                if (c.overlay0) root.overlay0 = c.overlay0;
-                if (c.overlay1) root.overlay1 = c.overlay1;
-                if (c.overlay2) root.overlay2 = c.overlay2;
-                if (c.blue) root.blue = c.blue;
-                if (c.sapphire) root.sapphire = c.sapphire;
-                if (c.peach) root.peach = c.peach;
-                if (c.green) root.green = c.green;
-                if (c.red) root.red = c.red;
-                if (c.mauve) root.mauve = c.mauve;
-                if (c.pink) root.pink = c.pink;
-                if (c.yellow) root.yellow = c.yellow;
-                if (c.maroon) root.maroon = c.maroon;
-                if (c.teal) root.teal = c.teal;
-                if (c.lavender) root.lavender = c.lavender;
-                if (c.sky) root.sky = c.sky;
-                if (c.primary) root.materialPrimary = c.primary;
-                if (c.on_primary) root.materialOnPrimary = c.on_primary;
-                if (c.primary_container) root.materialPrimaryContainer = c.primary_container;
-                if (c.on_primary_container) root.materialOnPrimaryContainer = c.on_primary_container;
-                if (c.secondary) root.materialSecondary = c.secondary;
-                if (c.on_secondary) root.materialOnSecondary = c.on_secondary;
-                if (c.secondary_container) root.materialSecondaryContainer = c.secondary_container;
-                if (c.on_secondary_container) root.materialOnSecondaryContainer = c.on_secondary_container;
-                if (c.tertiary) root.materialTertiary = c.tertiary;
-                if (c.on_tertiary) root.materialOnTertiary = c.on_tertiary;
-                if (c.tertiary_container) root.materialTertiaryContainer = c.tertiary_container;
-                if (c.on_tertiary_container) root.materialOnTertiaryContainer = c.on_tertiary_container;
-                if (c.error) root.materialError = c.error;
-                if (c.on_error) root.materialOnError = c.on_error;
-                if (c.error_container) root.materialErrorContainer = c.error_container;
-                if (c.on_error_container) root.materialOnErrorContainer = c.on_error_container;
-                if (c.surface) root.materialSurface = c.surface;
-                if (c.on_surface) root.materialOnSurface = c.on_surface;
-                if (c.on_surface_variant) root.materialOnSurfaceVariant = c.on_surface_variant;
-                if (c.surface_container) root.materialSurfaceContainer = c.surface_container;
-                if (c.surface_container_high) root.materialSurfaceContainerHigh = c.surface_container_high;
-                if (c.surface_container_highest) root.materialSurfaceContainerHighest = c.surface_container_highest;
-                if (c.accent1) root.accent1 = c.accent1;
-                else if (c.primary) root.accent1 = c.primary;
-                if (c.on_accent1) root.accent1Text = c.on_accent1;
-                else if (c.on_primary) root.accent1Text = c.on_primary;
-                if (c.accent1_container) root.accent1Container = c.accent1_container;
-                else if (c.primary_container) root.accent1Container = c.primary_container;
-                if (c.on_accent1_container) root.accent1ContainerText = c.on_accent1_container;
-                else if (c.on_primary_container) root.accent1ContainerText = c.on_primary_container;
-                if (c.accent2_source) root.accent2Source = c.accent2_source;
-                if (c.accent2) root.accent2 = c.accent2;
-                if (c.on_accent2) root.accent2Text = c.on_accent2;
-                if (c.accent2_container) root.accent2Container = c.accent2_container;
-                if (c.on_accent2_container) root.accent2ContainerText = c.on_accent2_container;
-                if (c.accent3_source) root.accent3Source = c.accent3_source;
-                if (c.accent3) root.accent3 = c.accent3;
-                if (c.on_accent3) root.accent3Text = c.on_accent3;
-                if (c.accent3_container) root.accent3Container = c.accent3_container;
-                if (c.on_accent3_container) root.accent3ContainerText = c.on_accent3_container;
-            } catch (e) {}
-        }
+    function applyColors(c) {
+        if (!c) return;
+        if (c.base) root.base = c.base;
+        if (c.mantle) root.mantle = c.mantle;
+        if (c.crust) root.crust = c.crust;
+        if (c.text) root.text = c.text;
+        if (c.subtext0) root.subtext0 = c.subtext0;
+        if (c.subtext1) root.subtext1 = c.subtext1;
+        if (c.surface0) root.surface0 = c.surface0;
+        if (c.surface1) root.surface1 = c.surface1;
+        if (c.surface2) root.surface2 = c.surface2;
+        if (c.overlay0) root.overlay0 = c.overlay0;
+        if (c.overlay1) root.overlay1 = c.overlay1;
+        if (c.overlay2) root.overlay2 = c.overlay2;
+        if (c.blue) root.blue = c.blue;
+        if (c.sapphire) root.sapphire = c.sapphire;
+        if (c.peach) root.peach = c.peach;
+        if (c.green) root.green = c.green;
+        if (c.red) root.red = c.red;
+        if (c.mauve) root.mauve = c.mauve;
+        if (c.pink) root.pink = c.pink;
+        if (c.yellow) root.yellow = c.yellow;
+        if (c.maroon) root.maroon = c.maroon;
+        if (c.teal) root.teal = c.teal;
+        if (c.lavender) root.lavender = c.lavender;
+        if (c.sky) root.sky = c.sky;
+        if (c.primary) root.materialPrimary = c.primary;
+        if (c.on_primary) root.materialOnPrimary = c.on_primary;
+        if (c.primary_container) root.materialPrimaryContainer = c.primary_container;
+        if (c.on_primary_container) root.materialOnPrimaryContainer = c.on_primary_container;
+        if (c.secondary) root.materialSecondary = c.secondary;
+        if (c.on_secondary) root.materialOnSecondary = c.on_secondary;
+        if (c.secondary_container) root.materialSecondaryContainer = c.secondary_container;
+        if (c.on_secondary_container) root.materialOnSecondaryContainer = c.on_secondary_container;
+        if (c.tertiary) root.materialTertiary = c.tertiary;
+        if (c.on_tertiary) root.materialOnTertiary = c.on_tertiary;
+        if (c.tertiary_container) root.materialTertiaryContainer = c.tertiary_container;
+        if (c.on_tertiary_container) root.materialOnTertiaryContainer = c.on_tertiary_container;
+        if (c.error) root.materialError = c.error;
+        if (c.on_error) root.materialOnError = c.on_error;
+        if (c.error_container) root.materialErrorContainer = c.error_container;
+        if (c.on_error_container) root.materialOnErrorContainer = c.on_error_container;
+        if (c.surface) root.materialSurface = c.surface;
+        if (c.on_surface) root.materialOnSurface = c.on_surface;
+        if (c.on_surface_variant) root.materialOnSurfaceVariant = c.on_surface_variant;
+        if (c.surface_container) root.materialSurfaceContainer = c.surface_container;
+        if (c.surface_container_high) root.materialSurfaceContainerHigh = c.surface_container_high;
+        if (c.surface_container_highest) root.materialSurfaceContainerHighest = c.surface_container_highest;
+        if (c.accent1) root.accent1 = c.accent1;
+        else if (c.primary) root.accent1 = c.primary;
+        if (c.on_accent1) root.accent1Text = c.on_accent1;
+        else if (c.on_primary) root.accent1Text = c.on_primary;
+        if (c.accent1_container) root.accent1Container = c.accent1_container;
+        else if (c.primary_container) root.accent1Container = c.primary_container;
+        if (c.on_accent1_container) root.accent1ContainerText = c.on_accent1_container;
+        else if (c.on_primary_container) root.accent1ContainerText = c.on_primary_container;
+        if (c.accent2_source) root.accent2Source = c.accent2_source;
+        if (c.accent2) root.accent2 = c.accent2;
+        if (c.on_accent2) root.accent2Text = c.on_accent2;
+        if (c.accent2_container) root.accent2Container = c.accent2_container;
+        if (c.on_accent2_container) root.accent2ContainerText = c.on_accent2_container;
+        if (c.accent3_source) root.accent3Source = c.accent3_source;
+        if (c.accent3) root.accent3 = c.accent3;
+        if (c.on_accent3) root.accent3Text = c.on_accent3;
+        if (c.accent3_container) root.accent3Container = c.accent3_container;
+        if (c.on_accent3_container) root.accent3ContainerText = c.on_accent3_container;
     }
-
-    // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
-    Timer { interval: 5000; running: true; repeat: true; onTriggered: colorsFileView.reload() }
 }

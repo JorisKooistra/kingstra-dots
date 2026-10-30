@@ -129,7 +129,8 @@ start_ui() {
         return 1
     fi
 
-    # skwd is de enige wallpaper-daemon (rendert + picker-UI + kleuranalyse).
+    # skwd is de enige wallpaper-daemon (renderer + kleuranalyse).
+    # De eigen Quickshell-picker start alleen op verzoek.
     # awww is volledig uit de pipeline verwijderd; stop_session ruimt een
     # eventueel nog lopende legacy awww-daemon op.
     systemctl_user start skwd-daemon.service

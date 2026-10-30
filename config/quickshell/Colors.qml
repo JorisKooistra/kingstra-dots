@@ -10,20 +10,31 @@ Item {
     id: root
 
     property var _data: ({})
+    property string rawJson: ""
+
+    function acceptPalette(content) {
+        let text = content.trim();
+        if (!text || text === rawJson) return;
+        try {
+            let data = JSON.parse(text);
+            if (!data || typeof data !== "object" || Array.isArray(data)) return;
+            _data = data;
+            rawJson = text;
+        } catch (e) {} // Keep the last complete palette during an interrupted write.
+    }
 
     FileView {
         id: colorsFileView
-        path: Quickshell.env("HOME") + "/.config/quickshell/colors.json"
+        path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/quickshell/colors.json"
         watchChanges: true
         preload: true
-        onInternalTextChanged: {
-            let content = __text.trim()
-            if (content) try { root._data = JSON.parse(content) } catch (e) {}
-        }
+        onInternalTextChanged: root.acceptPalette(__text)
+        onFileChanged: reload()
     }
 
-    // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
-    Timer { interval: 5000; running: true; repeat: true; onTriggered: colorsFileView.reload() }
+    // QS 0.3 misses some atomic renames. One shared reader bounds latency to
+    // 250 ms, rather than a separate five-second poll in every widget.
+    Timer { interval: 250; running: true; repeat: true; onTriggered: colorsFileView.reload() }
 
     // ---------------------------------------------------------------------------
     // Material-kleuren — reactief op _data, fallback = Catppuccin Mocha

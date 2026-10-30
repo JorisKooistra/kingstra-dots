@@ -206,13 +206,13 @@ _stop_video() {
 }
 
 _set_static() {
-    local file="$1"
+    local file="$1" payload
     [[ -f "$file" ]] || _die "Bestand niet gevonden: $file"
 
     _stop_video
 
-    # skwd is de enige wallpaper-daemon: het rendert, levert de picker-UI
-    # (Super+Ctrl+W) en doet de kleuranalyse. Voorheen draaide awww er als
+    # skwd is de enige wallpaper-daemon: het rendert en doet de kleuranalyse.
+    # Onze eigen Quickshell-picker gebruikt deze apply-route. awww draaide als
     # tweede renderer naast; skwd-paper ligt bovenop awww, dus je zag skwd's
     # beeld terwijl de kingstra-state awww's keuze bevatte -> desync/flicker.
     if ! command -v skwd &>/dev/null; then
@@ -227,7 +227,8 @@ _set_static() {
     _update_wallpaper_json "$file"
     _sync_skwd_current_wallpaper "$file" "static"
 
-    if skwd wall apply "{\"path\":\"$file\"}" >/dev/null 2>&1; then
+    payload="$(jq -cn --arg path "$file" '{path:$path}')"
+    if skwd wall apply "$payload" >/dev/null 2>&1; then
         _log "Statisch wallpaper ingesteld via skwd: $(basename "$file")"
         return 0
     fi
@@ -491,8 +492,8 @@ _apply_skwd_wallpaper() {
         _run_helper "$APPLY" --wallpaper "$file"
     else
         _notify "Wallpaper ingesteld" "$(basename "$file")"
+        _cache_wallhaven_tags "$source_file"
     fi
-    _cache_wallhaven_tags "$source_file"
 }
 
 _cmd_random_via_skwd() {
@@ -556,8 +557,8 @@ cmd_set() {
     else
         _warn "apply-shell-state niet gevonden — alleen wallpaper ingesteld"
         _notify "Wallpaper ingesteld" "$(basename "$file")"
+        _cache_wallhaven_tags "$source_file"
     fi
-    _cache_wallhaven_tags "$source_file"
 }
 
 cmd_video() {
@@ -581,7 +582,9 @@ cmd_video() {
     fi
 
     _notify "Videowallpaper" "$(basename "$file")"
-    _cache_wallhaven_tags "$file"
+    if [[ ! -f "$last_image" || ! -f "${APPLY:-}" ]]; then
+        _cache_wallhaven_tags "$file"
+    fi
 }
 
 cmd_random() {

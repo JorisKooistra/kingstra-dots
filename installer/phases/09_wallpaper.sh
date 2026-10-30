@@ -13,7 +13,8 @@ phase_run() {
     log_step "Wallpaper-pakketten installeren..."
     aur_install skwd-wall               # standalone skwd-wall CLI + user daemon
     pacman_install imagemagick          # voor gradient-fallback + manipulatie
-    pacman_install python-pillow         # Mono Accent beeldbewerking
+    pacman_install python-pillow        # thumbnail-cache + Mono Accent beeldbewerking
+    pacman_install qt6-shadertools       # eigen picker-kaartshader (qsb)
     pacman_install python-numpy          # Mono Accent pixelmasker
     pacman_install ffmpeg               # voor videothumbnails / -verwerking
     pacman_install sqlite               # walker/history dep, ook nuttig voor indexer
@@ -23,8 +24,9 @@ phase_run() {
     log_step "skwd-wall config aanmaken..."
     _phase09_write_skwd_wall_config
 
-    log_step "skwd-wall Kingstra-overlay toepassen..."
-    _phase09_apply_skwd_overlay
+    log_step "Eigen Kingstra wallpaper-picker aansluiten..."
+    _phase09_use_native_picker
+    _phase09_register_picker
 
     log_step "skwd-wall user-service activeren..."
     _phase09_enable_skwd_daemon
@@ -47,8 +49,9 @@ phase_run() {
     validate_file "$HOME/.config/skwd-wall/config.json"    "skwd-wall/config.json"
     validate_file "$HOME/.local/bin/kingstra-wallpaper"    "kingstra-wallpaper"
     validate_file "$HOME/.local/bin/kingstra-skwd-wallpaper-sync" "kingstra-skwd-wallpaper-sync"
-    validate_file "${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/skwd-wall-overlay/shell.qml" "skwd-wall Kingstra overlay"
-    validate_file "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/skwd-daemon.service.d/10-kingstra-overlay.conf" "skwd-wall Kingstra service override"
+    validate_file "$REPO_ROOT/config/quickshell/WallpaperPicker.qml" "Kingstra wallpaper-picker"
+    validate_file "$REPO_ROOT/config/quickshell/wallpaper/backend.py" "Kingstra picker worker"
+    validate_file "${XDG_DATA_HOME:-$HOME/.local/share}/applications/kingstra-wallpaper-picker.desktop" "Kingstra picker app-registratie"
     validate_dir  "$HOME/Pictures/Wallpapers"              "Pictures/Wallpapers"
     validate_file "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper" "last-wallpaper state"
     _phase09_validate_skwd_daemon
@@ -57,7 +60,7 @@ phase_run() {
     log_ok "Fase 09 voltooid — Wallpapermodule actief."
     log_info "Wallpaper instellen: kingstra-wallpaper set <bestand>"
     log_info "Interactieve kiezer: kingstra-wallpaper pick"
-    log_info "skwd-wall UI:       skwd wall toggle"
+    log_info "Kingstra picker:    ~/.config/hypr/scripts/wallpaper-picker-safe.sh"
     log_info "Willekeurig:        kingstra-wallpaper random"
     log_info "Videowallpaper:     kingstra-wallpaper video <bestand>"
 }
@@ -127,7 +130,7 @@ _phase09_write_skwd_wall_config() {
     },
     "wallpaperMute": true,
     "postProcessing": [
-        { "command": "~/.local/bin/apply-shell-state --wallpaper %path%", "type": "static" }
+        { "command": "~/.local/bin/apply-shell-state --renderer-hook --wallpaper \"%path%\"", "type": "static" }
     ],
     "performance": {
         "imageOptimizePreset": "balanced",
@@ -139,25 +142,45 @@ EOF
     _phase09_disable_skwd_matugen "$config_dest"
 }
 
-_phase09_apply_skwd_overlay() {
-    local patch_src="$REPO_ROOT/config/wallpaper/kingstra-skwd-wall-overlay-patch"
-
+_phase09_use_native_picker() {
+    local override="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/skwd-daemon.service.d/10-kingstra-overlay.conf"
     if "${DRY_RUN:-false}"; then
-        log_dry "skwd-wall overlay patch zou worden uitgevoerd: $patch_src"
+        log_dry "Oude Kingstra picker-override zou worden verwijderd: $override"
         return 0
     fi
+    # Alleen onze oude override; andere service-aanpassingen blijven staan.
+    if [[ -f "$override" ]] && grep -q 'Environment=SKWD_SHELL_QML=.*kingstra/skwd-wall-overlay/shell.qml' "$override"; then
+        backup_path "$override"
+        rm -- "$override"
+        systemctl --user daemon-reload >/dev/null 2>&1 || true
+    fi
+    log_ok "Eigen picker beschikbaar; geen upstream QML-patches nodig"
+}
 
-    if [[ ! -f "$patch_src" ]]; then
-        log_warn "skwd-wall overlay patch ontbreekt: $patch_src"
+_phase09_register_picker() {
+    local apps_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    local desktop="$apps_dir/kingstra-wallpaper-picker.desktop"
+    local launcher="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/wallpaper-picker-safe.sh"
+    if "${DRY_RUN:-false}"; then
+        log_dry "Picker app-registratie zou worden geschreven: $desktop"
         return 0
     fi
-
-    chmod +x "$patch_src"
-    if "$patch_src"; then
-        log_ok "skwd-wall Kingstra-overlay actief"
-    else
-        log_warn "skwd-wall Kingstra-overlay kon niet worden toegepast"
-    fi
+    ensure_dir "$apps_dir"
+    cat > "$desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Kingstra Wallpapers
+Comment=Wallpapers kiezen uit je collectie of Wallhaven
+Exec=bash "$launcher"
+Icon=preferences-desktop-wallpaper
+Terminal=false
+NoDisplay=true
+Categories=Settings;DesktopSettings;
+StartupWMClass=kingstra-wallpaper-picker
+DESKTOP
+    command -v update-desktop-database >/dev/null 2>&1 \
+        && update-desktop-database "$apps_dir" >/dev/null 2>&1 || true
+    log_ok "Picker geregistreerd voor desktop-portals"
 }
 
 _phase09_enable_skwd_daemon() {
@@ -223,12 +246,12 @@ _phase09_disable_skwd_matugen() {
             (.postProcessing // [])
             | map(select(
                 if type == "string" then
-                    contains("apply-shell-state --wallpaper %path%") | not
+                    contains("apply-shell-state") | not
                 else
-                    ((.command // "") | contains("apply-shell-state --wallpaper %path%") | not)
+                    ((.command // "") | contains("apply-shell-state") | not)
                 end
             ))
-            + [{"command":"~/.local/bin/apply-shell-state --wallpaper %path%","type":"static"}]
+            + [{"command":"~/.local/bin/apply-shell-state --renderer-hook --wallpaper \"%path%\"","type":"static"}]
         )
     ' "$config_file" > "$tmp_file" 2>/dev/null; then
         mv "$tmp_file" "$config_file"
@@ -269,7 +292,7 @@ _phase09_deploy_orchestrator() {
     chmod +x "$script_src"
     chmod +x "$bridge_src"
     log_ok "Orchestrator beschikbaar als: kingstra-wallpaper"
-    log_ok "skwd bridge beschikbaar als: kingstra-skwd-wallpaper-sync"
+    log_ok "Compatibele picker-launcher beschikbaar als: kingstra-skwd-wallpaper-sync"
 }
 
 _phase09_ensure_wallpaper_dir() {

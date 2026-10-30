@@ -432,7 +432,7 @@ sync_skwd_config() {
         | .postProcessing = (
             [(.postProcessing // [])[] | select((.type // "") != "static")]
             + [{
-                "command": "case \"%path%\" in \"$HOME\"/.cache/kingstra/theme-wallpapers/*) ;; *) ~/.local/bin/apply-shell-state --wallpaper \"%path%\" ;; esac; skwd wall unsuppress",
+                "command": "case \"%path%\" in \"$HOME\"/.cache/kingstra/theme-wallpapers/*) ;; *) ~/.local/bin/apply-shell-state --renderer-hook --wallpaper \"%path%\" ;; esac; skwd wall unsuppress",
                 "type": "static"
               }]
           )
