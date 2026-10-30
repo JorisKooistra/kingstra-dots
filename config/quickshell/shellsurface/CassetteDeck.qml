@@ -70,8 +70,10 @@ Item {
             hint: m.subtext0, metal: metal
         };
         if (look === "wood") {
-            // Organic: front in een warme aardetint, mat; geborsteld metaal.
-            let panel = Qt.tint(Qt.lighter(m.surface2, 1.35), Qt.rgba(terC.r, terC.g, terC.b, 0.5));
+            // Organic: mat kunststof front in de themakleur (primary
+            // container, een vleugje tertiary), geborsteld metaal.
+            let priC = primaryContainer;
+            let panel = Qt.tint(Qt.tint(Qt.lighter(m.surface2, 1.3), Qt.rgba(priC.r, priC.g, priC.b, 0.68)), Qt.rgba(terC.r, terC.g, terC.b, 0.1));
             return Object.assign(common, {
                 panelA: Qt.lighter(panel, 1.1), panelB: Qt.darker(panel, 1.08), panelEdge: Qt.darker(panel, 1.5),
                 logo: Qt.darker(panel, 1.9), print: Qt.rgba(m.crust.r, m.crust.g, m.crust.b, 0.55),

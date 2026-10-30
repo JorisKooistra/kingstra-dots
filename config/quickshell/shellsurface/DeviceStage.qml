@@ -52,7 +52,7 @@ FocusScope {
     // Organic: breedte van de koptelefoon t.o.v. het apparaat (echte maat:
     // een koptelefoon is breder dan een walkman of discman).
     property real phonesScale: 1.4
-    readonly property bool hasPhones: look === "wood"
+    readonly property bool hasPhones: true
     readonly property real phonesWidth: rigWidth * phonesScale
     // Apparaat en koptelefoon samen in het midden.
     readonly property real sceneShift: hasPhones ? phonesWidth * 0.55 : 0
@@ -333,9 +333,20 @@ FocusScope {
         u: stage.phonesWidth / 100
         k: stage.tableSquash
         project: (X, Z, H) => stage.phonesProject(X, Z, H)
-        wood: Qt.tint(Qt.darker(stage.mocha.peach, 1.9), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.35))
-        metal: stage.skin.metal || stage.mocha.subtext1
-        leather: Qt.tint(Qt.darker(stage.mocha.surface1, 1.2), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.45))
+        look: stage.look
+        ink: stage.mocha.text
+        glow: stage.accent
+        // Per thema: houten kap en leer (Organic), donker met gloed (Neon),
+        // papier (Paper) of mat kunststof (Mono).
+        wood: stage.look === "neon" ? Qt.darker(stage.mocha.crust, 1.1)
+            : stage.look === "paper" ? stage.mocha.base
+            : stage.look === "wood" ? Qt.tint(Qt.darker(stage.mocha.peach, 1.9), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.35))
+            : stage.mocha.surface1
+        metal: stage.look === "paper" ? stage.mocha.text : stage.skin.metal || stage.mocha.subtext1
+        leather: stage.look === "neon" ? Qt.darker(stage.mocha.base, 1.25)
+            : stage.look === "paper" ? stage.mocha.base
+            : stage.look === "wood" ? Qt.tint(Qt.darker(stage.mocha.surface1, 1.2), Qt.rgba(stage.tertiaryContainer.r, stage.tertiaryContainer.g, stage.tertiaryContainer.b, 0.45))
+            : Qt.darker(stage.mocha.surface0, 1.35)
         transform: Rotation {
             origin.x: stage.finalX + stage.rigWidth / 2
             origin.y: stage.finalY + stage.topDepth
@@ -568,6 +579,9 @@ FocusScope {
         wood: decoration.wood
         metal: decoration.metal
         leather: decoration.leather
+        look: decoration.look
+        ink: decoration.ink
+        glow: decoration.glow
         transform: Rotation {
             origin.x: stage.finalX + stage.rigWidth / 2
             origin.y: stage.finalY + stage.topDepth

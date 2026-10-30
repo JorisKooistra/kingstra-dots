@@ -3,7 +3,9 @@ import QtQuick.Shapes
 import QtQuick.Effects
 import ".."
 
-// Houten koptelefoon als versiering naast de walkman of discman (Organic).
+// Koptelefoon als versiering naast de walkman of discman, in de stijl van
+// het thema (look): "wood" houten kappen en leer, "neon" donker met een
+// gloeiende lijn, "paper" vlak papier met inktlijnen, "mono" mat kunststof.
 // Hij ligt op tafel alsof iemand hem net heeft neergelegd: de ovale schelpen
 // plat met de kussens naar beneden, elk een beetje anders gedraaid, en het
 // snoer krult in een losse lus door het beeld. Zelfde camera als het
@@ -20,6 +22,14 @@ Item {
     property color wood: "#8a5a3a"
     property color metal: "#bbbbbb"
     property color leather: "#3a2a20"
+    property string look: "wood"
+    // Paper: inktkleur; neon: gloeikleur.
+    property color ink: "black"
+    property color glow: "white"
+    readonly property bool flat: look === "paper"
+    readonly property bool lined: look === "paper" || look === "neon"
+    readonly property color lineColor: look === "paper" ? ink : Qt.rgba(glow.r, glow.g, glow.b, 0.85)
+    readonly property real lineW: look === "paper" ? 2 : 1.5
     property real k: 0.42
     property string part: "all"
     // Hoe ver het snoer naar voren mag krullen (1 = volle lengte); bij een
@@ -146,15 +156,15 @@ Item {
         readonly property real x0: Math.min(...outline.map(p => p[0]))
         readonly property real x1: Math.max(...outline.map(p => p[0]))
         ShapePath {
-            strokeWidth: 0
-            strokeColor: "transparent"
+            strokeWidth: phones.lined ? phones.lineW : 0
+            strokeColor: phones.lined ? phones.lineColor : "transparent"
             fillGradient: LinearGradient {
                 x1: wall.x0; y1: 0
                 x2: wall.x1; y2: 0
-                GradientStop { position: 0.0; color: Qt.darker(wall.side, 1.6) }
-                GradientStop { position: 0.3; color: Qt.lighter(wall.side, 1.25) }
+                GradientStop { position: 0.0; color: phones.flat ? wall.side : Qt.darker(wall.side, 1.6) }
+                GradientStop { position: 0.3; color: phones.flat ? wall.side : Qt.lighter(wall.side, 1.25) }
                 GradientStop { position: 0.55; color: wall.side }
-                GradientStop { position: 1.0; color: Qt.darker(wall.side, 1.9) }
+                GradientStop { position: 1.0; color: phones.flat ? wall.side : Qt.darker(wall.side, 1.9) }
             }
             PathSvg { path: phones.line(wall.outline) + " Z" }
         }
@@ -316,7 +326,7 @@ Item {
                 yaw: modelData.yaw
                 rx: phones.cupRx + 2.4
                 rz: phones.cupRz + 2.4
-                colorA: Qt.rgba(0, 0, 0, 0.5)
+                colorA: Qt.rgba(0, 0, 0, phones.flat ? 0.12 : phones.look === "neon" ? 0.35 : 0.5)
             }
         }
         Shape {
@@ -340,7 +350,7 @@ Item {
         // Binnenkant van de band, op zijn kant.
         ShapePath {
             strokeWidth: 1
-            strokeColor: Qt.darker(phones.leather, 2)
+            strokeColor: phones.lined ? phones.lineColor : Qt.darker(phones.leather, 2)
             fillGradient: LinearGradient {
                 x1: 0; y1: phones.bandPath(0.5, 0.5, phones.band1, 0, 1)[0][1] - phones.u * 6
                 x2: 0; y2: phones.bandPath(0.5, 0.5, phones.band0, 0, 1)[0][1] + phones.u * 6
@@ -353,12 +363,12 @@ Item {
         ShapePath {
             strokeWidth: 0
             strokeColor: "transparent"
-            fillColor: Qt.lighter(phones.leather, 1.45)
+            fillColor: phones.flat ? phones.leather : Qt.lighter(phones.leather, 1.45)
             PathSvg { path: phones.ribbonTop }
         }
         ShapePath {
             strokeWidth: Math.max(1, phones.u * 0.35)
-            strokeColor: Qt.lighter(phones.leather, 2.1)
+            strokeColor: phones.lined ? phones.lineColor : Qt.lighter(phones.leather, 2.1)
             strokeStyle: ShapePath.DashLine
             dashPattern: [2, 2]
             fillColor: "transparent"
@@ -419,8 +429,10 @@ Item {
                 h: phones.cushionH
                 rx: phones.cupRx * 0.96
                 rz: phones.cupRz * 0.96
-                colorA: Qt.lighter(phones.leather, 1.1)
-                colorB: Qt.darker(phones.leather, 1.2)
+                colorA: phones.flat ? phones.leather : Qt.lighter(phones.leather, 1.1)
+                colorB: phones.flat ? phones.leather : Qt.darker(phones.leather, 1.2)
+                edge: phones.lined ? phones.lineColor : "transparent"
+                edgeWidth: phones.lined ? phones.lineW * 1.2 : 0
             }
             // Metalen sierring tussen kussen en schaal.
             Disc {
@@ -431,7 +443,7 @@ Item {
                 rx: phones.cupRx * 0.93
                 rz: phones.cupRz * 0.93
                 colorA: "transparent"
-                edge: Qt.darker(phones.metal, 1.15)
+                edge: phones.lined ? phones.lineColor : Qt.darker(phones.metal, 1.15)
                 edgeWidth: Math.max(1, phones.u * 0.35)
             }
             // Houten schaal, naar boven iets smaller.
@@ -452,7 +464,10 @@ Item {
                 rx: phones.cupRx * 0.84
                 rz: phones.cupRz * 0.84
                 colorA: phones.wood
+                edge: phones.lined ? phones.lineColor : "transparent"
+                edgeWidth: phones.lined ? phones.lineW * 1.2 : 0
                 WoodGrain {
+                    visible: phones.look === "wood"
                     anchors.fill: parent
                     anchors.margins: parent.width * 0.04
                     radius: width / 2
@@ -471,6 +486,7 @@ Item {
                 // Licht van linksboven op de bolle kap.
                 Rectangle {
                     anchors.fill: parent
+                    visible: !phones.flat
                     radius: width / 2
                     gradient: Gradient {
                         GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.16) }
@@ -483,7 +499,7 @@ Item {
                     width: parent.width * 0.3
                     height: width
                     radius: width / 2
-                    color: Qt.darker(phones.wood, 1.25)
+                    color: phones.flat ? phones.wood : Qt.darker(phones.wood, 1.25)
                     border.width: Math.max(1.5, parent.width * 0.035)
                     border.color: phones.metal
                 }
@@ -523,7 +539,7 @@ Item {
         }
         ShapePath {
             strokeWidth: Math.max(1.5, phones.u * 2)
-            strokeColor: Qt.darker(phones.leather, 1.9)
+            strokeColor: phones.flat ? phones.ink : Qt.darker(phones.leather, phones.look === "neon" ? 1.2 : 1.9)
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin
@@ -532,7 +548,7 @@ Item {
         // Glans bovenop: waar het snoer over zichzelf ligt, loopt hij door.
         ShapePath {
             strokeWidth: Math.max(0.7, phones.u * 0.5)
-            strokeColor: Qt.lighter(phones.leather, 1.5)
+            strokeColor: phones.flat ? "transparent" : phones.look === "neon" ? phones.lineColor : Qt.lighter(phones.leather, 1.5)
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin

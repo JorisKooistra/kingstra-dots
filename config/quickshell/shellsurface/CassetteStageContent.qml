@@ -26,7 +26,7 @@ DeviceStage {
     look: cassette.look
     upright: true
     faceAspect: 0.71
-    widthShare: look === "wood" ? 0.27 : 0.38
+    widthShare: hasPhones ? 0.27 : 0.38
     phonesScale: 1.45
     bodyRadius: cassette.bodyRadius
     hint: "Spatie afspelen  ·  ◀◀ ▶▶ vorige/volgende, vasthouden spoelt  ·  sleep over het venster  ·  ← → spoelen  ·  Esc sluit"

@@ -29,7 +29,7 @@ DeviceStage {
     camYaw: -24
     camPitch: 48
     camDistance: 4.5
-    widthShare: look === "wood" ? 0.3 : 0.42
+    widthShare: hasPhones ? 0.3 : 0.42
     phonesScale: 1.3
     bodyRadius: disc.bodyRadius
     hint: "Spatie afspelen  ·  ⏮ ⏭ vorige/volgende, vasthouden zoekt  ·  sleep over de balk op het scherm  ·  ← → spoelen  ·  Esc sluit"
