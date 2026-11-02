@@ -23,6 +23,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Sessie hervatten zet apps van de ‘echt sluiten’-lijst (standaard ChatGPT) niet meer terug bij het inloggen. ChatGPT kwam zo na elke start mee op en vrat de eerste twee minuten 5 GB RAM en veel CPU.
 - Fix: `island-probe.sh` zocht elke 3 s met `find /proc/*/fd` naar een open camera; dat brak geregeld af met coredumps. Het kijkt nu alleen als er een `/dev/video*` is, en dan met `fuser`.
 
+### Werkvlak: camera blijft op een lege plek
+- Fix: scrolde je naar een lege plek op het ruimtelijk werkvlak en opende en sloot je daarna een scratchpad (kladblok, Spotify, Discord), dan sprong het beeld terug naar het laatste venster. Hyprland geeft dat venster dan weer focus, en de camera volgde die focus omdat het venster buiten beeld stond. Focus die terugkomt door een scratchpad te sluiten, van werkruimte te wisselen of een zwevend venster te sluiten verplaatst de camera nu niet meer. Klikken, Super+pijlen en nieuwe vensters volgen nog wel.
+
 ### Werkvlak: touchpad en aanraakscherm
 - Op een ruimtelijk werkvlak schuiven vier vingers het beeld vrij in beide richtingen; knijpen zoomt uit (vingers naar elkaar) of terug naar 100%. Super+drie vingers blijft hetzelfde schuiven doen. Tweevingerscroll blijft bij de app zolang het beeld op 100% staat, en drie vingers blijven werkruimte, overzicht en controlecentrum.
 - Uitgezoomd schuift een tweevingerscroll één pagina naar het volgende venster, dezelfde stap als Super+wiel, in plaats van de inhoud van het verkleinde venster te scrollen. Super+twee vingers doet die stap ook op 100%. Knijpen zoomt nog; een kleine vingertrilling verandert de schaal niet meer. Het muiswiel blijft in het document scrollen.

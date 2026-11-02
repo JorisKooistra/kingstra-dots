@@ -132,3 +132,15 @@ floating.workspace.id=11
 hl.get_active_workspace=function() return {id=11} end
 assert(registered.provider.layout_msg({area=ctx.area,targets={}},"snapshot")==true)
 print('ok - floating-only workspaces can publish an overview without tiled targets')
+
+-- Scratchpad dicht of werkruimte wissel: de camera blijft op de lege plek.
+local before = #dispatched
+local tiled = { layout = { name = "lua:hyprscroll2d" } }
+_G.__hyprscroll2d_on_window_active(tiled, 12)
+_G.__hyprscroll2d_on_window_active(tiled, 11)
+_G.__hyprscroll2d_on_window_active(tiled, 14)
+assert(#dispatched == before, "camera followed a focus return from a scratchpad")
+_G.__hyprscroll2d_on_window_active(tiled, 5)
+assert(#dispatched == before + 1 and dispatched[#dispatched].message == "follow",
+    "a click focus should still let the camera follow")
+print("ok - closing a scratchpad keeps the camera on an empty spot")

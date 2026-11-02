@@ -422,13 +422,27 @@ local function window_layout_name(window)
     return safe_field(layout, "name")
 end
 
+-- Hyprland geeft bij window.active een reden mee (Desktop::eFocusReason in
+-- v0.56). Als focus alleen terugkeert omdat een scratchpad dichtgaat, je van
+-- werkruimte wisselt of een zwevend venster sluit, blijft de camera staan.
+-- Anders springt hij van een lege plek terug naar het oude venster.
+local CAMERA_KEEPING_FOCUS_REASONS = {
+    [11] = true, -- FOCUS_REASON_WORKSPACE_CHANGE
+    [12] = true, -- FOCUS_REASON_TOGGLE_SPECIAL_WORKSPACE
+    [14] = true, -- FOCUS_REASON_UNMAP_WINDOW_FLOATING
+}
+
+local function on_window_active(window, reason)
+    if CAMERA_KEEPING_FOCUS_REASONS[tonumber(reason) or -1] then return end
+    if window_layout_name(window) == "lua:hyprscroll2d" then
+        hl.dispatch(hl.dsp.layout("follow"))
+    end
+end
+_G.__hyprscroll2d_on_window_active = on_window_active
+
 if not rawget(_G, "__hyprscroll2d_focus_subscription") then
     local ok, subscription = pcall(function()
-        return hl.on("window.active", function(window)
-            if window_layout_name(window) == "lua:hyprscroll2d" then
-                hl.dispatch(hl.dsp.layout("follow"))
-            end
-        end)
+        return hl.on("window.active", on_window_active)
     end)
     if ok then _G.__hyprscroll2d_focus_subscription = subscription or true end
 end
