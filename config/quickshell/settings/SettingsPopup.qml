@@ -98,7 +98,7 @@ Item {
     property var tabs: [
         { label: "Overzicht", icon: "󰕮", pages: [14], pageLabels: ["Overzicht"], keywords: "overzicht alles mode modus thema indeling scroll scrollen werkvlak wallpaper achtergrond tegels slepen" },
         { label: "Bediening", icon: "󰍹", pages: [0, 15], pageLabels: ["Per scherm", "Rail-indeling"], keywords: "bediening mode modus scherm profiel rail indeling scroll werkvlak wallpaper muziek volgorde slepen tweede rail apps launcher werkruimtes" },
-        { label: "Uiterlijk", icon: "󰏘", pages: [1, 2], pageLabels: ["Thema", "Bar"],
+        { label: "Uiterlijk", icon: "󰏘", pages: [1, 2], pageLabels: ["Thema", "Aanpassen"],
           keywords: "thema kleur kleurschema matugen font lettertype icoon bar topbar positie vorm hoogte breedte rand rondheid blur effecten" },
         { label: "Apparaten", icon: "󰌢", pages: [6, 8, 5, 7], pageLabels: ["Beeldschermen", "Geluid", "Invoer", "Netwerk"],
           keywords: "apparaten monitor monitoren scherm display resolutie indeling layout hoofdscherm helderheid tablet touch werkruimte workspace audio volume geluid uitvoer invoer microfoon speaker mixer dempen toetsenbord touchpad muis scroll scrollen rechtsklik dead keys netwerk wifi bluetooth" },
@@ -169,7 +169,7 @@ Item {
     // instelling die erin zit klapt het blok open.
     function expandSection(key) {
         let sections = {
-            "thema": themeAdvancedSection, "bar": barAdvancedSection,
+            "thema": themeAdvancedSection,
             "beeldschermen": displayAdvancedSection, "invoer": inputAdvancedSection,
             "geluid": audioAdvancedSection, "tijd": timeAdvancedSection,
             "sessie": sessionAdvancedSection, "verwijderen": uninstallAdvancedSection
@@ -178,9 +178,27 @@ Item {
         if (section) section.expanded = true;
     }
 
+    // Opent Thema aanpassen op de gevraagde groep. Namen van vóór de
+    // opruiming (appearance, bar, character, effects) blijven werken.
+    readonly property var themeEditorAliases: ({
+        "appearance": "windows", "vensters": "windows",
+        "bar": "shell", "character": "shell", "effects": "shell", "strook": "shell",
+        "kleuren": "colors", "letters": "fonts"
+    })
+
+    function themeEditorId(name) {
+        let key = String(name || "").toLowerCase();
+        if (themeEditorAliases[key] !== undefined) key = themeEditorAliases[key];
+        for (let i = 0; i < themeEditorTabs.length; i++) {
+            if (themeEditorTabs[i].id === key) return key;
+        }
+        return "";
+    }
+
     function openThemeEditor(editor) {
-        if (editor) themeEditorTab = editor;
-        expandSection("thema");
+        let id = themeEditorId(editor);
+        if (id !== "") themeEditorTab = id;
+        openPage(2);
     }
 
     // Diepe links (qs_manager.sh open settings <naam>): elke pagina heeft een
@@ -189,7 +207,7 @@ Item {
         "overzicht": 14, "overview": 14, "home": 14,
         "bediening": 0, "control": 0, "apparaten": 6, "systeem": 10,
         "rail": 15, "rail-indeling": 15, "railindeling": 15,
-        "thema": 1, "theme": 1, "bar": 2, "sneltoetsen": 4, "keybinds": 4,
+        "thema": 1, "theme": 1, "bar": 2, "aanpassen": 2, "kleuren": 2, "sneltoetsen": 4, "keybinds": 4,
         "invoer": 5, "input": 5, "beeldschermen": 6, "monitors": 6,
         "netwerk": 7, "network": 7, "geluid": 8, "audio": 8,
         "tijd": 9, "weer": 9, "sessie": 10, "session": 10, "updates": 11,
@@ -205,12 +223,11 @@ Item {
         if (slash > 0) {
             let editor = key.substring(slash + 1);
             key = key.substring(0, slash);
-            let isEditor = false;
-            for (let i = 0; i < themeEditorTabs.length; i++) {
-                if (themeEditorTabs[i].id === editor) isEditor = true;
+            if (themeEditorId(editor) !== "") {
+                openThemeEditor(editor);
+                return;
             }
-            if (isEditor) openThemeEditor(editor);
-            else expandSection(editor);
+            expandSection(editor);
         }
         let page = pageNames[key];
         if (page === undefined && /^[0-9]+$/.test(key)) page = parseInt(key);
@@ -401,14 +418,13 @@ Item {
     property string activeThemeId: ""
     property var themeAppearance: ({})
     property var activeThemeData: ({})
-    property bool showAllThemeVariables: false
     property bool themeSaveBusy: false
     property string themeSaveError: ""
     property string themeEditThemeId: ""
     property string themeLoadedSignature: ""
     property string themeStatusText: ""
     property string themeStatusKind: "info"
-    property string themeEditorTab: "appearance"
+    property string themeEditorTab: "colors"
     readonly property bool themeDirty: themeEditThemeId !== ""
                                         && themeLoadedSignature !== ""
                                         && currentThemeSignature() !== themeLoadedSignature
@@ -535,13 +551,13 @@ Item {
     property var moduleDensityOptions: ["minimal", "balanced", "rich"]
     property var workspacePreviewOptions: ["numbers", "app-icons", "hybrid"]
     property var railAccentOptions: ["none", "edge-line", "pulse-line", "segmented"]
+    // De vier groepen van Thema aanpassen (pagina 2). Oude namen uit
+    // diepe links worden in openThemeEditor omgezet.
     property var themeEditorTabs: [
-        { id: "appearance", label: "Uiterlijk", icon: "󰉼" },
-        { id: "fonts", label: "Fonts", icon: "󰛖" },
         { id: "colors", label: "Kleuren", icon: "󰏘" },
-        { id: "bar", label: "Bar", icon: "󰓡" },
-        { id: "character", label: "Karakter", icon: "󱥰" },
-        { id: "effects", label: "Effecten", icon: "󰟤" }
+        { id: "fonts", label: "Letters", icon: "󰛖" },
+        { id: "windows", label: "Vensters", icon: "󰖯" },
+        { id: "shell", label: "Strook en panelen", icon: "󰕮" }
     ]
 
     function refreshActiveTheme() {
@@ -1482,11 +1498,16 @@ Item {
         leftPadding: root.s(8)
         rightPadding: root.s(28)
         editable: true
+        // Eigen knoppen en tekstinvoer zetten value zelf; dan stuurt SpinBox
+        // geen valueModified. Dat doen we hier, anders slaan velden met
+        // onValueModified (kommagetallen, procenten) nooit iets op.
         function stepUp() {
             spin.value = Math.min(spin.to, spin.value + spin.stepSize)
+            spin.valueModified()
         }
         function stepDown() {
             spin.value = Math.max(spin.from, spin.value - spin.stepSize)
+            spin.valueModified()
         }
 
         contentItem: TextInput {
@@ -1502,7 +1523,10 @@ Item {
             selectionColor: Qt.alpha(root.blue, 0.35)
             selectedTextColor: root.text
             inputMethodHints: Qt.ImhFormattedNumbersOnly
-            onTextEdited: spin.value = spin.valueFromText(text, spin.locale)
+            onTextEdited: {
+                spin.value = spin.valueFromText(text, spin.locale)
+                spin.valueModified()
+            }
         }
 
         up.indicator: Rectangle {
@@ -1657,6 +1681,164 @@ Item {
                 wrapMode: Text.WordWrap
             }
         }
+    }
+
+    // ── Bouwstenen van de thema-editor ─────────────────────────────────
+    // Eén blok per onderwerp, één regel per instelling met een korte uitleg.
+    // Keuzes zijn ronde knoppen met Nederlandse namen in plaats van
+    // uitklaplijsten met technische waarden.
+    component EditorCard : Rectangle {
+        id: editorCard
+        property string heading: ""
+        property string hint: ""
+        property string glyph: "󰏘"
+        default property alias rows: editorCardBody.data
+
+        Layout.fillWidth: true
+        implicitHeight: editorCardColumn.implicitHeight + root.s(30)
+        radius: root.themedRadius
+        color: Qt.alpha(root.surface0, 0.46)
+        border.color: Qt.alpha(root.surface2, 0.82)
+        border.width: 1
+
+        ColumnLayout {
+            id: editorCardColumn
+            anchors.fill: parent
+            anchors.margins: root.s(15)
+            spacing: root.s(12)
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: root.s(8)
+                Text { text: editorCard.glyph; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17); color: root.ambientPurple }
+                Text { text: editorCard.heading; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(15); color: root.text; Layout.fillWidth: true }
+            }
+            Text {
+                visible: editorCard.hint !== ""
+                text: editorCard.hint
+                font.family: root.uiFontFamily
+                font.pixelSize: root.s(11)
+                color: root.subtext0
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            ColumnLayout {
+                id: editorCardBody
+                Layout.fillWidth: true
+                spacing: root.s(14)
+            }
+        }
+    }
+
+    component ChoiceRow : ColumnLayout {
+        id: choiceRow
+        property string label: ""
+        property string hint: ""
+        property var options: []
+        property string current: ""
+        signal picked(string choice)
+
+        Layout.fillWidth: true
+        spacing: root.s(6)
+
+        Text { text: choiceRow.label; font.family: root.uiFontFamily; font.weight: Font.Medium; font.pixelSize: root.s(12); color: root.text; Layout.fillWidth: true }
+        Flow {
+            Layout.fillWidth: true
+            spacing: root.s(6)
+            Repeater {
+                model: choiceRow.options
+                Rectangle {
+                    id: choiceChip
+                    required property var modelData
+                    readonly property bool chosen: choiceRow.current === String(modelData.v)
+                    height: root.s(32)
+                    width: choiceChipText.implicitWidth + root.s(28)
+                    radius: height / 2
+                    color: chosen ? Qt.alpha(root.ambientPurple, 0.22) : (choiceChipMa.containsMouse ? root.popupPanelFill : Qt.alpha(root.surface0, 0.55))
+                    border.width: 1
+                    border.color: chosen ? Qt.alpha(root.ambientPurple, 0.7) : root.surface1
+                    scale: choiceChipMa.pressed ? 0.96 : 1.0
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                    Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(150); easing.type: Easing.OutQuart } }
+                    Text {
+                        id: choiceChipText
+                        anchors.centerIn: parent
+                        text: choiceChip.modelData.t
+                        font.family: root.uiFontFamily
+                        font.pixelSize: root.s(11)
+                        font.weight: choiceChip.chosen ? root.themedFontWeight : Font.Normal
+                        color: choiceChip.chosen ? root.text : root.subtext0
+                    }
+                    MouseArea {
+                        id: choiceChipMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: choiceRow.picked(String(choiceChip.modelData.v))
+                    }
+                }
+            }
+        }
+        Text { visible: choiceRow.hint !== ""; text: choiceRow.hint; font.family: root.uiFontFamily; font.pixelSize: root.s(10); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+    }
+
+    component NumberRow : ColumnLayout {
+        id: numberRow
+        property string label: ""
+        property string hint: ""
+        property int minimum: 0
+        property int maximum: 100
+        property int step: 1
+        property int amount: 0
+        signal edited(int newAmount)
+
+        Layout.fillWidth: true
+        spacing: root.s(4)
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: root.s(10)
+            Text { text: numberRow.label; font.family: root.uiFontFamily; font.weight: Font.Medium; font.pixelSize: root.s(12); color: root.text; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            ThemedSpinBox {
+                from: numberRow.minimum
+                to: numberRow.maximum
+                stepSize: numberRow.step
+                value: numberRow.amount
+                onValueModified: numberRow.edited(value)
+                Layout.fillWidth: false
+                Layout.preferredWidth: root.s(150)
+            }
+        }
+        Text { visible: numberRow.hint !== ""; text: numberRow.hint; font.family: root.uiFontFamily; font.pixelSize: root.s(10); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+    }
+
+    component ListRow : ColumnLayout {
+        id: listRow
+        property string label: ""
+        property string hint: ""
+        property var choices: []
+        property string current: ""
+        // Een waarde uit het thema die niet in de lijst staat blijft zichtbaar.
+        readonly property var shownChoices: current !== "" && choices.indexOf(current) < 0 ? [current].concat(choices) : choices
+        signal picked(string choice)
+
+        Layout.fillWidth: true
+        spacing: root.s(4)
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: root.s(10)
+            Text { text: listRow.label; font.family: root.uiFontFamily; font.weight: Font.Medium; font.pixelSize: root.s(12); color: root.text; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            ThemedComboBox {
+                model: listRow.shownChoices
+                currentIndex: Math.max(0, listRow.shownChoices.indexOf(listRow.current))
+                onActivated: listRow.picked(currentText)
+                Layout.fillWidth: false
+                Layout.preferredWidth: root.s(220)
+            }
+        }
+        Text { visible: listRow.hint !== ""; text: listRow.hint; font.family: root.uiFontFamily; font.pixelSize: root.s(10); color: root.subtext0; wrapMode: Text.WordWrap; Layout.fillWidth: true }
     }
 
     component AudioVolumeCard : Rectangle {
@@ -3546,142 +3728,675 @@ Item {
                         width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
                         spacing: root.s(14)
 
-                        Text { text: "Bar"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
-                        Text { text: "Bar-instellingen worden opgeslagen in het geselecteerde theme en kunnen daarna live worden toegepast op de topbar."; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                        Text { text: "Thema aanpassen"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                        Text { text: "Wijzigingen gelden voor één thema en worden pas bewaard als je op Opslaan drukt."; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
 
-                        GridLayout {
+                        // Welk thema je bewerkt: altijd bovenaan, zodat duidelijk is waar
+                        // Opslaan heen schrijft.
+                        Rectangle {
                             Layout.fillWidth: true
-                            columns: width >= root.s(820) ? 2 : 1
-                            rowSpacing: root.s(10)
-                            columnSpacing: root.s(10)
+                            implicitHeight: editTargetRow.implicitHeight + root.s(28)
+                            radius: root.themedRadius
+                            color: Qt.alpha(root.ambientPurple, 0.10)
+                            border.width: 1
+                            border.color: Qt.alpha(root.ambientPurple, 0.55)
+                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(200) } }
 
-                            SettingsInfoCard {
-                                title: "Positie en vorm"
-                                icon: "󰓡"
-                                accent: root.blue
-                                value: "Kies waar de bar staat. Links/rechts schakelt automatisch naar een sidebar-template."
+                            RowLayout {
+                                id: editTargetRow
+                                anchors.fill: parent
+                                anchors.margins: root.s(14)
+                                spacing: root.s(12)
+
+                                Text { text: "󰏘"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(22); color: root.ambientPurple; Layout.alignment: Qt.AlignVCenter }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(3)
+                                    Text {
+                                        text: root.themeEditThemeId === ""
+                                              ? "Nog geen thema geladen"
+                                              : "Je past thema " + root.themeEditThemeId.charAt(0).toUpperCase() + root.themeEditThemeId.slice(1) + " aan"
+                                        font.family: root.displayFontFamily
+                                        font.weight: root.themedFontWeight
+                                        font.pixelSize: root.s(15)
+                                        color: root.text
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
+                                    }
+                                    Text {
+                                        text: root.themeEditThemeId !== "" && root.themeEditThemeId === root.activeThemeId
+                                              ? "Dit is je actieve thema. Opslaan past het meteen toe."
+                                              : "Dit thema is nu niet actief. Je ziet de wijzigingen pas als je het kiest onder Thema."
+                                        font.family: root.uiFontFamily
+                                        font.pixelSize: root.s(11)
+                                        color: root.subtext0
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
+                                    }
+                                }
+                                SettingsActionButton { label: "Ander thema"; icon: "󰏘"; accent: root.mauve; implicitWidth: root.s(140); onTriggered: root.openPage(1) }
                             }
+                        }
 
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: root.s(8)
                             Rectangle {
-                                Layout.fillWidth: true
-                                implicitHeight: barPositionEditor.implicitHeight + root.s(24)
-                                radius: root.s(10)
-                                color: Qt.alpha(root.surface0, 0.46)
-                                border.color: Qt.alpha(root.surface2, 0.82)
+                                Layout.preferredHeight: root.s(34)
+                                Layout.preferredWidth: root.s(220)
+                                radius: root.s(8)
+                                color: root.themeDirty
+                                       ? (themeEditMa.containsMouse ? Qt.alpha(root.green, 0.90) : root.green)
+                                       : Qt.alpha(root.surface1, 0.72)
+                                opacity: themeCarousel.selectedThemeId === "" || root.themeSaveBusy ? 0.55 : 1.0
+                                border.color: "transparent"
                                 border.width: 1
 
-                                ColumnLayout {
-                                    id: barPositionEditor
+                                RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: root.s(6)
+                                    Text {
+                                        text: root.themeSaveBusy ? "󰔟" : (root.themeDirty ? "󰆓" : "󰄬")
+                                        font.family: ThemeConfig.iconFont
+                                        font.pixelSize: root.s(14)
+                                        color: root.themeDirty ? root.base : root.subtext0
+                                    }
+                                    Text {
+                                        text: root.themeSaveBusy
+                                              ? "Opslaan..."
+                                              : (root.themeDirty
+                                                  ? (root.themeEditThemeId === root.activeThemeId ? "Opslaan & toepassen" : "Opslaan")
+                                                  : "Geen wijzigingen")
+                                        font.family: ThemeConfig.textFont
+                                        font.weight: Font.Bold
+                                        font.pixelSize: root.s(11)
+                                        color: root.themeDirty ? root.base : root.subtext0
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: themeEditMa
                                     anchors.fill: parent
-                                    anchors.margins: root.s(12)
-                                    spacing: root.s(9)
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    enabled: themeCarousel.selectedThemeId !== "" && !root.themeSaveBusy && root.themeDirty
+                                    onClicked: root.saveThemeEdits()
+                                }
+                            }
+                            Rectangle {
+                                Layout.preferredHeight: root.s(34)
+                                Layout.preferredWidth: root.s(150)
+                                radius: root.s(8)
+                                color: resetThemeMa.containsMouse ? Qt.alpha(root.peach, 0.20) : Qt.alpha(root.surface0, 0.65)
+                                opacity: root.themeDirty && !root.themeSaveBusy ? 1.0 : 0.45
+                                border.color: resetThemeMa.containsMouse ? root.peach : root.surface2
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: root.s(6)
+                                    Text { text: "󰑓"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(13); color: root.peach }
+                                    Text { text: "Herstel"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.text }
+                                }
+
+                                MouseArea {
+                                    id: resetThemeMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    enabled: root.themeDirty && !root.themeSaveBusy
+                                    onClicked: root.resetThemeEdits()
+                                }
+                            }
+                            Item { Layout.fillWidth: true }
+                        }
+
+                        Rectangle {
+                            visible: root.themeEditThemeId !== ""
+                            Layout.fillWidth: true
+                            implicitHeight: themeStatusRow.implicitHeight + root.s(14)
+                            radius: root.s(8)
+                            color: root.themeDirty
+                                   ? Qt.alpha(root.yellow, 0.12)
+                                   : (root.themeStatusKind === "error"
+                                      ? Qt.alpha(root.red, 0.14)
+                                      : (root.themeStatusKind === "ok"
+                                         ? Qt.alpha(root.green, 0.12)
+                                         : Qt.alpha(root.surface0, 0.46)))
+                            border.width: 1
+                            border.color: root.themeDirty
+                                          ? Qt.alpha(root.yellow, 0.55)
+                                          : (root.themeStatusKind === "error"
+                                             ? Qt.alpha(root.red, 0.65)
+                                             : (root.themeStatusKind === "ok"
+                                                ? Qt.alpha(root.green, 0.55)
+                                                : Qt.alpha(root.surface2, 0.72)))
+
+                            RowLayout {
+                                id: themeStatusRow
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.margins: root.s(10)
+                                spacing: root.s(8)
+
+                                Text {
+                                    text: root.themeDirty ? "󰐖" : (root.themeStatusKind === "error" ? "󰅚" : (root.themeStatusKind === "ok" ? "󰄬" : "󰋼"))
+                                    font.family: ThemeConfig.iconFont
+                                    font.pixelSize: root.s(13)
+                                    color: root.themeDirty ? root.yellow : (root.themeStatusKind === "error" ? root.red : (root.themeStatusKind === "ok" ? root.green : root.blue))
+                                }
+                                Text {
+                                    text: root.themeDirty
+                                          ? "Onopgeslagen wijzigingen in " + root.themeEditThemeId + ".toml"
+                                          : (root.themeStatusText !== "" ? root.themeStatusText : "Klaar")
+                                    Layout.fillWidth: true
+                                    font.family: ThemeConfig.textFont
+                                    font.pixelSize: root.s(10)
+                                    color: root.text
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: root.s(8)
+
+                            Repeater {
+                                model: root.themeEditorTabs
+
+                                Rectangle {
+                                    required property var modelData
+                                    readonly property bool active: root.themeEditorTab === modelData.id
+
+                                    width: tabContent.implicitWidth + root.s(22)
+                                    height: root.s(34)
+                                    radius: root.s(8)
+                                    color: active
+                                           ? Qt.alpha(root.blue, 0.24)
+                                           : (themeEditorTabMa.containsMouse ? Qt.alpha(root.surface1, 0.72) : Qt.alpha(root.surface0, 0.56))
+                                    border.width: 1
+                                    border.color: active ? root.blue : (themeEditorTabMa.containsMouse ? root.surface2 : Qt.alpha(root.surface2, 0.72))
 
                                     RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Positie"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                        ThemedComboBox { model: root.barPositionOptions; currentIndex: Math.max(0, model.indexOf(root.editBarPosition)); onActivated: root.setEditBarPosition(currentText) }
+                                        id: tabContent
+                                        anchors.centerIn: parent
+                                        spacing: root.s(6)
+
+                                        Text {
+                                            text: modelData.icon
+                                            font.family: ThemeConfig.iconFont
+                                            font.pixelSize: root.s(13)
+                                            color: parent.parent.active ? root.blue : root.subtext0
+                                        }
+                                        Text {
+                                            text: modelData.label
+                                            font.family: ThemeConfig.textFont
+                                            font.weight: parent.parent.active ? Font.Bold : Font.Normal
+                                            font.pixelSize: root.s(10)
+                                            color: parent.parent.active ? root.text : root.subtext0
+                                        }
                                     }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Hoogte"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                        ThemedSpinBox { from: 30; to: 72; value: root.editBarHeight; onValueChanged: root.editBarHeight = value }
+
+                                    MouseArea {
+                                        id: themeEditorTabMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.themeEditorTab = modelData.id
                                     }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Breedte"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                        ThemedComboBox { model: root.barWidthModeOptions; currentIndex: Math.max(0, model.indexOf(root.editBarWidthMode)); onActivated: root.editBarWidthMode = currentText }
+                                }
+                            }
+                        }
+
+                        // ── Kleuren ─────────────────────────────────────────────────────────
+                        ColumnLayout {
+                            visible: root.themeEditorTab === "colors"
+                            Layout.fillWidth: true
+                            spacing: root.s(12)
+
+                            EditorCard {
+                                heading: "Kleuren"
+                                hint: "De kleuren komen uit je wallpaper. Hier bepaal je hoe ze eruit worden gehaald."
+                                glyph: "󰏘"
+                                ChoiceRow {
+                                    label: "Licht of donker"
+                                    options: [{ v: "dark", t: "Donker" }, { v: "light", t: "Licht" }]
+                                    current: root.editMode
+                                    onPicked: (choice) => root.editMode = choice
+                                }
+                                ChoiceRow {
+                                    label: "Kleurstijl"
+                                    options: [
+                                        { v: "scheme-tonal-spot", t: "Rustig" },
+                                        { v: "scheme-neutral", t: "Gedempt" },
+                                        { v: "scheme-monochrome", t: "Grijstinten" },
+                                        { v: "scheme-fidelity", t: "Trouw aan wallpaper" },
+                                        { v: "scheme-content", t: "Volgt de wallpaper" },
+                                        { v: "scheme-expressive", t: "Uitgesproken" },
+                                        { v: "scheme-rainbow", t: "Regenboog" },
+                                        { v: "scheme-fruit-salad", t: "Fruitsalade" }
+                                    ]
+                                    current: root.editSchemeType
+                                    hint: "Rustig is de standaard. Trouw aan wallpaper blijft het dichtst bij de echte kleuren van de afbeelding."
+                                    onPicked: (choice) => root.editSchemeType = choice
+                                }
+                                NumberRow {
+                                    label: "Contrast"
+                                    hint: "0 is normaal. Hoger maakt verschillen scherper, lager zachter."
+                                    minimum: -100; maximum: 100; step: 5
+                                    amount: Math.round(parseFloat(root.editContrast) * 100)
+                                    onEdited: (newAmount) => root.setEditFloat("editContrast", newAmount)
+                                }
+                                NumberRow {
+                                    label: "Welke kleur uit de wallpaper"
+                                    hint: "0 is de kleur die het meest voorkomt. Een hoger nummer pakt een andere kleur uit dezelfde afbeelding."
+                                    minimum: 0; maximum: 12
+                                    amount: root.editColorIndex
+                                    onEdited: (newAmount) => root.editColorIndex = newAmount
+                                }
+                            }
+
+                            EditorCard {
+                                heading: "Iconen"
+                                glyph: "󰀻"
+                                ListRow {
+                                    label: "Icoonthema"
+                                    hint: "Voor apps en bestandsbeheer (GTK en Qt)."
+                                    choices: root.iconThemeOptions
+                                    current: root.editIconTheme
+                                    onPicked: (choice) => root.editIconTheme = choice
+                                }
+                            }
+                        }
+
+                        // ── Letters ─────────────────────────────────────────────────────────
+                        ColumnLayout {
+                            visible: root.themeEditorTab === "fonts"
+                            Layout.fillWidth: true
+                            spacing: root.s(12)
+
+                            EditorCard {
+                                heading: "Lettertypes"
+                                hint: "Gelden voor de shell, de launcher, meldingen en GTK-apps."
+                                glyph: "󰛖"
+                                ListRow {
+                                    label: "Tekst"
+                                    choices: root.fontOptions
+                                    current: root.editUiFont
+                                    onPicked: (choice) => root.editUiFont = choice
+                                }
+                                NumberRow {
+                                    label: "Tekstgrootte"
+                                    minimum: 8; maximum: 28
+                                    amount: root.editUiFontSize
+                                    onEdited: (newAmount) => root.editUiFontSize = newAmount
+                                }
+                                ListRow {
+                                    label: "Koppen"
+                                    hint: "Titels en grote getallen, zoals de klok."
+                                    choices: root.fontOptions
+                                    current: root.editDisplayFont
+                                    onPicked: (choice) => root.editDisplayFont = choice
+                                }
+                                ListRow {
+                                    label: "Code en terminal"
+                                    choices: root.fontOptions
+                                    current: root.editMonoFont
+                                    onPicked: (choice) => root.editMonoFont = choice
+                                }
+                                NumberRow {
+                                    label: "Grootte van code en terminal"
+                                    minimum: 8; maximum: 28
+                                    amount: root.editMonoFontSize
+                                    onEdited: (newAmount) => root.editMonoFontSize = newAmount
+                                }
+                                ChoiceRow {
+                                    label: "Dikte"
+                                    options: [{ v: "light", t: "Dun" }, { v: "regular", t: "Normaal" }, { v: "medium", t: "Medium" }, { v: "bold", t: "Vet" }]
+                                    current: root.editFontWeight
+                                    onPicked: (choice) => root.editFontWeight = choice
+                                }
+                                NumberRow {
+                                    label: "Letterafstand"
+                                    hint: "In honderdsten van een pixel; 0 is normaal."
+                                    minimum: -300; maximum: 300; step: 5
+                                    amount: Math.round(parseFloat(root.editLetterSpacing) * 100)
+                                    onEdited: (newAmount) => root.setEditFloat("editLetterSpacing", newAmount)
+                                }
+                            }
+                        }
+
+                        // ── Vensters ────────────────────────────────────────────────────────
+                        ColumnLayout {
+                            visible: root.themeEditorTab === "windows"
+                            Layout.fillWidth: true
+                            spacing: root.s(12)
+
+                            EditorCard {
+                                heading: "Vensters"
+                                hint: "Hoe Hyprland je appvensters tekent. Waarden in pixels."
+                                glyph: "󰖯"
+                                NumberRow {
+                                    label: "Hoekrondheid"
+                                    minimum: 0; maximum: 64
+                                    amount: root.editBorderRadius
+                                    onEdited: (newAmount) => root.editBorderRadius = newAmount
+                                }
+                                NumberRow {
+                                    label: "Randdikte"
+                                    minimum: 0; maximum: 12
+                                    amount: root.editBorderWidth
+                                    onEdited: (newAmount) => root.editBorderWidth = newAmount
+                                }
+                                NumberRow {
+                                    label: "Ruimte tussen vensters"
+                                    minimum: 0; maximum: 60
+                                    amount: root.editGapsIn
+                                    onEdited: (newAmount) => root.editGapsIn = newAmount
+                                }
+                                NumberRow {
+                                    label: "Ruimte tot de schermrand"
+                                    minimum: 0; maximum: 80
+                                    amount: root.editGapsOut
+                                    onEdited: (newAmount) => root.editGapsOut = newAmount
+                                }
+                                NumberRow {
+                                    label: "Vervaging achter doorzichtige vensters"
+                                    hint: "0 zet vervaging uit."
+                                    minimum: 0; maximum: 64
+                                    amount: root.editBlurSize
+                                    onEdited: (newAmount) => root.editBlurSize = newAmount
+                                }
+                                NumberRow {
+                                    label: "Vervaging: aantal lagen"
+                                    hint: "Meer lagen is zachter, maar zwaarder voor de videokaart."
+                                    minimum: 0; maximum: 12
+                                    amount: root.editBlurPasses
+                                    onEdited: (newAmount) => root.editBlurPasses = newAmount
+                                }
+                            }
+                        }
+
+                        // ── Shell ───────────────────────────────────────────────────────────
+                        ColumnLayout {
+                            visible: root.themeEditorTab === "shell"
+                            Layout.fillWidth: true
+                            spacing: root.s(12)
+
+                            EditorCard {
+                                heading: "Strook en rail"
+                                hint: "De rail zelf zet je aan of uit onder Bediening › Rail-indeling."
+                                glyph: "󰕮"
+                                ChoiceRow {
+                                    label: "Strook met klok en status"
+                                    options: [{ v: "top", t: "Boven" }, { v: "bottom", t: "Onder" }, { v: "off", t: "Uit" }]
+                                    current: root.editBarStatusStripEnabled ? root.editBarStatusStripEdge : "off"
+                                    onPicked: (choice) => {
+                                        if (choice === "off") {
+                                            root.editBarStatusStripEnabled = false;
+                                        } else {
+                                            root.editBarStatusStripEnabled = true;
+                                            root.editBarStatusStripEdge = choice;
+                                        }
                                     }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Vorm"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                        ThemedComboBox { model: root.barShapeOptions; currentIndex: Math.max(0, model.indexOf(root.editBarShape)); onActivated: root.editBarShape = currentText }
+                                }
+                                NumberRow {
+                                    label: "Hoogte van de strook"
+                                    minimum: 30; maximum: 72
+                                    amount: root.editBarStatusStripHeight
+                                    onEdited: (newAmount) => root.editBarStatusStripHeight = newAmount
+                                }
+                                ChoiceRow {
+                                    label: "Rail aan de"
+                                    options: [{ v: "left", t: "Linkerkant" }, { v: "right", t: "Rechterkant" }]
+                                    current: root.editBarRailEdge
+                                    onPicked: (choice) => root.editBarRailEdge = choice
+                                }
+                                NumberRow {
+                                    label: "Breedte van de rail"
+                                    minimum: 44; maximum: 96
+                                    amount: root.editBarRailWidth
+                                    onEdited: (newAmount) => root.editBarRailWidth = newAmount
+                                }
+                            }
+
+                            EditorCard {
+                                heading: "Panelen en beweging"
+                                glyph: "󰟤"
+                                NumberRow {
+                                    label: "Rondheid van panelen"
+                                    minimum: 4; maximum: 40
+                                    amount: root.editWidgetRadius
+                                    onEdited: (newAmount) => root.editWidgetRadius = newAmount
+                                }
+                                NumberRow {
+                                    label: "Dekking van panelen (%)"
+                                    hint: "100 is helemaal dicht, lager laat de achtergrond doorschijnen."
+                                    minimum: 10; maximum: 100
+                                    amount: Math.round(parseFloat(root.editPopupOpacity) * 100)
+                                    onEdited: (newAmount) => root.setEditFloat("editPopupOpacity", newAmount)
+                                }
+                                NumberRow {
+                                    label: "Animatiesnelheid (%)"
+                                    hint: "100 is normaal, hoger is sneller."
+                                    minimum: 25; maximum: 300; step: 5
+                                    amount: Math.round(parseFloat(root.editAnimationSpeed) * 100)
+                                    onEdited: (newAmount) => root.setEditFloat("editAnimationSpeed", newAmount)
+                                }
+                                ChoiceRow {
+                                    label: "Bewegingsstijl"
+                                    options: [{ v: "calm", t: "Rustig" }, { v: "gentle", t: "Zacht" }, { v: "snappy", t: "Vlot" }, { v: "firm", t: "Strak" }]
+                                    current: root.editStyleMotion
+                                    onPicked: (choice) => root.editStyleMotion = choice
+                                }
+                                NumberRow {
+                                    label: "Randen (%)"
+                                    hint: "Hoe duidelijk de randen van panelen zijn."
+                                    minimum: 0; maximum: 100
+                                    amount: Math.round(parseFloat(root.editOutlineStrength) * 100)
+                                    onEdited: (newAmount) => root.setEditFloat("editOutlineStrength", newAmount)
+                                }
+                                NumberRow {
+                                    label: "Glas (%)"
+                                    hint: "Hoeveel glans en doorschijn panelen hebben."
+                                    minimum: 0; maximum: 100
+                                    amount: Math.round(parseFloat(root.editGlassStrength) * 100)
+                                    onEdited: (newAmount) => root.setEditFloat("editGlassStrength", newAmount)
+                                }
+                                NumberRow {
+                                    label: "Gloed (%)"
+                                    minimum: 0; maximum: 100
+                                    amount: Math.round(parseFloat(root.editGlowIntensity) * 100)
+                                    onEdited: (newAmount) => root.setEditFloat("editGlowIntensity", newAmount)
+                                }
+                                NumberRow {
+                                    label: "Thema-effecten (%)"
+                                    hint: "Sterkte van effecten zoals het neonraster; 0 zet ze uit."
+                                    minimum: 0; maximum: 200; step: 5
+                                    amount: Math.round(parseFloat(root.editEffectIntensity) * 100)
+                                    onEdited: (newAmount) => root.setEditFloat("editEffectIntensity", newAmount)
+                                }
+                            }
+
+                            AdvancedSection {
+                                unit: root.s(100) / 100
+                                title: "Fijnafstelling"
+                                icon: "󰒓"
+                                hint: "Basisstijl, dichtheid, oppervlak, schaduw en marges; vooral zichtbaar in launcher en meldingen"
+                                EditorCard {
+                                    heading: "Stijl"
+                                    glyph: "󱥰"
+                                    ChoiceRow {
+                                        label: "Basisstijl"
+                                        hint: "Bepaalt onder meer de vorm van de muziekspeler en de lockscreen-look."
+                                        options: [{ v: "paper", t: "Papier" }, { v: "organic", t: "Organisch" }, { v: "neon", t: "Neon" }, { v: "mono", t: "Mono" }, { v: "matte", t: "Mat" }]
+                                        current: root.editStyleFamily
+                                        onPicked: (choice) => root.editStyleFamily = choice
+                                    }
+                                    ChoiceRow {
+                                        label: "Dichtheid"
+                                        options: [{ v: "compact", t: "Compact" }, { v: "comfortable", t: "Normaal" }, { v: "airy", t: "Ruim" }]
+                                        current: root.editStyleDensity
+                                        onPicked: (choice) => root.editStyleDensity = choice
+                                    }
+                                    ChoiceRow {
+                                        label: "Oppervlak"
+                                        options: [{ v: "paper-glass", t: "Papierglas" }, { v: "soft-glass", t: "Zacht glas" }, { v: "hard-surface", t: "Hard" }, { v: "solid", t: "Dicht" }]
+                                        current: root.editSurfaceMode
+                                        onPicked: (choice) => root.editSurfaceMode = choice
+                                    }
+                                    NumberRow {
+                                        label: "Schaduw (%)"
+                                        minimum: 0; maximum: 100
+                                        amount: Math.round(parseFloat(root.editPanelShadow) * 100)
+                                        onEdited: (newAmount) => root.setEditFloat("editPanelShadow", newAmount)
+                                    }
+                                    NumberRow {
+                                        label: "Binnenmarge van panelen"
+                                        minimum: 6; maximum: 40
+                                        amount: root.editPanelPadding
+                                        onEdited: (newAmount) => root.editPanelPadding = newAmount
                                     }
                                 }
                             }
                         }
 
                         AdvancedSection {
-                            id: barAdvancedSection
+                            id: themeAdvancedSection
                             unit: root.s(100) / 100
-                            hint: "Klokstijl, boven- en onderrand, topbar-stijl en het thema dat je bewerkt"
-                            SettingsInfoCard {
-                                title: "Huidige context"
-                                icon: "󰏘"
-                                accent: root.mauve
-                                value: "Actief: " + (root.activeThemeId || "onbekend") + "\nBewerken: " + (root.themeEditThemeId || "geen theme geladen")
-                            }
-
-                            GridLayout {
+                            title: "Alle themavariabelen"
+                            icon: "󰘦"
+                            hint: "Elke waarde uit het themabestand en de Matugen-sjablonen die bij toepassen worden gevuld"
+                            Rectangle {
+                                id: allVarsPanel
+                                visible: true
                                 Layout.fillWidth: true
-                                columns: width >= root.s(820) ? 2 : 1
-                                rowSpacing: root.s(10)
-                                columnSpacing: root.s(10)
+                                implicitHeight: allVarsCol.implicitHeight + root.s(24)
+                                radius: root.s(10)
+                                color: Qt.alpha(root.surface0, 0.45)
+                                border.color: root.surface1
+                                border.width: 1
 
-                                SettingsInfoCard {
-                                    title: "Details"
-                                    icon: "󰥔"
-                                    accent: root.peach
-                                    value: "Klokstijl, randen en topbar-blokken horen bij het thema en wisselen mee."
-                                }
+                                property var flatEntries: root.flattenThemeData(themeCarousel.selectedThemeData)
 
-                                Rectangle {
+                                ColumnLayout {
+                                    id: allVarsCol
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(12)
+                                    spacing: root.s(8)
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text {
+                                            text: "Alle variabelen (" + allVarsPanel.flatEntries.length + ")"
+                                            font.family: ThemeConfig.textFont
+                                            font.weight: Font.Bold
+                                            font.pixelSize: root.s(13)
+                                            color: root.text
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                        Text {
+                                            text: themeCarousel.selectedThemeId !== "" ? themeCarousel.selectedThemeId + ".toml" : ""
+                                            font.family: ThemeConfig.textFont
+                                            font.pixelSize: root.s(10)
+                                            color: root.overlay0
+                                        }
+                                    }
+
+                                    Text {
+                                        text: "Volledige key-paths uit het geselecteerde thema. Alleen ter inzage; aanpassen doe je in de blokken hierboven."
+                                        font.family: ThemeConfig.textFont
+                                        font.pixelSize: root.s(10)
+                                        color: root.subtext0
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
+                                    }
+
+                                Column {
+                                    id: allVarsList
                                     Layout.fillWidth: true
-                                    implicitHeight: barDetailEditor.implicitHeight + root.s(24)
-                                    radius: root.s(10)
-                                    color: Qt.alpha(root.surface0, 0.46)
-                                    border.color: Qt.alpha(root.surface2, 0.82)
-                                    border.width: 1
+                                    spacing: root.s(4)
 
-                                    ColumnLayout {
-                                        id: barDetailEditor
-                                        anchors.fill: parent
-                                        anchors.margins: root.s(12)
-                                        spacing: root.s(9)
+                                    Repeater {
+                                        model: allVarsPanel.flatEntries
 
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            Text { text: "Klok"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                            ThemedComboBox { model: root.clockStyleOptions; currentIndex: Math.max(0, model.indexOf(root.editClockStyle)); onActivated: root.editClockStyle = currentText }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            Text { text: "Bovenrand"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                            ThemedComboBox { model: root.barEdgeStyleOptions; currentIndex: Math.max(0, model.indexOf(root.editBarTopEdgeStyle)); onActivated: root.editBarTopEdgeStyle = currentText }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            Text { text: "Onderrand"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                            ThemedComboBox { model: root.barEdgeStyleOptions; currentIndex: Math.max(0, model.indexOf(root.editBarBottomEdgeStyle)); onActivated: root.editBarBottomEdgeStyle = currentText }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            Text { text: "Topbar stijl"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.preferredWidth: root.s(110) }
-                                            ThemedComboBox {
-                                                model: ["losse blokken", "strakke lijn"]
-                                                currentIndex: root.editTopbarLooseBlocks ? 0 : 1
-                                                enabled: root.editBarPosition === "top"
-                                                onActivated: root.editTopbarLooseBlocks = (currentIndex === 0)
+                                        delegate: Rectangle {
+                                            required property var modelData
+                                            width: allVarsList.width
+                                            height: rowData.implicitHeight + root.s(8)
+                                            radius: root.s(6)
+                                            color: Qt.alpha(root.surface0, 0.52)
+                                            border.color: Qt.alpha(root.surface2, 0.75)
+                                            border.width: 1
+
+                                            RowLayout {
+                                                id: rowData
+                                                anchors.fill: parent
+                                                anchors.margins: root.s(6)
+                                                spacing: root.s(10)
+
+                                                Text {
+                                                    text: String(modelData.key || "—")
+                                                    font.family: ThemeConfig.textFont
+                                                    font.pixelSize: root.s(10)
+                                                    color: root.subtext0
+                                                    Layout.preferredWidth: root.s(250)
+                                                    wrapMode: Text.WrapAnywhere
+                                                }
+
+                                                Text {
+                                                    text: String(modelData.value || "—")
+                                                    font.family: ThemeConfig.textFont
+                                                    font.pixelSize: root.s(10)
+                                                    font.weight: Font.Bold
+                                                    color: root.text
+                                                    Layout.fillWidth: true
+                                                    wrapMode: Text.WrapAnywhere
+                                                }
                                             }
                                         }
                                     }
                                 }
+                                }
                             }
-                        }
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: root.s(10)
-                            SettingsActionButton { label: root.themeDirty ? "Opslaan" : "Geen wijzigingen"; icon: root.themeDirty ? "󰆓" : "󰄬"; accent: root.green; primary: root.themeDirty; onTriggered: root.saveThemeEdits() }
-                            SettingsActionButton { label: "Topbar toepassen"; icon: "󰑓"; accent: root.blue; onTriggered: root.applyTopbarEdits() }
-                            SettingsActionButton { label: "Open Theme-editor"; icon: "󰏘"; accent: root.mauve; onTriggered: { root.openThemeEditor("bar"); root.openPage(1); } }
-                            Item { Layout.fillWidth: true }
-                        }
+                            Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
 
-                        SettingsInfoCard {
-                            title: "Status"
-                            icon: root.themeDirty ? "󰐖" : "󰋼"
-                            accent: root.themeDirty ? root.yellow : root.green
-                            value: root.themeDirty ? ("Onopgeslagen wijzigingen in " + root.themeEditThemeId + ".toml") : (root.themeStatusText || "Klaar")
+                            RowLayout {
+                                spacing: root.s(8)
+                                Text { text: "󰇚"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: root.ambientPurple }
+                                Text { text: "Matugen Pipeline"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(14); color: root.text }
+                            }
+
+                            Text { text: "Bij toepassen van een thema worden de huidige wallpaper-kleuren opnieuw door Matugen gerenderd en in deze templates geïnjecteerd:"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+
+                            GridLayout {
+                                Layout.fillWidth: true; columns: 3; rowSpacing: root.s(6); columnSpacing: root.s(8)
+                                Repeater {
+                                    model: [
+                                        { f: "kitty/colors.conf", i: "󰄛", c: "yellow" },
+                                        { f: "quickshell/colors.json", i: "󰣆", c: "mauve" },
+                                        { f: "walker/colors.css", i: "󰀻", c: "green" },
+                                        { f: "zsh/omp-colors.toml", i: "󱆃", c: "blue" },
+                                        { f: "hypr/lua/colors.lua", i: "󰆍", c: "peach" }
+                                    ]
+                                    Rectangle {
+                                        Layout.fillWidth: true; Layout.preferredHeight: root.s(36); radius: root.s(6)
+                                        color: tplMa.containsMouse ? Qt.alpha(root[modelData.c], 0.1) : root.surface0
+                                        border.color: tplMa.containsMouse ? root[modelData.c] : "transparent"; border.width: 1
+                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                        RowLayout {
+                                            anchors.fill: parent; anchors.margins: root.s(8); spacing: root.s(8)
+                                            Text { text: modelData.i; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(14); color: root[modelData.c] }
+                                            Text { text: modelData.f; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.text; Layout.fillWidth: true }
+                                        }
+                                        MouseArea { id: tplMa; anchors.fill: parent; hoverEnabled: true }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -3923,7 +4638,7 @@ Item {
                         SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.green; onTriggered: networkStatusProc.running = true }
                     }
 
-                    SettingsInfoCard { title: "Veiligheid"; icon: "󰌾"; accent: root.yellow; value: "Wifi-wachtwoorden blijven in de bestaande network popup; deze tab toont alleen status en opent de juiste workflow." }
+                    SettingsInfoCard { title: "Verbinden"; icon: "󰌾"; accent: root.yellow; value: "Netwerken kiezen en wachtwoorden invullen doe je in het wifi-paneel." }
                     Item { Layout.fillHeight: true }
                 }
             }
@@ -4579,7 +5294,7 @@ Item {
                         SettingsActionButton { label: "Check opnieuw"; icon: "󰑓"; accent: root.peach; onTriggered: updatesStatusProc.running = true }
                     }
 
-                    SettingsInfoCard { title: "Uitvoering"; icon: "󰄛"; accent: root.yellow; value: "Updates draaien bewust in Kitty met hold, zodat output en fouten zichtbaar blijven." }
+                    SettingsInfoCard { title: "Hoe het werkt"; icon: "󰄛"; accent: root.yellow; value: "Updates openen in een terminalvenster, zodat je ziet wat er gebeurt en eventuele fouten kunt lezen." }
                     Item { Layout.fillHeight: true }
                 }
             }
@@ -4877,1128 +5592,13 @@ Item {
                             }
                         }
 
-                        AdvancedSection {
-                            id: themeAdvancedSection
-                            unit: root.s(100) / 100
-                            title: "Thema aanpassen"
-                            icon: "󰏘"
-                            hint: "Lettertypes, kleuren, rondheid, bar, effecten, alle themavariabelen en Matugen"
-                            Text { text: "Thema-instellingen"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(16); color: root.text }
-                            Text {
-                                text: "Kies een groep, pas waarden aan en sla daarna het thema op."
-                                font.family: ThemeConfig.textFont
-                                font.pixelSize: root.s(10)
-                                color: root.subtext0
-                                Layout.fillWidth: true
-                                wrapMode: Text.WordWrap
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: root.s(8)
-
-                                Rectangle {
-                                    Layout.preferredHeight: root.s(34)
-                                    Layout.preferredWidth: root.s(220)
-                                    radius: root.s(8)
-                                    color: allVarsToggleMa.containsMouse ? Qt.alpha(root.blue, 0.20) : Qt.alpha(root.surface0, 0.65)
-                                    border.color: allVarsToggleMa.containsMouse ? root.blue : root.surface2
-                                    border.width: 1
-
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.margins: root.s(8)
-                                        spacing: root.s(8)
-                                        Text {
-                                            text: root.showAllThemeVariables ? "󰅂" : "󰅀"
-                                            font.family: ThemeConfig.iconFont
-                                            font.pixelSize: root.s(14)
-                                            color: root.blue
-                                        }
-                                        Text {
-                                            text: root.showAllThemeVariables ? "Verberg alle variabelen" : "Toon alle variabelen"
-                                            font.family: ThemeConfig.textFont
-                                            font.pixelSize: root.s(11)
-                                            font.weight: Font.Bold
-                                            color: root.text
-                                            Layout.fillWidth: true
-                                        }
-                                    }
-
-                                    MouseArea {
-                                        id: allVarsToggleMa
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.showAllThemeVariables = !root.showAllThemeVariables
-                                    }
-                                }
-
-                                Rectangle {
-                                    Layout.preferredHeight: root.s(34)
-                                    Layout.preferredWidth: root.s(220)
-                                    radius: root.s(8)
-                                    color: root.themeDirty
-                                           ? (themeEditMa.containsMouse ? Qt.alpha(root.green, 0.90) : root.green)
-                                           : Qt.alpha(root.surface1, 0.72)
-                                    opacity: themeCarousel.selectedThemeId === "" || root.themeSaveBusy ? 0.55 : 1.0
-                                    border.color: "transparent"
-                                    border.width: 1
-
-                                    RowLayout {
-                                        anchors.centerIn: parent
-                                        spacing: root.s(6)
-                                        Text {
-                                            text: root.themeSaveBusy ? "󰔟" : (root.themeDirty ? "󰆓" : "󰄬")
-                                            font.family: ThemeConfig.iconFont
-                                            font.pixelSize: root.s(14)
-                                            color: root.themeDirty ? root.base : root.subtext0
-                                        }
-                                        Text {
-                                            text: root.themeSaveBusy
-                                                  ? "Opslaan..."
-                                                  : (root.themeDirty
-                                                      ? (root.themeEditThemeId === root.activeThemeId ? "Opslaan & toepassen" : "Opslaan")
-                                                      : "Geen wijzigingen")
-                                            font.family: ThemeConfig.textFont
-                                            font.weight: Font.Bold
-                                            font.pixelSize: root.s(11)
-                                            color: root.themeDirty ? root.base : root.subtext0
-                                        }
-                                    }
-
-                                    MouseArea {
-                                        id: themeEditMa
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        enabled: themeCarousel.selectedThemeId !== "" && !root.themeSaveBusy && root.themeDirty
-                                        onClicked: root.saveThemeEdits()
-                                    }
-                                }
-
-                                Rectangle {
-                                    Layout.preferredHeight: root.s(34)
-                                    Layout.preferredWidth: root.s(150)
-                                    radius: root.s(8)
-                                    color: resetThemeMa.containsMouse ? Qt.alpha(root.peach, 0.20) : Qt.alpha(root.surface0, 0.65)
-                                    opacity: root.themeDirty && !root.themeSaveBusy ? 1.0 : 0.45
-                                    border.color: resetThemeMa.containsMouse ? root.peach : root.surface2
-                                    border.width: 1
-
-                                    RowLayout {
-                                        anchors.centerIn: parent
-                                        spacing: root.s(6)
-                                        Text { text: "󰑓"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(13); color: root.peach }
-                                        Text { text: "Herstel"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.text }
-                                    }
-
-                                    MouseArea {
-                                        id: resetThemeMa
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        enabled: root.themeDirty && !root.themeSaveBusy
-                                        onClicked: root.resetThemeEdits()
-                                    }
-                                }
-
-                                Item { Layout.fillWidth: true }
-                            }
-
-                            Flow {
-                                Layout.fillWidth: true
-                                spacing: root.s(8)
-
-                                Repeater {
-                                    model: root.themeEditorTabs
-
-                                    Rectangle {
-                                        required property var modelData
-                                        readonly property bool active: root.themeEditorTab === modelData.id
-
-                                        width: tabContent.implicitWidth + root.s(22)
-                                        height: root.s(34)
-                                        radius: root.s(8)
-                                        color: active
-                                               ? Qt.alpha(root.blue, 0.24)
-                                               : (themeEditorTabMa.containsMouse ? Qt.alpha(root.surface1, 0.72) : Qt.alpha(root.surface0, 0.56))
-                                        border.width: 1
-                                        border.color: active ? root.blue : (themeEditorTabMa.containsMouse ? root.surface2 : Qt.alpha(root.surface2, 0.72))
-
-                                        RowLayout {
-                                            id: tabContent
-                                            anchors.centerIn: parent
-                                            spacing: root.s(6)
-
-                                            Text {
-                                                text: modelData.icon
-                                                font.family: ThemeConfig.iconFont
-                                                font.pixelSize: root.s(13)
-                                                color: parent.parent.active ? root.blue : root.subtext0
-                                            }
-                                            Text {
-                                                text: modelData.label
-                                                font.family: ThemeConfig.textFont
-                                                font.weight: parent.parent.active ? Font.Bold : Font.Normal
-                                                font.pixelSize: root.s(10)
-                                                color: parent.parent.active ? root.text : root.subtext0
-                                            }
-                                        }
-
-                                        MouseArea {
-                                            id: themeEditorTabMa
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.themeEditorTab = modelData.id
-                                        }
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                visible: root.themeEditThemeId !== ""
-                                Layout.fillWidth: true
-                                implicitHeight: themeStatusRow.implicitHeight + root.s(14)
-                                radius: root.s(8)
-                                color: root.themeDirty
-                                       ? Qt.alpha(root.yellow, 0.12)
-                                       : (root.themeStatusKind === "error"
-                                          ? Qt.alpha(root.red, 0.14)
-                                          : (root.themeStatusKind === "ok"
-                                             ? Qt.alpha(root.green, 0.12)
-                                             : Qt.alpha(root.surface0, 0.46)))
-                                border.width: 1
-                                border.color: root.themeDirty
-                                              ? Qt.alpha(root.yellow, 0.55)
-                                              : (root.themeStatusKind === "error"
-                                                 ? Qt.alpha(root.red, 0.65)
-                                                 : (root.themeStatusKind === "ok"
-                                                    ? Qt.alpha(root.green, 0.55)
-                                                    : Qt.alpha(root.surface2, 0.72)))
-
-                                RowLayout {
-                                    id: themeStatusRow
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.margins: root.s(10)
-                                    spacing: root.s(8)
-
-                                    Text {
-                                        text: root.themeDirty ? "󰐖" : (root.themeStatusKind === "error" ? "󰅚" : (root.themeStatusKind === "ok" ? "󰄬" : "󰋼"))
-                                        font.family: ThemeConfig.iconFont
-                                        font.pixelSize: root.s(13)
-                                        color: root.themeDirty ? root.yellow : (root.themeStatusKind === "error" ? root.red : (root.themeStatusKind === "ok" ? root.green : root.blue))
-                                    }
-                                    Text {
-                                        text: root.themeDirty
-                                              ? "Onopgeslagen wijzigingen in " + root.themeEditThemeId + ".toml"
-                                              : (root.themeStatusText !== "" ? root.themeStatusText : "Klaar")
-                                        Layout.fillWidth: true
-                                        font.family: ThemeConfig.textFont
-                                        font.pixelSize: root.s(10)
-                                        color: root.text
-                                        wrapMode: Text.WordWrap
-                                    }
-                                }
-                            }
-
-                            GridLayout {
-                                id: themeEditorsGrid
-                                Layout.fillWidth: true
-                                columns: width >= root.s(1040) ? 2 : 1
-                                rowSpacing: root.s(10)
-                                columnSpacing: root.s(10)
-                                property int labelWidth: root.s(106)
-                                property int spinWidth: root.s(150)
-                                property int comboWidth: root.s(220)
-
-                                Rectangle {
-                                    visible: root.themeEditorTab === "appearance"
-                                    Layout.fillWidth: true
-                                    Layout.preferredWidth: root.s(470)
-                                    Layout.maximumWidth: root.s(560)
-                                    Layout.alignment: Qt.AlignHCenter
-                                    implicitHeight: appearanceEditor.implicitHeight + root.s(24)
-                                    radius: root.s(10)
-                                    color: Qt.alpha(root.surface0, 0.48)
-                                    border.color: Qt.alpha(root.surface2, 0.88)
-                                    border.width: 1
-
-                                    ColumnLayout {
-                                        id: appearanceEditor
-                                        anchors.fill: parent
-                                        anchors.margins: root.s(12)
-                                        spacing: root.s(8)
-
-                                        Text { text: "Uiterlijk"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Hoekrondheid"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 64; value: root.editBorderRadius; onValueChanged: root.editBorderRadius = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Randdikte"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 12; value: root.editBorderWidth; onValueChanged: root.editBorderWidth = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Binnenmarge"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 60; value: root.editGapsIn; onValueChanged: root.editGapsIn = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Buitenmarge"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 80; value: root.editGapsOut; onValueChanged: root.editGapsOut = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Blur size"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 64; value: root.editBlurSize; onValueChanged: root.editBlurSize = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Blur passes"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 12; value: root.editBlurPasses; onValueChanged: root.editBlurPasses = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                    }
-                                }
-
-                                Rectangle {
-                                    visible: root.themeEditorTab === "fonts"
-                                    Layout.fillWidth: true
-                                    Layout.preferredWidth: root.s(470)
-                                    Layout.maximumWidth: root.s(560)
-                                    Layout.alignment: Qt.AlignHCenter
-                                    implicitHeight: fontsEditor.implicitHeight + root.s(24)
-                                    radius: root.s(10)
-                                    color: Qt.alpha(root.surface0, 0.48)
-                                    border.color: Qt.alpha(root.surface2, 0.88)
-                                    border.width: 1
-
-                                    ColumnLayout {
-                                        id: fontsEditor
-                                        anchors.fill: parent
-                                        anchors.margins: root.s(12)
-                                        spacing: root.s(8)
-
-                                        Text { text: "Fonts"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "UI font"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.fontOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editUiFont))
-                                                onActivated: root.editUiFont = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "UI size"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 8; to: 28; value: root.editUiFontSize; onValueChanged: root.editUiFontSize = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Mono font"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.fontOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editMonoFont))
-                                                onActivated: root.editMonoFont = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Mono size"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 8; to: 28; value: root.editMonoFontSize; onValueChanged: root.editMonoFontSize = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Display font"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.fontOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editDisplayFont))
-                                                onActivated: root.editDisplayFont = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Font weight"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.fontWeightOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editFontWeight))
-                                                onActivated: root.editFontWeight = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Letter spacing"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox {
-                                                from: -300
-                                                to: 300
-                                                stepSize: 1
-                                                value: Math.round(parseFloat(root.editLetterSpacing) * 100)
-                                                textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                                valueFromText: function(text, locale) {
-                                                    var n = parseFloat(text);
-                                                    if (isNaN(n)) return 0;
-                                                    return Math.round(n * 100);
-                                                }
-                                                onValueModified: root.setEditFloat("editLetterSpacing", value)
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.spinWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                    }
-                                }
-
-                                Rectangle {
-                                    visible: root.themeEditorTab === "colors"
-                                    Layout.fillWidth: true
-                                    Layout.preferredWidth: root.s(470)
-                                    Layout.maximumWidth: root.s(560)
-                                    Layout.alignment: Qt.AlignHCenter
-                                    implicitHeight: colorEditor.implicitHeight + root.s(24)
-                                    radius: root.s(10)
-                                    color: Qt.alpha(root.surface0, 0.48)
-                                    border.color: Qt.alpha(root.surface2, 0.88)
-                                    border.width: 1
-
-                                    ColumnLayout {
-                                        id: colorEditor
-                                        anchors.fill: parent
-                                        anchors.margins: root.s(12)
-                                        spacing: root.s(8)
-
-                                        Text { text: "Icons & Matugen"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Icon theme"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.iconThemeOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editIconTheme))
-                                                onActivated: root.editIconTheme = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Scene"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.schemeOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editSchemeType))
-                                                onActivated: root.editSchemeType = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Mode"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.modeOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editMode))
-                                                onActivated: root.editMode = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Color index"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 12; value: root.editColorIndex; onValueChanged: root.editColorIndex = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Contrast"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox {
-                                                from: -100
-                                                to: 100
-                                                stepSize: 1
-                                                value: Math.round(parseFloat(root.editContrast) * 100)
-                                                textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                                valueFromText: function(text, locale) {
-                                                    var n = parseFloat(text);
-                                                    if (isNaN(n)) return 0;
-                                                    return Math.round(n * 100);
-                                                }
-                                                onValueModified: root.setEditFloat("editContrast", value)
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.spinWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-
-                                        Text {
-                                            text: "Scene bepaalt de Matugen-kleurberekening; mode schakelt donker/licht; icon theme wordt toegepast op GTK en Qt6."
-                                            font.family: ThemeConfig.textFont
-                                            font.pixelSize: root.s(10)
-                                            color: root.subtext0
-                                            Layout.fillWidth: true
-                                            wrapMode: Text.WordWrap
-                                        }
-                                    }
-                                }
-
-                                Rectangle {
-                                    visible: root.themeEditorTab === "bar" || root.themeEditorTab === "effects" || root.themeEditorTab === "character"
-                                    Layout.fillWidth: true
-                                    Layout.preferredWidth: root.s(470)
-                                    Layout.maximumWidth: root.s(560)
-                                    Layout.alignment: Qt.AlignHCenter
-                                    implicitHeight: shellEditor.implicitHeight + root.s(24)
-                                    radius: root.s(10)
-                                    color: Qt.alpha(root.surface0, 0.48)
-                                    border.color: Qt.alpha(root.surface2, 0.88)
-                                    border.width: 1
-
-                                    ColumnLayout {
-                                        id: shellEditor
-                                        anchors.fill: parent
-                                        anchors.margins: root.s(12)
-                                        spacing: root.s(8)
-
-                                        Text { text: root.themeEditorTab === "effects" ? "Effecten" : (root.themeEditorTab === "character" ? "Karakter" : "Bar"); font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.text }
-                                        Text {
-                                            text: root.themeEditorTab === "effects"
-                                                  ? "Regel transparantie, materiaalgevoel, animaties en deeltjes."
-                                                  : (root.themeEditorTab === "character"
-                                                     ? "Visuele eigenschappen per thema. Modes blijven bepalen welke modules zichtbaar zijn."
-                                                     : "Positie kiest de schermrand en bepaalt automatisch of de bar horizontaal of verticaal loopt.")
-                                            font.family: ThemeConfig.textFont
-                                            font.pixelSize: root.s(10)
-                                            color: root.subtext0
-                                            Layout.fillWidth: true
-                                            wrapMode: Text.WordWrap
-                                        }
-
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "bar"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Bar height"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 30; to: 72; value: root.editBarHeight; onValueChanged: root.editBarHeight = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "bar"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Bar position"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.barPositionOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editBarPosition))
-                                                onActivated: root.setEditBarPosition(currentText)
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "bar"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Bar width"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.barWidthModeOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editBarWidthMode))
-                                                onActivated: root.editBarWidthMode = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "bar"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Bar shape"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.barShapeOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editBarShape))
-                                                onActivated: root.editBarShape = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "bar"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Top edge"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.barEdgeStyleOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editBarTopEdgeStyle))
-                                                onActivated: root.editBarTopEdgeStyle = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "bar"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Bottom edge"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.barEdgeStyleOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editBarBottomEdgeStyle))
-                                                onActivated: root.editBarBottomEdgeStyle = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "bar"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Clock style"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.clockStyleOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editClockStyle))
-                                                onActivated: root.editClockStyle = currentText
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "bar"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Topbar stijl"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: ["losse blokken", "strakke lijn"]
-                                                currentIndex: root.editTopbarLooseBlocks ? 0 : 1
-                                                enabled: root.editBarPosition === "top"
-                                                onActivated: root.editTopbarLooseBlocks = (currentIndex === 0)
-                                                Layout.fillWidth: false
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        // ── Transparantie & animatie ──────────────────────────────────────
-                                        Text { visible: root.themeEditorTab === "effects"; text: "Transparantie & animatie"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
-
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "effects"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Bar opacity"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox {
-                                                from: 10; to: 100; stepSize: 1
-                                                value: Math.round(parseFloat(root.editBarOpacity) * 100)
-                                                textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                                valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 72 : Math.round(n * 100); }
-                                                onValueModified: root.setEditFloat("editBarOpacity", value)
-                                                Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "effects"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Popup opacity"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox {
-                                                from: 10; to: 100; stepSize: 1
-                                                value: Math.round(parseFloat(root.editPopupOpacity) * 100)
-                                                textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                                valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 80 : Math.round(n * 100); }
-                                                onValueModified: root.setEditFloat("editPopupOpacity", value)
-                                                Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "effects"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Animatiesnelheid"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox {
-                                                from: 10; to: 300; stepSize: 5
-                                                value: Math.round(parseFloat(root.editAnimationSpeed) * 100)
-                                                textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                                valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 75 : Math.round(n * 100); }
-                                                onValueModified: root.setEditFloat("editAnimationSpeed", value)
-                                                Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-
-                                        // ── Materiaal ────────────────────────────────────────────────────
-                                        Text { visible: root.themeEditorTab === "effects"; text: "Materiaal"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
-
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "effects"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Overlay opacity"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox {
-                                                from: 0; to: 50; stepSize: 1
-                                                value: Math.round(parseFloat(root.editOverlayOpacity) * 100)
-                                                textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                                valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 6 : Math.round(n * 100); }
-                                                onValueModified: root.setEditFloat("editOverlayOpacity", value)
-                                                Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "effects"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Glow intensiteit"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox {
-                                                from: 0; to: 50; stepSize: 1
-                                                value: Math.round(parseFloat(root.editGlowIntensity) * 100)
-                                                textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                                valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 4 : Math.round(n * 100); }
-                                                onValueModified: root.setEditFloat("editGlowIntensity", value)
-                                                Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-
-                                        // ── Effecten ─────────────────────────────────────────────────────
-                                        Text { visible: root.themeEditorTab === "effects"; text: "Deeltjes"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
-
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "effects"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Particle type"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox {
-                                                model: root.particleTypeOptions
-                                                currentIndex: Math.max(0, model.indexOf(root.editParticleType))
-                                                onActivated: root.editParticleType = currentText
-                                                Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "effects"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Particle count"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox {
-                                                from: 0; to: 100; stepSize: 1
-                                                value: root.editParticleCount
-                                                onValueChanged: root.editParticleCount = value
-                                                Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "effects"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Particle speed"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox {
-                                                from: 1; to: 500; stepSize: 1
-                                                value: Math.round(parseFloat(root.editParticleSpeed) * 100)
-                                                textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }
-                                                valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 18 : Math.round(n * 100); }
-                                                onValueModified: root.setEditFloat("editParticleSpeed", value)
-                                                Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-
-                                        // ── Karakter: style profile ──────────────────────────────────────
-                                        Text { visible: root.themeEditorTab === "character"; text: "Style profile"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
-
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Family"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox { model: root.styleFamilyOptions; currentIndex: Math.max(0, model.indexOf(root.editStyleFamily)); onActivated: root.editStyleFamily = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Density"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox { model: root.styleDensityOptions; currentIndex: Math.max(0, model.indexOf(root.editStyleDensity)); onActivated: root.editStyleDensity = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Surface"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox { model: root.surfaceModeOptions; currentIndex: Math.max(0, model.indexOf(root.editSurfaceMode)); onActivated: root.editSurfaceMode = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Motion"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox { model: root.styleMotionOptions; currentIndex: Math.max(0, model.indexOf(root.editStyleMotion)); onActivated: root.editStyleMotion = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Shadow"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editPanelShadow) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 22 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editPanelShadow", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Outline"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editOutlineStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 18 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editOutlineStrength", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Glass"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 50; stepSize: 1; value: Math.round(parseFloat(root.editGlassStrength) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 10 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editGlassStrength", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Radius"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 4; to: 48; value: root.editWidgetRadius; onValueChanged: root.editWidgetRadius = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Padding"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 6; to: 28; value: root.editPanelPadding; onValueChanged: root.editPanelPadding = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-
-                                        // ── Karakter: effectgedrag ───────────────────────────────────────
-                                        Text { visible: root.themeEditorTab === "character"; text: "Effectgedrag"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
-
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Ambient"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox { model: root.ambientEffectOptions; currentIndex: Math.max(0, model.indexOf(root.editAmbientEffect)); onActivated: root.editAmbientEffect = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Intensity"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 200; stepSize: 5; value: Math.round(parseFloat(root.editEffectIntensity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 100 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editEffectIntensity", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Cycle ms"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 30000; stepSize: 100; value: root.editEffectCycleMs; onValueChanged: root.editEffectCycleMs = value; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Hover"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedSpinBox { from: 0; to: 100; stepSize: 5; value: Math.round(parseFloat(root.editHoverReactivity) * 100); textFromValue: function(v, locale) { return (v / 100.0).toFixed(2); }; valueFromText: function(text, locale) { var n = parseFloat(text); return isNaN(n) ? 40 : Math.round(n * 100); }; onValueModified: root.setEditFloat("editHoverReactivity", value); Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.spinWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-
-                                        // ── Karakter: bar dynamics ───────────────────────────────────────
-                                        Text { visible: root.themeEditorTab === "character"; text: "Bar dynamics"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
-
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Drawer"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox { model: root.drawerStyleOptions; currentIndex: Math.max(0, model.indexOf(root.editDrawerStyle)); onActivated: root.editDrawerStyle = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Modules"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox { model: root.moduleDensityOptions; currentIndex: Math.max(0, model.indexOf(root.editModuleDensity)); onActivated: root.editModuleDensity = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Workspace"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox { model: root.workspacePreviewOptions; currentIndex: Math.max(0, model.indexOf(root.editWorkspacePreview)); onActivated: root.editWorkspacePreview = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "character"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Rail accent"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            ThemedComboBox { model: root.railAccentOptions; currentIndex: Math.max(0, model.indexOf(root.editRailAccent)); onActivated: root.editRailAccent = currentText; Layout.fillWidth: false; Layout.preferredWidth: themeEditorsGrid.comboWidth }
-                                            Item { Layout.fillWidth: true }
-                                        }
-
-                                        // ── Topbar acties ─────────────────────────────────────────────────
-                                        Text { visible: root.themeEditorTab === "bar"; text: "Acties"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.overlay0; topPadding: root.s(4) }
-
-                                        RowLayout {
-                                            visible: root.themeEditorTab === "bar"
-                                            Layout.fillWidth: true
-                                            spacing: root.s(10)
-                                            Text { text: "Topbar toepassen"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.subtext0; Layout.preferredWidth: themeEditorsGrid.labelWidth }
-                                            Rectangle {
-                                                Layout.preferredHeight: root.s(32)
-                                                Layout.preferredWidth: themeEditorsGrid.comboWidth
-                                                radius: root.s(8)
-                                                color: topbarReloadMa.containsMouse ? Qt.alpha(root.blue, 0.24) : Qt.alpha(root.surface1, 0.68)
-                                                border.width: 1
-                                                border.color: topbarReloadMa.containsMouse ? root.blue : root.surface2
-                                                opacity: root.topbarReloadBusy || root.themeSaveBusy ? 0.65 : 1.0
-                                                RowLayout {
-                                                    anchors.centerIn: parent
-                                                    spacing: root.s(6)
-                                                    Text { text: root.topbarReloadBusy || root.themeSaveBusy ? "󰔟" : "󰑓"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(13); color: root.text }
-                                                    Text { text: root.topbarReloadBusy || root.themeSaveBusy ? "Toepassen..." : "Topbar toepassen"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(10); color: root.text }
-                                                }
-                                                MouseArea {
-                                                    id: topbarReloadMa
-                                                    anchors.fill: parent
-                                                    hoverEnabled: true
-                                                    cursorShape: Qt.PointingHandCursor
-                                                    enabled: !root.topbarReloadBusy && !root.themeSaveBusy
-                                                    onClicked: root.applyTopbarEdits()
-                                                }
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-
-                                        Text {
-                                            text: root.themeEditorTab === "effects"
-                                                  ? "Effecten worden per theme opgeslagen en bewegen mee met theme-switches."
-                                                  : "Bar-instellingen worden per theme opgeslagen en blijven behouden na herstart of theme-switch."
-                                            font.family: ThemeConfig.textFont
-                                            font.pixelSize: root.s(10)
-                                            color: root.subtext0
-                                            Layout.fillWidth: true
-                                            wrapMode: Text.WordWrap
-                                        }
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                id: allVarsPanel
-                                visible: root.showAllThemeVariables
-                                Layout.fillWidth: true
-                                implicitHeight: allVarsCol.implicitHeight + root.s(24)
-                                radius: root.s(10)
-                                color: Qt.alpha(root.surface0, 0.45)
-                                border.color: root.surface1
-                                border.width: 1
-
-                                property var flatEntries: root.flattenThemeData(themeCarousel.selectedThemeData)
-
-                                ColumnLayout {
-                                    id: allVarsCol
-                                    anchors.fill: parent
-                                    anchors.margins: root.s(12)
-                                    spacing: root.s(8)
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text {
-                                            text: "Alle variabelen (" + allVarsPanel.flatEntries.length + ")"
-                                            font.family: ThemeConfig.textFont
-                                            font.weight: Font.Bold
-                                            font.pixelSize: root.s(13)
-                                            color: root.text
-                                        }
-                                        Item { Layout.fillWidth: true }
-                                        Text {
-                                            text: themeCarousel.selectedThemeId !== "" ? themeCarousel.selectedThemeId + ".toml" : ""
-                                            font.family: ThemeConfig.textFont
-                                            font.pixelSize: root.s(10)
-                                            color: root.overlay0
-                                        }
-                                    }
-
-                                    Text {
-                                        text: "Volledige key-paths uit het geselecteerde thema. Pas waarden bovenaan aan en klik 'Opslaan in thema'."
-                                        font.family: ThemeConfig.textFont
-                                        font.pixelSize: root.s(10)
-                                        color: root.subtext0
-                                        Layout.fillWidth: true
-                                        wrapMode: Text.WordWrap
-                                    }
-
-                                    ScrollView {
-                                        id: allVarsScroll
-                                        Layout.fillWidth: true
-                                        Layout.preferredHeight: root.s(280)
-                                        clip: true
-                                        ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
-
-                                        ListView {
-                                            anchors.fill: parent
-                                            model: allVarsPanel.flatEntries
-                                            spacing: root.s(4)
-                                            clip: true
-
-                                            delegate: Rectangle {
-                                                required property var modelData
-                                                width: ListView.view.width
-                                                height: rowData.implicitHeight + root.s(8)
-                                                radius: root.s(6)
-                                                color: Qt.alpha(root.surface0, 0.52)
-                                                border.color: Qt.alpha(root.surface2, 0.75)
-                                                border.width: 1
-
-                                                RowLayout {
-                                                    id: rowData
-                                                    anchors.fill: parent
-                                                    anchors.margins: root.s(6)
-                                                    spacing: root.s(10)
-
-                                                    Text {
-                                                        text: String(modelData.key || "—")
-                                                        font.family: ThemeConfig.textFont
-                                                        font.pixelSize: root.s(10)
-                                                        color: root.subtext0
-                                                        Layout.preferredWidth: root.s(250)
-                                                        wrapMode: Text.WrapAnywhere
-                                                    }
-
-                                                    Text {
-                                                        text: String(modelData.value || "—")
-                                                        font.family: ThemeConfig.textFont
-                                                        font.pixelSize: root.s(10)
-                                                        font.weight: Font.Bold
-                                                        color: root.text
-                                                        Layout.fillWidth: true
-                                                        wrapMode: Text.WrapAnywhere
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        MouseArea {
-                                            id: allVarsWheelCatcher
-                                            anchors.fill: parent
-                                            enabled: !TouchProfile.isTouchscreen
-                                            acceptedButtons: Qt.NoButton
-                                            hoverEnabled: true
-                                            propagateComposedEvents: true
-                                            onWheel: (wheel) => {
-                                                if (root.scrollFlickableByWheel(allVarsScroll.contentItem, wheel)) {
-                                                    wheel.accepted = true;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            Rectangle { Layout.fillWidth: true; height: 1; color: root.surface1 }
-
-                            RowLayout {
-                                spacing: root.s(8)
-                                Text { text: "󰇚"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: root.ambientPurple }
-                                Text { text: "Matugen Pipeline"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(14); color: root.text }
-                            }
-
-                            Text { text: "Bij toepassen van een thema worden de huidige wallpaper-kleuren opnieuw door Matugen gerenderd en in deze templates geïnjecteerd:"; font.family: ThemeConfig.textFont; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
-
-                            GridLayout {
-                                Layout.fillWidth: true; columns: 3; rowSpacing: root.s(6); columnSpacing: root.s(8)
-                                Repeater {
-                                    model: [
-                                        { f: "kitty/colors.conf", i: "󰄛", c: "yellow" },
-                                        { f: "quickshell/colors.json", i: "󰣆", c: "mauve" },
-                                        { f: "walker/colors.css", i: "󰀻", c: "green" },
-                                        { f: "zsh/omp-colors.toml", i: "󱆃", c: "blue" },
-                                        { f: "hypr/lua/colors.lua", i: "󰆍", c: "peach" }
-                                    ]
-                                    Rectangle {
-                                        Layout.fillWidth: true; Layout.preferredHeight: root.s(36); radius: root.s(6)
-                                        color: tplMa.containsMouse ? Qt.alpha(root[modelData.c], 0.1) : root.surface0
-                                        border.color: tplMa.containsMouse ? root[modelData.c] : "transparent"; border.width: 1
-                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                                        RowLayout {
-                                            anchors.fill: parent; anchors.margins: root.s(8); spacing: root.s(8)
-                                            Text { text: modelData.i; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(14); color: root[modelData.c] }
-                                            Text { text: modelData.f; font.family: ThemeConfig.textFont; font.pixelSize: root.s(10); color: root.text; Layout.fillWidth: true }
-                                        }
-                                        MouseArea { id: tplMa; anchors.fill: parent; hoverEnabled: true }
-                                    }
-                                }
-                            }
+                        // Kleuren, letters en vorm staan op hun eigen pagina.
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+                            SettingsActionButton { label: "Kleuren en letters"; icon: "󰏘"; accent: root.mauve; primary: true; onTriggered: root.openThemeEditor("colors") }
+                            SettingsActionButton { label: "Vensters"; icon: "󰖯"; accent: root.blue; onTriggered: root.openThemeEditor("windows") }
+                            SettingsActionButton { label: "Strook, rail en panelen"; icon: "󰕮"; accent: root.sapphire; onTriggered: root.openThemeEditor("shell") }
                         }
                     }
                 }
@@ -6011,13 +5611,6 @@ Item {
                     hoverEnabled: true
                     propagateComposedEvents: true
                     onWheel: (wheel) => {
-                        if (root.showAllThemeVariables
-                                && allVarsScroll.visible
-                                && allVarsWheelCatcher.containsMouse
-                                && root.scrollFlickableByWheel(allVarsScroll.contentItem, wheel)) {
-                            wheel.accepted = true;
-                            return;
-                        }
                         if (root.scrollFlickableByWheel(themeScroll.contentItem, wheel)) {
                             wheel.accepted = true;
                         }

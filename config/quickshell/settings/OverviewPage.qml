@@ -344,7 +344,7 @@ Item {
                     }
                     Flow {
                         Layout.fillWidth: true; spacing: 8
-                        Action { label: "Kleuren en lettertypes…"; onTriggered: root.pageRequested("thema") }
+                        Action { label: "Kleuren en lettertypes…"; onTriggered: root.pageRequested("aanpassen/colors") }
                     }
                 }
 

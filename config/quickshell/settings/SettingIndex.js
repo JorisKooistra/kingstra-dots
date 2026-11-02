@@ -7,21 +7,18 @@
 
 var entries = [
     { label: "Thema kiezen", page: 1, where: "Uiterlijk › Thema", keywords: "theme carousel actief thema toepassen preview" },
-    { label: "Hoekrondheid", page: 1, editor: "appearance", where: "Uiterlijk › Thema aanpassen › Uiterlijk", keywords: "radius rond rounding hoeken" },
-    { label: "Randdikte", page: 1, editor: "appearance", where: "Uiterlijk › Thema aanpassen › Uiterlijk", keywords: "border rand dikte" },
-    { label: "Binnen- en buitenmarge", page: 1, editor: "appearance", where: "Uiterlijk › Thema aanpassen › Uiterlijk", keywords: "gaps marge padding ruimte" },
-    { label: "Blur", page: 1, editor: "appearance", where: "Uiterlijk › Thema aanpassen › Uiterlijk", keywords: "blur wazig vervagen passes size" },
-    { label: "Lettertypes", page: 1, editor: "fonts", where: "Uiterlijk › Thema aanpassen › Fonts", keywords: "font lettertype ui mono display grootte gewicht letter spacing" },
-    { label: "Icoonthema", page: 1, editor: "colors", where: "Uiterlijk › Thema aanpassen › Kleuren", keywords: "icon icons iconen gtk qt" },
-    { label: "Matugen-kleuren", page: 1, editor: "colors", where: "Uiterlijk › Thema aanpassen › Kleuren", keywords: "matugen scene mode donker licht dark light contrast kleur color index" },
-    { label: "Barhoogte, -breedte en vorm", page: 1, editor: "bar", where: "Uiterlijk › Thema aanpassen › Bar", keywords: "bar height width shape positie position rand edge klokstijl clock" },
-    { label: "Transparantie", page: 1, editor: "bar", where: "Uiterlijk › Thema aanpassen › Bar", keywords: "opacity doorzichtig transparant popup bar" },
-    { label: "Animatiesnelheid", page: 1, editor: "bar", where: "Uiterlijk › Thema aanpassen › Bar", keywords: "animatie snelheid motion duration traag snel" },
-    { label: "Deeltjes en glow", page: 1, editor: "effects", where: "Uiterlijk › Thema aanpassen › Effecten", keywords: "particles deeltjes glow gloed materiaal overlay ambient" },
-    { label: "Stijlprofiel", page: 1, editor: "character", where: "Uiterlijk › Thema aanpassen › Karakter", keywords: "family density surface shadow outline glass karakter stijl" },
-    { label: "Rail en drawer", page: 1, editor: "character", where: "Uiterlijk › Thema aanpassen › Karakter", keywords: "rail accent drawer modules workspace preview" },
-    { label: "Barpositie en vorm", page: 2, where: "Uiterlijk › Bar", keywords: "bar positie vorm hoogte breedte boven onder topbar" },
-    { label: "Klok in de bar", page: 2, section: "bar", where: "Uiterlijk › Bar › Geavanceerd", keywords: "klok clock stijl" },
+    { label: "Licht of donker", page: 2, editor: "colors", where: "Uiterlijk › Aanpassen › Kleuren", keywords: "dark light donker licht modus mode" },
+    { label: "Kleurstijl en contrast", page: 2, editor: "colors", where: "Uiterlijk › Aanpassen › Kleuren", keywords: "matugen scene scheme kleur color contrast wallpaper index" },
+    { label: "Icoonthema", page: 2, editor: "colors", where: "Uiterlijk › Aanpassen › Kleuren", keywords: "icon icons iconen gtk qt papirus" },
+    { label: "Lettertypes", page: 2, editor: "fonts", where: "Uiterlijk › Aanpassen › Letters", keywords: "font lettertype tekst koppen mono terminal grootte dikte gewicht letterafstand spacing" },
+    { label: "Hoekrondheid en randen van vensters", page: 2, editor: "windows", where: "Uiterlijk › Aanpassen › Vensters", keywords: "radius rond rounding hoeken border rand dikte" },
+    { label: "Ruimte tussen vensters", page: 2, editor: "windows", where: "Uiterlijk › Aanpassen › Vensters", keywords: "gaps marge ruimte tussenruimte schermrand" },
+    { label: "Vervaging", page: 2, editor: "windows", where: "Uiterlijk › Aanpassen › Vensters", keywords: "blur wazig vervagen lagen passes" },
+    { label: "Strook boven of onder", page: 2, editor: "shell", where: "Uiterlijk › Aanpassen › Strook en panelen", keywords: "bar topbar strook statusbalk boven onder hoogte positie" },
+    { label: "Rail links of rechts", page: 2, editor: "shell", where: "Uiterlijk › Aanpassen › Strook en panelen", keywords: "rail zijbalk links rechts breedte" },
+    { label: "Doorzichtigheid en animatie", page: 2, editor: "shell", where: "Uiterlijk › Aanpassen › Strook en panelen", keywords: "opacity doorzichtig transparant dekking animatie snelheid beweging motion" },
+    { label: "Randen, glas en gloed", page: 2, editor: "shell", where: "Uiterlijk › Aanpassen › Strook en panelen", keywords: "outline rand glas glass gloed glow effecten neon rondheid panelen" },
+    { label: "Alle themavariabelen", page: 2, section: "thema", where: "Uiterlijk › Aanpassen", keywords: "variabelen toml matugen sjablonen templates" },
     { label: "Rail-indeling", page: 15, where: "Bediening › Rail-indeling", keywords: "rail volgorde slepen tweede rail links rechts verplaatsen knoppen" },
     { label: "Eigen apps in de rail", page: 15, where: "Bediening › Rail-indeling", keywords: "app launcher knop snelkoppeling eigen commando rail" },
     { label: "Aantal werkruimtes", page: 15, where: "Bediening › Rail-indeling", keywords: "werkruimtes workspaces aantal rail" },
@@ -52,7 +49,7 @@ var entries = [
 
 // Paginanummer naar de naam die qs_manager.sh open settings <naam> kent.
 var pageNames = {
-    1: "thema", 2: "bar", 4: "sneltoetsen", 5: "invoer", 6: "beeldschermen",
+    1: "thema", 2: "aanpassen", 4: "sneltoetsen", 5: "invoer", 6: "beeldschermen",
     7: "netwerk", 8: "geluid", 9: "tijd", 10: "sessie", 11: "updates",
     12: "geavanceerd", 13: "over"
 };
