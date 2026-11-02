@@ -116,10 +116,6 @@ start_core() {
         run_bg_once "hypridle( |$)" "hypridle" hypridle
     fi
     run_bg_once "playerctld daemon" "playerctld" playerctld daemon
-    # Nieuwe schijven (USB én intern) vanzelf koppelen onder /run/media/$USER,
-    # zodat ze in Files verschijnen. Zonder wachtwoord dankzij
-    # /etc/polkit-1/rules.d/50-kingstra-udisks.rules (installer fase 10).
-    has_cmd udiskie && run_bg_once "udiskie( |$)" "udiskie automount" udiskie --automount --no-tray --notify
 
     run_once "fingerprint-first-run.sh" "fingerprint first-run" "$CONFIG_HOME/hypr/scripts/fingerprint-first-run.sh"
     run_once "hardware-switches.sh" "hardware switches" "$CONFIG_HOME/hypr/scripts/hardware-switches.sh"
@@ -128,6 +124,9 @@ start_core() {
     run_bg_once "lid-lock.sh" "lid lock watcher" "$CONFIG_HOME/hypr/scripts/lid-lock.sh"
     run_bg_once "float-memory-watch.sh" "float memory watcher" "$CONFIG_HOME/hypr/scripts/float-memory-watch.sh"
     run_bg_once "app-quit.sh watch" "close-fully watcher" "$CONFIG_HOME/hypr/scripts/app-quit.sh" watch
+    # Nieuwe schijven (USB én intern) vanzelf koppelen onder /run/media/$USER,
+    # zodat ze in Files verschijnen. Zonder wachtwoord dankzij
+    # /etc/polkit-1/rules.d/50-kingstra-udisks.rules (installer fase 11).
     if [[ -x "$HOME/.local/bin/kingstra-disks" ]]; then
         run_bg_once "kingstra-disks watch" "disk automount" "$HOME/.local/bin/kingstra-disks" watch
     fi

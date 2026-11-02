@@ -30,10 +30,6 @@ phase_run() {
     log_step "SDDM-service activeren..."
     _phase10_enable_sddm
 
-    log_step "Schijven automatisch koppelen..."
-    pacman_install udiskie
-    _phase10_deploy_udisks_polkit
-
     log_step "Fase 10 valideren..."
     validate_cmd hyprlock
     validate_cmd hypridle
@@ -254,21 +250,6 @@ _phase10_deploy_sddm_config() {
     sudo mkdir -p /etc/sddm.conf.d
     sudo cp "$sddm_conf_src" "$sddm_conf_dest"
     log_ok "SDDM-config geplaatst: $sddm_conf_dest"
-}
-
-_phase10_deploy_udisks_polkit() {
-    local src="$REPO_ROOT/config/polkit/50-kingstra-udisks.rules"
-    local dest="/etc/polkit-1/rules.d/50-kingstra-udisks.rules"
-
-    if "${DRY_RUN:-false}"; then
-        log_dry "Polkit-regel zou worden geplaatst: $dest (vereist sudo)"
-        return 0
-    fi
-    [[ -f "$src" ]] || { log_warn "Polkit-regel niet gevonden: $src"; return 0; }
-
-    backup_system_path "$dest"
-    sudo install -Dm644 "$src" "$dest"
-    log_ok "Polkit-regel geplaatst: $dest (schijven koppelen zonder wachtwoord)"
 }
 
 _phase10_enable_sddm() {

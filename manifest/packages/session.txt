@@ -11,9 +11,6 @@ hypridle
 # SDDM (login manager)
 sddm
 
-# Nieuwe schijven vanzelf koppelen (met polkit-regel uit fase 10)
-udiskie
-
 # SDDM theme — sugar-candy stijl
 aur:sddm-sugar-candy-git
 

@@ -46,9 +46,6 @@ phase_run() {
     pacman_install udisks2
     _phase11_setup_disks
 
-    log_step "Docker alleen starten bij gebruik..."
-    _phase11_docker_on_demand
-
     log_step "Logitech-muisknoppen (logiops)..."
     _phase11_setup_logiops
 
@@ -264,24 +261,6 @@ _phase11_setup_disks() {
         backup_system_path "$rule_dest"
         sudo install -D -m 0644 "$rule_src" "$rule_dest"
         log_ok "Schijven koppelen zonder wachtwoord: $rule_dest"
-    fi
-}
-
-# Docker hoort niet bij het opstarten: docker.socket start de daemon zodra
-# iets `docker` gebruikt. Een draaiende daemon laten we nu met rust.
-_phase11_docker_on_demand() {
-    systemctl cat docker.socket >/dev/null 2>&1 || return 0
-
-    if "${DRY_RUN:-false}"; then
-        log_dry "docker.service zou uit de opstart gaan, docker.socket aan (vereist sudo)"
-        return 0
-    fi
-
-    if systemctl is-enabled -q docker.service 2>/dev/null; then
-        sudo systemctl disable docker.service && log_ok "docker.service start niet meer bij het opstarten"
-    fi
-    if ! systemctl is-enabled -q docker.socket 2>/dev/null; then
-        sudo systemctl enable docker.socket && log_ok "docker.socket start Docker bij gebruik"
     fi
 }
 
