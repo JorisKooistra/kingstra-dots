@@ -279,7 +279,7 @@ Item {
 
                 Card {
                     Heading { text: "Indeling van werkruimte " + root.workspace }
-                    Hint { Layout.fillWidth: true; text: "Ruimtelijk: tegels per plek en vrij verder scrollen naar elke kant." }
+                    Hint { Layout.fillWidth: true; text: "Hoe vensters op deze werkruimte naast elkaar staan." }
                     Flow {
                         Layout.fillWidth: true; spacing: 8
                         Repeater {
@@ -350,7 +350,7 @@ Item {
 
                 Card {
                     Heading { text: "Scrollen en werkvlak" }
-                    Hint { Layout.fillWidth: true; text: "Super+wiel scrolt binnen de werkruimte, Super+Shift+wiel wisselt van werkruimte, Super+Ctrl+linkermuis sleept vrij. Touchpad: vier vingers schuiven, knijpen zoomt. Aanraakscherm: twee vingers." }
+                    Hint { Layout.fillWidth: true; text: "Super+wiel scrolt door de werkruimte, Super+Shift+wiel wisselt van werkruimte. Op het touchpad schuif je met vier vingers." }
                     Hint { text: "Breedte van een nieuw venster op een scrollstrook" }
                     Flow {
                         Layout.fillWidth: true; spacing: 8
@@ -364,7 +364,6 @@ Item {
                             }
                         }
                     }
-                    Hint { Layout.fillWidth: true; text: "Ruimtelijk gebruikt Dwindle: splits en verhoudingen vrij aanpassen, zonder maximum per pagina." }
                     Hint { text: "Vastklikken na slepen" }
                     Flow {
                         Layout.fillWidth: true; spacing: 8
@@ -376,12 +375,6 @@ Item {
                                 chosen: root.near(root.werkvlak.snap, modelData.v)
                                 onTriggered: root.setWerkvlak("snap", modelData.v)
                             }
-                        }
-                        Action {
-                            label: root.profile.wallpaperDrift ? "Wallpaper-effect: aan" : "Wallpaper-effect: uit"
-                            chosen: root.profile.wallpaperDrift
-                            allowed: !!root.screenName && !ScreenProfiles.busy
-                            onTriggered: ScreenProfiles.action(["set", root.screenName, "wallpaperDrift", JSON.stringify(!root.profile.wallpaperDrift)])
                         }
                     }
                     Hint { text: root.werkvlakError; visible: text !== ""; color: root.themeColors.red; Layout.fillWidth: true }

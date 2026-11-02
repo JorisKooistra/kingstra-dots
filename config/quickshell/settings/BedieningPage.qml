@@ -198,9 +198,8 @@ Item {
             Hint {
                 Layout.fillWidth: true
                 readonly property string globalMode: (ScreenProfiles.state.fallback || {}).name || "office"
-                text: "De mode van dit scherm bepaalt hier de railonderdelen, automatisch verbergen, de muziek "
-                    + "en of meldingen verschijnen (Gaming houdt ze stil). Thema, energieprofiel en Niet storen "
-                    + "gelden voor de hele desktop. Volg standaard neemt de desktopmode over (nu: " + globalMode + ")."
+                text: "De mode van dit scherm bepaalt de railknoppen, de muziek en of meldingen verschijnen "
+                    + "(Gaming houdt ze stil). Volg standaard neemt de mode uit Overzicht over (nu: " + globalMode + ")."
             }
             Flow {
                 Layout.fillWidth: true
@@ -342,15 +341,6 @@ Item {
                         onTriggered: PlayerChoice.set(modelData.id)
                     }
                 }
-            }
-            Heading { text: "Hele desktop" }
-            Hint { text: "Thema, energieprofiel en Niet storen zijn gedeeld tussen je schermen."; Layout.fillWidth: true }
-            Flow {
-                Layout.fillWidth: true; spacing: 8
-                Action { label: "Thema"; onTriggered: root.pageRequested("thema") }
-                Action { label: "Wallpaper"; onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper-picker-safe.sh"]) }
-                Action { label: "Sneltoetsen"; onTriggered: root.pageRequested("sneltoetsen") }
-                Action { label: "Beeldschermen"; onTriggered: root.pageRequested("beeldschermen") }
             }
             Hint { text: ScreenProfiles.errorText; visible: text !== ""; color: root.themeColors.red; Layout.fillWidth: true }
         }

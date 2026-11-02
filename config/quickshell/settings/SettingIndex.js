@@ -37,7 +37,7 @@ var entries = [
     { label: "Volume per app", page: 8, section: "geluid", where: "Apparaten › Geluid › Alle apparaten en apps", keywords: "app streams mixer volume" },
     { label: "Tijd- en datumnotatie", page: 9, section: "tijd", where: "Systeem › Tijd & weer", keywords: "tijd datum notatie formaat 24 uur klok" },
     { label: "Weer-API en locatie", page: 9, where: "Systeem › Tijd & weer", keywords: "weer openweather api sleutel locatie eenheden celsius" },
-    { label: "Modus (office, gaming, media)", page: 10, where: "Systeem › Sessie", keywords: "mode modus office gaming media" },
+    { label: "Modus (office, gaming, media)", page: 14, where: "Overzicht", keywords: "mode modus office gaming media" },
     { label: "Automatisch vergrendelen", page: 10, section: "sessie", where: "Systeem › Sessie › Vergrendelen en slaapstand", keywords: "idle lock vergrendelen scherm uit dpms slaapstand suspend timeout" },
     { label: "Apps echt sluiten", page: 10, where: "Systeem › Sessie", keywords: "tray systeemtray achtergrond sluiten afsluiten quit kill chatgpt privacy minimaliseren" },
     { label: "Energieprofiel", page: 10, section: "sessie", where: "Systeem › Sessie › Vergrendelen en slaapstand", keywords: "power profile performance balanced saver batterij" },

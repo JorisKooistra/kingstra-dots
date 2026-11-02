@@ -11,6 +11,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Sessie-pil wisselt tussen sessies, een pijl wisselt van gebruiker (bij meer dan één), toetsenbordpil toont CAPS, en een slaapstand-pil als SDDM die aanbiedt. Gebruikers en sessies worden via rolnamen gelezen in plaats van rolnummers (de sessienaam viel daardoor altijd terug op ‘Hyprland’).
 - Uitrol: de sync kopieert bij elke thema- of wallpaperwissel ook het ontwerp (`Main.qml`, `qmldir`) naar `/usr/share/sddm/themes/kingstra`; de installer/updater (fase 10) doet dat met back-up.
 - Nieuwe smoke-test `tests/smoke/sddm-greeter.sh` laadt het inlogscherm met nep-SDDM-objecten (PySide6) en controleert wachtwoord, vingerafdruk, fout, sessiekeuze, gebruikerswissel en Esc; draait ook de bestaande `sddm-sync.py`.
+### Instellingen opgeruimd: dubbele knoppen
+- Mode (Office, Gaming, Media) kies je alleen nog in Overzicht, en per scherm in Bediening. Sessie toont welke mode actief is.
+- Bediening: de snelkoppelingen onder ‘Hele desktop’ (Thema, Wallpaper, Sneltoetsen, Beeldschermen) zijn weg, want die staan al in de zijbalk. Het wallpaper-effect bij scrollen staat alleen nog per scherm in Bediening, niet meer ook in Overzicht.
+- Geluid: de losse knop ‘Mute output’ is weg; dempen zit op de volumekaart zelf. Over: de knop ‘Update uitvoeren’ is weg; die staat onder Updates.
+- Onderhoud toont alleen Shell herstarten en Kleuren opnieuw maken. Alleen de bar herladen, status verversen en verwijderen staan onder ‘Meer onderhoud’.
+- Kortere, gewone teksten bij Overzicht, Bediening, Netwerk en Updates.
+
 ### Instellingen opgeruimd: Uiterlijk
 - Uiterlijk heeft nu twee pagina's: Thema (kiezen en toepassen) en Aanpassen. Aanpassen vervangt de oude Bar-pagina en de thema-editor, en zegt bovenaan altijd welk thema je bewerkt en of dat je actieve thema is.
 - Aanpassen heeft vier groepen met Nederlandse namen en een korte uitleg per instelling: Kleuren (licht/donker, kleurstijl, contrast, welke wallpaperkleur, icoonthema), Letters, Vensters (rondheid, rand, ruimte, vervaging) en Strook en panelen (strook boven/onder/uit en hoogte, rail links/rechts en breedte, rondheid, dekking, animatie, randen, glas, gloed, effecten). Keuzes zijn ronde knoppen in plaats van uitklaplijsten met technische waarden. Basisstijl, dichtheid, oppervlak, schaduw en marges staan onder Fijnafstelling; alle themavariabelen en de Matugen-sjablonen onder een uitklapblok.

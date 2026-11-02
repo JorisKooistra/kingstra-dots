@@ -3003,49 +3003,6 @@ Item {
                         }
                     }
 
-                    Rectangle {
-                        Layout.alignment: Qt.AlignLeft
-                        Layout.preferredWidth: root.s(220)
-                        Layout.preferredHeight: root.s(48)
-                        radius: root.themedInnerRadius
-                        color: updateMa.containsMouse ? Qt.alpha(root.green, 0.14) : root.popupPanelFill
-                        border.color: updateMa.containsMouse ? root.green : root.surface1
-                        border.width: 1
-                        scale: updateMa.pressed ? 0.98 : (updateMa.containsMouse ? 1.01 : 1.0)
-                        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(180); easing.type: Easing.OutQuart } }
-                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.margins: root.s(12)
-                            spacing: root.s(10)
-
-                            Text {
-                                text: "󰚰"
-                                font.family: ThemeConfig.iconFont
-                                font.pixelSize: root.s(18)
-                                color: updateMa.containsMouse ? root.green : root.subtext0
-                            }
-                            Text {
-                                text: "Update uitvoeren"
-                                font.family: root.uiFontFamily
-                                font.weight: root.themedFontWeight
-                                font.letterSpacing: root.themedLetterSpacing
-                                font.pixelSize: root.s(12)
-                                color: root.text
-                                Layout.fillWidth: true
-                            }
-                        }
-
-                        MouseArea {
-                            id: updateMa
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.runUpdateBootstrap()
-                        }
-                    }
 
                     Item { Layout.fillHeight: true }
                 }
@@ -4677,15 +4634,6 @@ Item {
                             Layout.fillWidth: true
                             spacing: root.s(10)
                             SettingsActionButton { label: "Volume-paneel"; icon: "󰕾"; accent: root.green; primary: true; onTriggered: root.openShellWidget("volume", "") }
-                            SettingsActionButton {
-                                label: "Mute output"
-                                icon: "󰖁"
-                                accent: root.peach
-                                onTriggered: {
-                                    let output = root.audioPrimaryNode(root.audioOutputs);
-                                    if (output) root.toggleAudioMute("sink", output.id);
-                                }
-                            }
                             SettingsActionButton { label: "Status verversen"; icon: "󰑓"; accent: root.blue; onTriggered: root.refreshAudioState() }
                         }
 
@@ -4843,15 +4791,8 @@ Item {
 
                         Text { text: "Sessie"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
 
-                        SettingsInfoCard { title: "Actieve mode"; icon: "󰒲"; accent: root.mauve; value: root.sessionModeText }
 
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: root.s(10)
-                            SettingsActionButton { label: "Office"; icon: "󰈹"; accent: root.blue; primary: root.sessionModeText === "office"; onTriggered: root.switchSessionMode("office") }
-                            SettingsActionButton { label: "Gaming"; icon: "󰊴"; accent: root.green; primary: root.sessionModeText === "gaming"; onTriggered: root.switchSessionMode("gaming") }
-                            SettingsActionButton { label: "Media"; icon: "󰝚"; accent: root.peach; primary: root.sessionModeText === "media"; onTriggered: root.switchSessionMode("media") }
-                        }
+                        SettingsInfoCard { title: "Mode"; icon: "󰒲"; accent: root.mauve; value: "Office, Gaming en Media kies je in Overzicht; per scherm in Bediening. Nu actief: " + (root.sessionModeText || "onbekend") }
 
                         RowLayout {
                             Layout.fillWidth: true
@@ -5319,26 +5260,27 @@ Item {
                         spacing: root.s(14)
 
                         Text { text: "Onderhoud"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
-                        SettingsInfoCard { title: "Status"; icon: "󰋼"; accent: root.blue; value: root.advancedStatusText }
+                        Text { text: "Voor als de shell of de kleuren niet goed meer bijwerken."; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0; Layout.fillWidth: true; wrapMode: Text.WordWrap }
 
                         Flow {
                             Layout.fillWidth: true
                             spacing: root.s(10)
-                            SettingsActionButton { label: "Topbar herladen"; icon: "󰑓"; accent: root.blue; onTriggered: root.reloadTopbar() }
                             SettingsActionButton { label: "Shell herstarten"; icon: "󰜉"; accent: root.peach; onTriggered: root.restartQuickshell() }
                             SettingsActionButton { label: "Kleuren opnieuw maken"; icon: "󰏘"; accent: root.mauve; onTriggered: root.rerenderTheme() }
-                            SettingsActionButton { label: "Alle status verversen"; icon: "󰑓"; accent: root.green; onTriggered: root.refreshOperationalStatus() }
                         }
 
                         AdvancedSection {
                             id: uninstallAdvancedSection
                             unit: root.s(100) / 100
-                            title: "Verwijderen en details"
+                            title: "Meer onderhoud"
                             icon: "󰆴"
-                            hint: "Kingstra verwijderen, met of zonder herstel, en waar de configuratie staat"
+                            hint: "Alleen de bar herladen, status verversen, Kingstra verwijderen en waar de configuratie staat"
+                            SettingsInfoCard { title: "Status"; icon: "󰋼"; accent: root.blue; value: root.advancedStatusText }
                             Flow {
                                 Layout.fillWidth: true
                                 spacing: root.s(10)
+                                SettingsActionButton { label: "Alleen de bar herladen"; icon: "󰑓"; accent: root.blue; onTriggered: root.reloadTopbar() }
+                                SettingsActionButton { label: "Alle status verversen"; icon: "󰑓"; accent: root.green; onTriggered: root.refreshOperationalStatus() }
                                 SettingsActionButton {
                                     label: root.showUninstallConfirm ? "Verwijderen gekozen" : "Kingstra verwijderen"
                                     icon: "󰆴"
