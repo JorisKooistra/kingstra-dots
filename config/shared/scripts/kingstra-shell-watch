@@ -73,6 +73,19 @@ restart_component() {
     restarts[$name]="${restarts[$name]:-}$(date +%s) "
 }
 
+# Leeft het onderdeel nog? Eerst via de procesregel; na een eigen herstart
+# (Quickshell vangt een crash op en start zichzelf opnieuw) heet het proces
+# alleen nog /usr/bin/quickshell en mist pgrep het. Vraag dan de instantie
+# zelf via IPC: dat lukt alleen als er een draait voor dit configpad.
+component_alive() {
+    local pattern="$1" cmd="$2" bin path
+    pgrep -f "$pattern" >/dev/null 2>&1 && return 0
+    bin="${cmd%% *}"
+    path="${cmd##* }"
+    [[ -n "$path" && "$path" == *.qml ]] || return 1
+    timeout 3 "$bin" ipc -p "$path" show >/dev/null 2>&1
+}
+
 give_up() {
     local name="$1"
     given_up[$name]=1
@@ -94,7 +107,7 @@ while hyprland_alive; do
     for entry in "${COMPONENTS[@]}"; do
         IFS='|' read -r name pattern cmd <<< "$entry"
         [[ -n "${given_up[$name]:-}" ]] && continue
-        if pgrep -f "$pattern" >/dev/null 2>&1; then
+        if component_alive "$pattern" "$cmd"; then
             unset 'missing_since[$name]'
             continue
         fi

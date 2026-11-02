@@ -7,6 +7,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ### Sessielog en schijfruimte
 - Fix: `~/.local/state/kingstra/session.log` groeide ~33 MB per uur (bijna 1 GB). Het eiland, de feedbackmelding en het werkvlakoverzicht herladen elke 90–200 ms een bestand dat pas bestaat na de eerste melding, en elke mislukte poging schreef een foutregel. Die FileViews loggen nu geen leesfouten meer (`printErrors: false`).
 - `kingstra-session-start` draait het sessielog bij elke start weg zodra het boven 20 MB komt; de laatste 2 MB blijven bewaard in `session.log.1`.
+- Fix: de shell-bewaker meldde ‘bar crasht steeds’ terwijl de bar draaide. Na een crash herstart Quickshell zichzelf onder een kale procesnaam die het zoekpatroon miste; de bewaker vraagt de instantie nu ook via `qs ipc show` voordat hij herstart.
 - Sessie hervatten zet apps van de ‘echt sluiten’-lijst (standaard ChatGPT) niet meer terug bij het inloggen. ChatGPT kwam zo na elke start mee op en vrat de eerste twee minuten 5 GB RAM en veel CPU.
 - Fix: `island-probe.sh` zocht elke 3 s met `find /proc/*/fd` naar een open camera; dat brak geregeld af met coredumps. Het kijkt nu alleen als er een `/dev/video*` is, en dan met `fuser`.
 
