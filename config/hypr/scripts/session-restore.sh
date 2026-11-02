@@ -22,6 +22,18 @@ MAX_AGE_DAYS=7
 
 hypr() { "${HYPRCTL_BIN:-hyprctl}" "$@"; }
 
+# Apps die bij sluiten echt moeten stoppen (app-quit.sh, standaard ChatGPT)
+# komen ook niet terug bij het inloggen: zo'n app hoort niet vanzelf te
+# starten. Eén klasse(-deel) per regel, hoofdletters tellen niet.
+no_restore_list() {
+    local quit
+    quit="$(dirname "$(readlink -f "$0")")/app-quit.sh"
+    if [[ -x "$quit" ]] || [[ -f "$quit" ]]; then
+        bash "$quit" list 2>/dev/null && return 0
+    fi
+    printf 'chatgpt\n'
+}
+
 enabled() {
     [[ -f "$SETTINGS_FILE" ]] || return 0
     python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("restore", True) else 1)' "$SETTINGS_FILE" 2>/dev/null
@@ -29,12 +41,13 @@ enabled() {
 
 save() {
     mkdir -p "$STATE_DIR"
-    hypr clients -j 2>/dev/null | python3 -c '
+    hypr clients -j 2>/dev/null | KINGSTRA_NO_RESTORE="$(no_restore_list)" python3 -c '
 import json, os, sys, time
 
 SKIP_CLASSES = {"org.quickshell", "quickshell", "kingstra-settings", "xdg-desktop-portal-gtk", "polkit-gnome-authentication-agent-1",
                 "hyprpolkitagent", "org.kde.polkit-kde-authentication-agent-1", "", "steam_proton"}
 SKIP_EXE = {"quickshell", "qs", "Hyprland", "hyprland", "bash", "sh", "zsh", "fish", "python3", "python"}
+NO_RESTORE = [w.strip().lower() for w in os.environ.get("KINGSTRA_NO_RESTORE", "").splitlines() if w.strip()]
 
 clients = json.load(sys.stdin)
 apps, seen = [], set()
@@ -50,6 +63,9 @@ for c in sorted(clients, key=lambda c: c.get("focusHistoryID", 99)):
     except OSError:
         continue
     if not argv or os.path.basename(argv[0]) in SKIP_EXE:
+        continue
+    names = (cls.lower(), os.path.basename(argv[0]).lower())
+    if any(w in n for w in NO_RESTORE for n in names):
         continue
     # Flatpak-apps: start opnieuw via flatpak run, niet via de sandbox-binary.
     if os.path.exists(f"/proc/{pid}/root/.flatpak-info"):
@@ -75,8 +91,9 @@ restore() {
     [[ -f "$SESSION_FILE" ]] || return 0
     local running
     running="$(hypr clients -j 2>/dev/null || echo '[]')"
-    python3 - "$SESSION_FILE" "$MAX_AGE_DAYS" "$running" <<'PY' | while IFS= read -r line; do
-import json, shlex, sys, time
+    KINGSTRA_NO_RESTORE="$(no_restore_list)" python3 - "$SESSION_FILE" "$MAX_AGE_DAYS" "$running" <<'PY' | while IFS= read -r line; do
+import json, os, shlex, sys, time
+NO_RESTORE = [w.strip().lower() for w in os.environ.get("KINGSTRA_NO_RESTORE", "").splitlines() if w.strip()]
 data = json.load(open(sys.argv[1]))
 if time.time() - data.get("saved", 0) > int(sys.argv[2]) * 86400:
     sys.exit(0)
@@ -87,6 +104,9 @@ for app in data.get("apps", []):
     if key in already or key in done:
         continue
     done.add(key)
+    argv0 = os.path.basename((app.get("argv") or [""])[0]).lower()
+    if any(w in n for w in NO_RESTORE for n in (key.lower(), argv0)):
+        continue
     cmd = " ".join(shlex.quote(a) for a in app.get("argv", []))
     if not cmd:
         continue
