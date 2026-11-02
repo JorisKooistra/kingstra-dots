@@ -48,6 +48,9 @@ phase_run() {
     pacman_install p7zip                # uitpakken vanuit yazi (7z, xz, bzip2...)
     pacman_install unzip zip            # zip-bestanden vanuit yazi
 
+    log_step "Docker alleen bij gebruik starten..."
+    _phase11_docker_on_demand
+
     log_step "Yazi-config deployen..."
     deploy_config "yazi"
     _phase11_init_yazi_theme_file
@@ -281,4 +284,25 @@ _phase11_setup_spicetify() {
 
     spicetify backup apply 2>/dev/null || \
         log_warn "Spicetify backup/apply mislukt — start Spotify eerst om te initialiseren"
+}
+
+# Docker hoeft niet bij elke start mee te laden (scheelt opstarttijd en
+# network-online-wachten). docker.socket start de daemon zodra iets `docker`
+# gebruikt. Alleen als Docker geïnstalleerd is; niets installeren.
+_phase11_docker_on_demand() {
+    if ! systemctl list-unit-files docker.service 2>/dev/null | grep -q '^docker.service'; then
+        log_info "Docker niet geïnstalleerd — overgeslagen"
+        return 0
+    fi
+    if "${DRY_RUN:-false}"; then
+        log_dry "docker.service zou uit de opstart gaan, docker.socket aan (vereist sudo)"
+        return 0
+    fi
+    if [[ "$(systemctl is-enabled docker.service 2>/dev/null)" == "enabled" ]]; then
+        sudo systemctl disable docker.service >/dev/null 2>&1 || log_warn "docker.service uitzetten mislukt"
+    fi
+    if [[ "$(systemctl is-enabled docker.socket 2>/dev/null)" != "enabled" ]]; then
+        sudo systemctl enable docker.socket >/dev/null 2>&1 || log_warn "docker.socket aanzetten mislukt"
+    fi
+    log_ok "Docker start voortaan pas bij gebruik (docker.socket)"
 }

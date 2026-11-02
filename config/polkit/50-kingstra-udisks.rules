@@ -1,0 +1,22 @@
+// Kingstra: schijven zonder wachtwoord koppelen.
+// Leden van wheel mogen in hun eigen, actieve sessie interne en externe
+// schijven mounten en ontgrendelen. Zo verschijnt een nieuw geplaatste schijf
+// vanzelf in Files (udiskie --automount in kingstra-session-start).
+// Formatteren, partitioneren en schijven wissen vragen nog steeds een wachtwoord.
+polkit.addRule(function(action, subject) {
+    var allowed = [
+        "org.freedesktop.udisks2.filesystem-mount",
+        "org.freedesktop.udisks2.filesystem-mount-system",
+        "org.freedesktop.udisks2.filesystem-mount-other-seat",
+        "org.freedesktop.udisks2.encrypted-unlock",
+        "org.freedesktop.udisks2.encrypted-unlock-system",
+        "org.freedesktop.udisks2.power-off-drive",
+        "org.freedesktop.udisks2.power-off-drive-system",
+        "org.freedesktop.udisks2.eject-media",
+        "org.freedesktop.udisks2.eject-media-system"
+    ];
+    if (allowed.indexOf(action.id) >= 0 && subject.local && subject.active
+            && subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});

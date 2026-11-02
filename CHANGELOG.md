@@ -5,6 +5,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ## Unreleased
 
 ### Sessielog en schijfruimte
+- Installer-fase 11 (en dus ook de updater) zet Docker op ‘starten bij gebruik’: `docker.service` uit de opstart, `docker.socket` aan. Alleen als Docker geïnstalleerd is.
+- Nieuwe schijven verschijnen vanzelf in Files: `udiskie --automount` start mee met de sessie, en een polkit-regel (`config/polkit/50-kingstra-udisks.rules`, geplaatst door installer-fase 10) laat leden van wheel schijven koppelen zonder wachtwoord. Formatteren blijft een wachtwoord vragen.
 - Fix: `~/.local/state/kingstra/session.log` groeide ~33 MB per uur (bijna 1 GB). Het eiland, de feedbackmelding en het werkvlakoverzicht herladen elke 90–200 ms een bestand dat pas bestaat na de eerste melding, en elke mislukte poging schreef een foutregel. Die FileViews loggen nu geen leesfouten meer (`printErrors: false`).
 - `kingstra-session-start` draait het sessielog bij elke start weg zodra het boven 20 MB komt; de laatste 2 MB blijven bewaard in `session.log.1`.
 - Fix: de shell-bewaker meldde ‘bar crasht steeds’ terwijl de bar draaide. Na een crash herstart Quickshell zichzelf onder een kale procesnaam die het zoekpatroon miste; de bewaker vraagt de instantie nu ook via `qs ipc show` voordat hij herstart.
