@@ -266,45 +266,50 @@ Item {
                     }
                 }
             }
-            Hint { text: "Achter Meer: deze knoppen schuiven weg tot je in de rail op Meer klikt"; Layout.fillWidth: true }
-            Flow {
-                Layout.fillWidth: true; spacing: 7
-                Repeater {
-                    model: [{id: "notifications", title: "Meldingen"}, {id: "system", title: "Systeem"}, {id: "updates", title: "Updates"}, {id: "games", title: "Games"}, {id: "pins", title: "Extra knoppen"}, {id: "apps", title: "Eigen apps"}, {id: "overview", title: "Uitzoomen"}, {id: "tray", title: "Systeemvak"}, {id: "clock", title: "Klok"}, {id: "power", title: "Afsluiten"}, {id: "settings", title: "Instellingen"}]
-                    delegate: Action {
-                        required property var modelData
-                        label: modelData.title
-                        chosen: root.overflow.indexOf(modelData.id) >= 0
-                        allowed: !!root.screenName && !ScreenProfiles.busy
-                        onTriggered: root.toggleOverflow(modelData.id)
+            AdvancedSection {
+                title: "Meer railknoppen"
+                icon: "󰍜"
+                hint: "Wat achter Meer wegschuift, extra knoppen en hun volgorde"
+                Hint { text: "Achter Meer: deze knoppen schuiven weg tot je in de rail op Meer klikt"; Layout.fillWidth: true }
+                Flow {
+                    Layout.fillWidth: true; spacing: 7
+                    Repeater {
+                        model: [{id: "notifications", title: "Meldingen"}, {id: "system", title: "Systeem"}, {id: "updates", title: "Updates"}, {id: "games", title: "Games"}, {id: "pins", title: "Extra knoppen"}, {id: "apps", title: "Eigen apps"}, {id: "overview", title: "Uitzoomen"}, {id: "tray", title: "Systeemvak"}, {id: "clock", title: "Klok"}, {id: "power", title: "Afsluiten"}, {id: "settings", title: "Instellingen"}]
+                        delegate: Action {
+                            required property var modelData
+                            label: modelData.title
+                            chosen: root.overflow.indexOf(modelData.id) >= 0
+                            allowed: !!root.screenName && !ScreenProfiles.busy
+                            onTriggered: root.toggleOverflow(modelData.id)
+                        }
                     }
                 }
-            }
-            Hint { text: "Extra railknoppen"; Layout.fillWidth: true }
-            Flow {
-                Layout.fillWidth: true; spacing: 7
-                Repeater {
-                    model: ["wifi", "bt", "dnd", "power", "media"]
-                    delegate: Action {
-                        required property string modelData
-                        label: root.pinLabels[modelData]
-                        chosen: root.pins.indexOf(modelData) >= 0
-                        allowed: !ScreenProfiles.busy
-                        onTriggered: ScreenProfiles.togglePin(root.screenName, modelData, root.pins)
+                Hint { text: "Extra railknoppen"; Layout.fillWidth: true }
+                Flow {
+                    Layout.fillWidth: true; spacing: 7
+                    Repeater {
+                        model: ["wifi", "bt", "dnd", "power", "media"]
+                        delegate: Action {
+                            required property string modelData
+                            label: root.pinLabels[modelData]
+                            chosen: root.pins.indexOf(modelData) >= 0
+                            allowed: !ScreenProfiles.busy
+                            onTriggered: ScreenProfiles.togglePin(root.screenName, modelData, root.pins)
+                        }
                     }
                 }
-            }
-            ColumnLayout {
-                Layout.fillWidth: true; spacing: 5
-                Repeater {
-                    model: root.pins
-                    delegate: RowLayout {
-                        required property string modelData
-                        required property int index
-                        Layout.fillWidth: true
-                        Hint { text: root.pinLabels[modelData] || modelData; Layout.fillWidth: true }
-                        Action { label: "Omhoog"; allowed: index > 0 && !ScreenProfiles.busy; onTriggered: root.movePin(index, -1) }
-                        Action { label: "Omlaag"; allowed: index < root.pins.length - 1 && !ScreenProfiles.busy; onTriggered: root.movePin(index, 1) }
+                ColumnLayout {
+                    Layout.fillWidth: true; spacing: 5
+                    Repeater {
+                        model: root.pins
+                        delegate: RowLayout {
+                            required property string modelData
+                            required property int index
+                            Layout.fillWidth: true
+                            Hint { text: root.pinLabels[modelData] || modelData; Layout.fillWidth: true }
+                            Action { label: "Omhoog"; allowed: index > 0 && !ScreenProfiles.busy; onTriggered: root.movePin(index, -1) }
+                            Action { label: "Omlaag"; allowed: index < root.pins.length - 1 && !ScreenProfiles.busy; onTriggered: root.movePin(index, 1) }
+                        }
                     }
                 }
             }

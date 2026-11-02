@@ -4,6 +4,20 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Instellingen overzichtelijker
+- De zijbalk van Instellingen heeft zes tabbladen in plaats van tien: Overzicht, Bediening, Uiterlijk, Apparaten (Beeldschermen, Geluid, Invoer, Netwerk), Sneltoetsen en Systeem (Sessie, Tijd & weer, Updates, Onderhoud, Over). Het oude Geavanceerd heet nu Onderhoud.
+- Technische keuzes staan per pagina in een uitklapbaar blok (nieuw `settings/AdvancedSection.qml`, rond met draaiende pijl en zacht openschuiven), zodat de pagina eerst de gewone keuzes laat zien:
+  - Thema: de hele thema-editor (lettertypes, kleuren, rondheid, bar, karakter, effecten), alle themavariabelen en de Matugen-templates onder ‘Thema aanpassen’.
+  - Bar: klokstijl, boven- en onderrand, topbar-stijl en het thema dat je bewerkt.
+  - Beeldschermen: statuskaarten, layout herstellen, status verversen en werkruimtes vastzetten per scherm.
+  - Geluid: losse uitvoer- en invoerapparaten en volume per app onder ‘Alle apparaten en apps’.
+  - Invoer: rechtsklik op het touchpad en dode toetsen (nu in het Nederlands).
+  - Tijd & weer: het weer staat bovenaan, tijd- en datumnotatie zit in het uitklapblok.
+  - Sessie: vergrendelen, scherm uit en slaapstand per energieprofiel.
+  - Onderhoud: Kingstra verwijderen en de configuratiedetails.
+  - Bediening: wat achter Meer wegschuift en de extra railknoppen.
+- Er is geen instelling verdwenen. Zoeken in Instellingen en in de launcher (`/`) klapt het juiste blok vanzelf open; diepe links als `kingstra-settings open invoer/invoer` doen dat ook. `geavanceerd`, `apparaten`, `systeem` en `onderhoud` zijn geldige paginanamen.
+
 ### Wifi-, bluetooth- en batterijpaneel in de nieuwe stijl
 - Het netwerkpaneel (Wi-Fi, Bluetooth, bedraad) is opnieuw gebouwd in de vormtaal van Snelle instellingen en Geluid & media: afgeronde tegels, Matugen-themakleuren (Wi-Fi in de kleur van de Wi-Fi-tegel, Bluetooth in die van de Bluetooth-tegel) en ThemeConfig-animaties. De oude radar met zwevende kaarten is weg. Bovenin een aan/uit-schakelaar en tabs met een glijdende markering; Tab wisselt nog steeds Wi-Fi en Bluetooth, en `/tmp/qs_network_mode` blijft de modus sturen.
 - Wi-Fi: de huidige verbinding als kaart met uitklapbare details (signaal, beveiliging, IP, band in GHz) en een knop om te verbreken; daaronder de netwerken, sterkste eerst. Nieuw: een wachtwoordveld in de rij bij een onbekend beveiligd netwerk (ook na een mislukte poging), ‘Opnieuw zoeken’, opgeslagen netwerken vergeten, en een duidelijke foutmelding als verbinden mislukt. `wifi_panel_logic.sh` meldt daarvoor per netwerk `known`.
