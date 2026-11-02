@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Sessielog en schijfruimte
+- Fix: `~/.local/state/kingstra/session.log` groeide ~33 MB per uur (bijna 1 GB). Het eiland, de feedbackmelding en het werkvlakoverzicht herladen elke 90–200 ms een bestand dat pas bestaat na de eerste melding, en elke mislukte poging schreef een foutregel. Die FileViews loggen nu geen leesfouten meer (`printErrors: false`).
+- `kingstra-session-start` draait het sessielog bij elke start weg zodra het boven 20 MB komt; de laatste 2 MB blijven bewaard in `session.log.1`.
+- Fix: `island-probe.sh` zocht elke 3 s met `find /proc/*/fd` naar een open camera; dat brak geregeld af met coredumps. Het kijkt nu alleen als er een `/dev/video*` is, en dan met `fuser`.
+
 ### Werkvlak: touchpad en aanraakscherm
 - Op een ruimtelijk werkvlak schuiven vier vingers het beeld vrij in beide richtingen; knijpen zoomt uit (vingers naar elkaar) of terug naar 100%. Super+drie vingers blijft hetzelfde schuiven doen. Tweevingerscroll blijft bij de app zolang het beeld op 100% staat, en drie vingers blijven werkruimte, overzicht en controlecentrum.
 - Uitgezoomd schuift een tweevingerscroll één pagina naar het volgende venster, dezelfde stap als Super+wiel, in plaats van de inhoud van het verkleinde venster te scrollen. Super+twee vingers doet die stap ook op 100%. Knijpen zoomt nog; een kleine vingertrilling verandert de schaal niet meer. Het muiswiel blijft in het document scrollen.

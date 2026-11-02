@@ -11,6 +11,14 @@ export QML_IMPORT_PATH="$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH
 
 mkdir -p "$LOG_DIR" 2>/dev/null || LOG_FILE="/tmp/kingstra-session-${UID:-$(id -u)}.log"
 
+# Houd het sessielog klein: bij elke sessiestart één vorige generatie
+# bewaren en alles boven 20 MB wegdraaien. Zonder dit groeide het log
+# onbeperkt (bijna 1 GB) omdat Quickshell zijn uitvoer hierheen schrijft.
+if [[ -f "$LOG_FILE" ]] && (( $(stat -c %s "$LOG_FILE" 2>/dev/null || echo 0) > 20 * 1024 * 1024 )); then
+    tail -c $((2 * 1024 * 1024)) "$LOG_FILE" > "$LOG_FILE.1" 2>/dev/null || true
+    : > "$LOG_FILE" 2>/dev/null || true
+fi
+
 log() {
     printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE" 2>/dev/null || true
 }

@@ -91,6 +91,8 @@ Item {
     FileView {
         id: feedbackFile
         path: "/tmp/kingstra-feedback.json"
+        // Bestaat pas na de eerste melding; reload elke 125 ms mag niet loggen.
+        printErrors: false
         watchChanges: true
         preload: true
         onInternalTextChanged: root.handleFeedback(__text)

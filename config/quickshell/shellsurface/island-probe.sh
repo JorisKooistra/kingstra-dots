@@ -13,9 +13,20 @@ if command -v pactl >/dev/null 2>&1 && [[ -n "$(pactl list short source-outputs 
     mic=true
 fi
 
-# Camera: een proces met /dev/video* open. Eén find, geen lus per fd.
-if [[ -n "$(find /proc/[0-9]*/fd -maxdepth 1 -lname '/dev/video*' -print -quit 2>/dev/null)" ]]; then
-    camera=true
+# Camera: een proces met /dev/video* open. Geen camera, dan niets zoeken.
+# Liefst fuser; de oude `find /proc/*/fd` liep elke 3 s door alle processen
+# en brak geregeld af (SIGABRT, coredumps) als een proces tussendoor stopte.
+shopt -s nullglob
+videos=(/dev/video*)
+shopt -u nullglob
+if (( ${#videos[@]} )); then
+    if command -v fuser >/dev/null 2>&1; then
+        fuser -s "${videos[@]}" 2>/dev/null && camera=true
+    else
+        for fd in /proc/[0-9]*/fd/*; do
+            [[ "$(readlink "$fd" 2>/dev/null)" == /dev/video* ]] && { camera=true; break; }
+        done
+    fi
 fi
 
 if pgrep -x 'wf-recorder|wl-screenrec|gpu-screen-recorder|obs' >/dev/null 2>&1; then

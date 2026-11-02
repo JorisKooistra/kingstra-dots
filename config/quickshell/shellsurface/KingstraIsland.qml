@@ -175,6 +175,9 @@ Item {
     FileView {
         id: osdFile
         path: "/tmp/kingstra-island.json"
+        // Het bestand bestaat pas na de eerste OSD; zonder dit schrijft elke
+        // reload (elke 90 ms) een foutregel naar session.log.
+        printErrors: false
         watchChanges: true
         preload: true
         onInternalTextChanged: root.handleOsd(__text)

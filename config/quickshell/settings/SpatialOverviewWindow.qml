@@ -203,6 +203,8 @@ Scope {
     FileView {
         id: requestFile
         path: root.runtime + "/kingstra-spatial-overview-request"
+        // Bestaat pas na het eerste verzoek; geen foutregel per reload.
+        printErrors: false
         preload: true
         watchChanges: true
         onInternalTextChanged: root.request(__text)
