@@ -40,6 +40,13 @@ phase_run() {
     pacman_install network-manager-applet
     pacman_install blueman
 
+    log_step "Schijven automatisch koppelen..."
+    pacman_install udisks2
+    _phase11_setup_disks
+
+    log_step "Docker alleen starten bij gebruik..."
+    _phase11_docker_on_demand
+
     log_step "Logitech-muisknoppen (logiops)..."
     _phase11_setup_logiops
 
@@ -79,6 +86,7 @@ phase_run() {
     validate_file "$HOME/.config/yazi/theme.toml"   "yazi theme.toml"
     validate_file "$HOME/.config/firefox/user.js"   "firefox/user.js"
     validate_file "$HOME/.local/bin/kingstra-firefox-optimize" "kingstra-firefox-optimize"
+    validate_file "$HOME/.local/bin/kingstra-disks" "kingstra-disks"
     validate_report
 
     log_ok "Fase 11 voltooid — Apps en dagelijkse tools beschikbaar."
@@ -214,6 +222,51 @@ _phase11_install_logid_recovery() {
     sudo systemctl daemon-reload 2>/dev/null || true
     sudo udevadm control --reload 2>/dev/null || true
     sudo systemctl reset-failed logid.service 2>/dev/null || true
+}
+
+# Losse schijven (intern of extern) koppelen bij het inloggen zonder wachtwoord,
+# zodat Files ze toont. Het koppelen zelf doet kingstra-disks vanuit de sessie.
+_phase11_setup_disks() {
+    local script_src="$REPO_ROOT/config/shared/scripts/kingstra-disks"
+    local rule_src="$REPO_ROOT/config/system/50-kingstra-udisks.rules"
+    local rule_dest="/etc/polkit-1/rules.d/50-kingstra-udisks.rules"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "kingstra-disks en polkit-regel zouden worden geplaatst: $rule_dest (vereist sudo)"
+        return 0
+    fi
+
+    ensure_dir "$HOME/.local/bin"
+    deploy_link "$script_src" "$HOME/.local/bin/kingstra-disks"
+    chmod +x "$script_src"
+
+    if [[ ! -f "$rule_src" ]]; then
+        log_warn "Bron niet gevonden: $rule_src"
+        return 0
+    fi
+    if ! sudo cmp -s "$rule_src" "$rule_dest" 2>/dev/null; then
+        backup_system_path "$rule_dest"
+        sudo install -D -m 0644 "$rule_src" "$rule_dest"
+        log_ok "Schijven koppelen zonder wachtwoord: $rule_dest"
+    fi
+}
+
+# Docker hoort niet bij het opstarten: docker.socket start de daemon zodra
+# iets `docker` gebruikt. Een draaiende daemon laten we nu met rust.
+_phase11_docker_on_demand() {
+    systemctl cat docker.socket >/dev/null 2>&1 || return 0
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "docker.service zou uit de opstart gaan, docker.socket aan (vereist sudo)"
+        return 0
+    fi
+
+    if systemctl is-enabled -q docker.service 2>/dev/null; then
+        sudo systemctl disable docker.service && log_ok "docker.service start niet meer bij het opstarten"
+    fi
+    if ! systemctl is-enabled -q docker.socket 2>/dev/null; then
+        sudo systemctl enable docker.socket && log_ok "docker.socket start Docker bij gebruik"
+    fi
 }
 
 _phase11_init_yazi_theme_file() {

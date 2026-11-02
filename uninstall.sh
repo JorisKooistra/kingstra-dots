@@ -430,6 +430,7 @@ remove_system_paths() {
     local path
     for path in \
         "/etc/sddm.conf.d/kingstra.conf" \
+        "/etc/polkit-1/rules.d/50-kingstra-udisks.rules" \
         "/usr/share/sddm/themes/kingstra"; do
         if [[ -e "$path" || -L "$path" ]]; then
             run sudo rm -rf "$path"

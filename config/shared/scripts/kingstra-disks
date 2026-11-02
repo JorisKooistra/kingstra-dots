@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-disks — losse schijven automatisch koppelen
+# =============================================================================
+#   kingstra-disks mount    alle nog niet gekoppelde dataschijven nu koppelen
+#   kingstra-disks watch    eerst koppelen, daarna bij elke nieuwe schijf opnieuw
+#   kingstra-disks status   laten zien wat gekoppeld zou worden
+#
+# Koppelt via udisks onder /run/media/$USER/<label>, zodat Files ze in de
+# zijbalk toont. Zonder wachtwoord dankzij 50-kingstra-udisks.rules (polkit).
+# Overgeslagen: de systeemschijf (/, /boot, swap), schijven die al in
+# /etc/fstab staan, EFI-, Microsoft reserved- en herstelpartities, kleine
+# partities en versleutelde of onbekende bestandssystemen.
+# =============================================================================
+set -uo pipefail
+
+LOG_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/session.log"
+
+log() {
+    printf '[%s] kingstra-disks: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE" 2>/dev/null || true
+}
+
+# Eén regel per te koppelen partitie: "<pad>\t<label of grootte>".
+candidates() {
+    lsblk -J -b -o PATH,PKNAME,TYPE,FSTYPE,SIZE,LABEL,MOUNTPOINTS,PARTTYPE 2>/dev/null \
+        | python3 -c '
+import json, subprocess, sys
+
+FS = {"ext4", "ext3", "ext2", "btrfs", "xfs", "f2fs", "ntfs", "ntfs3", "exfat", "vfat"}
+SKIP_PARTTYPES = {
+    "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",  # EFI-systeempartitie
+    "e3c9e316-0b5c-4db8-817d-f92df00215ae",  # Microsoft reserved
+    "de94bba4-06d1-4d40-a16a-bfd50179d6ac",  # Windows herstel
+    "21686148-6449-6e6f-744e-656564454649",  # BIOS boot
+    "0xef", "0x27",
+}
+SYSTEM_MOUNTS = {"/", "/boot", "/efi", "/boot/efi", "/home", "/usr", "/var", "[SWAP]"}
+MIN_SIZE = 512 * 1024 * 1024
+
+try:
+    fstab = subprocess.run(["findmnt", "--fstab", "--evaluate", "-rn", "-o", "SOURCE"],
+                           capture_output=True, text=True).stdout.split()
+except OSError:
+    fstab = []
+
+devices = []
+def walk(nodes):
+    for n in nodes:
+        devices.append(n)
+        walk(n.get("children") or [])
+walk(json.load(sys.stdin).get("blockdevices") or [])
+
+# Een schijf met een systeemmount of swap blijft helemaal met rust.
+system_disks = set()
+for d in devices:
+    if SYSTEM_MOUNTS & set(m for m in (d.get("mountpoints") or []) if m):
+        system_disks.add(d.get("pkname") or d.get("path", "").rsplit("/", 1)[-1])
+
+for d in devices:
+    disk = d.get("pkname") or d.get("path", "").rsplit("/", 1)[-1]
+    if d.get("type") not in ("part", "disk") or disk in system_disks:
+        continue
+    if (d.get("fstype") or "") not in FS:
+        continue
+    if [m for m in (d.get("mountpoints") or []) if m]:
+        continue
+    if (d.get("parttype") or "").lower() in SKIP_PARTTYPES:
+        continue
+    if int(d.get("size") or 0) < MIN_SIZE or d.get("path") in fstab:
+        continue
+    print(d["path"] + "\t" + (d.get("label") or "%d GB" % (int(d["size"]) // 10**9)))
+'
+}
+
+mount_all() {
+    local dev name out
+    while IFS=$'\t' read -r dev name; do
+        [[ -n $dev ]] || continue
+        if out="$(udisksctl mount -b "$dev" --no-user-interaction 2>&1)"; then
+            log "$name gekoppeld: ${out##* at }"
+        else
+            log "$name ($dev) niet gekoppeld: ${out##*: }"
+        fi
+    done < <(candidates)
+}
+
+watch() {
+    mount_all
+    command -v udevadm >/dev/null 2>&1 || return 0
+    # Een nieuwe schijf geeft een reeks gebeurtenissen; wacht tot het 2 s stil
+    # is en koppel dan in één keer.
+    udevadm monitor --udev --subsystem-match=block 2>/dev/null | while IFS= read -r line; do
+        [[ $line == *" add "* || $line == *" change "* ]] || continue
+        while IFS= read -r -t 2 _; do :; done
+        mount_all
+    done
+}
+
+case "${1:-mount}" in
+    mount) mount_all ;;
+    watch) watch ;;
+    status)
+        found="$(candidates)"
+        if [[ -n $found ]]; then
+            printf 'Wordt gekoppeld:\n'
+            while IFS=$'\t' read -r dev name; do
+                printf '  %s  %s\n' "$dev" "$name"
+            done <<< "$found"
+        else
+            echo "Geen losse schijven om te koppelen."
+        fi
+        ;;
+    *)
+        printf 'Gebruik: %s [mount|watch|status]\n' "$0" >&2
+        exit 2
+        ;;
+esac

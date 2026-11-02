@@ -36,6 +36,7 @@
 ~/.local/bin/kingstra-state-write|symlink
 ~/.local/bin/kingstra-session-start|symlink
 ~/.local/bin/kingstra-session-update|symlink
+~/.local/bin/kingstra-disks|symlink
 ~/.local/bin/kingstra-mode-switch|symlink
 ~/.local/bin/kingstra-mode-read|symlink
 ~/.local/bin/kingstra-color-transform|symlink
