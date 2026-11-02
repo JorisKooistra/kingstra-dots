@@ -1,0 +1,6 @@
+/* =============================================================================
+ * gtk.css — Kingstra: laad de matugen-kleuren in GTK-apps (Nautilus e.a.)
+ * colors.css wordt bij elke thema-/wallpaperwissel door matugen herschreven.
+ * Eigen aanpassingen hieronder zetten; dit bestand zelf blijft van de repo.
+ * ========================================================================== */
+@import url("colors.css");

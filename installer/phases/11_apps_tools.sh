@@ -16,6 +16,8 @@ phase_run() {
     pacman_install file-roller          # archiefbeheer in Nautilus
     pacman_install gvfs                 # trash/MTP/samba support
     pacman_install gvfs-mtp             # MTP (telefoons via USB)
+    pacman_install ffmpegthumbnailer    # video-miniaturen in Nautilus
+    _phase11_default_file_manager
 
     log_step "Klembord installeren..."
     pacman_install cliphist
@@ -93,6 +95,20 @@ phase_run() {
     log_info "Bestandsbeheer:  yazi (Super+E opent nautilus, yazi staat in het toetsenbordmenu)"
     log_info "Klembord:        Super+V — cliphist via Walker, plakt selectie"
     log_info "Screenshot:      Print / Super+Print / Shift+Print"
+}
+
+# ---------------------------------------------------------------------------
+# Nautilus als standaard voor mappen ("Map openen" vanuit udiskie, browser, ...)
+_phase11_default_file_manager() {
+    if "${DRY_RUN:-false}"; then
+        log_dry "Nautilus zou standaard worden voor inode/directory"
+        return 0
+    fi
+    if command -v xdg-mime &>/dev/null; then
+        xdg-mime default org.gnome.Nautilus.desktop inode/directory 2>/dev/null \
+            && log_ok "Nautilus is standaard voor mappen" \
+            || log_warn "xdg-mime: standaard bestandsbeheerder niet gezet"
+    fi
 }
 
 # ---------------------------------------------------------------------------

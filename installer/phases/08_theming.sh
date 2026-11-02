@@ -45,6 +45,9 @@ phase_run() {
     log_step "Theming placeholders initialiseren..."
     _phase08_init_generated_theme_files
 
+    log_step "GTK-apps (Nautilus) aan matugen-kleuren koppelen..."
+    _phase08_link_gtk_colors
+
     log_step "Game launcher installeren..."
     _phase08_install_game_launcher
 
@@ -82,6 +85,8 @@ phase_run() {
     validate_dir  "$HOME/.config/kingstra/modes"                  "kingstra/modes/"
     validate_dir  "$HOME/.config/spicetify/Themes/Matugen"        "spicetify/Themes/Matugen"
     validate_cmd  quickshell-game
+    validate_file "$HOME/.config/gtk-4.0/gtk.css"                 "gtk-4.0/gtk.css"
+    validate_file "$HOME/.config/gtk-3.0/gtk.css"                 "gtk-3.0/gtk.css"
     validate_file "$HOME/.config/quickshell/game-launcher/config.toml" "game-launcher/config.toml"
     validate_report
 
@@ -217,6 +222,23 @@ CONF
     else
         log_info "theme.lua bestaat al — niet overschreven"
     fi
+}
+
+# gtk.css laadt colors.css (matugen) in GTK3 (adw-gtk3) en GTK4/libadwaita.
+# Zonder dit bestand bleven Nautilus en dialogen grijs Adwaita.
+_phase08_link_gtk_colors() {
+    local v src dest
+    for v in 3 4; do
+        src="$REPO_ROOT/config/gtk-$v.0/gtk.css"
+        dest="$HOME/.config/gtk-$v.0/gtk.css"
+        if "${DRY_RUN:-false}"; then
+            log_dry "GTK$v gtk.css zou worden gelinkt: $dest"
+            continue
+        fi
+        ensure_dir "$(dirname "$dest")"
+        deploy_link "$src" "$dest"
+    done
+    log_ok "GTK gtk.css importeert nu de matugen-kleuren"
 }
 
 _phase08_init_generated_theme_files() {

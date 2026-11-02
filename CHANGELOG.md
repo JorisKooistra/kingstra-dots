@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Bestandsbeheer in thema
+- Fix: Nautilus en andere GTK-apps kregen nooit de matugen-kleuren. Matugen schreef `~/.config/gtk-{3,4}.0/colors.css`, maar er was geen `gtk.css` die het laadde, en `adw-gtk-theme` (het ingestelde GTK3-thema `adw-gtk3-dark`) werd niet geïnstalleerd. Installer-fase 08 linkt nu `config/gtk-{3,4}.0/gtk.css` (importeert `colors.css`) en installeert `adw-gtk-theme`.
+- Installer-fase 11 maakt Nautilus de standaard voor mappen (`xdg-mime`) en installeert `ffmpegthumbnailer` voor video-miniaturen.
+
 ### Schijven en Docker
 - Losse schijven, intern of via USB, worden bij het inloggen en zodra ze verschijnen vanzelf gekoppeld onder `/run/media/$USER/<label>` en staan zo in de zijbalk van Files. Dat doet het nieuwe `kingstra-disks watch` vanuit de sessiestart; een polkit-regel (`/etc/polkit-1/rules.d/50-kingstra-udisks.rules`) laat een lokale gebruiker in `wheel` daarvoor koppelen zonder wachtwoord. Formatteren en ontgrendelen blijven een wachtwoord vragen. Overgeslagen: de systeemschijf, swap, schijven uit `/etc/fstab`, EFI-, Microsoft reserved- en herstelpartities, partities kleiner dan 512 MB en versleutelde schijven. `kingstra-disks status` laat zien wat er gekoppeld zou worden.
 - Docker start niet meer bij het opstarten: de installer zet `docker.service` uit en `docker.socket` aan, zodat de daemon pas start zodra iets `docker` gebruikt. Dat scheelt ook het wachten op `network-online` in de opstartketen.

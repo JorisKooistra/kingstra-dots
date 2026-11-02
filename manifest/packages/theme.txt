@@ -19,6 +19,8 @@ noto-fonts-emoji
 # GTK theming
 nwg-look
 gnome-themes-extra
+# adw-gtk3-dark: GTK3-apps in libadwaita-stijl, kleuren via gtk.css/matugen
+adw-gtk-theme
 
 # Icon themes (per thema wisselbaar)
 papirus-icon-theme
