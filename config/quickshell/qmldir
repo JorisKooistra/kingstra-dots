@@ -10,3 +10,4 @@ singleton ScreenProfiles 1.0 ScreenProfiles.qml
 singleton GpuMonitor 1.0 GpuMonitor.qml
 singleton RailLayout 1.0 RailLayout.qml
 singleton PlayerChoice 1.0 PlayerChoice.qml
+singleton ArtCache 1.0 ArtCache.qml

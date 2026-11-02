@@ -384,7 +384,7 @@ Item {
                 color: Qt.rgba(root.mocha.primary.r, root.mocha.primary.g, root.mocha.primary.b, 0.25)
                 Image {
                     anchors.fill: parent
-                    source: root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : ""
+                    source: ArtCache.local(root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : "")
                     fillMode: Image.PreserveAspectCrop
                     sourceSize.width: 44
                     sourceSize.height: 44
@@ -622,7 +622,7 @@ Item {
                     color: Qt.rgba(root.mocha.primary.r, root.mocha.primary.g, root.mocha.primary.b, 0.2)
                     Image {
                         anchors.fill: parent
-                        source: root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : ""
+                        source: ArtCache.local(root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : "")
                         fillMode: Image.PreserveAspectCrop
                         sourceSize.width: 128
                         sourceSize.height: 128

@@ -520,7 +520,7 @@ ShellRoot {
                                     color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.2)
                                     Image {
                                         anchors.fill: parent
-                                        source: glance.player && glance.player.trackArtUrl ? String(glance.player.trackArtUrl) : ""
+                                        source: ArtCache.local(glance.player && glance.player.trackArtUrl ? String(glance.player.trackArtUrl) : "")
                                         fillMode: Image.PreserveAspectCrop
                                         sourceSize.width: 120
                                         sourceSize.height: 120

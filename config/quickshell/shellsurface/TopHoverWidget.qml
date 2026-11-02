@@ -644,8 +644,8 @@ Item {
                                 Layout.preferredHeight: 60
                                 mocha: root.mochaPalette
                                 accent: mocha.green
-                                artUrl: root.activePlayer && root.activePlayer.trackArtUrl
-                                    ? String(root.activePlayer.trackArtUrl) : ""
+                                artUrl: ArtCache.local(root.activePlayer && root.activePlayer.trackArtUrl
+                                    ? String(root.activePlayer.trackArtUrl) : "")
                                 playing: root.mediaPlaying
                                 showArm: false
                                 coverRadius: 14

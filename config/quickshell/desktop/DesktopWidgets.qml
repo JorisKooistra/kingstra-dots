@@ -438,7 +438,7 @@ Scope {
                                 compact: true
                                 mocha: mocha
                                 accent: mocha.primary
-                                artUrl: root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : ""
+                                artUrl: ArtCache.local(root.activePlayer && root.activePlayer.trackArtUrl ? String(root.activePlayer.trackArtUrl) : "")
                                 trackKey: root.mediaTrackKey
                                 playing: root.playing
                                 tracking: root.mediaTracking

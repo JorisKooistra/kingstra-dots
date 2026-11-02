@@ -67,7 +67,8 @@ Item {
     property real trackPosition: 0
     property bool draggingSeek: false
     readonly property string trackAlbum: hasPlayer ? String(player.trackAlbum || "") : ""
-    readonly property string artUrl: hasPlayer && player.trackArtUrl ? String(player.trackArtUrl) : ""
+    readonly property string rawArtUrl: hasPlayer && player.trackArtUrl ? String(player.trackArtUrl) : ""
+    readonly property string artUrl: ArtCache.local(rawArtUrl)
     readonly property real trackProgress: trackLength > 0 ? Math.max(0, Math.min(1, trackPosition / trackLength)) : 0
     readonly property bool canShuffle: hasPlayer && player.canControl && player.shuffleSupported
     readonly property bool canLoop: hasPlayer && player.canControl && player.loopSupported
@@ -648,7 +649,7 @@ Item {
                             tracking: root.hasPlayer && root.trackLength > 0
                             vinylMode: root.vinylMode
                             coverRadius: Math.min(root.itemRadius, 14)
-                            trackKey: root.trackAlbum !== "" ? root.trackAlbum : root.artUrl
+                            trackKey: root.trackAlbum !== "" ? root.trackAlbum : root.rawArtUrl
                             canSeek: root.canSeek
                             onSeekRequested: fraction => {
                                 let target = root.trackLength * fraction;

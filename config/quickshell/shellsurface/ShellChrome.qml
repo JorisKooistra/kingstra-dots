@@ -1684,7 +1684,7 @@ Item {
                 : (String(player.identity || "").trim() !== "" ? String(player.identity || "") : "Media"))
             : ""
         readonly property string artist: player ? String(player.trackArtist || "") : ""
-        readonly property string artUrl: player && player.trackArtUrl ? String(player.trackArtUrl) : ""
+        readonly property string artUrl: ArtCache.local(player && player.trackArtUrl ? String(player.trackArtUrl) : "")
         // HoverHandler i.p.v. de MouseArea: die ligt onder de knoppen, zodat
         // vorige/afspelen/volgende hun eigen klik krijgen en het paneel niet
         // openen. Op een aanraakscherm is er geen hover; de knoppen blijven

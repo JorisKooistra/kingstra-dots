@@ -563,7 +563,7 @@ Variants {
                     ? _activePlayer.trackTitle
                     : (String(_activePlayer.identity || "").trim() !== "" ? _activePlayer.identity : "Media");
                 return { "status": status, "title": title,
-                         "artUrl": _activePlayer.trackArtUrl || "", "timeStr": timeStr };
+                         "artUrl": ArtCache.local(_activePlayer.trackArtUrl || ""), "timeStr": timeStr };
             }
 
             Process {

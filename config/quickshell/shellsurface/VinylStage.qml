@@ -158,7 +158,7 @@ PanelWindow {
             title: win.p ? String(win.p.trackTitle || "") : ""
             artist: win.p ? String(win.p.trackArtist || "") : ""
             album: win.p ? String(win.p.trackAlbum || "") : ""
-            artUrl: win.p && win.p.trackArtUrl ? String(win.p.trackArtUrl) : ""
+            artUrl: ArtCache.local(win.p && win.p.trackArtUrl ? String(win.p.trackArtUrl) : "")
             trackKey: win.host.mediaTrackKey
             playing: win.host.playing
             tracking: win.host.mediaTracking
@@ -191,7 +191,7 @@ PanelWindow {
             title: win.p ? String(win.p.trackTitle || "") : ""
             artist: win.p ? String(win.p.trackArtist || "") : ""
             album: win.p ? String(win.p.trackAlbum || "") : ""
-            artUrl: win.p && win.p.trackArtUrl ? String(win.p.trackArtUrl) : ""
+            artUrl: ArtCache.local(win.p && win.p.trackArtUrl ? String(win.p.trackArtUrl) : "")
             trackKey: win.host.mediaTrackKey
             playing: win.host.playing
             tracking: win.host.mediaTracking
@@ -222,7 +222,7 @@ PanelWindow {
             title: win.p ? String(win.p.trackTitle || "") : ""
             artist: win.p ? String(win.p.trackArtist || "") : ""
             album: win.p ? String(win.p.trackAlbum || "") : ""
-            artUrl: win.p && win.p.trackArtUrl ? String(win.p.trackArtUrl) : ""
+            artUrl: ArtCache.local(win.p && win.p.trackArtUrl ? String(win.p.trackArtUrl) : "")
             trackKey: win.host.mediaTrackKey
             playing: win.host.playing
             tracking: win.host.mediaTracking
