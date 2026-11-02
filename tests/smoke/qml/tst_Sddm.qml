@@ -6,10 +6,14 @@ Item {
     width: 1920; height: 1080
     property var config: ({background: ""})
     property var keyboard: ({layouts: [{shortName: "US intl"}], currentLayout: 0})
-    property var userModel: ({count: 1, lastUser: "test-user",
-        index: function(i, c) { return i; }, data: function(i, role) { return "test-user"; }})
-    property var sessionModel: ({lastIndex: 0,
-        index: function(i, c) { return i; }, data: function(i, role) { return "Hyprland"; }})
+    property ListModel userModel: ListModel {
+        property string lastUser: "test-user"
+        ListElement { name: "test-user"; realName: ""; icon: "" }
+    }
+    property ListModel sessionModel: ListModel {
+        property int lastIndex: 0
+        ListElement { name: "Hyprland" }
+    }
     property var sddm: mockSddm
     QtObject {
         id: mockSddm
@@ -24,7 +28,7 @@ Item {
         name: "SddmInput"
         when: windowShown
         function test_first_key_reaches_password() {
-            wait(100);
+            tryCompare(greeter, "introDone", true, 3000);
             verify(!greeter.inputActive);
             keyClick(Qt.Key_A);
             verify(greeter.inputActive);

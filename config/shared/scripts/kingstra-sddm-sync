@@ -31,6 +31,56 @@ def atomic_copy(source, destination):
         staged.unlink(missing_ok=True)
 
 
+# Theme-bestanden die met de repo meegaan; de rest (Colors, Style, wallpaper,
+# displays, theme.conf) schrijft sync() per gebruiker.
+THEME_FILES = ("Main.qml", "qmldir", "metadata.desktop")
+
+# Zelfde tempo-rekensom als ThemeConfig.motionDurationScale.
+MOTION = {"firm": 0.78, "gentle": 1.08, "minimal": 0.60, "snappy": 0.88, "calm": 1.15}
+
+
+def number(value, fallback):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def style_qml(theme):
+    """Style.qml voor de greeter uit ~/.config/quickshell/theme.json."""
+    profile = theme.get("style_profile") or {}
+    material = theme.get("material") or {}
+    speed = min(3.0, max(0.25, number(theme.get("animation_speed"), 1.0) or 1.0))
+    motion = MOTION.get(str(profile.get("motion", "gentle")).lower(), 1.0)
+    ui_font = str(theme.get("ui_font") or "Inter")
+    values = {
+        "theme": ("string", str(theme.get("theme") or "organic")),
+        "name": ("string", str(theme.get("name") or theme.get("theme") or "Kingstra")),
+        "family": ("string", str(profile.get("family") or theme.get("theme") or "organic")),
+        "light": ("bool", str(theme.get("mode", "dark")).lower() == "light"),
+        "uiFont": ("string", ui_font),
+        "monoFont": ("string", str(theme.get("mono_font") or "JetBrainsMono Nerd Font")),
+        "displayFont": ("string", str(theme.get("display_font") or ui_font)),
+        "motionScale": ("real", round(motion / speed, 3)),
+        "glow": ("real", min(1.0, max(0.0, number(material.get("glow_intensity"), 0.0)))),
+        "texture": ("string", str(material.get("texture") or "none")),
+        "textureOpacity": ("real", min(0.3, max(0.0, number(material.get("overlay_opacity"), 0.0)))),
+    }
+    lines = ["// Automatisch gegenereerd door kingstra-sddm-sync uit het actieve thema.",
+             "pragma Singleton", "import QtQuick", "", "QtObject {"]
+    for key, (kind, value) in values.items():
+        literal = json.dumps(value) if kind == "string" else ("true" if value is True else "false" if value is False else repr(float(value)))
+        lines.append(f"    readonly property {kind} {key}: {literal}")
+    return "\n".join(lines + ["}", ""])
+
+
+def write_text(destination, text):
+    with tempfile.NamedTemporaryFile(mode="w", dir=destination.parent, delete=False) as tmp:
+        tmp.write(text)
+    Path(tmp.name).chmod(0o644)
+    Path(tmp.name).replace(destination)
+
+
 def hypr_json(command):
     try:
         result = subprocess.run(["hyprctl", command, "-j"], capture_output=True,
@@ -46,6 +96,22 @@ def sync(destination, wallpaper=None):
     palette = config / "matugen/generated/sddm-colors.qml"
     if palette.is_file():
         atomic_copy(palette, destination / "Colors.qml")
+    # Het ontwerp zelf meenemen, zodat een update van de repo ook zonder
+    # herinstallatie op het inlogscherm landt.
+    for name in THEME_FILES:
+        source = SOURCE / "themes/kingstra" / name
+        target = destination / name
+        if source.is_file() and (not target.is_file() or target.read_bytes() != source.read_bytes()):
+            atomic_copy(source, target)
+    theme_json = config / "quickshell/theme.json"
+    try:
+        theme = json.loads(theme_json.read_text())
+    except (OSError, ValueError):
+        theme = None
+    if isinstance(theme, dict):
+        write_text(destination / "Style.qml", style_qml(theme))
+    elif not (destination / "Style.qml").is_file():
+        atomic_copy(SOURCE / "themes/kingstra/Style.qml", destination / "Style.qml")
     if not wallpaper:
         for state in (cache / "skwd-wall/current_wallpaper", cache / "kingstra/last-wallpaper"):
             if state.is_file() and Path(state.read_text().strip()).is_file():

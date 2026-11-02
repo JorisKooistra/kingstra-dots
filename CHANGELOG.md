@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Inlogscherm in het huidige thema
+- Het SDDM-inlogscherm is opnieuw opgebouwd als spiegel van het vergrendelscherm: intro met een bol en ringen die openspringen, dezelfde klok, concentrische ringen die rood kleuren bij een fout, avatar links met naam, statusbol (vingerafdruk/slot) en een wachtwoordpil met bolletjes, en onderaan dezelfde glazen pillen. Alles schaalt mee met de schermbreedte zoals `Scaler.qml`. Na een geslaagde login vervaagt het scherm naar de basiskleur.
+- Thema volgt de shell: `kingstra-sddm-sync` schrijft nu ook `Style.qml` uit `~/.config/quickshell/theme.json` (lettertype zoals `ThemeConfig.textFont`, animatietempo, licht/donker, gloed, Neon-scanlijnen). Paper krijgt een lichte waas in plaats van een zwarte.
+- Kleuren gebruiken dezelfde rollen als het vergrendelscherm (`surface_container*`, `primary`); een oud `Colors.qml` valt netjes terug.
+- Sessie-pil wisselt tussen sessies, een pijl wisselt van gebruiker (bij meer dan één), toetsenbordpil toont CAPS, en een slaapstand-pil als SDDM die aanbiedt. Gebruikers en sessies worden via rolnamen gelezen in plaats van rolnummers (de sessienaam viel daardoor altijd terug op ‘Hyprland’).
+- Uitrol: de sync kopieert bij elke thema- of wallpaperwissel ook het ontwerp (`Main.qml`, `qmldir`) naar `/usr/share/sddm/themes/kingstra`; de installer/updater (fase 10) doet dat met back-up.
+- Nieuwe smoke-test `tests/smoke/sddm-greeter.sh` laadt het inlogscherm met nep-SDDM-objecten (PySide6) en controleert wachtwoord, vingerafdruk, fout, sessiekeuze, gebruikerswissel en Esc; draait ook de bestaande `sddm-sync.py`.
 ### Instellingen overzichtelijker
 - De zijbalk van Instellingen heeft zes tabbladen in plaats van tien: Overzicht, Bediening, Uiterlijk, Apparaten (Beeldschermen, Geluid, Invoer, Netwerk), Sneltoetsen en Systeem (Sessie, Tijd & weer, Updates, Onderhoud, Over). Het oude Geavanceerd heet nu Onderhoud.
 - Technische keuzes staan per pagina in een uitklapbaar blok (nieuw `settings/AdvancedSection.qml`, rond met draaiende pijl en zacht openschuiven), zodat de pagina eerst de gewone keuzes laat zien:

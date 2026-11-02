@@ -61,6 +61,35 @@ class SddmTests(unittest.TestCase):
                 sync.sync(theme)
                 self.assertEqual((theme / "background.img").read_bytes(), b"second")
 
+    def test_theme_style_and_design_follow_the_session(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            theme = base / "theme"; theme.mkdir()
+            (theme / "Main.qml").write_text("oud ontwerp")
+            config = base / "config/quickshell"; config.mkdir(parents=True)
+            (config / "theme.json").write_text(json.dumps({
+                "theme": "paper", "name": "Paper \"x\"", "mode": "light", "animation_speed": 0.68,
+                "ui_font": "IBM Plex Sans", "mono_font": "IBM Plex Mono",
+                "material": {"texture": "paper-fiber", "overlay_opacity": 0.08, "glow_intensity": 0},
+                "style_profile": {"family": "paper", "motion": "calm"}}))
+            with patch.dict(os.environ, {"XDG_CONFIG_HOME": str(base / "config"), "XDG_CACHE_HOME": str(base / "cache")}), patch.object(sync, "hypr_json", return_value=None):
+                sync.sync(theme)
+            style = (theme / "Style.qml").read_text()
+            self.assertIn('readonly property bool light: true', style)
+            self.assertIn('readonly property string monoFont: "IBM Plex Mono"', style)
+            self.assertIn('readonly property string name: "Paper \\"x\\""', style)
+            self.assertIn('readonly property real motionScale: 1.691', style)
+            self.assertEqual((theme / "Main.qml").read_text(), (sync.SOURCE / "themes/kingstra/Main.qml").read_text())
+            self.assertIn("singleton Style Style.qml", (theme / "qmldir").read_text())
+
+    def test_missing_theme_json_keeps_fallback_style(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            theme = base / "theme"; theme.mkdir()
+            with patch.dict(os.environ, {"XDG_CONFIG_HOME": str(base / "config"), "XDG_CACHE_HOME": str(base / "cache")}), patch.object(sync, "hypr_json", return_value=None):
+                sync.sync(theme)
+            self.assertIn("pragma Singleton", (theme / "Style.qml").read_text())
+
     def test_serials_map_different_connector_names_and_keep_order(self):
         profile = {"monitors": [
             {"name": "DP-1", "serial": "right ", "width": 1920, "height": 1080, "x": 3840, "y": 0},
