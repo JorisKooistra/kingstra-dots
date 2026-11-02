@@ -95,7 +95,7 @@ class SddmTests(unittest.TestCase):
             {"name": "DP-1", "serial": "right ", "width": 1920, "height": 1080, "x": 3840, "y": 0},
             {"name": "DP-3", "serial": "middle", "width": 1920, "height": 1080, "x": 1920, "y": 0, "focused": True},
             {"name": "DP-4", "serial": "left", "width": 1920, "height": 1080, "x": 0, "y": 0}]}
-        command = xsetup.display_command(profile, {"DP-0": "right", "DP-2": "middle", "DP-5": "left"})
+        command = xsetup.display_command(profile, {"DP-0": ["right"], "DP-2": ["middle"], "DP-5": ["left"]})
         groups = " ".join(command).split("--output ")[1:]
         self.assertIn("DP-0 --mode 1920x1080 --pos 3840x0", groups[0])
         self.assertIn("DP-2 --mode 1920x1080 --pos 1920x0", groups[1])
@@ -104,7 +104,32 @@ class SddmTests(unittest.TestCase):
 
     def test_disconnected_monitors_are_skipped(self):
         self.assertEqual(xsetup.display_command({"monitors": [
-            {"name": "unplugged", "serial": "missing"}]}, {"eDP-1": ""}), ["/usr/bin/xrandr"])
+            {"name": "unplugged", "serial": "missing"}, {"name": "DP-1", "serial": "a"}]}, {"DP-0": ["b"], "DP-2": ["c"]}), ["/usr/bin/xrandr"])
+
+    def test_without_serials_nvidia_names_pair_by_port_order(self):
+        # Zelfde naam DP-4 bestaat aan beide kanten maar is een ander scherm.
+        profile = {"monitors": [
+            {"name": "DP-1", "serial": "", "width": 1920, "height": 1080, "x": 3840, "y": 0},
+            {"name": "DP-3", "serial": "", "width": 1920, "height": 1080, "x": 1920, "y": 0},
+            {"name": "DP-4", "serial": "", "width": 1920, "height": 1080, "x": 0, "y": 0}]}
+        command = " ".join(xsetup.display_command(profile, {"DP-0": [], "DP-2": [], "DP-4": []}))
+        self.assertIn("DP-0 --mode 1920x1080 --pos 3840x0", command)
+        self.assertIn("DP-2 --mode 1920x1080 --pos 1920x0", command)
+        self.assertIn("DP-4 --mode 1920x1080 --pos 0x0", command)
+
+    def test_header_serial_matches_hyprland_hex_format(self):
+        edid = bytearray(128)
+        edid[12:16] = (0x01020304).to_bytes(4, "little")
+        lines = ["DP-2 connected 1920x1080+0+0", "\tEDID:"]
+        lines += ["\t\t" + edid.hex()[i:i+32] for i in range(0, 256, 32)]
+        outputs = xsetup.outputs_from_xrandr("\n".join(lines))
+        self.assertEqual(outputs, {"DP-2": ["0x01020304"]})
+        profile = {"monitors": [
+            {"name": "DP-3", "serial": "0x01020304", "width": 1920, "height": 1080, "x": 1920, "y": 0},
+            {"name": "HDMI-A-1", "serial": "", "width": 1920, "height": 1080, "x": 0, "y": 0}]}
+        command = " ".join(xsetup.display_command(profile, {"DP-2": ["0x01020304"], "HDMI-0": []}))
+        self.assertIn("DP-2 --mode 1920x1080 --pos 1920x0", command)
+        self.assertIn("HDMI-0 --mode 1920x1080 --pos 0x0", command)
 
     def test_edid_serials_are_decoded(self):
         edid = bytearray(128)
@@ -112,7 +137,7 @@ class SddmTests(unittest.TestCase):
         lines = ["DP-5 connected primary 1920x1080+0+0", "\tEDID:"]
         lines += ["\t\t" + edid.hex()[i:i+32] for i in range(0, 256, 32)]
         lines += ["DP-0 disconnected"]
-        self.assertEqual(xsetup.outputs_from_xrandr("\n".join(lines)), {"DP-5": "407TOUH03166"})
+        self.assertEqual(xsetup.outputs_from_xrandr("\n".join(lines)), {"DP-5": ["407TOUH03166"]})
 
 
 if __name__ == "__main__":
