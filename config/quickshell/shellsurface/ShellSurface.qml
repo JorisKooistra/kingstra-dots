@@ -49,6 +49,68 @@ Scope {
 
                 MatugenColors { id: mocha }
 
+                // ── Intro ────────────────────────────────────────────────
+                // Hyprland liet deze schermvullende laag met een slide +
+                // overshoot van boven invliegen. Die laaganimatie staat nu uit
+                // (rules.lua); de shell komt zelf binnen: het kader zakt vanaf
+                // net buiten de schermranden rustig op zijn plek terwijl het
+                // opkomt, zonder doorschieten. Bij een themawissel speelt een
+                // zachte versie, zodat de nieuwe vorm "neerstrijkt".
+                // Alleen opacity/scale van het contentItem: vormen, blobs en
+                // alle bestaande animaties blijven ongemoeid.
+                property real introOpacity: 0
+                property real introScale: 1.04
+                property bool introSettled: false
+
+                function playIntro(soft) {
+                    introAnim.stop();
+                    introOpacity = soft ? 0.55 : 0;
+                    introScale = soft ? 1.012 : 1.04;
+                    introAnim.soft = soft;
+                    introAnim.start();
+                }
+
+                Binding {
+                    target: surfaceWindow.contentItem
+                    property: "opacity"
+                    value: surfaceWindow.introOpacity
+                }
+                Binding {
+                    target: surfaceWindow.contentItem
+                    property: "scale"
+                    value: surfaceWindow.introScale
+                }
+
+                ParallelAnimation {
+                    id: introAnim
+                    property bool soft: false
+                    NumberAnimation {
+                        target: surfaceWindow; property: "introOpacity"; to: 1
+                        duration: ThemeConfig.duration(introAnim.soft ? 380 : 560)
+                        easing.type: Easing.OutCubic
+                    }
+                    NumberAnimation {
+                        target: surfaceWindow; property: "introScale"; to: 1
+                        duration: ThemeConfig.duration(introAnim.soft ? 520 : 860)
+                        easing.type: Easing.OutQuint
+                    }
+                    onFinished: {
+                        // Altijd exact eindigen, ook als duration() 0 geeft.
+                        surfaceWindow.introOpacity = 1;
+                        surfaceWindow.introScale = 1;
+                        surfaceWindow.introSettled = true;
+                    }
+                }
+
+                Component.onCompleted: playIntro(false)
+
+                Connections {
+                    target: ThemeConfig
+                    function onThemeChanged() {
+                        if (surfaceWindow.introSettled) surfaceWindow.playIntro(true);
+                    }
+                }
+
                 // Drie lagen, in deze volgorde:
                 //   z 0  — de omlijstings-blob, die naar binnen uitvloeit
                 //   z 30 — de panelhost (paneelblob + inhoud)

@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Shell-intro
+- De shell vliegt niet meer met een overshoot van boven het scherm in. Oorzaak: de Hyprland-regel die laaganimaties voor Quickshell uitzet matchte alleen de naam `quickshell`, terwijl de shell-lagen `quickshell:kingstra-…` heten. Die lagen (en de bureaubladwidgets) hebben nu `no_anim`.
+- In plaats daarvan komt de shell zelf binnen: het kader strijkt vanaf net buiten de schermranden op zijn plek neer terwijl het opkomt (schaal 1,04 → 1, zacht uitlopend, geen doorschieten). Bij een themawissel speelt een korte, zachte versie. Klok en mediakaart op het bureaublad komen daarna rustig op. De duur volgt de animatiesnelheid van het thema.
+
 ### Bestandsbeheer in thema
 - Fix: Nautilus en andere GTK-apps kregen nooit de matugen-kleuren. Matugen schreef `~/.config/gtk-{3,4}.0/colors.css`, maar er was geen `gtk.css` die het laadde, en `adw-gtk-theme` (het ingestelde GTK3-thema `adw-gtk3-dark`) werd niet geïnstalleerd. Installer-fase 08 linkt nu `config/gtk-{3,4}.0/gtk.css` (importeert `colors.css`) en installeert `adw-gtk-theme`.
 - Installer-fase 11 maakt Nautilus de standaard voor mappen (`xdg-mime`) en installeert `ffmpegthumbnailer` voor video-miniaturen.

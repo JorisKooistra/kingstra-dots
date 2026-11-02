@@ -285,6 +285,25 @@ Scope {
 
                 MatugenColors { id: mocha }
 
+                // Komt na het shellkader zacht op in plaats van met Hyprlands
+                // laag-slide mee te vliegen (die staat uit in rules.lua).
+                property real introOpacity: 0
+                Binding {
+                    target: win.contentItem
+                    property: "opacity"
+                    value: win.introOpacity
+                }
+                SequentialAnimation {
+                    running: true
+                    PauseAnimation { duration: ThemeConfig.duration(220) }
+                    NumberAnimation {
+                        target: win; property: "introOpacity"; to: 1
+                        duration: ThemeConfig.duration(620)
+                        easing.type: Easing.OutCubic
+                    }
+                    ScriptAction { script: win.introOpacity = 1 }
+                }
+
                 readonly property var nl: Qt.locale("nl_NL")
                 readonly property int margin: 96
 

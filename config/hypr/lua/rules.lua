@@ -105,5 +105,10 @@ layer("skwd-paper", "skwd-paper", { no_anim = true })
 layer("skwd-paper-transition", "skwd-paper-transition", { no_anim = true })
 layer("wallpaper-selector", "wallpaper-selector-parallel", { no_anim = true })
 layer("quickshell", "quickshell", { no_anim = true })
+-- De shell-lagen heten "quickshell:kingstra-…" en vielen dus niet onder de
+-- regel hierboven: Hyprland liet het hele scherm-kader met slide + overshoot
+-- van boven invliegen. De shell en de bureaubladwidgets doen hun intro nu zelf.
+layer("kingstra-shell", "quickshell:kingstra-shell-.*", { no_anim = true })
+layer("kingstra-desktop-widgets", "quickshell:kingstra-desktop-widgets", { no_anim = true })
 -- De schermvullende draaitafel animeert zelf vanuit de mediakaart.
 layer("kingstra-vinyl-stage", "quickshell:kingstra-vinyl-stage", { no_anim = true })
