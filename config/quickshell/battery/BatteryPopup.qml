@@ -1,1137 +1,857 @@
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
 import Quickshell.Services.Pipewire
 import "../"
+import "../shellsurface"
 
+// Batterij & energie: in dezelfde vormtaal als Snelle instellingen en
+// Geluid & media (afgeronde tegels, Matugen-themakleuren, ThemeConfig-
+// animaties). Vervangt de oude batterijkern met ring en golven; alle
+// functies daarvan zitten er nog in:
+//  - batterijpercentage en status (opladen, ontladen, vol), met
+//    waarschuwingspuls onder 15%;
+//  - helderheid en volume (klik op het luidsprekertje dempt);
+//  - energieprofiel (Prestaties, Gebalanceerd, Besparing) + idle-profiel;
+//  - vergrendelen, slaapstand, herstarten en afsluiten met ingedrukt
+//    houden (kort op Afsluiten = slaapstand, net als voorheen);
+//  - uptime, gebruikersnaam en uitloggen.
+// Nieuw: resterende tijd, verbruik in watt en batterijconditie als UPower
+// die meldt, en een terugknop naar Snelle instellingen.
+// De vorm (blob, hoeken, groei-animatie) komt volledig uit PanelHost.
 Item {
-    id: window
+    id: root
 
-    // --- Responsive Scaling Logic ---
-    Scaler {
-        id: scaler
-        // Uses the physical screen width so the popup scales synchronously with the TopBar
-        currentWidth: Screen.width
-    }
-    
-    // Helper function scoped to the root Item for easy access in deeply nested elements and Canvases
-    function s(val) { 
-        return scaler.s(val); 
-    }
+    MatugenColors { id: mocha }
+    // Voor PanelSlider: `mocha: mocha` zou op de eigen property kunnen binden.
+    readonly property var mochaPalette: mocha
 
-    // -------------------------------------------------------------------------
-    // COLORS (Dynamic Matugen Palette)
-    // -------------------------------------------------------------------------
-    MatugenColors { id: _theme }
-    readonly property color base: _theme.base
-    readonly property color mantle: _theme.mantle
-    readonly property color crust: _theme.crust
-    readonly property color text: _theme.text
-    readonly property color subtext0: _theme.subtext0
-    readonly property color overlay0: _theme.overlay0
-    readonly property color overlay1: _theme.overlay1
-    readonly property color surface0: _theme.surface0
-    readonly property color surface1: _theme.surface1
-    readonly property color surface2: _theme.surface2
-    
-    readonly property color mauve: _theme.mauve
-    readonly property color pink: _theme.pink
-    readonly property color red: _theme.red
-    readonly property color maroon: _theme.maroon
-    readonly property color peach: _theme.peach
-    readonly property color yellow: _theme.yellow
-    readonly property color green: _theme.green
-    readonly property color teal: _theme.teal
-    readonly property color sapphire: _theme.sapphire
-    readonly property color blue: _theme.blue
-    readonly property int themedRadius: window.s(Math.max(14, ThemeConfig.styleWidgetRadius))
-    readonly property int themedInnerRadius: window.s(Math.max(10, ThemeConfig.styleWidgetRadius - 4))
-    readonly property string uiFontFamily: ThemeConfig.uiFont
-    readonly property string monoFontFamily: ThemeConfig.monoFont
-    readonly property string displayFontFamily: ThemeConfig.displayFont
-    readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
-    readonly property int themedFontWeight: ThemeConfig.fontWeight
-    readonly property color popupFill: _theme.shellContentFill
-    readonly property color glassFill: _theme.shellRaisedFill
+    signal panelSwitchRequested(string entryId)
 
-    // -------------------------------------------------------------------------
-    // STATE & DATA
-    // -------------------------------------------------------------------------
+    readonly property int pad: 16
+    readonly property int itemRadius: Math.max(10, Math.min(16, ThemeConfig.styleWidgetRadius))
+    readonly property bool matteStyle: ThemeConfig.styleFamily === "matte"
+    readonly property int preferredPanelWidth: 420
+    readonly property int preferredPanelHeight: Math.ceil(content.implicitHeight + pad * 2)
 
-    // Battery — UPower (event-driven)
-    readonly property bool hasBattery: UPower.displayDevice !== null && UPower.displayDevice.ready
-        && UPower.displayDevice.state !== UPowerDeviceState.Unknown
-    readonly property int batCapacity: hasBattery ? Math.round(UPower.displayDevice.percentage * 100) : 0
+    // ------------------------------------------------------------------------
+    // Batterij (UPower, event-driven)
+    // ------------------------------------------------------------------------
+    readonly property var device: UPower.displayDevice
+    readonly property bool hasBattery: device !== null && device.ready
+        && device.state !== UPowerDeviceState.Unknown
+    readonly property int batCapacity: hasBattery ? Math.round(device.percentage * 100) : 0
     readonly property bool isCharging: hasBattery
-        ? (UPower.displayDevice.state === UPowerDeviceState.Charging
-           || UPower.displayDevice.state === UPowerDeviceState.FullyCharged
-           || UPower.displayDevice.state === UPowerDeviceState.PendingCharge)
-        : false
-    readonly property string batStatus: hasBattery
-        ? (isCharging ? "Charging" : UPowerDeviceState.toString(UPower.displayDevice.state))
-        : "…"
+        && (device.state === UPowerDeviceState.Charging
+            || device.state === UPowerDeviceState.FullyCharged
+            || device.state === UPowerDeviceState.PendingCharge)
+    readonly property bool isFull: hasBattery && device.state === UPowerDeviceState.FullyCharged
+    readonly property bool isDanger: hasBattery && !isCharging && batCapacity < 15
 
-    // Power profile — UPower PowerProfiles (event-driven)
+    readonly property color batColor: {
+        if (!hasBattery) return mocha.accent1;
+        if (isCharging) return mocha.green;
+        if (batCapacity >= 70) return mocha.accent1;
+        if (batCapacity >= 30) return mocha.yellow;
+        return mocha.red;
+    }
+
+    readonly property string batIcon: {
+        if (!hasBattery) return "󰚥";
+        if (isCharging) return "󰂄";
+        let steps = ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"];
+        return steps[Math.max(0, Math.min(10, Math.round(batCapacity / 10)))];
+    }
+
+    function spanText(seconds) {
+        let h = Math.floor(seconds / 3600);
+        let m = Math.floor((seconds % 3600) / 60);
+        return h > 0 ? h + "u " + (m < 10 ? "0" : "") + m + "m" : m + "m";
+    }
+
+    readonly property string statusText: {
+        if (!hasBattery) return "Netstroom";
+        if (isFull) return "Volledig opgeladen";
+        if (isCharging) {
+            let t = Number(device.timeToFull || 0);
+            return t > 0 ? "Opladen · vol over " + spanText(t) : "Opladen";
+        }
+        let t = Number(device.timeToEmpty || 0);
+        return t > 0 ? "Op batterij · nog " + spanText(t) : "Op batterij";
+    }
+
+    // Niet elke UPower-versie of batterij meldt dit; alleen tonen wat er is.
+    readonly property real watts: hasBattery && device.changeRate !== undefined ? Math.abs(Number(device.changeRate) || 0) : 0
+    readonly property real health: hasBattery && device.healthPercentage !== undefined
+        && (device.healthSupported === undefined || device.healthSupported)
+        ? Number(device.healthPercentage) || 0 : 0
+
+    property real animCapacity: 0
+    Behavior on animCapacity {
+        NumberAnimation { duration: ThemeConfig.duration(1200); easing.type: Easing.OutQuint }
+    }
+    onBatCapacityChanged: animCapacity = batCapacity
+    Component.onCompleted: animCapacity = batCapacity
+
+    // ------------------------------------------------------------------------
+    // Energieprofiel (UPower PowerProfiles)
+    // ------------------------------------------------------------------------
     readonly property string powerProfile: {
-        var p = PowerProfiles.profile;
+        let p = PowerProfiles.profile;
         if (p === PowerProfile.Performance) return "performance";
-        if (p === PowerProfile.PowerSaver)  return "power-saver";
+        if (p === PowerProfile.PowerSaver) return "power-saver";
         return "balanced";
     }
 
-    // Volume — Pipewire (event-driven)
-    readonly property var _sink: Pipewire.defaultAudioSink
-    readonly property real sysVolume: (_sink && _sink.audio && _sink.audio.ready) ? Math.round(_sink.audio.volume * 100) : -1
-    readonly property bool sysMuted: (_sink && _sink.audio && _sink.audio.ready) ? _sink.audio.muted : false
+    function profileColor(name) {
+        if (name === "performance") return mocha.accent2;
+        if (name === "power-saver") return mocha.green;
+        return mocha.accent1;
+    }
 
-    // Brightness — still via brightnessctl (no native module)
-    property real sysBrightness: 0
-    property bool isDraggingBri: false
-    Timer { id: briSyncDelay; interval: 800; onTriggered: window.isDraggingBri = false; triggeredOnStart: true; }
+    function setProfile(name) {
+        if (name === "performance") PowerProfiles.profile = PowerProfile.Performance;
+        else if (name === "power-saver") PowerProfiles.profile = PowerProfile.PowerSaver;
+        else PowerProfiles.profile = PowerProfile.Balanced;
+        Quickshell.execDetached(["bash", "-lc", "sleep 0.4; \"$HOME/.config/shared/scripts/kingstra-idle-apply\" '" + name + "' >/dev/null 2>&1 || true"]);
+    }
 
-    // Uptime + username — still via /proc/uptime (no native module)
+    // ------------------------------------------------------------------------
+    // Volume (Pipewire) en helderheid (brightnessctl)
+    // ------------------------------------------------------------------------
+    readonly property var sink: Pipewire.defaultAudioSink
+    readonly property bool volumeReady: !!sink && !!sink.audio && sink.audio.ready !== false
+    readonly property int sysVolume: volumeReady ? Math.round(sink.audio.volume * 100) : -1
+    readonly property bool sysMuted: volumeReady ? sink.audio.muted : false
+
+    Timer {
+        id: volumeThrottle
+        interval: 50
+        property real targetVol: -1
+        onTriggered: {
+            if (targetVol >= 0 && root.volumeReady) {
+                root.sink.audio.volume = targetVol;
+                if (targetVol > 0 && root.sink.audio.muted) root.sink.audio.muted = false;
+            }
+            targetVol = -1;
+        }
+    }
+
+    property int sysBrightness: -1
+    property bool draggingBrightness: false
+
+    Timer {
+        id: brightnessThrottle
+        interval: 50
+        property int targetPct: -1
+        onTriggered: {
+            if (targetPct >= 0)
+                Quickshell.execDetached(["brightnessctl", "-q", "set", targetPct + "%"]);
+            targetPct = -1;
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Uptime, gebruikersnaam en helderheid
+    // ------------------------------------------------------------------------
     property int upHours: 0
     property int upMins: 0
     property string currentUserName: ""
 
-    // Unified hue for Battery
-    readonly property color batColorStart: {
-        if (!hasBattery)          return window.blue;
-        if (isCharging)           return window.green;
-        if (batCapacity >= 70)    return window.blue;
-        if (batCapacity >= 30)    return window.yellow;
-        return window.red;
-    }
-    readonly property color batColorEnd: Qt.lighter(batColorStart, 1.15)
-
-    // Unified hue for Performance Profile
-    readonly property color profileStart: {
-        if (powerProfile === "performance") return window.red;
-        if (powerProfile === "power-saver") return window.green;
-        return window.blue;
-    }
-    readonly property color profileEnd: Qt.lighter(profileStart, 1.15)
-
-    // Ambient Blobs — zonder batterij neutrale thema-kleuren, anders op batterijstatus
-    readonly property color ambientPrimary: !hasBattery ? window.mauve : window.batColorStart
-    readonly property color ambientSecondary: {
-        if (!hasBattery) return window.sapphire;
-        if (isCharging) return window.sapphire;
-        if (batCapacity >= 70) return window.mauve;
-        if (batCapacity >= 30) return window.peach;
-        return window.maroon;
-    }
-
-    property real animCapacity: 0
-    Behavior on animCapacity { NumberAnimation { duration: ThemeConfig.duration(1200); easing.type: Easing.OutQuint } }
-    onBatCapacityChanged: animCapacity = batCapacity
-    Component.onCompleted: animCapacity = batCapacity
-
-    onAnimCapacityChanged: batCanvas.requestPaint()
-    onBatColorStartChanged: batCanvas.requestPaint()
-
-    // Uptime + username + brightness poller (battery/volume/power-profile now native)
     Process {
         id: sysPoller
         command: ["bash", "-c",
-            "echo $USER; " +
-            "awk '{print int($1/3600)\"h \"int(($1%3600)/60)\"m\"}' /proc/uptime 2>/dev/null || echo '0h 0m'; " +
-            "brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' || echo '0'"
+            "echo \"$USER\"; " +
+            "awk '{print int($1/3600)\" \"int(($1%3600)/60)}' /proc/uptime 2>/dev/null || echo '0 0'; " +
+            "if command -v brightnessctl >/dev/null 2>&1; then brightnessctl -m 2>/dev/null | awk -F, 'NR==1{gsub(/%/,\"\",$4); print $4}'; else echo -1; fi"
         ]
-        running: true
         stdout: StdioCollector {
             onStreamFinished: {
                 let lines = this.text.trim().split("\n");
-                if (lines.length >= 3) {
-                    window.currentUserName = lines[0];
-                    let upParts = lines[1].split("h ");
-                    if (upParts.length === 2) {
-                        window.upHours = parseInt(upParts[0]) || 0;
-                        window.upMins = parseInt(upParts[1].replace("m", "")) || 0;
-                    }
-                    if (!window.isDraggingBri) {
-                        window.sysBrightness = parseInt(lines[2]) || 0;
-                    }
+                if (lines.length < 2) return;
+                root.currentUserName = lines[0];
+                let up = lines[1].split(" ");
+                root.upHours = parseInt(up[0]) || 0;
+                root.upMins = parseInt(up[1]) || 0;
+                if (!root.draggingBrightness && lines.length >= 3) {
+                    let b = parseInt(lines[2]);
+                    root.sysBrightness = isNaN(b) ? -1 : b;
                 }
             }
         }
     }
 
     Timer {
-        interval: 5000; running: true; repeat: true; triggeredOnStart: true;
-        onTriggered: sysPoller.running = true
-    }
-
-    property real globalOrbitAngle: 0
-    NumberAnimation on globalOrbitAngle {
-        from: 0; to: Math.PI * 2; duration: 90000; loops: Animation.Infinite; running: true
-    }
-
-    // --- ENHANCED STARTUP ANIMATION STATES ---
-    property real introMain: 0
-    property real introTop: 0
-    property real introCore: 0
-    property real introSliders: 0
-    property real introActions: 0
-    property real introProfiles: 0
-
-    // De golf blijft, maar is ingekort: het paneel zelf staat na ~260 ms,
-    // en een inhoud die daarna nog anderhalve seconde naloopt voelt traag.
-    // Alles loopt via ThemeConfig.duration(), zodat animatiesnelheid en het
-    // bewegingsprofiel van het thema ook hier gelden.
-    ParallelAnimation {
+        interval: 5000
         running: true
-
-        // Base window fades, scales, and lifts
-        NumberAnimation { target: window; property: "introMain"; from: 0; to: 1.0; duration: ThemeConfig.duration(320); easing.type: Easing.OutQuart }
-
-        // Top bar drops in
-        SequentialAnimation {
-            PauseAnimation { duration: ThemeConfig.duration(30) }
-            NumberAnimation { target: window; property: "introTop"; from: 0; to: 1.0; duration: ThemeConfig.duration(320); easing.type: Easing.OutQuint }
-        }
-
-        // Central core pops out and breathes
-        SequentialAnimation {
-            PauseAnimation { duration: ThemeConfig.duration(70) }
-            NumberAnimation { target: window; property: "introCore"; from: 0; to: 1.0; duration: ThemeConfig.duration(360); easing.type: Easing.OutQuint }
-        }
-
-        // Hardware sliders slide up
-        SequentialAnimation {
-            PauseAnimation { duration: ThemeConfig.duration(100) }
-            NumberAnimation { target: window; property: "introSliders"; from: 0; to: 1.0; duration: ThemeConfig.duration(320); easing.type: Easing.OutQuart }
-        }
-
-        // Actions waterfall
-        SequentialAnimation {
-            PauseAnimation { duration: ThemeConfig.duration(130) }
-            NumberAnimation { target: window; property: "introActions"; from: 0; to: 1.0; duration: ThemeConfig.duration(320); easing.type: Easing.OutExpo }
-        }
-
-        // Power profiles finish the wave
-        SequentialAnimation {
-            PauseAnimation { duration: ThemeConfig.duration(160) }
-            NumberAnimation { target: window; property: "introProfiles"; from: 0; to: 1.0; duration: ThemeConfig.duration(340); easing.type: Easing.OutQuint }
-        }
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: if (!sysPoller.running) sysPoller.running = true
     }
 
-    // Clean, unified exit animation for when an action is clicked
-    ParallelAnimation {
-        id: exitAnim
-        NumberAnimation { target: window; property: "introMain"; to: 0; duration: ThemeConfig.duration(240); easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introTop"; to: 0; duration: ThemeConfig.duration(200); easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introCore"; to: 0; duration: ThemeConfig.duration(220); easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introSliders"; to: 0; duration: ThemeConfig.duration(180); easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introActions"; to: 0; duration: ThemeConfig.duration(160); easing.type: Easing.InQuart }
-        NumberAnimation { target: window; property: "introProfiles"; to: 0; duration: ThemeConfig.duration(140); easing.type: Easing.InQuart }
+    function closeAndRun(cmd) {
+        Quickshell.execDetached(["sh", "-c", cmd]);
+        Quickshell.execDetached(["bash", "-c", "echo close > /tmp/qs_widget_state"]);
+        root.panelSwitchRequested("");
     }
 
-    // -------------------------------------------------------------------------
-    // UI LAYOUT
-    // -------------------------------------------------------------------------
-    Item {
-        anchors.fill: parent
-        scale: 0.92 + (0.08 * introMain)
-        opacity: introMain
-        transform: Translate { y: window.s(15) * (1 - introMain) }
+    // ------------------------------------------------------------------------
+    // Weergave
+    // ------------------------------------------------------------------------
+    ColumnLayout {
+        id: content
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: root.pad
+        spacing: 12
 
-        // Outer Border
-        Rectangle {
-            anchors.fill: parent
-            radius: window.themedRadius
-            color: "transparent"
-            border.width: 0
-            clip: true
+        // --- Kop -------------------------------------------------------------
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
 
-            // Rotating Background Blobs
             Rectangle {
-                width: parent.width * 0.8; height: width; radius: width / 2
-                x: (parent.width / 2 - width / 2) + Math.cos(window.globalOrbitAngle * 2) * window.s(150)
-                y: (parent.height / 2 - height / 2) + Math.sin(window.globalOrbitAngle * 2) * window.s(100)
-                opacity: 0.08
-                color: window.ambientPrimary
-                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
-            }
-            
-            Rectangle {
-                width: parent.width * 0.9; height: width; radius: width / 2
-                x: (parent.width / 2 - width / 2) + Math.sin(window.globalOrbitAngle * 1.5) * window.s(-150)
-                y: (parent.height / 2 - height / 2) + Math.cos(window.globalOrbitAngle * 1.5) * window.s(-100)
-                opacity: 0.06
-                color: window.ambientSecondary
-                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
-            }
-
-            // Radar Rings
-            Item {
-                id: radarItem
-                anchors.fill: parent
-                
-                Repeater {
-                    model: 3
-                    Rectangle {
-                        anchors.centerIn: parent
-                        anchors.verticalCenterOffset: window.s(-70)
-                        width: window.s(320) + (index * window.s(170))
-                        height: width
-                        radius: width / 2
-                        color: "transparent"
-                        border.color: window.ambientSecondary
-                        border.width: 1
-                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
-                        opacity: 0.06 - (index * 0.02)
-                    }
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+                radius: Math.min(root.itemRadius, 18)
+                color: Qt.rgba(root.batColor.r, root.batColor.g, root.batColor.b, 0.22)
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("normal") }
                 }
-            }
-
-            // ==========================================
-            // TOP: UPTIME COMPONENT
-            // ==========================================
-            Row {
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.margins: window.s(25)
-                spacing: window.s(6)
-                
-                transform: Translate { y: window.s(-20) * (1.0 - introTop) }
-                opacity: introTop
-                
-                // Hours Box
-                Rectangle {
-                    width: window.s(44); height: window.s(48); radius: window.themedInnerRadius
-                    color: window.glassFill; border.color: Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12 + ThemeConfig.materialGlowIntensity); border.width: 1
-                    
-                    Rectangle { anchors.fill: parent; radius: window.s(10); color: window.ambientPrimary; opacity: 0.05; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } } }
-                    Column {
-                        anchors.centerIn: parent
-                        Text { 
-                            text: window.upHours.toString().padStart(2, '0')
-                            font.pixelSize: window.s(18); font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
-                            color: window.ambientPrimary
-                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
-                            anchors.horizontalCenter: parent.horizontalCenter 
-                        }
-                        Text { 
-                            text: "HR"; font.pixelSize: window.s(8); font.family: window.uiFontFamily; font.weight: Font.Bold; font.letterSpacing: window.themedLetterSpacing
-                            color: window.subtext0; anchors.horizontalCenter: parent.horizontalCenter 
-                        }
-                    }
-                }
-
-                // Pulsing Colon
                 Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: ":"
-                    font.pixelSize: window.s(22); font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
-                    color: window.ambientPrimary
-                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
-                    
-                    opacity: uptimePulse
-                    property real uptimePulse: 1.0
-                    SequentialAnimation on uptimePulse {
-                        loops: Animation.Infinite; running: true
-                        NumberAnimation { to: 0.2; duration: 800; easing.type: Easing.InOutSine }
-                        NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutSine }
-                    }
-                }
-
-                // Mins Box
-                Rectangle {
-                    width: window.s(44); height: window.s(48); radius: window.themedInnerRadius
-                    color: window.glassFill; border.color: Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12 + ThemeConfig.materialGlowIntensity); border.width: 1
-                    
-                    Rectangle { anchors.fill: parent; radius: window.s(10); color: window.ambientSecondary; opacity: 0.05; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } } }
-                    Column {
-                        anchors.centerIn: parent
-                        Text { 
-                            text: window.upMins.toString().padStart(2, '0')
-                            font.pixelSize: window.s(18); font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
-                            color: window.ambientSecondary
-                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
-                            anchors.horizontalCenter: parent.horizontalCenter 
-                        }
-                        Text { 
-                            text: "MIN"; font.pixelSize: window.s(8); font.family: window.uiFontFamily; font.weight: Font.Bold; font.letterSpacing: window.themedLetterSpacing
-                            color: window.subtext0; anchors.horizontalCenter: parent.horizontalCenter 
-                        }
+                    anchors.centerIn: parent
+                    text: root.batIcon
+                    font.family: ThemeConfig.iconFont
+                    font.pixelSize: 18
+                    color: root.batColor
+                    Behavior on color {
+                        ColorAnimation { duration: ThemeConfig.durationToken("normal") }
                     }
                 }
             }
 
-            // Expanding top-right logout icon
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 1
+                Text {
+                    Layout.fillWidth: true
+                    text: root.hasBattery ? "Batterij & energie" : "Energie"
+                    font.family: ThemeConfig.displayFont
+                    font.pixelSize: 17
+                    font.weight: ThemeConfig.headingWeight
+                    color: mocha.text
+                    elide: Text.ElideRight
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: "Aan sinds " + root.upHours + "u " + (root.upMins < 10 ? "0" : "") + root.upMins + "m"
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 10
+                    color: mocha.subtext0
+                    elide: Text.ElideRight
+                }
+            }
+
+            IconButton {
+                icon: "󰅁"
+                accent: mocha.subtext1
+                onTriggered: root.panelSwitchRequested("quicksettings")
+            }
+
+            // Uitloggen: klapt bij hover open met je gebruikersnaam.
             Rectangle {
-                id: logoutBtn
-                anchors.top: parent.top; anchors.right: parent.right
-                anchors.margins: window.s(25)
-                width: logoutMa.containsMouse ? window.s(44) + usernameText.implicitWidth + window.s(12) : window.s(44)
-                height: window.s(44); radius: window.s(14)
-                color: logoutMa.containsMouse ? Qt.alpha(window.text, 0.102) : "transparent"
-                border.color: logoutMa.containsMouse ? Qt.alpha(window.text, 0.2) : "transparent"
+                id: logoutButton
+                Layout.preferredHeight: 32
+                Layout.preferredWidth: logoutMouse.containsMouse ? 32 + userText.implicitWidth + 10 : 32
+                radius: Math.min(root.itemRadius, 16)
                 clip: true
-                
-                transform: Translate { y: window.s(-20) * (1.0 - introTop) }
-                opacity: introTop
-
-                Behavior on width { NumberAnimation { duration: ThemeConfig.duration(300); easing.type: Easing.OutQuint } }
-                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-
+                color: logoutMouse.containsMouse
+                    ? Qt.rgba(mocha.red.r, mocha.red.g, mocha.red.b, 0.20)
+                    : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
+                Behavior on Layout.preferredWidth {
+                    NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+                }
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
                 Row {
                     anchors.right: parent.right
-                    anchors.rightMargin: window.s(13)
+                    anchors.rightMargin: 9
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: window.s(12)
-
+                    spacing: 8
                     Text {
-                        id: usernameText
-                        text: window.currentUserName
-                        font.family: window.uiFontFamily
+                        id: userText
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.currentUserName
+                        font.family: ThemeConfig.uiFont
+                        font.pixelSize: 12
                         font.weight: Font.DemiBold
-                        font.letterSpacing: window.themedLetterSpacing
-                        font.pixelSize: window.s(14)
-                        color: window.text
-                        anchors.verticalCenter: parent.verticalCenter
-                        opacity: logoutMa.containsMouse ? 1.0 : 0.0
-                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
+                        color: mocha.text
+                        opacity: logoutMouse.containsMouse ? 1 : 0
+                        Behavior on opacity {
+                            NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+                        }
                     }
-
                     Text {
-                        font.family: ThemeConfig.iconFont; font.pixelSize: window.s(18)
-                        color: logoutMa.containsMouse ? window.red : window.overlay0
-                        text: "󰍃"
                         anchors.verticalCenter: parent.verticalCenter
-                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                        text: "󰍃"
+                        font.family: ThemeConfig.iconFont
+                        font.pixelSize: 15
+                        color: logoutMouse.containsMouse ? mocha.red : mocha.subtext0
+                        Behavior on color {
+                            ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                        }
                     }
                 }
-
                 MouseArea {
-                    id: logoutMa
-                    anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                    onClicked: { 
-                        exitAnim.start(); // Trigger graceful UI exit
-                        Quickshell.execDetached(["sh", "-c", "loginctl terminate-user $USER"]); 
-                        Quickshell.execDetached(["bash", "-c", "echo close > /tmp/qs_widget_state"]); 
-                    }
-                }
-            }
-
-            // ==========================================
-            // CENTRAL CORE & BATTERY RING
-            // ==========================================
-            Item {
-                anchors.fill: parent
-                z: 1
-                visible: window.hasBattery
-
-                opacity: introCore
-                transform: Translate { y: window.s(25) * (1 - introCore) }
-                scale: 0.9 + (0.1 * introCore)
-
-                // --- CLEAN OUTSIDE GLOW HALO ---
-                Rectangle {
-                    anchors.centerIn: centralCore
-                    width: centralCore.width + window.s(45)
-                    height: width
-                    radius: width / 2
-                    color: centralCore.isDangerState ? window.red : window.ambientPrimary
-                    opacity: centralCore.isDangerState ? 0.25 : 0.15
-                    z: 0 
-                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } }
-                    SequentialAnimation on scale {
-                        loops: Animation.Infinite; running: true
-                        NumberAnimation { to: heroMa.containsMouse ? 1.15 : 1.08; duration: heroMa.containsMouse ? 800 : 2000; easing.type: Easing.InOutSine }
-                        NumberAnimation { to: 1.0; duration: heroMa.containsMouse ? 800 : 2000; easing.type: Easing.InOutSine }
-                    }
-                }
-                // -------------------------------
-
-                Rectangle {
-                    id: centralCore
-                    width: window.s(260)
-                    height: width
-                    anchors.centerIn: parent
-                    anchors.verticalCenterOffset: window.s(-70)
-                    radius: width / 2
-                    z: 1
-                    
-                    property bool isDangerState: !window.isCharging && window.batCapacity < 15
-                    
-                    SequentialAnimation on scale {
-                        loops: Animation.Infinite
-                        running: true
-                        NumberAnimation { 
-                            to: heroMa.containsMouse ? 1.05 : (centralCore.isDangerState ? 1.04 : 1.01)
-                            duration: heroMa.containsMouse ? 1200 : (centralCore.isDangerState ? 600 : 2500)
-                            easing.type: Easing.InOutSine 
-                        }
-                        NumberAnimation { 
-                            to: 1.0
-                            duration: heroMa.containsMouse ? 1200 : (centralCore.isDangerState ? 600 : 2500)
-                            easing.type: Easing.InOutSine 
-                        }
-                    }
-
-                    gradient: Gradient {
-                        orientation: Gradient.Vertical
-                        GradientStop { position: 0.0; color: window.surface0 }
-                        GradientStop { position: 1.0; color: window.base }
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: width / 2
-                        color: window.maroon
-                        opacity: centralCore.isDangerState ? 0.15 : 0.0
-                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(1000) } }
-                        SequentialAnimation on opacity {
-                            loops: Animation.Infinite; running: centralCore.isDangerState
-                            NumberAnimation { to: 0.25; duration: 600; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 0.15; duration: 600; easing.type: Easing.InOutSine }
-                        }
-                    }
-
-                    Item {
-                        anchors.fill: parent
-                        
-                        property real textPulse: 0.0
-                        SequentialAnimation on textPulse {
-                            loops: Animation.Infinite; running: true
-                            NumberAnimation { from: 0.0; to: 1.0; duration: 1200; easing.type: Easing.InOutSine }
-                            NumberAnimation { from: 1.0; to: 0.0; duration: 1200; easing.type: Easing.InOutSine }
-                        }
-                        
-                        property real pumpPhase: 0.0
-                        NumberAnimation on pumpPhase {
-                            running: heroMa.containsMouse && window.isCharging
-                            loops: Animation.Infinite
-                            from: 0.0; to: 1.0; duration: 1200
-                            easing.type: Easing.InOutSine 
-                            onStopped: batCanvas.requestPaint()
-                        }
-                        
-                        property real dischargePhase: 1.0
-                        NumberAnimation on dischargePhase {
-                            running: heroMa.containsMouse && !window.isCharging
-                            loops: Animation.Infinite
-                            from: 1.0; to: 0.0; duration: 1600
-                            easing.type: Easing.InOutSine
-                            onStopped: batCanvas.requestPaint()
-                        }
-                        
-                        onPumpPhaseChanged: { if(heroMa.containsMouse && window.isCharging) batCanvas.requestPaint() }
-                        onDischargePhaseChanged: { if(heroMa.containsMouse && !window.isCharging) batCanvas.requestPaint() }
-                        
-                        Canvas {
-                            id: batCanvas
-                            anchors.fill: parent
-                            rotation: 180 
-                            
-                            onPaint: {
-                                var ctx = getContext("2d");
-                                ctx.clearRect(0, 0, width, height);
-                                
-                                var centerX = width / 2;
-                                var centerY = height / 2;
-                                var radius = (width / 2) - window.s(18); 
-                                var endAngle = (window.animCapacity / 100) * 2 * Math.PI;
-                                
-                                ctx.lineCap = "round";
-                                
-                                ctx.lineWidth = window.s(8);
-                                ctx.beginPath();
-                                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                                ctx.strokeStyle = "#0dffffff";
-                                ctx.stroke();
-                                
-                                var fillGrad = ctx.createLinearGradient(0, height, width, 0);
-                                fillGrad.addColorStop(0, window.batColorStart.toString());
-                                fillGrad.addColorStop(1, window.batColorEnd.toString());
-
-                                ctx.globalAlpha = 1.0;
-                                ctx.lineWidth = window.s(14);
-                                ctx.beginPath();
-                                ctx.arc(centerX, centerY, radius, 0, endAngle);
-                                ctx.strokeStyle = fillGrad;
-                                ctx.stroke();
-                                
-                                if (heroMa.containsMouse && endAngle > 0.1) {
-                                    if (window.isCharging) {
-                                        var surgeAngle = parent.pumpPhase * (endAngle + 0.6) - 0.3;
-                                        if (surgeAngle > 0 && surgeAngle < endAngle) {
-                                            var sStart = Math.max(0, surgeAngle - 0.4);
-                                            var sEnd = Math.min(endAngle, surgeAngle + 0.4);
-                                            ctx.beginPath();
-                                            ctx.arc(centerX, centerY, radius, sStart, sEnd);
-                                            ctx.lineWidth = window.s(22);
-                                            ctx.strokeStyle = window.batColorStart.toString();
-                                            ctx.globalAlpha = 0.5 * Math.sin(parent.pumpPhase * Math.PI);
-                                            ctx.stroke();
-
-                                            sStart = Math.max(0, surgeAngle - 0.2);
-                                            sEnd = Math.min(endAngle, surgeAngle + 0.2);
-                                            ctx.beginPath();
-                                            ctx.arc(centerX, centerY, radius, sStart, sEnd);
-                                            ctx.lineWidth = window.s(28);
-                                            ctx.strokeStyle = window.batColorEnd.toString();
-                                            ctx.globalAlpha = 0.8 * Math.sin(parent.pumpPhase * Math.PI);
-                                            ctx.stroke();
-                                        }
-                                        
-                                        if (parent.pumpPhase > 0.7) {
-                                            var flarePhase = (parent.pumpPhase - 0.7) / 0.3;
-                                            var hitX = centerX + Math.cos(endAngle) * radius;
-                                            var hitY = centerY + Math.sin(endAngle) * radius;
-                                            ctx.beginPath();
-                                            ctx.arc(hitX, hitY, window.s(7) + (flarePhase * window.s(15)), 0, 2*Math.PI);
-                                            ctx.fillStyle = window.batColorEnd.toString();
-                                            ctx.globalAlpha = (1.0 - flarePhase) * 0.6;
-                                            ctx.fill();
-                                        }
-                                    } else {
-                                        var drainCenter = parent.dischargePhase * endAngle;
-                                        for (var d = 0; d < 2; d++) {
-                                            var dSpread = 0.2 + (d * 0.15);
-                                            var dStart = Math.max(0, drainCenter - dSpread);
-                                            var dEnd = Math.min(endAngle, drainCenter + dSpread);
-                                            
-                                            if (dStart < dEnd) {
-                                                ctx.beginPath();
-                                                ctx.arc(centerX, centerY, radius, dStart, dEnd);
-                                                ctx.lineWidth = window.s(14) + (1 - d) * window.s(2);
-                                                ctx.strokeStyle = window.batColorEnd.toString();
-                                                ctx.globalAlpha = 0.2 * Math.sin(parent.dischargePhase * Math.PI);
-                                                ctx.stroke();
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    ColumnLayout {
-                        anchors.centerIn: parent
-                        spacing: window.s(-2)
-                        
-                        RowLayout {
-                            Layout.alignment: Qt.AlignHCenter
-                            spacing: window.s(8)
-                            
-                            Text {
-                                font.family: ThemeConfig.iconFont
-                                font.pixelSize: window.s(28)
-                                color: window.batColorStart
-                                text: window.isCharging ? "󰂄" : (window.batCapacity > 20 ? "󰁹" : "󰂃")
-                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(400) } }
-                            }
-                            
-                            Text {
-                                font.family: ThemeConfig.textFont
-                                font.weight: Font.Black
-                                font.pixelSize: window.s(54)
-                                color: window.text
-                                text: Math.round(window.animCapacity) + "%" 
-                            }
-                        }
-
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            font.family: ThemeConfig.textFont
-                            font.weight: Font.Bold
-                            font.pixelSize: window.s(13)
-                            
-                            color: window.isCharging 
-                                    ? Qt.tint(window.green, Qt.rgba(1, 1, 1, parent.textPulse * 0.4)) 
-                                    : (centralCore.isDangerState ? Qt.tint(window.red, Qt.rgba(1, 1, 1, parent.textPulse * 0.3)) : window.subtext0)
-                                    
-                            text: window.batStatus.toUpperCase()
-                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
-                        }
-                    }
-                }
-
-                MouseArea {
-                    id: heroMa
-                    anchors.fill: centralCore 
+                    id: logoutMouse
+                    anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onEntered: batCanvas.requestPaint()
-                    onExited: batCanvas.requestPaint()
+                    onClicked: root.closeAndRun("loginctl terminate-user \"$USER\"")
                 }
             }
+        }
 
-            // ==========================================
-            // BOTTOM DOCKS
-            // ==========================================
+        // --- Batterijkaart ----------------------------------------------------
+        Rectangle {
+            id: hero
+            Layout.fillWidth: true
+            Layout.preferredHeight: heroColumn.implicitHeight + 24
+            radius: Math.min(root.itemRadius + 2, 18)
+            color: root.matteStyle
+                ? mocha.shellRaisedFill
+                : Qt.rgba(root.batColor.r, root.batColor.g, root.batColor.b, root.isDanger ? 0.10 + dangerPulse * 0.10 : 0.10)
+            border.width: 1
+            border.color: Qt.rgba(root.batColor.r, root.batColor.g, root.batColor.b, root.isDanger ? 0.40 + dangerPulse * 0.35 : 0.35)
+            Behavior on color {
+                enabled: !root.isDanger
+                ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+            }
+
+            // Waarschuwingspuls bij een bijna lege batterij.
+            property real dangerPulse: 0
+            SequentialAnimation on dangerPulse {
+                running: root.isDanger
+                loops: Animation.Infinite
+                NumberAnimation { to: 1; duration: 900; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 0; duration: 900; easing.type: Easing.InOutSine }
+            }
+
             ColumnLayout {
-                anchors.bottom: parent.bottom
+                id: heroColumn
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.margins: window.s(25)
-                spacing: window.s(15)
+                anchors.top: parent.top
+                anchors.margins: 12
+                spacing: 10
 
-                // 1. HARDWARE CONTROLS DOCK (Sliders)
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: window.s(96)
-                    radius: window.s(14)
-                    color: Qt.alpha(window.text, 0.02)
-                    border.color: Qt.alpha(window.text, 0.102)
-                    border.width: 1
-
-                    opacity: introSliders
-                    transform: Translate { y: window.s(20) * (1.0 - introSliders) }
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: window.s(14)
-                        spacing: window.s(12)
-
-                        // Brightness Slider
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: window.s(15)
-
-                            Item {
-                                Layout.preferredWidth: window.s(32)
-                                Layout.preferredHeight: window.s(32)
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: window.sysBrightness > 66 ? "󰃠" : (window.sysBrightness > 33 ? "󰃟" : "󰃞")
-                                    font.family: ThemeConfig.iconFont
-                                    font.pixelSize: window.s(22)
-                                    color: window.ambientPrimary
-                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                }
-                            }
-
-                            Item {
-                                Layout.fillWidth: true
-                                height: window.s(18)
-                                
-                                Timer {
-                                    id: briCmdThrottle
-                                    interval: 50
-                                    property int targetPct: -1
-                                    onTriggered: {
-                                        if (targetPct >= 0) {
-                                            Quickshell.execDetached(["brightnessctl", "set", targetPct + "%"]);
-                                            targetPct = -1;
-                                        }
-                                    }
-                                }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: window.s(9)
-                                    color: Qt.alpha(window.text, 0.051)
-                                    border.color: Qt.alpha(window.text, 0.102)
-                                    border.width: 1
-                                    clip: true
-
-                                    Rectangle {
-                                        height: parent.height
-                                        width: parent.width * (window.sysBrightness / 100)
-                                        radius: window.s(9)
-                                        opacity: briMa.containsMouse ? 1.0 : 0.85
-                                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
-                                        Behavior on width { enabled: !window.isDraggingBri; NumberAnimation { duration: 200; easing.type: Easing.OutQuint } }
-
-                                        gradient: Gradient {
-                                            orientation: Gradient.Horizontal
-                                            GradientStop { position: 0.0; color: window.batColorStart; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
-                                            GradientStop { position: 1.0; color: window.batColorEnd; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
-                                        }
-                                    }
-                                }
-                                MouseArea {
-                                    id: briMa
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onPressed: (mouse) => { briSyncDelay.stop(); window.isDraggingBri = true; updateBri(mouse.x); }
-                                    onPositionChanged: (mouse) => { if (pressed) updateBri(mouse.x); }
-                                    onReleased: { briSyncDelay.restart(); }
-                                    
-                                    function updateBri(mx) {
-                                        let pct = Math.max(0, Math.min(100, Math.round((mx / width) * 100)));
-                                        window.sysBrightness = pct; 
-                                        briCmdThrottle.targetPct = pct;
-                                        if (!briCmdThrottle.running) briCmdThrottle.start();
-                                    }
-                                }
-                            }
-                        }
-
-                        // Volume Slider
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: window.s(15)
-
-                            Rectangle {
-                                Layout.preferredWidth: window.s(32)
-                                Layout.preferredHeight: window.s(32)
-                                radius: window.s(16)
-                                color: volIconMa.containsMouse ? Qt.alpha(window.text, 0.102) : "transparent"
-                                border.color: volIconMa.containsMouse ? window.profileStart : "transparent"
-                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: window.sysMuted || window.sysVolume === 0 ? "󰖁" : (window.sysVolume > 50 ? "󰕾" : "󰖀")
-                                    font.family: ThemeConfig.iconFont
-                                    font.pixelSize: window.s(22)
-                                    color: window.sysMuted ? window.overlay0 : window.profileStart
-                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                }
-                                MouseArea {
-                                    id: volIconMa
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        if (Pipewire.defaultAudioSink)
-                                            Pipewire.defaultAudioSink.audio.muted = !Pipewire.defaultAudioSink.audio.muted;
-                                    }
-                                }
-                            }
-
-                            Item {
-                                Layout.fillWidth: true
-                                height: window.s(18)
-                                
-                                Timer {
-                                    id: volCmdThrottle
-                                    interval: 50
-                                    property real targetVol: -1
-                                    onTriggered: {
-                                        if (targetVol >= 0 && Pipewire.defaultAudioSink) {
-                                            Pipewire.defaultAudioSink.audio.volume = targetVol;
-                                            if (targetVol > 0 && Pipewire.defaultAudioSink.audio.muted)
-                                                Pipewire.defaultAudioSink.audio.muted = false;
-                                            targetVol = -1;
-                                        }
-                                    }
-                                }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: window.s(9)
-                                    color: Qt.alpha(window.text, 0.051)
-                                    border.color: Qt.alpha(window.text, 0.102)
-                                    border.width: 1
-                                    clip: true
-
-                                    Rectangle {
-                                        height: parent.height
-                                        width: parent.width * (window.sysVolume / 100)
-                                        radius: window.s(9)
-                                        opacity: window.sysMuted ? 0.5 : (volMa.containsMouse ? 1.0 : 0.85)
-                                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
-                                        Behavior on width { enabled: !window.isDraggingVol; NumberAnimation { duration: 200; easing.type: Easing.OutQuint } }
-
-                                        gradient: Gradient {
-                                            orientation: Gradient.Horizontal
-                                            GradientStop { position: 0.0; color: window.sysMuted ? window.surface2 : window.profileStart; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
-                                            GradientStop { position: 1.0; color: window.sysMuted ? Qt.lighter(window.surface2, 1.15) : window.profileEnd; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } }
-                                        }
-                                    }
-                                }
-                                MouseArea {
-                                    id: volMa
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onPressed: (mouse) => { updateVol(mouse.x); }
-                                    onPositionChanged: (mouse) => { if (pressed) updateVol(mouse.x); }
-                                    onReleased: {}
-                                    
-                                    function updateVol(mx) {
-                                        let pct = Math.max(0, Math.min(100, Math.round((mx / width) * 100)));
-                                        volCmdThrottle.targetVol = pct / 100.0;
-                                        if (!volCmdThrottle.running) volCmdThrottle.start();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 2. SYSTEM ACTIONS DOCK - No Text, Monochromatic Waves, Big Icons
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: window.s(75)
-                    spacing: window.s(12)
-                    
-                    Repeater {
-                        model: ListModel {
-                            ListElement { cmd: "bash ~/.config/hypr/scripts/lock.sh"; icon: ""; baseColor: "mauve"; weight: 1.0 }
-                            ListElement { cmd: "bash ~/.config/hypr/scripts/suspend.sh"; icon: "ᶻ 𝗓 𐰁"; baseColor: "blue"; weight: 1.0 }
-                            ListElement { cmd: "systemctl reboot"; icon: "󰑓"; baseColor: "yellow"; weight: 2.5 }
-                            ListElement { cmd: "systemctl poweroff"; icon: ""; baseColor: "red"; weight: 3.5 }
-                        }
-                        
-                        delegate: Rectangle {
-                            id: actionCapsule
+                    spacing: 10
+
+                    Text {
+                        visible: root.hasBattery
+                        text: Math.round(root.animCapacity)
+                        font.family: ThemeConfig.displayFont
+                        font.pixelSize: 40
+                        font.weight: ThemeConfig.headingWeight
+                        color: mocha.text
+                    }
+                    Text {
+                        visible: root.hasBattery
+                        Layout.alignment: Qt.AlignBottom
+                        Layout.bottomMargin: 8
+                        Layout.leftMargin: -6
+                        text: "%"
+                        font.family: ThemeConfig.displayFont
+                        font.pixelSize: 18
+                        font.weight: ThemeConfig.emphasisWeight
+                        color: mocha.subtext0
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: root.hasBattery ? 4 : 0
+                        spacing: 2
+                        Text {
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            radius: window.s(14)
-
-                            // Staggered entry animation based on index
-                            opacity: introActions
-                            transform: Translate { y: window.s(30) * (1.0 - introActions) + (index * window.s(12) * (1.0 - introActions)) }
-                            
-                            // Map string names to dynamically grab the Matugen property, then generate a lighter version for a smooth wave
-                            property color c1: window[baseColor] || window.surface1
-                            property color c2: Qt.lighter(c1, 1.2)
-                            property bool isPowerAction: (typeof cmd === "string") && cmd.indexOf("poweroff") !== -1
-                            property string shortPressCmd: "bash ~/.config/hypr/scripts/suspend.sh"
-                            property string pendingCmd: cmd
-
-                            color: actionMa.containsMouse ? Qt.alpha(window.text, 0.102) : Qt.alpha(window.text, 0.051)
-                            border.color: actionMa.containsMouse ? c1 : Qt.alpha(window.text, 0.102)
-                            // Keeping these explicit to 1px/2px prevents ugly half-pixel anti-aliasing glitches
-                            border.width: actionMa.containsMouse ? 2 : 1
-                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                            
-                            // --- CLEAN STIFF RESISTANCE EFFECT ---
-                            scale: actionMa.pressed ? (0.98 - (0.01 * weight)) : (actionMa.containsMouse ? 1.08 : 1.0)
-                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuart } }
-                            // -------------------------------------
-
-                            property real fillLevel: 0.0
-                            property bool triggered: false
-                            property real flashOpacity: 0.0
-                            
-                            Canvas {
-                                id: actionWaveCanvas
-                                anchors.fill: parent
-                                
-                                property real wavePhase: 0.0
-                                NumberAnimation on wavePhase {
-                                    running: actionCapsule.fillLevel > 0.0 && actionCapsule.fillLevel < 1.0
-                                    loops: Animation.Infinite
-                                    from: 0; to: Math.PI * 2; duration: 800
-                                }
-                                onWavePhaseChanged: requestPaint()
-                                Connections { target: actionCapsule; function onFillLevelChanged() { actionWaveCanvas.requestPaint() } }
-                                
-                                onPaint: {
-                                    var ctx = getContext("2d");
-                                    ctx.clearRect(0, 0, width, height);
-                                    if (actionCapsule.fillLevel <= 0.001) return;
-                                    
-                                    var r = window.s(14); 
-                                    var fillY = height * (1.0 - actionCapsule.fillLevel);
-                                    ctx.save();
-                                    ctx.beginPath();
-                                    ctx.moveTo(r, 0);
-                                    ctx.lineTo(width - r, 0);
-                                    ctx.arcTo(width, 0, width, r, r);
-                                    ctx.lineTo(width, height - r);
-                                    ctx.arcTo(width, height, width - r, height, r);
-                                    ctx.lineTo(r, height);
-                                    ctx.arcTo(0, height, 0, height - r, r);
-                                    ctx.lineTo(0, r);
-                                    ctx.arcTo(0, 0, r, 0, r);
-                                    ctx.closePath();
-                                    ctx.clip(); 
-                                    
-                                    ctx.beginPath();
-                                    ctx.moveTo(0, fillY);
-                                    if (actionCapsule.fillLevel < 0.99) {
-                                        var waveAmp = window.s(10) * Math.sin(actionCapsule.fillLevel * Math.PI); 
-                                        var cp1y = fillY + Math.sin(wavePhase) * waveAmp;
-                                        var cp2y = fillY + Math.cos(wavePhase + Math.PI) * waveAmp;
-                                        ctx.bezierCurveTo(width * 0.33, cp2y, width * 0.66, cp1y, width, fillY);
-                                        ctx.lineTo(width, height);
-                                        ctx.lineTo(0, height);
-                                    } else {
-                                        ctx.lineTo(width, 0);
-                                        ctx.lineTo(width, height);
-                                        ctx.lineTo(0, height);
-                                    }
-                                    ctx.closePath();
-                                    
-                                    var grad = ctx.createLinearGradient(0, 0, 0, height);
-                                    grad.addColorStop(0, actionCapsule.c1.toString());
-                                    grad.addColorStop(1, actionCapsule.c2.toString());
-                                    ctx.fillStyle = grad;
-                                    ctx.fill();
-                                    ctx.restore();
-                                }
+                            text: root.statusText
+                            font.family: ThemeConfig.uiFont
+                            font.pixelSize: 12
+                            font.weight: Font.DemiBold
+                            color: root.isCharging || root.isDanger ? root.batColor : mocha.text
+                            elide: Text.ElideRight
+                            Behavior on color {
+                                ColorAnimation { duration: ThemeConfig.durationToken("normal") }
                             }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: !root.hasBattery ? "Geen batterij gevonden; dit apparaat draait op netstroom."
+                                : (root.isDanger ? "Batterij bijna leeg: sluit de lader aan."
+                                   : (root.isCharging ? "Lader aangesloten" : "Lader niet aangesloten"))
+                            wrapMode: Text.WordWrap
+                            font.family: ThemeConfig.uiFont
+                            font.pixelSize: 10
+                            color: mocha.subtext0
+                        }
+                    }
+                }
 
-                            Rectangle {
-                                anchors.fill: parent; radius: window.s(14); color: "#ffffff"
-                                opacity: actionCapsule.flashOpacity
-                                PropertyAnimation on opacity { id: cardFlashAnim; to: 0; duration: 500; easing.type: Easing.OutExpo }
-                            }
+                // Batterijbalk: gevulde pil, met een glans die meeloopt tijdens
+                // het opladen.
+                Rectangle {
+                    id: batteryTrack
+                    visible: root.hasBattery
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 14
+                    radius: height / 2
+                    color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
 
-                            // Centered Big Icon (Idle State)
-                            Text { 
-                                anchors.centerIn: parent
-                                font.family: ThemeConfig.iconFont
-                                font.pixelSize: window.s(24)
-                                color: actionMa.containsMouse ? window.text : window.subtext0
-                                text: icon
-                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                            }
+                    Rectangle {
+                        id: batteryFill
+                        width: Math.max(batteryTrack.height, batteryTrack.width * Math.max(0, Math.min(100, root.animCapacity)) / 100)
+                        height: parent.height
+                        radius: parent.radius
+                        color: root.batColor
+                        clip: true
+                        Behavior on color {
+                            ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+                        }
 
-                            Item {
-                                anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-                                height: actionCapsule.height * actionCapsule.fillLevel
-                                clip: true
-                                
-                                // Centered Big Icon (Filled State)
-                                Text { 
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    y: (actionCapsule.height / 2) - (height / 2) - (actionCapsule.height - parent.height)
-                                    font.family: ThemeConfig.iconFont
-                                    font.pixelSize: window.s(24)
-                                    color: window.crust
-                                    text: icon 
-                                }
+                        Rectangle {
+                            visible: root.isCharging && !root.isFull
+                            width: 60
+                            height: parent.height
+                            radius: parent.radius
+                            property real sweep: 0
+                            x: -width + (batteryFill.width + width) * sweep
+                            gradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0) }
+                                GradientStop { position: 0.5; color: Qt.rgba(1, 1, 1, 0.35) }
+                                GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0) }
                             }
-
-                            MouseArea {
-                                id: actionMa
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: actionCapsule.triggered ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                
-                                onPressed: { 
-                                    if (!actionCapsule.triggered) { 
-                                        actionCapsule.pendingCmd = cmd;
-                                        drainAnim.stop(); 
-                                        fillAnim.start(); 
-                                    }
-                                }
-                                onReleased: {
-                                    if (!actionCapsule.triggered && actionCapsule.fillLevel < 1.0) { 
-                                        fillAnim.stop(); 
-                                        drainAnim.start(); 
-                                        if (actionCapsule.isPowerAction) {
-                                            actionCapsule.triggered = true;
-                                            actionCapsule.pendingCmd = actionCapsule.shortPressCmd;
-                                            actionCapsule.flashOpacity = 0.35;
-                                            cardFlashAnim.start();
-                                            exitAnim.start();
-                                            exitTimer.start();
-                                        }
-                                    }
-                                }
-                            }
-
-                            NumberAnimation {
-                                id: fillAnim; target: actionCapsule; property: "fillLevel"; to: 1.0
-                                duration: ((actionCapsule.isPowerAction ? 2000 : (550 * weight)) * (1.0 - actionCapsule.fillLevel)); easing.type: Easing.InSine
-                                onFinished: {
-                                    actionCapsule.triggered = true; actionCapsule.flashOpacity = 0.6; cardFlashAnim.start();
-                                    actionCapsule.pendingCmd = cmd;
-                                    exitAnim.start(); exitTimer.start(); // Start graceful exit sequence
-                                }
-                            }
-                            
-                            NumberAnimation {
-                                id: drainAnim; target: actionCapsule; property: "fillLevel"; to: 0.0
-                                duration: 1500 * actionCapsule.fillLevel; easing.type: Easing.OutQuad
-                            }
-
-                            Timer {
-                                id: exitTimer; interval: 500 
-                                onTriggered: { Quickshell.execDetached(["sh", "-c", actionCapsule.pendingCmd]); Quickshell.execDetached(["bash", "-c", "echo close > /tmp/qs_widget_state"]); }
+                            NumberAnimation on sweep {
+                                from: 0; to: 1; duration: 1800
+                                loops: Animation.Infinite
+                                running: root.isCharging && !root.isFull
+                                easing.type: Easing.InOutSine
                             }
                         }
                     }
                 }
 
-                // 3. POWER PROFILES DOCK
-                Rectangle {
+                // Extra gegevens (alleen wat UPower meldt).
+                Flow {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: window.s(54)
-                    radius: window.s(14)
-                    color: Qt.alpha(window.text, 0.051) 
-                    border.color: Qt.alpha(window.text, 0.102)
-                    border.width: 1
-
-                    opacity: introProfiles
-                    transform: Translate { y: window.s(20) * (1.0 - introProfiles) }
-                    
-                    Rectangle {
-                        id: sliderPill
-                        width: (parent.width - window.s(2)) / 3 
-                        height: parent.height - window.s(2)
-                        y: window.s(1)
-                        radius: window.s(10)
-                        x: {
-                            if (window.powerProfile === "performance") return window.s(1);
-                            if (window.powerProfile === "balanced") return width + window.s(1);
-                            return (width * 2) + window.s(1);
-                        }
-                        
-                        Behavior on x { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutBack; easing.overshoot: 1.2 } }
-                        
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: window.profileStart; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(400)} } }
-                            GradientStop { position: 1.0; color: window.profileEnd; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(400)} } }
-                        }
+                    visible: root.hasBattery && (root.watts > 0.05 || root.health > 0)
+                    spacing: 6
+                    InfoChip {
+                        visible: root.watts > 0.05
+                        icon: root.isCharging ? "󱐋" : "󰠰"
+                        label: (root.isCharging ? "Laadt " : "Verbruik ") + root.watts.toFixed(1) + " W"
                     }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        spacing: 0
-                        
-                        Repeater {
-                            model: ListModel {
-                                ListElement { name: "performance"; icon: "󰓅"; label: "Perform" } 
-                                ListElement { name: "balanced"; icon: "󰗑"; label: "Balance" }   
-                                ListElement { name: "power-saver"; icon: "󰌪"; label: "Saver" } 
-                            }
-                            
-                            delegate: Item {
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
-                                
-                                RowLayout {
-                                    anchors.centerIn: parent
-                                    spacing: window.s(8)
-                                    Text {
-                                        font.family: ThemeConfig.iconFont; font.pixelSize: window.s(18)
-                                        color: window.powerProfile === name ? window.crust : (profileMa.containsMouse ? window.text : window.subtext0)
-                                        text: icon
-                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                    }
-                                    Text {
-                                        font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: window.s(13)
-                                        color: window.powerProfile === name ? window.crust : (profileMa.containsMouse ? window.text : window.subtext0)
-                                        text: label
-                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                    }
-                                }
-                                
-                                MouseArea {
-                                    id: profileMa
-                                    anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        if (name === "performance") PowerProfiles.profile = PowerProfile.Performance;
-                                        else if (name === "power-saver") PowerProfiles.profile = PowerProfile.PowerSaver;
-                                        else PowerProfiles.profile = PowerProfile.Balanced;
-                                        Quickshell.execDetached(["bash", "-lc", "sleep 0.4; \"$HOME/.config/shared/scripts/kingstra-idle-apply\" '" + name + "' >/dev/null 2>&1 || true"]);
-                                    }
-                                }
-                            }
-                        }
+                    InfoChip {
+                        visible: root.health > 0
+                        icon: "󰄌"
+                        label: "Conditie " + Math.round(root.health) + "%"
                     }
                 }
             }
+        }
+
+        // --- Schuifregelaars ---------------------------------------------------
+        PanelSlider {
+            mocha: root.mochaPalette
+            itemRadius: root.itemRadius
+            visible: root.sysBrightness >= 0
+            icon: root.sysBrightness > 66 ? "󰃠" : (root.sysBrightness > 33 ? "󰃟" : "󰃞")
+            label: "Helderheid"
+            value: root.sysBrightness
+            accent: mocha.yellow
+            onDragToggled: (dragging) => root.draggingBrightness = dragging
+            onMoved: (percent) => {
+                let v = Math.max(1, Math.min(100, Math.round(percent)));
+                root.sysBrightness = v;
+                brightnessThrottle.targetPct = v;
+                if (!brightnessThrottle.running) brightnessThrottle.start();
+            }
+        }
+
+        PanelSlider {
+            mocha: root.mochaPalette
+            itemRadius: root.itemRadius
+            visible: root.sysVolume >= 0
+            icon: root.sysMuted || root.sysVolume === 0 ? "󰖁" : (root.sysVolume > 50 ? "󰕾" : "󰖀")
+            label: root.sysMuted ? "Gedempt" : "Volume"
+            value: root.sysVolume
+            dimmed: root.sysMuted
+            accent: mocha.accent3
+            onIconClicked: if (root.volumeReady) root.sink.audio.muted = !root.sink.audio.muted
+            onMoved: (percent) => {
+                volumeThrottle.targetVol = Math.max(0, Math.min(100, percent)) / 100;
+                if (!volumeThrottle.running) volumeThrottle.start();
+            }
+        }
+
+        // --- Energieprofiel ---------------------------------------------------
+        Text {
+            Layout.fillWidth: true
+            Layout.topMargin: 2
+            text: "Energieprofiel"
+            font.family: ThemeConfig.uiFont
+            font.pixelSize: 10
+            font.weight: ThemeConfig.emphasisWeight
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.6
+            color: mocha.subtext0
+        }
+
+        Rectangle {
+            id: profileBar
+            Layout.fillWidth: true
+            Layout.preferredHeight: 40
+            radius: Math.min(root.itemRadius, 20)
+            color: root.matteStyle ? mocha.shellRaisedFill : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05)
+            border.width: 1
+            border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+
+            readonly property var profiles: ["performance", "balanced", "power-saver"]
+            readonly property int profileIndex: Math.max(0, profiles.indexOf(root.powerProfile))
+            readonly property real segmentWidth: (width - 6) / profiles.length
+            readonly property color currentColor: root.profileColor(root.powerProfile)
+
+            Rectangle {
+                x: 3 + profileBar.profileIndex * profileBar.segmentWidth
+                y: 3
+                width: profileBar.segmentWidth
+                height: profileBar.height - 6
+                radius: Math.max(4, profileBar.radius - 3)
+                color: Qt.rgba(profileBar.currentColor.r, profileBar.currentColor.g, profileBar.currentColor.b, 0.24)
+                border.width: 1
+                border.color: Qt.rgba(profileBar.currentColor.r, profileBar.currentColor.g, profileBar.currentColor.b, 0.50)
+                Behavior on x {
+                    NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+                }
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+                }
+                Behavior on border.color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+                }
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 3
+                spacing: 0
+                ProfileButton { profile: "performance"; icon: "󰓅"; label: "Prestaties" }
+                ProfileButton { profile: "balanced"; icon: "󰾅"; label: "Gebalanceerd" }
+                ProfileButton { profile: "power-saver"; icon: "󰌪"; label: "Besparing" }
+            }
+        }
+
+        // --- Systeemacties ---------------------------------------------------
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: 2
+            spacing: 8
+            HoldAction {
+                icon: "󰌾"; label: "Vergrendel"; accent: mocha.accent1
+                holdMs: 550
+                cmd: "bash ~/.config/hypr/scripts/lock.sh"
+            }
+            HoldAction {
+                icon: "󰤄"; label: "Slaapstand"; accent: mocha.accent3
+                holdMs: 550
+                cmd: "bash ~/.config/hypr/scripts/suspend.sh"
+            }
+            HoldAction {
+                icon: "󰜉"; label: "Herstart"; accent: mocha.yellow
+                holdMs: 1375
+                cmd: "systemctl reboot"
+            }
+            HoldAction {
+                icon: "󰐥"; label: "Afsluiten"; accent: mocha.red
+                holdMs: 2000
+                cmd: "systemctl poweroff"
+                // Kort tikken = slaapstand, lang vasthouden = afsluiten.
+                tapCmd: "bash ~/.config/hypr/scripts/suspend.sh"
+            }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            text: "Houd een knop ingedrukt om te bevestigen · kort op Afsluiten = slaapstand"
+            wrapMode: Text.WordWrap
+            font.family: ThemeConfig.uiFont
+            font.pixelSize: 9
+            color: mocha.subtext0
+            opacity: 0.8
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Componenten
+    // ------------------------------------------------------------------------
+
+    component IconButton: Rectangle {
+        id: ib
+        property string icon: ""
+        property color accent: mocha.text
+        signal triggered()
+
+        Layout.preferredWidth: 32
+        Layout.preferredHeight: 32
+        radius: Math.min(root.itemRadius, 16)
+        color: ibMouse.containsMouse
+            ? Qt.rgba(accent.r, accent.g, accent.b, 0.20)
+            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
+        scale: ibMouse.pressed ? 0.94 : (ibMouse.containsMouse ? 1.07 : 1.0)
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+        Behavior on scale {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+        Text {
+            anchors.centerIn: parent
+            text: ib.icon
+            font.family: ThemeConfig.iconFont
+            font.pixelSize: 15
+            color: ib.accent
+        }
+        MouseArea {
+            id: ibMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: ib.triggered()
+        }
+    }
+
+    component InfoChip: Rectangle {
+        id: chip
+        property string icon: ""
+        property string label: ""
+        width: chipRow.implicitWidth + 16
+        height: 24
+        radius: height / 2
+        color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
+        Row {
+            id: chipRow
+            anchors.centerIn: parent
+            spacing: 5
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: chip.icon
+                font.family: ThemeConfig.iconFont
+                font.pixelSize: 12
+                color: root.batColor
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: chip.label
+                font.family: ThemeConfig.monoFont
+                font.pixelSize: 10
+                font.weight: Font.Medium
+                color: mocha.text
+            }
+        }
+    }
+
+    component ProfileButton: Item {
+        id: pb
+        property string profile: ""
+        property string icon: ""
+        property string label: ""
+        readonly property bool current: root.powerProfile === profile
+        readonly property color tint: root.profileColor(profile)
+
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+
+        Row {
+            anchors.centerIn: parent
+            spacing: 6
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: pb.icon
+                font.family: ThemeConfig.iconFont
+                font.pixelSize: 14
+                color: pb.current ? pb.tint : (pbMouse.containsMouse ? mocha.text : mocha.subtext0)
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: pb.label
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 11
+                font.weight: pb.current ? Font.DemiBold : Font.Normal
+                color: pb.current || pbMouse.containsMouse ? mocha.text : mocha.subtext0
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
+            }
+        }
+
+        MouseArea {
+            id: pbMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.setProfile(pb.profile)
+        }
+    }
+
+    // Ingedrukt houden om te bevestigen: de tegel vult zich van onder naar
+    // boven in de accentkleur; loslaten laat hem weer leeglopen.
+    component HoldAction: Rectangle {
+        id: action
+        property string icon: ""
+        property string label: ""
+        property color accent: mocha.primary
+        property string cmd: ""
+        property string tapCmd: ""
+        property int holdMs: 550
+        property real fillLevel: 0
+        property bool fired: false
+        property real flash: 0
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: 62
+        radius: Math.min(root.itemRadius, 16)
+        color: actionMouse.containsMouse
+            ? Qt.rgba(action.accent.r, action.accent.g, action.accent.b, 0.14)
+            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05)
+        border.width: 1
+        border.color: actionMouse.containsMouse
+            ? Qt.rgba(action.accent.r, action.accent.g, action.accent.b, 0.50)
+            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+        scale: actionMouse.pressed ? 0.97 : 1.0
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+        }
+        Behavior on border.color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+        }
+        Behavior on scale {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+
+        // Vulling: een afgeronde pil die van onder omhoog groeit.
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: 1
+            height: Math.max(0, (parent.height - 2) * action.fillLevel)
+            radius: Math.min(parent.radius - 1, height / 2)
+            visible: action.fillLevel > 0.001
+            color: Qt.rgba(action.accent.r, action.accent.g, action.accent.b, 0.85)
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            color: "#ffffff"
+            opacity: action.flash
+        }
+
+        Column {
+            anchors.centerIn: parent
+            spacing: 3
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: action.icon
+                font.family: ThemeConfig.iconFont
+                font.pixelSize: 20
+                color: action.fillLevel > 0.5 ? mocha.crust
+                    : (actionMouse.containsMouse ? action.accent : mocha.subtext0)
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: action.label
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 10
+                font.weight: Font.DemiBold
+                color: action.fillLevel > 0.25 ? mocha.crust
+                    : (actionMouse.containsMouse ? mocha.text : mocha.subtext0)
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
+            }
+        }
+
+        function fire(command) {
+            if (action.fired) return;
+            action.fired = true;
+            flashAnim.restart();
+            runTimer.command = command;
+            runTimer.start();
+        }
+
+        MouseArea {
+            id: actionMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: action.fired ? Qt.ArrowCursor : Qt.PointingHandCursor
+            onPressed: {
+                if (action.fired) return;
+                drainAnim.stop();
+                fillAnim.start();
+            }
+            onReleased: {
+                if (action.fired || action.fillLevel >= 1.0) return;
+                fillAnim.stop();
+                drainAnim.start();
+                if (action.tapCmd !== "") action.fire(action.tapCmd);
+            }
+            onCanceled: {
+                if (action.fired) return;
+                fillAnim.stop();
+                drainAnim.start();
+            }
+        }
+
+        NumberAnimation {
+            id: fillAnim
+            target: action
+            property: "fillLevel"
+            to: 1.0
+            duration: action.holdMs * (1.0 - action.fillLevel)
+            easing.type: Easing.InSine
+            onFinished: if (action.fillLevel >= 1.0) action.fire(action.cmd)
+        }
+        NumberAnimation {
+            id: drainAnim
+            target: action
+            property: "fillLevel"
+            to: 0.0
+            duration: 900 * action.fillLevel
+            easing.type: Easing.OutQuad
+        }
+        SequentialAnimation {
+            id: flashAnim
+            NumberAnimation { target: action; property: "flash"; to: 0.5; duration: 60 }
+            NumberAnimation { target: action; property: "flash"; to: 0; duration: 420; easing.type: Easing.OutExpo }
+        }
+        // Korte pauze zodat de bevestiging zichtbaar is vóór het paneel sluit.
+        Timer {
+            id: runTimer
+            interval: 350
+            property string command: ""
+            onTriggered: root.closeAndRun(command)
         }
     }
 }

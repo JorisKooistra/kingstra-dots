@@ -40,15 +40,18 @@ is_valid_mac() {
 }
 
 get_icon() {
+    # Nerd Font Material-iconen (󰋋 enz.), dezelfde set als de rest van de
+    # shell. De oude mix van emoji en verouderde codepunten viel in sommige
+    # fonts terug op een CJK-teken.
     local type=$(echo "$1" | tr '[:upper:]' '[:lower:]')
     local name=$(echo "$2" | tr '[:upper:]' '[:lower:]')
-    if [[ "$type" == *"headset"* ]] || [[ "$type" == *"headphone"* ]] || [[ "$name" == *"headphone"* ]] || [[ "$name" == *"buds"* ]] || [[ "$name" == *"pods"* ]]; then echo "🎧"
-    elif [[ "$type" == *"audio"* ]] || [[ "$type" == *"speaker"* ]] || [[ "$type" == *"card"* ]] || [[ "$name" == *"speaker"* ]]; then echo "蓼"
-    elif [[ "$type" == *"phone"* ]] || [[ "$name" == *"phone"* ]] || [[ "$name" == *"iphone"* ]] || [[ "$name" == *"android"* ]]; then echo ""
-    elif [[ "$type" == *"mouse"* ]] || [[ "$name" == *"mouse"* ]]; then echo ""
-    elif [[ "$type" == *"keyboard"* ]] || [[ "$name" == *"keyboard"* ]]; then echo ""
-    elif [[ "$type" == *"controller"* ]] || [[ "$name" == *"controller"* ]]; then echo ""
-    else echo ""
+    if [[ "$type" == *"headset"* ]] || [[ "$type" == *"headphone"* ]] || [[ "$name" == *"headphone"* ]] || [[ "$name" == *"buds"* ]] || [[ "$name" == *"pods"* ]]; then echo "󰋋"
+    elif [[ "$type" == *"audio"* ]] || [[ "$type" == *"speaker"* ]] || [[ "$type" == *"card"* ]] || [[ "$name" == *"speaker"* ]]; then echo "󰓃"
+    elif [[ "$type" == *"phone"* ]] || [[ "$name" == *"phone"* ]] || [[ "$name" == *"iphone"* ]] || [[ "$name" == *"android"* ]]; then echo "󰏲"
+    elif [[ "$type" == *"mouse"* ]] || [[ "$name" == *"mouse"* ]]; then echo "󰍽"
+    elif [[ "$type" == *"keyboard"* ]] || [[ "$name" == *"keyboard"* ]]; then echo "󰌌"
+    elif [[ "$type" == *"controller"* ]] || [[ "$type" == *"gaming"* ]] || [[ "$name" == *"controller"* ]]; then echo "󰊴"
+    else echo "󰂯"
     fi
 }
 
@@ -92,7 +95,7 @@ get_status() {
         for c_line in "${connected_info_lines[@]}"; do
             if [ -z "$c_line" ]; then continue; fi
             connected_mac=$(echo "$c_line" | cut -d ' ' -f 2)
-            CACHE_FILE="$CACHE_DIR/bt_stat_${connected_mac//:/_}"
+            CACHE_FILE="$CACHE_DIR/bt_meta_${connected_mac//:/_}"
 
             # Profile, Name, and Icon do not change dynamically. Calculate ONCE.
             if [ -f "$CACHE_FILE" ]; then
@@ -216,7 +219,7 @@ connect $mac")
     while [ $waited -lt 15 ]; do
         if bluetoothctl info "$mac" 2>/dev/null | grep -q "Connected: yes"; then
             # Clear stale cache so fresh profile/icon is picked up
-            rm -f "$CACHE_DIR/bt_stat_${mac//:/_}" 2>/dev/null
+            rm -f "$CACHE_DIR/bt_meta_${mac//:/_}" 2>/dev/null
             echo "{\"ok\":true}"
             return 0
         fi
@@ -236,7 +239,7 @@ disconnect_dev() {
     fi
 
     # Remove cache so a fresh connect regenerates the profile
-    rm -f "/tmp/quickshell_network_cache/bt_stat_${mac//:/_}" 2>/dev/null
+    rm -f "/tmp/quickshell_network_cache/bt_meta_${mac//:/_}" 2>/dev/null
     bluetoothctl disconnect "$mac"
 }
 
@@ -247,7 +250,7 @@ forget_dev() {
         return 1
     fi
 
-    rm -f "/tmp/quickshell_network_cache/bt_stat_${mac//:/_}" 2>/dev/null
+    rm -f "/tmp/quickshell_network_cache/bt_meta_${mac//:/_}" 2>/dev/null
     bluetoothctl remove "$mac"
 }
 

@@ -48,7 +48,7 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
         // Note on rx: The 500 represents the 480 base width + 20 margin. 
         // Statuskaart: de kern en hardwarebediening passen ruim binnen deze
         // maat; meer hoogte liet onderaan een betekenisloos vlak achter.
-        "battery":   { w: s(480, scale), h: s(600, scale), rx: mw - s(500, scale), ry: s(70, scale), comp: "battery/BatteryPopup.qml" },
+        "battery":   { w: s(420, scale), h: s(560, scale), rx: mw - s(440, scale), ry: s(70, scale), comp: "battery/BatteryPopup.qml" },
         // Audio is a routing/control sheet, not a second media player. Keep it
         // intentionally short; device/app lists already scroll when needed.
         
@@ -57,8 +57,9 @@ function getLayout(name, mx, my, mw, mh, touchBoost, themeName, barPosition) {
         
         // Left-aligned: pinned 12px from the left edge
         
-        // Right-aligned: pinned 20px from the right edge dynamically (Width: 900 + 20 margin = 920)
-        "network":   { w: s(900, scale), h: s(700, scale), rx: mw - s(920, scale), ry: s(70, scale), comp: "network/NetworkPopup.qml" },
+        // Right-aligned: pinned 20px from the right edge (420 + 20 marge).
+        // Zelfde maat als het paneel in PanelHost (preferredPanelWidth).
+        "network":   { w: s(420, scale), h: s(640, scale), rx: mw - s(440, scale), ry: s(70, scale), comp: "network/NetworkPopup.qml" },
         
         // Centered both horizontally and vertically
         "monitors":  { w: s(850, scale), h: s(580, scale), rx: Math.floor((mw/2)-(s(850, scale)/2)), ry: Math.floor((mh/2)-(s(580, scale)/2)), comp: "monitors/MonitorPopup.qml" },

@@ -68,19 +68,26 @@ else
     CONNECTED_JSON="null"
 fi
 
+# Opgeslagen wifi-profielen: daarvoor hoeft het paneel geen wachtwoord te
+# vragen en kan het "Vergeten" aanbieden.
+KNOWN_SSIDS=$(nmcli -t -f NAME,TYPE connection show 2>/dev/null | awk -F: '$2=="802-11-wireless"{print $1}')
+
 # Get available networks INSTANTLY using --rescan no
 NETWORKS_JSON=$(nmcli -t -f active,ssid,signal,security device wifi list --rescan no 2>/dev/null | \
     awk -F: '!seen[$2]++ && $2 != "" && $1 != "yes" {print $2":"$3":"$4}' | \
     head -n 24 | \
     while IFS=':' read -r ssid signal security; do
         icon=$(get_icon "$signal")
+        known=false
+        if [[ -n "$KNOWN_SSIDS" ]] && grep -Fxq -- "$ssid" <<< "$KNOWN_SSIDS"; then known=true; fi
         jq -n \
            --arg id "$ssid" \
            --arg ssid "$ssid" \
            --arg icon "$icon" \
            --arg signal "$signal" \
            --arg security "$security" \
-           '{id: $id, ssid: $ssid, icon: $icon, signal: $signal, security: $security}'
+           --argjson known "$known" \
+           '{id: $id, ssid: $ssid, icon: $icon, signal: $signal, security: $security, known: $known}'
     done | jq -s '.')
 
 # shellcheck disable=SC2046 # bewust op één regel uitgevoerd

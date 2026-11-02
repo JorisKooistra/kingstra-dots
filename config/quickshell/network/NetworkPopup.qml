@@ -1,40 +1,80 @@
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Effects
-import QtQuick.Window
 import QtCore
 import Quickshell
 import Quickshell.Io
 import "../"
 
+// Netwerkpaneel: Wi-Fi, Bluetooth en bedraad netwerk in één paneel, in
+// dezelfde vormtaal als Snelle instellingen en Geluid & media (afgeronde
+// tegels, themakleuren uit Matugen, ThemeConfig-animaties). Vervangt de oude
+// radar-weergave; alle functies daarvan zitten er nog in:
+//  - Wi-Fi/Bluetooth aan en uit, met directe terugkoppeling;
+//  - verbinden, verbreken, details van de verbinding (signaal, beveiliging,
+//    IP, band; batterij, audioprofiel, MAC);
+//  - bluetooth zoeken, koppelen en vergeten; foutmelding bij mislukken;
+//  - Tab wisselt Wi-Fi ↔ Bluetooth, /tmp/qs_network_mode blijft de bron
+//    voor de modus (qs_manager, Snelle instellingen);
+//  - geluidjes bij schakelen, verbinden en verbreken;
+//  - de laatste status uit de cache, zodat het paneel direct gevuld opent.
+// Nieuw: wachtwoordveld voor onbekende beveiligde netwerken, opnieuw zoeken,
+// opgeslagen netwerken vergeten en een terugknop naar Snelle instellingen.
+// De vorm (blob, hoeken, groei-animatie) komt volledig uit PanelHost.
 Item {
-    id: window
-    
-    // --- Responsive Scaling Logic ---
-    Scaler {
-        id: scaler
-        currentWidth: Screen.width
-    }
-    
-    function s(val) { 
-        return scaler.s(val); 
-    }
-    
-    // 1. Give the root window focus so it actively listens for keystrokes
+    id: root
+
     focus: true
 
-    // 2. Add the Shortcut component to listen specifically for the Tab key
+    MatugenColors { id: mocha }
+
+    signal panelSwitchRequested(string entryId)
+
+    readonly property int pad: 16
+    readonly property int itemRadius: Math.max(10, Math.min(16, ThemeConfig.styleWidgetRadius))
+    readonly property bool matteStyle: ThemeConfig.styleFamily === "matte"
+    readonly property int preferredPanelWidth: 420
+    // Groeit mee met de lijst; daarboven scrollt de lijst binnen het paneel.
+    readonly property int maxPanelHeight: 640
+    readonly property int preferredPanelHeight: Math.min(maxPanelHeight,
+        Math.ceil(pad * 2 + headerColumn.implicitHeight + 12 + bodyColumn.implicitHeight))
+
+    readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/quickshell/network"
+
+    // Wi-Fi in de kleur van de Wi-Fi-tegel, Bluetooth in die van de
+    // Bluetooth-tegel in Snelle instellingen; bedraad in groen (status).
+    readonly property color wifiAccent: mocha.accent3
+    readonly property color btAccent: mocha.accent1
+    readonly property color ethAccent: mocha.green
+
+    property string activeMode: "wifi"
+    readonly property color activeColor: activeMode === "wifi" ? wifiAccent
+        : (activeMode === "bt" ? btAccent : ethAccent)
+
+    // ------------------------------------------------------------------------
+    // Toetsen
+    // ------------------------------------------------------------------------
     Shortcut {
         sequence: "Tab"
-        onActivated: {
-            window.playSfx("switch.wav");
-            window.activeMode = window.activeMode === "wifi" ? "bt" : "wifi";
-        }
+        onActivated: root.setMode(root.activeMode === "wifi" ? "bt" : "wifi")
     }
 
-    // -------------------------------------------------------------------------
-    // INSTANT CACHING ENGINE & SHARED STATE
-    // -------------------------------------------------------------------------
+    function setMode(mode) {
+        if (mode === root.activeMode) return;
+        root.playSfx("switch.wav");
+        root.activeMode = mode;
+    }
+
+    function playSfx(filename) {
+        try {
+            let path = Qt.resolvedUrl("sounds/" + filename).toString();
+            if (path.indexOf("file://") === 0) path = path.substring(7);
+            Quickshell.execDetached(["sh", "-c", "pw-play \"$1\" 2>/dev/null || paplay \"$1\" 2>/dev/null", "sh", path]);
+        } catch (e) {}
+    }
+
+    // ------------------------------------------------------------------------
+    // Cache en modusbestand
+    // ------------------------------------------------------------------------
     Settings {
         id: cache
         category: "QS_NetworkWidget"
@@ -44,15 +84,16 @@ Item {
     }
 
     property bool ignoreNextModeFileUpdate: false
+
     Process {
         id: modeReader
-        command: ["bash", "-c", "cat /tmp/qs_network_mode 2>/dev/null"]
+        command: ["cat", "/tmp/qs_network_mode"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let mode = this.text.trim();
-                if ((mode === "wifi" || mode === "bt" || mode === "eth") && window.activeMode !== mode) {
-                    window.ignoreNextModeFileUpdate = true;
-                    window.activeMode = mode;
+                if ((mode === "wifi" || mode === "bt" || mode === "eth") && root.activeMode !== mode) {
+                    root.ignoreNextModeFileUpdate = true;
+                    root.activeMode = mode;
                 }
             }
         }
@@ -62,1939 +103,1778 @@ Item {
         interval: 150
         running: true
         repeat: true
-        onTriggered: {
-            if (!modeReader.running) modeReader.running = true;
-        }
-    }
-
-    Component.onCompleted: {
-        Quickshell.execDetached(["bash", "-c", "if [ ! -f /tmp/qs_network_mode ]; then echo '" + activeMode + "' > /tmp/qs_network_mode; fi"]);
-
-        // Process cached JSON FIRST so the arrays populate before animations trigger
-        if (cache.lastWifiJson !== "") processWifiJson(cache.lastWifiJson);
-        if (cache.lastBtJson !== "") processBtJson(cache.lastBtJson);
-        introState = 1.0;
-    }
-
-    function playSfx(filename) {
-        try {
-            let rawUrl = Qt.resolvedUrl("sounds/" + filename).toString();
-            let cleanPath = rawUrl;
-            if (cleanPath.indexOf("file://") === 0) {
-                cleanPath = cleanPath.substring(7); 
-            }
-            let cmd = "pw-play '" + cleanPath + "' 2>/dev/null || paplay '" + cleanPath + "' 2>/dev/null";
-            Quickshell.execDetached(["sh", "-c", cmd]);
-        } catch(e) {}
-    }
-
-    MatugenColors { id: _theme }
-
-    readonly property color base: _theme.base
-    readonly property color mantle: _theme.mantle
-    readonly property color crust: _theme.crust
-    readonly property color text: _theme.text
-    readonly property color subtext0: _theme.subtext0
-    readonly property color overlay0: _theme.overlay0
-    readonly property color overlay1: _theme.overlay1
-    readonly property color surface0: _theme.surface0
-    readonly property color surface1: _theme.surface1
-    readonly property color surface2: _theme.surface2
-    
-    readonly property color mauve: _theme.mauve
-    readonly property color pink: _theme.pink
-    readonly property color sapphire: _theme.sapphire
-    readonly property color blue: _theme.blue
-    readonly property color red: _theme.red
-    readonly property color maroon: _theme.maroon
-    readonly property color peach: _theme.peach
-    readonly property int themedRadius: window.s(Math.max(14, ThemeConfig.styleWidgetRadius))
-    readonly property int themedInnerRadius: window.s(Math.max(10, ThemeConfig.styleWidgetRadius - 4))
-    readonly property string uiFontFamily: ThemeConfig.uiFont
-    readonly property string monoFontFamily: ThemeConfig.monoFont
-    readonly property string displayFontFamily: ThemeConfig.displayFont
-    readonly property real themedLetterSpacing: ThemeConfig.letterSpacing
-    readonly property int themedFontWeight: ThemeConfig.fontWeight
-    readonly property color popupFill: _theme.shellContentFill
-    readonly property color dockFill: _theme.shellRaisedFill
-
-    readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/quickshell/network"
-    
-    // Abstracted accents. Dialed down from 1.4 to 1.15 to prevent the RGB channels 
-    // from blowing out to pure #FFFFFF while still staying distinct and bright.
-    readonly property color wifiAccent: Qt.lighter(window.sapphire, 1.15) 
-    readonly property color btAccent: window.mauve
-
-    property string activeMode: "bt"
-    // Ethernet is statusinformatie; Wi-Fi en Bluetooth zijn de enige vormen
-    // die de brede radar en apparatenlijst nodig hebben.
-    readonly property int preferredPanelWidth: activeMode === "eth" ? window.s(450) : 0
-    readonly property int preferredPanelHeight: activeMode === "eth" ? window.s(380) : 0
-    readonly property color activeColor: activeMode === "wifi" ? window.wifiAccent : window.btAccent
-    // Calculate a subtle, pure one-color gradient rather than mixing two distinct palette colors
-    readonly property color activeGradientSecondary: Qt.darker(window.activeColor, 1.25)
-
-    // Ethernet heeft geen radio-controls. Laat de aparte, rustige statusview
-    // daarom de hele wireless-radar vervangen zodra de shell eth selecteert.
-    Loader {
-        anchors.fill: parent
-        active: window.activeMode === "eth"
-        visible: active
-        source: Qt.resolvedUrl("EthernetView.qml")
-    }
-
-    // Dictionary objects to allow multi-device simultaneous connects/disconnects without globally locking
-    property var busyTasks: ({})
-    property var disconnectingDevices: ({})
-    
-    Timer { 
-        id: busyTimeout; interval: window.activeMode === "bt" ? 90000 : 15000;
-        onTriggered: {
-            if (Object.keys(window.busyTasks).length > 0 && window.activeMode === "bt") {
-                window.btConnectError = "Verbinding mislukt (timeout)";
-                btConnectErrorTimer.restart();
-            }
-            window.busyTasks = ({}); window.disconnectingDevices = ({});
-        } 
-    }
-
-    Timer { id: wifiPendingReset; interval: 8000; onTriggered: { window.wifiPowerPending = false; window.expectedWifiPower = ""; } }
-    Timer { id: btPendingReset; interval: 8000; onTriggered: { window.btPowerPending = false; window.expectedBtPower = ""; } }
-
-    property bool showInfoView: false
-
-    // Supports up to 5 simultaneous connected cores
-    property var currentCores: [null, null, null, null, null]
-    property var coreVisualIndices: [0, 0, 0, 0, 0]
-    property int activeCoreCount: 0
-    property real smoothedActiveCoreCount: activeCoreCount
-    Behavior on smoothedActiveCoreCount { NumberAnimation { duration: ThemeConfig.duration(1000); easing.type: Easing.InOutExpo } }
-
-    function syncCores() {
-        let list = activeMode === "wifi" ? (isWifiConn && wifiConnected ? [window.wifiConnected] : []) : window.btConnected;
-        if (!currentPower) list = [];
-        else {
-            if (!Array.isArray(list)) list = [list];
-        }
-
-        let newCores = [window.currentCores[0], window.currentCores[1], window.currentCores[2], window.currentCores[3], window.currentCores[4]];
-        let found = [false, false, false, false, false];
-
-        // 1. Maintain existing devices in their current visual slots
-        for (let i = 0; i < list.length && i < 5; i++) {
-            let dev = list[i];
-            let id = window.activeMode === "wifi" ? dev.ssid : dev.mac;
-            for (let c = 0; c < 5; c++) {
-                if (newCores[c] && (window.activeMode === "wifi" ? newCores[c].ssid : newCores[c].mac) === id) { 
-                    found[c] = true; newCores[c] = dev; break; 
-                }
-            }
-        }
-
-        // Wipe missing devices
-        for (let c = 0; c < 5; c++) { if (!found[c]) newCores[c] = null; }
-
-        // 2. Map newcomer devices to any empty slots
-        for (let i = 0; i < list.length && i < 5; i++) {
-            let dev = list[i];
-            let id = window.activeMode === "wifi" ? dev.ssid : dev.mac;
-            let isFound = false;
-            for (let c = 0; c < 5; c++) {
-                if (newCores[c] && (window.activeMode === "wifi" ? newCores[c].ssid : newCores[c].mac) === id) { isFound = true; break; }
-            }
-            if (!isFound) {
-                for (let c = 0; c < 5; c++) {
-                    if (!newCores[c]) { newCores[c] = dev; break; }
-                }
-            }
-        }
-
-        window.currentCores = newCores;
-
-        // 3. Assign continuous visual indexes for elegant ring spacing
-        let activeCount = 0;
-        let newVis = [0, 0, 0, 0, 0];
-        for (let c = 0; c < 5; c++) {
-            if (newCores[c]) {
-                newVis[c] = activeCount;
-                activeCount++;
-            }
-        }
-        window.coreVisualIndices = newVis;
-        window.activeCoreCount = activeCount;
-    }
-
-    onCurrentConnChanged: {
-        showInfoView = currentConn;
-        if (currentConn) updateInfoNodes();
+        onTriggered: if (!modeReader.running) modeReader.running = true
     }
 
     onActiveModeChanged: {
-        if (!window.ignoreNextModeFileUpdate) {
-            Quickshell.execDetached(["bash", "-c", "echo '" + window.activeMode + "' > /tmp/qs_network_mode"]);
-        }
-        window.ignoreNextModeFileUpdate = false;
-
-        // Start/stop BT device discovery when switching modes
-        if (window.activeMode === "bt" && window.btPower === "on") {
-            window.startBtScan();
-        } else {
-            window.stopBtScan();
-        }
-
-        // Complete wipe of nodes to prevent any ghost artifacts between modes
-        infoListModel.clear();
-        window.btConnectError = "";
-        window.busyTasks = ({});
-        window.disconnectingDevices = ({});
-        window.currentCores = [null, null, null, null, null];
-        window.coreVisualIndices = [0, 0, 0, 0, 0];
-        window.activeCoreCount = 0;
-        syncCores();
-        window.showInfoView = window.currentConn;
-        if (window.showInfoView) window.updateInfoNodes();
+        if (!root.ignoreNextModeFileUpdate)
+            Quickshell.execDetached(["sh", "-c", "printf '%s\\n' \"$1\" > /tmp/qs_network_mode", "sh", root.activeMode]);
+        root.ignoreNextModeFileUpdate = false;
+        root.wifiError = "";
+        root.btError = "";
+        root.passwordSsid = "";
+        root.updateBtScan();
+        root.pollNow();
     }
 
-    ListModel { id: wifiListModel }
-    ListModel { id: btListModel }
-    ListModel { id: infoListModel }
+    Component.onCompleted: {
+        Quickshell.execDetached(["sh", "-c", "[ -f /tmp/qs_network_mode ] || printf '%s\\n' \"$1\" > /tmp/qs_network_mode", "sh", root.activeMode]);
+        if (cache.lastWifiJson !== "") processWifiJson(cache.lastWifiJson);
+        if (cache.lastBtJson !== "") processBtJson(cache.lastBtJson);
+        // Eén echte scan bij openen; de poller zelf gebruikt --rescan no.
+        Quickshell.execDetached(["nmcli", "device", "wifi", "rescan"]);
+        root.updateBtScan();
+    }
 
-    function syncModel(listModel, dataArray) {
+    // Bluetooth-zoeken loopt alleen zolang dit paneel op Bluetooth staat.
+    // De oude popup liet het zoeken na sluiten aan staan.
+    Component.onDestruction: {
+        if (root.btScanning)
+            Quickshell.execDetached(["bash", root.scriptsDir + "/bluetooth_panel_logic.sh", "--scan-off"]);
+    }
+
+    // ------------------------------------------------------------------------
+    // Modellen: ListModels houden de rijen vast tussen polls, zodat een open
+    // wachtwoordveld of uitgeklapte details niet bij elke poll verdwijnen.
+    // ------------------------------------------------------------------------
+    ListModel { id: wifiModel }
+    ListModel { id: btConnectedModel }
+    ListModel { id: btPairedModel }
+    ListModel { id: btFoundModel }
+
+    function syncModel(listModel, rows) {
         for (let i = listModel.count - 1; i >= 0; i--) {
-            let id = listModel.get(i).id;
-            let found = false;
-            for (let j = 0; j < dataArray.length; j++) {
-                if (id === dataArray[j].id) { found = true; break; }
+            let rid = listModel.get(i).rid;
+            let keep = false;
+            for (let j = 0; j < rows.length; j++) {
+                if (rows[j].rid === rid) { keep = true; break; }
             }
-            if (!found) { listModel.remove(i); }
+            if (!keep) listModel.remove(i);
         }
-        
-        for (let i = 0; i < dataArray.length && i < 30; i++) {
-            let d = dataArray[i];
-            let foundIdx = -1;
+        for (let i = 0; i < rows.length; i++) {
+            let row = rows[i];
+            let found = -1;
             for (let j = i; j < listModel.count; j++) {
-                if (listModel.get(j).id === d.id) { foundIdx = j; break; }
+                if (listModel.get(j).rid === row.rid) { found = j; break; }
             }
-            
-            let obj = {
-                id: d.id || "", ssid: d.ssid || "", mac: d.mac || "",
-                name: d.name || d.ssid || "", icon: d.icon || "", security: d.security || "", action: d.action || "",
-                isInfoNode: d.isInfoNode || false, isActionable: d.isActionable !== undefined ? d.isActionable : false, 
-                cmdStr: d.cmdStr || "", parentIndex: d.parentIndex !== undefined ? d.parentIndex : -1
-            };
-
-            if (foundIdx === -1) {
-                listModel.insert(i, obj);
+            if (found === -1) {
+                listModel.insert(i, row);
             } else {
-                if (foundIdx !== i) { listModel.move(foundIdx, i, 1); }
-                for (let key in obj) { 
-                    if (listModel.get(i)[key] !== obj[key]) {
-                        listModel.setProperty(i, key, obj[key]); 
-                    }
+                if (found !== i) listModel.move(found, i, 1);
+                let current = listModel.get(i);
+                for (let key in row) {
+                    if (current[key] !== row[key]) listModel.setProperty(i, key, row[key]);
                 }
             }
         }
     }
 
-    property int hoveredCardCount: 0
-    readonly property bool isListLocked: hoveredCardCount > 0
-    property var nextWifiList: null
-    property var nextBtList: null
-    property var nextInfoList: null
-
-    onIsListLockedChanged: {
-        if (!isListLocked) {
-            if (nextWifiList !== null) { window.syncModel(wifiListModel, nextWifiList); window.wifiList = nextWifiList; nextWifiList = null; }
-            if (nextBtList !== null) { window.syncModel(btListModel, nextBtList); window.btList = nextBtList; nextBtList = null; }
-            if (nextInfoList !== null) { window.syncModel(infoListModel, nextInfoList); nextInfoList = null; }
-        }
-    }
-
+    // ------------------------------------------------------------------------
+    // Wi-Fi
+    // ------------------------------------------------------------------------
+    property string wifiPower: "off"
     property bool wifiPowerPending: false
     property string expectedWifiPower: ""
-    property string wifiPower: "off"
     property var wifiConnected: null
-    property var wifiList: []
-    property string strongestWifiSsid: ""
-    readonly property bool isWifiConn: !!window.wifiConnected && window.wifiConnected.ssid !== undefined
+    readonly property bool isWifiConn: !!wifiConnected && wifiConnected.ssid !== undefined
+    property string wifiBusySsid: ""
+    property bool wifiDisconnecting: false
+    property string wifiError: ""
+    property string passwordSsid: ""
+    property bool wifiScanning: false
 
-    readonly property string targetWifiSsid: {
-        let found = false;
-        if (cache.lastWifiSsid !== "") {
-            for (let i = 0; i < wifiList.length; i++) {
-                if (wifiList[i].id === cache.lastWifiSsid) { found = true; break; }
-            }
-        }
-        return found ? cache.lastWifiSsid : strongestWifiSsid;
-    }
+    Timer { id: wifiPendingReset; interval: 8000; onTriggered: { root.wifiPowerPending = false; root.expectedWifiPower = ""; } }
+    Timer { id: wifiErrorTimer; interval: 6000; onTriggered: root.wifiError = "" }
+    Timer { id: wifiScanDone; interval: 3500; onTriggered: { root.wifiScanning = false; root.pollNow(); } }
 
     onWifiConnectedChanged: {
-        if (window.wifiConnected && window.wifiConnected.ssid) { cache.lastWifiSsid = window.wifiConnected.ssid; }
-        syncCores();
-        if (window.currentConn && window.activeMode === "wifi") updateInfoNodes();
-    }
-
-    property bool btPowerPending: false
-    property string expectedBtPower: ""
-    property string btPower: "off"
-    property var btConnected: []
-    property var btList: []
-    readonly property bool isBtConn: window.btConnected.length > 0
-    property string btConnectError: ""
-
-    // Auto-clear error message after 5 seconds
-    Timer { id: btConnectErrorTimer; interval: 5000; onTriggered: window.btConnectError = "" }
-
-    // Start scan when BT panel is opened, stop on close
-    function startBtScan() {
-        Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--scan-on"]);
-    }
-    function stopBtScan() {
-        Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--scan-off"]);
-    }
-    
-    onBtConnectedChanged: { 
-        syncCores();
-        if (window.currentConn && window.activeMode === "bt") updateInfoNodes() 
-    }
-
-    readonly property bool currentPower: activeMode === "wifi" ? window.wifiPower === "on" : window.btPower === "on"
-    onCurrentPowerChanged: { syncCores(); }
-
-    readonly property bool currentPowerPending: activeMode === "wifi" ? window.wifiPowerPending : window.btPowerPending
-    readonly property bool currentConn: activeMode === "wifi" ? window.isWifiConn : window.isBtConn
-    
-    readonly property var currentObjList: activeMode === "wifi" ? (window.isWifiConn ? [window.wifiConnected] : []) : window.btConnected
-    
-    readonly property bool isLogicMultiState: window.activeMode === "bt" && window.activeCoreCount > 1
-    
-    // Smooth transition properties. Drops to 0.0 immediately if power is cut.
-    property real multiTransitionState: (isLogicMultiState && window.currentPower) ? 1.0 : 0.0
-    Behavior on multiTransitionState { NumberAnimation { duration: ThemeConfig.duration(1200); easing.type: Easing.InOutExpo } }
-
-    function updateInfoNodes() {
-        let nodes = [];
-        
-        let wConn = window.wifiConnected;
-        if (Array.isArray(wConn)) wConn = wConn[0]; 
-        let cList = window.activeMode === "wifi" ? (window.isWifiConn && wConn ? [wConn] : []) : window.btConnected;
-        
-        if (window.currentConn && cList.length > 0) {
-            for (let i = 0; i < cList.length; i++) {
-                let obj = cList[i];
-                let cIndex = 0;
-                
-                if (window.activeMode === "bt") {
-                    for (let c = 0; c < 5; c++) {
-                        if (window.currentCores[c] && window.currentCores[c].mac === obj.mac) { cIndex = c; break; }
-                    }
-                }
-
-                if (window.activeMode === "wifi") {
-                    let sigValue = obj.signal !== undefined ? obj.signal + "%" : "Calculating...";
-                    nodes.push({ id: "sig_" + i, name: sigValue, icon: obj.icon || "󰤨", action: "Signal Strength", isInfoNode: true, isActionable: false, parentIndex: cIndex });
-                    nodes.push({ id: "sec_" + i, name: obj.security || "Open", icon: "󰦝", action: "Security", isInfoNode: true, isActionable: false, parentIndex: cIndex });
-                    if (obj.ip) nodes.push({ id: "ip_" + i, name: obj.ip, icon: "󰩟", action: "IP Address", isInfoNode: true, isActionable: false, parentIndex: cIndex });
-                    if (obj.freq) nodes.push({ id: "freq_" + i, name: obj.freq, icon: "󰖧", action: "Band", isInfoNode: true, isActionable: false, parentIndex: cIndex });
-                } else {
-                    nodes.push({ id: "bat_" + obj.mac, name: (obj.battery || "0") + "%", icon: "󰥉", action: "Battery", isInfoNode: true, isActionable: false, parentIndex: cIndex });
-                    if (obj.profile) {
-                        nodes.push({ id: "prof_" + obj.mac, name: obj.profile, icon: (obj.profile === "Hi-Fi (A2DP)" ? "󰓃" : "󰋎"), action: "Audio Profile", isInfoNode: true, isActionable: false, parentIndex: cIndex });
-                    }
-                    nodes.push({ id: "mac_" + obj.mac, name: obj.mac || "Unknown", icon: "󰒋", action: "MAC Address", isInfoNode: true, isActionable: false, parentIndex: cIndex });
-                }
-            }
-            // Always bind to -1 to prevent index jump 'pops'. We'll control its layout via pure math.
-            nodes.push({ id: "action_scan", name: "Scan Devices", icon: "󰍉", action: "Switch View", isInfoNode: true, isActionable: true, cmdStr: "TOGGLE_VIEW", parentIndex: -1 });
-        }
-        
-        if (window.isListLocked) window.nextInfoList = nodes;
-        else { window.syncModel(infoListModel, nodes); window.nextInfoList = null; }
+        if (root.isWifiConn) cache.lastWifiSsid = root.wifiConnected.ssid;
     }
 
     function processWifiJson(textData) {
         if (textData === "") return;
-        try {
-            let data = JSON.parse(textData);
-            let fetchedPower = data.power || "off";
-            
-            if (window.wifiPowerPending) {
-                window.wifiPower = window.expectedWifiPower; 
-                if (fetchedPower === window.expectedWifiPower) {
-                    window.wifiPowerPending = false; 
-                    wifiPendingReset.stop();
-                }
-            } else {
-                window.wifiPower = fetchedPower;
-                window.expectedWifiPower = "";
+        let data;
+        try { data = JSON.parse(textData); } catch (e) { return; }
+
+        let fetchedPower = data.power || "off";
+        if (root.wifiPowerPending) {
+            root.wifiPower = root.expectedWifiPower;
+            if (fetchedPower === root.expectedWifiPower) {
+                root.wifiPowerPending = false;
+                wifiPendingReset.stop();
             }
+        } else {
+            root.wifiPower = fetchedPower;
+            root.expectedWifiPower = "";
+        }
 
-            let wasWifiConn = window.isWifiConn;
-            let newConnected = data.connected;
-            if (JSON.stringify(window.wifiConnected) !== JSON.stringify(newConnected)) {
-                window.wifiConnected = newConnected;
-            }
-            
-            let newNetworks = data.networks ? data.networks : [];
-            if (newNetworks.length > 0) {
-                let maxSig = -1; let bestSsid = newNetworks[0].id;
-                for (let i = 0; i < newNetworks.length; i++) {
-                    let sig = parseInt(newNetworks[i].signal || 0);
-                    if (sig > maxSig) { maxSig = sig; bestSsid = newNetworks[i].id; }
-                }
-                window.strongestWifiSsid = bestSsid;
-            } else { window.strongestWifiSsid = ""; }
+        let connected = data.connected || null;
+        if (JSON.stringify(root.wifiConnected) !== JSON.stringify(connected))
+            root.wifiConnected = connected;
+        if (!root.isWifiConn) root.wifiDisconnecting = false;
 
-            newNetworks.sort((a, b) => a.id.localeCompare(b.id));
-
-            if (window.isWifiConn && window.activeMode === "wifi") {
-                newNetworks.push({ id: "action_settings", ssid: "Current Device", mac: "", name: "Current Device", icon: "󰒓", security: "", action: "View Info", isInfoNode: false, isActionable: true, cmdStr: "TOGGLE_VIEW", parentIndex: -1 });
-            }
-
-            if (JSON.stringify(window.wifiList) !== JSON.stringify(newNetworks)) {
-                if (window.isListLocked) window.nextWifiList = newNetworks;
-                else { window.syncModel(wifiListModel, newNetworks); window.wifiList = newNetworks; window.nextWifiList = null; }
-            }
-
-            if (window.activeMode === "wifi") {
-                if (!wasWifiConn && window.isWifiConn) {
-                    window.showInfoView = true;
-                }
-                
-                let dd = window.disconnectingDevices;
-                let ddChanged = false;
-                for (let ssid in dd) {
-                    if (!window.isWifiConn || (window.wifiConnected && window.wifiConnected.ssid !== ssid)) {
-                        delete dd[ssid];
-                        ddChanged = true;
-                    }
-                }
-                if (ddChanged) {
-                    window.disconnectingDevices = Object.assign({}, dd);
-                    if (Object.keys(window.disconnectingDevices).length === 0 && Object.keys(window.busyTasks).length === 0) busyTimeout.stop();
-                }
-                
-                let newlyConnected = false;
-                let bt = window.busyTasks;
-                if (window.isWifiConn && window.wifiConnected && bt[window.wifiConnected.ssid]) {
-                    newlyConnected = true;
-                    delete bt[window.wifiConnected.ssid];
-                }
-                if (newlyConnected) {
-                    window.playSfx("connect.wav");
-                    window.busyTasks = Object.assign({}, bt);
-                    if (Object.keys(window.busyTasks).length === 0 && Object.keys(window.disconnectingDevices).length === 0) busyTimeout.stop();
-                }
-
-                if (window.currentConn) window.updateInfoNodes();
-            }
-        } catch(e) {}
-    }
-
-    function processBtJson(textData) {
-        if (textData === "") return;
-        try {
-            let data = JSON.parse(textData);
-            let fetchedPower = data.power || "off";
-            
-            if (window.btPowerPending) {
-                window.btPower = window.expectedBtPower; 
-                if (fetchedPower === window.expectedBtPower) {
-                    window.btPowerPending = false; 
-                    btPendingReset.stop();
-                }
-            } else {
-                window.btPower = fetchedPower;
-                window.expectedBtPower = "";
-            }
-
-            let oldBtLen = window.btConnected.length;
-            let newBtConnected = data.connected || [];
-            if (!Array.isArray(newBtConnected)) newBtConnected = [newBtConnected];
-
-            if (JSON.stringify(window.btConnected) !== JSON.stringify(newBtConnected)) {
-                window.btConnected = newBtConnected;
-            }
-
-            let newDevices = data.devices ? data.devices : [];
-            newDevices.sort((a, b) => a.id.localeCompare(b.id));
-
-            if (window.isBtConn && window.activeMode === "bt") {
-                newDevices.push({ id: "action_settings", ssid: "", mac: "action_settings", name: "Current Device", icon: "󰒓", action: "View Info", isInfoNode: false, isActionable: true, cmdStr: "TOGGLE_VIEW", parentIndex: -1 });
-            }
-
-            if (JSON.stringify(window.btList) !== JSON.stringify(newDevices)) {
-                if (window.isListLocked) window.nextBtList = newDevices;
-                else { window.syncModel(btListModel, newDevices); window.btList = newDevices; window.nextBtList = null; }
-            }
-
-            if (window.activeMode === "bt") {
-                if (window.btConnected.length > oldBtLen) {
-                    window.showInfoView = true;
-                }
-
-                let dd = window.disconnectingDevices;
-                let ddChanged = false;
-                for (let mac in dd) {
-                    let stillConnected = false;
-                    for (let i = 0; i < window.btConnected.length; i++) {
-                        if (window.btConnected[i].mac === mac) { stillConnected = true; break; }
-                    }
-                    if (!stillConnected) {
-                        delete dd[mac];
-                        ddChanged = true;
-                    }
-                }
-                if (ddChanged) {
-                    window.disconnectingDevices = Object.assign({}, dd);
-                    if (Object.keys(window.disconnectingDevices).length === 0 && Object.keys(window.busyTasks).length === 0) busyTimeout.stop();
-                }
-                
-                let newlyConnected = false;
-                let bt = window.busyTasks;
-                for (let i = 0; i < window.btConnected.length; i++) {
-                    let mac = window.btConnected[i].mac;
-                    if (bt[mac]) {
-                        newlyConnected = true;
-                        delete bt[mac];
-                    }
-                }
-                if (newlyConnected) {
-                    window.playSfx("connect.wav");
-                    window.busyTasks = Object.assign({}, bt);
-                    if (Object.keys(window.busyTasks).length === 0 && Object.keys(window.disconnectingDevices).length === 0) busyTimeout.stop();
-                }
-
-                if (window.currentConn) window.updateInfoNodes();
-            }
-        } catch(e) {}
+        let nets = Array.isArray(data.networks) ? data.networks : [];
+        // Sterkste bovenaan, daarna op naam: zo staat wat je wilt meestal
+        // boven zonder dat de lijst bij elke poll door elkaar springt.
+        nets.sort((a, b) => {
+            let sa = Math.round(parseInt(a.signal || 0) / 20);
+            let sb = Math.round(parseInt(b.signal || 0) / 20);
+            if (sa !== sb) return sb - sa;
+            return String(a.ssid || "").localeCompare(String(b.ssid || ""));
+        });
+        let rows = [];
+        for (let i = 0; i < nets.length && i < 30; i++) {
+            let n = nets[i];
+            rows.push({
+                rid: String(n.id || n.ssid || ""),
+                name: String(n.ssid || n.id || ""),
+                icon: String(n.icon || "󰤨"),
+                signal: parseInt(n.signal || 0) || 0,
+                security: String(n.security || ""),
+                known: n.known === true
+            });
+        }
+        root.syncModel(wifiModel, rows);
     }
 
     Process {
         id: wifiPoller
-        command: ["bash", window.scriptsDir + "/wifi_panel_logic.sh"]
+        command: ["bash", root.scriptsDir + "/wifi_panel_logic.sh"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
-                cache.lastWifiJson = this.text.trim();
-                processWifiJson(cache.lastWifiJson);
+                let txt = this.text.trim();
+                if (txt === "") return;
+                cache.lastWifiJson = txt;
+                root.processWifiJson(txt);
             }
         }
+    }
+
+    property string wifiConnectTarget: ""
+    property bool wifiConnectWithPassword: false
+
+    Process {
+        id: wifiConnectProc
+        stderr: StdioCollector { id: wifiConnectErr }
+        onExited: (exitCode, exitStatus) => {
+            let ssid = root.wifiConnectTarget;
+            root.wifiBusySsid = "";
+            if (exitCode === 0) {
+                root.playSfx("connect.wav");
+                root.wifiError = "";
+                root.passwordSsid = "";
+            } else {
+                let detail = String(wifiConnectErr.text || "").trim().split("\n")[0];
+                let secrets = /secret|password|802-1x|psk/i.test(detail);
+                root.wifiError = secrets || root.wifiConnectWithPassword
+                    ? "Verbinden met " + ssid + " mislukt: controleer het wachtwoord"
+                    : "Verbinden met " + ssid + " mislukt" + (detail !== "" ? " (" + detail.replace(/^Error:\s*/, "") + ")" : "");
+                wifiErrorTimer.restart();
+                // Beveiligd netwerk zonder (juist) wachtwoord: vraag erom.
+                if (secrets || root.wifiConnectWithPassword) root.passwordSsid = ssid;
+            }
+            root.pollNow();
+        }
+    }
+
+    function connectWifi(ssid, password) {
+        if (wifiConnectProc.running || ssid === "") return;
+        let cmd = ["nmcli", "device", "wifi", "connect", ssid];
+        if (password !== undefined && password !== "") cmd.push("password", password);
+        root.wifiConnectTarget = ssid;
+        root.wifiConnectWithPassword = password !== undefined && password !== "";
+        root.wifiBusySsid = ssid;
+        root.wifiError = "";
+        wifiConnectProc.command = cmd;
+        wifiConnectProc.running = true;
+        root.pollNow();
+    }
+
+    function disconnectWifi() {
+        if (!root.isWifiConn || root.wifiDisconnecting) return;
+        root.wifiDisconnecting = true;
+        root.playSfx("disconnect.wav");
+        Quickshell.execDetached(["sh", "-c", "nmcli device disconnect \"$(nmcli -t -f DEVICE,TYPE d | awk -F: '$2==\"wifi\"{print $1; exit}')\""]);
+        root.pollNow();
+    }
+
+    function forgetWifi(ssid) {
+        if (ssid === "") return;
+        root.playSfx("disconnect.wav");
+        Quickshell.execDetached(["nmcli", "connection", "delete", "id", ssid]);
+        root.pollNow();
+    }
+
+    function rescanWifi() {
+        if (root.wifiScanning || root.wifiPower !== "on") return;
+        root.wifiScanning = true;
+        Quickshell.execDetached(["nmcli", "device", "wifi", "rescan"]);
+        wifiScanDone.restart();
+    }
+
+    function bandLabel(freq) {
+        let mhz = parseInt(String(freq || ""));
+        if (isNaN(mhz)) return freq && freq !== "Unknown" ? String(freq) : "Onbekend";
+        let band = mhz >= 5925 ? "6 GHz" : (mhz >= 4900 ? "5 GHz" : "2,4 GHz");
+        return band + " · " + mhz + " MHz";
+    }
+
+    function securityLabel(sec) {
+        let s = String(sec || "").trim();
+        return s === "" || s === "--" ? "Open" : s;
+    }
+
+    function isSecured(sec) {
+        let s = String(sec || "").trim();
+        return s !== "" && s !== "--";
+    }
+
+    // ------------------------------------------------------------------------
+    // Bluetooth
+    // ------------------------------------------------------------------------
+    property string btPower: "off"
+    property bool btPowerPending: false
+    property string expectedBtPower: ""
+    property int btConnectedCount: 0
+    property var btBusy: ({})
+    property string btError: ""
+    property bool btScanning: false
+
+    Timer { id: btPendingReset; interval: 8000; onTriggered: { root.btPowerPending = false; root.expectedBtPower = ""; } }
+    Timer { id: btErrorTimer; interval: 6000; onTriggered: root.btError = "" }
+
+    function setBtBusy(mac, what) {
+        let next = Object.assign({}, root.btBusy);
+        if (what === "") delete next[mac];
+        else next[mac] = what;
+        root.btBusy = next;
+    }
+
+    function updateBtScan() {
+        let want = root.activeMode === "bt" && root.btPower === "on";
+        if (want === root.btScanning) return;
+        root.btScanning = want;
+        Quickshell.execDetached(["bash", root.scriptsDir + "/bluetooth_panel_logic.sh", want ? "--scan-on" : "--scan-off"]);
+    }
+
+    onBtPowerChanged: updateBtScan()
+
+    function looksUnnamed(name, mac) {
+        let n = String(name || "");
+        return n === "" || n.replace(/-/g, ":").toUpperCase() === String(mac || "").toUpperCase();
+    }
+
+    function processBtJson(textData) {
+        if (textData === "") return;
+        let data;
+        try { data = JSON.parse(textData); } catch (e) { return; }
+
+        let fetchedPower = data.power || "off";
+        if (root.btPowerPending) {
+            root.btPower = root.expectedBtPower;
+            if (fetchedPower === root.expectedBtPower) {
+                root.btPowerPending = false;
+                btPendingReset.stop();
+            }
+        } else {
+            root.btPower = fetchedPower;
+            root.expectedBtPower = "";
+        }
+
+        let connected = data.connected || [];
+        if (!Array.isArray(connected)) connected = [connected];
+        let connectedRows = [];
+        for (let i = 0; i < connected.length; i++) {
+            let d = connected[i];
+            if (!d || !d.mac) continue;
+            connectedRows.push({
+                rid: String(d.mac),
+                name: String(d.name || d.mac),
+                icon: String(d.icon || "󰂯"),
+                mac: String(d.mac),
+                battery: parseInt(d.battery || 0) || 0,
+                profile: String(d.profile || "")
+            });
+            // Een apparaat dat verbonden is, is niet meer "bezig met verbinden".
+            if (root.btBusy[d.mac] === "connect") root.setBtBusy(d.mac, "");
+        }
+        // Verbreken is klaar zodra het apparaat uit de verbonden lijst is.
+        for (let mac in root.btBusy) {
+            if (root.btBusy[mac] !== "disconnect") continue;
+            let still = false;
+            for (let i = 0; i < connectedRows.length; i++) {
+                if (connectedRows[i].mac === mac) { still = true; break; }
+            }
+            if (!still) root.setBtBusy(mac, "");
+        }
+
+        let devices = Array.isArray(data.devices) ? data.devices : [];
+        let paired = [];
+        let found = [];
+        for (let i = 0; i < devices.length; i++) {
+            let d = devices[i];
+            if (!d || !d.mac) continue;
+            let unnamed = root.looksUnnamed(d.name, d.mac);
+            let row = {
+                rid: String(d.mac),
+                name: unnamed ? "Onbekend apparaat" : String(d.name),
+                icon: String(d.icon || "󰂯"),
+                mac: String(d.mac),
+                unnamed: unnamed
+            };
+            if (d.action === "Pair") found.push(row);
+            else paired.push(row);
+        }
+        let byName = (a, b) => {
+            if (a.unnamed !== b.unnamed) return a.unnamed ? 1 : -1;
+            return a.name.localeCompare(b.name);
+        };
+        paired.sort(byName);
+        found.sort(byName);
+
+        root.syncModel(btConnectedModel, connectedRows);
+        root.syncModel(btPairedModel, paired);
+        root.syncModel(btFoundModel, found.slice(0, 20));
+        root.btConnectedCount = connectedRows.length;
     }
 
     Process {
         id: btPoller
-        command: ["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--status"]
+        command: ["bash", root.scriptsDir + "/bluetooth_panel_logic.sh", "--status"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
-                cache.lastBtJson = this.text.trim();
-                processBtJson(cache.lastBtJson);
+                let txt = this.text.trim();
+                if (txt === "") return;
+                cache.lastBtJson = txt;
+                root.processBtJson(txt);
             }
         }
     }
-    
+
+    property string btConnectTarget: ""
+    property string btConnectName: ""
+
+    Process {
+        id: btConnectProc
+        stdout: StdioCollector { id: btConnectOut }
+        onExited: (exitCode, exitStatus) => {
+            let mac = root.btConnectTarget;
+            root.setBtBusy(mac, "");
+            let reply = null;
+            try { reply = JSON.parse(String(btConnectOut.text || "").trim().split("\n").pop()); } catch (e) {}
+            if (exitCode === 0 && (!reply || reply.ok !== false)) {
+                root.playSfx("connect.wav");
+                root.btError = "";
+            } else {
+                let why = reply && reply.error ? String(reply.error) : "";
+                // bluetoothctl-uitvoer kan lang zijn; de eerste regel volstaat.
+                why = why.split("\n")[0];
+                root.btError = (root.btConnectName !== "" ? root.btConnectName + ": " : "")
+                    + (why !== "" ? why : "verbinding mislukt");
+                btErrorTimer.restart();
+            }
+            root.pollNow();
+        }
+    }
+
     Timer {
-        interval: (Object.keys(window.busyTasks).length > 0 || Object.keys(window.disconnectingDevices).length > 0) ? 1000 : 3000
-        running: true; repeat: true
-        onTriggered: { 
-            if (!wifiPoller.running) wifiPoller.running = true; 
-            if (!btPoller.running) btPoller.running = true; 
+        id: btConnectTimeout
+        interval: 90000
+        onTriggered: {
+            if (!btConnectProc.running) return;
+            btConnectProc.running = false;
+            root.setBtBusy(root.btConnectTarget, "");
+            root.btError = "Verbinding mislukt (timeout)";
+            btErrorTimer.restart();
         }
     }
 
-    property real globalOrbitAngle: 0
-    NumberAnimation on globalOrbitAngle {
-        from: 0; to: Math.PI * 2; duration: 200000; loops: Animation.Infinite; running: true
+    function connectBt(mac, name) {
+        if (btConnectProc.running) {
+            root.btError = "Even geduld: er wordt al een apparaat verbonden";
+            btErrorTimer.restart();
+            return;
+        }
+        root.btConnectTarget = mac;
+        root.btConnectName = name || "";
+        root.btError = "";
+        root.setBtBusy(mac, "connect");
+        btConnectProc.command = ["bash", root.scriptsDir + "/bluetooth_panel_logic.sh", "--connect", mac];
+        btConnectProc.running = true;
+        btConnectTimeout.restart();
+        root.pollNow();
     }
 
-    property real introState: 0.0
-    Behavior on introState { NumberAnimation { duration: ThemeConfig.duration(1500); easing.type: Easing.OutCubic } }
+    function disconnectBt(mac) {
+        if (root.btBusy[mac]) return;
+        root.setBtBusy(mac, "disconnect");
+        root.playSfx("disconnect.wav");
+        Quickshell.execDetached(["bash", root.scriptsDir + "/bluetooth_panel_logic.sh", "--disconnect", mac]);
+        root.pollNow();
+    }
 
-    component LoadingDots : Row {
-        spacing: window.s(5)
-        property color dotCol: window.text
-        Repeater {
-            model: 3
-            Rectangle {
-                width: window.s(6); height: window.s(6); radius: window.s(3); color: dotCol
-                SequentialAnimation on y {
-                    loops: Animation.Infinite
-                    PauseAnimation { duration: index * 100 }
-                    NumberAnimation { from: 0; to: window.s(-6); duration: 250; easing.type: Easing.OutSine }
-                    NumberAnimation { from: window.s(-6); to: 0; duration: 250; easing.type: Easing.InSine }
-                    PauseAnimation { duration: (2 - index) * 100 }
-                }
+    function forgetBt(mac) {
+        if (root.btBusy[mac]) return;
+        root.playSfx("disconnect.wav");
+        Quickshell.execDetached(["bash", root.scriptsDir + "/bluetooth_panel_logic.sh", "--forget", mac]);
+        root.pollNow();
+    }
+
+    // ------------------------------------------------------------------------
+    // Bedraad
+    // ------------------------------------------------------------------------
+    property var ethernet: ({ power: "off", connected: null })
+    readonly property var ethConnection: ethernet && ethernet.connected ? ethernet.connected : null
+    readonly property bool ethConnected: ethConnection !== null
+
+    Process {
+        id: ethPoller
+        command: ["bash", root.scriptsDir + "/eth_panel_logic.sh"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.ethernet = JSON.parse(this.text.trim()); } catch (e) {}
             }
         }
     }
 
-    Item {
-        id: wirelessContent
-        anchors.fill: parent
-        visible: window.activeMode !== "eth"
+    // ------------------------------------------------------------------------
+    // Aan/uit en verversen
+    // ------------------------------------------------------------------------
+    readonly property bool currentPower: activeMode === "wifi" ? wifiPower === "on"
+        : (activeMode === "bt" ? btPower === "on" : ethConnected)
+    readonly property bool currentPowerPending: activeMode === "wifi" ? wifiPowerPending
+        : (activeMode === "bt" ? btPowerPending : false)
+    readonly property bool anyBusy: wifiBusySsid !== "" || wifiDisconnecting || Object.keys(btBusy).length > 0
 
-        Rectangle {
-            anchors.fill: parent
-            radius: window.themedRadius
-            color: "transparent"
-            border.width: 0
-            clip: true
+    function togglePower() {
+        if (root.activeMode === "wifi") {
+            if (root.wifiPowerPending) return;
+            root.expectedWifiPower = root.wifiPower === "on" ? "off" : "on";
+            root.wifiPowerPending = true;
+            root.playSfx(root.expectedWifiPower === "on" ? "power_on.wav" : "power_off.wav");
+            wifiPendingReset.restart();
+            root.wifiPower = root.expectedWifiPower;
+            Quickshell.execDetached(["nmcli", "radio", "wifi", root.wifiPower]);
+        } else if (root.activeMode === "bt") {
+            if (root.btPowerPending) return;
+            root.expectedBtPower = root.btPower === "on" ? "off" : "on";
+            root.btPowerPending = true;
+            root.playSfx(root.expectedBtPower === "on" ? "power_on.wav" : "power_off.wav");
+            btPendingReset.restart();
+            root.btPower = root.expectedBtPower;
+            Quickshell.execDetached(["bash", root.scriptsDir + "/bluetooth_panel_logic.sh", "--toggle"]);
+        }
+        root.pollNow();
+    }
+
+    function pollNow() {
+        if (!wifiPoller.running) wifiPoller.running = true;
+        if (!btPoller.running) btPoller.running = true;
+        if (root.activeMode === "eth" && !ethPoller.running) ethPoller.running = true;
+    }
+
+    Timer {
+        interval: root.anyBusy || root.wifiPowerPending || root.btPowerPending ? 1000 : 3000
+        running: true
+        repeat: true
+        onTriggered: root.pollNow()
+    }
+
+    // ------------------------------------------------------------------------
+    // Weergave
+    // ------------------------------------------------------------------------
+    ColumnLayout {
+        id: headerColumn
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: root.pad
+        spacing: 12
+
+        // --- Kop -------------------------------------------------------------
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+
             Rectangle {
-                width: parent.width * 0.8; height: width; radius: width / 2
-                x: (parent.width / 2 - width / 2) + Math.cos(window.globalOrbitAngle * 2) * window.s(150)
-                y: (parent.height / 2 - height / 2) + Math.sin(window.globalOrbitAngle * 2) * window.s(100)
-                opacity: window.currentPower ? 0.08 : 0.02
-                color: window.currentConn ? window.activeColor : window.surface2
-                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
-                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(1000) } }
-            }
-            
-            Rectangle {
-                width: parent.width * 0.9; height: width; radius: width / 2
-                x: (parent.width / 2 - width / 2) + Math.sin(window.globalOrbitAngle * 1.5) * window.s(-150)
-                y: (parent.height / 2 - height / 2) + Math.cos(window.globalOrbitAngle * 1.5) * window.s(-100)
-                opacity: window.currentPower ? 0.06 : 0.01
-                color: window.currentConn ? window.activeGradientSecondary : window.surface1
-                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(1000) } }
-                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(1000) } }
-            }
-
-            Item {
-                id: radarItem
-                anchors.fill: parent
-                anchors.bottomMargin: window.s(80) 
-                opacity: window.currentPower ? 1.0 : 0.0
-                scale: window.currentPower ? 1.0 : 1.05
-                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.InOutQuad } }
-                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutCubic } }
-                
-                Repeater {
-                    model: 3
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: window.s(280) + (index * window.s(170))
-                        height: width
-                        radius: width / 2
-                        color: "transparent"
-                        
-                        border.color: Object.keys(window.disconnectingDevices).length > 0 ? window.red : window.activeColor
-                        border.width: Object.keys(window.disconnectingDevices).length > 0 ? window.s(2) : 1
-                        
-                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                        Behavior on border.width { NumberAnimation { duration: ThemeConfig.duration(150) } }
-
-                        opacity: Object.keys(window.disconnectingDevices).length > 0 ? 0.2 : (window.currentConn ? 0.08 - (index * 0.02) : 0.03)
-                        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(150) } }
-                    }
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+                radius: Math.min(root.itemRadius, 18)
+                color: Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, root.currentPower ? 0.24 : 0.10)
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
                 }
-            }
-
-            Canvas {
-                id: nodeLinesCanvas
-                anchors.fill: parent
-                anchors.bottomMargin: window.s(80)
-                z: 0 
-                opacity: (window.currentConn && window.showInfoView && window.currentPower) ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(500) } }
-                
-                property real scaleTrigger: window.s(1)
-                onScaleTriggerChanged: requestPaint()
-
-                Timer {
-                    id: lightningTimer
-                    interval: 45
-                    running: nodeLinesCanvas.opacity > 0.01 && window.currentPower 
-                    repeat: true
-                    onTriggered: nodeLinesCanvas.requestPaint()
-                }
-
-                Connections {
-                    target: window
-                    function onGlobalOrbitAngleChanged() { 
-                        if (window.currentConn && window.showInfoView && window.currentPower) nodeLinesCanvas.requestPaint() 
-                    }
-                }
-                
-                onPaint: {
-                    var ctx = getContext("2d");
-                    var s = window.s;
-                    ctx.clearRect(0, 0, width, height);
-                    if (!window.currentConn || !window.showInfoView || !window.currentPower) return;
-                    
-                    var time = Date.now() / 1000;
-                    ctx.lineJoin = "round";
-                    ctx.lineCap = "round";
-
-                    var tWave1 = time * 2.5;
-                    var tWave2 = time * -1.5;
-
-                    for (var i = 0; i < orbitRepeater.count; i++) {
-                        var item = orbitRepeater.itemAt(i);
-                        if (!item || !item.isLoaded) continue;
-
-                        var targetX = item.x + item.width / 2;
-                        var targetY = item.y + item.height / 2;
-
-                        function drawStrands(startX, startY, parentFade, parentWidth) {
-                            var dx = targetX - startX;
-                            var dy = targetY - startY;
-                            var fullDist = Math.sqrt(dx * dx + dy * dy);
-                            
-                            if (fullDist < s(10)) return;
-
-                            var alpha = Math.atan2(dy, dx);
-                            var cosA = Math.cos(alpha);
-                            var sinA = Math.sin(alpha);
-                            
-                            var coreVisualRadius = parentWidth / 2;
-                            var startOffset = coreVisualRadius + s(5); 
-                            var endOffset = s(35); 
-                            
-                            var drawDist = fullDist - startOffset - endOffset;
-                            if (drawDist <= 0) return;
-                            
-                            var steps = 8;
-                            var perpX = -sinA;
-                            var perpY = cosA;
-
-                            var sX = startX + cosA * startOffset;
-                            var sY = startY + sinA * startOffset;
-
-                            var distanceFactor = Math.max(0, 1.0 - (fullDist / 400.0));
-                            var dynamicLineWidthCore = s(1.0) + (distanceFactor * s(2.0));
-                            var dynamicLineWidthGlow = s(4.0) + (distanceFactor * s(4.0));
-                            var dynamicAlpha = (0.2 + (distanceFactor * 0.7)) * parentFade;
-
-                            ctx.beginPath();
-                            ctx.moveTo(sX, sY);
-                            for (var j = 1; j <= steps; j++) {
-                                var t = j / steps;
-                                var currentDist = drawDist * t;
-                                var envelope = Math.sin(t * Math.PI);
-                                var offset = Math.sin(tWave1 + t * 6) * s(6) * envelope + ((Math.random() - 0.5) * s(5.0) * distanceFactor);
-                                ctx.lineTo(sX + cosA * currentDist + perpX * offset, sY + sinA * currentDist + perpY * offset);
-                            }
-                            ctx.lineWidth = dynamicLineWidthGlow;
-                            ctx.strokeStyle = window.activeColor;
-                            ctx.globalAlpha = dynamicAlpha * 0.15;
-                            ctx.stroke();
-
-                            ctx.lineWidth = dynamicLineWidthCore;
-                            ctx.strokeStyle = "#ffffff";
-                            ctx.globalAlpha = dynamicAlpha;
-                            ctx.stroke();
-
-                            ctx.beginPath();
-                            ctx.moveTo(sX, sY);
-                            for (var k = 1; k <= steps; k++) {
-                                var tk = k / steps;
-                                var currentDistK = drawDist * tk;
-                                var envelopeK = Math.sin(tk * Math.PI);
-                                var offsetK = Math.cos(tWave2 + tk * 8) * s(12) * envelopeK + ((Math.random() - 0.5) * s(3.0) * distanceFactor);
-                                ctx.lineTo(sX + cosA * currentDistK + perpX * offsetK, sY + sinA * currentDistK + perpY * offsetK);
-                            }
-                            ctx.lineWidth = dynamicLineWidthCore * 1.5;
-                            ctx.strokeStyle = window.activeColor;
-                            ctx.globalAlpha = dynamicAlpha * 0.3;
-                            ctx.stroke();
-                        }
-
-                        if (item.myParentIdx === -1) {
-                            for (var c = 0; c < coreRepeater.count; c++) {
-                                var cItem = coreRepeater.itemAt(c);
-                                if (cItem && cItem.activeTransition > 0.01) {
-                                    drawStrands(cItem.x + cItem.width/2, cItem.y + cItem.height/2, cItem.activeTransition, cItem.width);
-                                }
-                            }
-                        } else {
-                            var pItem = coreRepeater.itemAt(item.myParentIdx);
-                            if (pItem && pItem.activeTransition > 0.01) {
-                                drawStrands(pItem.x + pItem.width/2, pItem.y + pItem.height/2, pItem.activeTransition, pItem.width);
-                            }
-                        }
-                    }
-                }
-            }
-
-            Item {
-                id: orbitContainer
-                anchors.fill: parent
-                anchors.bottomMargin: window.s(80) 
-                z: 1
-
-                // =========================================================
-                // 1. DYNAMIC CENTRAL CORES (N-Device Supported)
-                // =========================================================
-                Repeater {
-                    id: coreRepeater
-                    model: 5
-
-                    delegate: Item {
-                        id: coreContainer
-                        
-                        property var myDevice: window.currentCores[index]
-                        
-                        property bool isPrimary: index === 0
-                        property bool hasDevice: myDevice !== null
-                        property bool isReallyActive: hasDevice || (isPrimary && window.activeCoreCount === 0)
-
-                        property real activeTransition: isReallyActive ? 1.0 : 0.0
-                        
-                        Behavior on activeTransition { 
-                            enabled: window.introState >= 1.0; 
-                            NumberAnimation { duration: 1400; easing.type: Easing.OutExpo } 
-                        }
-
-                        property real multiShift: window.activeMode === "wifi" ? 0.0 : window.multiTransitionState
-
-                        // Automatically scales down core sizes as more devices fill the ring
-                        width: window.currentPower ? (window.s(200) - (window.s(30) * multiShift) - (window.s(15) * Math.max(0, window.smoothedActiveCoreCount - 2))) : window.s(160)
-                        height: width
-                        
-                        property real myBaseAngle: (window.coreVisualIndices[index] / Math.max(1, window.activeCoreCount)) * Math.PI * 2
-                        property real animatedBaseAngle: myBaseAngle
-                        Behavior on animatedBaseAngle { NumberAnimation { duration: ThemeConfig.duration(1000); easing.type: Easing.InOutExpo } }
-                        
-                        property real coreOrbitAngle: window.globalOrbitAngle * 1.5 + animatedBaseAngle
-                        
-                        property real myOrbitRadiusX: window.s(180) + (window.activeCoreCount > 2 ? window.s(20) : 0)
-                        property real myOrbitRadiusY: window.s(110) + (window.activeCoreCount > 2 ? window.s(15) : 0)
-
-                        x: (orbitContainer.width / 2 - width / 2) + (Math.cos(coreOrbitAngle) * myOrbitRadiusX * multiShift * activeTransition)
-                        y: (orbitContainer.height / 2 - height / 2) + (Math.sin(coreOrbitAngle) * myOrbitRadiusY * multiShift * activeTransition)
-                        
-                        opacity: activeTransition
-                        scale: 0.8 + 0.2 * activeTransition
-                        visible: opacity > 0.01
-
-                        property string myId: myDevice ? (window.activeMode === "wifi" ? myDevice.ssid : myDevice.mac) : "unknown"
-                        property bool isMyDisconnecting: !!window.disconnectingDevices[myId]
-
-                        MultiEffect {
-                            source: centralCore
-                            anchors.fill: centralCore
-                            shadowEnabled: true
-                            shadowColor: "#000000"
-                            shadowOpacity: window.currentPower ? 0.5 : 0.0
-                            shadowBlur: 1.2
-                            shadowVerticalOffset: window.s(6)
-                            z: -1
-                            Behavior on shadowOpacity { NumberAnimation { duration: ThemeConfig.duration(600) } }
-                        }
-
-                        Rectangle {
-                            id: centralCore
-                            anchors.fill: parent
-                            radius: width / 2
-                            
-                            property real disconnectFill: 0.0
-                            property bool disconnectTriggered: false
-                            property real flashOpacity: 0.0
-                            property real bumpScale: 1.0
-                            property bool isDangerState: coreMa.containsMouse || disconnectFill > 0 || isMyDisconnecting
-                            
-                            scale: bumpScale
-
-                            SequentialAnimation on bumpScale {
-                                id: coreBumpAnim
-                                running: false
-                                NumberAnimation { to: 1.15; duration: 200; easing.type: Easing.OutBack }
-                                NumberAnimation { to: 1.0; duration: 600; easing.type: Easing.OutQuint }
-                            }
-
-                            // A pure, mathematically subtle gradient rather than a dual-color mash
-                            gradient: Gradient {
-                                orientation: Gradient.Vertical
-                                GradientStop {
-                                    position: 0.0
-                                    color: {
-                                        if (!window.currentPower) return window.mantle;
-                                        if (isMyDisconnecting) return window.surface0; 
-                                        if (centralCore.isDangerState && window.currentConn) return Qt.lighter(window.red, 1.15);
-                                        return window.currentConn ? Qt.lighter(window.activeColor, 1.15) : window.surface0;
-                                    }
-                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
-                                }
-                                GradientStop {
-                                    position: 1.0
-                                    color: {
-                                        if (!window.currentPower) return window.crust;
-                                        if (isMyDisconnecting) return window.base; 
-                                        if (centralCore.isDangerState && window.currentConn) return window.red;
-                                        return window.currentConn ? window.activeColor : window.base;
-                                    }
-                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
-                                }
-                            }
-
-                            border.color: {
-                                if (!window.currentPower) return window.crust;
-                                if (isMyDisconnecting) return window.surface0;
-                                if (centralCore.isDangerState && window.currentConn) return window.maroon;
-                                return window.currentConn ? Qt.lighter(window.activeColor, 1.1) : window.surface1;
-                            }
-                            border.width: window.s(2)
-                            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(300) } }
-                            
-                            Rectangle {
-                                anchors.fill: parent
-                                radius: parent.radius
-                                color: "#ffffff"
-                                opacity: centralCore.flashOpacity
-                                PropertyAnimation on opacity { id: coreFlashAnim; to: 0; duration: 500; easing.type: Easing.OutExpo }
-                            }
-
-                            Canvas {
-                                id: coreWave
-                                anchors.fill: parent
-                                visible: centralCore.disconnectFill > 0
-                                opacity: 0.95
-                                
-                                property real scaleTrigger: window.s(1)
-                                onScaleTriggerChanged: requestPaint()
-
-                                property real wavePhase: 0.0
-                                NumberAnimation on wavePhase {
-                                    running: centralCore.disconnectFill > 0.0 && centralCore.disconnectFill < 1.0
-                                    loops: Animation.Infinite
-                                    from: 0; to: Math.PI * 2; duration: 800
-                                }
-                                onWavePhaseChanged: requestPaint()
-                                Connections { target: centralCore; function onDisconnectFillChanged() { coreWave.requestPaint() } }
-
-                                onPaint: {
-                                    var ctx = getContext("2d");
-                                    var s = window.s;
-                                    ctx.clearRect(0, 0, width, height);
-                                    if (centralCore.disconnectFill <= 0.001) return;
-
-                                    var r = width / 2;
-                                    var fillY = height * (1.0 - centralCore.disconnectFill);
-
-                                    ctx.save();
-                                    ctx.beginPath();
-                                    ctx.arc(r, r, r, 0, 2 * Math.PI);
-                                    ctx.clip(); 
-
-                                    ctx.beginPath();
-                                    ctx.moveTo(0, fillY);
-                                    if (centralCore.disconnectFill < 0.99) {
-                                        var waveAmp = s(10) * Math.sin(centralCore.disconnectFill * Math.PI);
-                                        var cp1y = fillY + Math.sin(wavePhase) * waveAmp;
-                                        var cp2y = fillY + Math.cos(wavePhase + Math.PI) * waveAmp;
-                                        ctx.bezierCurveTo(width * 0.33, cp2y, width * 0.66, cp1y, width, fillY);
-                                        ctx.lineTo(width, height);
-                                        ctx.lineTo(0, height);
-                                    } else {
-                                        ctx.lineTo(width, 0);
-                                        ctx.lineTo(width, height);
-                                        ctx.lineTo(0, height);
-                                    }
-                                    ctx.closePath();
-                                    
-                                    // Matugen wash-out drain effect against the red danger orb
-                                    var grad = ctx.createLinearGradient(0, 0, 0, height);
-                                    grad.addColorStop(0, window.surface1.toString()); 
-                                    grad.addColorStop(1, window.crust.toString());
-                                    ctx.fillStyle = grad;
-                                    ctx.fill();
-                                    ctx.restore();
-                                }
-                            }
-
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: parent.width + window.s(40)
-                                height: width
-                                radius: width / 2
-                                color: centralCore.isDangerState && window.currentConn ? window.red : window.activeColor
-                                opacity: window.currentConn && !isMyDisconnecting ? (centralCore.isDangerState ? 0.3 : 0.15) : 0.0
-                                z: -1
-                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
-                                
-                                SequentialAnimation on scale {
-                                    loops: Animation.Infinite; running: window.currentConn
-                                    NumberAnimation { to: coreMa.containsMouse ? 1.15 : 1.1; duration: coreMa.containsMouse ? 800 : 2000; easing.type: Easing.InOutSine }
-                                    NumberAnimation { to: 1.0; duration: coreMa.containsMouse ? 800 : 2000; easing.type: Easing.InOutSine }
-                                }
-                            }
-                            
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: parent.width + window.s(15)
-                                height: width
-                                radius: width / 2
-                                color: "transparent"
-                                border.color: centralCore.isDangerState ? window.red : window.activeColor
-                                border.width: window.s(3)
-                                z: -2
-                                
-                                property real pulseOp: 0.0
-                                property real pulseSc: 1.0
-                                opacity: (window.currentConn && window.showInfoView && window.currentPower && !isMyDisconnecting) ? pulseOp : 0.0
-                                scale: pulseSc
-                                
-                                Timer {
-                                    interval: 45
-                                    running: parent.opacity > 0.01
-                                    repeat: true
-                                    onTriggered: {
-                                        var time = Date.now() / 1000;
-                                        parent.pulseOp = 0.3 + Math.sin(time * 2.5) * 0.15;
-                                        parent.pulseSc = 1.02 + Math.cos(time * 3.0) * 0.02;
-                                    }
-                                }
-                            }
-
-                            // OFFLINE TEXT
-                            ColumnLayout {
-                                anchors.centerIn: parent
-                                spacing: window.s(10)
-                                visible: !window.currentConn || !window.currentPower
-                                opacity: visible ? 1.0 : 0.0
-                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
-
-                                Text {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    font.family: ThemeConfig.iconFont
-                                    font.pixelSize: window.s(48) - (window.s(16) * coreContainer.multiShift)
-                                    color: window.currentPower ? window.overlay0 : window.surface2
-                                    text: window.activeMode === "wifi" ? "󰤮" : "󰂲"
-                                }
-                                Text {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    font.family: window.uiFontFamily; font.weight: Font.DemiBold; font.letterSpacing: window.themedLetterSpacing
-                                    font.pixelSize: window.s(14) - (window.s(3) * coreContainer.multiShift)
-                                    color: window.overlay0
-                                    text: window.currentPowerPending 
-                                        ? ((window.activeMode === "wifi" ? window.expectedWifiPower : window.expectedBtPower) === "on" ? "Powering On..." : "Powering Off...") 
-                                        : (!window.currentPower ? "Radio Offline" : "Scanning...")
-                                }
-                            }
-
-                            // ONLINE TEXT (Base + Clipped Mask)
-                            Item {
-                                anchors.fill: parent
-                                visible: window.currentConn && window.currentPower
-                                opacity: visible ? 1.0 : 0.0
-                                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
-
-                                // 1. Base Uncovered Text
-                                ColumnLayout {
-                                    id: baseCoreText
-                                    anchors.centerIn: parent
-                                    spacing: window.s(4)
-
-                                    Text {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        font.family: ThemeConfig.iconFont
-                                        font.pixelSize: window.s(48) - (window.s(16) * coreContainer.multiShift)
-                                        color: isMyDisconnecting ? window.overlay1 : window.crust
-                                        text: isMyDisconnecting ? "" : (coreMa.containsMouse ? (window.activeMode === "wifi" ? "󰖪" : "󰂲") : (coreContainer.myDevice ? coreContainer.myDevice.icon : ""))
-                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                    }
-                                    LoadingDots { Layout.alignment: Qt.AlignHCenter; visible: isMyDisconnecting; dotCol: window.overlay1 }
-                                    Text {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        Layout.maximumWidth: window.s(150) - (window.s(50) * coreContainer.multiShift)
-                                        horizontalAlignment: Text.AlignHCenter
-                                        font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
-                                        font.pixelSize: window.s(16) - (window.s(4) * coreContainer.multiShift)
-                                        color: isMyDisconnecting ? window.overlay1 : window.crust
-                                        text: coreContainer.myDevice ? (window.activeMode === "wifi" ? coreContainer.myDevice.ssid : coreContainer.myDevice.name) : ""
-                                        elide: Text.ElideRight
-                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                    }
-                                    Text {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        font.family: window.uiFontFamily; font.weight: Font.DemiBold; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(11)
-                                        color: isMyDisconnecting ? window.overlay1 : (coreMa.containsMouse ? window.crust : "#99000000")
-                                        text: isMyDisconnecting ? "Disconnecting..." : (centralCore.disconnectFill > 0.01 ? "Hold..." : "Connected")
-                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                    }
-                                }
-
-                                // 2. Covered Clipped Text (Dynamically masks the text over the filling wave)
-                                Item {
-                                    id: waveClipItem
-                                    anchors.bottom: parent.bottom
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    height: Math.min(parent.height, Math.max(0, parent.height * centralCore.disconnectFill + window.s(8)))
-                                    clip: true
-                                    visible: centralCore.disconnectFill > 0
-
-                                    ColumnLayout {
-                                        spacing: window.s(4)
-                                        x: waveClipItem.width / 2 - width / 2
-                                        y: (centralCore.height / 2) - (height / 2) - (centralCore.height - waveClipItem.height)
-
-                                        Text {
-                                            Layout.alignment: Qt.AlignHCenter
-                                            font.family: ThemeConfig.iconFont
-                                            font.pixelSize: window.s(48) - (window.s(16) * coreContainer.multiShift)
-                                            color: window.text
-                                            text: isMyDisconnecting ? "" : (coreMa.containsMouse ? (window.activeMode === "wifi" ? "󰖪" : "󰂲") : (coreContainer.myDevice ? coreContainer.myDevice.icon : ""))
-                                        }
-                                        LoadingDots { Layout.alignment: Qt.AlignHCenter; visible: isMyDisconnecting; dotCol: window.text }
-                                        Text {
-                                            Layout.alignment: Qt.AlignHCenter
-                                            Layout.maximumWidth: window.s(150) - (window.s(50) * coreContainer.multiShift)
-                                            horizontalAlignment: Text.AlignHCenter
-                                            font.family: window.displayFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing
-                                            font.pixelSize: window.s(16) - (window.s(4) * coreContainer.multiShift)
-                                            color: window.text
-                                            text: coreContainer.myDevice ? (window.activeMode === "wifi" ? coreContainer.myDevice.ssid : coreContainer.myDevice.name) : ""
-                                            elide: Text.ElideRight
-                                        }
-                                        Text {
-                                            Layout.alignment: Qt.AlignHCenter
-                                            font.family: window.uiFontFamily; font.weight: Font.DemiBold; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(11)
-                                            color: window.text
-                                            text: isMyDisconnecting ? "Disconnecting..." : (centralCore.disconnectFill > 0.01 ? "Hold..." : "Connected")
-                                        }
-                                    }
-                                }
-                            }
-
-                            MouseArea {
-                                id: coreMa
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                                cursorShape: window.currentConn && !isMyDisconnecting ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                
-                                onPressed: function(mouse) {
-                                    if (window.currentConn && !isMyDisconnecting && !centralCore.disconnectTriggered) {
-                                        if (mouse.button === Qt.RightButton) {
-                                            coreRightHoldTimer.restart();
-                                        } else {
-                                            coreDrainAnim.stop();
-                                            coreFillAnim.start();
-                                        }
-                                    }
-                                }
-                                onReleased: function(mouse) {
-                                    if (mouse.button === Qt.RightButton) {
-                                        coreRightHoldTimer.stop();
-                                        return;
-                                    }
-                                    if (!centralCore.disconnectTriggered && !isMyDisconnecting) {
-                                        coreFillAnim.stop();
-                                        coreDrainAnim.start();
-                                    }
-                                }
-                            }
-
-                            Timer {
-                                id: coreRightHoldTimer
-                                interval: 650
-                                onTriggered: coreDisconnectNow()
-                            }
-
-                            function coreDisconnectNow() {
-                                if (!window.currentConn || isMyDisconnecting || centralCore.disconnectTriggered || !coreContainer.myDevice) return;
-
-                                centralCore.disconnectTriggered = true;
-                                centralCore.flashOpacity = 0.6;
-                                coreFlashAnim.start();
-                                coreBumpAnim.start();
-
-                                window.playSfx("disconnect.wav");
-
-                                let dd = window.disconnectingDevices;
-                                dd[coreContainer.myId] = true;
-                                window.disconnectingDevices = Object.assign({}, dd);
-                                busyTimeout.restart();
-
-                                let cmd = window.activeMode === "wifi"
-                                    ? "nmcli device disconnect $(nmcli -t -f DEVICE,TYPE d | grep wifi | cut -d: -f1 | head -n1)"
-                                    : "bash " + window.scriptsDir + "/bluetooth_panel_logic.sh --disconnect '" + coreContainer.myDevice.mac + "'"
-                                Quickshell.execDetached(["sh", "-c", cmd])
-
-                                centralCore.disconnectFill = 0.0;
-                                centralCore.disconnectTriggered = false;
-
-                                if (window.activeMode === "wifi") wifiPoller.running = true; else btPoller.running = true;
-                            }
-
-                            NumberAnimation {
-                                id: coreFillAnim
-                                target: centralCore
-                                property: "disconnectFill"
-                                to: 1.0
-                                duration: 700 * (1.0 - centralCore.disconnectFill) 
-                                easing.type: Easing.InSine
-                                onFinished: coreDisconnectNow()
-                            }
-                            
-                            NumberAnimation {
-                                id: coreDrainAnim
-                                target: centralCore
-                                property: "disconnectFill"
-                                to: 0.0
-                                duration: 1000 * centralCore.disconnectFill 
-                                easing.type: Easing.OutQuad
-                            }
-                        }
-                    }
-                }
-
-                // =========================================================
-                // 2. THE SWARM (Pure Mathematical Interpolation)
-                // =========================================================
-                Item {
-                    anchors.fill: parent
-                    opacity: window.currentPower ? 1.0 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.InOutQuad } }
-
-                    Repeater {
-                        id: orbitRepeater
-                        model: (window.currentConn && window.showInfoView) ? infoListModel : (window.activeMode === "wifi" ? wifiListModel : btListModel)
-                        
-                        delegate: Item {
-                            id: floatCardDelegateContainer
-                            width: window.s(170); height: window.s(60)
-
-                            property bool isLoaded: false
-                            opacity: isLoaded ? 1.0 : 0.0
-                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuint } }
-
-                            property real entryAnim: isLoaded ? 1.0 : 0.0
-                            Behavior on entryAnim { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutBack } }
-
-                            Timer {
-                                running: true
-                                interval: 40 + (index * 30) 
-                                onTriggered: floatCardDelegateContainer.isLoaded = true
-                            }
-
-                            property int myParentIdx: model.parentIndex !== undefined ? model.parentIndex : -1
-                            
-                            property int siblingsCount: {
-                                let c = 0;
-                                let m = orbitRepeater.model;
-                                if (m && m.count !== undefined) {
-                                    for (let i = 0; i < m.count; i++) {
-                                        let d = m.get(i);
-                                        if (d && (d.parentIndex !== undefined ? d.parentIndex : -1) === myParentIdx) c++;
-                                    }
-                                }
-                                return Math.max(1, c);
-                            }
-                            property int localIndex: {
-                                let idx = 0;
-                                let m = orbitRepeater.model;
-                                if (m && m.count !== undefined) {
-                                    for (let i = 0; i < index; i++) {
-                                        let d = m.get(i);
-                                        if (d && (d.parentIndex !== undefined ? d.parentIndex : -1) === myParentIdx) idx++;
-                                    }
-                                }
-                                return idx;
-                            }
-
-                            property real unifiedRatio: window.activeMode === "wifi" ? 0.0 : window.multiTransitionState
-
-                            property real activeCount: (unifiedRatio > 0.5 && myParentIdx !== -1) ? siblingsCount : orbitRepeater.count
-                            property real dynamicScale: activeCount > 10 ? Math.max(0.6, 12.0 / activeCount) : (unifiedRatio > 0.5 ? (window.activeCoreCount > 2 ? 0.7 : 0.8) : 1.0)
-                            
-                            property real safeMultiShift: window.activeMode === "wifi" ? 0.0 : window.multiTransitionState
-                            property var pItem: myParentIdx !== -1 ? coreRepeater.itemAt(myParentIdx) : null
-                            
-                            property real parentX: pItem ? (orbitContainer.width / 2) + (Math.cos(parentCoreAngle) * pItem.myOrbitRadiusX * safeMultiShift * pItem.activeTransition) : (orbitContainer.width / 2)
-                            property real parentY: pItem ? (orbitContainer.height / 2) + (Math.sin(parentCoreAngle) * pItem.myOrbitRadiusY * safeMultiShift * pItem.activeTransition) : (orbitContainer.height / 2)
-
-                            property real parentBaseAngle: pItem ? pItem.animatedBaseAngle : 0
-                            
-                            // To prevent list updating "jumps", we smoothly interpolate the layout properties while leaving the global rotation constant
-                            property real targetSingleBaseAngle: (index / Math.max(1, orbitRepeater.count)) * Math.PI * 2
-                            property real singleBaseAngle: targetSingleBaseAngle
-                            Behavior on singleBaseAngle { NumberAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.OutExpo } }
-
-                            property real singleLiveAngle: (window.globalOrbitAngle * 1.5) + singleBaseAngle
-                            
-                            property real arcSpread: Math.PI * 0.8 
-                            property real targetNodeOffset: (siblingsCount > 1) ? ((localIndex / (siblingsCount - 1)) - 0.5) * arcSpread : 0
-                            property real nodeOffset: targetNodeOffset
-                            Behavior on nodeOffset { NumberAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.OutExpo } }
-
-                            property real parentCoreAngle: (window.globalOrbitAngle * 1.5) + parentBaseAngle
-                            property real multiLiveAngle: myParentIdx === -1 ? singleLiveAngle : (parentCoreAngle + nodeOffset)
-
-                            property int ringIndex: isInfoNode ? 0 : index % 2
-                            property real targetRingOffset: ringIndex * window.s(40)
-                            property real ringOffset: targetRingOffset
-                            Behavior on ringOffset { NumberAnimation { duration: ThemeConfig.duration(800); easing.type: Easing.OutExpo } }
-
-                            property real singleRadX: isInfoNode ? window.s(280) : window.s(320) + ringOffset
-                            property real singleRadY: isInfoNode ? window.s(180) : window.s(200) + ringOffset
-                            
-                            // Scan node (-1) perfectly snaps to dead center (0,0) so it avoids crossing paths with Cores
-                            property real multiRadX: isInfoNode ? (myParentIdx === -1 ? 0 : (window.activeCoreCount > 2 ? window.s(180) : window.s(160))) : window.s(340) + ringOffset
-                            property real multiRadY: isInfoNode ? (myParentIdx === -1 ? 0 : (window.activeCoreCount > 2 ? window.s(180) : window.s(160))) : window.s(240) + ringOffset
-
-                            property real currentRadX: (singleRadX * (1 - unifiedRatio)) + (multiRadX * unifiedRatio)
-                            property real currentRadY: (singleRadY * (1 - unifiedRatio)) + (multiRadY * unifiedRatio)
-                            property real currentAngle: (singleLiveAngle * (1 - unifiedRatio)) + (multiLiveAngle * unifiedRatio)
-                            
-                            property real pwrDrift: window.currentPower ? 0 : window.s(40)
-                            Behavior on pwrDrift { NumberAnimation { duration: ThemeConfig.duration(600); easing.type: Easing.OutQuint } }
-
-                            // Make the pop out start from 25% of the radius (outside the core) so it floats nicely
-                            property real animRadX: (currentRadX + pwrDrift) * (0.25 + 0.75 * entryAnim)
-                            property real animRadY: (currentRadY + pwrDrift) * (0.25 + 0.75 * entryAnim)
-
-                            property real targetX: myParentIdx === -1 
-                                ? (orbitContainer.width / 2) - (width / 2) + Math.cos(currentAngle) * animRadX
-                                : parentX - (width / 2) + Math.cos(currentAngle) * animRadX
-                                
-                            property real targetY: myParentIdx === -1 
-                                ? (orbitContainer.height / 2) - (height / 2) + Math.sin(currentAngle) * animRadY
-                                : parentY - (height / 2) + Math.sin(currentAngle) * animRadY
-
-                            property real liveBob: myParentIdx === -1 && isInfoNode 
-                                ? Math.sin(window.globalOrbitAngle * 6) * window.s(12) * (1 - unifiedRatio) 
-                                : 0
-
-                            x: targetX
-                            y: targetY + liveBob
-
-                            scale: (!isLoaded ? 0.0 : (floatMa.pressed ? dynamicScale * 0.95 : (floatCard.locksList ? dynamicScale * 1.08 : dynamicScale))) * floatCard.bumpScale
-                            Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(400); easing.type: Easing.OutQuart } }
-                            z: floatCard.locksList ? 10 : index
-
-                            MultiEffect {
-                                source: floatCard
-                                anchors.fill: floatCard
-                                shadowEnabled: window.currentPower && floatCardDelegateContainer.opacity > 0.05
-                                shadowColor: "#000000"
-                                shadowOpacity: 0.3
-                                shadowBlur: 0.8
-                                shadowVerticalOffset: window.s(4)
-                                z: -1
-                            }
-
-                            Rectangle {
-                                id: floatCard
-                                anchors.fill: parent
-                                radius: window.s(14)
-                                
-                                property string itemId: id
-                                property string itemName: name
-                                
-                                property bool isMyBusy: !!window.busyTasks[itemId]
-                                
-                                property bool isPairedBT: window.activeMode === "bt" && action === "Connect"
-                                property bool isTargetWifi: window.activeMode === "wifi" && !window.isWifiConn && itemId === window.targetWifiSsid
-                                property bool isSpecialAction: itemId === "action_scan" || itemId === "action_settings"
-                                property bool isHighlighted: isPairedBT || isTargetWifi || isSpecialAction
-                                
-                                property bool isCurrentlyConnected: {
-                                    if (window.activeMode === "wifi") return (window.wifiConnected && window.wifiConnected.ssid === itemId);
-                                    for (let i = 0; i < window.btConnected.length; i++) {
-                                        if (window.btConnected[i].mac === itemId) return true;
-                                    }
-                                    return false;
-                                }
-                                
-                                property bool isInteractable: !isInfoNode || isActionable
-                                property bool locksList: isInteractable && (floatMa.containsMouse || floatMa.pressed)
-                                onLocksListChanged: { if (locksList) window.hoveredCardCount++; else window.hoveredCardCount--; }
-                                Component.onDestruction: { if (locksList) window.hoveredCardCount--; }
-                                
-                                property real bumpScale: 1.0
-                                SequentialAnimation on bumpScale {
-                                    id: cardBumpAnim
-                                    running: false
-                                    NumberAnimation { to: 1.2; duration: 200; easing.type: Easing.OutBack }
-                                    NumberAnimation { to: 1.0; duration: 600; easing.type: Easing.OutQuint }
-                                }
-
-                                property real nameImplicitWidth: baseNameText.implicitWidth
-                                property real nameContainerWidth: nameContainerBase.width
-                                property bool doMarquee: floatMa.containsMouse && nameImplicitWidth > nameContainerWidth
-                                property real textOffset: 0
-
-                                SequentialAnimation on textOffset {
-                                    running: floatCard.doMarquee
-                                    loops: Animation.Infinite
-                                    PauseAnimation { duration: 600 } 
-                                    NumberAnimation {
-                                        from: 0
-                                        to: -(floatCard.nameImplicitWidth + window.s(30))
-                                        duration: (floatCard.nameImplicitWidth + window.s(30)) * 35
-                                    }
-                                }
-                                onDoMarqueeChanged: if (!doMarquee) textOffset = 0;
-
-                                property real fillLevel: 0.0
-                                property bool triggered: false
-                                property real flashOpacity: 0.0
-                                
-                                property real renderFill: (isCurrentlyConnected) ? 1.0 : fillLevel
-                                property string holdAction: "connect"
-                                readonly property bool canForgetBT: window.activeMode === "bt" && !isInfoNode && !isCurrentlyConnected && !isSpecialAction
-                                readonly property string holdLabel: holdAction === "forget" ? "Forget..." : "Hold..."
-                                
-                                onIsMyBusyChanged: {
-                                    if (!isMyBusy && triggered) {
-                                        triggered = false;
-                                        if (!floatCard.isCurrentlyConnected) drainAnim.start();
-                                    }
-                                }
-                                
-                                onIsCurrentlyConnectedChanged: {
-                                    if (!isCurrentlyConnected && fillLevel > 0) drainAnim.start();
-                                }
-
-                                color: locksList ? Qt.alpha(window.text, 0.165) : Qt.alpha(window.text, 0.055)
-                                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: window.s(14)
-                                    color: "transparent"
-                                    border.width: 1
-                                    border.color: window.surface2
-                                    visible: !isHighlighted && !locksList
-                                }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: window.s(14)
-                                    opacity: locksList || isHighlighted ? 1.0 : 0.0
-                                    color: "transparent"
-                                    border.width: isHighlighted && !locksList ? 1 : window.s(2)
-                                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
-                                    
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        anchors.margins: isHighlighted && !locksList ? 1 : window.s(2)
-                                        radius: window.s(12)
-                                        color: window.base
-                                        opacity: locksList ? 0.9 : 1.0
-                                    }
-                                    
-                                    gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: Qt.lighter(window.activeColor, 1.15) }
-                                        GradientStop { position: 1.0; color: window.activeColor }
-                                    }
-                                    z: -1
-                                }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: window.s(14)
-                                    color: "#ffffff"
-                                    opacity: floatCard.flashOpacity
-                                    PropertyAnimation on opacity { id: cardFlashAnim; to: 0; duration: 500; easing.type: Easing.OutExpo }
-                                    z: 5
-                                }
-
-                                Canvas {
-                                    id: waveCanvas
-                                    anchors.fill: parent
-                                    
-                                    property real scaleTrigger: window.s(1)
-                                    onScaleTriggerChanged: requestPaint()
-
-                                    property real wavePhase: 0.0
-                                    
-                                    NumberAnimation on wavePhase {
-                                        running: floatCard.renderFill > 0.0 && floatCard.renderFill < 1.0
-                                        loops: Animation.Infinite
-                                        from: 0; to: Math.PI * 2
-                                        duration: 800
-                                    }
-
-                                    onWavePhaseChanged: requestPaint()
-                                    Connections { target: floatCard; function onRenderFillChanged() { waveCanvas.requestPaint() } }
-
-                                    onPaint: {
-                                        var ctx = getContext("2d");
-                                        var s = window.s;
-                                        ctx.clearRect(0, 0, width, height);
-                                        if (floatCard.renderFill <= 0.001) return;
-
-                                        var currentW = width * floatCard.renderFill;
-                                        var r = s(14); 
-
-                                        ctx.save();
-                                        ctx.beginPath();
-                                        ctx.moveTo(0, 0);
-                                        
-                                        if (floatCard.renderFill < 0.99) {
-                                            var waveAmp = s(12) * Math.sin(floatCard.renderFill * Math.PI); 
-                                            if (currentW - waveAmp < 0) waveAmp = currentW;
-                                            var cp1x = currentW + Math.sin(wavePhase) * waveAmp;
-                                            var cp2x = currentW + Math.cos(wavePhase + Math.PI) * waveAmp;
-
-                                            ctx.lineTo(currentW, 0);
-                                            ctx.bezierCurveTo(cp2x, height * 0.33, cp1x, height * 0.66, currentW, height);
-                                            ctx.lineTo(0, height);
-                                        } else {
-                                            ctx.lineTo(width, 0);
-                                            ctx.lineTo(width, height);
-                                            ctx.lineTo(0, height);
-                                        }
-                                        ctx.closePath();
-                                        ctx.clip(); 
-
-                                        ctx.beginPath();
-                                        ctx.moveTo(r, 0);
-                                        ctx.lineTo(width - r, 0);
-                                        ctx.arcTo(width, 0, width, r, r);
-                                        ctx.lineTo(width, height - r);
-                                        ctx.arcTo(width, height, width - r, height, r);
-                                        ctx.lineTo(r, height);
-                                        ctx.arcTo(0, height, 0, height - r, r);
-                                        ctx.lineTo(0, r);
-                                        ctx.arcTo(0, 0, r, 0, r);
-                                        ctx.closePath();
-
-                                        var grad = ctx.createLinearGradient(0, 0, currentW, 0);
-                                        grad.addColorStop(0, Qt.lighter(window.activeColor, 1.15).toString());
-                                        grad.addColorStop(1, window.activeColor.toString());
-                                        ctx.fillStyle = grad;
-                                        ctx.fill();
-
-                                        ctx.restore();
-                                    }
-                                }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: parent.radius
-                                    color: "transparent"
-                                    border.color: window.activeColor
-                                    border.width: window.s(2)
-                                    visible: parent.isHighlighted && !parent.isMyBusy && !parent.isCurrentlyConnected
-                                    
-                                    SequentialAnimation on scale {
-                                        loops: Animation.Infinite; running: parent.visible
-                                        NumberAnimation { to: 1.15; duration: 1200; easing.type: Easing.InOutSine }
-                                        NumberAnimation { to: 1.0; duration: 1200; easing.type: Easing.InOutSine }
-                                    }
-                                    SequentialAnimation on opacity {
-                                        loops: Animation.Infinite; running: parent.visible
-                                        NumberAnimation { to: 0.0; duration: 1200; easing.type: Easing.InOutSine }
-                                        NumberAnimation { to: 0.8; duration: 1200; easing.type: Easing.InOutSine }
-                                    }
-                                }
-
-                                RowLayout {
-                                    id: baseTextRow
-                                    anchors.fill: parent
-                                    anchors.margins: window.s(12)
-                                    spacing: window.s(10)
-                                    
-                                    Text {
-                                        font.family: ThemeConfig.iconFont
-                                        font.pixelSize: window.s(20)
-                                        color: floatCard.isMyBusy ? window.text : window.activeColor
-                                        text: icon
-                                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                    }
-                                    
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: window.s(2)
-                                        
-                                        Item {
-                                            id: nameContainerBase
-                                            Layout.fillWidth: true
-                                            height: window.s(18)
-                                            clip: true
-
-                                            Text {
-                                                id: baseNameText
-                                                anchors.left: parent.left
-                                                anchors.leftMargin: floatCard.textOffset
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                text: floatCard.itemName
-                                                font.family: ThemeConfig.textFont
-                                                font.weight: Font.Bold
-                                                font.pixelSize: window.s(13)
-                                                color: floatCard.isHighlighted ? window.activeColor : window.text
-                                            }
-                                            Text {
-                                                anchors.left: baseNameText.right
-                                                anchors.leftMargin: window.s(30)
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                visible: floatCard.doMarquee
-                                                text: floatCard.itemName
-                                                font.family: ThemeConfig.textFont
-                                                font.weight: Font.Bold
-                                                font.pixelSize: window.s(13)
-                                                color: floatCard.isHighlighted ? window.activeColor : window.text
-                                            }
-                                        }
-                                        
-                                        Text {
-                                            font.family: ThemeConfig.textFont
-                                            font.pixelSize: window.s(10)
-                                            color: floatCard.isMyBusy ? window.activeColor : window.overlay0
-                                            text: floatCard.isMyBusy ? "Connecting..." : (floatCard.renderFill > 0.1 && floatCard.renderFill < 1.0 ? floatCard.holdLabel : action)
-                                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                                        }
-                                    }
-                                }
-
-                                Item {
-                                    anchors.left: parent.left
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    width: floatCard.width * floatCard.renderFill
-                                    clip: true
-                                    
-                                    RowLayout {
-                                        x: baseTextRow.x; y: baseTextRow.y
-                                        width: baseTextRow.width; height: baseTextRow.height
-                                        spacing: window.s(10)
-                                        
-                                        Text { font.family: ThemeConfig.iconFont; font.pixelSize: window.s(20); color: window.crust; text: icon }
-                                        
-                                        ColumnLayout {
-                                            Layout.fillWidth: true
-                                            spacing: window.s(2)
-
-                                            Item {
-                                                Layout.fillWidth: true
-                                                height: window.s(18)
-                                                clip: true
-                                                
-                                                Text {
-                                                    id: filledNameText
-                                                    anchors.left: parent.left
-                                                    anchors.leftMargin: floatCard.textOffset
-                                                    anchors.verticalCenter: parent.verticalCenter
-                                                    text: floatCard.itemName
-                                                    font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: window.s(13); color: window.crust 
-                                                }
-                                                Text { 
-                                                    anchors.left: filledNameText.right
-                                                    anchors.leftMargin: window.s(30)
-                                                    anchors.verticalCenter: parent.verticalCenter
-                                                    visible: floatCard.doMarquee
-                                                    text: floatCard.itemName
-                                                    font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: window.s(13); color: window.crust 
-                                                }
-                                            }
-                                            Text {
-                                                font.family: ThemeConfig.textFont; font.pixelSize: window.s(10); color: window.crust
-                                                text: floatCard.isMyBusy ? "Connecting..." : (floatCard.renderFill > 0.1 && floatCard.renderFill < 1.0 ? floatCard.holdLabel : action)
-                                            }
-                                        }
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: floatMa
-                                    anchors.fill: parent
-                                    hoverEnabled: floatCard.isInteractable
-                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
-                                    
-                                    cursorShape: (floatCard.triggered || floatCard.isMyBusy || floatCard.renderFill === 1.0 || !floatCard.isInteractable) ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                    
-                                    onPressed: function(mouse) {
-                                        if (mouse.button === Qt.RightButton && floatCard.canForgetBT && !floatCard.triggered && !floatCard.isMyBusy) {
-                                            forgetHoldTimer.restart();
-                                            return;
-                                        }
-
-                                        if (mouse.button === Qt.LeftButton && floatCard.isInteractable && !floatCard.triggered && !floatCard.isMyBusy && floatCard.fillLevel === 0.0) {
-                                            floatCard.holdAction = "connect";
-                                            drainAnim.stop()
-                                            fillAnim.start()
-                                        }
-                                    }
-                                    onReleased: function(mouse) {
-                                        if (mouse.button === Qt.RightButton) {
-                                            forgetHoldTimer.stop();
-                                            return;
-                                        }
-
-                                        if (floatCard.isInteractable && !floatCard.triggered && !floatCard.isMyBusy && floatCard.fillLevel < 1.0) {
-                                            fillAnim.stop()
-                                            drainAnim.start()
-                                        }
-                                    }
-                                }
-
-                                Timer {
-                                    id: forgetHoldTimer
-                                    interval: 650
-                                    onTriggered: {
-                                        if (!floatCard.canForgetBT || floatCard.triggered || floatCard.isMyBusy) return;
-                                        floatCard.triggered = true;
-                                        floatCard.holdAction = "forget";
-                                        floatCard.flashOpacity = 0.6;
-                                        cardFlashAnim.start();
-                                        cardBumpAnim.start();
-                                        window.playSfx("disconnect.wav");
-                                        Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--forget", mac]);
-                                        floatCard.triggered = false;
-                                        btPoller.running = true;
-                                    }
-                                }
-
-                                NumberAnimation {
-                                    id: fillAnim
-                                    target: floatCard
-                                    property: "fillLevel"
-                                    to: 1.0
-                                    duration: 600 * (1.0 - floatCard.fillLevel) 
-                                    easing.type: Easing.InSine
-                                    onFinished: {
-                                        floatCard.triggered = true;
-                                        floatCard.flashOpacity = 0.6;
-                                        cardFlashAnim.start();
-                                        cardBumpAnim.start();
-                                        
-                                        if (cmdStr === "TOGGLE_VIEW") {
-                                            window.playSfx("switch.wav");
-                                            window.showInfoView = !window.showInfoView;
-                                            floatCard.triggered = false;
-                                            drainAnim.start();
-                                        } else if (isInfoNode && cmdStr) {
-                                            Quickshell.execDetached(["sh", "-c", cmdStr]);
-                                            if (window.activeMode === "bt") btPoller.running = true;
-                                            floatCard.triggered = false;
-                                            drainAnim.start(); 
-                                        } else {
-                                            let bt = window.busyTasks;
-                                            bt[floatCard.itemId] = true;
-                                            window.busyTasks = Object.assign({}, bt);
-                                            busyTimeout.restart();
-                                            
-                                            if (window.activeMode === "wifi") {
-                                                let cmd = "nmcli device wifi connect '" + ssid + "'";
-                                                Quickshell.execDetached(["sh", "-c", cmd]);
-                                                wifiPoller.running = true;
-                                            } else {
-                                                window.btConnectError = "";
-                                                Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--connect", mac]);
-                                                btPoller.running = true;
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                NumberAnimation {
-                                    id: drainAnim
-                                    target: floatCard
-                                    property: "fillLevel"
-                                    to: 0.0
-                                    duration: 1500 * floatCard.fillLevel 
-                                    easing.type: Easing.OutQuad
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // =========================================================
-            // BT CONNECTION ERROR BANNER
-            // =========================================================
-            Rectangle {
-                anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottomMargin: window.s(90)
-                width: window.s(340)
-                height: window.s(36)
-                radius: window.s(10)
-                color: Qt.rgba(window.red.r, window.red.g, window.red.b, 0.85)
-                visible: window.btConnectError !== "" && window.activeMode === "bt"
-                opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
                 Text {
                     anchors.centerIn: parent
-                    text: window.btConnectError
-                    color: window.text
-                    font.pixelSize: window.s(12)
-                    font.weight: Font.Medium
-                    horizontalAlignment: Text.AlignHCenter
+                    text: root.activeMode === "wifi" ? (root.wifiPower === "on" ? (root.isWifiConn ? (root.wifiConnected.icon || "󰤨") : "󰤯") : "󰤮")
+                        : (root.activeMode === "bt" ? (root.btPower === "on" ? (root.btConnectedCount > 0 ? "󰂱" : "󰂯") : "󰂲") : "󰈀")
+                    font.family: ThemeConfig.iconFont
+                    font.pixelSize: 18
+                    color: root.currentPower ? root.activeColor : mocha.subtext0
+                    Behavior on color {
+                        ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+                    }
                 }
             }
 
-            // =========================================================
-            // BOTTOM DOCK (Mode Switcher & Power)
-            // =========================================================
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 1
+                Text {
+                    Layout.fillWidth: true
+                    text: root.activeMode === "wifi" ? "Wi-Fi" : (root.activeMode === "bt" ? "Bluetooth" : "Bedraad netwerk")
+                    font.family: ThemeConfig.displayFont
+                    font.pixelSize: 17
+                    font.weight: ThemeConfig.headingWeight
+                    color: mocha.text
+                    elide: Text.ElideRight
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: {
+                        if (root.activeMode === "wifi") {
+                            if (root.wifiPowerPending) return root.expectedWifiPower === "on" ? "Wordt aangezet…" : "Wordt uitgezet…";
+                            if (root.wifiPower !== "on") return "Uit";
+                            if (root.wifiBusySsid !== "") return "Verbinden met " + root.wifiBusySsid + "…";
+                            return root.isWifiConn ? "Verbonden met " + root.wifiConnected.ssid : "Aan, niet verbonden";
+                        }
+                        if (root.activeMode === "bt") {
+                            if (root.btPowerPending) return root.expectedBtPower === "on" ? "Wordt aangezet…" : "Wordt uitgezet…";
+                            if (root.btPower !== "on") return "Uit";
+                            if (root.btConnectedCount === 1) return "1 apparaat verbonden";
+                            if (root.btConnectedCount > 1) return root.btConnectedCount + " apparaten verbonden";
+                            return root.btScanning ? "Aan · zoekt naar apparaten" : "Aan";
+                        }
+                        return root.ethConnected ? "Ethernet · verbonden" : "Geen kabelverbinding actief";
+                    }
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 10
+                    color: root.currentPower ? root.activeColor : mocha.subtext0
+                    elide: Text.ElideRight
+                    Behavior on color {
+                        ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+                    }
+                }
+            }
+
+            IconButton {
+                icon: "󰅁"
+                tooltip: "Snelle instellingen"
+                accent: mocha.subtext1
+                onTriggered: root.panelSwitchRequested("quicksettings")
+            }
+
+            PowerSwitch {
+                visible: root.activeMode !== "eth"
+                checked: root.currentPower
+                pending: root.currentPowerPending
+                accent: root.activeColor
+                onToggled: root.togglePower()
+            }
+        }
+
+        // --- Tabs ------------------------------------------------------------
+        Rectangle {
+            id: tabBar
+            Layout.fillWidth: true
+            Layout.preferredHeight: 36
+            radius: Math.min(root.itemRadius, 18)
+            color: root.matteStyle ? mocha.shellRaisedFill : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05)
+            border.width: 1
+            border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+
+            readonly property var modes: ["wifi", "bt", "eth"]
+            readonly property int modeIndex: Math.max(0, modes.indexOf(root.activeMode))
+            readonly property real segmentWidth: (width - 6) / modes.length
+
+            // Glijdende markering onder de actieve tab.
             Rectangle {
-                anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottomMargin: window.s(25)
-                width: window.s(360)
-                height: window.s(54)
-                radius: window.themedRadius
-                color: window.dockFill 
-                border.color: Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12 + ThemeConfig.materialGlowIntensity)
+                x: 3 + tabBar.modeIndex * tabBar.segmentWidth
+                y: 3
+                width: tabBar.segmentWidth
+                height: tabBar.height - 6
+                radius: Math.max(4, tabBar.radius - 3)
+                color: Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, 0.22)
                 border.width: 1
+                border.color: Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, 0.45)
+                Behavior on x {
+                    NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+                }
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+                }
+                Behavior on border.color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+                }
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 3
+                spacing: 0
+
+                TabButton { mode: "wifi"; icon: "󰤨"; label: "Wi-Fi"; accent: root.wifiAccent }
+                TabButton { mode: "bt"; icon: "󰂯"; label: "Bluetooth"; accent: root.btAccent }
+                TabButton { mode: "eth"; icon: "󰈀"; label: "Bedraad"; accent: root.ethAccent }
+            }
+        }
+    }
+
+    Flickable {
+        id: bodyFlick
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: headerColumn.bottom
+        anchors.bottom: parent.bottom
+        anchors.topMargin: 12
+        anchors.leftMargin: root.pad
+        anchors.rightMargin: root.pad
+        anchors.bottomMargin: root.pad
+        contentWidth: width
+        contentHeight: bodyColumn.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: contentHeight > height
+
+        ColumnLayout {
+            id: bodyColumn
+            width: bodyFlick.width
+            spacing: 8
+
+            // ================= Wi-Fi =================
+            ColumnLayout {
+                Layout.fillWidth: true
+                visible: root.activeMode === "wifi"
+                spacing: 8
+
+                OffState {
+                    shown: root.wifiPower !== "on" && !root.wifiPowerPending
+                    icon: "󰤮"
+                    title: "Wi-Fi staat uit"
+                    detail: "Zet Wi-Fi aan om netwerken in de buurt te zien."
+                    accent: root.wifiAccent
+                    onActivate: root.togglePower()
+                }
+
+                Banner {
+                    shown: root.wifiError !== ""
+                    message: root.wifiError
+                    onDismissed: root.wifiError = ""
+                }
+
+                // Huidige verbinding.
+                Rectangle {
+                    id: wifiCurrent
+                    property bool expanded: false
+                    Layout.fillWidth: true
+                    visible: root.wifiPower === "on" && root.isWifiConn
+                    Layout.preferredHeight: wifiCurrentColumn.implicitHeight + 16
+                    radius: Math.min(root.itemRadius, 14)
+                    color: Qt.rgba(root.wifiAccent.r, root.wifiAccent.g, root.wifiAccent.b, 0.14)
+                    border.width: 1
+                    border.color: Qt.rgba(root.wifiAccent.r, root.wifiAccent.g, root.wifiAccent.b, 0.45)
+
+                    ColumnLayout {
+                        id: wifiCurrentColumn
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 8
+                        spacing: 0
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            IconBubble {
+                                icon: root.isWifiConn ? (root.wifiConnected.icon || "󰤨") : "󰤨"
+                                accent: root.wifiAccent
+                                lit: true
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 0
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.isWifiConn ? root.wifiConnected.ssid : ""
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 12
+                                    font.weight: Font.DemiBold
+                                    color: mocha.text
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.wifiDisconnecting ? "Verbreken…"
+                                        : "Verbonden" + (root.isWifiConn && root.wifiConnected.signal ? " · " + root.wifiConnected.signal + "%" : "")
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 10
+                                    color: root.wifiAccent
+                                    elide: Text.ElideRight
+                                }
+                            }
+                            IconButton {
+                                icon: "󰅂"
+                                tooltip: "Details"
+                                accent: mocha.text
+                                small: true
+                                iconRotation: wifiCurrent.expanded ? 90 : 0
+                                onTriggered: wifiCurrent.expanded = !wifiCurrent.expanded
+                            }
+                            IconButton {
+                                icon: root.wifiDisconnecting ? "󰑮" : "󰖪"
+                                spinning: root.wifiDisconnecting
+                                tooltip: "Verbreken"
+                                accent: mocha.red
+                                small: true
+                                onTriggered: root.disconnectWifi()
+                            }
+                        }
+
+                        Reveal {
+                            shown: wifiCurrent.expanded
+                            DetailRow { icon: "󰤨"; label: "Signaal"; value: root.isWifiConn && root.wifiConnected.signal ? root.wifiConnected.signal + "%" : "—"; accent: root.wifiAccent }
+                            DetailRow { icon: "󰦝"; label: "Beveiliging"; value: root.isWifiConn ? root.securityLabel(root.wifiConnected.security) : "—"; accent: root.wifiAccent }
+                            DetailRow { icon: "󰩟"; label: "IP-adres"; value: root.isWifiConn && root.wifiConnected.ip && root.wifiConnected.ip !== "No IP" ? root.wifiConnected.ip : "Geen IP"; accent: root.wifiAccent }
+                            DetailRow { icon: "󰖧"; label: "Band"; value: root.isWifiConn ? root.bandLabel(root.wifiConnected.freq) : "—"; accent: root.wifiAccent }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    visible: root.wifiPower === "on"
+                    spacing: 6
+                    SectionLabel { text: "Beschikbare netwerken" }
+                    IconButton {
+                        icon: "󰑐"
+                        tooltip: "Opnieuw zoeken"
+                        accent: root.wifiAccent
+                        small: true
+                        spinning: root.wifiScanning
+                        onTriggered: root.rescanWifi()
+                    }
+                }
+
+                Repeater {
+                    model: wifiModel
+                    delegate: DeviceRow {
+                        id: netRow
+                        required property var model
+                        readonly property bool secured: root.isSecured(netRow.model.security)
+                        readonly property bool asking: root.passwordSsid === netRow.model.name
+                        visible: root.wifiPower === "on"
+                        icon: netRow.model.icon
+                        title: netRow.model.name
+                        subtitle: (secured ? root.securityLabel(netRow.model.security) : "Open")
+                            + (netRow.model.known ? " · opgeslagen" : "")
+                            + " · " + netRow.model.signal + "%"
+                        accent: root.wifiAccent
+                        trailingIcon: secured && !netRow.model.known ? "󰌾" : "󰅂"
+                        busy: root.wifiBusySsid === netRow.model.name
+                        highlighted: asking
+                        secondaryIcon: netRow.model.known ? "󰩺" : ""
+                        secondaryTooltip: "Vergeten"
+                        onSecondaryTriggered: root.forgetWifi(netRow.model.name)
+                        onTriggered: {
+                            if (secured && !netRow.model.known) {
+                                root.passwordSsid = asking ? "" : netRow.model.name;
+                            } else {
+                                root.passwordSsid = "";
+                                root.connectWifi(netRow.model.name);
+                            }
+                        }
+
+                        Reveal {
+                            shown: netRow.asking
+                            onShownChanged: if (shown) passwordField.forceActiveFocus()
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 32
+                                    radius: Math.min(root.itemRadius, 12)
+                                    color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
+                                    border.width: 1
+                                    border.color: passwordField.activeFocus
+                                        ? Qt.rgba(root.wifiAccent.r, root.wifiAccent.g, root.wifiAccent.b, 0.70)
+                                        : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+                                    Behavior on border.color {
+                                        ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                                    }
+
+                                    TextInput {
+                                        id: passwordField
+                                        property bool reveal: false
+                                        anchors.left: parent.left
+                                        anchors.right: eyeButton.left
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        anchors.leftMargin: 10
+                                        anchors.rightMargin: 4
+                                        echoMode: reveal ? TextInput.Normal : TextInput.Password
+                                        font.family: ThemeConfig.uiFont
+                                        font.pixelSize: 12
+                                        color: mocha.text
+                                        selectionColor: Qt.rgba(root.wifiAccent.r, root.wifiAccent.g, root.wifiAccent.b, 0.4)
+                                        clip: true
+                                        onAccepted: if (text !== "") { root.connectWifi(netRow.model.name, text); text = ""; }
+                                        Keys.onEscapePressed: root.passwordSsid = ""
+
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            visible: passwordField.text === ""
+                                            text: "Wachtwoord"
+                                            font: passwordField.font
+                                            color: mocha.subtext0
+                                        }
+                                    }
+
+                                    Text {
+                                        id: eyeButton
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: 8
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: passwordField.reveal ? "󰈉" : "󰈈"
+                                        font.family: ThemeConfig.iconFont
+                                        font.pixelSize: 14
+                                        color: eyeMouse.containsMouse ? mocha.text : mocha.subtext0
+                                        MouseArea {
+                                            id: eyeMouse
+                                            anchors.fill: parent
+                                            anchors.margins: -4
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: passwordField.reveal = !passwordField.reveal
+                                        }
+                                    }
+                                }
+
+                                PillButton {
+                                    label: "Verbind"
+                                    accent: root.wifiAccent
+                                    enabledState: passwordField.text !== "" && root.wifiBusySsid === ""
+                                    onTriggered: {
+                                        root.connectWifi(netRow.model.name, passwordField.text);
+                                        passwordField.text = "";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                EmptyNote {
+                    visible: root.wifiPower === "on" && wifiModel.count === 0
+                    text: root.wifiScanning ? "Zoeken naar netwerken…" : "Geen andere netwerken gevonden"
+                }
+            }
+
+            // ================= Bluetooth =================
+            ColumnLayout {
+                Layout.fillWidth: true
+                visible: root.activeMode === "bt"
+                spacing: 8
+
+                OffState {
+                    shown: root.btPower !== "on" && !root.btPowerPending
+                    icon: "󰂲"
+                    title: "Bluetooth staat uit"
+                    detail: "Zet Bluetooth aan om apparaten te verbinden of te koppelen."
+                    accent: root.btAccent
+                    onActivate: root.togglePower()
+                }
+
+                Banner {
+                    shown: root.btError !== ""
+                    message: root.btError
+                    onDismissed: root.btError = ""
+                }
+
+                Repeater {
+                    model: btConnectedModel
+                    delegate: Rectangle {
+                        id: btCard
+                        required property var model
+                        property bool expanded: false
+                        readonly property bool leaving: root.btBusy[btCard.model.mac] === "disconnect"
+                        Layout.fillWidth: true
+                        visible: root.btPower === "on"
+                        Layout.preferredHeight: btCardColumn.implicitHeight + 16
+                        radius: Math.min(root.itemRadius, 14)
+                        color: Qt.rgba(root.btAccent.r, root.btAccent.g, root.btAccent.b, 0.14)
+                        border.width: 1
+                        border.color: Qt.rgba(root.btAccent.r, root.btAccent.g, root.btAccent.b, 0.45)
+
+                        ColumnLayout {
+                            id: btCardColumn
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 8
+                            spacing: 0
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 8
+                                IconBubble { icon: btCard.model.icon; accent: root.btAccent; lit: true }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 0
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: btCard.model.name
+                                        font.family: ThemeConfig.uiFont
+                                        font.pixelSize: 12
+                                        font.weight: Font.DemiBold
+                                        color: mocha.text
+                                        elide: Text.ElideRight
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: btCard.leaving ? "Verbreken…"
+                                            : "Verbonden"
+                                              + (btCard.model.battery > 0 ? " · " + btCard.model.battery + "%" : "")
+                                              + (btCard.model.profile !== "" && btCard.model.profile !== "None" ? " · " + btCard.model.profile : "")
+                                        font.family: ThemeConfig.uiFont
+                                        font.pixelSize: 10
+                                        color: root.btAccent
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                                IconButton {
+                                    icon: "󰅂"
+                                    tooltip: "Details"
+                                    accent: mocha.text
+                                    small: true
+                                    iconRotation: btCard.expanded ? 90 : 0
+                                    onTriggered: btCard.expanded = !btCard.expanded
+                                }
+                                IconButton {
+                                    icon: btCard.leaving ? "󰑮" : "󰂲"
+                                    spinning: btCard.leaving
+                                    tooltip: "Verbreken"
+                                    accent: mocha.red
+                                    small: true
+                                    onTriggered: root.disconnectBt(btCard.model.mac)
+                                }
+                            }
+
+                            // Batterijbalkje van het apparaat (als het dat meldt).
+                            Rectangle {
+                                visible: btCard.model.battery > 0
+                                Layout.fillWidth: true
+                                Layout.topMargin: 8
+                                Layout.leftMargin: 40
+                                Layout.preferredHeight: 4
+                                radius: 2
+                                color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
+                                Rectangle {
+                                    width: parent.width * Math.max(0, Math.min(100, btCard.model.battery)) / 100
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color: btCard.model.battery <= 15 ? mocha.red : (btCard.model.battery <= 35 ? mocha.yellow : root.btAccent)
+                                    Behavior on width {
+                                        NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
+                                    }
+                                }
+                            }
+
+                            Reveal {
+                                shown: btCard.expanded
+                                DetailRow { icon: "󰥉"; label: "Batterij"; value: btCard.model.battery > 0 ? btCard.model.battery + "%" : "Niet gemeld"; accent: root.btAccent }
+                                DetailRow {
+                                    visible: btCard.model.profile !== "" && btCard.model.profile !== "None"
+                                    icon: btCard.model.profile === "Hi-Fi (A2DP)" ? "󰓃" : "󰋎"
+                                    label: "Audioprofiel"
+                                    value: btCard.model.profile
+                                    accent: root.btAccent
+                                }
+                                DetailRow { icon: "󰒋"; label: "MAC-adres"; value: btCard.model.mac; accent: root.btAccent }
+                            }
+                        }
+                    }
+                }
+
+                SectionLabel {
+                    Layout.topMargin: 4
+                    visible: root.btPower === "on" && btPairedModel.count > 0
+                    text: "Gekoppelde apparaten"
+                }
+
+                Repeater {
+                    model: btPairedModel
+                    delegate: DeviceRow {
+                        id: pairedRow
+                        required property var model
+                        visible: root.btPower === "on"
+                        icon: pairedRow.model.icon
+                        title: pairedRow.model.name
+                        subtitle: root.btBusy[pairedRow.model.mac] === "connect" ? "Verbinden…" : "Gekoppeld · klik om te verbinden"
+                        accent: root.btAccent
+                        busy: root.btBusy[pairedRow.model.mac] === "connect"
+                        dimmed: pairedRow.model.unnamed
+                        secondaryIcon: "󰩺"
+                        secondaryTooltip: "Vergeten"
+                        onSecondaryTriggered: root.forgetBt(pairedRow.model.mac)
+                        onTriggered: root.connectBt(pairedRow.model.mac, pairedRow.model.name)
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    visible: root.btPower === "on"
+                    spacing: 6
+                    SectionLabel { text: "In de buurt" }
+                    LoadingDots { visible: root.btScanning; dotColor: root.btAccent }
+                }
+
+                Repeater {
+                    model: btFoundModel
+                    delegate: DeviceRow {
+                        id: foundRow
+                        required property var model
+                        visible: root.btPower === "on"
+                        icon: foundRow.model.icon
+                        title: foundRow.model.name
+                        subtitle: root.btBusy[foundRow.model.mac] === "connect" ? "Koppelen…"
+                            : (foundRow.model.unnamed ? foundRow.model.mac : "Klik om te koppelen")
+                        accent: root.btAccent
+                        busy: root.btBusy[foundRow.model.mac] === "connect"
+                        dimmed: foundRow.model.unnamed
+                        trailingIcon: "󰐕"
+                        onTriggered: root.connectBt(foundRow.model.mac, foundRow.model.name)
+                    }
+                }
+
+                EmptyNote {
+                    visible: root.btPower === "on" && btFoundModel.count === 0
+                    text: root.btScanning ? "Zoeken naar apparaten in de buurt…" : "Geen nieuwe apparaten gevonden"
+                }
+            }
+
+            // ================= Bedraad =================
+            ColumnLayout {
+                Layout.fillWidth: true
+                visible: root.activeMode === "eth"
+                spacing: 8
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: ethColumn.implicitHeight + 16
+                    radius: Math.min(root.itemRadius, 14)
+                    color: root.ethConnected
+                        ? Qt.rgba(root.ethAccent.r, root.ethAccent.g, root.ethAccent.b, 0.14)
+                        : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.04)
+                    border.width: 1
+                    border.color: root.ethConnected
+                        ? Qt.rgba(root.ethAccent.r, root.ethAccent.g, root.ethAccent.b, 0.45)
+                        : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                    Behavior on color {
+                        ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+                    }
+
+                    ColumnLayout {
+                        id: ethColumn
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 8
+                        spacing: 6
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            IconBubble { icon: "󰈀"; accent: root.ethAccent; lit: root.ethConnected }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 0
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.ethConnected ? (root.ethConnection.name || "Bedrade verbinding") : "Bedraad netwerk"
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 12
+                                    font.weight: Font.DemiBold
+                                    color: mocha.text
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.ethConnected ? "Ethernet · verbonden" : "Geen kabelverbinding actief"
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 10
+                                    color: root.ethConnected ? root.ethAccent : mocha.subtext0
+                                    elide: Text.ElideRight
+                                }
+                            }
+                            Rectangle {
+                                Layout.preferredWidth: 8
+                                Layout.preferredHeight: 8
+                                Layout.rightMargin: 6
+                                radius: 4
+                                color: root.ethConnected ? root.ethAccent : mocha.overlay0
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 2
+                            spacing: 6
+                            DetailRow { icon: "󰩟"; label: "IP-adres"; value: root.ethConnected && root.ethConnection.ip !== "No IP" ? (root.ethConnection.ip || "—") : "—"; accent: root.ethAccent }
+                            DetailRow { icon: "󰖟"; label: "Snelheid"; value: root.ethConnected && root.ethConnection.speed !== "Unknown" ? (root.ethConnection.speed || "Onbekend") : "—"; accent: root.ethAccent }
+                            DetailRow { icon: "󰒋"; label: "Interface"; value: root.ethConnected ? (root.ethConnection.id || "—") : "—"; accent: root.ethAccent }
+                            DetailRow { icon: "󰑬"; label: "MAC-adres"; value: root.ethConnected ? (root.ethConnection.mac || "—") : "—"; accent: root.ethAccent }
+                        }
+                    }
+                }
+
+                EmptyNote {
+                    text: root.ethConnected
+                        ? "Bedraad netwerk wordt automatisch door NetworkManager beheerd."
+                        : "Sluit een ethernetkabel aan; deze weergave ververst automatisch."
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Componenten
+    // ------------------------------------------------------------------------
+
+    // Klapt zijn inhoud vloeiend open en dicht (zelfde als Geluid & media).
+    component Reveal: Item {
+        id: reveal
+        property bool shown: false
+        property int gap: 8
+        default property alias content: revealColumn.data
+        property real progress: shown ? 1 : 0
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: Math.ceil((revealColumn.implicitHeight + gap) * progress)
+        visible: shown || progress > 0.001
+        opacity: progress
+        clip: true
+
+        Behavior on progress {
+            NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+
+        ColumnLayout {
+            id: revealColumn
+            y: reveal.gap
+            width: reveal.width
+            spacing: 6
+        }
+    }
+
+    component SectionLabel: Text {
+        Layout.fillWidth: true
+        font.family: ThemeConfig.uiFont
+        font.pixelSize: 10
+        font.weight: ThemeConfig.emphasisWeight
+        font.capitalization: Font.AllUppercase
+        font.letterSpacing: 0.6
+        color: mocha.subtext0
+    }
+
+    component EmptyNote: Text {
+        Layout.fillWidth: true
+        topPadding: 6
+        bottomPadding: 6
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.WordWrap
+        font.family: ThemeConfig.uiFont
+        font.pixelSize: 11
+        color: mocha.subtext0
+    }
+
+    component DetailRow: RowLayout {
+        id: detail
+        property string icon: ""
+        property string label: ""
+        property string value: ""
+        property color accent: mocha.primary
+        Layout.fillWidth: true
+        spacing: 10
+        Text {
+            Layout.preferredWidth: 32
+            horizontalAlignment: Text.AlignHCenter
+            text: detail.icon
+            font.family: ThemeConfig.iconFont
+            font.pixelSize: 14
+            color: detail.accent
+        }
+        Text {
+            Layout.preferredWidth: 86
+            text: detail.label
+            font.family: ThemeConfig.uiFont
+            font.pixelSize: 11
+            color: mocha.subtext0
+        }
+        Text {
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignRight
+            text: detail.value
+            font.family: ThemeConfig.monoFont
+            font.pixelSize: 11
+            font.weight: Font.Medium
+            color: mocha.text
+            elide: Text.ElideRight
+        }
+    }
+
+    component IconBubble: Rectangle {
+        id: bubble
+        property string icon: ""
+        property color accent: mocha.primary
+        property bool lit: false
+        property bool dimmed: false
+        Layout.preferredWidth: 32
+        Layout.preferredHeight: 32
+        radius: Math.min(root.itemRadius, 16)
+        color: lit
+            ? Qt.rgba(accent.r, accent.g, accent.b, 0.30)
+            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.06)
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+        Text {
+            anchors.centerIn: parent
+            text: bubble.icon
+            font.family: ThemeConfig.iconFont
+            font.pixelSize: 16
+            color: bubble.lit ? bubble.accent : (bubble.dimmed ? mocha.overlay1 : mocha.subtext0)
+        }
+    }
+
+    // Eén netwerk of apparaat. Klik verbindt; het tweede knopje (verschijnt
+    // bij hover) vergeet. Kinderen (zoals het wachtwoordveld) komen eronder.
+    component DeviceRow: Rectangle {
+        id: row
+        property string icon: ""
+        property string title: ""
+        property string subtitle: ""
+        property color accent: mocha.primary
+        property string trailingIcon: "󰅂"
+        property string secondaryIcon: ""
+        property string secondaryTooltip: ""
+        property bool busy: false
+        property bool highlighted: false
+        property bool dimmed: false
+        default property alias extra: rowExtra.data
+        signal triggered()
+        signal secondaryTriggered()
+
+        readonly property bool hovered: rowMouse.containsMouse || secondaryMouse.containsMouse
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: rowColumn.implicitHeight + 12
+        radius: Math.min(root.itemRadius, 14)
+        color: highlighted
+            ? Qt.rgba(accent.r, accent.g, accent.b, 0.10)
+            : (busy
+                ? Qt.rgba(accent.r, accent.g, accent.b, 0.08)
+                : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, hovered ? 0.08 : 0.04))
+        border.width: 1
+        border.color: highlighted || busy
+            ? Qt.rgba(accent.r, accent.g, accent.b, 0.35)
+            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, hovered ? 0.12 : 0.06)
+        scale: rowMouse.pressed ? 0.985 : 1.0
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+        Behavior on border.color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+        Behavior on scale {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+
+        ColumnLayout {
+            id: rowColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 6
+            anchors.leftMargin: 8
+            spacing: 0
+
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 34
+
+                MouseArea {
+                    id: rowMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: row.busy ? Qt.BusyCursor : Qt.PointingHandCursor
+                    onClicked: if (!row.busy) row.triggered()
+                }
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.margins: window.s(6)
-                    spacing: window.s(6)
+                    spacing: 8
 
-                    // Wi-Fi Mode Button
-                    Rectangle {
+                    IconBubble {
+                        icon: row.icon
+                        accent: row.accent
+                        lit: row.busy || row.highlighted
+                        dimmed: row.dimmed
+                    }
+
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        radius: window.themedInnerRadius
-                        
-                        color: window.activeMode === "wifi" ? "transparent" : (wifiTabMa.containsMouse ? window.surface1 : "transparent")
-                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: window.themedInnerRadius
-                            opacity: window.activeMode === "wifi" ? 1.0 : 0.0
-                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
-                            gradient: Gradient {
-                                orientation: Gradient.Horizontal
-                                GradientStop { position: 0.0; color: Qt.lighter(window.wifiAccent, 1.15) }
-                                GradientStop { position: 1.0; color: window.wifiAccent }
-                            }
+                        spacing: 0
+                        Text {
+                            Layout.fillWidth: true
+                            text: row.title
+                            font.family: ThemeConfig.uiFont
+                            font.pixelSize: 12
+                            font.weight: Font.DemiBold
+                            color: row.dimmed ? mocha.subtext0 : mocha.text
+                            elide: Text.ElideRight
                         }
-
-                        RowLayout {
-                            anchors.centerIn: parent
-                            spacing: window.s(8)
-                            Text { font.family: ThemeConfig.iconFont; font.pixelSize: window.s(18); color: window.activeMode === "wifi" ? window.crust : window.text; text: "󰤨"; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(200)} } }
-                            Text { font.family: window.uiFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(13); color: window.activeMode === "wifi" ? window.crust : window.text; text: "Wi-Fi"; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(200)} } }
-                        }
-                        MouseArea {
-                            id: wifiTabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (window.activeMode !== "wifi") window.playSfx("switch.wav");
-                                window.activeMode = "wifi";
-                            }
+                        Text {
+                            Layout.fillWidth: true
+                            visible: text !== ""
+                            text: row.subtitle
+                            font.family: ThemeConfig.uiFont
+                            font.pixelSize: 10
+                            color: row.busy ? row.accent : mocha.subtext0
+                            elide: Text.ElideRight
                         }
                     }
 
-                    Rectangle { width: 1; Layout.fillHeight: true; Layout.margins: window.s(5); color: Qt.alpha(window.text, 0.2) }
-
-                    // Bluetooth Mode Button
+                    // Vergeten: alleen zichtbaar bij hover, zodat de lijst rustig blijft.
                     Rectangle {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        radius: window.themedInnerRadius
-                        color: window.activeMode === "bt" ? "transparent" : (btTabMa.containsMouse ? window.surface1 : "transparent")
-                        Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: window.themedInnerRadius
-                            opacity: window.activeMode === "bt" ? 1.0 : 0.0
-                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
-                            gradient: Gradient {
-                                orientation: Gradient.Horizontal
-                                GradientStop { position: 0.0; color: Qt.lighter(window.btAccent, 1.15) }
-                                GradientStop { position: 1.0; color: window.btAccent }
-                            }
+                        visible: row.secondaryIcon !== "" && !row.busy
+                        Layout.preferredWidth: 26
+                        Layout.preferredHeight: 26
+                        radius: Math.min(root.itemRadius, 13)
+                        opacity: row.hovered ? 1 : 0
+                        color: secondaryMouse.containsMouse
+                            ? Qt.rgba(mocha.red.r, mocha.red.g, mocha.red.b, 0.20)
+                            : "transparent"
+                        Behavior on opacity {
+                            NumberAnimation { duration: ThemeConfig.durationToken("fast") }
                         }
-
-                        RowLayout {
+                        Behavior on color {
+                            ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                        }
+                        Text {
                             anchors.centerIn: parent
-                            spacing: window.s(8)
-                            Text { font.family: ThemeConfig.iconFont; font.pixelSize: window.s(18); color: window.activeMode === "bt" ? window.crust : window.text; text: "󰂯"; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(200)} } }
-                            Text { font.family: window.uiFontFamily; font.weight: window.themedFontWeight; font.letterSpacing: window.themedLetterSpacing; font.pixelSize: window.s(13); color: window.activeMode === "bt" ? window.crust : window.text; text: "Bluetooth"; Behavior on color { ColorAnimation{duration:ThemeConfig.duration(200)} } }
+                            text: row.secondaryIcon
+                            font.family: ThemeConfig.iconFont
+                            font.pixelSize: 13
+                            color: secondaryMouse.containsMouse ? mocha.red : mocha.subtext0
                         }
                         MouseArea {
-                            id: btTabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (window.activeMode !== "bt") window.playSfx("switch.wav");
-                                window.activeMode = "bt";
-                            }
+                            id: secondaryMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: row.secondaryTriggered()
+                        }
+                    }
+
+                    Text {
+                        Layout.preferredWidth: 24
+                        horizontalAlignment: Text.AlignHCenter
+                        text: row.busy ? "󰑮" : row.trailingIcon
+                        font.family: ThemeConfig.iconFont
+                        font.pixelSize: 14
+                        color: row.busy || row.highlighted ? row.accent : (row.hovered ? mocha.text : mocha.subtext0)
+                        rotation: row.busy ? spinAngle : (row.highlighted && row.trailingIcon === "󰅂" ? 90 : 0)
+                        property real spinAngle: 0
+                        NumberAnimation on spinAngle {
+                            from: 0; to: 360; duration: 900
+                            loops: Animation.Infinite
+                            running: row.busy
+                        }
+                        Behavior on color {
+                            ColorAnimation { duration: ThemeConfig.durationToken("fast") }
                         }
                     }
                 }
             }
 
-            // Power Toggle 
+            ColumnLayout {
+                id: rowExtra
+                Layout.fillWidth: true
+                spacing: 0
+            }
+        }
+    }
+
+    component IconButton: Rectangle {
+        id: ib
+        property string icon: ""
+        property string tooltip: ""
+        property color accent: mocha.text
+        property bool small: false
+        property bool spinning: false
+        property real iconRotation: 0
+        signal triggered()
+
+        Layout.preferredWidth: small ? 28 : 32
+        Layout.preferredHeight: small ? 28 : 32
+        radius: Math.min(root.itemRadius, small ? 14 : 16)
+        color: ibMouse.containsMouse
+            ? Qt.rgba(accent.r, accent.g, accent.b, 0.20)
+            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, small ? 0.0 : 0.06)
+        scale: ibMouse.pressed ? 0.94 : (ibMouse.containsMouse ? 1.07 : 1.0)
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+        Behavior on scale {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+        Text {
+            id: ibIcon
+            anchors.centerIn: parent
+            text: ib.icon
+            font.family: ThemeConfig.iconFont
+            font.pixelSize: ib.small ? 14 : 15
+            color: ibMouse.containsMouse || ib.spinning ? ib.accent : (ib.small ? mocha.subtext0 : ib.accent)
+            property real spinAngle: 0
+            rotation: ib.spinning ? spinAngle : ib.iconRotation
+            Behavior on rotation {
+                enabled: !ib.spinning
+                NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+            }
+            NumberAnimation on spinAngle {
+                from: 0; to: 360; duration: 900
+                loops: Animation.Infinite
+                running: ib.spinning
+            }
+            Behavior on color {
+                ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+            }
+        }
+        MouseArea {
+            id: ibMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: ib.triggered()
+        }
+    }
+
+    // Aan/uit-schakelaar: knopje glijdt, het spoor kleurt mee; tijdens het
+    // omzetten draait er een klein wieltje in het knopje.
+    component PowerSwitch: Rectangle {
+        id: sw
+        property bool checked: false
+        property bool pending: false
+        property color accent: mocha.primary
+        signal toggled()
+
+        Layout.preferredWidth: 46
+        Layout.preferredHeight: 26
+        radius: height / 2
+        color: checked
+            ? Qt.rgba(accent.r, accent.g, accent.b, swMouse.containsMouse ? 0.95 : 0.85)
+            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, swMouse.containsMouse ? 0.16 : 0.10)
+        border.width: 1
+        border.color: checked
+            ? Qt.rgba(accent.r, accent.g, accent.b, 1.0)
+            : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.16)
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("standard") }
+        }
+        Behavior on border.color {
+            ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+        }
+
+        Rectangle {
+            id: knob
+            width: sw.height - 6
+            height: width
+            radius: width / 2
+            y: 3
+            x: sw.checked ? sw.width - width - 3 : 3
+            color: sw.checked ? mocha.crust : mocha.subtext0
+            scale: swMouse.pressed ? 0.88 : 1.0
+            Behavior on x {
+                NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+            }
+            Behavior on color {
+                ColorAnimation { duration: ThemeConfig.durationToken("normal") }
+            }
+            Behavior on scale {
+                NumberAnimation { duration: ThemeConfig.durationToken("fast") }
+            }
+            Text {
+                anchors.centerIn: parent
+                visible: sw.pending
+                text: "󰑮"
+                font.family: ThemeConfig.iconFont
+                font.pixelSize: 11
+                color: sw.checked ? sw.accent : mocha.crust
+                property real spinAngle: 0
+                rotation: spinAngle
+                NumberAnimation on spinAngle {
+                    from: 0; to: 360; duration: 800
+                    loops: Animation.Infinite
+                    running: sw.pending
+                }
+            }
+        }
+
+        MouseArea {
+            id: swMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: sw.toggled()
+        }
+    }
+
+    component TabButton: Item {
+        id: tab
+        property string mode: ""
+        property string icon: ""
+        property string label: ""
+        property color accent: mocha.primary
+        readonly property bool current: root.activeMode === mode
+
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+
+        Row {
+            anchors.centerIn: parent
+            spacing: 6
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: tab.icon
+                font.family: ThemeConfig.iconFont
+                font.pixelSize: 14
+                color: tab.current ? tab.accent : (tabMouse.containsMouse ? mocha.text : mocha.subtext0)
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: tab.label
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 12
+                font.weight: tab.current ? Font.DemiBold : Font.Normal
+                color: tab.current ? mocha.text : (tabMouse.containsMouse ? mocha.text : mocha.subtext0)
+                Behavior on color {
+                    ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+                }
+            }
+        }
+
+        MouseArea {
+            id: tabMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.setMode(tab.mode)
+        }
+    }
+
+    // Lege toestand als de radio uit staat, met een knop om hem aan te zetten.
+    component OffState: Rectangle {
+        id: off
+        property bool shown: false
+        property string icon: ""
+        property string title: ""
+        property string detail: ""
+        property color accent: mocha.primary
+        signal activate()
+
+        Layout.fillWidth: true
+        visible: shown
+        Layout.preferredHeight: offColumn.implicitHeight + 32
+        radius: Math.min(root.itemRadius, 14)
+        color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.04)
+        border.width: 1
+        border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+
+        ColumnLayout {
+            id: offColumn
+            anchors.centerIn: parent
+            width: parent.width - 32
+            spacing: 8
+
             Rectangle {
-                anchors.bottom: parent.bottom
-                anchors.right: parent.right
-                anchors.margins: window.s(30)
-                width: window.s(48); height: window.s(48); radius: window.s(24)
-                
-                color: "transparent"
-                border.color: window.currentPowerPending ? window.activeColor : (window.currentPower ? "transparent" : window.surface2)
-                border.width: window.s(2)
-                Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(300) } }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: window.s(24)
-                    opacity: window.currentPower ? 1.0 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(300) } }
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Qt.lighter(window.activeColor, 1.15); Behavior on color { ColorAnimation {duration: ThemeConfig.duration(300)} } }
-                        GradientStop { position: 1.0; color: window.activeColor; Behavior on color { ColorAnimation {duration: ThemeConfig.duration(300)} } }
-                    }
-                }
-                
-                scale: pwrMa.pressed ? 0.9 : (pwrMa.containsMouse ? 1.1 : 1.0)
-                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(200); easing.type: Easing.OutBack } }
-
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: 48
+                Layout.preferredHeight: 48
+                radius: Math.min(root.itemRadius + 4, 24)
+                color: Qt.rgba(off.accent.r, off.accent.g, off.accent.b, 0.12)
                 Text {
-                    id: pwrIcon
                     anchors.centerIn: parent
+                    text: off.icon
                     font.family: ThemeConfig.iconFont
-                    font.pixelSize: window.s(22)
-                    color: window.currentPower ? window.crust : window.text
-                    text: window.currentPowerPending ? "󰑮" : "" 
-                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } }
-
-                    RotationAnimation {
-                        target: pwrIcon
-                        property: "rotation"
-                        from: 0; to: 360
-                        duration: 800
-                        loops: Animation.Infinite
-                        running: window.currentPowerPending
-                        onRunningChanged: {
-                            if (!running) pwrIcon.rotation = 0;
-                        }
-                    }
+                    font.pixelSize: 22
+                    color: off.accent
                 }
+            }
+            Text {
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                text: off.title
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 13
+                font.weight: Font.DemiBold
+                color: mocha.text
+            }
+            Text {
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                text: off.detail
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 11
+                color: mocha.subtext0
+            }
+            PillButton {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: 2
+                label: "Aanzetten"
+                accent: off.accent
+                onTriggered: off.activate()
+            }
+        }
+    }
 
-                MouseArea {
-                    id: pwrMa
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (window.activeMode === "wifi") {
-                            if (window.wifiPowerPending) return;
-                            window.expectedWifiPower = window.wifiPower === "on" ? "off" : "on";
-                            window.wifiPowerPending = true;
-                            
-                            if (window.expectedWifiPower === "on") window.playSfx("power_on.wav"); else window.playSfx("power_off.wav");
-                            
-                            wifiPendingReset.restart();
-                            window.wifiPower = window.expectedWifiPower; // Optimistic
-                            Quickshell.execDetached(["nmcli", "radio", "wifi", window.wifiPower]);
-                            wifiPoller.running = true;
-                        } else {
-                            if (window.btPowerPending) return;
-                            window.expectedBtPower = window.btPower === "on" ? "off" : "on";
-                            window.btPowerPending = true;
-                            
-                            if (window.expectedBtPower === "on") window.playSfx("power_on.wav"); else window.playSfx("power_off.wav");
-                            
-                            btPendingReset.restart();
-                            window.btPower = window.expectedBtPower; // Optimistic
-                            Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--toggle"]);
-                            btPoller.running = true;
-                        }
-                    }
+    component PillButton: Rectangle {
+        id: pill
+        property string label: ""
+        property color accent: mocha.primary
+        property bool enabledState: true
+        signal triggered()
+
+        Layout.preferredWidth: pillText.implicitWidth + 28
+        Layout.preferredHeight: 32
+        radius: height / 2
+        opacity: enabledState ? 1 : 0.5
+        color: Qt.rgba(accent.r, accent.g, accent.b, pillMouse.containsMouse && enabledState ? 0.95 : 0.80)
+        scale: pillMouse.pressed && enabledState ? 0.95 : 1.0
+        Behavior on color {
+            ColorAnimation { duration: ThemeConfig.durationToken("fast") }
+        }
+        Behavior on scale {
+            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+        Text {
+            id: pillText
+            anchors.centerIn: parent
+            text: pill.label
+            font.family: ThemeConfig.uiFont
+            font.pixelSize: 12
+            font.weight: Font.DemiBold
+            color: mocha.crust
+        }
+        MouseArea {
+            id: pillMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: pill.enabledState ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: if (pill.enabledState) pill.triggered()
+        }
+    }
+
+    // Foutmelding die zacht in- en uitklapt; klik sluit hem.
+    component Banner: Item {
+        id: banner
+        property bool shown: false
+        property string message: ""
+        property real progress: shown ? 1 : 0
+        signal dismissed()
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: Math.ceil((bannerBox.implicitHeight) * progress)
+        visible: shown || progress > 0.001
+        opacity: progress
+        clip: true
+        Behavior on progress {
+            NumberAnimation { duration: ThemeConfig.durationToken("normal"); easing.type: ThemeConfig.easingToken("emphasized") }
+        }
+
+        Rectangle {
+            id: bannerBox
+            width: parent.width
+            implicitHeight: bannerRow.implicitHeight + 16
+            height: implicitHeight
+            radius: Math.min(root.itemRadius, 14)
+            color: Qt.rgba(mocha.red.r, mocha.red.g, mocha.red.b, 0.14)
+            border.width: 1
+            border.color: Qt.rgba(mocha.red.r, mocha.red.g, mocha.red.b, 0.45)
+
+            RowLayout {
+                id: bannerRow
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: 12
+                anchors.rightMargin: 10
+                spacing: 8
+                Text {
+                    text: "󰀦"
+                    font.family: ThemeConfig.iconFont
+                    font.pixelSize: 15
+                    color: mocha.red
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: banner.message
+                    wrapMode: Text.WordWrap
+                    maximumLineCount: 3
+                    elide: Text.ElideRight
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 11
+                    color: mocha.text
+                }
+                Text {
+                    text: "󰅖"
+                    font.family: ThemeConfig.iconFont
+                    font.pixelSize: 13
+                    color: bannerMouse.containsMouse ? mocha.text : mocha.subtext0
+                }
+            }
+            MouseArea {
+                id: bannerMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: banner.dismissed()
+            }
+        }
+    }
+
+    component LoadingDots: Row {
+        id: dots
+        property color dotColor: mocha.text
+        spacing: 4
+        Repeater {
+            model: 3
+            Rectangle {
+                id: dot
+                required property int index
+                width: 5
+                height: 5
+                radius: 2.5
+                color: dots.dotColor
+                opacity: 0.3
+                SequentialAnimation on opacity {
+                    loops: Animation.Infinite
+                    running: dots.visible
+                    PauseAnimation { duration: dot.index * 160 }
+                    NumberAnimation { to: 1.0; duration: 320; easing.type: Easing.OutSine }
+                    NumberAnimation { to: 0.3; duration: 320; easing.type: Easing.InSine }
+                    PauseAnimation { duration: (2 - dot.index) * 160 }
                 }
             }
         }
