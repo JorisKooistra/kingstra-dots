@@ -23,6 +23,7 @@ find_tool() {
 SNAPSHOT_CMD="${KINGSTRA_SNAPSHOT_CMD:-$(find_tool kingstra-snapshot)}"
 HEALTH_CMD="$(find_tool kingstra-health)"
 ROLLBACK_CMD="$(find_tool kingstra-rollback)"
+MERGE_CMD="$(find_tool kingstra-pacnew-merge)"
 AUR_CACHE_CMD="$(find_tool kingstra-aur-cache)"
 PACMAN_LOG="${KINGSTRA_PACMAN_LOG:-/var/log/pacman.log}"
 RESULT_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/update-result.json"
@@ -365,7 +366,7 @@ check_arch_news() {
 # .pacnew en .pacsave: per bestand het verschil tonen en samen beslissen.
 # Zonder terminal alleen melden, zoals voorheen.
 report_pacnew() {
-    local files="" f base reply n=0 kept=0 took=0 later=0 stamp
+    local files="" f base reply n=0 kept=0 took=0 later=0 stamp merged="" choices
     command -v pacman >/dev/null 2>&1 || return 0
     files="$(find /etc -xdev \( -name '*.pacnew' -o -name '*.pacsave' \) 2>/dev/null | sort)"
     if [[ -z "$files" ]]; then
@@ -399,9 +400,39 @@ report_pacnew() {
         fi
         sudo diff -u --label "nu" --label "nieuw" "$base" "$f" 2>/dev/null \
             | tail -n +3 | head -n 30 | sed 's/^/      /'
+        # Samenvoegen: nieuwe versie plus wat jij zelf aanzette of toevoegde.
+        rm -f -- "$merged"
+        merged=""
+        choices="[n]ieuwe overnemen, [e]igen houden, [l]ater ${C_DIM}[l]${C_RESET}"
+        if [[ -n "$MERGE_CMD" ]]; then
+            merged="$(mktemp)"
+            # shellcheck disable=SC2024  # tijdelijk bestand is van de gebruiker
+            if sudo python3 "$MERGE_CMD" "$base" "$f" > "$merged" 2>/dev/null \
+                && ! sudo cmp -s "$merged" "$f" && ! sudo cmp -s "$merged" "$base"; then
+                log "${C_DIM}Samengevoegd: de nieuwe versie, met jouw eigen regels erin:${C_RESET}"
+                sudo diff -u --label "nu" --label "samengevoegd" "$base" "$merged" 2>/dev/null \
+                    | tail -n +3 | head -n 20 | sed 's/^/      /'
+                choices="[s]amenvoegen (aanbevolen), [n]ieuwe overnemen, [e]igen houden, [l]ater ${C_DIM}[s]${C_RESET}"
+            else
+                rm -f -- "$merged"
+                merged=""
+            fi
+        fi
         live_clear
-        read -r -p "    ${C_CYAN}${G_ASK}${C_RESET} [n]ieuwe overnemen, [e]igen houden, [l]ater ${C_DIM}[l]${C_RESET} " reply || reply=""
+        read -r -p "    ${C_CYAN}${G_ASK}${C_RESET} $choices " reply || reply="l"
+        [[ -z "$reply" && -n "$merged" ]] && reply="s"
         case "$reply" in
+            s|S)
+                if [[ -z "$merged" ]]; then
+                    later=$((later + 1))
+                    continue
+                fi
+                sudo cp -a -- "$base" "$base.kingstra-$stamp" 2>/dev/null
+                # tee houdt eigenaar en rechten van het bestaande bestand.
+                if sudo tee "$base" < "$merged" >/dev/null && sudo rm -f -- "$f"; then
+                    took=$((took + 1))
+                    to_log "samengevoegd: $f (oude versie: $base.kingstra-$stamp)"
+                fi ;;
             n|N)
                 sudo cp -a -- "$base" "$base.kingstra-$stamp" 2>/dev/null
                 if sudo mv -f -- "$f" "$base"; then
@@ -413,6 +444,7 @@ report_pacnew() {
             *) later=$((later + 1)) ;;
         esac
     done <<< "$files"
+    [[ -n "$merged" ]] && rm -f -- "$merged"
     if (( later > 0 )); then
         result warn "Configbestanden: $took nieuw, $kept eigen gehouden, $later voor later."
     else

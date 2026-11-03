@@ -15,6 +15,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Spiekbriefje (Super vasthouden)** heeft een blok Werkvlak: twee vingers, wiel, Ctrl+wiel, Ctrl+slepen, Shift+wiel, en zonder Super knijpen en vier vingers.
 
 ### Update breekt niet meer af op een optioneel pakket
+- **Configbestanden samenvoegen**: bij een `.pacnew` biedt de updater nu ook [s]amenvoegen aan (standaard als het kan). Basis is de nieuwe versie, met jouw eigen regels erin: in `pam.d/sudo` blijft de vingerafdrukregel (`pam_fprintd`) staan, in `locale.gen` blijven je talen (zoals en_US) aan. Je ziet het resultaat eerst; de oude versie blijft bewaard. Bij JSON of grote verschillen kies je zelf (`kingstra-pacnew-merge`).
 - **Geen valse bootfout meer bij een unified kernel image.** De controle na de update zocht `initramfs-linux.img`, maar de laptop start met een UKI (`/boot/EFI/Linux/arch-linux.efi`, `default_uki` in de mkinitcpio-preset). Hij kijkt nu naar dat bestand.
 - **AUR-updates lopen weer.** Vóór de AUR-build ververst de updater de PGP-sleutels van de pakketten met een update (firefox-bin faalde op Mozilla's nieuwe subsleutel, "unknown public key"). Hij installeert ook bouwpakketten die de AUR-maintainer vergeten is te noemen (skwd-daemon eist `qt6-tools`).
 - **Dicteren**: whisper.cpp heet in de Arch-repo nu `whisper-cpp`; het oude AUR-pakket bestaat niet meer. De installer neemt `whisper-cpp` uit extra (vangnet: `whisper.cpp-git`).

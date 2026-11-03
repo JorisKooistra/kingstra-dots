@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""Een .pacnew samenvoegen met je eigen versie, zonder eigen regels te verliezen.
+
+Gebruik: kingstra-pacnew-merge <bestand> <bestand.pacnew>  (resultaat naar stdout)
+
+Basis is de nieuwe versie van het pakket. Daarin komt terug wat jij zelf
+aanzette of toevoegde:
+  - een regel die bij jou aan staat en in de nieuwe versie als commentaar
+    ("#regel") staat, gaat weer aan (locale.gen: en_US.UTF-8 blijft aan);
+  - een eigen regel die in de nieuwe versie helemaal niet voorkomt, komt
+    terug na de regel waar hij bij jou ook na stond (pam.d/sudo:
+    pam_fprintd blijft vóór de include van system-auth).
+Regels die de nieuwe versie zelf verandert, neemt hij gewoon over.
+
+Weigert (code 3) bij gestructureerde bestanden (JSON, XML) en als er meer
+dan drie eigen regels terug zouden moeten: dan is het waarschijnlijk geen
+eigen toevoeging maar een oude versie van wat het pakket zelf veranderde,
+en is met de hand kiezen veiliger.
+"""
+import re
+import sys
+
+
+def norm(line):
+    return re.sub(r"\s+", " ", line.strip())
+
+
+def active(line):
+    s = line.strip()
+    return bool(s) and not s.startswith("#")
+
+
+MAX_INSERTED = 3
+
+
+def merge(old, new):
+    """Geeft (regels, aantal ingevoegde eigen regels)."""
+    inserted = 0
+    out = list(new)
+    keys = [norm(x) for x in out]
+    prev_anchor = None  # index in out van de vorige oude regel die er al staat
+    for line in old:
+        k = norm(line)
+        if k in keys:
+            prev_anchor = keys.index(k)
+            continue
+        if not active(line):
+            continue
+        commented = [i for i, x in enumerate(keys) if x.lstrip("#").strip() == k]
+        if commented:
+            i = commented[0]
+            out[i] = line
+            keys[i] = k
+            prev_anchor = i
+            continue
+        if prev_anchor is None:
+            # Bovenaan, maar na een kopregel als "#%PAM-1.0".
+            pos = 0
+            while pos < len(out) and out[pos].startswith("#%"):
+                pos += 1
+        else:
+            pos = prev_anchor + 1
+        out.insert(pos, line)
+        keys.insert(pos, k)
+        prev_anchor = pos
+        inserted += 1
+    return out, inserted
+
+
+def main():
+    if len(sys.argv) != 3:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    with open(sys.argv[1], encoding="utf-8", errors="surrogateescape") as fh:
+        old = fh.read().splitlines()
+    with open(sys.argv[2], encoding="utf-8", errors="surrogateescape") as fh:
+        new = fh.read().splitlines()
+    if sys.argv[1].endswith((".json", ".xml")):
+        print("Gestructureerd bestand; kies zelf.", file=sys.stderr)
+        return 3
+    merged, inserted = merge(old, new)
+    if inserted > MAX_INSERTED:
+        print(f"{inserted} eigen regels zouden terugkomen; kies zelf.", file=sys.stderr)
+        return 3
+    sys.stdout.write("\n".join(merged) + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
