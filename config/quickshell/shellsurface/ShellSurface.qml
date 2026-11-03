@@ -195,6 +195,12 @@ Scope {
                     rightInset: chrome.rightEdgeExtent > 0 ? chrome.rightEdgeExtent : chrome.shellBorderWidth
                 }
 
+                // Spiekbriefje bij Super vasthouden; doorklikbaar, geen focus.
+                SuperCheatSheet {
+                    shellWindow: surfaceWindow
+                    mocha: mocha
+                }
+
                 // Pop-ups voor nieuwe meldingen, naast de rail.
                 NotificationToasts {
                     id: notificationToasts

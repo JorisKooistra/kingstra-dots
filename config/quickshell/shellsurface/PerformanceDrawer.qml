@@ -38,6 +38,17 @@ Item {
     property real powerWatts: 0
     property string powerState: ""
     property var topProcesses: []
+    // Wat vroeger het tabblad Systeem in het controlecentrum was: verbinding,
+    // adres, belasting, kernel en GPU-details. Ingeklapt onder "Meer details",
+    // zodat het paneel standaard rustig blijft.
+    property bool detailsOpen: false
+    property string netName: ""
+    property string netAddress: ""
+    property string loadText: "--"
+    property string kernelText: ""
+    readonly property bool gpuDetailsWanted: root.visible && root.detailsOpen
+    onGpuDetailsWantedChanged: GpuMonitor.request(root, gpuDetailsWanted)
+    Component.onDestruction: GpuMonitor.request(root, false)
     // Welke meters de drawer toont volgt de actieve mode: Office vraagt
     // cpu_temp/ram_usage, Gaming de volledige set. Zonder bruikbare
     // mode-state blijft de rustige Office-set de fallback.
@@ -50,7 +61,8 @@ Item {
         || hasModule("gpu_temp") || hasModule("fps")
     // PanelHost gebruikt deze maat, zodat de drawer krimpt als Office
     // alleen CPU/RAM toont in plaats van een leeg vlak onder de meters.
-    readonly property int preferredPanelHeight: Math.ceil(content.implicitHeight + content.anchors.margins * 2)
+    readonly property int preferredPanelHeight: Math.ceil(content.implicitHeight + root.pad * 2)
+    readonly property int pad: 22
 
     function hasModule(name) {
         return Array.isArray(modeModules) && modeModules.indexOf(name) !== -1;
@@ -139,6 +151,7 @@ Item {
         metricsPoller.running = true;
         processPoller.running = true;
         if (root.showFps) fpsPoller.running = true;
+        if (root.detailsOpen && !detailPoller.running) detailPoller.running = true;
     }
 
     function openBtop() {
@@ -222,21 +235,53 @@ Item {
         id: processPoller
         command: ["bash", "-lc",
             "cores=$(nproc 2>/dev/null || echo 1); " +
-            "top -b -n 2 -d 0.3 -w 512 2>/dev/null | awk -v cores=\"$cores\" '/^ *PID /{block++; next} block==2 && NF>=12 && $12 != \"top\" {printf \"%s:%.1f\\n\", $12, $9/cores; if(++n==3) exit}'"
+            "top -b -n 2 -d 0.3 -w 512 2>/dev/null | awk -v cores=\"$cores\" '/^ *PID /{block++; next} block==2 && NF>=12 && $12 != \"top\" {printf \"%s:%.1f:%.1f\\n\", $12, $9/cores, $10; if(++n==5) exit}'"
         ]
         stdout: StdioCollector {
             onStreamFinished: {
                 let rows = [];
                 let lines = this.text.trim().split("\n");
                 for (let i = 0; i < lines.length; i++) {
-                    let idx = lines[i].lastIndexOf(":");
+                    let memIdx = lines[i].lastIndexOf(":");
+                    let idx = memIdx > 0 ? lines[i].lastIndexOf(":", memIdx - 1) : -1;
                     if (idx <= 0) continue;
-                    rows.push({ name: lines[i].slice(0, idx), cpu: parseFloat(lines[i].slice(idx + 1)) || 0 });
+                    rows.push({
+                        name: lines[i].slice(0, idx),
+                        cpu: parseFloat(lines[i].slice(idx + 1, memIdx)) || 0,
+                        mem: parseFloat(lines[i].slice(memIdx + 1)) || 0
+                    });
                 }
                 root.topProcesses = rows;
             }
         }
     }
+
+    // Trager veranderende details; draait alleen als "Meer details" open is.
+    Process {
+        id: detailPoller
+        command: ["bash", "-lc",
+            "printf 'conn=%s\\n' \"$(nmcli -t -f NAME connection show --active 2>/dev/null | grep -v '^lo$' | head -n1)\"; " +
+            "printf 'ip=%s\\n' \"$(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4; exit}')\"; " +
+            "printf 'load=%s\\n' \"$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null)\"; " +
+            "printf 'kernel=%s\\n' \"$(uname -r 2>/dev/null)\""
+        ]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let lines = this.text.split("\n");
+                for (let i = 0; i < lines.length; i++) {
+                    let eq = lines[i].indexOf("=");
+                    if (eq <= 0) continue;
+                    let key = lines[i].substring(0, eq);
+                    let value = lines[i].substring(eq + 1).trim();
+                    if (key === "conn") root.netName = value;
+                    else if (key === "ip") root.netAddress = value;
+                    else if (key === "load") root.loadText = value !== "" ? value : "--";
+                    else if (key === "kernel") root.kernelText = value;
+                }
+            }
+        }
+    }
+    onDetailsOpenChanged: if (detailsOpen && !detailPoller.running) detailPoller.running = true
 
     Process {
         id: fpsPoller
@@ -248,10 +293,21 @@ Item {
         stdout: StdioCollector { onStreamFinished: root.fps = this.text.trim() || "--" }
     }
 
+    // Scrollt als het scherm te laag is voor alles (met details open).
+    Flickable {
+        id: flick
+        anchors.fill: parent
+        contentWidth: width
+        contentHeight: content.implicitHeight + root.pad * 2
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: contentHeight > height
+
     ColumnLayout {
         id: content
-        anchors.fill: parent
-        anchors.margins: 22
+        x: root.pad
+        y: root.pad
+        width: flick.width - root.pad * 2
         spacing: 14
 
         RowLayout {
@@ -399,7 +455,7 @@ Item {
             spacing: 4
             Text { text: "Zwaarste processen"; font.family: ThemeConfig.uiFont; font.pixelSize: 10; font.weight: Font.DemiBold; color: mocha.subtext0 }
             Repeater {
-                model: root.topProcesses
+                model: root.detailsOpen ? root.topProcesses : root.topProcesses.slice(0, 3)
                 delegate: Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
@@ -425,12 +481,92 @@ Item {
                             font.weight: Font.Bold
                             color: mocha.accent1
                         }
+                        Text {
+                            visible: root.detailsOpen
+                            Layout.preferredWidth: 52
+                            horizontalAlignment: Text.AlignRight
+                            text: (modelData.mem || 0).toFixed(1) + "% mem"
+                            font.family: ThemeConfig.monoFont
+                            font.pixelSize: 10
+                            color: mocha.accent3
+                        }
                     }
                 }
             }
         }
 
-        Item { Layout.fillHeight: true }
+        // "Meer details": wat het controlecentrum vroeger onder Systeem had.
+        Rectangle {
+            id: detailsToggle
+            Layout.fillWidth: true
+            Layout.preferredHeight: 30
+            radius: height / 2
+            color: detailsMouse.containsMouse
+                ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.45)
+            Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                Text { text: root.detailsOpen ? "Minder details" : "Meer details"; Layout.fillWidth: true; font.family: ThemeConfig.uiFont; font.pixelSize: 11; font.weight: Font.DemiBold; color: mocha.subtext0 }
+                Text {
+                    text: "󰅀"
+                    font.family: ThemeConfig.iconFont
+                    font.pixelSize: 14
+                    color: mocha.subtext0
+                    rotation: root.detailsOpen ? 180 : 0
+                    Behavior on rotation { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") } }
+                }
+            }
+            MouseArea {
+                id: detailsMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.detailsOpen = !root.detailsOpen
+            }
+        }
+
+        ColumnLayout {
+            id: detailsBox
+            visible: opacity > 0.01
+            opacity: root.detailsOpen ? 1 : 0
+            Layout.fillWidth: true
+            spacing: 6
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") } }
+
+            DetailHeader { text: "Netwerk" }
+            DetailLine { icon: "󰖩"; label: "Verbinding"; value: root.netName !== "" ? root.netName : "Geen"; accent: mocha.accent3 }
+            DetailLine { icon: "󰩟"; label: "Adres"; value: root.netAddress !== "" ? root.netAddress : "--"; accent: mocha.accent1 }
+
+            DetailHeader { text: "Sessie" }
+            DetailLine { icon: "󰓅"; label: "Belasting (1, 5, 15 min)"; value: root.loadText; accent: mocha.accent2 }
+            DetailLine { icon: "󰌽"; label: "Kernel"; value: root.kernelText; accent: mocha.subtext1 }
+
+            DetailHeader { text: "GPU" }
+            Repeater {
+                model: GpuMonitor.gpus
+                delegate: ColumnLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 4
+                    Text { Layout.fillWidth: true; text: String(modelData.name || "GPU"); font.family: ThemeConfig.uiFont; font.pixelSize: 11; font.bold: true; color: mocha.text; elide: Text.ElideRight }
+                    DetailLine { icon: "󰢮"; label: "Belasting"; value: modelData.sleeping ? "Slaapstand" : modelData.usage === null ? "Niet beschikbaar" : Math.round(modelData.usage) + "%"; accent: mocha.accent2 }
+                    DetailLine { icon: "󰔏"; label: "Temperatuur"; value: modelData.temperature === null ? "Niet beschikbaar" : Math.round(modelData.temperature) + "°"; accent: mocha.accent1 }
+                    DetailLine { icon: "󰍛"; label: "VRAM"; value: modelData.memoryUsed === null || modelData.memoryTotal === null ? "Niet beschikbaar" : Math.round(modelData.memoryUsed) + " / " + Math.round(modelData.memoryTotal) + " MiB"; accent: mocha.accent3 }
+                }
+            }
+            Text {
+                visible: GpuMonitor.gpus.length === 0
+                Layout.fillWidth: true
+                text: GpuMonitor.errorText || "GPU-informatie laden…"
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 11
+                color: mocha.subtext0
+                elide: Text.ElideRight
+            }
+        }
 
         Rectangle {
             Layout.fillWidth: true
@@ -464,6 +600,30 @@ Item {
                 onClicked: root.openBtop()
             }
         }
+    }
+
+    }
+
+    component DetailHeader: Text {
+        Layout.fillWidth: true
+        Layout.topMargin: 4
+        font.family: ThemeConfig.uiFont
+        font.pixelSize: 10
+        font.weight: Font.DemiBold
+        color: mocha.subtext0
+    }
+
+    component DetailLine: RowLayout {
+        id: line
+        property string icon: ""
+        property string label: ""
+        property string value: ""
+        property color accent: mocha.text
+        Layout.fillWidth: true
+        spacing: 8
+        Text { text: line.icon; font.family: ThemeConfig.iconFont; font.pixelSize: 13; color: line.accent }
+        Text { text: line.label; font.family: ThemeConfig.uiFont; font.pixelSize: 11; color: mocha.subtext1 }
+        Text { Layout.fillWidth: true; horizontalAlignment: Text.AlignRight; text: line.value; font.family: ThemeConfig.monoFont; font.pixelSize: 11; font.weight: Font.DemiBold; color: mocha.text; elide: Text.ElideLeft }
     }
 
     component MetricRow: ColumnLayout {

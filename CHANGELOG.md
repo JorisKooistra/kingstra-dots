@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Losse eindjes: Systeem naar het prestatiepaneel, spiekbriefje bij Super
+- **Het controlecentrum heeft geen tabblad Systeem meer.** Alles daaruit staat nu in het prestatiepaneel: de zwaarste processen (nu vijf, met geheugen), en onder **Meer details** de verbinding, het IP-adres, de belasting, de kernel en per GPU belasting, temperatuur en VRAM. Het knopje 󰍛 links in het controlecentrum opent het prestatiepaneel. Het paneel scrolt als het scherm te laag is.
+- **Spiekbriefje**: houd Super ongeveer 0,8 seconde vast zonder iets anders te doen en de belangrijkste sneltoetsen verschijnen midden op het scherm onder de muis; loslaten sluit het. Het verschijnt niet als je in die tijd een Super-combinatie gebruikt, met Super sleept, klikt of scrollt, de muis beweegt, of een venster volledig scherm is. Hyprland regelt het in `hypr/lua/super-hold.lua`, de shell toont het (`shellsurface/SuperCheatSheet.qml`). `Super+F1` toont nog steeds alle sneltoetsen.
+
 ### Schermen opgeruimd: Sfeer, Instellingen en Uiterlijk
 - **Super+A heet nu Sfeer** en heeft nog drie rijen: Thema, Wallpaper en "Wat ga je doen" (Werken, Kijken en luisteren, Spelen, Zen). Pijltjes, 1–3 en Enter werken; een klik past het meteen toe. Thema's met eigen aanpassingen krijgen een stip.
 - **De losse themakiezer en modekiezer zijn weg**, net als hun toetsen `Super+Ctrl+T` en `Super+Ctrl+M`, want Sfeer doet hetzelfde. `Super+Shift+T` (volgend thema) en de grote wallpaperkiezer (`Super+Ctrl+W`, of "Alle…" in Sfeer) blijven. `kingstra theme` en `kingstra mode` zonder naam openen Sfeer.

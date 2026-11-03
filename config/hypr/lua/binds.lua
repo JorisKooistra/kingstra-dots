@@ -9,11 +9,18 @@ if not ok_spatial then
     end }
 end
 local noop = function() end
+-- Spiekbriefje bij Super vasthouden; elke Super-bind hieronder meldt zich
+-- zodat een combinatie (ook slepen of scrollen) het briefje tegenhoudt.
+local ok_hold, super_hold = pcall(require, "lua.super-hold")
+if not ok_hold then super_hold = { watch = noop, setup = noop } end
 local function exec(keys, command, options)
     hl.bind(keys, hl.dsp.exec_cmd(command), options)
+    super_hold.watch(keys, options)
 end
 local function bind(keys, dispatcher, options)
-    return hl.bind(keys, dispatcher, options)
+    local handle = hl.bind(keys, dispatcher, options)
+    super_hold.watch(keys, options)
+    return handle
 end
 
 -- Focus and movement
@@ -194,3 +201,5 @@ hl.define_submap("passthrough", function()
     bind(mod .. " + Escape", hl.dsp.submap("reset"))
 end)
 bind(mod .. " + Escape", hl.dsp.submap("passthrough"))
+
+super_hold.setup()

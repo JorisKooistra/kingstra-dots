@@ -10,9 +10,9 @@ import ".."
 // dash-tab: informatie die je in één oogopslag wilt zien (tijd, maand,
 // systeembelasting, wat er speelt) in plaats van knoppen die alleen andere
 // panelen openen — die staan al in de rail, dus die waren hier dubbelop.
-// Twee tabbladen (hover of klik): Overzicht en Systeem (processen,
-// netwerk, sessie). Pijltjes in een
-// kaart openen het volledige paneel via de PanelHost.
+// Eén overzicht; wat vroeger het tabblad Systeem was (processen, netwerk,
+// sessie, GPU) staat nu in het prestatiepaneel. Pijltjes in een kaart
+// openen het volledige paneel via de PanelHost.
 Item {
     id: root
 
@@ -39,9 +39,6 @@ Item {
     property int ramPercent: 0
     property int diskPercent: 0
     property string cpuTemp: "--"
-    readonly property bool gpuMetricsVisible: root.visible && root.tab === 1
-    onGpuMetricsVisibleChanged: GpuMonitor.request(root, gpuMetricsVisible)
-    Component.onDestruction: GpuMonitor.request(root, false)
 
     readonly property var activePlayer: {
         let players = Mpris.players.values;
@@ -226,14 +223,13 @@ Item {
 
     Timer {
         interval: 30000
-        running: root.tab === 0
+        running: root.visible
         repeat: true
         triggeredOnStart: true
         onTriggered: if (!screenTimePoller.running) screenTimePoller.running = true
     }
 
-    // --- Tabbladen ------------------------------------------------------------
-    property int tab: 0
+    // --- Koppeling met PanelHost ----------------------------------------------
     // PanelHost leest dit bij een wissel naar het netwerkpaneel.
     property string requestedNetworkMode: ""
     // Eerste klik in het paneel: PanelHost zet het dan vast, zodat een
@@ -243,96 +239,6 @@ Item {
     // PanelHost luistert hiernaar, zodat een pijltje hier het volledige
     // paneel opent met dezelfde blob-overgang als een railklik.
     signal panelSwitchRequested(string entryId)
-
-    // --- Systeem: processen, netwerk, sessie ---------------------------------
-    property var topProcesses: []
-    property real netRxRate: 0
-    property real netTxRate: 0
-    property real _lastRx: -1
-    property real _lastTx: -1
-    property real _lastNetTime: 0
-    property string netName: ""
-    property string netAddress: ""
-    property string uptimeText: "--"
-    property string loadText: "--"
-    property string kernelText: ""
-    readonly property string powerProfileLabel: {
-        let p = PowerProfiles.profile;
-        if (p === PowerProfile.Performance) return "Prestaties";
-        if (p === PowerProfile.PowerSaver) return "Energiebesparing";
-        return "Gebalanceerd";
-    }
-
-    function formatRate(bytesPerSecond) {
-        let v = Math.max(0, bytesPerSecond);
-        if (v >= 1048576) return (v / 1048576).toFixed(1) + " MB/s";
-        if (v >= 1024) return Math.round(v / 1024) + " KB/s";
-        return Math.round(v) + " B/s";
-    }
-
-    Process {
-        id: systemPoller
-        command: ["bash", "-lc",
-            "ps -eo %cpu=,%mem=,comm= --sort=-%cpu 2>/dev/null | awk '{cpu=$1; mem=$2; $1=\"\"; $2=\"\"; sub(/^ +/, \"\"); if ($0 != \"ps\") printf \"proc=%s|%s|%s\\n\", $0, cpu, mem}' | head -n 5; " +
-            "sed 's/:/ /' /proc/net/dev 2>/dev/null | awk 'NR>2 && $1!=\"lo\" {rx+=$2; tx+=$10} END {printf \"net=%.0f|%.0f\\n\", rx, tx}'; " +
-            "printf 'conn=%s\\n' \"$(nmcli -t -f NAME connection show --active 2>/dev/null | grep -v '^lo$' | head -n1)\"; " +
-            "printf 'ip=%s\\n' \"$(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4; exit}')\"; " +
-            "printf 'up=%s\\n' \"$(awk '{d=int($1/86400); h=int(($1%86400)/3600); m=int(($1%3600)/60); if (d>0) printf \"%dd %du %02dm\", d, h, m; else printf \"%du %02dm\", h, m}' /proc/uptime 2>/dev/null)\"; " +
-            "printf 'load=%s\\n' \"$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null)\"; " +
-            "printf 'kernel=%s\\n' \"$(uname -r 2>/dev/null)\""
-        ]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let procs = [];
-                let lines = this.text.split("\n");
-                for (let i = 0; i < lines.length; i++) {
-                    let line = lines[i];
-                    let eq = line.indexOf("=");
-                    if (eq <= 0) continue;
-                    let key = line.substring(0, eq);
-                    let value = line.substring(eq + 1).trim();
-                    if (key === "proc") {
-                        let parts = value.split("|");
-                        if (parts.length >= 3)
-                            procs.push({ name: parts[0], cpu: parseFloat(parts[1]) || 0, mem: parseFloat(parts[2]) || 0 });
-                    } else if (key === "net") {
-                        let parts = value.split("|");
-                        let rx = parseFloat(parts[0]) || 0;
-                        let tx = parseFloat(parts[1]) || 0;
-                        let t = Date.now();
-                        if (root._lastRx >= 0 && t > root._lastNetTime) {
-                            let dt = (t - root._lastNetTime) / 1000;
-                            root.netRxRate = Math.max(0, (rx - root._lastRx) / dt);
-                            root.netTxRate = Math.max(0, (tx - root._lastTx) / dt);
-                        }
-                        root._lastRx = rx;
-                        root._lastTx = tx;
-                        root._lastNetTime = t;
-                    } else if (key === "conn") {
-                        root.netName = value;
-                    } else if (key === "ip") {
-                        root.netAddress = value;
-                    } else if (key === "up") {
-                        root.uptimeText = value !== "" ? value : "--";
-                    } else if (key === "load") {
-                        root.loadText = value !== "" ? value : "--";
-                    } else if (key === "kernel") {
-                        root.kernelText = value;
-                    }
-                }
-                root.topProcesses = procs;
-            }
-        }
-    }
-
-    // Alleen pollen voor het tabblad dat je ziet.
-    Timer {
-        interval: 2000
-        running: root.tab === 1
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: if (!systemPoller.running) systemPoller.running = true
-    }
 
     function clampPercent(value) {
         let parsed = parseInt(value);
@@ -344,15 +250,30 @@ Item {
         anchors.margins: root.pad
         spacing: 10
 
-        // Tabbladen, zoals het dashboard van Caelestia. Het paneel houdt bij
-        // elk tabblad dezelfde maat, zodat de blob niet verspringt.
+        // Smalle kolom: Systeem opent het prestatiepaneel (daar staan nu
+        // processen, netwerk, sessie en GPU), onderaan Instellingen.
         ColumnLayout {
             Layout.preferredWidth: 34
             Layout.fillHeight: true
             spacing: 6
 
-            TabButton { index: 0; icon: "󰕮"; label: "Controlecentrum" }
-            TabButton { index: 1; icon: "󰍛"; label: "Systeem" }
+            Rectangle {
+                Layout.preferredWidth: 34
+                Layout.preferredHeight: 34
+                radius: Math.min(root.cardRadius, 12)
+                color: systemMouse.containsMouse ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08) : "transparent"
+                scale: systemMouse.containsMouse ? 1.07 : 1.0
+                Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") } }
+                Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") } }
+                Text { anchors.centerIn: parent; text: "󰍛"; font.family: ThemeConfig.iconFont; font.pixelSize: 16; color: systemMouse.containsMouse ? mocha.primary : mocha.subtext0 }
+                MouseArea {
+                    id: systemMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.panelSwitchRequested("performance")
+                }
+            }
             Item { Layout.fillHeight: true }
             Rectangle {
                 Layout.preferredWidth: 30
@@ -381,11 +302,6 @@ Item {
             RowLayout {
                 anchors.fill: parent
                 spacing: 10
-                opacity: root.tab === 0 ? 1 : 0
-                visible: opacity > 0.01
-                Behavior on opacity {
-                    NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
-                }
 
                 // --- Snelle instellingen -------------------------------------
                 Card {
@@ -1053,139 +969,6 @@ Item {
                     }
                 }
             }
-
-            // --- Tab 1: Systeem ----------------------------------------------
-            RowLayout {
-                anchors.fill: parent
-                spacing: 10
-                opacity: root.tab === 1 ? 1 : 0
-                visible: opacity > 0.01
-                Behavior on opacity {
-                    NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
-                }
-
-                Card {
-                    Layout.preferredWidth: 330
-                    Layout.fillHeight: true
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 5
-
-                        CardHeader { title: "Processen"; target: "performance" }
-
-                        Repeater {
-                            model: root.topProcesses
-                            delegate: RowLayout {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                spacing: 8
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: String(modelData.name || "")
-                                    font.family: ThemeConfig.monoFont
-                                    font.pixelSize: 11
-                                    color: mocha.text
-                                    elide: Text.ElideRight
-                                }
-                                Text {
-                                    Layout.preferredWidth: 58
-                                    horizontalAlignment: Text.AlignRight
-                                    text: Number(modelData.cpu).toFixed(1) + "%"
-                                    font.family: ThemeConfig.monoFont
-                                    font.pixelSize: 11
-                                    font.weight: ThemeConfig.emphasisWeight
-                                    color: mocha.peach
-                                }
-                                Text {
-                                    Layout.preferredWidth: 58
-                                    horizontalAlignment: Text.AlignRight
-                                    text: Number(modelData.mem).toFixed(1) + "%"
-                                    font.family: ThemeConfig.monoFont
-                                    font.pixelSize: 11
-                                    color: mocha.blue
-                                }
-                            }
-                        }
-
-                        EmptyText { visible: root.topProcesses.length === 0; text: "Processen laden…" }
-                        Item { Layout.fillHeight: true }
-                    }
-                }
-
-                Card {
-                    Layout.preferredWidth: 250
-                    Layout.fillHeight: true
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 6
-
-                        CardHeader { title: "Netwerk"; target: "network" }
-
-                        StatLine { icon: "󰁅"; label: "Download"; value: root.formatRate(root.netRxRate); accent: mocha.teal }
-                        StatLine { icon: "󰁝"; label: "Upload"; value: root.formatRate(root.netTxRate); accent: mocha.peach }
-                        StatLine { icon: "󰖩"; label: "Verbinding"; value: root.netName !== "" ? root.netName : "Geen"; accent: mocha.accent3 }
-                        StatLine { icon: "󰩟"; label: "Adres"; value: root.netAddress !== "" ? root.netAddress : "--"; accent: mocha.accent1 }
-                        Item { Layout.fillHeight: true }
-                    }
-                }
-
-                Card {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 6
-
-                        CardHeader { title: "GPU"; target: "" }
-                        Repeater {
-                            model: GpuMonitor.gpus
-                            delegate: ColumnLayout {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                spacing: 3
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: String(modelData.name || "GPU")
-                                    font.family: ThemeConfig.uiFont
-                                    font.pixelSize: 11
-                                    font.bold: true
-                                    color: mocha.text
-                                    elide: Text.ElideRight
-                                }
-                                StatLine { icon: "󰢮"; label: "Belasting"; value: modelData.sleeping ? "Slaapstand" : modelData.usage === null ? "Niet beschikbaar" : Math.round(modelData.usage) + "%"; accent: mocha.primary }
-                                StatLine { icon: "󰔏"; label: "Temperatuur"; value: modelData.temperature === null ? "Niet beschikbaar" : Math.round(modelData.temperature) + "°"; accent: mocha.peach }
-                                StatLine { icon: "󰍛"; label: "VRAM"; value: modelData.memoryUsed === null || modelData.memoryTotal === null ? "Niet beschikbaar" : Math.round(modelData.memoryUsed) + " / " + Math.round(modelData.memoryTotal) + " MiB"; accent: mocha.teal }
-                            }
-                        }
-                        EmptyText { visible: GpuMonitor.gpus.length === 0; text: GpuMonitor.errorText || "GPU-informatie niet beschikbaar" }
-
-                        CardHeader { title: "Sessie"; target: "" }
-
-                        StatLine { icon: "󰔟"; label: "Actief sinds"; value: root.uptimeText; accent: mocha.accent1 }
-                        StatLine { icon: "󰓅"; label: "Belasting"; value: root.loadText; accent: mocha.peach }
-                        StatLine { icon: "󰾅"; label: "Energieprofiel"; value: root.powerProfileLabel; accent: mocha.accent3 }
-                        StatLine { icon: "󰌽"; label: "Kernel"; value: root.kernelText; accent: mocha.subtext1 }
-                        Item { Layout.fillHeight: true }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 6
-                            Item { Layout.fillWidth: true }
-                            ChipButton {
-                                icon: "󰄪"
-                                label: "btop"
-                                onTriggered: Quickshell.execDetached(["kitty", "--title=btop", "btop"])
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -1200,56 +983,6 @@ Item {
             mouse.accepted = false;
         }
         onWheel: (wheel) => wheel.accepted = false
-    }
-
-    component TabButton: Rectangle {
-        id: tabBtn
-        property int index: 0
-        property string icon: ""
-        property string label: ""
-        readonly property bool active: root.tab === index
-
-        Layout.preferredWidth: 34
-        Layout.preferredHeight: 34
-        radius: Math.min(root.cardRadius, 12)
-        color: active
-            ? Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.22)
-            : (tabMouse.containsMouse ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08) : "transparent")
-        border.width: active ? 1 : 0
-        border.color: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.42)
-        scale: tabMouse.containsMouse && !active ? 1.07 : 1.0
-        Behavior on color {
-            ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
-        }
-        Behavior on scale {
-            NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
-        }
-
-        Text {
-            anchors.centerIn: parent
-            text: tabBtn.icon
-            font.family: ThemeConfig.iconFont
-            font.pixelSize: 16
-            color: tabBtn.active ? mocha.primary : mocha.subtext0
-        }
-
-        MouseArea {
-            id: tabMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            // Hover wisselt ook al: het hele paneel werkt op hover, dus een
-            // klik zou overbodig voelen.
-            onEntered: hoverSwitch.restart()
-            onExited: hoverSwitch.stop()
-            onClicked: root.tab = tabBtn.index
-        }
-
-        Timer {
-            id: hoverSwitch
-            interval: 140
-            onTriggered: root.tab = tabBtn.index
-        }
     }
 
     component CardHeader: RowLayout {
@@ -1301,38 +1034,6 @@ Item {
         font.pixelSize: 11
         color: mocha.subtext0
         elide: Text.ElideRight
-    }
-
-    component StatLine: RowLayout {
-        id: stat
-        property string icon: ""
-        property string label: ""
-        property string value: ""
-        property color accent: mocha.text
-        Layout.fillWidth: true
-        spacing: 8
-        Text {
-            text: stat.icon
-            font.family: ThemeConfig.iconFont
-            font.pixelSize: 13
-            color: stat.accent
-        }
-        Text {
-            text: stat.label
-            font.family: ThemeConfig.uiFont
-            font.pixelSize: 11
-            color: mocha.subtext1
-        }
-        Text {
-            Layout.fillWidth: true
-            horizontalAlignment: Text.AlignRight
-            text: stat.value
-            font.family: ThemeConfig.monoFont
-            font.pixelSize: 11
-            font.weight: ThemeConfig.emphasisWeight
-            color: mocha.text
-            elide: Text.ElideLeft
-        }
     }
 
     component ChipButton: Rectangle {
