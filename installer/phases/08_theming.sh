@@ -171,6 +171,7 @@ _phase08_deploy_state_scripts() {
         ["kingstra-welcome"]="kingstra-welcome"
         ["kingstra-nightlight"]="kingstra-nightlight"
         ["kingstra-auto-mode"]="kingstra-auto-mode"
+        ["kingstra-dictate"]="kingstra-dictate"
     )
 
     for src_name in "${!state_scripts[@]}"; do

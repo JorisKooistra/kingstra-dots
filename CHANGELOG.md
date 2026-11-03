@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Dicteren (Super+H)
+- Nieuw: houd Super+H vast en praat; bij loslaten wordt het omgezet en getypt waar je cursor staat. Werkt in elke app, ook Citrix en Teams, omdat de tekst als toetsaanslagen binnenkomt (`wtype`; met `"paste": true` in `~/.config/kingstra/dicteren.json` via het klembord).
+- Draait lokaal met whisper.cpp en het meertalige model `ggml-small-q5_1` (ongeveer 190 MB), standaard Nederlands. De melding rechtsboven laat zien wanneer hij luistert en omzet.
+- De installer/updater (fase 11) installeert `whisper.cpp` (AUR) en downloadt het model naar `~/.local/share/kingstra/whisper/`. Overslaan met `ENABLE_DICTATION=false`.
+
 ### Modi die vanzelf aanspringen
 - Nieuw: `kingstra-auto-mode` (gestart door de sessie) volgt drie regels, elk aan of uit in Bediening (Super+A) onder ‘Vanzelf’:
   - **Spel → Gaming**: een spel op volledig scherm (Steam, Lutris, Heroic, Wine, gamescope en bekende klassen) zet Niet storen aan, blur, schaduwen en animaties van Hyprland uit en schakelt naar Gaming. Sluit het spel, dan komt de vorige mode en alles terug, met een korte melding.

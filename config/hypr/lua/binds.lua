@@ -114,6 +114,11 @@ exec(mod .. " + CTRL + Return", scripts .. "/qs_manager.sh toggle launcher")
 exec(mod .. " + B", "xdg-open https://")
 exec(mod .. " + E", "nautilus")
 exec(mod .. " + V", scripts .. "/qs_manager.sh toggle clipboard")
+-- Dicteren: Super+H vasthouden en praten, loslaten typt de tekst (lokaal,
+-- whisper.cpp). De loslaat-bind negeert modifiers, zodat het ook stopt als
+-- Super eerder wordt losgelaten; zonder opname doet hij niets.
+exec(mod .. " + H", "~/.local/bin/kingstra-dictate start")
+exec("H", "~/.local/bin/kingstra-dictate stop", { release = true, ignore_mods = true, non_consuming = true })
 exec(mod .. " + SHIFT + Return", "kitty --title=btop btop")
 exec(mod .. " + SHIFT + C", "kitty --title=cava cava")
 exec(mod .. " + SHIFT + W", scripts .. "/wallpaper-random-safe.sh")

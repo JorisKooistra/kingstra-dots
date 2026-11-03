@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-dictate — praten wordt getypte tekst, lokaal met whisper.cpp
+# =============================================================================
+# Super+H vasthouden: opnemen. Loslaten: omzetten en typen waar de cursor staat.
+# Er gaat niets naar internet; het model staat in ~/.local/share/kingstra/whisper.
+#
+# Gebruik:
+#   kingstra-dictate start | stop | toggle | cancel | status
+#
+# Instellingen (optioneel) in ~/.config/kingstra/dicteren.json:
+#   {"language": "nl", "model": "ggml-small-q5_1.bin", "paste": false}
+#   paste=true plakt via het klembord in plaats van te typen (handig als een
+#   app getypte tekens mist).
+# =============================================================================
+set -uo pipefail
+
+RUNTIME="${XDG_RUNTIME_DIR:-/tmp}"
+WORK="$RUNTIME/kingstra-dictate"
+PID_FILE="$WORK/recorder.pid"
+AUDIO="$WORK/opname.wav"
+STATUS_FILE="$RUNTIME/kingstra-dictate.json"
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/dicteren.json"
+MODEL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/whisper"
+MIN_SECONDS=0.4
+
+mkdir -p "$WORK"
+
+cfg() {
+    local value=""
+    [[ -f "$CONFIG_FILE" ]] && command -v jq >/dev/null 2>&1 \
+        && value="$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG_FILE" 2>/dev/null)"
+    printf '%s' "${value:-$2}"
+}
+
+feedback() {
+    local token tmp
+    token="$(date +%s%3N)$RANDOM"
+    tmp="$(mktemp /tmp/kingstra-feedback.json.XXXXXX)" || return 0
+    jq -nc --arg token "$token" --arg icon "$1" --arg title "$2" --arg detail "$3" \
+        --argjson timeout "${4:-2400}" --arg urgency "${5:-normal}" \
+        '{token:$token, icon:$icon, title:$title, detail:$detail, timeout:$timeout, urgency:$urgency}' > "$tmp" \
+        && mv -f "$tmp" /tmp/kingstra-feedback.json
+}
+
+set_status() {
+    printf '{"state":"%s","since":%s}\n' "$1" "$(date +%s)" > "$STATUS_FILE.tmp" && mv -f "$STATUS_FILE.tmp" "$STATUS_FILE"
+}
+
+whisper_bin() {
+    local b
+    for b in whisper-cli whisper-cpp whisper.cpp main; do
+        if command -v "$b" >/dev/null 2>&1 && [[ "$b" != main || -n "${KINGSTRA_WHISPER_ALLOW_MAIN:-}" ]]; then
+            command -v "$b"
+            return 0
+        fi
+    done
+    return 1
+}
+
+model_path() {
+    local name
+    name="$(cfg model ggml-small-q5_1.bin)"
+    [[ "$name" == /* ]] && { printf '%s' "$name"; return; }
+    printf '%s/%s' "$MODEL_DIR" "$name"
+}
+
+recording() {
+    [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null
+}
+
+start() {
+    recording && return 0
+    if ! whisper_bin >/dev/null || [[ ! -f "$(model_path)" ]]; then
+        feedback "󰍭" "Dicteren is nog niet klaar" "Draai kingstra update om whisper en het taalmodel te installeren" 4000 warning
+        return 1
+    fi
+    rm -f "$AUDIO"
+    # shellcheck disable=SC2016 # $$ en $1/$2 horen bij de binnenste shell
+    if command -v pw-record >/dev/null 2>    if command -v pw-record >/dev/null 2>&1; then1; then
+        setsid -f sh -c 'echo $$ > "$1"; exec pw-record --rate 16000 --channels 1 --format s16 "$2"' sh "$PID_FILE" "$AUDIO" >/dev/null 2>&1
+    elif command -v parecord >/dev/null 2>&1; then
+        setsid -f sh -c 'echo $$ > "$1"; exec parecord --rate=16000 --channels=1 --format=s16le --file-format=wav "$2"' sh "$PID_FILE" "$AUDIO" >/dev/null 2>&1
+    else
+        feedback "󰍭" "Geen opname mogelijk" "pw-record ontbreekt" 3000 warning
+        return 1
+    fi
+    date +%s.%N > "$WORK/started"
+    set_status luisteren
+    feedback "󰍬" "Luisteren…" "Laat Super+H los als je klaar bent" 8000
+}
+
+stop_recorder() {
+    local pid
+    pid="$(cat "$PID_FILE" 2>/dev/null)"
+    [[ -n "$pid" ]] && kill -INT "$pid" 2>/dev/null
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.05
+    done
+    rm -f "$PID_FILE"
+}
+
+type_text() {
+    local text="$1"
+    if [[ "$(cfg paste false)" == "true" ]] || ! command -v wtype >/dev/null 2>&1; then
+        printf '%s' "$text" | wl-copy
+        sleep 0.05
+        wtype -M ctrl v -m ctrl 2>/dev/null || true
+    else
+        wtype -- "$text"
+    fi
+}
+
+stop() {
+    recording || return 0
+    stop_recorder
+    local started now
+    started="$(cat "$WORK/started" 2>/dev/null || echo 0)"
+    now="$(date +%s.%N)"
+    if awk -v a="$started" -v b="$now" -v m="$MIN_SECONDS" 'BEGIN { exit !(b - a < m) }'; then
+        set_status uit
+        feedback "󰍭" "Te kort" "Houd Super+H vast terwijl je praat" 1800
+        return 0
+    fi
+    set_status omzetten
+    feedback "󰗊" "Omzetten…" "Lokaal, er gaat niets naar internet" 6000
+    local text
+    text="$("$(whisper_bin)" -m "$(model_path)" -l "$(cfg language nl)" -nt -np -f "$AUDIO" 2>/dev/null \
+        | tr '\n' ' ' | sed -E 's/\[[^]]*\]//g; s/  +/ /g; s/^ +//; s/ +$//')"
+    rm -f "$AUDIO"
+    set_status uit
+    if [[ -z "$text" ]]; then
+        feedback "󰍭" "Niets verstaan" "Probeer het nog eens, iets dichter bij de microfoon" 2400
+        return 0
+    fi
+    type_text "$text"
+    feedback "󰌌" "Getypt" "${text:0:80}" 2000
+}
+
+cancel() {
+    recording && stop_recorder
+    rm -f "$AUDIO"
+    set_status uit
+}
+
+case "${1:-toggle}" in
+    start) start ;;
+    stop) stop ;;
+    toggle) if recording; then stop; else start; fi ;;
+    cancel) cancel ;;
+    status) cat "$STATUS_FILE" 2>/dev/null || echo '{"state":"uit"}' ;;
+    *) sed -n '3,15p' "$0"; exit 2 ;;
+esac

@@ -118,6 +118,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + B` | Browser (standaard) |
 | `Super + E` | Nautilus (bestandsbeheer) |
 | `Super + V` | Klembordgeschiedenis (cliphist) |
+| `Super + H` (vasthouden) | Dicteren: praten, loslaten typt de tekst (lokaal, whisper.cpp) |
 | `Super + Shift + Return` | btop in Kitty |
 | `Super + Shift + C` | cava (audio visualizer) in Kitty |
 | `Super + Ctrl + B` | Hyprland config herladen (+ melding) |

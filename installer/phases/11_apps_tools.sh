@@ -64,6 +64,9 @@ phase_run() {
     log_step "Firefox-profiel optimalisaties deployen..."
     _phase11_setup_firefox
 
+    log_step "Dicteren (whisper.cpp, lokaal)..."
+    _phase11_setup_dictation
+
     log_step "Optionele apps installeren..."
     _phase11_optional_apps
 
@@ -109,6 +112,35 @@ _phase11_default_file_manager() {
 }
 
 # ---------------------------------------------------------------------------
+
+# Dicteren met Super+H: whisper.cpp en een klein meertalig model (ongeveer
+# 190 MB). Alles draait lokaal. Uit te zetten met ENABLE_DICTATION=false.
+_phase11_setup_dictation() {
+    if [[ "${ENABLE_DICTATION:-true}" != "true" ]]; then
+        log_info "Dicteren overgeslagen (ENABLE_DICTATION=false)"
+        return 0
+    fi
+    aur_install whisper.cpp
+
+    local model_dir="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/whisper"
+    local model="$model_dir/ggml-small-q5_1.bin"
+    local url="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin"
+    if [[ -s "$model" ]]; then
+        log_ok "Taalmodel voor dicteren aanwezig"
+    elif "${DRY_RUN:-false}"; then
+        log_dry "Taalmodel zou worden gedownload naar $model"
+    else
+        ensure_dir "$model_dir"
+        log_info "Taalmodel voor dicteren downloaden (ongeveer 190 MB)..."
+        if curl -fL --retry 3 -o "$model.part" "$url"; then
+            mv -f "$model.part" "$model"
+            log_ok "Taalmodel geplaatst: $model"
+        else
+            rm -f "$model.part"
+            log_warn "Taalmodel downloaden mislukt; dicteren werkt na de volgende update"
+        fi
+    fi
+}
 
 _phase11_optional_apps() {
     # Office-suite (ONLYOFFICE ipv LibreOffice)
