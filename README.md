@@ -31,6 +31,9 @@ kingstra mode gaming          # switch mode
 kingstra update               # update system, Flatpak and dotfiles
 kingstra doctor               # check the installation, with fixes
 kingstra rollback             # dotfiles back to the restore point before the last update
+kingstra rollback --system    # packages of the last update back to the previous version
+kingstra herstel              # rescue menu, also without a desktop
+kingstra backup               # backup status; run, browse, restore <path>
 kingstra refresh kitty        # one config back to the repo default (backup first)
 kingstra restart              # restart the shell
 kingstra version
@@ -47,6 +50,21 @@ point and holds them there; `kingstra rollback --release` follows updates again.
 Your own edits to tracked files (for example keybindings changed in Settings) are set aside
 during an update and put back afterwards. If they clash with the update, the dotfiles stay on
 the old version and nothing is lost.
+
+After yay the updater checks `/var/log/pacman.log` and `checkupdates` to report what really
+changed, records the transaction (`kingstra rollback --system` puts those packages back from the
+cache) and runs `kingstra-health --after-update`. Settings › System › Updates shows what is
+pending, Arch news and the last result before anything installs.
+
+### Safety net
+
+- Boot menu (systemd-boot): Kingstra, Kingstra (safe, linux-lts) and Kingstra rescue. A new
+  kernel gets three tries; after that the safe entry boots automatically. Hold space for the menu.
+- `kingstra herstel`: rescue menu that works without a desktop.
+- `kingstra backup`: hourly restic backup of your home to a data disk, weekly second copy.
+  Settings per machine in `~/.config/kingstra/backup.conf`.
+- `kingstra gezondheid`: disks (smartd), backup age, kernels on `/boot`, free space.
+- etckeeper, reflector, daily download of pending updates, Plymouth splash in theme colours.
 
 One-time migrations between versions live in `installer/migrations/` and run once per machine.
 
