@@ -23,10 +23,6 @@ met drie vingers omlaag of een klik op de bovenbalk.
 
 Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 
-**Spiekbriefje:** houd `Super` ongeveer 0,8 s vast zonder een andere toets, klik
-of muisbeweging en de belangrijkste sneltoetsen verschijnen; loslaten sluit het.
-`Super + F1` toont de volledige lijst.
-
 ---
 
 ## Vensters — focus

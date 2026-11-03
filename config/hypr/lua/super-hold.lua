@@ -1,3 +1,7 @@
+-- UITGESCHAKELD (2026-11-03): niet meer geladen vanuit binds.lua. Een
+-- tweede hl.bind op dezelfde toets (de "busy"-bind van M.watch) verving in
+-- Hyprland de echte bind, waardoor o.a. Super+Q niets meer deed. Alleen weer
+-- aanzetten met een aanpak die geen extra binds op bestaande toetsen legt.
 -- Spiekbriefje: Super een moment vasthouden (zonder andere toets of klik)
 -- toont de belangrijkste sneltoetsen; loslaten verbergt ze weer.
 --
