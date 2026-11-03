@@ -11,6 +11,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Spiekbriefje (Super vasthouden)** heeft een blok Werkvlak: twee vingers, wiel, Ctrl+wiel, Ctrl+slepen, Shift+wiel, en zonder Super knijpen en vier vingers.
 
 ### Update breekt niet meer af op een optioneel pakket
+- **Bestandskiezer gaat weer open.** Open- en opslaan-vensters liepen via `xdg-desktop-portal-gnome` (Nautilus), maar die faalt buiten GNOME zonder terug te vallen: apps meldden dat het kiesvenster niet openging. De portal gebruikt weer de GTK-dialoog; de bladwijzers voor de data-schijven blijven.
 - **Een optioneel pakket dat niet lukt, stopt de update niet meer.** `kingstra update` brak af met "yay installeren: whisper.cpp" (code 1). Optionele AUR-pakketten (whisper.cpp, satty, mpvpaper, onlyoffice, heroic, spicetify, vesktop, logiops, python-vdf, de games-launcher en de vangnet-pakketten) geven nu een waarschuwing en de rest gaat door. Aan het eind staat welke niet lukten, met `yay -S …` om het later opnieuw te proberen. Kernpakketten (walker, oh-my-posh, skwd-wall) blijven verplicht.
 - **whisper.cpp (dicteren)** komt eerst uit de Arch-repo als die het heeft; anders wordt het uit de AUR gebouwd zonder de testronde (`check()`), die meestal de oorzaak was. Staat `whisper-cli` er al, dan wordt niets opnieuw gebouwd.
 
@@ -42,7 +43,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Firefox**: userChrome krijgt vorm, letter en focusgloed van het thema; de nieuwe-tabbladpagina krijgt je wallpaper, je kleuren en dezelfde hoeken (`firefox/chrome/userContent.css`), zonder advertenties of nieuwsfeed. Tabbladen blijven boven.
 - **Vesktop en Spotify**: een gegenereerd Vencord-thema (`~/.config/vesktop/themes/kingstra.theme.css`, vanzelf aangezet, andere thema's blijven aan) met kleuren, letter en vorm; Spicetify krijgt dezelfde letter, hoeken en gloed bovenop de bestaande kleuren.
 - **Vaste set dagelijkse apps**: de installer zet Loupe (foto's), Papers (pdf), Teksteditor (tekst) en Showtime (video) neer en maakt ze eenmalig standaard. Een eigen keuze daarna blijft bij een update staan.
-- **Mappen, dialogen en schijven**: mapiconen nemen de accentkleur van het thema over (een eigen Papirus-afgeleide in `~/.local/share/icons`, zonder root). Open- en opslaan-dialogen gebruiken Nautilus via `xdg-desktop-portal-gnome` (GTK-dialoog als vangnet). Gekoppelde data-schijven (`/mnt/data*`) staan met hun naam in de zijbalk van Nautilus en elke dialoog.
+- **Mappen, dialogen en schijven**: mapiconen nemen de accentkleur van het thema over (een eigen Papirus-afgeleide in `~/.local/share/icons`, zonder root). Gekoppelde data-schijven (`/mnt/data*`) staan met hun naam in de zijbalk van Nautilus en elke dialoog.
 - Smoke-test `tests/smoke/apps-sync.sh`.
 
 ### Losse eindjes: Systeem naar het prestatiepaneel, spiekbriefje bij Super

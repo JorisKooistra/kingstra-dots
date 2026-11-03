@@ -181,9 +181,12 @@ _phase03_configure_portals() {
 default=hyprland;gtk
 org.freedesktop.impl.portal.Screenshot=hyprland
 org.freedesktop.impl.portal.ScreenCast=hyprland
-org.freedesktop.impl.portal.FileChooser=gnome;gtk
+org.freedesktop.impl.portal.FileChooser=gtk
 org.freedesktop.impl.portal.Notification=gtk
 EOF
+    # FileChooser via gnome (Nautilus) faalde buiten GNOME: "kiesvenster ging
+    # niet open". De portal leest de keuze alleen bij het starten in.
+    systemctl --user try-restart xdg-desktop-portal.service >/dev/null 2>&1 || true
     log_ok "XDG-portalconfiguratie geschreven"
 }
 
