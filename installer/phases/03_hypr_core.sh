@@ -39,6 +39,7 @@ _phase03_install_packages() {
         polkit-gnome \
         xdg-desktop-portal-hyprland \
         xdg-desktop-portal-gtk \
+        xdg-desktop-portal-gnome \
         wl-clipboard \
         cliphist \
         wtype \
@@ -180,7 +181,7 @@ _phase03_configure_portals() {
 default=hyprland;gtk
 org.freedesktop.impl.portal.Screenshot=hyprland
 org.freedesktop.impl.portal.ScreenCast=hyprland
-org.freedesktop.impl.portal.FileChooser=gtk
+org.freedesktop.impl.portal.FileChooser=gnome;gtk
 org.freedesktop.impl.portal.Notification=gtk
 EOF
     log_ok "XDG-portalconfiguratie geschreven"

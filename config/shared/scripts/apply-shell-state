@@ -631,6 +631,18 @@ if [[ -f "$PALETTE_JSON" ]] && command -v jq &>/dev/null; then
     fi
 fi
 
+# Dagelijkse apps — één bron voor GTK, Qt, VS Code, Vesktop, Firefox-vorm,
+# mapiconen en de Spotify-vormlaag (vóór Spicetify, dat user.css toepast).
+# Open GTK-apps, VS Code en Vesktop wisselen daarmee live mee.
+APPS_SYNC="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/kingstra-apps-sync"
+if [[ -f "$APPS_SYNC" ]]; then
+    if python3 "$APPS_SYNC" --wallpaper "${WALLPAPER:-}"; then
+        _log "Apps bijgewerkt (kingstra-apps-sync)"
+    else
+        _warn "kingstra-apps-sync mislukt"
+    fi
+fi
+
 # Spicetify — herlaad Matugen theme zonder Spotify te herstarten.
 SPICETIFY_COLOR_INI="${XDG_CONFIG_HOME:-$HOME/.config}/spicetify/Themes/Matugen/color.ini"
 if command -v spicetify &>/dev/null && [[ -f "$SPICETIFY_COLOR_INI" ]]; then
@@ -662,21 +674,6 @@ if command -v spicetify &>/dev/null && [[ -f "$SPICETIFY_COLOR_INI" ]]; then
         else
             _warn "Spicetify reload mislukt"
         fi
-    fi
-fi
-
-# VSCode — merge workbench.colorCustomizations in settings.json
-VSCODE_MATUGEN="${XDG_CONFIG_HOME:-$HOME/.config}/Code/User/matugen-colors.json"
-VSCODE_SETTINGS="${XDG_CONFIG_HOME:-$HOME/.config}/Code/User/settings.json"
-if [[ -f "$VSCODE_MATUGEN" && -f "$VSCODE_SETTINGS" ]] && command -v jq &>/dev/null; then
-    _tmp=$(mktemp "$VSCODE_SETTINGS.XXXXXX")
-    if jq -s '.[0] * .[1]' "$VSCODE_SETTINGS" "$VSCODE_MATUGEN" > "$_tmp" 2>/dev/null; then
-        chmod 644 "$_tmp"
-        mv "$_tmp" "$VSCODE_SETTINGS"
-        _log "VSCode kleuren bijgewerkt"
-    else
-        rm -f "$_tmp"
-        _warn "VSCode settings merge mislukt"
     fi
 fi
 

@@ -73,6 +73,12 @@ phase_run() {
     log_step "Optionele apps installeren..."
     _phase11_optional_apps
 
+    log_step "Dagelijkse apps in thema (foto, pdf, tekst, video)..."
+    _phase11_daily_apps
+    _phase11_default_apps
+    _phase11_disk_bookmarks
+    _phase11_apps_sync
+
     log_step "Fase 11 valideren..."
     validate_cmd nautilus
     validate_cmd cliphist
@@ -98,6 +104,82 @@ phase_run() {
     log_info "Bestandsbeheer:  yazi (Super+E opent nautilus, yazi staat in het toetsenbordmenu)"
     log_info "Klembord:        Super+V — cliphist via Walker, plakt selectie"
     log_info "Screenshot:      Print / Super+Print / Shift+Print"
+}
+
+# ---------------------------------------------------------------------------
+# Vaste set dagelijkse apps die het thema volgen (libadwaita: kleuren, licht/
+# donker en vorm via kingstra-apps-sync). Los geïnstalleerd, zodat een
+# ontbrekend pakket de rest niet tegenhoudt.
+_phase11_daily_apps() {
+    local pkg
+    for pkg in loupe papers gnome-text-editor showtime; do
+        pacman_install "$pkg" || log_warn "$pkg niet geïnstalleerd"
+    done
+}
+
+# Standaard-apps per bestandssoort. Eenmalig per versie van deze lijst, zodat
+# een eigen keuze daarna (Openen met → Altijd) bij een update blijft staan.
+_phase11_default_apps() {
+    local marker="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/default-apps-v1"
+    if "${DRY_RUN:-false}"; then
+        log_dry "Loupe, Papers, Teksteditor en Showtime zouden standaard worden"
+        return 0
+    fi
+    [[ -f "$marker" ]] && { log_ok "Standaard-apps al gezet (eigen keuzes blijven)"; return 0; }
+    command -v xdg-mime &>/dev/null || return 0
+
+    local -A apps=(
+        [org.gnome.Loupe.desktop]="image/jpeg image/png image/gif image/webp image/bmp image/tiff image/svg+xml image/avif image/heic image/x-icon"
+        [org.gnome.Papers.desktop]="application/pdf"
+        [org.gnome.TextEditor.desktop]="text/plain text/markdown text/x-log text/csv"
+        [org.gnome.Showtime.desktop]="video/mp4 video/x-matroska video/webm video/quicktime video/x-msvideo video/mpeg video/ogg"
+    )
+    local desktop
+    for desktop in "${!apps[@]}"; do
+        if [[ -f "/usr/share/applications/$desktop" ]]; then
+            # shellcheck disable=SC2086 # de mime-lijst is bewust gesplitst
+            xdg-mime default "$desktop" ${apps[$desktop]} 2>/dev/null \
+                || log_warn "xdg-mime: $desktop niet als standaard gezet"
+        else
+            log_warn "$desktop ontbreekt; standaard niet gezet"
+        fi
+    done
+    mkdir -p "$(dirname "$marker")" && touch "$marker"
+    log_ok "Foto's: Loupe, pdf: Papers, tekst: Teksteditor, video: Showtime"
+}
+
+# Data-schijven (/mnt/data*) als vaste plek in de zijbalk van Nautilus en
+# elke open-/opslaan-dialoog. Bestaande bladwijzers blijven staan.
+_phase11_disk_bookmarks() {
+    local bookmarks="$HOME/.config/gtk-3.0/bookmarks"
+    local mnt label
+    if "${DRY_RUN:-false}"; then
+        log_dry "Data-schijven zouden als bladwijzer worden toegevoegd"
+        return 0
+    fi
+    command -v findmnt &>/dev/null || return 0
+    mkdir -p "$(dirname "$bookmarks")"
+    touch "$bookmarks"
+    for mnt in /mnt/data*; do
+        [[ -d "$mnt" ]] && findmnt -rn "$mnt" &>/dev/null || continue
+        grep -q "^file://$mnt\( \|$\)" "$bookmarks" && continue
+        label="$(findmnt -rn -o LABEL "$mnt" 2>/dev/null | head -n1)"
+        [[ -n "$label" ]] || label="$(basename "$mnt")"
+        printf 'file://%s %s\n' "$mnt" "$label" >> "$bookmarks"
+        log_ok "Bladwijzer: $label ($mnt)"
+    done
+}
+
+# Eén keer de app-laag bijwerken: app-profiel, vormlaag, VS Code-thema
+# (installeert de lokale extensie), Vesktop en mapiconen.
+_phase11_apps_sync() {
+    if "${DRY_RUN:-false}"; then
+        log_dry "kingstra-apps-sync zou draaien"
+        return 0
+    fi
+    python3 "$REPO_ROOT/config/shared/scripts/kingstra-apps-sync" \
+        && log_ok "Apps volgen het actieve thema" \
+        || log_warn "kingstra-apps-sync mislukt; volgt bij de volgende themawissel"
 }
 
 # ---------------------------------------------------------------------------

@@ -201,6 +201,10 @@ _phase08_deploy_mode_scripts() {
     deploy_link "$scripts_dir/kingstra-mode-read" "$HOME/.local/bin/kingstra-mode-read"
     chmod +x "$scripts_dir/kingstra-mode-read"
 
+    # Dagelijkse apps volgen het thema (login via gtk.sh, wissel via apply-shell-state).
+    deploy_link "$scripts_dir/kingstra-apps-sync" "$HOME/.local/bin/kingstra-apps-sync"
+    chmod +x "$scripts_dir/kingstra-apps-sync"
+
     log_ok "Mode-scripts beschikbaar: kingstra-mode-switch, kingstra-mode-read"
 }
 

@@ -8,6 +8,13 @@ local function load_optional(module)
     end
 end
 
+-- Qt-apps volgen het thema via qt6ct (kleuren uit matugen, letter en iconen
+-- uit kingstra-apps-sync). De Quickshell-schermen zetten dit zelf weer uit
+-- (pragma Env QT_QPA_PLATFORMTHEME=), zodat de shell zijn eigen stijl houdt.
+if type(hl.env) == "function" then
+    pcall(hl.env, "QT_QPA_PLATFORMTHEME", "qt6ct")
+end
+
 hl.config({
     general = {
         gaps_in = 4,

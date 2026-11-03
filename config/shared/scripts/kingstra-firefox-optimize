@@ -9,7 +9,10 @@ PROFILE_ROOT="${HOME}/.mozilla/firefox"
 PROFILES_INI="${PROFILE_ROOT}/profiles.ini"
 TEMPLATE_FILE="${CONFIG_HOME}/firefox/user.js"
 CHROME_TEMPLATE_FILE="${CONFIG_HOME}/firefox/chrome/userChrome.css"
+CONTENT_TEMPLATE_FILE="${CONFIG_HOME}/firefox/chrome/userContent.css"
 MATUGEN_FIREFOX_COLORS="${CONFIG_HOME}/matugen/generated/firefox_websites.css"
+# Vorm en letter van het thema (kingstra-apps-sync schrijft dit bij elke wissel).
+KINGSTRA_FIREFOX_SHAPE="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/apps/firefox-shape.css"
 START_MARKER='// >>> kingstra performance profile >>>'
 END_MARKER='// <<< kingstra performance profile <<<'
 CHROME_START_MARKER='/* >>> kingstra firefox chrome >>> */'
@@ -62,41 +65,51 @@ apply_template_to_profile() {
     log "managed prefs bijgewerkt in $(basename "$profile_dir")"
 }
 
-apply_chrome_to_profile() {
+# Zet een beheerd blok (kleuren + vormlaag + template) bovenaan een
+# chrome-bestand; eigen regels van de gebruiker eronder blijven staan.
+apply_css_to_profile() {
     local profile_dir="$1"
+    local template="$2"
+    local name="$3"
     local chrome_dir="${profile_dir}/chrome"
-    local user_chrome="${chrome_dir}/userChrome.css"
+    local target="${chrome_dir}/${name}"
     local tmp_file
 
-    [[ -f "$CHROME_TEMPLATE_FILE" ]] || {
-        log "chrome-template ontbreekt: $CHROME_TEMPLATE_FILE"
+    [[ -f "$template" ]] || {
+        log "chrome-template ontbreekt: $template"
         return 0
     }
 
     mkdir -p "$chrome_dir"
     tmp_file="$(mktemp)"
 
-    if [[ -f "$user_chrome" ]]; then
+    if [[ -f "$target" ]]; then
         awk -v start="$CHROME_START_MARKER" -v end="$CHROME_END_MARKER" '
             BEGIN { skip = 0 }
             $0 == start { skip = 1; next }
             $0 == end { skip = 0; next }
             !skip { print }
-        ' "$user_chrome" > "$tmp_file"
+        ' "$target" > "$tmp_file"
     fi
 
     {
         printf '%s\n' "$CHROME_START_MARKER"
-        printf '@import url("file://%s");\n\n' "$MATUGEN_FIREFOX_COLORS"
-        cat "$CHROME_TEMPLATE_FILE"
+        printf '@import url("file://%s");\n' "$MATUGEN_FIREFOX_COLORS"
+        printf '@import url("file://%s");\n\n' "$KINGSTRA_FIREFOX_SHAPE"
+        cat "$template"
         printf '%s\n' "$CHROME_END_MARKER"
         [[ -s "$tmp_file" ]] && printf '\n'
         cat "$tmp_file"
     } > "${tmp_file}.merged"
 
-    mv "${tmp_file}.merged" "$user_chrome"
+    mv "${tmp_file}.merged" "$target"
     rm -f "$tmp_file"
-    log "managed chrome CSS bijgewerkt in $(basename "$profile_dir")"
+    log "managed ${name} bijgewerkt in $(basename "$profile_dir")"
+}
+
+apply_chrome_to_profile() {
+    apply_css_to_profile "$1" "$CHROME_TEMPLATE_FILE" userChrome.css
+    apply_css_to_profile "$1" "$CONTENT_TEMPLATE_FILE" userContent.css
 }
 
 main() {

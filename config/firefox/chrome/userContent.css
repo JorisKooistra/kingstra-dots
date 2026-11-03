@@ -1,0 +1,71 @@
+/* Managed Kingstra Firefox content theme: the new tab and home page.
+ * kingstra-firefox-optimize zet de matugen-kleuren en de vormlaag
+ * (kingstra-apps-sync) als @import boven dit bestand.
+ */
+
+@-moz-document url("about:newtab"), url("about:home"), url("about:privatebrowsing") {
+  :root, body {
+    --newtab-background-color: var(--surface) !important;
+    --newtab-background-color-secondary: var(--surface-container) !important;
+    --newtab-text-primary-color: var(--on-surface) !important;
+    --newtab-text-secondary-color: var(--on-surface-variant) !important;
+    --newtab-primary-action-background: var(--primary) !important;
+    --newtab-element-hover-color: var(--surface-container-high) !important;
+    --newtab-border-color: var(--outline-variant) !important;
+    --border-radius-small: var(--kingstra-control-radius, 4px) !important;
+    --border-radius-medium: var(--kingstra-card-radius, 8px) !important;
+    --border-radius-large: var(--kingstra-card-radius, 12px) !important;
+    font-family: var(--kingstra-font, inherit) !important;
+  }
+
+  body {
+    background-color: var(--surface) !important;
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--surface) 55%, transparent),
+                      color-mix(in srgb, var(--surface) 80%, transparent)),
+      var(--kingstra-wallpaper, none) !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-attachment: fixed !important;
+  }
+
+  .search-wrapper .search-handoff-button,
+  .search-wrapper input,
+  .search-inner-wrapper,
+  .search-wrapper .logo-and-wordmark + .search-inner-wrapper {
+    border-radius: var(--kingstra-control-radius, 8px) !important;
+    background-color: color-mix(in srgb, var(--surface-container) 88%, transparent) !important;
+    border: var(--kingstra-border, 0px) solid var(--outline-variant) !important;
+    color: var(--on-surface) !important;
+  }
+
+  .search-wrapper .search-handoff-button:focus-visible,
+  .search-wrapper input:focus {
+    box-shadow: var(--kingstra-glow, none), 0 0 0 1px var(--primary) !important;
+  }
+
+  .top-site-outer .tile,
+  .top-site-outer .top-site-icon,
+  .top-site-outer .tile .icon-wrapper,
+  .card-outer,
+  .ds-card {
+    border-radius: var(--kingstra-card-radius, 8px) !important;
+  }
+
+  .top-site-outer .tile {
+    background-color: color-mix(in srgb, var(--surface-container) 85%, transparent) !important;
+    border: var(--kingstra-border, 0px) solid var(--outline-variant) !important;
+  }
+
+  .top-site-outer .title,
+  .top-site-outer .title span {
+    color: var(--on-surface) !important;
+    text-shadow: 0 1px 2px color-mix(in srgb, var(--surface) 70%, transparent) !important;
+  }
+
+  .logo-and-wordmark .wordmark,
+  .personalize-button {
+    fill: var(--on-surface) !important;
+    color: var(--on-surface) !important;
+  }
+}

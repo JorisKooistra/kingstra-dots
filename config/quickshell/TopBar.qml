@@ -1,5 +1,6 @@
 //@ pragma Env QS_NO_RELOAD_POPUP=1
 //@ pragma Env QSG_RENDER_LOOP=threaded
+//@ pragma Env QT_QPA_PLATFORMTHEME=
 
 import QtQuick
 import Quickshell

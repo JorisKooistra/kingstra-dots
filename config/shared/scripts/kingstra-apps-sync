@@ -1,0 +1,988 @@
+#!/usr/bin/env python3
+"""kingstra-apps-sync — dagelijkse apps volgen het actieve thema.
+
+Eén bron (theme.json + matugen-palet) voor alles buiten de shell:
+
+  1. App-profiel: licht of donker, letter, iconen en cursor voor GTK3/4,
+     libadwaita, Qt (qt6ct) en Electron (via de portal-voorkeur).
+  2. Vormlaag: hoeken, randen, dichtheid en gloed van het thema in GTK,
+     Firefox, VS Code, Vesktop en Spotify.
+  3. Live: open GTK-apps, VS Code en Vesktop wisselen mee zonder herstart.
+  4. VS Code: een eigen gegenereerd kleurthema (werkbalk + syntax).
+  6. Vesktop (Vencord-thema) en Spotify (Spicetify-vormlaag).
+  8. Mapiconen in de accentkleur (eigen Papirus-afgeleide in ~/.local).
+
+Gebruik:
+    kingstra-apps-sync              # alles bijwerken (na thema-/wallpaperwissel)
+    kingstra-apps-sync --login      # alleen het bewaarde app-profiel toepassen
+    kingstra-apps-sync --wallpaper PAD
+    kingstra-apps-sync --no-apply   # bestanden schrijven, geen gsettings (tests)
+
+Elk onderdeel faalt los: een fout in één app houdt de rest niet tegen.
+"""
+
+from __future__ import annotations
+
+import colorsys
+import configparser
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import zipfile
+from pathlib import Path
+
+HOME = Path.home()
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config")
+STATE = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local/state") / "kingstra"
+DATA = Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
+GEN = STATE / "apps"
+PROFILE_FILE = STATE / "app-profile.json"
+THEME_JSON = CONFIG / "quickshell/theme.json"
+PALETTE_JSON = CONFIG / "kingstra/state/matugen-palette.json"
+
+CURSOR_THEME = os.environ.get("XCURSOR_THEME", "Bibata-Modern-Classic")
+CURSOR_SIZE = os.environ.get("XCURSOR_SIZE", "24")
+
+APPLY = True
+
+
+def log(msg: str) -> None:
+    print(f"[kingstra-apps-sync] {msg}", file=sys.stderr)
+
+
+def write_atomic(path: Path, text: str) -> bool:
+    """Schrijf alleen als de inhoud verandert; geeft True bij een wijziging."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if path.is_file() and not path.is_symlink() and path.read_text(encoding="utf-8") == text:
+            return False
+    except OSError:
+        pass
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.chmod(tmp, 0o644)
+    if path.is_symlink():
+        path.unlink()
+    os.replace(tmp, path)
+    return True
+
+
+def load_json(path: Path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def run(*cmd: str, timeout: float = 10) -> bool:
+    if not APPLY or not shutil.which(cmd[0]):
+        return False
+    try:
+        return subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                              timeout=timeout, check=False).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def gsettings(key: str, value: str) -> bool:
+    return run("gsettings", "set", "org.gnome.desktop.interface", key, value)
+
+
+# ---------------------------------------------------------------------------
+# Thema en palet
+# ---------------------------------------------------------------------------
+FALLBACK_PALETTE = {
+    "background": "#121318", "on_background": "#e3e1e9", "surface": "#121318",
+    "surface_container_lowest": "#0d0e13", "surface_container_low": "#1a1b21",
+    "surface_container": "#1e1f25", "surface_container_high": "#292a2f",
+    "surface_container_highest": "#34343a", "on_surface": "#e3e1e9",
+    "on_surface_variant": "#c5c6d0", "outline": "#8f909a", "outline_variant": "#45464f",
+    "primary": "#b4c5ff", "on_primary": "#1a2d60", "primary_container": "#334478",
+    "on_primary_container": "#dbe1ff", "secondary_accent": "#a5eb6e",
+    "secondary_accent_container": "#2f5113", "tertiary_accent": "#ffb68b",
+    "tertiary_accent_container": "#6b3a17", "error": "#ffb4ab", "shadow": "#000000",
+}
+
+
+def load_palette() -> dict:
+    data = load_json(PALETTE_JSON, {})
+    colors = {}
+    entries = []
+    if isinstance(data, dict):
+        if isinstance(data.get("groups"), list):
+            for group in data["groups"]:
+                entries.extend(group.get("colors", []) if isinstance(group, dict) else [])
+        elif isinstance(data.get("colors"), list):
+            entries = data["colors"]
+    for entry in entries:
+        if isinstance(entry, dict):
+            hexv = str(entry.get("hex", ""))
+            if re.fullmatch(r"#[0-9a-fA-F]{6}", hexv):
+                colors[str(entry.get("key"))] = hexv.lower()
+    merged = dict(FALLBACK_PALETTE)
+    merged.update(colors)
+    return merged
+
+
+def num(value, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def load_theme() -> dict:
+    t = load_json(THEME_JSON, {})
+    if not isinstance(t, dict):
+        t = {}
+    style = t.get("style_profile") if isinstance(t.get("style_profile"), dict) else {}
+    material = t.get("material") if isinstance(t.get("material"), dict) else {}
+    radius = max(0, min(32, int(round(num(t.get("border_radius"), 12)))))
+    return {
+        "id": str(t.get("theme") or "default"),
+        "mode": "light" if str(t.get("mode", "dark")).lower() == "light" else "dark",
+        "radius": radius,
+        "border_width": max(0, min(4, int(round(num(t.get("border_width"), 2))))),
+        "ui_font": str(t.get("ui_font") or "Inter"),
+        "ui_font_size": num(t.get("ui_font_size"), 12),
+        "mono_font": str(t.get("mono_font") or "JetBrainsMono Nerd Font"),
+        "mono_font_size": num(t.get("mono_font_size"), 12),
+        "display_font": str(t.get("display_font") or t.get("ui_font") or "Inter"),
+        "font_weight": str(t.get("font_weight") or "regular"),
+        "letter_spacing": num(t.get("letter_spacing"), 0.0),
+        "icon_theme": str(t.get("icon_theme") or "Papirus-Dark"),
+        "density": str(style.get("density") or "comfortable"),
+        "outline": max(0.0, min(1.0, num(style.get("outline_strength"), 0.3))),
+        "glow": max(0.0, min(1.0, num(material.get("glow_intensity"), 0.0))),
+        "family": str(style.get("family") or ""),
+    }
+
+
+def pt(px_size: float, minimum: int = 10) -> int:
+    """QML-pixelmaat van het thema naar een GTK-puntmaat."""
+    return max(minimum, int(round(px_size * 0.9)))
+
+
+def alpha(hexv: str, a: float) -> str:
+    h = hexv.lstrip("#")
+    return f"rgba({int(h[0:2], 16)}, {int(h[2:4], 16)}, {int(h[4:6], 16)}, {a:.2f})"
+
+
+def shape(theme: dict) -> dict:
+    """Eén set maten voor alle apps (variant 'vol': hoeken, randen, dichtheid, gloed)."""
+    r = theme["radius"]
+    control = r if r <= 4 else min(12, max(4, round(r * 0.5)))
+    card = min(r, 20)
+    density = theme["density"]
+    return {
+        "radius": r,
+        "control": control,
+        "card": card,
+        "pill": r >= 18,
+        "square": r <= 4,
+        "border": 1 if theme["outline"] >= 0.4 else 0,
+        "glow": theme["glow"] if theme["glow"] >= 0.15 else 0.0,
+        "compact": density in ("compact", "dense"),
+        "spacious": density in ("spacious", "airy", "relaxed"),
+        "bold": theme["font_weight"].lower() in ("bold", "semibold", "700", "600"),
+        "spacing": max(0.0, min(1.5, theme["letter_spacing"])),
+    }
+
+
+# ---------------------------------------------------------------------------
+# 8. Mapiconen in de accentkleur
+# ---------------------------------------------------------------------------
+PAPIRUS_COLORS = {
+    "blue": "#5294e2", "indigo": "#5c6bc0", "violet": "#7e57c2", "magenta": "#ca71df",
+    "pink": "#f06292", "red": "#e25252", "carmine": "#a30002", "deeporange": "#eb6637",
+    "orange": "#ee923a", "paleorange": "#eeca8f", "yellow": "#f9bd30", "brown": "#ae8e6c",
+    "palebrown": "#d1bfae", "green": "#87b158", "teal": "#16a085", "cyan": "#00bcd4",
+    "darkcyan": "#45abb7", "bluegrey": "#607d8b", "grey": "#8e8e8e", "black": "#4f4f4f",
+    "white": "#e4e4e4",
+}
+
+
+def hls(hexv: str):
+    h = hexv.lstrip("#")
+    return colorsys.rgb_to_hls(int(h[0:2], 16) / 255, int(h[2:4], 16) / 255, int(h[4:6], 16) / 255)
+
+
+def folder_color(accent: str) -> str:
+    h, l, s = hls(accent)
+    if s < 0.18:
+        return "white" if l > 0.75 else ("black" if l < 0.3 else "grey")
+    best, best_d = "blue", 9.0
+    for name, ref in PAPIRUS_COLORS.items():
+        rh, rl, rs = hls(ref)
+        if rs < 0.18:
+            continue
+        dh = min(abs(h - rh), 1 - abs(h - rh)) * 4
+        d = dh * dh + (l - rl) ** 2 + 0.3 * (s - rs) ** 2
+        if d < best_d:
+            best, best_d = name, d
+    return best
+
+
+def icon_search_dirs():
+    return [DATA / "icons", HOME / ".icons", Path("/usr/share/icons")]
+
+
+def find_icon_theme(name: str):
+    for base in icon_search_dirs():
+        p = base / name
+        if (p / "index.theme").is_file():
+            return p
+    return None
+
+
+def build_folder_theme(base_name: str, color: str):
+    """Maak ~/.local/share/icons/Kingstra-<base>-<kleur> met gekleurde mappen.
+
+    Werkt zoals papirus-folders, maar zonder root: alleen symlinks naar de
+    gekleurde mapiconen die Papirus zelf meelevert. Geeft de themanaam terug,
+    of None als het basisthema geen Papirus is (dan blijft het basisthema).
+    """
+    if not base_name.startswith("Papirus") or color == "blue":
+        return None
+    sources = []
+    for name in (base_name, "Papirus"):
+        p = find_icon_theme(name)
+        if p and p not in sources:
+            sources.append(p)
+    papirus = find_icon_theme("Papirus")
+    if not sources or papirus is None:
+        return None
+    target_name = f"Kingstra-{base_name}-{color}"
+    target = DATA / "icons" / target_name
+    stamp = target / ".kingstra-stamp"
+    stamp_value = f"{base_name} {color} 1"
+    if stamp.is_file() and stamp.read_text(encoding="utf-8").strip() == stamp_value:
+        return target_name
+
+    # Oude Kingstra-mapthema's opruimen; elke kleur een eigen naam, zodat
+    # open GTK-apps de wissel live oppakken.
+    for old in glob.glob(str(DATA / "icons" / "Kingstra-*")):
+        if os.path.basename(old) != target_name:
+            shutil.rmtree(old, ignore_errors=True)
+    shutil.rmtree(target, ignore_errors=True)
+    target.mkdir(parents=True, exist_ok=True)
+
+    made_dirs = set()
+    pattern = re.compile(r"^((?:folder|user)-)blue((?:-.*)?\.svg)$")
+    for src in sources:
+        for places in sorted(src.glob("*/places")):
+            rel = places.relative_to(src)
+            out_dir = target / rel
+            links = {}
+            for entry in places.iterdir():
+                if entry.is_symlink():
+                    links[entry.name] = os.path.basename(os.readlink(entry))
+            done = set()
+            for name, link in links.items():
+                m = pattern.match(link)
+                if not m or "-blue" in name:
+                    continue
+                colored = places / f"{m.group(1)}{color}{m.group(2)}"
+                dest = out_dir / name
+                if dest.exists() or dest.is_symlink():
+                    done.add(name)
+                    continue
+                if not colored.exists():
+                    continue
+                out_dir.mkdir(parents=True, exist_ok=True)
+                os.symlink(str(colored.resolve()), dest)
+                done.add(name)
+            # Ketens volgen: folder-text.svg -> folder-documents.svg -> gekleurd.
+            changed = bool(done)
+            while changed:
+                changed = False
+                for name, link in links.items():
+                    dest = out_dir / name
+                    if link in done and name not in done and not (dest.exists() or dest.is_symlink()):
+                        os.symlink(link, dest)
+                        done.add(name)
+                        changed = True
+            if done:
+                made_dirs.add(str(rel))
+
+    if not made_dirs:
+        shutil.rmtree(target, ignore_errors=True)
+        return None
+
+    parser = configparser.ConfigParser(interpolation=None, strict=False)
+    parser.optionxform = str
+    parser.read(papirus / "index.theme", encoding="utf-8")
+    lines = ["[Icon Theme]", f"Name={target_name}",
+             f"Comment=Kingstra: {base_name} met mappen in de accentkleur",
+             f"Inherits={base_name},Papirus,hicolor"]
+    dirs = sorted(d for d in made_dirs if "@" not in d)
+    scaled = sorted(d for d in made_dirs if "@" in d)
+    lines.append("Directories=" + ",".join(dirs))
+    if scaled:
+        lines.append("ScaledDirectories=" + ",".join(scaled))
+    lines.append("")
+    for d in dirs + scaled:
+        if parser.has_section(d):
+            lines.append(f"[{d}]")
+            lines.extend(f"{k}={v}" for k, v in parser.items(d))
+        else:
+            size = re.match(r"(\d+)", d)
+            lines += [f"[{d}]", f"Size={size.group(1) if size else 48}", "Context=Places", "Type=Fixed"]
+            if "@" in d:
+                lines.append("Scale=" + d.split("@")[1].split("x")[0].split("/")[0])
+        lines.append("")
+    (target / "index.theme").write_text("\n".join(lines), encoding="utf-8")
+    stamp.write_text(stamp_value + "\n", encoding="utf-8")
+    log(f"mapiconen: {target_name}")
+    return target_name
+
+
+# ---------------------------------------------------------------------------
+# 1. App-profiel (licht/donker, letter, iconen, cursor)
+# ---------------------------------------------------------------------------
+def build_profile(theme: dict, palette: dict) -> dict:
+    icon = theme["icon_theme"]
+    # Papirus heeft een lichte en donkere variant; volg de stand van het thema.
+    if icon.startswith("Papirus"):
+        # Papirus = donkere symbolen voor lichte vlakken, Papirus-Dark omgekeerd.
+        icon = "Papirus-Dark" if theme["mode"] == "dark" else "Papirus"
+    try:
+        folder_theme = build_folder_theme(icon, folder_color(palette["primary"]))
+    except OSError as exc:
+        log(f"mapiconen overgeslagen: {exc}")
+        folder_theme = None
+    return {
+        "mode": theme["mode"],
+        "gtk_theme": "adw-gtk3-dark" if theme["mode"] == "dark" else "adw-gtk3",
+        "font": f"{theme['ui_font']} {pt(theme['ui_font_size'])}",
+        "font_family": theme["ui_font"],
+        "font_size": pt(theme["ui_font_size"]),
+        "mono_font": f"{theme['mono_font']} {pt(theme['mono_font_size'])}",
+        "icon_theme": folder_theme or icon,
+        "cursor_theme": CURSOR_THEME,
+        "cursor_size": CURSOR_SIZE,
+    }
+
+
+def set_ini(path: Path, values: dict) -> None:
+    lines = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        pass
+    if not any(line.strip() == "[Settings]" for line in lines):
+        lines.insert(0, "[Settings]")
+    seen = set()
+    out = []
+    for line in lines:
+        key = line.split("=", 1)[0].strip()
+        if key in values and "=" in line:
+            out.append(f"{key}={values[key]}")
+            seen.add(key)
+        else:
+            out.append(line)
+    idx = next(i for i, line in enumerate(out) if line.strip() == "[Settings]")
+    for key, value in values.items():
+        if key not in seen:
+            idx += 1
+            out.insert(idx, f"{key}={value}")
+    write_atomic(path, "\n".join(out) + "\n")
+
+
+def set_qt6ct(profile: dict) -> None:
+    path = CONFIG / "qt6ct/qt6ct.conf"
+    parser = configparser.ConfigParser(interpolation=None, strict=False)
+    parser.optionxform = str
+    try:
+        parser.read(path, encoding="utf-8")
+    except configparser.Error:
+        parser = configparser.ConfigParser(interpolation=None)
+        parser.optionxform = str
+    for section in ("Appearance", "Fonts"):
+        if not parser.has_section(section):
+            parser.add_section(section)
+    parser.set("Appearance", "custom_palette", "true")
+    parser.set("Appearance", "color_scheme_path", str(CONFIG / "qt6ct/colors/matugen.conf"))
+    parser.set("Appearance", "icon_theme", profile["icon_theme"])
+    if not parser.get("Appearance", "style", fallback=""):
+        parser.set("Appearance", "style", "Fusion")
+    size = profile["font_size"]
+    family = profile["font_family"]
+    mono_family, _, mono_size = profile["mono_font"].rpartition(" ")
+    parser.set("Fonts", "general", f'"{family},{size},-1,5,400,0,0,0,0,0,0,0,0,0,0,1"')
+    parser.set("Fonts", "fixed", f'"{mono_family},{mono_size},-1,5,400,0,0,0,0,0,0,0,0,0,0,1"')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    from io import StringIO
+    buf = StringIO()
+    parser.write(buf, space_around_delimiters=False)
+    write_atomic(path, buf.getvalue())
+
+
+def write_profile_files(profile: dict) -> None:
+    dark = "1" if profile["mode"] == "dark" else "0"
+    common = {
+        "gtk-application-prefer-dark-theme": dark,
+        "gtk-icon-theme-name": profile["icon_theme"],
+        "gtk-font-name": profile["font"],
+        "gtk-cursor-theme-name": profile["cursor_theme"],
+        "gtk-cursor-theme-size": profile["cursor_size"],
+    }
+    set_ini(CONFIG / "gtk-3.0/settings.ini", {**common, "gtk-theme-name": profile["gtk_theme"]})
+    set_ini(CONFIG / "gtk-4.0/settings.ini", common)
+    gtkrc = HOME / ".gtkrc-2.0"
+    write_atomic(gtkrc, (
+        f'gtk-theme-name="{profile["gtk_theme"]}"\n'
+        f'gtk-icon-theme-name="{profile["icon_theme"]}"\n'
+        f'gtk-font-name="{profile["font"]}"\n'
+        f'gtk-cursor-theme-name="{profile["cursor_theme"]}"\n'
+        f'gtk-cursor-theme-size={profile["cursor_size"]}\n'))
+    try:
+        set_qt6ct(profile)
+    except (OSError, configparser.Error) as exc:
+        log(f"qt6ct overgeslagen: {exc}")
+    write_atomic(PROFILE_FILE, json.dumps(profile, indent=2) + "\n")
+
+
+def apply_profile(profile: dict, reload_gtk: bool) -> None:
+    """Zet het profiel in gsettings; de portal geeft licht/donker door aan
+    Electron-apps en Firefox. reload_gtk laat open GTK-apps hun CSS opnieuw
+    lezen door het thema kort te wisselen (zoals end-4 en HyDE doen)."""
+    if not APPLY or not shutil.which("gsettings"):
+        return
+    scheme = "prefer-dark" if profile["mode"] == "dark" else "prefer-light"
+    if not gsettings("color-scheme", scheme) and scheme == "prefer-light":
+        gsettings("color-scheme", "default")
+    gsettings("font-name", profile["font"])
+    gsettings("monospace-font-name", profile["mono_font"])
+    gsettings("icon-theme", profile["icon_theme"])
+    gsettings("cursor-theme", profile["cursor_theme"])
+    gsettings("cursor-size", str(profile["cursor_size"]))
+    if reload_gtk:
+        other = "Adwaita-dark" if profile["mode"] == "dark" else "Adwaita"
+        gsettings("gtk-theme", other)
+        time.sleep(0.15)
+    gsettings("gtk-theme", profile["gtk_theme"])
+
+
+# ---------------------------------------------------------------------------
+# 2. Vormlaag voor GTK3 en GTK4/libadwaita
+# ---------------------------------------------------------------------------
+def gtk_shape_css(theme: dict, palette: dict, gtk4: bool) -> str:
+    s = shape(theme)
+    c, k = s["control"], s["card"]
+    focus = "entry:focus-within" if gtk4 else "entry:focus"
+    out = [
+        "/* Automatisch gegenereerd door kingstra-apps-sync. Pas dit bestand NIET aan. */",
+        f"/* Thema {theme['id']}: hoeken {s['radius']} px, knoppen {c} px, kaarten {k} px. */",
+        "",
+        "button, entry, spinbutton, dropdown > button, combobox > box > button,",
+        "searchbar entry, headerbar button, menubutton > button, .linked > button,",
+        "row.activatable, .navigation-sidebar > row, placessidebar row, gridview > child,",
+        "flowboxchild, menu menuitem, popover modelbutton {",
+        f"  border-radius: {c}px;",
+        "}",
+        ".linked > button:not(:first-child):not(:last-child) { border-radius: 0; }",
+        "",
+        ".card, list.boxed-list, list.content, .frame, frame > border, popover > contents,",
+        "popover.background, popover.menu > contents, menu, .menu, tooltip, tooltip.background,",
+        "messagedialog, window.dialog.message, .osd, toast, banner {",
+        f"  border-radius: {k}px;",
+        "}",
+    ]
+    if s["pill"]:
+        out += ["", "button.suggested-action, button.destructive-action, button.pill, entry, searchbar entry {",
+                "  border-radius: 999px;", "}"]
+    if s["square"]:
+        out += ["", "switch, switch > slider, switch slider, scale slider, checkbutton check, check {",
+                f"  border-radius: {max(0, c)}px;", "}"]
+    if s["border"]:
+        w = max(1, theme["border_width"] // 2)
+        out += ["", "button:not(.flat):not(.image-button), entry, spinbutton, .card, list.boxed-list {",
+                f"  border: {w}px solid {alpha(palette['outline'], 0.55)};", "}"]
+    if s["compact"]:
+        out += ["", "button { min-height: 26px; padding: 2px 8px; }",
+                "entry { min-height: 28px; }", "headerbar { min-height: 38px; }",
+                "row { min-height: 34px; }"]
+    elif s["spacious"]:
+        out += ["", "button { min-height: 36px; padding: 6px 14px; }", "row { min-height: 46px; }"]
+    if s["glow"]:
+        blur = int(round(4 + 10 * s["glow"]))
+        out += ["", f"button:focus-visible, {focus}, row:focus-visible, gridview > child:focus-visible {{",
+                f"  box-shadow: 0 0 {blur}px {alpha(palette['primary'], 0.25 + 0.4 * s['glow'])},",
+                f"              inset 0 0 0 1px {alpha(palette['primary'], 0.8)};", "}",
+                "button.suggested-action {",
+                f"  box-shadow: 0 0 {blur}px {alpha(palette['primary'], 0.35)};", "}"]
+    if s["bold"]:
+        out += ["", "headerbar .title, windowtitle .title, .heading, .title-1, .title-2, .title-3 {",
+                "  font-weight: 800;", "}"]
+    if s["spacing"] > 0.05:
+        out += ["", "headerbar .title, windowtitle .title, .heading {",
+                f"  letter-spacing: {s['spacing']:.2f}px;", "}"]
+    return "\n".join(out) + "\n"
+
+
+def write_gtk_shape(theme: dict, palette: dict) -> bool:
+    changed = False
+    for v, gtk4 in (("3", False), ("4", True)):
+        changed |= write_atomic(CONFIG / f"gtk-{v}.0/kingstra-shape.css", gtk_shape_css(theme, palette, gtk4))
+    return changed
+
+
+# ---------------------------------------------------------------------------
+# 5. Firefox: vorm en letter (userChrome/userContent importeren dit bestand)
+# ---------------------------------------------------------------------------
+def firefox_css(theme: dict, palette: dict, wallpaper: str) -> str:
+    s = shape(theme)
+    c, k = s["control"], s["card"]
+    glow = (f"0 0 {int(4 + 10 * s['glow'])}px {alpha(palette['primary'], 0.5)}" if s["glow"] else "none")
+    wall = ""
+    if wallpaper and os.path.isfile(wallpaper):
+        wall = "file://" + wallpaper.replace(" ", "%20")
+    return "\n".join([
+        "/* Automatisch gegenereerd door kingstra-apps-sync. Pas dit bestand NIET aan. */",
+        ":root {",
+        f"  --kingstra-radius: {s['radius']}px;",
+        f"  --kingstra-control-radius: {c}px;",
+        f"  --kingstra-card-radius: {k}px;",
+        f"  --kingstra-border: {s['border']}px;",
+        f"  --kingstra-glow: {glow};",
+        f"  --kingstra-font: \"{theme['ui_font']}\", system-ui, sans-serif;",
+        f"  --kingstra-mono: \"{theme['mono_font']}\", monospace;",
+        f"  --kingstra-weight: {700 if s['bold'] else 400};",
+        f"  --kingstra-density: {'compact' if s['compact'] else ('spacious' if s['spacious'] else 'normal')};",
+        f"  --kingstra-wallpaper: {('url(\"' + wall + '\")') if wall else 'none'};",
+        f"  --kingstra-outline: {palette['outline']};",
+        f"  --kingstra-accent: {palette['primary']};",
+        "}",
+        "",
+    ])
+
+
+# ---------------------------------------------------------------------------
+# 4. VS Code: eigen gegenereerd thema
+# ---------------------------------------------------------------------------
+VSCODE_EXT_ID = "kingstra.kingstra-theme"
+VSCODE_VERSION = "1.0.0"
+VSCODE_LABELS = {
+    ("dark", "a"): "Kingstra Donker", ("dark", "b"): "Kingstra Donker ·",
+    ("light", "a"): "Kingstra Licht", ("light", "b"): "Kingstra Licht ·",
+}
+VSCODE_TARGETS = [  # (extensiemap, gebruikersinstellingen, cli)
+    (HOME / ".vscode/extensions", CONFIG / "Code/User", "code"),
+    (HOME / ".vscode-oss/extensions", CONFIG / "VSCodium/User", "codium"),
+    (HOME / ".vscode-oss/extensions", CONFIG / "Code - OSS/User", "code-oss"),
+]
+
+
+def vscode_package_json() -> dict:
+    themes = []
+    for (mode, slot), label in VSCODE_LABELS.items():
+        themes.append({"label": label, "uiTheme": "vs-dark" if mode == "dark" else "vs",
+                       "path": f"./themes/kingstra-{mode}-{slot}.json"})
+    return {
+        "name": "kingstra-theme", "displayName": "Kingstra", "publisher": "kingstra",
+        "version": VSCODE_VERSION, "description": "Kleurthema dat Kingstra uit je wallpaper en thema genereert.",
+        "engines": {"vscode": "^1.60.0"}, "categories": ["Themes"],
+        "contributes": {"themes": themes},
+    }
+
+
+def vscode_theme(theme: dict, palette: dict) -> dict:
+    p = palette
+    generated = load_json(CONFIG / "Code/User/matugen-colors.json", {})
+    colors = generated.get("workbench.colorCustomizations", {}) if isinstance(generated, dict) else {}
+    colors = {k: v for k, v in colors.items() if isinstance(v, str) and v.startswith("#")}
+    colors.setdefault("editor.background", p["background"])
+    colors.setdefault("editor.foreground", p["on_surface"])
+    colors["focusBorder"] = p["primary"]
+    def tok(scope, color, style=None):
+        settings = {"foreground": color}
+        if style:
+            settings["fontStyle"] = style
+        return {"scope": scope, "settings": settings}
+    mid = p.get("on_primary_container", p["primary"])
+    tokens = [
+        tok(["comment", "punctuation.definition.comment"], p["outline"], "italic"),
+        tok(["keyword", "storage.type", "storage.modifier", "keyword.control"], p["primary"],
+            "bold" if shape(theme)["bold"] else None),
+        tok(["string", "string.quoted", "markup.inline.raw"], p["secondary_accent"]),
+        tok(["constant.numeric", "constant.language", "constant.character", "support.constant"], p["tertiary_accent"]),
+        tok(["entity.name.function", "support.function", "meta.function-call"], mid),
+        tok(["entity.name.type", "entity.name.class", "support.type", "support.class"],
+            p.get("on_secondary_accent_container", p["secondary_accent"])),
+        tok(["variable", "variable.other", "meta.definition.variable"], p["on_surface"]),
+        tok(["variable.parameter"], p.get("on_tertiary_accent_container", p["on_surface"]), "italic"),
+        tok(["entity.name.tag", "markup.heading"], p["primary"]),
+        tok(["entity.other.attribute-name"], p["tertiary_accent"]),
+        tok(["punctuation", "meta.brace", "keyword.operator"], p["on_surface_variant"]),
+        tok(["invalid"], p["error"]),
+        tok(["markup.bold"], p["on_surface"], "bold"),
+        tok(["markup.italic"], p["on_surface"], "italic"),
+        tok(["markup.underline.link"], p["primary"], "underline"),
+    ]
+    return {
+        "$schema": "vscode://schemas/color-theme",
+        "name": "Kingstra",
+        "type": theme["mode"],
+        "semanticHighlighting": True,
+        "colors": colors,
+        "tokenColors": tokens,
+    }
+
+
+def build_vsix(path: Path) -> None:
+    manifest = f"""<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
+  <Metadata>
+    <Identity Language="en-US" Id="kingstra-theme" Version="{VSCODE_VERSION}" Publisher="kingstra" />
+    <DisplayName>Kingstra</DisplayName>
+    <Description xml:space="preserve">Kleurthema dat Kingstra genereert.</Description>
+    <Categories>Themes</Categories>
+    <Properties>
+      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.60.0" />
+    </Properties>
+  </Metadata>
+  <Installation><InstallationTarget Id="Microsoft.VisualStudio.Code"/></Installation>
+  <Dependencies/>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
+  </Assets>
+</PackageManifest>
+"""
+    types = """<?xml version="1.0" encoding="utf-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension=".json" ContentType="application/json"/>
+<Default Extension=".vsixmanifest" ContentType="text/xml"/>
+</Types>
+"""
+    placeholder = json.dumps({"name": "Kingstra", "type": "dark", "colors": {}, "tokenColors": []})
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", types)
+        z.writestr("extension.vsixmanifest", manifest)
+        z.writestr("extension/package.json", json.dumps(vscode_package_json(), indent=2))
+        for (mode, slot) in VSCODE_LABELS:
+            z.writestr(f"extension/themes/kingstra-{mode}-{slot}.json", placeholder)
+
+
+def vscode_ext_dir(ext_root: Path):
+    found = sorted(glob.glob(str(ext_root / f"{VSCODE_EXT_ID}-*")))
+    return Path(found[-1]) if found else None
+
+
+def ensure_vscode_extension(ext_root: Path, cli: str):
+    ext = vscode_ext_dir(ext_root)
+    if ext is not None or not APPLY or not shutil.which(cli):
+        return ext
+    with tempfile.TemporaryDirectory() as tmp:
+        vsix = Path(tmp) / "kingstra-theme.vsix"
+        build_vsix(vsix)
+        run(cli, "--install-extension", str(vsix), "--force", timeout=60)
+    ext = vscode_ext_dir(ext_root)
+    if ext:
+        log(f"VS Code-thema geïnstalleerd ({cli})")
+    return ext
+
+
+def strip_jsonc(text: str) -> str:
+    out, i, n, in_str = [], 0, len(text), False
+    while i < n:
+        ch = text[i]
+        if in_str:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:
+                out.append(text[i + 1])
+                i += 1
+            elif ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+            out.append(ch)
+        elif text.startswith("//", i):
+            while i < n and text[i] != "\n":
+                i += 1
+            continue
+        elif text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        else:
+            out.append(ch)
+        i += 1
+    return re.sub(r",(\s*[}\]])", r"\1", "".join(out))
+
+
+def set_jsonc_string(text: str, key: str, value: str) -> str:
+    """Zet één tekstsleutel in settings.json zonder commentaar te verliezen."""
+    pat = re.compile(r'("' + re.escape(key) + r'"\s*:\s*)"(?:[^"\\]|\\.)*"')
+    encoded = json.dumps(value, ensure_ascii=False)
+    if pat.search(text):
+        return pat.sub(lambda m: m.group(1) + encoded, text, count=1)
+    brace = text.find("{")
+    if brace < 0:
+        return "{\n    " + json.dumps(key) + ": " + encoded + "\n}\n"
+    rest = text[brace + 1:]
+    sep = "" if rest.strip().startswith("}") else ","
+    return text[:brace + 1] + "\n    " + json.dumps(key) + ": " + encoded + sep + rest
+
+
+def sync_vscode(theme: dict, palette: dict) -> None:
+    state_file = STATE / "vscode-sync.json"
+    state = load_json(state_file, {})
+    data = vscode_theme(theme, palette)
+    for ext_root, user_dir, cli in VSCODE_TARGETS:
+        if not user_dir.parent.is_dir() and not shutil.which(cli):
+            continue
+        ext = ensure_vscode_extension(ext_root, cli)
+        if ext is None:
+            continue
+        key = str(user_dir)
+        info = state.get(key, {})
+        slot = "b" if info.get("slot") == "a" else "a"
+        write_atomic(ext / "themes" / f"kingstra-{theme['mode']}-{slot}.json", json.dumps(data, indent=2) + "\n")
+        write_atomic(ext / "package.json", json.dumps(vscode_package_json(), indent=2) + "\n")
+
+        settings_path = user_dir / "settings.json"
+        try:
+            text = settings_path.read_text(encoding="utf-8")
+        except OSError:
+            text = "{\n}\n"
+        try:
+            current = json.loads(strip_jsonc(text) or "{}")
+        except ValueError:
+            log(f"VS Code: {settings_path} niet leesbaar, overgeslagen")
+            continue
+        current_theme = str(current.get("workbench.colorTheme", ""))
+        # Kies Kingstra eenmalig; kiest Joris daarna zelf iets anders, dan blijft dat.
+        if current_theme and not current_theme.startswith("Kingstra") and info.get("adopted"):
+            continue
+        label = VSCODE_LABELS[(theme["mode"], slot)]
+        new_text = set_jsonc_string(text, "workbench.colorTheme", label)
+        font = f"'{theme['mono_font']}', monospace"
+        if "editor.fontFamily" not in current or current.get("editor.fontFamily") == info.get("font"):
+            new_text = set_jsonc_string(new_text, "editor.fontFamily", font)
+            info["font"] = font
+        # Oude aanpak (kleuren in settings.json mengen) opruimen: alleen de
+        # sleutels die Kingstra zelf ooit schreef, en alleen in strikte JSON.
+        try:
+            strict = json.loads(new_text)
+        except ValueError:
+            strict = None
+        if isinstance(strict, dict) and isinstance(strict.get("workbench.colorCustomizations"), dict) \
+                and not info.get("legacy_cleaned"):
+            ours = load_json(CONFIG / "Code/User/matugen-colors.json", {}).get("workbench.colorCustomizations", {})
+            cc = strict["workbench.colorCustomizations"]
+            for k in list(cc):
+                if k in ours:
+                    del cc[k]
+            if not cc:
+                del strict["workbench.colorCustomizations"]
+            new_text = json.dumps(strict, indent=4, ensure_ascii=False) + "\n"
+            info["legacy_cleaned"] = True
+        if new_text != text:
+            write_atomic(settings_path, new_text)
+        info.update({"slot": slot, "adopted": True})
+        state[key] = info
+        log(f"VS Code: {label}")
+    write_atomic(state_file, json.dumps(state, indent=2) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# 6. Vesktop (Vencord) en Spotify (Spicetify)
+# ---------------------------------------------------------------------------
+def vesktop_css(theme: dict, p: dict) -> str:
+    s = shape(theme)
+    c, k = s["control"], s["card"]
+    font = theme["ui_font"]
+    glow = f"0 0 {int(4 + 10 * s['glow'])}px {alpha(p['primary'], 0.45)}" if s["glow"] else "none"
+    return f"""/**
+ * @name Kingstra
+ * @description Automatisch gegenereerd door kingstra-apps-sync. Pas dit bestand NIET aan.
+ * @author Kingstra
+ * @version 1.0.0
+ */
+:root, .theme-dark, .theme-light, .visual-refresh {{
+  --font-primary: "{font}", "gg sans", sans-serif;
+  --font-display: "{theme['display_font']}", "{font}", sans-serif;
+  --font-code: "{theme['mono_font']}", monospace;
+
+  --background-primary: {p['surface_container_low']};
+  --background-secondary: {p['surface_container']};
+  --background-secondary-alt: {p['surface_container_high']};
+  --background-tertiary: {p['surface_container_lowest']};
+  --background-floating: {p['surface_container_high']};
+  --background-accent: {p['primary_container']};
+  --background-modifier-hover: {alpha(p['on_surface'], 0.06)};
+  --background-modifier-active: {alpha(p['on_surface'], 0.10)};
+  --background-modifier-selected: {alpha(p['primary'], 0.16)};
+  --background-base-lowest: {p['surface_container_lowest']};
+  --background-base-lower: {p['surface_container_low']};
+  --background-base-low: {p['surface_container']};
+  --background-surface-high: {p['surface_container_high']};
+  --background-surface-higher: {p['surface_container_highest']};
+  --chat-background-default: {p['surface_container_low']};
+  --channeltextarea-background: {p['surface_container']};
+  --input-background: {p['surface_container']};
+  --modal-background: {p['surface_container']};
+  --modal-footer-background: {p['surface_container_low']};
+  --scrollbar-thin-thumb: {p['outline_variant']};
+  --scrollbar-auto-thumb: {p['outline_variant']};
+  --scrollbar-auto-track: transparent;
+
+  --text-normal: {p['on_surface']};
+  --text-default: {p['on_surface']};
+  --text-strong: {p['on_surface']};
+  --text-muted: {p['on_surface_variant']};
+  --text-link: {p['primary']};
+  --header-primary: {p['on_surface']};
+  --header-secondary: {p['on_surface_variant']};
+  --interactive-normal: {p['on_surface_variant']};
+  --interactive-hover: {p['on_surface']};
+  --interactive-active: {p['primary']};
+  --interactive-muted: {p['outline']};
+  --channels-default: {p['on_surface_variant']};
+  --border-subtle: {p['outline_variant']};
+  --border-faint: {alpha(p['outline_variant'], 0.5)};
+
+  --brand-500: {p['primary']};
+  --brand-560: {p['primary']};
+  --brand-experiment: {p['primary']};
+  --button-filled-brand-background: {p['primary']};
+  --button-filled-brand-text: {p['on_primary']};
+  --mention-background: {alpha(p['tertiary_accent'], 0.12)};
+  --mention-foreground: {p['tertiary_accent']};
+  --status-positive: {p['secondary_accent']};
+  --status-danger: {p['error']};
+
+  --radius-xs: {min(c, 4)}px;
+  --radius-sm: {c}px;
+  --radius-md: {k}px;
+  --radius-lg: {k}px;
+  --kingstra-glow: {glow};
+}}
+[class*="button_"], [class*="lookFilled"], [class*="input_"], [class*="searchBar"],
+[class*="channelTextArea"] [class*="scrollableContainer"], [class*="wrapper_"][class*="link"] {{
+  border-radius: {c}px !important;
+}}
+[class*="modal_"], [class*="root_"][class*="small"], [class*="popout"], [class*="menu_"],
+[class*="embedFull"], [class*="messagesPopout"] {{
+  border-radius: {k}px !important;
+}}
+[class*="channelTextArea"]:focus-within {{
+  box-shadow: var(--kingstra-glow) !important;
+}}
+"""
+
+
+def sync_vesktop(theme: dict, palette: dict) -> None:
+    for root in (CONFIG / "vesktop", CONFIG / "Vencord"):
+        if not root.is_dir():
+            continue
+        write_atomic(root / "themes/kingstra.theme.css", vesktop_css(theme, palette))
+        settings_path = root / "settings/settings.json"
+        settings = load_json(settings_path, None)
+        if settings is None and settings_path.exists():
+            log(f"Vesktop: {settings_path} niet leesbaar, thema niet aangezet")
+            continue
+        settings = settings if isinstance(settings, dict) else {}
+        enabled = settings.get("enabledThemes")
+        enabled = enabled if isinstance(enabled, list) else []
+        if "kingstra.theme.css" not in enabled:
+            enabled.append("kingstra.theme.css")
+            settings["enabledThemes"] = enabled
+            write_atomic(settings_path, json.dumps(settings, indent=4) + "\n")
+        log(f"Vesktop: thema in {root.name}")
+
+
+SPICE_START = "/* >>> kingstra vorm >>> */"
+SPICE_END = "/* <<< kingstra vorm <<< */"
+
+
+def sync_spicetify(theme: dict, palette: dict) -> None:
+    user_css = CONFIG / "spicetify/Themes/Matugen/user.css"
+    if not user_css.is_file():
+        return
+    s = shape(theme)
+    c, k = s["control"], s["card"]
+    block = "\n".join([
+        SPICE_START,
+        ":root {",
+        f"  --kingstra-control-radius: {c}px;",
+        f"  --kingstra-card-radius: {k}px;",
+        "}",
+        f"body, .main-view-container, .Root__nav-bar, .main-nowPlayingBar-container {{ font-family: \"{theme['ui_font']}\", sans-serif !important; }}",
+        f".encore-text-title-large, .encore-text-title-medium, h1, h2 {{ font-family: \"{theme['display_font']}\", \"{theme['ui_font']}\", sans-serif !important; }}",
+        f".Root__nav-bar, .Root__main-view, .Root__right-sidebar, .main-nowPlayingBar-container, main-view-container {{ border-radius: {k}px !important; }}",
+        f".main-card-card, .Card, [data-encore-id=\"card\"], .main-trackList-trackListRow, .x-searchInput-searchInputInput, .main-contextMenu-menu {{ border-radius: {c if c < k else k}px !important; }}",
+        f"button[data-encore-id=\"buttonPrimary\"] > span, .main-playButton-PlayButton button, .main-playPauseButton-button {{ border-radius: {('999px' if s['pill'] else str(c) + 'px')} !important; }}",
+        (f".main-playPauseButton-button, button[data-encore-id=\"buttonPrimary\"] > span {{ box-shadow: 0 0 {int(4 + 10 * s['glow'])}px {alpha(palette['primary'], 0.5)} !important; }}" if s["glow"] else ""),
+        SPICE_END,
+    ])
+    text = user_css.read_text(encoding="utf-8")
+    text = re.sub(re.escape(SPICE_START) + r".*?" + re.escape(SPICE_END) + r"\n?", "", text, flags=re.S)
+    write_atomic(user_css, text.rstrip("\n") + "\n\n" + block + "\n")
+
+
+# ---------------------------------------------------------------------------
+def current_wallpaper(arg: str) -> str:
+    if arg:
+        return arg
+    data = load_json(CONFIG / "kingstra/state/wallpaper.json", {})
+    for key in ("path", "wallpaper", "current"):
+        if isinstance(data, dict) and isinstance(data.get(key), str):
+            return data[key]
+    return ""
+
+
+def step(name: str, fn, *args):
+    try:
+        return fn(*args)
+    except Exception as exc:  # noqa: BLE001 — één app mag de rest niet tegenhouden
+        log(f"{name} mislukt: {exc}")
+        return None
+
+
+def main(argv) -> int:
+    global APPLY
+    login = "--login" in argv
+    if "--no-apply" in argv:
+        APPLY = False
+    wallpaper = ""
+    if "--wallpaper" in argv:
+        i = argv.index("--wallpaper")
+        wallpaper = argv[i + 1] if i + 1 < len(argv) else ""
+
+    if login:
+        profile = load_json(PROFILE_FILE, None)
+        if not isinstance(profile, dict):
+            theme, palette = load_theme(), load_palette()
+            profile = build_profile(theme, palette)
+            write_profile_files(profile)
+        apply_profile(profile, reload_gtk=False)
+        return 0
+
+    theme, palette = load_theme(), load_palette()
+    profile = step("app-profiel", build_profile, theme, palette)
+    if profile:
+        step("app-profiel schrijven", write_profile_files, profile)
+    step("GTK-vorm", write_gtk_shape, theme, palette)
+    step("Firefox-vorm", lambda: write_atomic(
+        GEN / "firefox-shape.css", firefox_css(theme, palette, current_wallpaper(wallpaper))))
+    step("VS Code", sync_vscode, theme, palette)
+    step("Vesktop", sync_vesktop, theme, palette)
+    step("Spotify", sync_spicetify, theme, palette)
+    if profile:
+        step("toepassen", apply_profile, profile, True)
+    log(f"klaar: {theme['id']} ({theme['mode']})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

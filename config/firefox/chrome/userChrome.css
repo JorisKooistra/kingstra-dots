@@ -165,3 +165,53 @@ menupopup {
   --panel-color: var(--on-surface) !important;
   --panel-border-color: var(--outline-variant) !important;
 }
+
+/* -----------------------------------------------------------------------------
+ * Vorm en letter van het thema (variabelen uit kingstra-apps-sync,
+ * ~/.local/state/kingstra/apps/firefox-shape.css). Zonder dat bestand vallen
+ * ze terug op de Firefox-standaard.
+ * -------------------------------------------------------------------------- */
+:root {
+  --tab-border-radius: var(--kingstra-control-radius, 6px) !important;
+  --toolbarbutton-border-radius: var(--kingstra-control-radius, 4px) !important;
+  --arrowpanel-border-radius: var(--kingstra-card-radius, 8px) !important;
+  --panel-border-radius: var(--kingstra-card-radius, 8px) !important;
+  --urlbar-container-border-radius: var(--kingstra-control-radius, 4px) !important;
+  --border-radius-small: var(--kingstra-control-radius, 4px) !important;
+  --border-radius-medium: var(--kingstra-card-radius, 8px) !important;
+}
+
+#navigator-toolbox,
+#urlbar,
+.tab-label,
+menupopup,
+panel {
+  font-family: var(--kingstra-font, inherit) !important;
+}
+
+.tab-label {
+  font-weight: var(--kingstra-weight, normal) !important;
+}
+
+.tab-background,
+#urlbar-background,
+#searchbar,
+toolbarbutton .toolbarbutton-icon,
+toolbarbutton .toolbarbutton-badge-stack {
+  border-radius: var(--kingstra-control-radius, 4px) !important;
+}
+
+.tab-background[selected="true"] {
+  outline: var(--kingstra-border, 0px) solid var(--outline-variant) !important;
+}
+
+#urlbar[focused="true"] #urlbar-background {
+  box-shadow: var(--kingstra-glow, none) !important;
+}
+
+menupopup,
+panel,
+#urlbar[open] > #urlbar-background {
+  --panel-border-radius: var(--kingstra-card-radius, 8px) !important;
+  border-radius: var(--kingstra-card-radius, 8px) !important;
+}
