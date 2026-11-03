@@ -23,6 +23,17 @@ sock="${XDG_RUNTIME_DIR:-/run/user/$UID}/hypr/${HYPRLAND_INSTANCE_SIGNATURE:-}/.
 
 guard_active=false
 
+# De echte submap, niet wat deze guard denkt: na een herstart van de guard of
+# een Super+Escape liep guard_active uit de pas en bleef passthrough hangen,
+# zodat Super+Q en alle andere Super-toetsen niets meer deden (3 nov).
+in_passthrough() {
+    [[ "$(hyprctl submap 2>/dev/null | tr -d '[:space:]')" == passthrough ]]
+}
+
+reset_submap() {
+    "$HOME/.config/hypr/scripts/hypr-dispatch.sh" submap reset >/dev/null 2>&1
+}
+
 handle_focus() {
     local class="${1,,}"
 
@@ -31,11 +42,24 @@ handle_focus() {
             "$HOME/.config/hypr/scripts/hypr-dispatch.sh" submap passthrough >/dev/null 2>&1
             guard_active=true
         fi
-    elif $guard_active; then
-        "$HOME/.config/hypr/scripts/hypr-dispatch.sh" submap reset >/dev/null 2>&1
+    elif $guard_active || in_passthrough; then
+        # Ook een handmatige passthrough vervalt zodra een gewoon venster
+        # focus krijgt; anders kan hij ongemerkt blijven hangen.
+        reset_submap
         guard_active=false
     fi
 }
+
+# Bij het starten: hangt passthrough nog van een vorige sessie of guard en
+# heeft geen Citrix-venster focus, dan terug naar de gewone binds.
+start_class="$(hyprctl activewindow -j 2>/dev/null | sed -n 's/.*"class": *"\([^"]*\)".*/\1/p' | head -n 1)"
+if in_passthrough; then
+    if [[ "${start_class,,}" =~ $CLASS_PATTERN ]]; then
+        guard_active=true
+    else
+        reset_submap
+    fi
+fi
 
 # activewindow>>CLASS,TITLE — alleen de class is hier relevant
 socat -U - "UNIX-CONNECT:$sock" | while IFS= read -r line; do

@@ -15,6 +15,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Spiekbriefje (Super vasthouden)** heeft een blok Werkvlak: twee vingers, wiel, Ctrl+wiel, Ctrl+slepen, Shift+wiel, en zonder Super knijpen en vier vingers.
 
 ### Update breekt niet meer af op een optioneel pakket
+- **Super+Q (en alle Super-toetsen) bleven dood** doordat Hyprland vastzat in de Citrix-modus `passthrough` zonder Citrix-venster. De Citrix-bewaker keek naar zijn eigen geheugen in plaats van naar de echte stand; na een herstart van de bewaker of een Super+Escape bleef de modus hangen. Nu zet hij de gewone toetsen terug zodra een gewoon venster focus krijgt, en ook bij het starten.
 - **Maar één update tegelijk.** Een tweede `kingstra update` (bijvoorbeeld uit Instellingen terwijl er in een terminal nog een liep of gepauzeerd stond) zegt nu dat er al een draait, in plaats van ernaast te gaan wachten op sudo, git en de installer.
 - **quickshell-games-launchers-git wordt niet meer elke keer opnieuw gebouwd** als de geïnstalleerde commit al de nieuwste van de bron is (de AUR noemt r138, de bron heeft r80).
 - **Knop "Dotfiles update" terug** op Instellingen › Systeem › Updates (draait bootstrap, zoals vroeger).
