@@ -581,10 +581,10 @@ Item {
             + " · dotfiles " + dotfilesText;
     }
 
+    // Eerst het overzicht (Instellingen › Updates): wat er klaarstaat, het
+    // Arch-nieuws en de knop Bijwerken. Pas die knop opent de terminal.
     function openUpdatesTerminal() {
-        let script = Quickshell.env("HOME") + "/.config/quickshell/package_upgrade.sh";
-        Quickshell.execDetached(["kitty", "--hold", "bash", script]);
-        Quickshell.execDetached(["notify-send", "Updates", "Updateworkflow gestart in terminal"]);
+        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "open", "settings", "updates"]);
     }
 
     function switchWorkspace(wsId) {

@@ -96,7 +96,7 @@ Item {
     // (thema-editor), 4 Sneltoetsen, 5 Invoer, 6 Schermen, 7 Netwerk,
     // 8 Geluid, 9 Tijd & weer, 10 Energie en sessie, 11 Updates,
     // 12 Onderhoud, 13 Over, 15 Zijbalk-indeling, 16 Start, 17 Uiterlijk,
-    // 18 Bureaublad, 19 Meldingen en rust.
+    // 18 Bureaublad, 19 Meldingen en rust, 20 Back-up.
     property var tabs: [
         { label: "Start", icon: "󰋜", pages: [16], pageLabels: ["Start"], extra: [], extraLabels: [], keywords: "start begin home overzicht alles" },
         { label: "Uiterlijk", icon: "󰏘", pages: [17], pageLabels: ["Uiterlijk"], extra: [1, 2], extraLabels: ["Kleurstijl en contrast", "Alle onderdelen"],
@@ -113,8 +113,8 @@ Item {
           keywords: "invoer toetsenbord touchpad muis scroll scrollen rechtsklik dead keys sneltoets sneltoetsen keybind keybinds toets binding" },
         { label: "Meldingen en rust", icon: "󰂛", pages: [19], pageLabels: ["Meldingen en rust"], extra: [], extraLabels: [],
           keywords: "meldingen notificaties niet storen dnd rust nachtlicht warm avond schema per app stil nooit altijd" },
-        { label: "Systeem", icon: "󰒓", pages: [10, 9, 11, 12, 13], pageLabels: ["Energie en sessie", "Tijd en weer", "Updates", "Onderhoud", "Over"], extra: [], extraLabels: [],
-          keywords: "systeem sessie idle vergrendelen lock slaap suspend energie power profiel uitloggen weer tijd datum klok notatie formaat api openweather locatie updates update pakketten onderhoud geavanceerd herstart herladen matugen verwijderen over versie" }
+        { label: "Systeem", icon: "󰒓", pages: [10, 9, 11, 20, 12, 13], pageLabels: ["Energie en sessie", "Tijd en weer", "Updates", "Back-up", "Onderhoud", "Over"], extra: [], extraLabels: [],
+          keywords: "back-up backup versies terughalen terugdraaien herstel gezondheid schijf schijven smart opstart kernel systeem sessie idle vergrendelen lock slaap suspend energie power profiel uitloggen weer tijd datum klok notatie formaat api openweather locatie updates update pakketten onderhoud geavanceerd herstart herladen matugen verwijderen over versie" }
     ]
     property int currentTab: 0
     property int currentPage: tabs[0].pages[0]
@@ -221,7 +221,8 @@ Item {
         "thema": 1, "theme": 1, "kleurstijl": 1, "bar": 2, "aanpassen": 2, "kleuren": 2, "sneltoetsen": 4, "keybinds": 4,
         "invoer": 5, "input": 5, "beeldschermen": 6, "schermen": 6, "monitors": 6,
         "netwerk": 7, "network": 7, "geluid": 8, "audio": 8,
-        "tijd": 9, "weer": 9, "sessie": 10, "session": 10, "energie": 10, "updates": 11,
+        "tijd": 9, "weer": 9, "sessie": 10, "session": 10, "energie": 10, "updates": 11, "update": 11,
+        "backup": 20, "back-up": 20, "terughalen": 20,
         "geavanceerd": 12, "advanced": 12, "onderhoud": 12, "over": 13, "about": 13
     })
 
@@ -249,6 +250,8 @@ Item {
         if (currentPage === 6) refreshDisplayStatus();
         if (currentPage === 8) refreshAudioState();
         if (currentPage === 10) refreshCloseFully();
+        if (currentPage === 11) refreshUpdatePage(false);
+        if (currentPage === 20) refreshBackupPage();
     }
 
     property real introBase: 0.0
@@ -285,6 +288,14 @@ Item {
     property string sessionModeText: "office"
     property string currentPowerProfileText: "balanced"
     property string updateStatusText: "Nog niet gecontroleerd"
+    // Updates-pagina: plan (wat er klaarstaat), laatste uitkomst en de
+    // gezondheidscheck. Back-up-pagina: status van kingstra-backup.
+    property var upPlan: ({})
+    property bool upPlanBusy: false
+    property var upResult: ({})
+    property var vnHealth: []
+    property var bkStatus: ({})
+    readonly property string kingstraBin: Quickshell.env("HOME") + "/.local/bin/"
     property string advancedStatusText: "Klaar"
     property bool showUninstallConfirm: false
     readonly property string monitorRestoreScript: Quickshell.env("HOME") + "/.config/hypr/scripts/monitor-hotplug-restore.sh"
@@ -1318,8 +1329,68 @@ Item {
     }
 
     function runPackageUpgrade() {
-        Quickshell.execDetached(["kitty", "--hold", "bash", Quickshell.env("HOME") + "/.config/quickshell/package_upgrade.sh"]);
-        notify("Updates", "Package update gestart in terminal");
+        Quickshell.execDetached(["kitty", "--class", "kingstra-update", "--title", "Kingstra update", "bash", Quickshell.env("HOME") + "/.config/quickshell/package_upgrade.sh"]);
+        updateResultWatch.start();
+    }
+
+    function refreshUpdatePage(search) {
+        updatePlanCacheProc.running = true;
+        updateResultProc.running = true;
+        healthProc.running = true;
+        if (search || !upPlan.checked || (Date.now() / 1000 - upPlan.checked) > 900) {
+            upPlanBusy = true;
+            updatePlanProc.running = true;
+        }
+    }
+
+    function runSystemRollback() {
+        Quickshell.execDetached(["kitty", "--class", "kingstra-update", "--title", "Update terugdraaien", "--hold", "bash", "-lc", "'" + kingstraBin + "kingstra-rollback' --system"]);
+    }
+
+    function openRescueMenu() {
+        Quickshell.execDetached(["kitty", "--class", "kingstra-update", "--title", "Kingstra herstel", "bash", "-lc", "'" + kingstraBin + "kingstra-herstel'"]);
+    }
+
+    function refreshBackupPage() {
+        backupStatusProc.running = true;
+        healthProc.running = true;
+    }
+
+    function backupAction(action) {
+        if (action === "run") {
+            Quickshell.execDetached(["systemctl", "--user", "start", "--no-block", "kingstra-backup.service"]);
+            bkStatus = Object.assign({}, bkStatus, { running: true });
+        } else if (action === "copy") {
+            Quickshell.execDetached(["systemctl", "--user", "start", "--no-block", "kingstra-backup-copy.service"]);
+            notify("Back-up", "Tweede kopie wordt bijgewerkt");
+        } else {
+            Quickshell.execDetached([kingstraBin + "kingstra-backup", action]);
+        }
+        backupRefreshTimer.restart();
+    }
+
+    function fmtWhen(ts) {
+        if (!ts) return "nog nooit";
+        let d = new Date(ts * 1000);
+        let mins = Math.round((Date.now() - d.getTime()) / 60000);
+        if (mins < 2) return "zojuist";
+        if (mins < 60) return mins + " minuten geleden";
+        if (mins < 1440) return Math.round(mins / 60) + " uur geleden";
+        return Qt.formatDateTime(d, "d MMM HH:mm");
+    }
+
+    function fmtBytes(n) {
+        let v = Number(n || 0);
+        let units = ["B", "KB", "MB", "GB", "TB"];
+        let i = 0;
+        while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+        return (i === 0 ? v : v.toFixed(1)) + " " + units[i];
+    }
+
+    function upGroupLine(item) {
+        if (item.from && item.to) return item.name + "  " + item.from + " → " + item.to;
+        if (item.to) return item.name + "  " + item.to;
+        return item.name;
     }
 
     function restartQuickshell() {
@@ -2234,6 +2305,98 @@ Item {
                 let count = this.text.trim();
                 root.updateStatusText = count === "" ? "Updatecheck niet beschikbaar" : (count + " updates beschikbaar");
             }
+        }
+    }
+
+    Process {
+        id: updatePlanProc
+        command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/update_plan.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.upPlan = JSON.parse(this.text); } catch (e) {}
+                root.upPlanBusy = false;
+                if (root.upPlan.total !== undefined)
+                    root.updateStatusText = root.upPlan.total === 0 ? "Alles is bij" : (root.upPlan.total + " updates klaar");
+            }
+        }
+        onExited: root.upPlanBusy = false
+    }
+
+    Process {
+        id: updatePlanCacheProc
+        command: ["bash", "-c", "cat \"${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/update-plan.json\" 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (root.upPlanBusy || this.text.trim() === "") return;
+                try { root.upPlan = JSON.parse(this.text); } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: updateResultProc
+        command: ["bash", "-c", "cat \"${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/update-result.json\" 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text.trim() === "") return;
+                try {
+                    let res = JSON.parse(this.text);
+                    let changed = !root.upResult.time || res.time !== root.upResult.time;
+                    root.upResult = res;
+                    if (changed && updateResultWatch.running) {
+                        updateResultWatch.stop();
+                        root.refreshUpdatePage(true);
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
+    // Na "Bijwerken": kijk elke paar seconden of de terminal klaar is, en
+    // ververs dan de pagina met de uitkomst.
+    Timer {
+        id: updateResultWatch
+        interval: 4000
+        repeat: true
+        property int ticks: 0
+        onRunningChanged: if (running) ticks = 0
+        onTriggered: {
+            ticks++;
+            if (ticks > 450) { stop(); return; }
+            updateResultProc.running = true;
+        }
+    }
+
+    Process {
+        id: healthProc
+        command: ["bash", "-c", "\"$HOME/.local/bin/kingstra-health\" --json 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.vnHealth = JSON.parse(this.text); } catch (e) { root.vnHealth = []; }
+            }
+        }
+    }
+
+    Process {
+        id: backupStatusProc
+        command: ["bash", "-c", "\"$HOME/.local/bin/kingstra-backup\" status --json 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.bkStatus = JSON.parse(this.text); } catch (e) { root.bkStatus = ({}); }
+            }
+        }
+    }
+
+    Timer {
+        id: backupRefreshTimer
+        interval: 3000
+        repeat: true
+        property int ticks: 0
+        onRunningChanged: if (running) ticks = 0
+        onTriggered: {
+            ticks++;
+            backupStatusProc.running = true;
+            if (ticks > 200 || (!root.bkStatus.running && ticks > 2)) stop();
         }
     }
 
@@ -5275,7 +5438,7 @@ Item {
             }
 
             // =================================================================
-            // TAB 11: UPDATES
+            // TAB 11: UPDATES — wat er klaarstaat, bijwerken, uitkomst
             // =================================================================
             Item {
                 anchors.fill: parent
@@ -5283,24 +5446,400 @@ Item {
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
-                ColumnLayout {
+                ScrollView {
                     anchors.fill: parent
                     anchors.margins: root.s(20)
-                    spacing: root.s(14)
+                    clip: true
+                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
-                    Text { text: "Updates"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
-                        SettingsInfoCard { title: "Updates"; icon: "󰚰"; accent: root.green; value: root.updateStatusText }
+                    ColumnLayout {
+                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        spacing: root.s(14)
 
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: root.s(10)
-                        SettingsActionButton { label: "Alle updates"; icon: "󰚰"; accent: root.green; primary: true; onTriggered: root.runPackageUpgrade() }
-                        SettingsActionButton { label: "Dotfiles update"; icon: "󰐕"; accent: root.blue; onTriggered: root.runUpdateBootstrap() }
-                        SettingsActionButton { label: "Check opnieuw"; icon: "󰑓"; accent: root.peach; onTriggered: updatesStatusProc.running = true }
+                        Text { text: "Updates"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.family: root.uiFontFamily
+                            font.pixelSize: root.s(11)
+                            color: root.subtext0
+                            text: root.upPlanBusy ? "Zoeken naar updates…"
+                                : (root.upPlan.checked ? ("Gecontroleerd " + root.fmtWhen(root.upPlan.checked) + ". Er wordt niets geïnstalleerd tot je op Bijwerken drukt.")
+                                                       : "Nog niet gecontroleerd.")
+                        }
+
+                        // Samenvatting met de grote knop.
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: upSummaryRow.implicitHeight + root.s(28)
+                            radius: root.s(14)
+                            color: Qt.alpha(root.upPlan.total > 0 ? root.green : root.surface0, root.upPlan.total > 0 ? 0.12 : 0.46)
+                            border.width: 1
+                            border.color: Qt.alpha(root.upPlan.total > 0 ? root.green : root.surface2, 0.6)
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+
+                            RowLayout {
+                                id: upSummaryRow
+                                anchors.fill: parent
+                                anchors.margins: root.s(14)
+                                spacing: root.s(14)
+                                Text {
+                                    text: root.upPlanBusy ? "󰑓" : (root.upPlan.total > 0 ? "󰚰" : "󰄬")
+                                    font.family: ThemeConfig.iconFont
+                                    font.pixelSize: root.s(30)
+                                    color: root.upPlan.total > 0 ? root.green : root.subtext0
+                                    RotationAnimation on rotation { running: root.upPlanBusy; from: 0; to: 360; duration: 1200; loops: Animation.Infinite }
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(2)
+                                    Text {
+                                        text: root.upPlan.total > 0 ? (root.upPlan.total + " updates klaar") : (root.upPlanBusy ? "Even zoeken…" : "Alles is bij")
+                                        font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(18); color: root.text
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
+                                        visible: root.upPlan.repo > 0
+                                        font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0
+                                        text: (root.upPlan.downloaded || 0) + " van " + (root.upPlan.repo || 0) + " pakketten al gedownload"
+                                              + (root.upPlan.kernel ? " · nieuwe kernel, daarna herstarten" : "")
+                                    }
+                                }
+                                SettingsActionButton { label: "Bijwerken"; icon: "󰚰"; accent: root.green; primary: true; onTriggered: root.runPackageUpgrade() }
+                            }
+                        }
+
+                        // Arch-nieuws: soms is er handwerk nodig vóór de update.
+                        Rectangle {
+                            Layout.fillWidth: true
+                            visible: (root.upPlan.news || []).length > 0
+                            implicitHeight: upNewsCol.implicitHeight + root.s(24)
+                            radius: root.s(10)
+                            color: Qt.alpha(root.yellow, 0.12)
+                            border.width: 1
+                            border.color: Qt.alpha(root.yellow, 0.55)
+                            ColumnLayout {
+                                id: upNewsCol
+                                anchors.fill: parent
+                                anchors.margins: root.s(12)
+                                spacing: root.s(6)
+                                RowLayout {
+                                    spacing: root.s(8)
+                                    Text { text: "󰎕"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17); color: root.yellow }
+                                    Text { text: "Arch-nieuws sinds je vorige update"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(14); color: root.text }
+                                }
+                                Repeater {
+                                    model: root.upPlan.news || []
+                                    delegate: Text {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
+                                        font.family: root.uiFontFamily; font.pixelSize: root.s(12); color: root.text
+                                        text: modelData.date + "  " + modelData.title
+                                    }
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                    font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0
+                                    text: "Lees ze op archlinux.org/news als er handwerk bij staat. De update vraagt het ook nog."
+                                }
+                            }
+                        }
+
+                        // Groepen: Systeem en kernel, Apps, AUR, Flatpak, Kingstra.
+                        Repeater {
+                            model: (root.upPlan.groups || []).filter(function(g) { return (g.items || []).length > 0 || (g.notes || []).length > 0; })
+                            delegate: Rectangle {
+                                id: upGroup
+                                required property var modelData
+                                property bool open: modelData.id === "systeem" || modelData.id === "kingstra"
+                                Layout.fillWidth: true
+                                implicitHeight: upGroupCol.implicitHeight + root.s(24)
+                                radius: root.s(10)
+                                color: Qt.alpha(root.surface0, 0.46)
+                                border.width: 1
+                                border.color: Qt.alpha(root.surface2, 0.82)
+                                Behavior on implicitHeight { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
+
+                                ColumnLayout {
+                                    id: upGroupCol
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(12)
+                                    spacing: root.s(6)
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(8)
+                                        Text {
+                                            text: upGroup.modelData.id === "systeem" ? "󰒓" : upGroup.modelData.id === "kingstra" ? "󰣇"
+                                                  : upGroup.modelData.id === "flatpak" ? "󰏖" : upGroup.modelData.id === "aur" ? "󰣇" : "󰀻"
+                                            font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17)
+                                            color: upGroup.modelData.id === "systeem" ? root.peach : root.blue
+                                        }
+                                        Text {
+                                            text: upGroup.modelData.title
+                                            font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(14); color: root.text
+                                            Layout.fillWidth: true
+                                        }
+                                        Text {
+                                            text: upGroup.modelData.id === "kingstra"
+                                                  ? ((upGroup.modelData.items || []).length + " nieuw")
+                                                  : String((upGroup.modelData.items || []).length)
+                                            font.family: root.uiFontFamily; font.weight: Font.Bold; font.pixelSize: root.s(12); color: root.subtext0
+                                        }
+                                        Text {
+                                            text: upGroup.open ? "󰅃" : "󰅀"
+                                            font.family: ThemeConfig.iconFont; font.pixelSize: root.s(15); color: root.subtext0
+                                        }
+                                    }
+                                    // Kingstra: de CHANGELOG-regels, anders de pakketten met versiesprong.
+                                    Repeater {
+                                        model: upGroup.open
+                                               ? (upGroup.modelData.id === "kingstra" && (upGroup.modelData.notes || []).length > 0
+                                                  ? upGroup.modelData.notes : (upGroup.modelData.items || []).slice(0, 60))
+                                               : []
+                                        delegate: Text {
+                                            required property var modelData
+                                            Layout.fillWidth: true
+                                            wrapMode: Text.WordWrap
+                                            font.family: typeof modelData === "string" ? root.uiFontFamily : "monospace"
+                                            font.pixelSize: root.s(typeof modelData === "string" ? 12 : 11)
+                                            color: typeof modelData === "string" ? root.text
+                                                   : (modelData.downloaded ? root.subtext0 : root.text)
+                                            text: typeof modelData === "string" ? ("• " + modelData) : root.upGroupLine(modelData)
+                                        }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: upGroup.open = !upGroup.open
+                                }
+                            }
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+                            SettingsActionButton { label: "Opnieuw zoeken"; icon: "󰑓"; accent: root.peach; onTriggered: root.refreshUpdatePage(true) }
+                            SettingsActionButton { label: "Laatste update terugdraaien"; icon: "󰕍"; accent: root.red; onTriggered: root.runSystemRollback() }
+                            SettingsActionButton { label: "Herstelmenu"; icon: "󰁨"; accent: root.mauve; onTriggered: root.openRescueMenu() }
+                        }
+
+                        // Uitkomst van de vorige run.
+                        Rectangle {
+                            Layout.fillWidth: true
+                            visible: (root.upResult.items || []).length > 0
+                            implicitHeight: upResultCol.implicitHeight + root.s(24)
+                            radius: root.s(10)
+                            color: Qt.alpha(root.surface0, 0.46)
+                            border.width: 1
+                            border.color: Qt.alpha(root.upResult.exit ? root.red : root.surface2, 0.82)
+                            ColumnLayout {
+                                id: upResultCol
+                                anchors.fill: parent
+                                anchors.margins: root.s(12)
+                                spacing: root.s(6)
+                                RowLayout {
+                                    spacing: root.s(8)
+                                    Text { text: root.upResult.exit ? "󰅚" : "󰄬"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17); color: root.upResult.exit ? root.red : root.green }
+                                    Text {
+                                        text: "Vorige update · " + root.fmtWhen(root.upResult.time)
+                                        font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(14); color: root.text
+                                    }
+                                }
+                                Repeater {
+                                    model: root.upResult.items || []
+                                    delegate: RowLayout {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        spacing: root.s(8)
+                                        Text {
+                                            text: modelData.kind === "ok" ? "󰄬" : (modelData.kind === "warn" ? "󰀦" : "󰅚")
+                                            font.family: ThemeConfig.iconFont; font.pixelSize: root.s(13)
+                                            color: modelData.kind === "ok" ? root.green : (modelData.kind === "warn" ? root.yellow : root.red)
+                                            Layout.alignment: Qt.AlignTop
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            wrapMode: Text.WordWrap
+                                            font.family: root.uiFontFamily; font.pixelSize: root.s(12); color: root.text
+                                            text: modelData.text
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Gezondheid: dezelfde check als na een update.
+                        Rectangle {
+                            Layout.fillWidth: true
+                            visible: root.vnHealth.length > 0
+                            implicitHeight: vnHealthCol.implicitHeight + root.s(24)
+                            radius: root.s(10)
+                            color: Qt.alpha(root.surface0, 0.46)
+                            border.width: 1
+                            border.color: Qt.alpha(root.surface2, 0.82)
+                            ColumnLayout {
+                                id: vnHealthCol
+                                anchors.fill: parent
+                                anchors.margins: root.s(12)
+                                spacing: root.s(6)
+                                RowLayout {
+                                    spacing: root.s(8)
+                                    Text { text: "󰓙"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17); color: root.sapphire }
+                                    Text { text: "Gezondheid"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(14); color: root.text }
+                                }
+                                Repeater {
+                                    model: root.vnHealth
+                                    delegate: RowLayout {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        spacing: root.s(8)
+                                        Text {
+                                            text: modelData.level === 0 ? "󰄬" : (modelData.level === 1 ? "󰀦" : "󰅚")
+                                            font.family: ThemeConfig.iconFont; font.pixelSize: root.s(13)
+                                            color: modelData.level === 0 ? root.green : (modelData.level === 1 ? root.yellow : root.red)
+                                            Layout.alignment: Qt.AlignTop
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            wrapMode: Text.WordWrap
+                                            font.family: root.uiFontFamily; font.pixelSize: root.s(12); color: root.text
+                                            text: modelData.text
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0
+                            text: "Bijwerken opent een terminal, want daar vraagt het systeem je wachtwoord. Pakketten worden 's nachts alvast gedownload; geïnstalleerd wordt pas als jij het zegt."
+                        }
+                        Item { Layout.fillHeight: true }
                     }
+                }
+            }
 
-                    SettingsInfoCard { title: "Hoe het werkt"; icon: "󰄛"; accent: root.yellow; value: "Updates openen in een terminalvenster, zodat je ziet wat er gebeurt en eventuele fouten kunt lezen." }
-                    Item { Layout.fillHeight: true }
+            // =================================================================
+            // TAB 20: BACK-UP
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentPage === 20
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
+
+                ScrollView {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    clip: true
+                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+
+                    ColumnLayout {
+                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        spacing: root.s(14)
+
+                        Text { text: "Back-up"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0
+                            text: "Elk uur een versie van je persoonlijke map op een andere schijf. Alleen wat veranderd is wordt opgeslagen. Bewaard: 24 per uur, 14 per dag, 8 per week en 12 per maand."
+                        }
+
+                        Rectangle {
+                            id: bkCard
+                            readonly property bool healthy: !!root.bkStatus.last_ok && (Date.now() / 1000 - root.bkStatus.last_ok) < 3 * 86400
+                            readonly property color tone: root.bkStatus.enabled === false ? root.subtext0
+                                                          : (root.bkStatus.running ? root.blue : (healthy ? root.green : root.yellow))
+                            Layout.fillWidth: true
+                            implicitHeight: bkRow.implicitHeight + root.s(28)
+                            radius: root.s(14)
+                            color: Qt.alpha(tone, 0.12)
+                            border.width: 1
+                            border.color: Qt.alpha(tone, 0.6)
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+
+                            RowLayout {
+                                id: bkRow
+                                anchors.fill: parent
+                                anchors.margins: root.s(14)
+                                spacing: root.s(14)
+                                Text {
+                                    text: root.bkStatus.running ? "󰑓" : "󰁯"
+                                    font.family: ThemeConfig.iconFont; font.pixelSize: root.s(30); color: bkCard.tone
+                                    RotationAnimation on rotation { running: !!root.bkStatus.running; from: 0; to: 360; duration: 1400; loops: Animation.Infinite }
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(2)
+                                    Text {
+                                        font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(18); color: root.text
+                                        text: root.bkStatus.enabled === false ? "Back-up staat uit"
+                                              : root.bkStatus.running ? "Bezig met een back-up…"
+                                              : ("Laatste back-up: " + root.fmtWhen(root.bkStatus.last_ok))
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
+                                        font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0
+                                        text: root.bkStatus.enabled === false
+                                              ? "Geen datadisk gevonden. Zet hem aan in ~/.config/kingstra/backup.conf."
+                                              : ((root.bkStatus.snapshots || 0) + " versies · " + root.fmtBytes(root.bkStatus.repo_size)
+                                                 + " in " + (root.bkStatus.repo || "?")
+                                                 + (root.bkStatus.free ? " · " + root.fmtBytes(root.bkStatus.free) + " vrij" : ""))
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        visible: !!root.bkStatus.error
+                                        wrapMode: Text.WordWrap
+                                        font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.yellow
+                                        text: root.bkStatus.error || ""
+                                    }
+                                }
+                                SettingsActionButton {
+                                    label: "Nu maken"; icon: "󰁯"; accent: root.green; primary: true
+                                    onTriggered: root.backupAction("run")
+                                }
+                            }
+                        }
+
+                        SettingsInfoCard {
+                            title: "Tweede kopie"
+                            icon: "󰆏"
+                            accent: root.sapphire
+                            value: root.bkStatus.copy
+                                   ? ("Wekelijks naar " + root.bkStatus.copy + ". Laatst: " + root.fmtWhen(root.bkStatus.copy_ok) + ".")
+                                   : "Nog geen tweede kopie gemaakt. Die komt wekelijks op een andere schijf, zodat één kapotte schijf je niets kost."
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: root.s(10)
+                            SettingsActionButton { label: "Versies bekijken"; icon: "󰉋"; accent: root.blue; onTriggered: root.backupAction("browse") }
+                            SettingsActionButton { label: "Map sluiten"; icon: "󰉖"; accent: root.overlay0; onTriggered: root.backupAction("close") }
+                            SettingsActionButton { label: "Tweede kopie nu"; icon: "󰆏"; accent: root.sapphire; onTriggered: root.backupAction("copy") }
+                        }
+
+                        SettingsInfoCard {
+                            title: "Iets terughalen"
+                            icon: "󰕍"
+                            accent: root.mauve
+                            value: "Versies bekijken opent ~/Back-up/snapshots in Bestanden: elke map is een moment. Sleep wat je nodig hebt terug. Of in een terminal: kingstra backup restore <pad>, dan komt het naast het origineel als <naam>.terug."
+                        }
+                        SettingsInfoCard {
+                            title: "Wat er niet in zit"
+                            icon: "󰈉"
+                            accent: root.overlay0
+                            value: "Caches, prullenbak, Steam en ~/Games, Claude-VM's, node_modules. Eigen uitzonderingen zet je in ~/.config/kingstra/backup-exclude.local.txt, één pad per regel."
+                        }
+                        Item { Layout.fillHeight: true }
+                    }
                 }
             }
 

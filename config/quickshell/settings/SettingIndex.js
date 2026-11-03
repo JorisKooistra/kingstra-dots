@@ -55,7 +55,11 @@ var entries = [
     { label: "Automatisch vergrendelen", page: 10, section: "sessie", where: "Systeem › Energie en sessie › Vergrendelen en slaapstand", keywords: "idle lock vergrendelen scherm uit dpms slaapstand suspend timeout" },
     { label: "Apps echt sluiten", page: 10, where: "Systeem › Energie en sessie", keywords: "tray systeemtray achtergrond sluiten afsluiten quit kill chatgpt privacy minimaliseren" },
     { label: "Energieprofiel", page: 10, section: "sessie", where: "Systeem › Energie en sessie › Vergrendelen en slaapstand", keywords: "power profile performance balanced saver batterij" },
-    { label: "Updates", page: 11, where: "Systeem › Updates", keywords: "update pakketten dotfiles upgrade" },
+    { label: "Updates", page: 11, where: "Systeem › Updates", keywords: "update pakketten dotfiles upgrade kernel arch nieuws" },
+    { label: "Laatste update terugdraaien", page: 11, where: "Systeem › Updates", keywords: "terugdraaien rollback downgrade herstel kapot vorige versie" },
+    { label: "Herstelmenu", page: 11, where: "Systeem › Updates", keywords: "herstel rescue noodmenu kapot start niet" },
+    { label: "Gezondheid", page: 11, where: "Systeem › Updates", keywords: "gezondheid controle check schijf ruimte boot kernel smart" },
+    { label: "Back-up", page: 20, where: "Systeem › Back-up", keywords: "back-up backup restic versies kopie schijf data terughalen herstellen bestand kwijt" },
     { label: "Shell herstarten", page: 12, where: "Systeem › Onderhoud", keywords: "quickshell herstart topbar herladen matugen render" },
     { label: "Verwijderen", page: 12, section: "verwijderen", where: "Systeem › Onderhoud › Verwijderen en details", keywords: "uninstall verwijderen restore" },
     { label: "Over Kingstra", page: 13, where: "Systeem › Over", keywords: "versie over github onderdelen" }
@@ -65,7 +69,7 @@ var entries = [
 var pageNames = {
     0: "perscherm", 1: "thema", 2: "aanpassen", 4: "sneltoetsen", 5: "invoer", 6: "beeldschermen",
     7: "netwerk", 8: "geluid", 9: "tijd", 10: "sessie", 11: "updates",
-    12: "geavanceerd", 13: "over", 15: "rail", 16: "start", 17: "uiterlijk", 18: "bureaublad", 19: "rust"
+    12: "geavanceerd", 13: "over", 15: "rail", 16: "start", 17: "uiterlijk", 18: "bureaublad", 19: "rust", 20: "backup"
 };
 
 function search(query, limit) {
