@@ -1,0 +1,13 @@
+# Kingstra: een nieuwe kernel krijgt drie opstartpogingen. Lukt het niet,
+# dan start de pc vanzelf "Kingstra (veilig)" (zie kingstra-boot-entries).
+[Trigger]
+Type = Path
+Operation = Install
+Operation = Upgrade
+Target = usr/lib/modules/*/vmlinuz
+
+[Action]
+Description = Kingstra: nieuwe kernel krijgt drie opstartpogingen...
+When = PostTransaction
+Exec = /usr/local/lib/kingstra/kingstra-boot-entries arm
+NeedsTargets

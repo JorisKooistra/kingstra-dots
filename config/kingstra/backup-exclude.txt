@@ -1,0 +1,25 @@
+# Wat de back-up van je persoonlijke map overslaat. Eigen uitzonderingen:
+# ~/.config/kingstra/backup-exclude.local.txt (zelfde vorm, één pad of patroon per regel).
+# Mappen met een CACHEDIR.TAG worden ook overgeslagen.
+~/.cache
+~/.local/share/Trash
+~/.local/share/Steam
+~/.local/share/containers
+~/.local/share/docker
+~/.local/share/baloo
+~/.var/app/*/cache
+~/.config/Claude/vm_bundles
+~/.config/*/Cache
+~/.config/*/Code Cache
+~/.config/*/GPUCache
+~/.config/*/Service Worker/CacheStorage
+~/.mozilla/firefox/*/cache2
+~/.npm/_cacache
+~/.cargo/registry
+~/.dotnet/tools/.store
+~/.electron-gyp
+~/Games
+~/Back-up
+node_modules
+__pycache__
+*.tmp

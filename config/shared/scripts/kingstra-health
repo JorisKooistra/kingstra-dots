@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-health — Korte gezondheidscheck van het systeem
+# =============================================================================
+# Gebruik:
+#   kingstra-health                 alles controleren en tonen
+#   kingstra-health --after-update  zelfde, na kingstra update (inclusief shell)
+#   kingstra-health --notify        voor de timer: problemen als melding,
+#                                   hoogstens één keer per dag per onderwerp
+#   kingstra-health --json          uitkomst als JSON (voor de shell)
+#
+# Elke regel begint met OK, LET OP of FOUT. Exitcode 0 = alles goed,
+# 1 = minstens één LET OP, 2 = minstens één FOUT. Alleen lezen.
+# =============================================================================
+set -uo pipefail
+
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+MODE="show"
+case "${1:-}" in
+    --after-update) MODE="after-update" ;;
+    --notify) MODE="notify" ;;
+    --json) MODE="json" ;;
+    -h|--help) sed -n '3,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+
+BOOT_DIR="${KINGSTRA_BOOT_DIR:-/boot}"
+SMART_FILE="${KINGSTRA_SMART_FILE:-/var/lib/kingstra/smart-warnings}"
+BACKUP_STATUS="$CACHE_HOME/kingstra/backup-status.json"
+UPDATE_LAST_RUN="$STATE_HOME/kingstra/updates/last-run"
+UPDATE_COUNT="$CACHE_HOME/quickshell/package_updates_count"
+NOTIFIED="$CACHE_HOME/kingstra/health-notified"
+
+declare -a LINES=()
+WORST=0
+# add <niveau 0|1|2> <sleutel> <tekst>
+add() {
+    local level="$1" key="$2" text="$3" label="OK"
+    (( level == 1 )) && label="LET OP"
+    (( level == 2 )) && label="FOUT"
+    (( level > WORST )) && WORST=$level
+    LINES+=("$level|$key|$label|$text")
+}
+
+mib_free() { df -Pm "$1" 2>/dev/null | awk 'NR == 2 { print $4 }'; }
+
+check_shell() {
+    [[ -n "${WAYLAND_DISPLAY:-}" ]] || return 0
+    if pgrep -x quickshell >/dev/null 2>&1 || pgrep -x qs >/dev/null 2>&1; then
+        add 0 shell "De shell draait."
+    else
+        add 2 shell "De shell draait niet. Start hem met: kingstra restart"
+    fi
+}
+
+check_units() {
+    local sys user
+    sys="$(systemctl --failed --no-legend --plain 2>/dev/null | awk '{ print $1 }' | paste -sd ' ')"
+    user="$(systemctl --user --failed --no-legend --plain 2>/dev/null | awk '{ print $1 }' | paste -sd ' ')"
+    if [[ -z "$sys$user" ]]; then
+        add 0 units "Geen mislukte diensten."
+    else
+        add 1 units "Mislukte diensten: ${sys}${sys:+ }${user}. Bekijk met: systemctl status <naam>"
+    fi
+}
+
+# Elke geïnstalleerde kernel moet met initramfs op /boot staan, anders start
+# hij niet. Komt voor als /boot vol of niet gekoppeld was tijdens de update.
+# /boot (vfat) is vaak alleen voor root leesbaar; dan via een lopende
+# sudo-sessie (na kingstra update), anders slaan we de check over.
+boot_test() {
+    if [[ -r "$BOOT_DIR" && -x "$BOOT_DIR" ]]; then
+        test -f "$1"
+    else
+        sudo -n test -f "$1" 2>/dev/null
+    fi
+}
+
+boot_readable() {
+    [[ -r "$BOOT_DIR" && -x "$BOOT_DIR" ]] || sudo -n test -d "$BOOT_DIR" 2>/dev/null
+}
+
+check_kernels() {
+    command -v pacman >/dev/null 2>&1 || return 0
+    boot_readable || return 0
+    local k missing=() n=0
+    for k in $(pacman -Qq linux linux-lts linux-zen linux-hardened 2>/dev/null); do
+        n=$((n + 1))
+        boot_test "$BOOT_DIR/vmlinuz-$k" || missing+=("vmlinuz-$k")
+        boot_test "$BOOT_DIR/initramfs-$k.img" || missing+=("initramfs-$k.img")
+    done
+    (( n > 0 )) || return 0
+    if (( ${#missing[@]} == 0 )); then
+        add 0 kernels "Alle $n kernel(s) staan klaar op $BOOT_DIR."
+    else
+        add 2 kernels "Ontbreekt op $BOOT_DIR: ${missing[*]}. Herstel met: sudo mkinitcpio -P"
+    fi
+}
+
+check_space() {
+    local boot root
+    boot="$(mib_free "$BOOT_DIR")"
+    root="$(mib_free /)"
+    if [[ "$boot" =~ ^[0-9]+$ ]]; then
+        if (( boot < 60 )); then
+            add 2 boot-space "Nog maar ${boot} MB vrij op $BOOT_DIR; de volgende kernel-update past niet."
+        elif (( boot < 120 )); then
+            add 1 boot-space "Nog ${boot} MB vrij op $BOOT_DIR; krap voor een kernel-update."
+        else
+            add 0 boot-space "${boot} MB vrij op $BOOT_DIR."
+        fi
+    fi
+    if [[ "$root" =~ ^[0-9]+$ ]]; then
+        if (( root < 2048 )); then
+            add 2 root-space "Systeemschijf bijna vol: $((root / 1024)) GB vrij. Kingstra herstel › Ruimte maken helpt."
+        elif (( root < 5120 )); then
+            add 1 root-space "Systeemschijf raakt vol: $((root / 1024)) GB vrij."
+        else
+            add 0 root-space "$((root / 1024)) GB vrij op de systeemschijf."
+        fi
+    fi
+}
+
+# Welk menu-item systemd-boot koos staat in een EFI-variabele die iedereen
+# mag lezen. "Kingstra (veilig)" zonder dat je het koos betekent meestal dat
+# de gewone kernel drie keer niet opstartte.
+EFI_SELECTED="${KINGSTRA_EFI_SELECTED:-/sys/firmware/efi/efivars/LoaderEntrySelected-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f}"
+check_boot_fallback() {
+    local entry=""
+    [[ -r "$EFI_SELECTED" ]] || return 0
+    entry="$(tail -c +5 "$EFI_SELECTED" 2>/dev/null | iconv -f UTF-16LE -t UTF-8 2>/dev/null | tr -d '\0')"
+    case "$entry" in
+        kingstra-linux-lts*)
+            add 1 boot "Deze start draait op de veilige kernel. Koos je dat niet zelf, dan startte de gewone kernel niet; kingstra herstel helpt." ;;
+        kingstra-herstel*)
+            add 1 boot "Je bent gestart in Kingstra herstel." ;;
+    esac
+}
+
+check_backup() {
+    [[ -f "$BACKUP_STATUS" ]] || return 0
+    python3 - "$BACKUP_STATUS" <<'PY' 2>/dev/null
+import json, sys, time
+d = json.load(open(sys.argv[1]))
+if not d.get("enabled", True):
+    sys.exit(0)
+last = int(d.get("last_ok") or 0)
+age = (time.time() - last) / 86400 if last else 999
+err = d.get("error") or ""
+if last == 0:
+    print("1|backup|Er is nog geen back-up gemaakt." + (" " + err if err else ""))
+elif age > 3:
+    print("1|backup|Laatste back-up is %d dagen oud.%s" % (age, (" " + err) if err else ""))
+else:
+    print("0|backup|Back-up is bij (%s)." % time.strftime("%d-%m %H:%M", time.localtime(last)))
+PY
+}
+
+check_smart() {
+    if [[ ! -s "$SMART_FILE" ]]; then
+        systemctl is-active --quiet smartd 2>/dev/null && add 0 smart "Schijven gezond (smartd houdt ze in de gaten)."
+        return 0
+    fi
+    add 2 smart "Schijfwaarschuwing: $(tail -n 1 "$SMART_FILE"). Maak nu een back-up."
+}
+
+check_update_age() {
+    local last=0 count=0 days
+    [[ -f "$UPDATE_LAST_RUN" ]] && read -r last < "$UPDATE_LAST_RUN"
+    [[ "$last" =~ ^[0-9]+$ ]] || last=0
+    [[ -f "$UPDATE_COUNT" ]] && read -r count < "$UPDATE_COUNT"
+    [[ "$count" =~ ^[0-9]+$ ]] || count=0
+    (( last > 0 )) || return 0
+    days=$(( ($(date +%s) - last) / 86400 ))
+    if (( days >= 14 && count > 0 )); then
+        add 1 updates "Al $days dagen niet bijgewerkt; er staan $count updates klaar (kingstra update)."
+    fi
+}
+
+check_shell_if_needed() { [[ "$MODE" == "after-update" ]] && check_shell; return 0; }
+
+check_shell_if_needed
+check_units
+check_kernels
+check_space
+check_boot_fallback
+while IFS='|' read -r lvl key text; do
+    [[ -n "$lvl" ]] && add "$lvl" "$key" "$text"
+done < <(check_backup)
+check_smart
+[[ "$MODE" == "notify" || "$MODE" == "show" ]] && check_update_age
+
+case "$MODE" in
+    json)
+        printf '%s\n' "${LINES[@]}" | python3 -c '
+import json, sys
+rows = [l.rstrip("\n").split("|", 3) for l in sys.stdin if l.strip()]
+print(json.dumps([{"level": int(r[0]), "key": r[1], "text": r[3]} for r in rows], ensure_ascii=False))'
+        ;;
+    notify)
+        mkdir -p "$(dirname "$NOTIFIED")"
+        today="$(date +%Y-%m-%d)"
+        for line in "${LINES[@]}"; do
+            IFS='|' read -r lvl key _label text <<< "$line"
+            (( lvl > 0 )) || continue
+            grep -qx "$today $key" "$NOTIFIED" 2>/dev/null && continue
+            urgency="normal"; (( lvl == 2 )) && urgency="critical"
+            notify-send -a Kingstra -u "$urgency" -i dialog-warning "Kingstra" "$text" 2>/dev/null || true
+            printf '%s %s\n' "$today" "$key" >> "$NOTIFIED"
+        done
+        tail -n 50 "$NOTIFIED" > "$NOTIFIED.tmp" 2>/dev/null && mv "$NOTIFIED.tmp" "$NOTIFIED"
+        ;;
+    *)
+        for line in "${LINES[@]}"; do
+            IFS='|' read -r _lvl _key label text <<< "$line"
+            printf '%-6s %s\n' "$label" "$text"
+        done
+        ;;
+esac
+exit "$WORST"

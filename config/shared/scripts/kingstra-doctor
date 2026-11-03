@@ -208,6 +208,50 @@ if [[ -f "$last_update" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+section "Vangnet"
+health="$HOME/.local/bin/kingstra-health"
+if [[ -x "$health" ]]; then
+    while IFS= read -r line; do
+        case "$line" in
+            "OK "*) ok "${line#OK     }" ;;
+            "LET OP "*) warn "${line#LET OP }" ;;
+            "FOUT "*) fail "${line#FOUT   }" ;;
+        esac
+    done < <("$health" 2>/dev/null)
+else
+    warn "kingstra-health ontbreekt" "Draai: kingstra update"
+fi
+
+for unit in kingstra-backup.timer kingstra-health.timer; do
+    systemctl --user is-enabled --quiet "$unit" 2>/dev/null || warn "$unit staat uit" "Aanzetten: systemctl --user enable --now $unit"
+done
+for unit in smartd.service reflector.timer kingstra-update-prefetch.timer; do
+    systemctl is-enabled --quiet "$unit" 2>/dev/null || warn "$unit staat uit" "Wordt gezet door: kingstra update"
+done
+
+if [[ -x /usr/local/lib/kingstra/kingstra-boot-entries ]]; then
+    boot_state="$(/usr/local/lib/kingstra/kingstra-boot-entries status 2>/dev/null)"
+    [[ -n "$boot_state" ]] || boot_state="$(sudo -n /usr/local/lib/kingstra/kingstra-boot-entries status 2>/dev/null)"
+    if grep -q MISLUKT <<< "$boot_state"; then
+        fail "Een kernel startte drie keer niet; de pc gebruikt de veilige kernel" "Draai: kingstra herstel"
+    elif [[ -n "$boot_state" ]]; then
+        ok "Opstartmenu met vangnet (houd spatie ingedrukt voor het menu)"
+    fi
+fi
+
+# Opstarttijd: het BIOS-deel is met software niet sneller te maken.
+if command -v systemd-analyze >/dev/null 2>&1; then
+    times="$(systemd-analyze 2>/dev/null | head -n 1)"
+    firmware="$(sed -nE 's/.* ([0-9.]+)s \(firmware\).*/\1/p' <<< "$times")"
+    if [[ -n "$firmware" ]] && awk -v f="$firmware" 'BEGIN { exit !(f > 15) }'; then
+        warn "Het BIOS doet ${firmware%.*} s over het opstarten (${times#Startup finished in })" \
+             "Zet in het BIOS Fast Boot aan en netwerkstart (PXE) uit; dat scheelt vaak 20-30 s"
+    elif [[ -n "$times" ]]; then
+        ok "Opstarttijd: ${times#Startup finished in }"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 printf '\n%s%d OK%s · %s%d let op%s · %s%d fout%s\n' \
     "$C_GREEN" "$N_OK" "$C_RESET" "$C_YELLOW" "$N_WARN" "$C_RESET" "$C_RED" "$N_FAIL" "$C_RESET"
 (( N_FAIL == 0 ))

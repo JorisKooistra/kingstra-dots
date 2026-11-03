@@ -579,6 +579,12 @@ if [[ -f "$SDDM_SYNC" ]]; then
     python3 "$SDDM_SYNC" --wallpaper "${WALLPAPER:-}" \
         || _warn "SDDM synchroniseren mislukt"
 fi
+# Opstartbeeld (Plymouth) volgt het inlogscherm: zelfde kleuren en achtergrond.
+PLYMOUTH_SYNC="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/kingstra-plymouth-sync"
+if [[ -f "$PLYMOUTH_SYNC" && -d /usr/share/plymouth/themes/kingstra ]]; then
+    # Op de achtergrond: vervagen kost een halve seconde en niemand wacht erop.
+    (python3 "$PLYMOUTH_SYNC" >/dev/null 2>&1 || _warn "Opstartbeeld synchroniseren mislukt") &
+fi
 
 # Pywalfox — Firefox UI theming (tabs, toolbar, borders).
 # Pywalfox heeft twee expliciete accentrollen: in dark mode color10/color13 en

@@ -416,6 +416,7 @@ An AUR helper is not a manual prerequisite: `bootstrap.sh` installs `yay-bin` wh
 | 12 | `12_network_resume_fixes` | NetworkManager, Bluetooth, resume and lid-lock services |
 | 13 | `13_monitoring` | lm_sensors, btop validation, bar system data |
 | 14 | `14_profiles` | Hardware detection → `lua/hardware.lua`, GPU, laptop, tablet, fingerprint setup |
+| 14b | `14b_vangnet` | Safety net: boot fallback to LTS, rescue entry, Plymouth, restic backups, smartd, etckeeper, reflector, update prefetch |
 | 15 | `15_finalize` | Final validation, services check, install-complete marker |
 
 Smoke tests for the installer and Lua generators live in `tests/smoke/`.

@@ -1,0 +1,9 @@
+[Unit]
+Description=Kingstra gezondheidscheck, kort na inloggen en elk uur
+
+[Timer]
+OnStartupSec=3min
+OnUnitActiveSec=1h
+
+[Install]
+WantedBy=timers.target

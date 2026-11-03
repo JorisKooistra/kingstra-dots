@@ -8,10 +8,13 @@
 #   kingstra-rollback --list          terugzetpunten tonen
 #   kingstra-rollback --release       weer meegaan met updates
 #   kingstra-rollback --dry-run [..]  laten zien wat er zou gebeuren
+#   kingstra-rollback --system [bestand]  pakketten van de laatste update
+#                                     terug naar de vorige versie
+#   kingstra-rollback --system --list  updates die terug kunnen
 #
 # Na een rollback staan de dotfiles "vast": de updater haalt geen nieuwe
-# dotfiles op tot je --release draait. Systeempakketten worden niet
-# teruggezet; bij een snapper-snapshot staat erbij hoe dat kan.
+# dotfiles op tot je --release draait. --system zet pakketten terug uit de
+# pakketcache, volgens de transactie die kingstra update heeft vastgelegd.
 # =============================================================================
 set -uo pipefail
 
@@ -39,6 +42,87 @@ resolve_repo() {
     printf '%s\n' "$repo"
 }
 
+TX_DIR="$STATE_DIR/updates/transacties"
+YAY_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/yay"
+PKG_CACHE="${KINGSTRA_PKG_CACHE:-/var/cache/pacman/pkg}"
+
+# Het pakketbestand van een oude versie: eerst de pacman-cache, dan die van yay.
+cached_pkg() {
+    local name="$1" ver="$2" f
+    for f in "$PKG_CACHE/$name-$ver"-*.pkg.tar.* "$YAY_CACHE/$name/$name-$ver"-*.pkg.tar.*; do
+        [[ -f "$f" && "$f" != *.sig ]] || continue
+        # name-ver-arch.pkg.tar.*: zorg dat "foo" niet "foo-bar" vangt.
+        [[ "$(basename "$f")" =~ ^"$name"-"$ver"-[^-]+\.pkg\.tar ]] || continue
+        printf '%s\n' "$f"
+        return 0
+    done
+    return 1
+}
+
+system_list() {
+    local f up inst
+    if ! compgen -G "$TX_DIR/*.tsv" >/dev/null; then
+        _say "Nog geen vastgelegde updates. Die komen er bij elke kingstra update bij."
+        return 0
+    fi
+    _say "Updates die terug kunnen (nieuwste eerst):"
+    while IFS= read -r f; do
+        up="$(grep -c '^upgraded' "$f" || true)"
+        inst="$(grep -c '^installed' "$f" || true)"
+        printf '  %s  %s bijgewerkt, %s nieuw  (%s)\n' \
+            "$(date -r "$f" '+%Y-%m-%d %H:%M')" "$up" "$inst" "$f"
+    done < <(ls -1t "$TX_DIR"/*.tsv)
+}
+
+# Pakketten van één update terugzetten naar de versie van daarvoor.
+system_rollback() {
+    local tx="${1:-}" action name old _new pkg reply
+    local -a files=() missing=() added=()
+    if [[ -z "$tx" ]]; then
+        tx="$(ls -1t "$TX_DIR"/*.tsv 2>/dev/null | head -n 1)"
+        [[ -n "$tx" ]] || _die "geen vastgelegde update gevonden (kingstra update legt ze vast)."
+    fi
+    [[ -f "$tx" ]] || _die "bestand niet gevonden: $tx"
+
+    while IFS=$'\t' read -r action name old _new; do
+        case "$action" in
+            upgraded|downgraded|removed)
+                [[ -n "$old" ]] || continue
+                if pkg="$(cached_pkg "$name" "$old")"; then
+                    files+=("$pkg")
+                else
+                    missing+=("$name $old")
+                fi ;;
+            installed) added+=("$name") ;;
+        esac
+    done < "$tx"
+
+    _say "Update van $(date -r "$tx" '+%Y-%m-%d %H:%M') terugdraaien:"
+    _say "  ${#files[@]} pakket(ten) terug naar de vorige versie"
+    (( ${#missing[@]} > 0 )) && _say "  ${#missing[@]} niet meer in de cache (blijven nieuw): ${missing[*]:0:8}"
+    (( ${#added[@]} > 0 )) && _say "  ${#added[@]} nieuw geïnstalleerd (blijven staan): ${added[*]:0:8}"
+    if (( ${#files[@]} == 0 )); then
+        _say "Er valt niets terug te zetten."
+        return 0
+    fi
+    if $DRY_RUN; then
+        printf '  %s\n' "${files[@]}"
+        _say "Dry-run: er is niets gewijzigd."
+        return 0
+    fi
+    if ! $ASSUME_YES; then
+        read -r -p "Doorgaan? [j/N] " reply || reply=""
+        [[ "$reply" =~ ^[jJyY] ]] || { _say "Niets gewijzigd."; return 0; }
+    fi
+    # Geen --noconfirm: pacman toont zelf nog wat er gebeurt en vraagt akkoord.
+    sudo pacman -U --needed -- "${files[@]}" || _die "pacman meldde een fout; zie hierboven."
+    mkdir -p "$STATE_DIR"
+    printf '%s|%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$tx" >> "$STATE_DIR/system-rollbacks.log"
+    _say ""
+    _say "Klaar. Herstart als er een kernel of driver bij zat."
+    _say "Let op: de volgende kingstra update zet deze pakketten weer op de nieuwe versie."
+}
+
 snapper_for_tag() {
     local tag="$1"
     [[ -f "$SNAP_LOG" ]] || return 0
@@ -46,13 +130,25 @@ snapper_for_tag() {
 }
 
 args=()
+SYSTEM=false
+ASSUME_YES=false
 for arg in "$@"; do
     case "$arg" in
         --dry-run) DRY_RUN=true ;;
+        --system|systeem) SYSTEM=true ;;
+        --yes|-y) ASSUME_YES=true ;;
         *) args+=("$arg") ;;
     esac
 done
 set -- "${args[@]+"${args[@]}"}"
+
+if $SYSTEM; then
+    case "${1:-}" in
+        --list|list) system_list ;;
+        *) system_rollback "${1:-}" ;;
+    esac
+    exit $?
+fi
 
 REPO="$(resolve_repo)" || _die "geen kingstra-dots git-repo gevonden."
 
@@ -79,7 +175,7 @@ case "${1:-}" in
         exit 0
         ;;
     -h|--help|help)
-        sed -n '3,14p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '3,17p' "$0" | sed 's/^# \{0,1\}//'
         exit 0
         ;;
 esac

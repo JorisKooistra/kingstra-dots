@@ -55,6 +55,10 @@ Onderhoud
   doctor                   installatie controleren, met hersteladvies
   snapshot [list|create]   terugzetpunten tonen of maken
   rollback [--list|--release|<tag>]  dotfiles terug naar een terugzetpunt
+  rollback --system [--list]  pakketten van de laatste update terug naar de vorige versie
+  herstel                  herstelmenu, werkt ook zonder bureaublad
+  gezondheid               korte check: schijven, back-up, opstart, updates
+  backup [run|status|list|browse|close|restore <pad>]  back-up van je persoonlijke map
   refresh <onderdeel>      één config terug naar de standaard (bv. kitty)
   restart                  shell herstarten (bar, panelen, overzicht)
   install [opties]         installer draaien (zie install.sh --help)
@@ -97,7 +101,10 @@ case "$cmd" in
     doctor|check)  run kingstra-doctor "$@" ;;
     snapshot)      run kingstra-snapshot "$@" ;;
     rollback|terug) run kingstra-rollback "$@" ;;
-    refresh|herstel) run kingstra-refresh "$@" ;;
+    refresh) run kingstra-refresh "$@" ;;
+    herstel|rescue) run kingstra-herstel "$@" ;;
+    gezondheid|health) run kingstra-health "$@" ;;
+    backup|back-up) run kingstra-backup "${@:-status}" ;;
     restart|herstart) run kingstra-session-start restart-shell ;;
     install)
         repo="$(resolve_repo)" || { echo "kingstra: repo niet gevonden" >&2; exit 1; }

@@ -1,0 +1,10 @@
+[Unit]
+Description=Kingstra tweede back-upkopie, wekelijks
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

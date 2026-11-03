@@ -8,7 +8,23 @@ set -uo pipefail
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/quickshell"
 COUNT_SCRIPT="${HOME}/.config/quickshell/package_updates.sh"
 AUDIT_SCRIPT="${HOME}/.config/quickshell/package_audit.sh"
-SNAPSHOT_CMD="${KINGSTRA_SNAPSHOT_CMD:-$HOME/.local/bin/kingstra-snapshot}"
+SELF_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+SHARED_SCRIPTS="$(cd "$SELF_DIR/../shared/scripts" 2>/dev/null && pwd -P || true)"
+# Eerst de geïnstalleerde versie, anders die uit de repo: bij de eerste
+# update na een nieuwe release staat ~/.local/bin nog niet klaar.
+find_tool() {
+    local name="$1"
+    if [[ -x "$HOME/.local/bin/$name" ]]; then
+        printf '%s' "$HOME/.local/bin/$name"
+    elif [[ -n "$SHARED_SCRIPTS" && -f "$SHARED_SCRIPTS/$name" ]]; then
+        printf '%s' "$SHARED_SCRIPTS/$name"
+    fi
+}
+SNAPSHOT_CMD="${KINGSTRA_SNAPSHOT_CMD:-$(find_tool kingstra-snapshot)}"
+HEALTH_CMD="$(find_tool kingstra-health)"
+ROLLBACK_CMD="$(find_tool kingstra-rollback)"
+PACMAN_LOG="${KINGSTRA_PACMAN_LOG:-/var/log/pacman.log}"
+RESULT_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/update-result.json"
 HOLD_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/update-hold"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/updates"
 LAST_RUN_FILE="$STATE_DIR/last-run"
@@ -31,7 +47,7 @@ INTERACTIVE=false
 UI=false
 [[ -t 0 && -t 1 && "${TERM:-}" != "dumb" ]] && UI=true
 
-STEPS_TOTAL=8
+STEPS_TOTAL=9
 STEP_NUM=0
 STEP_TITLE=""
 SUMMARY=()
@@ -195,6 +211,7 @@ run_quiet() {
     local label="$1"
     shift
     local tmp rc=0 last="" counter="" done="" total="" text=""
+    QUIET_TAIL=""
     tmp="$(mktemp)"
     to_log "\$ $*"
     "$@" </dev/null >"$tmp" 2>&1 &
@@ -213,6 +230,7 @@ run_quiet() {
     done
     wait "$pid" || rc=$?
     [[ -n "$LOG_FILE" ]] && cat "$tmp" >> "$LOG_FILE"
+    QUIET_TAIL="$(tr '\r' '\n' < "$tmp" | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | awk 'NF' | tail -n 8)"
     live_clear
     if (( rc != 0 )); then
         printf '    %sLaatste uitvoer:%s\n' "$C_DIM" "$C_RESET"
@@ -246,6 +264,7 @@ ask_yes() {
     [[ ! "$reply" =~ ^[nN] ]]
 }
 
+QUIET_TAIL=""
 REPO_COUNT=0
 AUR_COUNT=0
 FLATPAK_COUNT=0
@@ -340,8 +359,10 @@ check_arch_news() {
     fi
 }
 
+# .pacnew en .pacsave: per bestand het verschil tonen en samen beslissen.
+# Zonder terminal alleen melden, zoals voorheen.
 report_pacnew() {
-    local files=""
+    local files="" f base reply n=0 kept=0 took=0 later=0 stamp
     command -v pacman >/dev/null 2>&1 || return 0
     files="$(find /etc -xdev \( -name '*.pacnew' -o -name '*.pacsave' \) 2>/dev/null | sort)"
     if [[ -z "$files" ]]; then
@@ -349,7 +370,160 @@ report_pacnew() {
         return 0
     fi
     to_log "$files"
-    result warn "$(count_lines "$files") configbestand(en) wachten op sudo pacdiff: $(inline_names "$files")"
+    n="$(count_lines "$files")"
+    if ! $UI || ! ask_yes "$n configbestand(en) hebben een nieuwe versie. Nu samen nalopen?"; then
+        result warn "$n configbestand(en) wachten nog: $(inline_names "$files") (later: kingstra update)"
+        return 0
+    fi
+    stamp="$(date +%Y%m%d)"
+    while IFS= read -r f; do
+        [[ -n "$f" ]] || continue
+        if [[ "$f" == *.pacsave ]]; then
+            log "${C_BOLD}$f${C_RESET} ${C_DIM}(oude instellingen van een verwijderd of vervangen pakket)${C_RESET}"
+            if ask_no "Weggooien?"; then
+                sudo rm -f -- "$f" && took=$((took + 1))
+            else
+                later=$((later + 1))
+            fi
+            continue
+        fi
+        base="${f%.pacnew}"
+        log "${C_BOLD}$base${C_RESET}"
+        if [[ "$base" == /etc/pacman.d/mirrorlist ]] && systemctl is-enabled --quiet reflector.timer 2>/dev/null; then
+            log "${C_DIM}reflector houdt deze lijst zelf bij; de nieuwe versie is niet nodig.${C_RESET}"
+            sudo rm -f -- "$f" && kept=$((kept + 1))
+            continue
+        fi
+        sudo diff -u --label "nu" --label "nieuw" "$base" "$f" 2>/dev/null \
+            | tail -n +3 | head -n 30 | sed 's/^/      /'
+        live_clear
+        read -r -p "    ${C_CYAN}${G_ASK}${C_RESET} [n]ieuwe overnemen, [e]igen houden, [l]ater ${C_DIM}[l]${C_RESET} " reply || reply=""
+        case "$reply" in
+            n|N)
+                sudo cp -a -- "$base" "$base.kingstra-$stamp" 2>/dev/null
+                if sudo mv -f -- "$f" "$base"; then
+                    took=$((took + 1))
+                    to_log "overgenomen: $f (oude versie: $base.kingstra-$stamp)"
+                fi ;;
+            e|E)
+                sudo rm -f -- "$f" && kept=$((kept + 1)) && to_log "eigen gehouden: $base" ;;
+            *) later=$((later + 1)) ;;
+        esac
+    done <<< "$files"
+    if (( later > 0 )); then
+        result warn "Configbestanden: $took nieuw, $kept eigen gehouden, $later voor later."
+    else
+        result ok "Configbestanden: $took nieuw, $kept eigen gehouden."
+    fi
+}
+
+# Wat pacman echt deed sinds $1 (lokale tijd, YYYY-mm-ddTHH:MM:SS), uit
+# pacman.log. Schrijft de transactie weg, zodat `kingstra rollback --system`
+# haar kan terugdraaien.
+TX_UPGRADED=0
+TX_INSTALLED=0
+TX_FILE=""
+record_transaction() {
+    local since="$1" lines=""
+    [[ -r "$PACMAN_LOG" ]] || return 1
+    lines="$(awk -v since="$since" '
+        /^\[[0-9]{4}-[0-9]{2}-[0-9]{2}T[^]]*\] \[ALPM\] (upgraded|installed|downgraded|removed) / {
+            ts = substr($1, 2, 19)
+            if (ts < since) next
+            action = $3; name = $4
+            ver = $0; sub(/^[^(]*\(/, "", ver); sub(/\)$/, "", ver)
+            old = ""; new = ver
+            if (index(ver, " -> ") > 0) { split(ver, v, " -> "); old = v[1]; new = v[2] }
+            if (action == "removed") { old = ver; new = "" }
+            printf "%s\t%s\t%s\t%s\n", action, name, old, new
+        }' "$PACMAN_LOG" 2>/dev/null)"
+    TX_UPGRADED="$(printf '%s\n' "$lines" | grep -c '^upgraded' || true)"
+    TX_INSTALLED="$(printf '%s\n' "$lines" | grep -c '^installed' || true)"
+    [[ -n "$lines" ]] || return 0
+    mkdir -p "$STATE_DIR/transacties" 2>/dev/null || return 0
+    TX_FILE="$STATE_DIR/transacties/$(date +%Y%m%d-%H%M%S).tsv"
+    printf '%s\n' "$lines" > "$TX_FILE"
+    # Alleen de laatste 20 transacties bewaren.
+    find "$STATE_DIR/transacties" -name '*.tsv' -printf '%T@ %p\n' 2>/dev/null | sort -rn \
+        | tail -n +21 | cut -d' ' -f2- | xargs -r rm -f --
+    to_log "Transactie: $TX_FILE ($TX_UPGRADED bijgewerkt, $TX_INSTALLED nieuw)"
+}
+
+# Controleert of de update echt gelukt is. yay kan met code 0 eindigen terwijl
+# pacman niets installeerde (2 november: "bijgewerkt", maar 88 updates open);
+# dan zeggen we dat eerlijk, met de laatste regels van yay erbij.
+verify_arch() {
+    local since="$1" rc="$2" remaining="" n_left=0
+    record_transaction "$since" || true
+    if command -v checkupdates >/dev/null 2>&1; then
+        live "Controleren of alles erop staat"
+        remaining="$(timeout 90 checkupdates 2>/dev/null || true)"
+        live_clear
+    fi
+    n_left="$(count_lines "$remaining")"
+    to_log "-- Nog open na de update ($n_left) --" "$remaining"
+
+    if (( rc == 0 && REPO_COUNT > 0 && TX_UPGRADED + TX_INSTALLED == 0 )); then
+        result fail "Er is niets geïnstalleerd, terwijl er $REPO_COUNT updates klaarstonden."
+        [[ -n "$QUIET_TAIL" ]] && log_block "$(printf '%s\n' "$QUIET_TAIL" | sed 's/^/  /')"
+        log "Probeer opnieuw met: kingstra update --interactief"
+        return 1
+    fi
+    if (( rc != 0 )); then
+        result fail "Arch/AUR eindigde met exitcode $rc ($TX_UPGRADED bijgewerkt voordat het stopte)."
+        return "$rc"
+    fi
+    if (( n_left > 0 )); then
+        result warn "$TX_UPGRADED pakketten bijgewerkt, maar $n_left staan nog open: $(inline_names "$remaining")"
+        return 0
+    fi
+    if (( TX_UPGRADED + TX_INSTALLED == 0 )); then
+        result ok "Arch/AUR was al actueel."
+    else
+        result ok "Arch/AUR bijgewerkt: $TX_UPGRADED pakketten nieuwer, $TX_INSTALLED nieuw."
+    fi
+}
+
+# Na de update: draait de shell, staan de kernels op /boot, is er ruimte?
+# Bij een echte fout bieden we meteen terugdraaien aan.
+check_after_update() {
+    local out="" rc=0
+    if [[ -z "$HEALTH_CMD" ]]; then
+        log "kingstra-health niet gevonden; controle overgeslagen."
+        return 0
+    fi
+    out="$(bash "$HEALTH_CMD" --after-update 2>&1)" || rc=$?
+    to_log "$out"
+    case "$rc" in
+        0) result ok "Controle na de update: alles in orde." ;;
+        1) result warn "Controle na de update: let op."
+           log_block "$(printf '%s\n' "$out" | grep -v '^OK' | sed 's/^/  /')" ;;
+        *) result fail "Controle na de update vond een probleem."
+           log_block "$(printf '%s\n' "$out" | grep -v '^OK' | sed 's/^/  /')"
+           if [[ -n "$TX_FILE" && -n "$ROLLBACK_CMD" ]] && $UI \
+               && ask_no "Deze update terugdraaien (pakketten naar de vorige versie)?"; then
+               bash "$ROLLBACK_CMD" --system "$TX_FILE"
+           fi ;;
+    esac
+}
+
+# Uitkomst voor het update-venster in de shell.
+write_result() {
+    local code="$1"
+    mkdir -p "$(dirname "$RESULT_FILE")" 2>/dev/null || return 0
+    python3 -c '
+import json, os, sys, time
+path, code, log, tx, *rows = sys.argv[1:]
+items = []
+for row in rows:
+    kind, _, rest = row.partition("|")
+    step, _, text = rest.partition("|")
+    items.append({"kind": kind, "step": step, "text": text})
+with open(path + ".tmp", "w") as fh:
+    json.dump({"time": int(time.time()), "exit": int(code), "log": log,
+               "transaction": tx, "items": items}, fh, ensure_ascii=False)
+os.replace(path + ".tmp", path)
+' "$RESULT_FILE" "$code" "${LOG_FILE:-}" "${TX_FILE:-}" "${SUMMARY[@]+"${SUMMARY[@]}"}" 2>/dev/null || true
 }
 
 report_reboot() {
@@ -381,8 +555,9 @@ cleanup_system() {
     fi
 
     if command -v paccache >/dev/null 2>&1; then
-        if ask_no "Oude pakketcache opruimen (houdt de laatste 2 versies)?"; then
-            sudo paccache -rk2 && sudo paccache -ruk0 && log "Pakketcache opgeruimd."
+        if ask_no "Oude pakketcache opruimen (houdt de laatste 3 versies)?"; then
+            # Drie versies: de huidige plus twee om naar terug te kunnen.
+            sudo paccache -rk3 && sudo paccache -ruk0 && log "Pakketcache opgeruimd."
         fi
     fi
 
@@ -526,7 +701,7 @@ update_dotfiles() {
 # Terugzetpunt vóór er iets verandert: git-tag van de dotfiles en, op btrfs
 # met snapper, een systeemsnapshot. Mislukt dat, dan gaat de update door.
 make_restore_point() {
-    if [[ ! -x "$SNAPSHOT_CMD" ]]; then
+    if [[ -z "$SNAPSHOT_CMD" || ! -f "$SNAPSHOT_CMD" ]]; then
         result warn "kingstra-snapshot niet gevonden; geen terugzetpunt."
         return 0
     fi
@@ -537,7 +712,7 @@ make_restore_point() {
         sudo -v || true
     fi
     local out=""
-    if out="$("$SNAPSHOT_CMD" create "kingstra: voor update" 2>&1)"; then
+    if out="$(bash "$SNAPSHOT_CMD" create "kingstra: voor update" 2>&1)"; then
         to_log "$out"
         result ok "Terugzetpunt gemaakt (terug met: kingstra-rollback)."
     else
@@ -607,6 +782,7 @@ update_flatpak() {
 
 finish() {
     local code="$1" line kind title msg glyph color
+    write_result "$code"
     if $UI; then
         live_clear
         printf '\n  %s%s%s %s100%%%s  %sKlaar%s\n' "$C_GREEN" "$(bar 1 1 14)" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET"
@@ -669,13 +845,12 @@ make_restore_point
 
 section "Arch/AUR"
 arch_exit=0
+arch_since="$(date '+%Y-%m-%dT%H:%M:%S')"
 update_arch || arch_exit=$?
-[[ $arch_exit -eq 0 ]] || overall_exit=$arch_exit
-if [[ $arch_exit -eq 0 ]]; then
-    result ok "Arch/AUR bijgewerkt."
-else
-    result fail "Arch/AUR eindigde met exitcode $arch_exit."
+if ! verify_arch "$arch_since" "$arch_exit"; then
+    [[ $arch_exit -eq 0 ]] && arch_exit=1
 fi
+[[ $arch_exit -eq 0 ]] || overall_exit=$arch_exit
 
 section "Flatpak"
 flatpak_exit=0
@@ -718,6 +893,9 @@ fi
 section "Na de update"
 report_pacnew
 report_reboot
+
+section "Controle"
+check_after_update
 
 section "Opruimen"
 cleanup_system

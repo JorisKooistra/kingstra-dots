@@ -43,6 +43,7 @@ ALL_PHASES=(
     12_network_resume_fixes
     13_monitoring
     14_profiles
+    14b_vangnet
     15_finalize
 )
 

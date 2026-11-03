@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""Opstartbeeld (Plymouth) in de kleuren en achtergrond van het actieve thema.
+
+  kingstra-plymouth-sync            afbeeldingen bijwerken (bij elke themawissel)
+  kingstra-plymouth-sync --install  thema plaatsen en kiezen (vraagt sudo)
+
+Het thema staat in /usr/share/plymouth/themes/kingstra en is van de gebruiker,
+net als het SDDM-thema, zodat een themawissel zonder wachtwoord kan. Plymouth
+start vanaf de systeemschijf (niet uit de initramfs), dus nieuwe kleuren zijn
+er bij de volgende opstart meteen.
+
+Kleuren en achtergrond komen uit het SDDM-thema (Colors.qml, background.img),
+zodat opstartbeeld en inlogscherm precies op elkaar aansluiten.
+"""
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+SOURCE = Path(__file__).resolve().parents[2] / "plymouth" / "kingstra"
+THEME = Path(os.environ.get("KINGSTRA_PLYMOUTH_DIR", "/usr/share/plymouth/themes/kingstra"))
+SDDM = Path(os.environ.get("KINGSTRA_SDDM_THEME", "/usr/share/sddm/themes/kingstra"))
+REPO_SDDM = Path(__file__).resolve().parents[2] / "sddm" / "themes" / "kingstra"
+
+
+def colors():
+    """Hex-kleuren uit Colors.qml van de greeter (gesynct of de repo-fallback)."""
+    out = {}
+    for path in (REPO_SDDM / "Colors.qml", SDDM / "Colors.qml"):
+        try:
+            text = path.read_text()
+        except OSError:
+            continue
+        for name, value in re.findall(r'property\s+color\s+(\w+)\s*:\s*"(#[0-9a-fA-F]{6,8})"', text):
+            out[name] = value
+    return out
+
+
+def light_theme():
+    try:
+        return re.search(r'property\s+bool\s+light\s*:\s*true', (SDDM / "Style.qml").read_text()) is not None
+    except OSError:
+        return False
+
+
+def rgba(hexcode, alpha=1.0):
+    h = hexcode.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return (r, g, b, int(255 * alpha))
+
+
+def render(dest):
+    from PIL import Image, ImageDraw, ImageFilter
+
+    c = colors()
+    text = c.get("text") or c.get("on_background") or "#cdd6f4"
+    mauve = c.get("mauve") or c.get("secondary") or "#cba6f7"
+    accent = c.get("primary") or mauve
+    surface0 = c.get("surface0") or c.get("surface") or "#313244"
+    base = c.get("base") or c.get("background") or "#1e1e2e"
+    light = light_theme()
+
+    # Achtergrond: zoals de greeter, sterk vervaagd en iets gedimd.
+    bg = None
+    wallpaper = SDDM / "background.img"
+    if wallpaper.exists():
+        try:
+            img = Image.open(wallpaper).convert("RGB")
+            w, h = 1920, 1080
+            scale = max(w / img.width, h / img.height)
+            img = img.resize((max(w, int(img.width * scale)), max(h, int(img.height * scale))), Image.LANCZOS)
+            left, top = (img.width - w) // 2, (img.height - h) // 2
+            img = img.crop((left, top, left + w, top + h)).filter(ImageFilter.GaussianBlur(40))
+            shade = Image.new("RGB", (w, h), rgba(base)[:3] if light else (0, 0, 0))
+            bg = Image.blend(img, shade, 0.38 if light else 0.25)
+        except Exception as exc:  # kapotte afbeelding: effen achtergrond
+            print("Achtergrond overgeslagen:", exc, file=sys.stderr)
+    if bg is None:
+        bg = Image.new("RGB", (1920, 1080), rgba(base)[:3])
+    bg.save(dest / "background.png", optimize=True)
+
+    # Ringen en bol op 2x, daarna verkleind voor zachte randen.
+    def ring(size, color, width, alpha, arc=None):
+        s = size * 2
+        im = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        pad = width * 2
+        box = (pad, pad, s - pad - 1, s - pad - 1)
+        if arc:
+            d.ellipse(box, outline=rgba(color, alpha * 0.25), width=width * 2)
+            d.arc(box, arc[0], arc[1], fill=rgba(color, alpha), width=width * 3)
+        else:
+            d.ellipse(box, outline=rgba(color, alpha), width=width * 2)
+        return im.resize((size, size), Image.LANCZOS)
+
+    ring(360, mauve, 1, 1.0).save(dest / "ring-outer.png")
+    ring(300, text, 1, 1.0).save(dest / "ring-mid.png")
+    ring(240, accent, 2, 1.0, arc=(-90, 30)).save(dest / "ring-arc.png")
+
+    s = 340
+    orb = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(orb)
+    d.ellipse((4, 4, s - 5, s - 5), fill=rgba(surface0, 0.9), outline=rgba(text), width=4)
+    # Aan/uit-teken als in de greeter, getekend in plaats van een lettertype.
+    cx = cy = s // 2
+    r = 46
+    d.arc((cx - r, cy - r, cx + r, cy + r), -60, 240, fill=rgba(text), width=10)
+    d.line((cx, cy - r - 10, cx, cy - 6), fill=rgba(text), width=10)
+    orb.resize((170, 170), Image.LANCZOS).save(dest / "orb.png")
+
+
+def sync(theme_dir):
+    for name in ("kingstra.plymouth", "kingstra.script"):
+        shutil.copyfile(SOURCE / name, theme_dir / name)
+    render(theme_dir)
+
+
+def install_system(stage, uid, gid):
+    if os.geteuid() != 0:
+        raise SystemExit("Systeeminstallatie vereist sudo")
+    THEME.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(stage, THEME, dirs_exist_ok=True)
+    for path in [THEME, *THEME.rglob("*")]:
+        os.chown(path, uid, gid)
+        path.chmod(0o755 if path.is_dir() else 0o644)
+    # Zonder -R: het thema komt niet in de initramfs, Plymouth leest het van /usr.
+    subprocess.run(["plymouth-set-default-theme", "kingstra"], check=True)
+    print("Opstartbeeld ingesteld: kingstra")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--install", action="store_true")
+    parser.add_argument("--system-install", nargs=3, metavar=("STAGE", "UID", "GID"), help=argparse.SUPPRESS)
+    args = parser.parse_args()
+    if args.system_install:
+        stage, uid, gid = args.system_install
+        install_system(Path(stage), int(uid), int(gid))
+    elif args.install:
+        if os.geteuid() == 0:
+            raise SystemExit("Start --install zonder sudo, vanuit je eigen sessie.")
+        with tempfile.TemporaryDirectory(prefix="kingstra-plymouth-") as temp:
+            stage = Path(temp)
+            sync(stage)
+            subprocess.run(["sudo", "/usr/bin/python3", "-I", str(Path(__file__).resolve()),
+                            "--system-install", str(stage), str(os.getuid()), str(os.getgid())], check=True)
+    elif THEME.is_dir() and os.access(THEME, os.W_OK):
+        sync(THEME)
+
+
+if __name__ == "__main__":
+    main()

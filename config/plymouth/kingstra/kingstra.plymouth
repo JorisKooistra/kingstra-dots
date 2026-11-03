@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Kingstra
+Description=Kingstra-opstartbeeld: bol met ringen in de kleuren van je thema
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/kingstra
+ScriptFile=/usr/share/plymouth/themes/kingstra/kingstra.script

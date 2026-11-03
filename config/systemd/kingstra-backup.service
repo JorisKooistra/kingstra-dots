@@ -1,0 +1,9 @@
+[Unit]
+Description=Kingstra back-up van je persoonlijke map (restic)
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+ExecStart=%h/.local/bin/kingstra-backup run

@@ -1,0 +1,11 @@
+[Unit]
+Description=Kingstra: updates dagelijks alvast downloaden
+
+[Timer]
+OnCalendar=*-*-* 03:30
+OnBootSec=20min
+Persistent=true
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target

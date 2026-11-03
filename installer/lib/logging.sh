@@ -192,6 +192,7 @@ _ui_phase_title() {
         12_network_resume_fixes) echo "Netwerk en slaapstand" ;;
         13_monitoring) echo "Monitoring" ;;
         14_profiles) echo "Hardwareprofiel" ;;
+        14b_vangnet) echo "Vangnet" ;;
         15_finalize) echo "Afronden" ;;
         *) echo "$1" ;;
     esac

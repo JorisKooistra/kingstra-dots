@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-herstel — Herstelmenu dat zonder bureaublad werkt
+# =============================================================================
+# Voor als Hyprland of de shell niet meer start. Werkt op een tekstscherm
+# (Ctrl+Alt+F3, inloggen, `kingstra herstel`) en vanuit de opstartoptie
+# "Kingstra herstel", die zonder inlogscherm opstart.
+# =============================================================================
+set -uo pipefail
+
+BIN="$HOME/.local/bin"
+SELF_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+
+B=$'\033[1m' D=$'\033[2m' R=$'\033[0m' Y=$'\033[33m'
+[[ -t 1 ]] || { B="" D="" R="" Y=""; }
+
+tool() {
+    local name="$1"
+    if [[ -x "$BIN/$name" ]]; then printf '%s' "$BIN/$name"
+    elif [[ -f "$SELF_DIR/$name" ]]; then printf '%s' "$SELF_DIR/$name"
+    fi
+}
+
+run_tool() {
+    local t; t="$(tool "$1")"; shift
+    if [[ -z "$t" ]]; then echo "Niet gevonden: $1"; return 1; fi
+    bash "$t" "$@"
+}
+
+pause() { echo; read -r -p "${D}Enter = terug naar het menu${R} " _ || true; }
+
+ask() { local r; read -r -p "$1 [j/N] " r || return 1; [[ "$r" =~ ^[jJyY] ]]; }
+
+graphical_running() { systemctl is-active --quiet display-manager.service 2>/dev/null; }
+
+free_space() {
+    df -h / /boot 2>/dev/null | sed 's/^/  /'
+    echo
+    if command -v paccache >/dev/null 2>&1 && ask "Oude pakketversies opruimen (houdt er 2 per pakket)?"; then
+        sudo paccache -rk2 && sudo paccache -ruk0
+    fi
+    if [[ -d "$HOME/.cache/yay" ]] && ask "AUR-bouwmap leegmaken ($(du -sh "$HOME/.cache/yay" 2>/dev/null | cut -f1))?"; then
+        rm -rf "${HOME:?}/.cache/yay/"*
+    fi
+    if ask "Systeemlogboek inkorten tot 200 MB?"; then
+        sudo journalctl --vacuum-size=200M
+    fi
+    if [[ -d "$HOME/.cache/spotify" ]] && ask "Spotify-cache leegmaken ($(du -sh "$HOME/.cache/spotify" 2>/dev/null | cut -f1))?"; then
+        rm -rf "${HOME:?}/.cache/spotify/"*
+    fi
+    echo
+    df -h / /boot 2>/dev/null | sed 's/^/  /'
+}
+
+reset_shell() {
+    echo "De shell-cache gaat weg; je instellingen blijven staan."
+    ask "Doorgaan?" || return 0
+    rm -rf "${HOME:?}/.cache/quickshell/qmlcache" "${HOME:?}/.cache/kingstra/qmlcache" 2>/dev/null
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+        run_tool kingstra-session-start restart-shell
+    else
+        echo "Klaar. De shell start schoon bij de volgende keer inloggen."
+    fi
+}
+
+while true; do
+    clear 2>/dev/null || true
+    printf '\n  %sKingstra herstel%s  %s%s%s\n\n' "$B" "$R" "$D" "$(uname -r)" "$R"
+    if /usr/local/lib/kingstra/kingstra-boot-entries status 2>/dev/null | grep -q MISLUKT \
+        || sudo -n /usr/local/lib/kingstra/kingstra-boot-entries status 2>/dev/null | grep -q MISLUKT; then
+        printf '  %sDe nieuwe kernel startte niet; je draait op de veilige kernel.%s\n' "$Y" "$R"
+        printf '  %sMeestal helpt 1 (laatste update terugdraaien) en daarna opnieuw opstarten.%s\n\n' "$Y" "$R"
+    fi
+    cat <<TXT
+  1  Laatste update terugdraaien    pakketten naar de vorige versie
+  2  Dotfiles terugzetten           naar het terugzetpunt vóór de laatste update
+  3  Shell resetten                 cache weg, instellingen blijven
+  4  Ruimte maken                   pakketcache, AUR-map, logboek
+  5  Controle                       gezondheid en installatie nakijken
+  6  Foutmeldingen van deze start
+  7  Netwerk opnieuw starten
+  8  Bureaublad starten             inlogscherm openen
+  9  Opnieuw opstarten
+  q  Sluiten
+
+TXT
+    read -r -p "  Keuze: " choice || exit 0
+    echo
+    case "$choice" in
+        1) run_tool kingstra-rollback --system; pause ;;
+        2) run_tool kingstra-rollback --list; echo
+           ask "Naar het laatste terugzetpunt?" && run_tool kingstra-rollback; pause ;;
+        3) reset_shell; pause ;;
+        4) free_space; pause ;;
+        5) run_tool kingstra-health; echo; run_tool kingstra-doctor --quiet; pause ;;
+        6) journalctl -b -p err --no-pager | tail -n 40; pause ;;
+        7) sudo systemctl restart NetworkManager && echo "Netwerk herstart."; pause ;;
+        8) if graphical_running; then echo "Het bureaublad draait al (Ctrl+Alt+F1 of F2)."; pause
+           else sudo systemctl start display-manager.service; exit 0; fi ;;
+        9) systemctl reboot ;;
+        q|Q|"") exit 0 ;;
+        *) ;;
+    esac
+done

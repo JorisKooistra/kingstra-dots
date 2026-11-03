@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""Kingstra-opstartmenu voor systemd-boot, met automatisch terugvallen.
+
+  kingstra-boot-entries setup        menu-items schrijven (vraagt root)
+  kingstra-boot-entries arm [pkgbase...]  teller zetten na een kernel-update
+  kingstra-boot-entries status       tonen wat er staat
+
+Drie items, gesorteerd in deze volgorde:
+  Kingstra            linux, stil opstarten met opstartbeeld
+  Kingstra (veilig)   linux-lts, zelfde opties
+  Kingstra herstel    tekstscherm zonder inlogscherm, voor `kingstra herstel`
+
+Een nieuwe kernel krijgt drie pogingen (systemd-boot boot counting,
+bestandsnaam kingstra-linux+3.conf). kingstra-boot-ok.service meldt de opstart
+als geslaagd zodra het inlogscherm een paar seconden draait. Na drie mislukte
+pogingen zet systemd-boot het item achteraan en start vanzelf "Kingstra
+(veilig)". De bestaande items (bijvoorbeeld van archinstall) blijven staan.
+De opties (root=, enz.) komen uit het bestaande item, nooit uit een gok.
+"""
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ESP = Path(os.environ.get("KINGSTRA_ESP", "/boot"))
+ENTRIES = ESP / "loader" / "entries"
+LOADER = ESP / "loader" / "loader.conf"
+BACKUPS = Path(os.environ.get("KINGSTRA_BOOT_BACKUPS", "/var/backups/kingstra-boot"))
+TRIES = 3
+
+QUIET = ["quiet", "splash", "loglevel=3", "rd.udev.log_level=3",
+         "systemd.show_status=auto", "vt.global_cursor_default=0"]
+# Deze opties beheren wij; ze komen niet dubbel uit het bestaande item mee.
+MANAGED = re.compile(r"^(quiet|splash|loglevel=.*|rd\.udev\.log_level=.*|systemd\.show_status=.*|"
+                     r"vt\.global_cursor_default=.*|systemd\.unit=.*|plymouth\..*)$")
+
+ITEMS = [
+    # naam, pkgbase, titel, versie (hoger = eerder in het menu), extra opties, stil
+    ("kingstra-linux", "linux", "Kingstra", "3", [], True),
+    ("kingstra-linux-lts", "linux-lts", "Kingstra (veilig)", "2", [], True),
+    ("kingstra-herstel", None, "Kingstra herstel", "1", ["systemd.unit=multi-user.target"], False),
+]
+COUNTER = re.compile(r"\+\d+(-\d+)?$")
+
+
+def parse(path):
+    data = {"initrd": []}
+    for raw in path.read_text(errors="replace").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, _, value = line.partition(" ")
+        value = value.strip()
+        if key == "initrd":
+            data["initrd"].append(value)
+        else:
+            data[key] = value
+    return data
+
+
+def stem(path):
+    """Naam zonder .conf en zonder teller (+3 of +2-1)."""
+    return COUNTER.sub("", path.name[:-5])
+
+
+def find_base(pkgbase):
+    """Het bestaande, niet-fallback item voor deze kernel."""
+    want = f"/vmlinuz-{pkgbase}"
+    for path in sorted(ENTRIES.glob("*.conf")):
+        if stem(path).startswith("kingstra-"):
+            continue
+        data = parse(path)
+        if data.get("linux", "").strip() != want:
+            continue
+        if any("fallback" in i for i in data["initrd"]) or "fallback" in path.name:
+            continue
+        if data.get("options"):
+            return data
+    return None
+
+
+def current(name):
+    for path in ENTRIES.glob(f"{name}*.conf"):
+        if stem(path) == name:
+            return path
+    return None
+
+
+def options_of(base, extra, quiet):
+    opts = [o for o in base.get("options", "").split() if not MANAGED.match(o)]
+    return " ".join(opts + (QUIET if quiet else []) + extra)
+
+
+def write_entry(name, base, pkgbase, title, version, extra, quiet, counter):
+    lines = [
+        "# Beheerd door kingstra-boot-entries; wijzigingen gaan bij een update verloren.",
+        f"title {title}",
+        "sort-key kingstra",
+        f"version {version}",
+        f"linux /vmlinuz-{pkgbase}",
+    ]
+    lines += [f"initrd {i}" for i in base["initrd"]]
+    lines.append(f"options {options_of(base, extra, quiet)}")
+    text = "\n".join(lines) + "\n"
+    old = current(name)
+    if old is not None and old.read_text(errors="replace") == text and not counter:
+        return old
+    target = ENTRIES / (f"{name}+{TRIES}.conf" if counter else f"{name}.conf")
+    tmp = ENTRIES / f".{name}.tmp"
+    tmp.write_text(text)
+    os.chmod(tmp, 0o644)
+    tmp.replace(target)
+    if old is not None and old != target:
+        old.unlink(missing_ok=True)
+    return target
+
+
+def backup():
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    dest = BACKUPS / stamp
+    dest.mkdir(parents=True, exist_ok=True)
+    if LOADER.exists():
+        shutil.copy2(LOADER, dest / "loader.conf")
+    shutil.copytree(ENTRIES, dest / "entries", dirs_exist_ok=True)
+    return dest
+
+
+def set_loader():
+    """default op de kingstra-items, menu alleen bij een ingedrukte toets."""
+    lines = LOADER.read_text().splitlines() if LOADER.exists() else []
+    out, seen = [], set()
+    for line in lines:
+        key = line.strip().split(" ", 1)[0] if line.strip() else ""
+        if key in ("default", "timeout"):
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append("default kingstra-*" if key == "default" else "timeout 0")
+        else:
+            out.append(line)
+    if "default" not in seen:
+        out.append("default kingstra-*")
+    if "timeout" not in seen:
+        out.append("timeout 0")
+    LOADER.write_text("\n".join(out) + "\n")
+
+
+def installed(pkgbase):
+    return (ESP / f"vmlinuz-{pkgbase}").exists()
+
+
+def setup():
+    if not ENTRIES.is_dir():
+        print("Geen systemd-boot-items gevonden in", ENTRIES, "- overgeslagen.")
+        return 0
+    bases = {p: find_base(p) for p in ("linux", "linux-lts") if installed(p)}
+    bases = {k: v for k, v in bases.items() if v}
+    if "linux" not in bases and "linux-lts" not in bases:
+        print("Geen bestaand item met opties voor linux of linux-lts; niets gewijzigd.")
+        return 0
+    saved = backup()
+    written = []
+    for name, pkgbase, title, version, extra, quiet in ITEMS:
+        kernel = pkgbase or ("linux-lts" if "linux-lts" in bases else "linux")
+        base = bases.get(kernel)
+        if base is None:
+            old = current(name)
+            if old is not None:
+                old.unlink()
+            continue
+        # Een nieuw item krijgt meteen pogingen; een bestaand houdt zijn stand.
+        counter = quiet and current(name) is None
+        written.append(write_entry(name, base, kernel, title, version, extra, quiet, counter).name)
+    set_loader()
+    # Een via bootctl gezette standaard wint van loader.conf; die halen we weg.
+    try:
+        subprocess.run(["bootctl", "set-default", ""], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass
+    print("Opstartmenu ingesteld:", ", ".join(written), f"(back-up: {saved})")
+    return 0
+
+
+def arm(pkgbases):
+    if not ENTRIES.is_dir():
+        return 0
+    targets = set(pkgbases) or {"linux", "linux-lts"}
+    for name, pkgbase, *_ in ITEMS:
+        if pkgbase is None or pkgbase not in targets:
+            continue
+        old = current(name)
+        if old is None:
+            continue
+        new = ENTRIES / f"{name}+{TRIES}.conf"
+        if old != new:
+            old.replace(new)
+            print(f"{name}: {TRIES} pogingen voor de nieuwe kernel")
+    return 0
+
+
+def status():
+    for path in sorted(ENTRIES.glob("kingstra-*.conf")):
+        m = re.search(r"\+(\d+)(?:-(\d+))?\.conf$", path.name)
+        if not m:
+            state = "goedgekeurd"
+        elif m.group(1) == "0":
+            state = "MISLUKT, wordt overgeslagen"
+        else:
+            state = f"nog {m.group(1)} poging(en)"
+        print(f"{parse(path).get('title', path.name):<20} {state}")
+    return 0
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
+    if cmd in ("setup", "arm") and os.geteuid() != 0:
+        sys.exit("Draai dit met sudo.")
+    if cmd == "setup":
+        return setup()
+    if cmd == "arm":
+        # Vanuit de pacman-hook: paden als usr/lib/modules/<versie>/vmlinuz op stdin.
+        names = list(sys.argv[2:])
+        if not names and not sys.stdin.isatty():
+            for line in sys.stdin:
+                base = Path("/") / line.strip()
+                pkg = base.parent / "pkgbase"
+                if pkg.exists():
+                    names.append(pkg.read_text().strip())
+        return arm(names)
+    if cmd == "status":
+        return status()
+    print(__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

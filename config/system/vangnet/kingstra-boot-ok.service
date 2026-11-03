@@ -1,0 +1,16 @@
+[Unit]
+Description=Kingstra: opstart geslaagd zodra het inlogscherm draait
+Documentation=man:systemd-bless-boot.service(8)
+DefaultDependencies=no
+Requires=display-manager.service
+After=display-manager.service
+Before=boot-complete.target
+
+[Service]
+Type=oneshot
+# Het inlogscherm moet een paar seconden blijven draaien; een crashende
+# compositor telt dan niet als geslaagde opstart.
+ExecStart=/bin/sh -c 'sleep 8; systemctl is-active --quiet display-manager.service'
+
+[Install]
+RequiredBy=boot-complete.target

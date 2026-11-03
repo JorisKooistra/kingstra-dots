@@ -1,0 +1,9 @@
+[Unit]
+Description=Kingstra gezondheidscheck (schijven, back-up, opstart, updates)
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+
+[Service]
+Type=oneshot
+# Exitcode 1/2 betekent "let op"/"fout" en is geen mislukte dienst.
+SuccessExitStatus=1 2
+ExecStart=%h/.local/bin/kingstra-health --notify

@@ -1,0 +1,81 @@
+// Kingstra-opstartbeeld. Zelfde opbouw als de intro van het inlogscherm en
+// het lockscherm: vervaagde achtergrond, bol in het midden, ringen eromheen.
+// De afbeeldingen schrijft kingstra-plymouth-sync bij elke themawissel.
+
+sw = Window.GetWidth();
+sh = Window.GetHeight();
+// Benadering van de schaal in de greeter: (breedte / 1920) ^ 0.85.
+sc = 1 + (sw - 1920) / 1920 * 0.85;
+if (sc < 0.35) sc = 0.35;
+
+Window.SetBackgroundTopColor(0.05, 0.05, 0.07);
+Window.SetBackgroundBottomColor(0.05, 0.05, 0.07);
+
+bg_image = Image("background.png");
+if (bg_image) {
+    bg = Sprite(bg_image.Scale(sw, sh));
+    bg.SetPosition(0, 0, -100);
+}
+
+fun centered(img, z) {
+    s = Sprite(img);
+    s.SetPosition(Math.Int(sw / 2 - img.GetWidth() / 2), Math.Int(sh / 2 - img.GetHeight() / 2), z);
+    return s;
+}
+
+ring_outer_img = Image("ring-outer.png").Scale(360 * sc, 360 * sc);
+ring_mid_img = Image("ring-mid.png").Scale(300 * sc, 300 * sc);
+arc_img = Image("ring-arc.png").Scale(240 * sc, 240 * sc);
+orb_img = Image("orb.png").Scale(170 * sc, 170 * sc);
+
+ring_outer = centered(ring_outer_img, 1);
+ring_mid = centered(ring_mid_img, 2);
+arc = centered(arc_img, 3);
+orb = centered(orb_img, 4);
+
+ring_outer.SetOpacity(0.25);
+ring_mid.SetOpacity(0.35);
+
+global.t = 0;
+fun refresh() {
+    global.t++;
+    // Langzaam ademen van de buitenringen en een draaiende boog als teken
+    // dat er iets gebeurt.
+    ring_outer.SetOpacity(0.18 + 0.12 * Math.Sin(global.t / 40));
+    ring_mid.SetOpacity(0.28 + 0.12 * Math.Sin(global.t / 40 + 1.2));
+    rotated = arc_img.Rotate(global.t / 25);
+    arc.SetImage(rotated);
+    arc.SetPosition(Math.Int(sw / 2 - rotated.GetWidth() / 2), Math.Int(sh / 2 - rotated.GetHeight() / 2), 3);
+}
+Plymouth.SetRefreshFunction(refresh);
+
+// Meldingen (bijvoorbeeld van fsck) onder de bol.
+message_sprite = Sprite();
+message_sprite.SetPosition(0, 0, 10);
+fun message(text) {
+    img = Image.Text(text, 0.85, 0.85, 0.88);
+    message_sprite.SetImage(img);
+    message_sprite.SetPosition(Math.Int(sw / 2 - img.GetWidth() / 2), Math.Int(sh / 2 + 230 * sc), 10);
+}
+Plymouth.SetMessageFunction(message);
+
+// Wachtwoord (alleen bij een versleutelde schijf): bolletjes onder de bol.
+prompt_sprite = Sprite();
+bullets_sprite = Sprite();
+fun password(prompt, bullets) {
+    p = Image.Text(prompt, 0.85, 0.85, 0.88);
+    prompt_sprite.SetImage(p);
+    prompt_sprite.SetPosition(Math.Int(sw / 2 - p.GetWidth() / 2), Math.Int(sh / 2 + 200 * sc), 10);
+    dots = "";
+    for (i = 0; i < bullets; i++) dots += "●";
+    b = Image.Text(dots, 1, 1, 1);
+    bullets_sprite.SetImage(b);
+    bullets_sprite.SetPosition(Math.Int(sw / 2 - b.GetWidth() / 2), Math.Int(sh / 2 + 230 * sc), 10);
+}
+Plymouth.SetDisplayPasswordFunction(password);
+
+fun normal() {
+    prompt_sprite.SetImage(Image.Text("", 1, 1, 1));
+    bullets_sprite.SetImage(Image.Text("", 1, 1, 1));
+}
+Plymouth.SetDisplayNormalFunction(normal);

@@ -1,0 +1,15 @@
+[Unit]
+Description=Kingstra: updates alvast downloaden (installeert niets)
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+Wants=network-online.target
+After=network-online.target
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+# checkupdates -d gebruikt een eigen kopie van de pakketdatabase, dus het
+# systeem komt nooit half bijgewerkt te staan. Alleen de cache vult zich.
+ExecStart=/usr/bin/checkupdates -d
+SuccessExitStatus=2

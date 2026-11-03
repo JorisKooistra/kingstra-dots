@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-backup — Versies van je persoonlijke map op een andere schijf
+# =============================================================================
+# Gebruik:
+#   kingstra-backup run [--now]   back-up maken (de timer doet dit elk uur)
+#   kingstra-backup copy          tweede kopie bijwerken (de timer: wekelijks)
+#   kingstra-backup status [--json]
+#   kingstra-backup list          versies tonen
+#   kingstra-backup browse        versies openen als map (~/Back-up)
+#   kingstra-backup close         die map weer sluiten
+#   kingstra-backup restore <pad> [versie]  bestand of map terugzetten
+#                                 (naast het origineel, als <naam>.terug)
+#
+# Instellingen: ~/.config/kingstra/backup.conf. Werkt met restic. Alleen wat
+# veranderd is wordt opgeslagen. Bewaard: 24 per uur, 14 per dag, 8 per week,
+# 12 per maand. De back-up schrijft nooit naar de systeemschijf: is de
+# doelschijf niet gekoppeld, dan wordt de back-up overgeslagen en gemeld.
+# =============================================================================
+set -uo pipefail
+
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/backup.conf"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra"
+STATUS="$CACHE/backup-status.json"
+LOCK="$CACHE/backup.lock"
+BROWSE_DIR="$HOME/Back-up"
+SELF_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+DEFAULT_EXCLUDES="$SELF_DIR/../../kingstra/backup-exclude.txt"
+
+BACKUP_ENABLED=true
+BACKUP_REPO="/mnt/data2/Kingstra-backup"
+BACKUP_COPY="/mnt/data3/Kingstra-backup"
+BACKUP_MIRROR_SRC="/mnt/data1/backup windows"
+BACKUP_MIRROR_DEST="/mnt/data3/backup windows"
+BACKUP_PATHS="$HOME"
+# shellcheck source=/dev/null
+[[ -f "$CONF" ]] && source "$CONF"
+
+# Lokale schijf in huis: geen wachtwoord, zodat een kapotte SSD je de
+# sleutel niet kost. Wie een kopie buiten huis wil, kiest daar wel een.
+RESTIC=(restic --insecure-no-password -r "$BACKUP_REPO")
+
+_say() { printf '%s\n' "$*"; }
+_die() { printf 'kingstra-backup: %s\n' "$*" >&2; exit 1; }
+
+# Python schrijft de status in één keer weg; velden die niet meegegeven
+# worden blijven staan.
+status_set() {
+    mkdir -p "$CACHE"
+    python3 - "$STATUS" "$@" <<'PY'
+import json, os, sys
+path, *pairs = sys.argv[1:]
+try:
+    data = json.load(open(path))
+except Exception:
+    data = {}
+for pair in pairs:
+    key, _, value = pair.partition("=")
+    if value.lstrip("-").isdigit():
+        value = int(value)
+    elif value in ("true", "false"):
+        value = value == "true"
+    data[key] = value
+tmp = path + ".tmp"
+with open(tmp, "w") as fh:
+    json.dump(data, fh, ensure_ascii=False)
+os.replace(tmp, path)
+PY
+}
+
+status_get() {
+    python3 -c 'import json,sys
+try: print(json.load(open(sys.argv[1])).get(sys.argv[2], ""))
+except Exception: print("")' "$STATUS" "$1" 2>/dev/null
+}
+
+# Ligt het pad op een eigen schijf (niet op /)? Anders is die schijf niet
+# gekoppeld en zou de back-up op de systeemschijf belanden.
+on_own_disk() {
+    local dir="$1" probe target
+    probe="$dir"
+    while [[ ! -e "$probe" && "$probe" != "/" ]]; do probe="$(dirname "$probe")"; done
+    target="$(findmnt -n -o TARGET -T "$probe" 2>/dev/null || true)"
+    [[ -n "$target" && "$target" != "/" && "$target" != "/home" ]]
+}
+
+notify() {
+    command -v notify-send >/dev/null 2>&1 || return 0
+    notify-send -a Kingstra -i drive-harddisk "Back-up" "$1" 2>/dev/null || true
+}
+
+fail() {
+    status_set "error=$1" "running=false"
+    _say "Back-up niet gelukt: $1"
+    local last; last="$(status_get last_ok)"
+    [[ "$last" =~ ^[0-9]+$ ]] || last=0
+    # Pas na drie dagen zonder back-up een melding; één mislukte poging is normaal.
+    if (( $(date +%s) - last > 3 * 86400 )); then
+        local seen; seen="$(status_get notified_day)"
+        if [[ "$seen" != "$(date +%F)" ]]; then
+            notify "Al meer dan drie dagen geen back-up: $1"
+            status_set "notified_day=$(date +%F)"
+        fi
+    fi
+    exit 1
+}
+
+exclude_file() {
+    local out="$CACHE/backup-exclude.effective"
+    mkdir -p "$CACHE"
+    {
+        [[ -f "$DEFAULT_EXCLUDES" ]] && sed "s|^~|$HOME|" "$DEFAULT_EXCLUDES"
+        [[ -f "${CONF%/*}/backup-exclude.local.txt" ]] && sed "s|^~|$HOME|" "${CONF%/*}/backup-exclude.local.txt"
+        printf '%s\n' "$BROWSE_DIR"
+    } | grep -v '^[[:space:]]*#' | awk 'NF' > "$out"
+    printf '%s' "$out"
+}
+
+ensure_repo() {
+    on_own_disk "$BACKUP_REPO" || fail "de schijf voor $BACKUP_REPO is niet gekoppeld"
+    mkdir -p "$BACKUP_REPO" 2>/dev/null || fail "kan $BACKUP_REPO niet aanmaken (rechten?)"
+    if [[ ! -f "$BACKUP_REPO/config" ]]; then
+        _say "Nieuwe back-upopslag maken in $BACKUP_REPO"
+        "${RESTIC[@]}" init >/dev/null 2>&1 || fail "back-upopslag aanmaken mislukt"
+    fi
+}
+
+cmd_run() {
+    [[ "$BACKUP_ENABLED" == "true" ]] || { status_set "enabled=false"; _say "Back-up staat uit ($CONF)."; exit 0; }
+    command -v restic >/dev/null 2>&1 || fail "restic is niet geïnstalleerd"
+    mkdir -p "$CACHE"
+    exec 9>"$LOCK"
+    flock -n 9 || { _say "Er loopt al een back-up."; exit 0; }
+    status_set "enabled=true" "repo=$BACKUP_REPO" "running=true" "last_try=$(date +%s)"
+    ensure_repo
+
+    local excl out summary
+    excl="$(exclude_file)"
+    # shellcheck disable=SC2086  # BACKUP_PATHS mag meerdere paden bevatten
+    out="$(nice -n 19 ionice -c3 "${RESTIC[@]}" backup --json --one-file-system \
+        --exclude-caches --exclude-file "$excl" --tag kingstra $BACKUP_PATHS 2>&1)"
+    local rc=$?
+    # restic: 0 = goed, 3 = goed maar sommige bestanden waren niet leesbaar.
+    if (( rc != 0 && rc != 3 )); then
+        fail "$(printf '%s\n' "$out" | grep -v '^{' | tail -n 1)"
+    fi
+    summary="$(printf '%s\n' "$out" | grep '"message_type":"summary"' | tail -n 1)"
+    local added=0 files=0
+    if [[ -n "$summary" ]]; then
+        added="$(printf '%s' "$summary" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("data_added", 0))')"
+        files="$(printf '%s' "$summary" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("files_new",0)+d.get("files_changed",0))')"
+    fi
+    local warn=""
+    (( rc == 3 )) && warn="Een paar bestanden waren niet leesbaar."
+
+    # Opruimen kost tijd; één keer per dag is genoeg.
+    local pruned; pruned="$(status_get last_prune)"
+    [[ "$pruned" =~ ^[0-9]+$ ]] || pruned=0
+    if (( $(date +%s) - pruned > 86400 )); then
+        if nice -n 19 ionice -c3 "${RESTIC[@]}" forget --quiet --tag kingstra --prune \
+            --keep-hourly 24 --keep-daily 14 --keep-weekly 8 --keep-monthly 12 >/dev/null 2>&1; then
+            status_set "last_prune=$(date +%s)"
+        fi
+    fi
+
+    local count size
+    count="$("${RESTIC[@]}" snapshots --json --tag kingstra 2>/dev/null | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))' 2>/dev/null || echo 0)"
+    size="$(du -sb "$BACKUP_REPO" 2>/dev/null | cut -f1)"
+    status_set "running=false" "last_ok=$(date +%s)" "error=$warn" "added=$added" "changed_files=$files" \
+        "snapshots=$count" "repo_size=${size:-0}" "free=$(df -B1 --output=avail "$BACKUP_REPO" 2>/dev/null | tail -n 1 | tr -d ' ')"
+    _say "Back-up klaar: $files bestanden, $(numfmt --to=iec "${added:-0}" 2>/dev/null || echo "$added") nieuw. $count versies."
+}
+
+cmd_copy() {
+    [[ "$BACKUP_ENABLED" == "true" ]] || exit 0
+    local rc=0
+    if [[ -n "$BACKUP_COPY" && -f "$BACKUP_REPO/config" ]]; then
+        if on_own_disk "$BACKUP_COPY"; then
+            mkdir -p "$BACKUP_COPY" && nice -n 19 ionice -c3 rsync -a --delete "$BACKUP_REPO/" "$BACKUP_COPY/" || rc=1
+            (( rc == 0 )) && status_set "copy_ok=$(date +%s)" "copy=$BACKUP_COPY"
+        else
+            _say "Schijf voor de tweede kopie is niet gekoppeld: $BACKUP_COPY"; rc=1
+        fi
+    fi
+    if [[ -n "$BACKUP_MIRROR_SRC" && -d "$BACKUP_MIRROR_SRC" && -n "$BACKUP_MIRROR_DEST" ]]; then
+        if on_own_disk "$BACKUP_MIRROR_DEST"; then
+            # Zonder --delete: wat in de bron verdwijnt, blijft in de kopie bewaard.
+            mkdir -p "$BACKUP_MIRROR_DEST" && nice -n 19 ionice -c3 rsync -a "$BACKUP_MIRROR_SRC/" "$BACKUP_MIRROR_DEST/" || rc=1
+            (( rc == 0 )) && status_set "mirror_ok=$(date +%s)"
+        else
+            rc=1
+        fi
+    fi
+    (( rc == 0 )) && _say "Tweede kopie bijgewerkt." || status_set "copy_error=tweede kopie niet gelukt"
+    return "$rc"
+}
+
+cmd_status() {
+    if [[ "${1:-}" == "--json" ]]; then
+        [[ -f "$STATUS" ]] && cat "$STATUS" || printf '{"enabled": %s}\n' "$BACKUP_ENABLED"
+        return 0
+    fi
+    [[ -f "$STATUS" ]] || { _say "Nog geen back-up gemaakt. Opslag: $BACKUP_REPO"; return 0; }
+    python3 - "$STATUS" <<'PY'
+import json, sys, time
+d = json.load(open(sys.argv[1]))
+def when(t):
+    return time.strftime("%d-%m-%Y %H:%M", time.localtime(t)) if t else "nog nooit"
+print("Opslag:        ", d.get("repo", "?"))
+print("Laatste:       ", when(d.get("last_ok", 0)))
+print("Versies:       ", d.get("snapshots", 0))
+print("Tweede kopie:  ", when(d.get("copy_ok", 0)), d.get("copy", ""))
+if d.get("error"):
+    print("Melding:       ", d["error"])
+PY
+}
+
+cmd_browse() {
+    command -v restic >/dev/null 2>&1 || _die "restic is niet geïnstalleerd"
+    on_own_disk "$BACKUP_REPO" || _die "de back-upschijf is niet gekoppeld"
+    mkdir -p "$BROWSE_DIR"
+    if ! mountpoint -q "$BROWSE_DIR"; then
+        systemd-run --user --quiet --collect --unit kingstra-backup-browse \
+            "$(command -v restic)" "${RESTIC[@]:1}" mount "$BROWSE_DIR" >/dev/null 2>&1
+
+        for _ in $(seq 1 40); do mountpoint -q "$BROWSE_DIR" && break; sleep 0.25; done
+    fi
+    mountpoint -q "$BROWSE_DIR" || _die "openen mislukt (is fuse3 geïnstalleerd?)"
+    _say "Versies staan in $BROWSE_DIR/snapshots (sluiten: kingstra backup close)"
+    command -v xdg-open >/dev/null 2>&1 && [[ -n "${WAYLAND_DISPLAY:-}" ]] \
+        && setsid -f xdg-open "$BROWSE_DIR/snapshots" >/dev/null 2>&1
+    return 0
+}
+
+cmd_close() {
+    systemctl --user stop kingstra-backup-browse 2>/dev/null
+    mountpoint -q "$BROWSE_DIR" && fusermount3 -u "$BROWSE_DIR" 2>/dev/null
+    rmdir "$BROWSE_DIR" 2>/dev/null
+    _say "Back-upmap gesloten."
+}
+
+cmd_restore() {
+    local path="${1:-}" snap="${2:-latest}" abs target
+    [[ -n "$path" ]] || _die "gebruik: kingstra-backup restore <pad> [versie]"
+    abs="$(realpath -m "$path")"
+    target="$(mktemp -d "${abs%/*}/.kingstra-terug.XXXX")" || _die "kan niet schrijven naast $abs"
+    "${RESTIC[@]}" restore "$snap" --target "$target" --include "$abs" || { rm -rf "$target"; _die "terugzetten mislukt"; }
+    if [[ -e "$target$abs" ]]; then
+        mv "$target$abs" "$abs.terug"
+        _say "Teruggezet als: $abs.terug"
+    else
+        _say "Niet gevonden in versie $snap: $abs"
+    fi
+    rm -rf "$target"
+}
+
+case "${1:-status}" in
+    run) cmd_run ;;
+    copy) cmd_copy ;;
+    status) shift; cmd_status "$@" ;;
+    list) "${RESTIC[@]}" snapshots --tag kingstra --compact ;;
+    browse|open) cmd_browse ;;
+    close|sluit) cmd_close ;;
+    restore|terug) shift; cmd_restore "$@" ;;
+    -h|--help|help) sed -n '3,19p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) _die "onbekend commando: $1 (zie kingstra-backup help)" ;;
+esac
