@@ -117,6 +117,8 @@ case "$MODE" in
         for p in "${CANDIDATES[@]}"; do
             # Alleen binnen de yay-cache, nooit de cache zelf.
             [[ "$p" == "$YAY_CACHE"/?* ]] || continue
+            # Go zet zijn modulecache alleen-lezen; anders blijft rm hangen.
+            chmod -R u+w -- "$p" 2>/dev/null
             rm -rf -- "$p"
         done
         printf 'AUR-bouwcache opgeruimd: %s vrij.\n' "$human"

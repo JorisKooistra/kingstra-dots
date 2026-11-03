@@ -24,6 +24,10 @@ for v in 1 2 3 4; do
     touch -d "2026-01-0$v" "$d/foo-bin-$v-1-x86_64.pkg.tar.zst"
 done
 touch "$d/foo-bin-1-1-x86_64.pkg.tar.zst.sig" "$d/foo_4_amd64.deb" "$d/src/bestand"
+# Go zet zijn modulecache alleen-lezen.
+mkdir -p "$d/src/go/mod"
+touch "$d/src/go/mod/x.go"
+chmod -R a-w "$d/src/go"
 
 # bar: splitpakket waarvan alleen bar-plugin erop staat; baz is weg.
 mkdir -p "$T/yay/bar" "$T/yay/baz"
