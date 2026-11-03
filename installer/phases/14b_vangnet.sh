@@ -21,8 +21,13 @@ VANGNET_LIB="/usr/local/lib/kingstra"
 
 phase_run() {
     log_step "Vangnet-pakketten installeren..."
-    pacman_install restic fuse3 rsync smartmontools etckeeper reflector \
-        kernel-modules-hook plymouth python-pillow pacman-contrib
+    # Eén voor één en niet onmisbaar: een ontbrekend pakket slaat alleen dat
+    # onderdeel over, niet de hele update.
+    local pkg
+    for pkg in restic fuse3 rsync smartmontools etckeeper reflector \
+        kernel-modules-hook plymouth python-pillow pacman-contrib; do
+        pacman_install_optional "$pkg"
+    done
 
     log_step "Vangnet-commando's plaatsen..."
     _phase14b_deploy_scripts

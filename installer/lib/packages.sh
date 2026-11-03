@@ -3,6 +3,9 @@
 # packages.sh — Pakketinstallatie (pacman + AUR)
 # =============================================================================
 
+# Optionele pakketten die niet lukten; print_summary toont ze aan het eind.
+declare -ga INSTALL_OPTIONAL_FAILED=()
+
 # Installeer een lijst van pacman-pakketten
 pacman_install() {
     local -a pkgs=("$@")
@@ -130,6 +133,32 @@ aur_install() {
         printf '\033[?1049l\033[?1000l\033[?1002l\033[?1003l\033[?1006l' 2>/dev/null || true
     fi
     "${DRY_RUN:-false}" || ui_count_packages "${#to_install[@]}"
+}
+
+# Optioneel AUR-pakket: lukt het niet (bouwfout, AUR even weg), dan een
+# waarschuwing en gaat de update door. De installer draait met set -e, dus
+# een kale aur_install die faalt brak tot nu toe de hele update af.
+aur_install_optional() {
+    if ! aur_install "$@"; then
+        log_warn "Optioneel AUR-pakket niet geïnstalleerd: $*. De rest van de update gaat door."
+        log_warn "Later opnieuw proberen: yay -S $*"
+        INSTALL_OPTIONAL_FAILED+=("$*")
+    fi
+    return 0
+}
+
+# Zelfde voor gewone pakketten die niet onmisbaar zijn.
+pacman_install_optional() {
+    if ! pacman_install "$@"; then
+        log_warn "Optioneel pakket niet geïnstalleerd: $*. De rest van de update gaat door."
+        INSTALL_OPTIONAL_FAILED+=("$*")
+    fi
+    return 0
+}
+
+# Staat het pakket in de officiële repo's? Dan liever daar vandaan dan bouwen.
+pacman_has_repo_pkg() {
+    pacman -Si "$1" >/dev/null 2>&1
 }
 
 _package_install_hint() {

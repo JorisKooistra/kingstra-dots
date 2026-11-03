@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Update breekt niet meer af op een optioneel pakket
+- **Een optioneel pakket dat niet lukt, stopt de update niet meer.** `kingstra update` brak af met "yay installeren: whisper.cpp" (code 1). Optionele AUR-pakketten (whisper.cpp, satty, mpvpaper, onlyoffice, heroic, spicetify, vesktop, logiops, python-vdf, de games-launcher en de vangnet-pakketten) geven nu een waarschuwing en de rest gaat door. Aan het eind staat welke niet lukten, met `yay -S …` om het later opnieuw te proberen. Kernpakketten (walker, oh-my-posh, skwd-wall) blijven verplicht.
+- **whisper.cpp (dicteren)** komt eerst uit de Arch-repo als die het heeft; anders wordt het uit de AUR gebouwd zonder de testronde (`check()`), die meestal de oorzaak was. Staat `whisper-cli` er al, dan wordt niets opnieuw gebouwd.
+
 ### Vangnet: eerlijke updates, terugdraaien, back-ups en een rustige opstart
 - **De updater zegt eerlijk wat er gebeurde.** Na yay leest hij in `/var/log/pacman.log` wat er echt is bijgewerkt en kijkt hij met `checkupdates` of er nog iets openstaat. Op 2 november meldde hij "bijgewerkt" terwijl er niets was geïnstalleerd (kernel bleef 7.2.11, 88 updates open); dat wordt nu een rode regel met de laatste uitvoer van yay erbij.
 - **Terugzetpunt altijd**: de updater vindt `kingstra-snapshot` nu ook in de repo als `~/.local/bin` nog niet is bijgewerkt ("kingstra-snapshot niet gevonden" is weg).

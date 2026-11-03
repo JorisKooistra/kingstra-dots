@@ -268,7 +268,7 @@ _phase09_install_mpvpaper() {
 
     if [[ "$enable_video" == "true" ]]; then
         log_info "ENABLE_VIDEO_WALLPAPER=true — mpvpaper installeren"
-        aur_install mpvpaper
+        aur_install_optional mpvpaper
     else
         log_info "ENABLE_VIDEO_WALLPAPER=false — mpvpaper overgeslagen"
         log_info "  Zet ENABLE_VIDEO_WALLPAPER=true in je profiel om videowallpapers in te schakelen."

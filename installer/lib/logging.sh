@@ -714,6 +714,7 @@ print_summary() {
         fi
         printf "\n  %b  ${_DIM}%s${_RESET}\n" "$status" "$details" >&3
         printf "  ${_DIM}Volledige uitvoer: %s${_RESET}\n\n" "$LOG_FILE" >&3
+        _summary_optional_failed >&3
         # Wat hierna komt (instructies, herstartvraag) gewoon tonen.
         INSTALL_UI_QUIET=false
         if [[ -n "${INSTALL_AFTER_SUMMARY:-}" ]] && declare -f "$INSTALL_AFTER_SUMMARY" >/dev/null; then
@@ -726,4 +727,12 @@ print_summary() {
     printf "${_GREEN}${_BOLD}  Installatie voltooid.${_RESET}\n"
     printf "${_GREEN}${_BOLD}══════════════════════════════════════════════${_RESET}\n"
     printf "  Log: %s\n\n" "$LOG_FILE"
+    _summary_optional_failed
+}
+
+# Optionele pakketten die niet lukten; de rest van de installatie ging door.
+_summary_optional_failed() {
+    (( ${#INSTALL_OPTIONAL_FAILED[@]} > 0 )) || return 0
+    printf "  ${_YELLOW}Niet gelukt (optioneel):${_RESET} %s\n" "${INSTALL_OPTIONAL_FAILED[*]}"
+    printf "  ${_DIM}Later opnieuw: yay -S %s${_RESET}\n\n" "${INSTALL_OPTIONAL_FAILED[*]}"
 }

@@ -494,10 +494,10 @@ _phase08_install_game_launcher() {
     # checkdepend, en dat bouwt niet meer op de huidige Python. Zonder check
     # installeert het gewoon, en daarna kan de launcher zelf bijwerken.
     pacman_install python-evdev python-tomlkit
-    AUR_NOCHECK=true aur_install python-vdf
+    AUR_NOCHECK=true aur_install_optional python-vdf
 
     # Installeer AUR package (levert /usr/bin/quickshell-game)
-    aur_install quickshell-games-launchers-git
+    aur_install_optional quickshell-games-launchers-git
 
     # Zorg dat de config directory bestaat (symlink via deploy_config "quickshell")
     local cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/game-launcher"

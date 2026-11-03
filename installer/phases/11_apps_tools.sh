@@ -33,7 +33,7 @@ phase_run() {
     log_step "Screenshot-toolchain installeren..."
     pacman_install grim
     pacman_install slurp
-    aur_install satty
+    aur_install_optional satty
     pacman_install wf-recorder          # schermopname (vastleg-studio, Super+Shift+R)
     pacman_install hyprpicker           # kleur kiezen
     pacman_install tesseract tesseract-data-nld tesseract-data-eng   # tekst uit beeld
@@ -205,7 +205,13 @@ _phase11_setup_dictation() {
         log_info "Dicteren overgeslagen (ENABLE_DICTATION=false)"
         return 0
     fi
-    aur_install whisper.cpp
+    # Uit de repo's als dat kan (geen bouwen), anders AUR. Mislukt het, dan
+    # werkt de rest gewoon en meldt Super+H dat dicteren nog niet klaar is.
+    if pacman_has_repo_pkg whisper.cpp; then
+        pacman_install_optional whisper.cpp
+    elif ! command -v whisper-cli >/dev/null 2>&1; then
+        AUR_NOCHECK=true aur_install_optional whisper.cpp
+    fi
 
     local model_dir="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/whisper"
     local model="$model_dir/ggml-small-q5_1.bin"
@@ -231,7 +237,7 @@ _phase11_optional_apps() {
     # Office-suite (ONLYOFFICE ipv LibreOffice)
     if [[ "${ENABLE_OPTIONAL_OFFICE:-false}" == "true" ]]; then
         log_info "Office-suite installeren (ENABLE_OPTIONAL_OFFICE=true)..."
-        aur_install onlyoffice-bin
+        aur_install_optional onlyoffice-bin
     else
         log_info "Office-suite overgeslagen (ENABLE_OPTIONAL_OFFICE=false)"
     fi
@@ -239,7 +245,7 @@ _phase11_optional_apps() {
     # Heroic Games Launcher
     if [[ "${ENABLE_OPTIONAL_HEROIC:-false}" == "true" ]]; then
         log_info "Heroic Games Launcher installeren (ENABLE_OPTIONAL_HEROIC=true)..."
-        aur_install heroic-games-launcher-bin
+        aur_install_optional heroic-games-launcher-bin
     else
         log_info "Heroic Games Launcher overgeslagen (ENABLE_OPTIONAL_HEROIC=false)"
     fi
@@ -255,7 +261,7 @@ _phase11_optional_apps() {
     # Spicetify (Spotify-theming)
     if [[ "${ENABLE_SPICETIFY:-false}" == "true" ]]; then
         log_info "Spicetify installeren (ENABLE_SPICETIFY=true)..."
-        aur_install spicetify-cli
+        aur_install_optional spicetify-cli
         _phase11_setup_spicetify
     else
         log_info "Spicetify overgeslagen (ENABLE_SPICETIFY=false)"
@@ -264,7 +270,7 @@ _phase11_optional_apps() {
     # Vesktop (Discord-client met RPC + screenshare)
     if [[ "${ENABLE_VESKTOP:-false}" == "true" ]]; then
         log_info "Vesktop installeren (ENABLE_VESKTOP=true)..."
-        aur_install vesktop-bin
+        aur_install_optional vesktop-bin
     else
         log_info "Vesktop overgeslagen (ENABLE_VESKTOP=false)"
     fi
@@ -301,7 +307,7 @@ _phase11_setup_logiops() {
         return 0
     fi
 
-    aur_install logiops
+    aur_install_optional logiops
 
     if "${DRY_RUN:-false}"; then
         log_dry "logid-config zou worden geplaatst: $cfg_dest (vereist sudo)"

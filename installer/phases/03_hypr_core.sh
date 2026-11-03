@@ -47,7 +47,7 @@ _phase03_install_packages() {
         slurp \
         playerctl \
         hyprsunset
-    aur_install satty
+    aur_install_optional satty
 }
 
 _phase03_deploy_configs() {
