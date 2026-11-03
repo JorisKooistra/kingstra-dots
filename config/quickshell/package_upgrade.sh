@@ -296,6 +296,8 @@ preview_updates() {
     if [[ -n "$helper" ]]; then
         live "AUR-updates zoeken"
         aur_list="$(timeout 90 "$helper" -Qua 2>/dev/null || true)"
+        drop_stale_git "$aur_list"
+        aur_list="$AUR_KEPT"
     fi
     if command -v flatpak >/dev/null 2>&1; then
         live "Flatpak-updates zoeken"
@@ -634,6 +636,47 @@ cleanup_system() {
     fi
 }
 
+# -git-pakketten waarvan de AUR een hogere versie noemt dan de bron echt
+# heeft (quickshell-games-launchers-git: AUR r138, bron r80). yay bouwt dan
+# elke keer dezelfde versie opnieuw en de teller blijft op 1. Staat de
+# geïnstalleerde commit gelijk aan die van de bron, dan slaan we hem over.
+AUR_IGNORE=()
+AUR_KEPT=""
+drop_stale_git() {
+    local list="$1" line name local_ver hash srcinfo src branch remote ref
+    AUR_KEPT=""
+    local cache="${XDG_CACHE_HOME:-$HOME/.cache}/yay"
+    while IFS= read -r line; do
+        [[ -n "$line" ]] || continue
+        name="${line%% *}"
+        if [[ "$name" == *-git ]]; then
+            local_ver="$(pacman -Q "$name" 2>/dev/null | awk '{print $2}')"
+            hash="${local_ver%-*}"; hash="${hash##*.}"
+            srcinfo="$cache/$name/.SRCINFO"
+            if [[ "$hash" =~ ^g?[0-9a-f]{7,}$ && -f "$srcinfo" ]]; then
+                hash="${hash#g}"
+                src="$(sed -n 's/^[[:space:]]*source = //p' "$srcinfo" | grep -m1 'git+' || true)"
+                src="${src#*::}"; src="${src#git+}"
+                branch=""
+                [[ "$src" == *"#branch="* ]] && branch="${src##*#branch=}"
+                src="${src%%#*}"
+                if [[ -n "$src" ]]; then
+                    ref="HEAD"
+                    [[ -n "$branch" ]] && ref="refs/heads/$branch"
+                    remote="$(timeout 15 git ls-remote "$src" "$ref" 2>/dev/null | awk 'NR==1{print $1}')"
+                    if [[ -n "$remote" && "$remote" == "$hash"* ]]; then
+                        AUR_IGNORE+=("$name")
+                        to_log "AUR: $name overgeslagen; geïnstalleerd $local_ver is al de nieuwste commit van de bron"
+                        continue
+                    fi
+                fi
+            fi
+        fi
+        AUR_KEPT+="$line"$'\n'
+    done <<< "$list"
+    AUR_KEPT="${AUR_KEPT%$'\n'}"
+}
+
 resolve_dotfiles_repo() {
     local marker="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/install-complete"
     local repo=""
@@ -842,13 +885,17 @@ update_arch() {
         return 0
     fi
 
+    local -a ignore=()
+    if (( ${#AUR_IGNORE[@]} > 0 )); then
+        ignore=(--ignore "$(IFS=,; echo "${AUR_IGNORE[*]}")")
+    fi
     if ! $UI || $INTERACTIVE; then
         prepare_aur
-        "$helper" -Syu || rc=$?
+        "$helper" -Syu "${ignore[@]+"${ignore[@]}"}" || rc=$?
         return "$rc"
     fi
 
-    local -a flags=(-Syu --noconfirm --sudoloop)
+    local -a flags=(-Syu --noconfirm --sudoloop "${ignore[@]+"${ignore[@]}"}")
     case "$helper" in
         yay) flags+=(--answerdiff None --answerclean None --answeredit None --answerupgrade None) ;;
         paru) flags+=(--skipreview) ;;
@@ -862,7 +909,7 @@ update_arch() {
     run_quiet "$helper" "$helper" "${flags[@]}" || rc=$?
     if (( rc != 0 )) && ask_yes "Opnieuw draaien met de gewone $helper-uitvoer en vragen?"; then
         rc=0
-        "$helper" -Syu || rc=$?
+        "$helper" -Syu "${ignore[@]+"${ignore[@]}"}" || rc=$?
     fi
     return "$rc"
 }
@@ -905,6 +952,20 @@ finish() {
     live_clear
     read -r -p "Druk Enter om te sluiten..." _
 }
+
+# Eén update tegelijk. Twee runs naast elkaar (terminal plus het venster uit
+# Instellingen) wachten op elkaars sudo, git en installer.
+LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/kingstra-update.lock"
+if command -v flock >/dev/null 2>&1 && exec 9>"$LOCK_FILE"; then
+    if ! flock -n 9; then
+        echo
+        echo "  Er draait al een kingstra update (in een ander venster of een gestopte terminal)."
+        echo "  Maak die eerst af of sluit hem. Vastgelopen? pkill -f package_upgrade.sh"
+        echo
+        if [[ -t 0 ]]; then read -r -p "Druk Enter om te sluiten..." _ || true; fi
+        exit 1
+    fi
+fi
 
 init_log
 

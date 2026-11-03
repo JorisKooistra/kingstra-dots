@@ -15,6 +15,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Spiekbriefje (Super vasthouden)** heeft een blok Werkvlak: twee vingers, wiel, Ctrl+wiel, Ctrl+slepen, Shift+wiel, en zonder Super knijpen en vier vingers.
 
 ### Update breekt niet meer af op een optioneel pakket
+- **Maar één update tegelijk.** Een tweede `kingstra update` (bijvoorbeeld uit Instellingen terwijl er in een terminal nog een liep of gepauzeerd stond) zegt nu dat er al een draait, in plaats van ernaast te gaan wachten op sudo, git en de installer.
+- **quickshell-games-launchers-git wordt niet meer elke keer opnieuw gebouwd** als de geïnstalleerde commit al de nieuwste van de bron is (de AUR noemt r138, de bron heeft r80).
+- **Knop "Dotfiles update" terug** op Instellingen › Systeem › Updates (draait bootstrap, zoals vroeger).
 - **Fixes werken meteen, niet pas de keer daarna.** De updater haalde de dotfiles pas op ná Arch/AUR en draaide de rest van de run met zijn oude code. Daardoor leek het alsof je steeds een oude versie bijwerkte. Nu haalt hij eerst de dotfiles op en start hij zichzelf opnieuw met de nieuwe versie, in hetzelfde log.
 - **Configbestanden samenvoegen**: bij een `.pacnew` biedt de updater nu ook [s]amenvoegen aan (standaard als het kan). Basis is de nieuwe versie, met jouw eigen regels erin: in `pam.d/sudo` blijft de vingerafdrukregel (`pam_fprintd`) staan, in `locale.gen` blijven je talen (zoals en_US) aan. Je ziet het resultaat eerst; de oude versie blijft bewaard. Bij JSON of grote verschillen kies je zelf (`kingstra-pacnew-merge`).
 - **Geen valse bootfout meer bij een unified kernel image.** De controle na de update zocht `initramfs-linux.img`, maar de laptop start met een UKI (`/boot/EFI/Linux/arch-linux.efi`, `default_uki` in de mkinitcpio-preset). Hij kijkt nu naar dat bestand.
