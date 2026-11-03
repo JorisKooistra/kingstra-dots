@@ -282,6 +282,17 @@ Item {
                 onDetailRequested: root.openPanel("notifications")
             }
             Tile {
+                visible: NightLight.available
+                icon: NightLight.nightOn ? "󰖔" : "󰖙"
+                label: "Nachtlicht"
+                subtitle: NightLight.subtitle
+                active: NightLight.nightOn
+                accent: mocha.peach
+                detailTooltip: "Schema in Instellingen"
+                onTriggered: NightLight.toggle()
+                onDetailRequested: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "open", "settings", "beeldschermen"])
+            }
+            Tile {
                 icon: root.powerProfileName === "performance" ? "󰓅"
                     : (root.powerProfileName === "power-saver" ? "󰌪" : "󰾅")
                 label: "Energieprofiel"

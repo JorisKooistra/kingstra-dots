@@ -130,6 +130,10 @@ start_core() {
     if [[ -x "$HOME/.local/bin/kingstra-disks" ]]; then
         run_bg_once "kingstra-disks watch" "disk automount" "$HOME/.local/bin/kingstra-disks" watch
     fi
+    # Nachtlicht: volgt het schema uit ~/.config/kingstra/nachtlicht.json.
+    if [[ -x "$HOME/.local/bin/kingstra-nightlight" ]] && has_cmd hyprsunset; then
+        run_bg_once "kingstra-nightlight daemon" "night light" "$HOME/.local/bin/kingstra-nightlight" daemon
+    fi
     run_once "gtk.sh" "GTK settings" "$CONFIG_HOME/hypr/scripts/gtk.sh"
 
     has_cmd xdg-user-dirs-update && xdg-user-dirs-update >> "$LOG_FILE" 2>&1 || true

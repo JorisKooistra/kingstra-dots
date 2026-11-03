@@ -30,6 +30,7 @@ var entries = [
     { label: "Schermindeling", page: 6, where: "Apparaten › Beeldschermen", keywords: "monitor layout indeling resolutie scherm" },
     { label: "Hoofdscherm", page: 6, where: "Apparaten › Beeldschermen", keywords: "primary hoofd rail anker monitor" },
     { label: "Helderheid", page: 6, where: "Apparaten › Beeldschermen", keywords: "brightness helderheid licht" },
+    { label: "Nachtlicht", page: 6, where: "Apparaten › Beeldschermen", keywords: "nachtlicht night light warm blauw licht avond schema hyprsunset kleurtemperatuur" },
     { label: "Tabletmodus", page: 6, where: "Apparaten › Beeldschermen", keywords: "tablet touch aanraak" },
     { label: "Workspaces per scherm", page: 6, section: "beeldschermen", where: "Apparaten › Beeldschermen › Geavanceerd", keywords: "workspace werkruimte monitor vastzetten toewijzen" },
     { label: "Wifi en bluetooth", page: 7, where: "Apparaten › Netwerk", keywords: "wifi netwerk bluetooth draadloos" },

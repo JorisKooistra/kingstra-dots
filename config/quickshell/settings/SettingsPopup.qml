@@ -4450,6 +4450,63 @@ Item {
                             SettingsActionButton { label: "Helderheid +"; icon: "󰃠"; accent: root.yellow; onTriggered: root.adjustBrightness(5) }
                         }
 
+                        // Nachtlicht (kingstra-nightlight + hyprsunset): 's avonds
+                        // warmere kleuren, zacht overvloeiend volgens schema.
+                        Rectangle {
+                            id: nightLightCard
+                            visible: NightLight.available
+                            Layout.fillWidth: true
+                            implicitHeight: nightLightColumn.implicitHeight + root.s(24)
+                            radius: root.s(10)
+                            color: Qt.alpha(root.surface0, 0.46)
+                            border.width: 1
+                            border.color: Qt.alpha(root.peach, 0.58)
+                            readonly property string nightCmd: Quickshell.env("HOME") + "/.local/bin/kingstra-nightlight"
+
+                            ColumnLayout {
+                                id: nightLightColumn
+                                anchors.fill: parent
+                                anchors.margins: root.s(12)
+                                spacing: root.s(10)
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: root.s(8)
+                                    Text { text: NightLight.nightOn ? "󰖔" : "󰖙"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17); color: root.peach }
+                                    Text { text: "Nachtlicht"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text; Layout.fillWidth: true }
+                                    Text { text: NightLight.subtitle; font.family: root.monoFontFamily; font.pixelSize: root.s(10); color: NightLight.nightOn ? root.peach : root.subtext0 }
+                                }
+
+                                ChoiceRow {
+                                    label: "Wanneer"
+                                    options: [{ v: "schema", t: "Volgens schema" }, { v: "hand", t: "Alleen met de hand" }]
+                                    current: NightLight.scheduled ? "schema" : "hand"
+                                    onPicked: choice => NightLight.setScheduled(choice === "schema")
+                                }
+                                ChoiceRow {
+                                    visible: NightLight.scheduled
+                                    label: "Begint om"
+                                    options: [{ v: "19:00", t: "19:00" }, { v: "20:00", t: "20:00" }, { v: "21:00", t: "21:00" }, { v: "22:00", t: "22:00" }, { v: "23:00", t: "23:00" }]
+                                    current: NightLight.startTime
+                                    onPicked: choice => Quickshell.execDetached([nightLightCard.nightCmd, "set", "start", choice])
+                                }
+                                ChoiceRow {
+                                    visible: NightLight.scheduled
+                                    label: "Stopt om"
+                                    options: [{ v: "05:00", t: "05:00" }, { v: "06:00", t: "06:00" }, { v: "07:00", t: "07:00" }, { v: "08:00", t: "08:00" }]
+                                    current: NightLight.endTime
+                                    onPicked: choice => Quickshell.execDetached([nightLightCard.nightCmd, "set", "end", choice])
+                                }
+                                ChoiceRow {
+                                    label: "Hoe warm"
+                                    hint: "Het nachtlicht vloeit in twintig minuten in en uit. Met de hand schakelen (Snelle instellingen) geldt tot het volgende schemamoment."
+                                    options: [{ v: "5000", t: "Licht" }, { v: "4000", t: "Middel" }, { v: "3200", t: "Sterk" }]
+                                    current: String(NightLight.warmth)
+                                    onPicked: choice => Quickshell.execDetached([nightLightCard.nightCmd, "set", "temperature", choice])
+                                }
+                            }
+                        }
+
                         AdvancedSection {
                             id: displayAdvancedSection
                             unit: root.s(100) / 100

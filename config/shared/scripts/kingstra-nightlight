@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-nightlight — nachtlicht via hyprsunset, met schema en zachte overgang
+# =============================================================================
+# Gebruik:
+#   kingstra-nightlight daemon        schema volgen (gestart door kingstra-session-start)
+#   kingstra-nightlight toggle|on|off handmatig, geldt tot het volgende schemamoment
+#   kingstra-nightlight auto          handmatige keuze vergeten, schema volgen
+#   kingstra-nightlight schedule on|off   schema aan of uit
+#   kingstra-nightlight set start|end HH:MM, set temperature K
+#   kingstra-nightlight status        huidige stand als JSON
+#
+# Instellingen: ~/.config/kingstra/nachtlicht.json
+#   {"schedule": true, "start": "21:00", "end": "07:00",
+#    "temperature": 4000, "fade_minutes": 20}
+# Stand voor de shell: $XDG_RUNTIME_DIR/kingstra-nightlight.json
+# =============================================================================
+set -uo pipefail
+
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/nachtlicht.json"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra"
+OVERRIDE_FILE="$STATE_DIR/nightlight-override"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+STATUS_FILE="$RUNTIME_DIR/kingstra-nightlight.json"
+NEUTRAL=6500
+
+mkdir -p "$STATE_DIR" "$(dirname "$CONFIG_FILE")" 2>/dev/null || true
+
+cfg() {
+    local key="$1" fallback="$2" value=""
+    if [[ -f "$CONFIG_FILE" ]] && command -v jq >/dev/null 2>&1; then
+        value="$(jq -r --arg k "$key" '.[$k] // empty' "$CONFIG_FILE" 2>/dev/null)"
+    fi
+    printf '%s' "${value:-$fallback}"
+}
+
+write_config_key() {
+    local key="$1" value="$2" tmp
+    command -v jq >/dev/null 2>&1 || return 1
+    [[ -f "$CONFIG_FILE" ]] || printf '{}\n' > "$CONFIG_FILE"
+    tmp="$(mktemp)"
+    jq --arg k "$key" --argjson v "$value" '.[$k] = $v' "$CONFIG_FILE" > "$tmp" && mv "$tmp" "$CONFIG_FILE"
+}
+
+minutes_of() {
+    local hh="${1%%:*}" mm="${1##*:}"
+    echo $(( 10#$hh * 60 + 10#$mm ))
+}
+
+in_schedule() {
+    local now start end
+    now=$(( 10#$(date +%H) * 60 + 10#$(date +%M) ))
+    start=$(minutes_of "$(cfg start 21:00)")
+    end=$(minutes_of "$(cfg end 07:00)")
+    if (( start <= end )); then
+        (( now >= start && now < end ))
+    else
+        (( now >= start || now < end ))
+    fi
+}
+
+# Eerstvolgende schemamoment (begin of einde) als epoch: tot dan geldt een
+# handmatige keuze.
+next_boundary() {
+    local t best="" candidate
+    for t in "$(cfg start 21:00)" "$(cfg end 07:00)"; do
+        candidate="$(date -d "today $t" +%s 2>/dev/null)" || continue
+        (( candidate <= $(date +%s) )) && candidate="$(date -d "tomorrow $t" +%s)"
+        if [[ -z "$best" ]] || (( candidate < best )); then best="$candidate"; fi
+    done
+    echo "${best:-$(( $(date +%s) + 43200 ))}"
+}
+
+override_value() {
+    [[ -f "$OVERRIDE_FILE" ]] || return 1
+    local value until
+    read -r value until < "$OVERRIDE_FILE" || return 1
+    if [[ -n "${until:-}" ]] && (( $(date +%s) >= until )); then
+        rm -f "$OVERRIDE_FILE"
+        return 1
+    fi
+    printf '%s' "$value"
+}
+
+wanted_on() {
+    local o
+    if o="$(override_value)"; then
+        [[ "$o" == "on" ]]
+        return
+    fi
+    [[ "$(cfg schedule true)" == "true" ]] && in_schedule
+}
+
+applied_temperature() {
+    local t=""
+    [[ -f "$STATUS_FILE" ]] && command -v jq >/dev/null 2>&1 \
+        && t="$(jq -r '.temperature // empty' "$STATUS_FILE" 2>/dev/null)"
+    echo "${t:-$NEUTRAL}"
+}
+
+write_status() {
+    local temp="$1" target="$2" override="" schedule
+    override="$(override_value 2>/dev/null || true)"
+    schedule="$(cfg schedule true)"
+    local tmp="$STATUS_FILE.tmp"
+    printf '{"active":%s,"temperature":%d,"target":%d,"warmth":%d,"override":"%s","schedule":%s,"start":"%s","end":"%s"}\n' \
+        "$([[ $target -lt $NEUTRAL ]] && echo true || echo false)" "$temp" "$target" "$(cfg temperature 4000)" \
+        "$override" "$schedule" "$(cfg start 21:00)" "$(cfg end 07:00)" > "$tmp" && mv "$tmp" "$STATUS_FILE"
+}
+
+ensure_hyprsunset() {
+    command -v hyprsunset >/dev/null 2>&1 || return 1
+    pgrep -x hyprsunset >/dev/null 2>&1 && return 0
+    setsid -f hyprsunset -i >/dev/null 2>&1 || return 1
+    sleep 0.5
+}
+
+apply_temperature() {
+    local temp="$1"
+    ensure_hyprsunset || return 1
+    if (( temp >= NEUTRAL )); then
+        hyprctl hyprsunset identity >/dev/null 2>&1
+    else
+        hyprctl hyprsunset temperature "$temp" >/dev/null 2>&1
+    fi
+}
+
+target_temperature() {
+    if wanted_on; then cfg temperature 4000; else echo "$NEUTRAL"; fi
+}
+
+# Snelle overgang (ongeveer twee seconden) voor handmatig schakelen.
+quick_fade() {
+    local from to steps=12 i temp
+    from="$(applied_temperature)"
+    to="$(target_temperature)"
+    for (( i = 1; i <= steps; i++ )); do
+        temp=$(( from + (to - from) * i / steps ))
+        apply_temperature "$temp"
+        sleep 0.15
+    done
+    write_status "$to" "$to"
+}
+
+set_override() {
+    printf '%s %s\n' "$1" "$(next_boundary)" > "$OVERRIDE_FILE"
+}
+
+daemon() {
+    local current target step fade
+    current="$(applied_temperature)"
+    # Bij het opstarten meteen in de goede stand, zonder te faden.
+    target="$(target_temperature)"
+    apply_temperature "$target" && current="$target"
+    write_status "$current" "$target"
+    while true; do
+        sleep 30
+        target="$(target_temperature)"
+        current="$(applied_temperature)"
+        if (( current != target )); then
+            fade="$(cfg fade_minutes 20)"
+            (( fade < 1 )) && fade=1
+            # In fade_minutes van neutraal naar de doeltemperatuur, per 30 s.
+            step=$(( (NEUTRAL - $(cfg temperature 4000)) / (fade * 2) ))
+            (( step < 25 )) && step=25
+            if (( current < target )); then
+                current=$(( current + step > target ? target : current + step ))
+            else
+                current=$(( current - step < target ? target : current - step ))
+            fi
+            apply_temperature "$current"
+        fi
+        write_status "$current" "$target"
+    done
+}
+
+case "${1:-status}" in
+    daemon) daemon ;;
+    on) set_override on; quick_fade ;;
+    off) set_override off; quick_fade ;;
+    toggle)
+        if wanted_on; then set_override off; else set_override on; fi
+        quick_fade
+        ;;
+    auto) rm -f "$OVERRIDE_FILE"; quick_fade ;;
+    set)
+        # kingstra-nightlight set start 21:00 | end 07:00 | temperature 4000
+        case "${2:-}:${3:-}" in
+            start:[0-2][0-9]:[0-5][0-9]|end:[0-2][0-9]:[0-5][0-9]) write_config_key "$2" "\"$3\"" ;;
+            temperature:[0-9][0-9][0-9][0-9]) write_config_key temperature "$3" ;;
+            *) echo "gebruik: kingstra-nightlight set start|end HH:MM of set temperature 3000-6000" >&2; exit 2 ;;
+        esac
+        quick_fade
+        ;;
+    schedule)
+        case "${2:-}" in
+            on) write_config_key schedule true ;;
+            off) write_config_key schedule false ;;
+            *) echo "gebruik: kingstra-nightlight schedule on|off" >&2; exit 2 ;;
+        esac
+        rm -f "$OVERRIDE_FILE"
+        quick_fade
+        ;;
+    status)
+        [[ -f "$STATUS_FILE" ]] || write_status "$(applied_temperature)" "$(target_temperature)"
+        cat "$STATUS_FILE"
+        ;;
+    *) sed -n '3,15p' "$0"; exit 2 ;;
+esac

@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Nachtlicht
+- Nieuw: 's avonds warmere schermkleuren via `hyprsunset`, aangestuurd door `kingstra-nightlight`. Volgt een schema (standaard 21:00–07:00) en vloeit in twintig minuten in en uit; met de hand schakelen vloeit in twee seconden en geldt tot het volgende schemamoment.
+- Schakelaar "Nachtlicht" in Snelle instellingen (controlecentrum en paneel); instellingen voor schema, begin, einde en warmte in Instellingen › Apparaten › Beeldschermen. Opgeslagen in `~/.config/kingstra/nachtlicht.json`.
+- De installer/updater (fase 03) installeert `hyprsunset`; de sessie start de daemon.
+
 ### Inlogscherm in het huidige thema
 - Het SDDM-inlogscherm is opnieuw opgebouwd als spiegel van het vergrendelscherm: intro met een bol en ringen die openspringen, dezelfde klok, concentrische ringen die rood kleuren bij een fout, avatar links met naam, statusbol (vingerafdruk/slot) en een wachtwoordpil met bolletjes, en onderaan dezelfde glazen pillen. Alles schaalt mee met de schermbreedte zoals `Scaler.qml`. Na een geslaagde login vervaagt het scherm naar de basiskleur.
 - Thema volgt de shell: `kingstra-sddm-sync` schrijft nu ook `Style.qml` uit `~/.config/quickshell/theme.json` (lettertype zoals `ThemeConfig.textFont`, animatietempo, licht/donker, gloed, Neon-scanlijnen). Paper krijgt een lichte waas in plaats van een zwarte.

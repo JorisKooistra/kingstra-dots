@@ -44,7 +44,8 @@ _phase03_install_packages() {
         wtype \
         grim \
         slurp \
-        playerctl
+        playerctl \
+        hyprsunset
     aur_install satty
 }
 

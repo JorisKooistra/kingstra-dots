@@ -87,7 +87,7 @@ Item {
     property string busyId: ""
 
     // --- Bewerkmodus: volgorde, breedte, verborgen ---------------------------
-    readonly property var pillIds: ["wifi", "eth", "bt", "dnd", "power", "monitors", "keyboard"]
+    readonly property var pillIds: ["wifi", "eth", "bt", "dnd", "night", "power", "monitors", "keyboard"]
     property var ccOrder: pillIds
     property var ccHidden: []
     property var ccWide: []
@@ -153,6 +153,7 @@ Item {
         if (id === "eth") return !hasWifi && isEthConnected;
         if (id === "bt") return hasBluetooth;
         if (id === "keyboard") return kbLayoutCount > 1;
+        if (id === "night") return NightLight.available;
         return true;
     }
     function pillIcon(id) {
@@ -160,13 +161,14 @@ Item {
         if (id === "eth") return "󰈀";
         if (id === "bt") return bluetoothOn ? "󰂱" : "󰂲";
         if (id === "dnd") return NotificationService.dnd ? "󰂛" : "󰂚";
+        if (id === "night") return NightLight.nightOn ? "󰖔" : "󰖙";
         if (id === "power") return powerProfileName === "performance" ? "󰓅" : (powerProfileName === "power-saver" ? "󰌪" : "󰾅");
         if (id === "monitors") return "󰍹";
         if (id === "keyboard") return "󰌌";
         return "";
     }
     function pillLabel(id) {
-        return ({ wifi: "Wi-Fi", eth: "Bedraad", bt: "Bluetooth", dnd: "Niet storen", power: "Energie",
+        return ({ wifi: "Wi-Fi", eth: "Bedraad", bt: "Bluetooth", dnd: "Niet storen", night: "Nachtlicht", power: "Energie",
                   monitors: "Beeldschermen", keyboard: "Toetsenbord" })[id] || id;
     }
     function pillSubtitle(id) {
@@ -174,6 +176,7 @@ Item {
         if (id === "eth") return "Verbonden";
         if (id === "bt") return !bluetoothOn ? "Uit" : (bluetoothConnected > 0 ? bluetoothConnected + " verbonden" : "Aan");
         if (id === "dnd") return NotificationService.dnd ? "Aan" : "Uit";
+        if (id === "night") return NightLight.subtitle;
         if (id === "power") return profileLabel(powerProfileName);
         if (id === "monitors") return Quickshell.screens.length === 1 ? "1 scherm" : Quickshell.screens.length + " schermen";
         if (id === "keyboard") return kbLayout !== "" ? kbLayout : "Volgende indeling";
@@ -184,12 +187,14 @@ Item {
         if (id === "eth") return true;
         if (id === "bt") return bluetoothOn;
         if (id === "dnd") return NotificationService.dnd;
+        if (id === "night") return NightLight.nightOn;
         if (id === "power") return powerProfileName !== "balanced";
         return false;
     }
     function pillAccent(id) {
         if (id === "bt" || id === "keyboard") return mocha.accent1;
         if (id === "dnd") return mocha.accent2;
+        if (id === "night") return mocha.peach;
         if (id === "power") return powerProfileName === "performance" ? mocha.accent2 : mocha.accent3;
         return mocha.accent3;
     }
@@ -215,6 +220,8 @@ Item {
             if (bluetoothOn && expanded === "bt") expanded = "";
         } else if (id === "dnd") {
             NotificationService.toggleDnd();
+        } else if (id === "night") {
+            NightLight.toggle();
         } else if (id === "power") {
             toggleExpanded("power");
         } else if (id === "monitors") {
