@@ -15,6 +15,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Spiekbriefje (Super vasthouden)** heeft een blok Werkvlak: twee vingers, wiel, Ctrl+wiel, Ctrl+slepen, Shift+wiel, en zonder Super knijpen en vier vingers.
 
 ### Update breekt niet meer af op een optioneel pakket
+- **Geen valse bootfout meer bij een unified kernel image.** De controle na de update zocht `initramfs-linux.img`, maar de laptop start met een UKI (`/boot/EFI/Linux/arch-linux.efi`, `default_uki` in de mkinitcpio-preset). Hij kijkt nu naar dat bestand.
 - **AUR-updates lopen weer.** Vóór de AUR-build ververst de updater de PGP-sleutels van de pakketten met een update (firefox-bin faalde op Mozilla's nieuwe subsleutel, "unknown public key"). Hij installeert ook bouwpakketten die de AUR-maintainer vergeten is te noemen (skwd-daemon eist `qt6-tools`).
 - **Dicteren**: whisper.cpp heet in de Arch-repo nu `whisper-cpp`; het oude AUR-pakket bestaat niet meer. De installer neemt `whisper-cpp` uit extra (vangnet: `whisper.cpp-git`).
 - quickshell-games-launchers-git blijft als update verschijnen omdat de AUR-versie (r138) nieuwer lijkt dan wat de bron echt levert (r80). Dat ligt bij de maintainer; het herinstalleert alleen hetzelfde pakket en kan geen kwaad.
