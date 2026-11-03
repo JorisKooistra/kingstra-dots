@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-aur-cache — AUR-bouwcache van yay opruimen
+# =============================================================================
+# Gebruik:
+#   kingstra-aur-cache            laten zien wat weg kan (alleen lezen)
+#   kingstra-aur-cache --size     alleen hoeveel ruimte vrijkomt (leesbaar)
+#   kingstra-aur-cache --clean    opruimen
+#
+# yay bewaart per AUR-pakket de downloads (debs, jars, AppImages), de
+# bouwmappen en elk gebouwd pakket, en ruimt zelf nooit op. Weg gaan:
+#   - mappen van pakketten die niet meer geïnstalleerd zijn;
+#   - alles wat niet in de AUR-git staat, behalve gebouwde pakketten;
+#   - gebouwde pakketten op de nieuwste KINGSTRA_AUR_KEEP (standaard 3) na.
+# Die laatste blijven staan voor kingstra-rollback --system.
+# =============================================================================
+set -uo pipefail
+
+YAY_CACHE="${KINGSTRA_YAY_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/yay}"
+KEEP="${KINGSTRA_AUR_KEEP:-3}"
+MODE="show"
+case "${1:-}" in
+    --clean) MODE="clean" ;;
+    --size) MODE="size" ;;
+    -h|--help) sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    "") ;;
+    *) printf 'Onbekende optie: %s\n' "$1" >&2; exit 2 ;;
+esac
+
+[[ -d "$YAY_CACHE" ]] || { [[ "$MODE" == size ]] && echo 0B; exit 0; }
+[[ "$KEEP" =~ ^[0-9]+$ ]] || KEEP=3
+
+declare -A INSTALLED=()
+while read -r p; do INSTALLED["$p"]=1; done < <(pacman -Qq 2>/dev/null)
+# Zonder pacman-lijst lijkt alles verwijderd; dan liever niets doen.
+(( ${#INSTALLED[@]} > 0 )) || { echo "pacman -Qq gaf niets; niets aangeraakt." >&2; exit 1; }
+
+CANDIDATES=()   # paden
+REASONS=()      # zelfde volgorde: waarom
+
+add() { CANDIDATES+=("$1"); REASONS+=("$2"); }
+
+# Is een van de pakketten uit deze map nog geïnstalleerd?
+dir_installed() {
+    local dir="$1" name
+    [[ -n "${INSTALLED[$(basename "$dir")]:-}" ]] && return 0
+    [[ -f "$dir/.SRCINFO" ]] || return 1
+    while read -r name; do
+        [[ -n "${INSTALLED[$name]:-}" ]] && return 0
+    done < <(sed -n 's/^[[:space:]]*pkgname = //p' "$dir/.SRCINFO")
+    return 1
+}
+
+scan_dir() {
+    local dir="$1" entry base name
+    local -A tracked=() seen=()
+    local -a builds=()
+
+    if ! dir_installed "$dir"; then
+        add "$dir" "niet meer geïnstalleerd"
+        return
+    fi
+
+    # Zonder git weten we niet wat bij het recept hoort: alleen builds.
+    if [[ -d "$dir/.git" ]]; then
+        while IFS= read -r -d '' entry; do
+            tracked["${entry%%/*}"]=1
+        done < <(git -C "$dir" ls-files -z 2>/dev/null)
+        for entry in "$dir"/* "$dir"/.[!.]*; do
+            [[ -e "$entry" || -L "$entry" ]] || continue
+            base="${entry##*/}"
+            [[ "$base" == .git || -n "${tracked[$base]:-}" || "$base" == *.pkg.tar.* ]] && continue
+            add "$entry" "download/bouwmap"
+        done
+    fi
+
+    # Gebouwde pakketten: per pakketnaam de nieuwste KEEP houden.
+    while IFS= read -r entry; do
+        base="${entry##*/}"
+        base="${base%.pkg.tar.*}"
+        name="${base%-*-*-*}"          # naam-versie-release-arch
+        seen["$name"]=$(( ${seen[$name]:-0} + 1 ))
+        (( ${seen[$name]} > KEEP )) || continue
+        add "$entry" "oude build"
+        [[ -e "$entry.sig" ]] && add "$entry.sig" "oude build"
+    done < <(find "$dir" -maxdepth 1 -type f -name '*.pkg.tar.*' ! -name '*.sig' -printf '%T@ %p\n' 2>/dev/null \
+                | sort -rn | cut -d' ' -f2-)
+}
+
+for d in "$YAY_CACHE"/*/; do
+    d="${d%/}"
+    [[ -d "$d" && ! -L "$d" ]] || continue
+    scan_dir "$d"
+done
+
+total=0
+if (( ${#CANDIDATES[@]} > 0 )); then
+    total="$(du -scb -- "${CANDIDATES[@]}" 2>/dev/null | tail -n 1 | cut -f1)"
+fi
+human="$(numfmt --to=iec --suffix=B "${total:-0}" 2>/dev/null || printf '%sB' "${total:-0}")"
+
+case "$MODE" in
+    size)
+        printf '%s\n' "$human"
+        ;;
+    show)
+        if (( ${#CANDIDATES[@]} == 0 )); then
+            echo "AUR-bouwcache is al schoon."
+            exit 0
+        fi
+        for i in "${!CANDIDATES[@]}"; do
+            printf '  %-26s %s\n' "${REASONS[$i]}" "${CANDIDATES[$i]#"$YAY_CACHE"/}"
+        done
+        printf 'Samen %s. Opruimen: kingstra-aur-cache --clean\n' "$human"
+        ;;
+    clean)
+        for p in "${CANDIDATES[@]}"; do
+            # Alleen binnen de yay-cache, nooit de cache zelf.
+            [[ "$p" == "$YAY_CACHE"/?* ]] || continue
+            rm -rf -- "$p"
+        done
+        printf 'AUR-bouwcache opgeruimd: %s vrij.\n' "$human"
+        ;;
+esac

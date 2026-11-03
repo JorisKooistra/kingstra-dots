@@ -77,11 +77,11 @@ phase_run() {
 _phase14b_deploy_scripts() {
     local scripts_dir="$REPO_ROOT/config/shared/scripts" name
     if "${DRY_RUN:-false}"; then
-        log_dry "kingstra-health, -herstel, -backup en -plymouth-sync zouden in ~/.local/bin komen"
+        log_dry "kingstra-health, -herstel, -backup, -plymouth-sync en -aur-cache zouden in ~/.local/bin komen"
         return 0
     fi
     ensure_dir "$HOME/.local/bin"
-    for name in kingstra-health kingstra-herstel kingstra-backup kingstra-plymouth-sync; do
+    for name in kingstra-health kingstra-herstel kingstra-backup kingstra-plymouth-sync kingstra-aur-cache; do
         chmod +x "$scripts_dir/$name"
         deploy_link "$scripts_dir/$name" "$HOME/.local/bin/$name"
     done

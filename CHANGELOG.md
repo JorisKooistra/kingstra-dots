@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### AUR-bouwcache groeit niet meer ongemoeid door
+- **`kingstra-aur-cache`** ruimt de bouwcache van yay op (`~/.cache/yay`, op de laptop 16 GB). Weg gaan mappen van pakketten die niet meer geïnstalleerd zijn, downloads en bouwmappen (debs, jars, AppImages, `src/`), en gebouwde pakketten op de nieuwste drie per pakket na, zodat `kingstra rollback --system` blijft werken. Zonder opties laat het alleen zien wat weg kan; `--clean` ruimt op.
+- **De updater vraagt het bij het opruimen**, naast wezen en de pakketcache, met hoeveel ruimte het oplevert. Het herstelmenu (Ruimte maken) gooit de cache niet meer helemaal leeg maar gebruikt hetzelfde script.
+
 ### Ruimtelijk werkvlak op de laptop: meeschuiven en ontdekbaar
 - **Super + twee vingers schuift het werkvlak mee met je vingers**, als een kaart, in plaats van per gebaar één hele plek te springen. Bij optillen klikt het op een plek vast als je er dichtbij bent. Uitgezoomd werkt een gewone tweevingerscroll zo, ook zonder Super. Dit zit in de zoom-plugin; `kingstra update` bouwt hem opnieuw.
 - **Gebaren werken ook op een leeg werkvlak** of als een zwevend venster de focus heeft. Knijpen, vier vingers en Super+drie vingers keken eerst naar het actieve venster en deden zonder venster niets.

@@ -39,8 +39,8 @@ free_space() {
     if command -v paccache >/dev/null 2>&1 && ask "Oude pakketversies opruimen (houdt er 2 per pakket)?"; then
         sudo paccache -rk2 && sudo paccache -ruk0
     fi
-    if [[ -d "$HOME/.cache/yay" ]] && ask "AUR-bouwmap leegmaken ($(du -sh "$HOME/.cache/yay" 2>/dev/null | cut -f1))?"; then
-        rm -rf "${HOME:?}/.cache/yay/"*
+    if [[ -d "$HOME/.cache/yay" ]] && ask "AUR-bouwcache opruimen ($(run_tool kingstra-aur-cache --size) vrij; houdt de laatste 3 builds)?"; then
+        run_tool kingstra-aur-cache --clean
     fi
     if ask "Systeemlogboek inkorten tot 200 MB?"; then
         sudo journalctl --vacuum-size=200M

@@ -23,6 +23,7 @@ find_tool() {
 SNAPSHOT_CMD="${KINGSTRA_SNAPSHOT_CMD:-$(find_tool kingstra-snapshot)}"
 HEALTH_CMD="$(find_tool kingstra-health)"
 ROLLBACK_CMD="$(find_tool kingstra-rollback)"
+AUR_CACHE_CMD="$(find_tool kingstra-aur-cache)"
 PACMAN_LOG="${KINGSTRA_PACMAN_LOG:-/var/log/pacman.log}"
 RESULT_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/update-result.json"
 HOLD_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/update-hold"
@@ -560,6 +561,17 @@ cleanup_system() {
         if ask_no "Oude pakketcache opruimen (houdt de laatste 3 versies)?"; then
             # Drie versies: de huidige plus twee om naar terug te kunnen.
             sudo paccache -rk3 && sudo paccache -ruk0 && log "Pakketcache opgeruimd."
+        fi
+    fi
+
+    # yay ruimt zijn bouwcache nooit op; zonder dit groeit hij tot tientallen GB.
+    if [[ -n "$AUR_CACHE_CMD" ]]; then
+        local aur_free
+        aur_free="$(bash "$AUR_CACHE_CMD" --size 2>/dev/null || true)"
+        if [[ -n "$aur_free" && "$aur_free" != 0B ]]; then
+            if ask_no "AUR-bouwcache opruimen ($aur_free vrij; houdt de laatste 3 builds)?"; then
+                log "$(bash "$AUR_CACHE_CMD" --clean 2>&1)"
+            fi
         fi
     fi
 
