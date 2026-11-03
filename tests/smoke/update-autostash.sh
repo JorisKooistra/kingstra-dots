@@ -59,6 +59,8 @@ run_updater
 [[ "$(cat "$LOCAL/other")" == "y" ]] || { cat "$CASE/out"; fail "update niet toegepast"; }
 [[ "$(cat "$LOCAL/binds.lua")" == "eigen" ]] || fail "eigen wijziging kwijt"
 [[ -z "$(git -C "$LOCAL" stash list)" ]] || fail "stash bleef staan"
+grep -q "verder met de nieuwe updater" "$CASE/out" || fail "updater startte niet opnieuw na het ophalen"
+[[ "$(grep -c "Gestart:" "$TEST_HOME/.local/state/kingstra/updates/"update-*.log)" == 2 ]] || fail "niet in hetzelfde log verder"
 
 # 2. Botsing: alles blijft op de oude stand, eigen wijziging intact.
 setup

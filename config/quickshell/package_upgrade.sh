@@ -40,6 +40,9 @@ LOG_FILE=""
 NOTABLE_RE='^(linux(-lts|-zen|-hardened)?|linux-firmware|nvidia[^ ]*|mesa|vulkan-[^ ]+|systemd|glibc|hyprland|hyprlock|hypridle|quickshell[^ ]*|pipewire|wireplumber|sddm|networkmanager|bluez|grub|mkinitcpio) '
 INLINE_MAX=6
 
+ORIG_ARGS=("$@")
+SELF="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")"
+
 INTERACTIVE=false
 [[ "${1:-}" == "--interactief" || "${1:-}" == "--interactive" ]] && INTERACTIVE=true
 
@@ -196,6 +199,11 @@ count_lines() {
 # de stappen die stil (met voortgangsbalk) draaien.
 init_log() {
     mkdir -p "$STATE_DIR" 2>/dev/null || return 0
+    # Na het opnieuw starten met de nieuwe updater: hetzelfde log aanvullen.
+    if [[ -n "${KINGSTRA_UPDATE_LOG:-}" && -w "$KINGSTRA_UPDATE_LOG" ]]; then
+        LOG_FILE="$KINGSTRA_UPDATE_LOG"
+        return 0
+    fi
     LOG_FILE="$STATE_DIR/update-$(date +%Y%m%d-%H%M%S).log"
     : > "$LOG_FILE" 2>/dev/null || LOG_FILE=""
 
@@ -911,6 +919,27 @@ else
 fi
 to_log "Gestart: $(date '+%Y-%m-%d %H:%M:%S')"
 
+# Eerst de dotfiles ophalen en dan met de nieuwe updater verder. Anders
+# draaien Arch/AUR, configbestanden en de controle nog met de code van vóór
+# de update, en werken fixes pas bij de keer daarna.
+if [[ -z "${KINGSTRA_UPDATE_REEXEC:-}" ]]; then
+    self_before="$(git -C "$(resolve_dotfiles_repo 2>/dev/null || echo /nonexistent)" rev-parse HEAD 2>/dev/null || true)"
+    live "Updater bijwerken"
+    # Stil: wat er gebeurt staat in het log en komt bij Dotfiles terug.
+    if [[ -n "$self_before" ]] && update_dotfiles >/dev/null; then
+        self_after="$(git -C "$DOTFILES_REPO" rev-parse HEAD 2>/dev/null || true)"
+        live_clear
+        if [[ -n "$self_after" && "$self_after" != "$self_before" && -f "$SELF" ]]; then
+            log "Dotfiles bijgewerkt (${self_before:0:7} → ${self_after:0:7}); verder met de nieuwe updater."
+            export KINGSTRA_UPDATE_REEXEC="$self_before" KINGSTRA_UPDATE_LOG="$LOG_FILE"
+            exec bash "$SELF" "${ORIG_ARGS[@]+"${ORIG_ARGS[@]}"}"
+        fi
+    fi
+    DOTFILES_REPO=""
+elif [[ "$KINGSTRA_UPDATE_REEXEC" =~ ^[0-9a-f]{7,}$ ]]; then
+    to_log "Opnieuw gestart na dotfiles-update vanaf $KINGSTRA_UPDATE_REEXEC"
+fi
+
 section "Arch-nieuws"
 if ! check_arch_news; then
     [[ -n "$LOG_FILE" ]] && log "Log: $LOG_FILE"
@@ -958,6 +987,9 @@ fi
 section "Dotfiles"
 dotfiles_update_exit=0
 update_dotfiles || dotfiles_update_exit=$?
+if [[ "${KINGSTRA_UPDATE_REEXEC:-}" =~ ^[0-9a-f]{7,}$ && -n "$DOTFILES_REPO" ]]; then
+    log "Aan het begin opgehaald: ${KINGSTRA_UPDATE_REEXEC:0:7} → $(git -C "$DOTFILES_REPO" rev-parse --short HEAD 2>/dev/null)."
+fi
 
 # Een git pull alleen is niet genoeg: nieuwe pakketten, gegenereerde hardware-
 # config en live sessiewijzigingen worden pas door install.sh toegepast. Draai
