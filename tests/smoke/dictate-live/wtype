@@ -1,0 +1,2 @@
+#!/bin/sh
+printf '%s|%s\n' "$(date +%s.%N | cut -c1-14)" "$(cat)" >> /tmp/claude-0/dict/typed.log

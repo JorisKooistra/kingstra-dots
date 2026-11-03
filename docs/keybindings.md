@@ -119,6 +119,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + V` | Klembordgeschiedenis: Enter plakt, Shift+Enter kopieert, Ctrl+P pint vast |
 | `Super + .` | Emoji en symbolen (launcher in de emoji-stand) |
 | `Super + H` (vasthouden) | Dicteren: praten, loslaten typt de tekst (lokaal, whisper.cpp) |
+| `Super + H` (kort tikken) | Live dicteren: elke zin wordt getypt zodra je even pauzeert; nog een keer tikken stopt |
 | `Super + Shift + Return` | btop in Kitty |
 | `Super + Shift + C` | cava (audio visualizer) in Kitty |
 

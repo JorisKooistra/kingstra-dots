@@ -2,7 +2,13 @@
 # =============================================================================
 # kingstra-dictate — praten wordt getypte tekst, lokaal met whisper.cpp
 # =============================================================================
-# Super+H vasthouden: opnemen. Loslaten: omzetten en typen waar de cursor staat.
+# Twee manieren, allebei met Super+H:
+# * Vasthouden: praten terwijl je vasthoudt. Elke zin wordt al omgezet
+#   terwijl je praat; bij loslaten wordt alles getypt (pas na loslaten,
+#   anders zou de tekst als Super+letter binnenkomen).
+# * Kort tikken: live dicteren. Elke zin wordt getypt zodra je even pauzeert.
+#   Nog een keer Super+H tikken stopt (na vijf minuten stopt het vanzelf).
+# Het knippen bij pauzes en het omzetten doet kingstra-dictate-live.py.
 # Er gaat niets naar internet; het model staat in ~/.local/share/kingstra/whisper.
 #
 # Gebruik:
@@ -23,6 +29,7 @@ STATUS_FILE="$RUNTIME/kingstra-dictate.json"
 CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/dicteren.json"
 MODEL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/whisper"
 MIN_SECONDS=0.4
+LIVE_HELPER="$(dirname "$(readlink -f "$0")")/kingstra-dictate-live.py"
 
 mkdir -p "$WORK"
 
@@ -69,13 +76,30 @@ recording() {
     [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null
 }
 
+live_active() {
+    [[ -f "$WORK/live" ]]
+}
+
+type_command() {
+    # Leest tekst van stdin en typt die waar de cursor staat.
+    if [[ "$(cfg paste false)" == "true" ]] || ! command -v wtype >/dev/null 2>&1; then
+        printf '%s' 'wl-copy; sleep 0.05; wtype -M ctrl v -m ctrl 2>/dev/null || true'
+    else
+        printf '%s' 'wtype -'
+    fi
+}
+
 start() {
-    recording && return 0
+    if recording; then
+        # Tweede tik in live-modus: stoppen.
+        live_active && finish_session
+        return 0
+    fi
     if ! whisper_bin >/dev/null || [[ ! -f "$(model_path)" ]]; then
         feedback "󰍭" "Dicteren is nog niet klaar" "Draai kingstra update om whisper en het taalmodel te installeren" 4000 warning
         return 1
     fi
-    rm -f "$AUDIO"
+    rm -f "$AUDIO" "$WORK/live" "$WORK/stop" "$WORK/cancel" "$WORK/klaar" "$WORK/getypt.txt" "$WORK/stuk.wav"
     # shellcheck disable=SC2016 # $$ en $1/$2 horen bij de binnenste shell
     if command -v pw-record >/dev/null 2>&1; then
         setsid -f sh -c 'echo $$ > "$1"; exec pw-record --rate 16000 --channels 1 --format s16 "$2"' sh "$PID_FILE" "$AUDIO" >/dev/null 2>&1
@@ -86,8 +110,10 @@ start() {
         return 1
     fi
     date +%s.%N > "$WORK/started"
+    KD_WHISPER="$(whisper_bin)" KD_MODEL="$(model_path)" KD_LANG="$(cfg language nl)" KD_TYPE="$(type_command)" \
+        setsid -f python3 "$LIVE_HELPER" "$WORK" >/dev/null 2>&1
     set_status luisteren
-    feedback "󰍬" "Luisteren…" "Laat Super+H los als je klaar bent" 8000
+    feedback "󰍬" "Luisteren…" "Loslaten typt de tekst. Kort tikken: live meetypen" 8000
 }
 
 stop_recorder() {
@@ -101,53 +127,60 @@ stop_recorder() {
     rm -f "$PID_FILE"
 }
 
-type_text() {
-    local text="$1"
-    if [[ "$(cfg paste false)" == "true" ]] || ! command -v wtype >/dev/null 2>&1; then
-        printf '%s' "$text" | wl-copy
-        sleep 0.05
-        wtype -M ctrl v -m ctrl 2>/dev/null || true
+# Opname stoppen, de helper de laatste zin laten afmaken en wachten tot alles
+# getypt is.
+finish_session() {
+    local was_live=false
+    live_active && was_live=true
+    stop_recorder
+    touch "$WORK/stop"
+    set_status omzetten
+    $was_live || feedback "󰗊" "Omzetten…" "Lokaal, er gaat niets naar internet" 6000
+    for _ in $(seq 1 1200); do
+        [[ -f "$WORK/klaar" ]] && break
+        sleep 0.1
+    done
+    rm -f "$AUDIO" "$WORK/live" "$WORK/stuk.wav"
+    set_status uit
+    local text
+    text="$(cat "$WORK/getypt.txt" 2>/dev/null)"
+    if [[ -z "$text" ]]; then
+        feedback "󰍭" "Niets verstaan" "Probeer het nog eens, iets dichter bij de microfoon" 2400
+    elif $was_live; then
+        feedback "󰍭" "Live dicteren uit" "$(printf '%s' "$text" | tail -c 80)" 1800
     else
-        wtype -- "$text"
+        feedback "󰌌" "Getypt" "${text:0:80}" 2000
     fi
 }
 
 stop() {
     recording || return 0
-    stop_recorder
+    # Loslaten in live-modus doet niets; de volgende tik stopt.
+    live_active && return 0
     local started now
     started="$(cat "$WORK/started" 2>/dev/null || echo 0)"
     now="$(date +%s.%N)"
     if awk -v a="$started" -v b="$now" -v m="$MIN_SECONDS" 'BEGIN { exit !(b - a < m) }'; then
-        set_status uit
-        feedback "󰍭" "Te kort" "Houd Super+H vast terwijl je praat" 1800
+        # Kort getikt: live dicteren.
+        touch "$WORK/live"
+        set_status live
+        feedback "󰍬" "Live dicteren" "Praat maar; elke zin wordt getypt. Tik Super+H om te stoppen" 4000
         return 0
     fi
-    set_status omzetten
-    feedback "󰗊" "Omzetten…" "Lokaal, er gaat niets naar internet" 6000
-    local text
-    text="$("$(whisper_bin)" -m "$(model_path)" -l "$(cfg language nl)" -nt -np -f "$AUDIO" 2>/dev/null \
-        | tr '\n' ' ' | sed -E 's/\[[^]]*\]//g; s/  +/ /g; s/^ +//; s/ +$//')"
-    rm -f "$AUDIO"
-    set_status uit
-    if [[ -z "$text" ]]; then
-        feedback "󰍭" "Niets verstaan" "Probeer het nog eens, iets dichter bij de microfoon" 2400
-        return 0
-    fi
-    type_text "$text"
-    feedback "󰌌" "Getypt" "${text:0:80}" 2000
+    finish_session
 }
 
 cancel() {
+    touch "$WORK/cancel"
     recording && stop_recorder
-    rm -f "$AUDIO"
+    rm -f "$AUDIO" "$WORK/live"
     set_status uit
 }
 
 case "${1:-toggle}" in
     start) start ;;
     stop) stop ;;
-    toggle) if recording; then stop; else start; fi ;;
+    toggle) if recording; then finish_session; else start; fi ;;
     cancel) cancel ;;
     status) cat "$STATUS_FILE" 2>/dev/null || echo '{"state":"uit"}' ;;
     *) sed -n '3,15p' "$0"; exit 2 ;;

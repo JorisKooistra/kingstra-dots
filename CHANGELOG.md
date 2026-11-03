@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Dicteren typt live mee
+- **Kort op Super+H tikken start live dicteren**: elke zin wordt getypt zodra je even pauzeert (ongeveer 0,6 s stilte), terwijl je doorpraat. Nog een keer tikken stopt; na vijf minuten stopt het vanzelf. Voorheen gaf een korte tik alleen "Te kort".
+- **Vasthouden werkt als voorheen, maar sneller klaar**: zinnen worden al omgezet terwijl je praat, dus na loslaten hoeft alleen de laatste zin nog. De tekst wordt pas na loslaten getypt (0,6 s marge), omdat getypte letters met Super nog ingedrukt als sneltoetsen zouden binnenkomen.
+- Het knippen bij pauzes en omzetten doet `shared/scripts/kingstra-dictate-live.py`; geen nieuwe pakketten of sneltoetsen. Test: `tests/smoke/dictate-live.sh`.
+
 ### AUR-bouwcache groeit niet meer ongemoeid door
 - **`kingstra-aur-cache`** ruimt de bouwcache van yay op (`~/.cache/yay`, op de laptop 16 GB). Weg gaan mappen van pakketten die niet meer geïnstalleerd zijn, downloads en bouwmappen (debs, jars, AppImages, `src/`), en gebouwde pakketten op de nieuwste drie per pakket na, zodat `kingstra rollback --system` blijft werken. Zonder opties laat het alleen zien wat weg kan; `--clean` ruimt op.
 - **De updater vraagt het bij het opruimen**, naast wezen en de pakketcache, met hoeveel ruimte het oplevert. Het herstelmenu (Ruimte maken) gooit de cache niet meer helemaal leeg maar gebruikt hetzelfde script.

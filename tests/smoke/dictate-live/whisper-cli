@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+import sys, wave
+p = sys.argv[sys.argv.index("-f")+1]
+w = wave.open(p); d = w.getnframes()/16000
+print(" zin van %.1fs" % d)
