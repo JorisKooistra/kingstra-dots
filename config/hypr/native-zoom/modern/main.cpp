@@ -350,23 +350,34 @@ void mouseButton(IPointer::SButtonEvent event,Event::SCallbackInfo& info) {
 }
 bool spatialMonitor(PHLMONITOR monitor);
 void layoutMessage(PHLMONITOR monitor,const std::string& message);
-// One finger-scroll gesture moves a single page. High-resolution pad events
-// keep arriving after the step, so further deltas wait until the fingers lift.
-struct FingerPage { double x=0,y=0; bool sent=false; std::chrono::steady_clock::time_point last{}; };
-FingerPage fingerPage;
-void fingerPageSnap(PHLMONITOR monitor,const IPointer::SAxisEvent& event) {
+// Two fingers drag the werkvlak like a map: the view follows the fingers
+// and settles on a nearby spot when they lift. libinput ends every finger
+// scroll with a zero delta, which is the lift. The 400 ms gap is a fallback
+// for a missed stop event: the next scroll simply starts a new drag.
+// Touchpad deltas arrive after scroll_factor (0.45), so a gain brings the
+// movement back to roughly one-to-one with the fingers.
+constexpr double FINGER_PAN_GAIN=2.0;
+struct FingerPan { bool on=false; std::chrono::steady_clock::time_point last{}; };
+FingerPan fingerPan;
+void fingerPanFollow(PHLMONITOR monitor,const IPointer::SAxisEvent& event) {
     const auto now=std::chrono::steady_clock::now();
-    if (fingerPage.last.time_since_epoch().count() && now-fingerPage.last>std::chrono::milliseconds(220)) fingerPage={};
-    fingerPage.last=now;
-    if (event.axis==WL_POINTER_AXIS_VERTICAL_SCROLL) fingerPage.y+=event.delta;
-    else fingerPage.x+=event.delta;
-    if (fingerPage.sent) return;
-    if (std::max(std::abs(fingerPage.x),std::abs(fingerPage.y))<64) return;
-    fingerPage.sent=true;
+    if (event.delta==0) {
+        if (fingerPan.on) layoutMessage(monitor,"dragend");
+        fingerPan={};
+        return;
+    }
+    if (!fingerPan.on || now-fingerPan.last>std::chrono::milliseconds(400)) {
+        layoutMessage(monitor,"dragstart");
+        fingerPan.on=true;
+    }
+    fingerPan.last=now;
+    const auto z=zoomFor(monitor);
+    const double scale=(z && z->factor>0)?z->factor:1.0;
     // Same direction as Super+wheel: positive is down/right, after natural scroll.
-    const char* dir=std::abs(fingerPage.y)>=std::abs(fingerPage.x)
-        ?(fingerPage.y>0?"down":"up"):(fingerPage.x>0?"right":"left");
-    layoutMessage(monitor,std::string("pan ")+dir);
+    const double step=event.delta*FINGER_PAN_GAIN/scale;
+    if (!std::isfinite(step)) return;
+    const bool vertical=event.axis==WL_POINTER_AXIS_VERTICAL_SCROLL;
+    layoutMessage(monitor,std::format("panby {:.3f} {:.3f}",vertical?0.0:step,vertical?step:0.0));
 }
 void mouseAxis(IPointer::SAxisEvent event,Event::SCallbackInfo& info) {
     if (info.cancelled || g_pSessionLockManager->isSessionLocked()) return;
@@ -382,10 +393,10 @@ void mouseAxis(IPointer::SAxisEvent event,Event::SCallbackInfo& info) {
     const auto monitor=monitorAt(g_pInputManager->getMouseCoordsInternal());
     // Two-finger scroll is an axis, not a swipe. While zoomed out it used to
     // scroll the shrunken app (and a touch pinch wobbled the scale). Super+
-    // two fingers, or any two-finger scroll while zoomed, steps one page.
+    // two fingers, or any two-finger scroll while zoomed, drags the werkvlak.
     if (event.source==WL_POINTER_AXIS_SOURCE_FINGER && spatialMonitor(monitor)
         && ((mods&Input::HL_MODIFIER_META) || zoomFor(monitor))) {
-        fingerPageSnap(monitor,event);
+        fingerPanFollow(monitor,event);
         info.cancelled=true;
         return;
     }
@@ -736,6 +747,6 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE owner) {
 }
 APICALL EXPORT void PLUGIN_EXIT() {
     listeners.clear(); zooms.clear(); grab={}; pointerButtons.clear(); heldButtons.clear(); pointerWindow.reset(); pointerSurface.reset();
-    contacts.clear(); touchCaptured=false; touchArmed=false; touchStartedZoomed=false; touchPinched=false; touchMonitor.reset(); touchWorkspace.reset(); fingerPage={};
+    contacts.clear(); touchCaptured=false; touchArmed=false; touchStartedZoomed=false; touchPinched=false; touchMonitor.reset(); touchWorkspace.reset(); fingerPan={};
     damageAll();
 }

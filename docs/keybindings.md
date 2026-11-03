@@ -224,7 +224,8 @@ worden bij een update niet automatisch omgezet.
 - **Super+drievingerveeg:** hetzelfde vrije schuiven als je geen vier vingers
   kwijt kunt (vereist live Lua-gebaren).
 - **Super+wiel:** één pagina omhoog/omlaag; **Super+Alt+wiel** of een kantelwiel: links/rechts.
-- **Super+twee vingers** op touchpad of aanraakscherm doet diezelfde paginastap. Uitgezoomd doet een gewone tweevingerscroll dat ook, zodat het verkleinde venster niet van binnenuit wegschiet. Het muiswiel blijft in het document scrollen. Knijpen zoomt nog.
+- **Super+twee vingers** op het touchpad: het werkvlak schuift mee met je vingers, zoals een kaart. Bij optillen klikt het op een plek vast als je er dichtbij bent. Uitgezoomd doet een gewone tweevingerscroll (zonder Super) hetzelfde, zodat het verkleinde venster niet van binnenuit wegschiet. Het muiswiel blijft in het document scrollen. Knijpen zoomt nog.
+- **Ontdekken:** de eerste keer op een ruimtelijk werkvlak legt een melding de gebaren uit (`werkvlak-hint.sh --reset` toont hem opnieuw), en Super vasthouden toont een blok Werkvlak met dezelfde gebaren. Alle gebaren werken ook op een leeg werkvlak of met een zwevend venster in focus.
 - **Super+Ctrl+linkermuis ingedrukt:** het werkvlak vrij slepen, ook diagonaal. Bij loslaten
   klikt het alleen op een plek vast als je er dichtbij bent.
 - **Nieuwe vensters** komen waar je kijkt: op een lege plek vult het venster die plek,

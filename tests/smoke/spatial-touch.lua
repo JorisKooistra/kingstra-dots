@@ -79,4 +79,18 @@ layout_name = "dwindle"
 pinch.start({ scale = 0.5, delta = { x = 30, y = 0 } })
 assert(#nudged == 1, "pinch does nothing outside the spatial layout")
 pinch.finish({})
+-- Op een leeg ruimtelijk werkvlak (geen actief venster) moeten de gebaren
+-- toch werken: ze kijken naar de werkruimte, niet naar het venster.
+layout_name = "dwindle"
+hl.get_active_window = function() return nil end
+hl.get_active_workspace = function() return { id = 1, tiled_layout = "lua:hyprscroll2d" } end
+four.start({ delta = { x = 7, y = 0 } })
+assert(last() == "panby -7.0000 0.0000" or last() == "panby -7.0000 -0.0000", "four fingers pan an empty spatial workspace")
+four.finish({})
+assert(last() == "dragend")
+hl.get_active_special_workspace = function() return { name = "special:magic" } end
+before = #dispatched
+four.start({ delta = { x = 7, y = 0 } })
+assert(#dispatched == before, "an open special workspace keeps its own gestures")
+four.finish({ cancelled = true })
 print("ok - touchpad pans, pinches and keeps the magic workspace outside the spatial layout")

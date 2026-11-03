@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Ruimtelijk werkvlak op de laptop: meeschuiven en ontdekbaar
+- **Super + twee vingers schuift het werkvlak mee met je vingers**, als een kaart, in plaats van per gebaar één hele plek te springen. Bij optillen klikt het op een plek vast als je er dichtbij bent. Uitgezoomd werkt een gewone tweevingerscroll zo, ook zonder Super. Dit zit in de zoom-plugin; `kingstra update` bouwt hem opnieuw.
+- **Gebaren werken ook op een leeg werkvlak** of als een zwevend venster de focus heeft. Knijpen, vier vingers en Super+drie vingers keken eerst naar het actieve venster en deden zonder venster niets.
+- **Eenmalige uitleg**: de eerste keer op een ruimtelijk werkvlak verschijnt een melding met de gebaren (op een pc zonder touchpad de muisbediening). `~/.config/hypr/scripts/werkvlak-hint.sh --reset` laat hem nog een keer zien.
+- **Spiekbriefje (Super vasthouden)** heeft een blok Werkvlak: twee vingers, wiel, Ctrl+wiel, Ctrl+slepen, Shift+wiel, en zonder Super knijpen en vier vingers.
+
 ### Update breekt niet meer af op een optioneel pakket
 - **Een optioneel pakket dat niet lukt, stopt de update niet meer.** `kingstra update` brak af met "yay installeren: whisper.cpp" (code 1). Optionele AUR-pakketten (whisper.cpp, satty, mpvpaper, onlyoffice, heroic, spicetify, vesktop, logiops, python-vdf, de games-launcher en de vangnet-pakketten) geven nu een waarschuwing en de rest gaat door. Aan het eind staat welke niet lukten, met `yay -S …` om het later opnieuw te proberen. Kernpakketten (walker, oh-my-posh, skwd-wall) blijven verplicht.
 - **whisper.cpp (dicteren)** komt eerst uit de Arch-repo als die het heeft; anders wordt het uit de AUR gebouwd zonder de testronde (`check()`), die meestal de oorzaak was. Staat `whisper-cli` er al, dan wordt niets opnieuw gebouwd.

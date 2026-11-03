@@ -5,6 +5,21 @@ local function active()
     return ok and window and window.layout and window.layout.name == "lua:hyprscroll2d"
 end
 M.active = active
+-- Gebaren kijken naar de werkruimte zelf, niet naar het actieve venster:
+-- op een leeg werkvlak of met een zwevend venster in focus moet schuiven en
+-- knijpen ook werken. Zonder werkruimte-info valt het terug op het venster.
+local function spatial_here()
+    local special_ok, special = pcall(function()
+        return hl.get_active_special_workspace and hl.get_active_special_workspace()
+    end)
+    if special_ok and special then return false end
+    local ok, workspace = pcall(function() return hl.get_active_workspace and hl.get_active_workspace() end)
+    if ok and workspace and workspace.tiled_layout then
+        return workspace.tiled_layout == "lua:hyprscroll2d"
+    end
+    return active()
+end
+M.here = spatial_here
 function M.route(message, fallback)
     return function()
         if active() then hl.dispatch(hl.dsp.layout(message))
@@ -71,13 +86,13 @@ if hl.gesture then
         fingers = 3, direction = "swipe", mods = "SUPER",
         action = {
             start = function(e)
-                swiping = active()
+                swiping = spatial_here()
                 if not swiping then return end
                 hl.dispatch(hl.dsp.layout("dragstart"))
                 if e.delta then pan_pixels(e.delta.x, e.delta.y) end
             end,
             update = function(e)
-                if swiping and active() and e.delta then pan_pixels(e.delta.x, e.delta.y) end
+                if swiping and spatial_here() and e.delta then pan_pixels(e.delta.x, e.delta.y) end
             end,
             finish = function()
                 if swiping then hl.dispatch(hl.dsp.layout("dragend")) end
@@ -90,7 +105,7 @@ if hl.gesture then
         fingers = 2, direction = "pinch",
         action = {
             start = function(e)
-                pinching = active()
+                pinching = spatial_here()
                 if not pinching then return end
                 pinch_base = zoom_scale()
                 hl.dispatch(hl.dsp.layout("dragstart"))
@@ -98,7 +113,7 @@ if hl.gesture then
                 follow_pinch(e.scale)
             end,
             update = function(e)
-                if not pinching or not active() then return end
+                if not pinching or not spatial_here() then return end
                 if e.delta then pan_pixels(e.delta.x, e.delta.y) end
                 follow_pinch(e.scale)
             end,
@@ -115,7 +130,7 @@ if hl.gesture then
         fingers = 4, direction = "swipe",
         action = {
             start = function(e)
-                hand.on, hand.x, hand.y = active(), 0, 0
+                hand.on, hand.x, hand.y = spatial_here(), 0, 0
                 if e.delta then hand.x, hand.y = e.delta.x or 0, e.delta.y or 0 end
                 if not hand.on then return end
                 hl.dispatch(hl.dsp.layout("dragstart"))
@@ -124,7 +139,7 @@ if hl.gesture then
             update = function(e)
                 if not e.delta then return end
                 hand.x, hand.y = hand.x + (e.delta.x or 0), hand.y + (e.delta.y or 0)
-                if hand.on and active() then pan_pixels(e.delta.x, e.delta.y) end
+                if hand.on and spatial_here() then pan_pixels(e.delta.x, e.delta.y) end
             end,
             finish = function(e)
                 local panned = hand.on
@@ -229,6 +244,18 @@ function M.wheel(direction)
 end
 
 M.drag_start = drag_start
+-- Eenmalige uitleg: de eerste keer dat je op een ruimtelijk werkvlak komt,
+-- legt een melding de gebaren en toetsen uit (werkvlak-hint.sh onthoudt dat).
+local hinted = false
+local function maybe_hint()
+    if hinted or layout_of_active() ~= "lua:hyprscroll2d" then return end
+    hinted = true
+    if hl.exec_cmd then hl.exec_cmd("~/.config/hypr/scripts/werkvlak-hint.sh") end
+end
+if hl.on then
+    pcall(hl.on, "workspace.active", maybe_hint)
+    pcall(hl.on, "window.active", maybe_hint)
+end
 M.drag_stop = drag_stop
 
 -- De Lua-layout-API van Hyprland 0.56 geeft geen resize-delta door.

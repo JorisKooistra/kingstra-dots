@@ -30,9 +30,11 @@ railknoppen, Meer-lijst) gaat "Meer en muziek…" naar Instellingen › Bedienin
    terug in. Op een aanraakscherm doen twee vingers hetzelfde; één vinger blijft
    de app bedienen. Super+drievingerveeg doet het schuiven ook, als de vierde
    vinger niet past. Gewone appscroll en de drievingergebaren (werkruimte,
-   overzicht, controlecentrum) blijven bestaan. Uitgezoomd schuift een
-   tweevingerscroll één pagina, net als Super+wiel; Super+twee vingers doet
-   die stap ook op 100%. Het muiswiel blijft in het document scrollen.
+   overzicht, controlecentrum) blijven bestaan. Super+twee vingers schuift het
+   werkvlak mee met je vingers, als een kaart; uitgezoomd hoeft Super er niet
+   bij. Bij optillen klikt het op een plek vast als je dichtbij bent. Het
+   muiswiel blijft in het document scrollen. De eerste keer legt een melding
+   dit uit, en Super vasthouden toont het blok Werkvlak.
 7. Super+Tab opent de vensterkaart. Gewoon slepen verplaatst alleen de camera,
    ook als je op een miniatuur begint. Super+slepen, of op een aanraakscherm
    lang indrukken, verplaatst een app: op het midden van een ander venster op dezelfde pagina wisselen ze van tegel; op een andere pagina komt de app ernaast. Aan een rand splits je dat

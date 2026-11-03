@@ -29,7 +29,13 @@ Item {
             ["W", "Alle vensters"], ["Z", "Indeling"], ["−", "Parkeren"]]},
         {title: "Shell", glyph: "󰕮", rows: [
             ["A", "Sfeer"], ["N", "Meldingen"], ["Ctrl+I", "Instellingen"], ["Ctrl+Space", "Menu"],
-            ["Ctrl+L", "Vergrendelen"], ["Ctrl+⌫", "Afsluiten"], ["F1", "Alle sneltoetsen"]]}
+            ["Ctrl+L", "Vergrendelen"], ["Ctrl+⌫", "Afsluiten"], ["F1", "Alle sneltoetsen"]]},
+        // Het ruimtelijk werkvlak: touchpad en muis naast elkaar, zodat de
+        // gebaren te vinden zijn zonder de documentatie te lezen.
+        {title: "Werkvlak", glyph: "󰕰", rows: [
+            ["2 vingers", "Meeschuiven"], ["Wiel", "Plek verder"], ["Ctrl+wiel", "Zoomen"],
+            ["Ctrl+slepen", "Vrij schuiven"], ["Shift+wiel", "Werkruimte"]],
+         note: "Zonder Super: knijpen zoomt,\nvier vingers schuiven,\ndrie vingers wisselen werkruimte."}
     ]
 
     anchors.fill: parent
@@ -152,6 +158,17 @@ Item {
                                     elide: Text.ElideRight
                                 }
                             }
+                        }
+                        Text {
+                            visible: !!group.modelData.note
+                            Layout.topMargin: 4
+                            Layout.maximumWidth: 232
+                            text: group.modelData.note || ""
+                            font.family: ThemeConfig.uiFont
+                            font.pixelSize: 11
+                            color: root.mocha.subtext0
+                            wrapMode: Text.WordWrap
+                            lineHeight: 1.15
                         }
                     }
                 }
