@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Alles-zoeken in de launcher, klembord plakt en pint
+- De launcher zoekt zonder voorvoegsel nu ook in alle acties van het toetsenbordmenu (met de sneltoets erbij, zodat je die leert), in open vensters en in instellingen, en rekent een som meteen uit (`12*7`). Apps blijven bovenaan; de voorvoegsels werken zoals voorheen.
+- Het toetsenbordmenu en de launcher delen één lijst met acties: `shellsurface/MenuTree.js`.
+- Klembord (Super+V): Enter kopieert én plakt meteen in het venster waar je was (terminals met Ctrl+Shift+V), Shift+Enter of klikken kopieert alleen. Teksten vastpinnen met het speldje of Ctrl+P; vastgepinde staan bovenaan en schuiven niet weg (`~/.local/state/kingstra/clipboard-pins.json`, maximaal 30).
+
 ### Dicteren (Super+H)
 - Nieuw: houd Super+H vast en praat; bij loslaten wordt het omgezet en getypt waar je cursor staat. Werkt in elke app, ook Citrix en Teams, omdat de tekst als toetsaanslagen binnenkomt (`wtype`; met `"paste": true` in `~/.config/kingstra/dicteren.json` via het klembord).
 - Draait lokaal met whisper.cpp en het meertalige model `ggml-small-q5_1` (ongeveer 190 MB), standaard Nederlands. De melding rechtsboven laat zien wanneer hij luistert en omzet.

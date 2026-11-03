@@ -11,17 +11,20 @@ FocusScope {
     MatugenColors { id: mocha }
 
     property var entries: []
+    // Vastgepinde teksten (clipboard-pins.json), als "pin:<n>\t<tekst>".
+    property var pins: []
     property string query: ""
     property int selectedIndex: 0
     readonly property string bridge: Quickshell.env("HOME") + "/.config/quickshell/shellsurface/clipboard-panel.sh"
     readonly property var filteredEntries: {
         let needle = String(query || "").toLowerCase().trim();
-        if (needle === "") return entries;
-        return entries.filter(entry => root.previewFor(entry).toLowerCase().indexOf(needle) >= 0);
+        let all = pins.map((t, i) => "pin:" + i + "\t" + t).concat(entries);
+        if (needle === "") return all;
+        return all.filter(entry => root.previewFor(entry).toLowerCase().indexOf(needle) >= 0);
     }
 
     function previewFor(entry) {
-        let value = String(entry || "").replace(/^\d+\t/, "").trim();
+        let value = String(entry || "").replace(/^(pin:)?\d+\t/, "").trim();
         if (value.indexOf("[[ binary data") === 0) {
             let size = value.match(/\[\[ binary data (.+) \]\]/);
             return size ? "Afbeelding · " + size[1] : "Afbeelding";
@@ -33,14 +36,41 @@ FocusScope {
         return String(entry || "").indexOf("[[ binary data") >= 0;
     }
 
-    function refresh() {
-        if (!loadProcess.running) loadProcess.running = true;
+    function isPin(entry) {
+        return String(entry || "").indexOf("pin:") === 0;
     }
 
+    function pinIndex(entry) {
+        return String(entry || "").substring(4).split("\t")[0];
+    }
+
+    function refresh() {
+        if (!loadProcess.running) loadProcess.running = true;
+        if (!pinProcess.running) pinProcess.running = true;
+    }
+
+    // Klik of Shift+Enter: alleen kopiëren.
     function copyEntry(entry) {
         if (!entry || copyProcess.running) return;
-        copyProcess.command = ["bash", bridge, "copy", String(entry)];
+        copyProcess.command = isPin(entry)
+            ? ["bash", bridge, "copy-pin", pinIndex(entry)]
+            : ["bash", bridge, "copy", String(entry)];
         copyProcess.running = true;
+    }
+
+    // Enter: kopiëren en meteen plakken in het venster waar je was.
+    function pasteEntry(entry) {
+        if (!entry || copyProcess.running) return;
+        copyProcess.command = ["bash", bridge, "paste", isPin(entry) ? "pin:" + pinIndex(entry) : String(entry)];
+        copyProcess.running = true;
+    }
+
+    function togglePin(entry) {
+        if (!entry || isImage(entry)) return;
+        Quickshell.execDetached(isPin(entry)
+            ? ["bash", bridge, "unpin", pinIndex(entry)]
+            : ["bash", bridge, "pin", String(entry)]);
+        pinRefresh.restart();
     }
 
     function closePanel() {
@@ -69,6 +99,23 @@ FocusScope {
     }
 
     Process {
+        id: pinProcess
+        command: ["bash", root.bridge, "pins"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let parsed = JSON.parse(this.text);
+                    root.pins = Array.isArray(parsed) ? parsed.map(String) : [];
+                } catch (error) {
+                    root.pins = [];
+                }
+            }
+        }
+    }
+
+    Timer { id: pinRefresh; interval: 250; onTriggered: if (!pinProcess.running) pinProcess.running = true }
+
+    Process {
         id: copyProcess
         command: ["bash", "-lc", "true"]
         onExited: (exitCode) => {
@@ -94,8 +141,19 @@ FocusScope {
             root.selectedIndex = Math.max(root.selectedIndex - 1, 0);
         event.accepted = true;
     }
-    Keys.onReturnPressed: event => { root.copyEntry(root.filteredEntries[root.selectedIndex]); event.accepted = true; }
-    Keys.onEnterPressed: event => { root.copyEntry(root.filteredEntries[root.selectedIndex]); event.accepted = true; }
+    Keys.onReturnPressed: event => {
+        let entry = root.filteredEntries[root.selectedIndex];
+        if (event.modifiers & Qt.ShiftModifier) root.copyEntry(entry);
+        else root.pasteEntry(entry);
+        event.accepted = true;
+    }
+    Keys.onEnterPressed: event => { root.pasteEntry(root.filteredEntries[root.selectedIndex]); event.accepted = true; }
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_P && (event.modifiers & Qt.ControlModifier)) {
+            root.togglePin(root.filteredEntries[root.selectedIndex]);
+            event.accepted = true;
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -113,7 +171,7 @@ FocusScope {
             ColumnLayout {
                 Layout.fillWidth: true; spacing: 1
                 Text { text: "Klembord"; font.family: ThemeConfig.displayFont; font.pixelSize: 18; font.weight: Font.Black; color: mocha.text }
-                Text { text: root.entries.length + " recent · klik om te kopiëren"; font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0 }
+                Text { text: root.entries.length + " recent" + (root.pins.length > 0 ? " · " + root.pins.length + " vastgepind" : "") + " · Enter plakt"; font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0 }
             }
             Rectangle {
                 Layout.preferredWidth: 32; Layout.preferredHeight: 32; radius: 10
@@ -153,19 +211,28 @@ FocusScope {
                 required property int index
                 readonly property bool current: root.selectedIndex === index
                 readonly property bool image: root.isImage(modelData)
+                readonly property bool pinned: root.isPin(modelData)
                 width: entryList.width; height: Math.max(48, previewText.implicitHeight + 22); radius: 13
                 color: current || entryMouse.containsMouse ? Qt.rgba(mocha.accent1.r, mocha.accent1.g, mocha.accent1.b, current ? 0.18 : 0.12) : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.68)
                 border.width: 1
                 border.color: current ? Qt.rgba(mocha.accent1.r, mocha.accent1.g, mocha.accent1.b, 0.48) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
                 RowLayout {
                     anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 10
-                    Text { text: entryRow.image ? "󰋩" : "󰆏"; font.family: ThemeConfig.iconFont; font.pixelSize: 16; color: entryRow.image ? mocha.accent2 : mocha.accent1 }
+                    Text { text: entryRow.pinned ? "󰐃" : (entryRow.image ? "󰋩" : "󰆏"); font.family: ThemeConfig.iconFont; font.pixelSize: 16; color: entryRow.image ? mocha.accent2 : mocha.accent1 }
                     Text {
                         id: previewText
                         Layout.fillWidth: true
                         text: root.previewFor(entryRow.modelData)
                         font.family: ThemeConfig.uiFont; font.pixelSize: 12; color: mocha.text
                         wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
+                    }
+                    // Vastpinnen: een plekje dat niet wegschuift (alleen tekst).
+                    Rectangle {
+                        visible: !entryRow.image && (entryRow.current || entryMouse.containsMouse || entryRow.pinned)
+                        Layout.preferredWidth: 26; Layout.preferredHeight: 26; radius: 8
+                        color: pinMouse.containsMouse ? Qt.rgba(mocha.accent1.r, mocha.accent1.g, mocha.accent1.b, 0.20) : "transparent"
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+                        Text { anchors.centerIn: parent; text: entryRow.pinned ? "󰐃" : "󰤰"; font.family: ThemeConfig.iconFont; font.pixelSize: 13; color: entryRow.pinned ? mocha.accent1 : mocha.subtext0 }
                     }
                     Text { text: "󰅂"; font.family: ThemeConfig.iconFont; font.pixelSize: 13; color: current ? mocha.accent1 : mocha.subtext0 }
                 }
@@ -174,6 +241,14 @@ FocusScope {
                     anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                     onEntered: root.selectedIndex = entryRow.index
                     onClicked: root.copyEntry(entryRow.modelData)
+                }
+                MouseArea {
+                    id: pinMouse
+                    visible: !entryRow.image
+                    width: 34; height: parent.height
+                    anchors.right: parent.right; anchors.rightMargin: 30
+                    hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                    onClicked: root.togglePin(entryRow.modelData)
                 }
             }
             Text {
@@ -184,7 +259,7 @@ FocusScope {
         }
 
         Text {
-            Layout.fillWidth: true; text: "↑↓ kiezen · Enter kopiëren · Esc sluiten"
+            Layout.fillWidth: true; text: "↑↓ kiezen · Enter plakken · Shift+Enter kopiëren · Ctrl+P vastpinnen · Esc"
             font.family: ThemeConfig.monoFont; font.pixelSize: 10; color: mocha.subtext0
             horizontalAlignment: Text.AlignRight
         }

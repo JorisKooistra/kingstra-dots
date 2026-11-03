@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import ".."
 import "../settings/SettingIndex.js" as SettingIndex
+import "MenuTree.js" as MenuTree
 
 // App-launcher die vanaf de onderkant van het scherm uitgroeit, in dezelfde
 // chrome-taal als de bar. De desktop-entries komen uit list-apps.py; de
@@ -207,6 +208,10 @@ FocusScope {
         if (!result) return;
         if (result.kind === "app") launch(result.app);
         else if (result.kind === "action") runQuickAction(result.action);
+        else if (result.kind === "menu") {
+            Quickshell.execDetached(result.item.cmd);
+            if (!result.item.panel) closePanel();
+        }
         else if (result.kind === "mode") {
             helpOpen = false;
             searchInput.text = result.value;
@@ -294,6 +299,58 @@ FocusScope {
         return scored.map(result => result.action);
     }
 
+    // --- Alles-zoeken: zonder voorvoegsel ook acties, vensters en instellingen --
+    // Acties komen uit dezelfde boom als het toetsenbordmenu, met de sneltoets
+    // erbij, zodat je de toetsen leert terwijl je zoekt.
+    readonly property var menuActions: MenuTree.flatten(MenuTree.build(Quickshell.env("HOME"),
+        Quickshell.env("HOME") + "/.config/hypr/scripts")).filter(a => a.item.label !== "Apps")
+
+    readonly property var filteredMenu: {
+        let q = root.normalizeSearch(query);
+        if (q.length < 2) return [];
+        let taken = {};
+        for (let i = 0; i < filteredActions.length; i++) taken[String(filteredActions[i].label).toLowerCase()] = true;
+        let scored = [];
+        for (let i = 0; i < menuActions.length; i++) {
+            let a = menuActions[i];
+            if (taken[String(a.item.label).toLowerCase()]) continue;
+            let score = Math.max(root.fieldScore(a.item.label, q, 5000), root.fieldScore(a.path, q, 2400));
+            if (score > 0) scored.push({ entry: a, score: score });
+        }
+        scored.sort((x, y) => y.score - x.score || String(x.entry.item.label).localeCompare(String(y.entry.item.label)));
+        return scored.slice(0, 5).map(r => ({ kind: "menu", icon: r.entry.item.icon,
+            label: r.entry.item.label,
+            detail: (r.entry.path !== "" ? r.entry.path : "Menu") + (r.entry.item.hint ? "  ·  " + r.entry.item.hint : ""),
+            item: r.entry.item }));
+    }
+
+    readonly property var filteredSettings: {
+        let q = String(query || "").trim();
+        if (q.length < 3) return [];
+        return SettingIndex.search(q, 3).map(e => ({ kind: "setting", icon: "󰒓", label: e.label,
+            detail: "Instelling  ·  " + e.where, value: SettingIndex.deepLink(e) }));
+    }
+
+    readonly property var filteredWindows: {
+        let q = root.normalizeSearch(query);
+        if (q.length < 2) return [];
+        return windowResults
+            .filter(w => root.normalizeSearch(String(w.title) + " " + String(w.className)).indexOf(q) !== -1)
+            .slice(0, 3)
+            .map(w => ({ icon: "󰖯", label: String(w.title), detail: "Open venster  ·  " + String(w.className) + " · werkruimte " + w.workspace,
+                         kind: "window", value: String(w.address), workspace: String(w.workspace) }));
+    }
+
+    // Een som zonder '=' ervoor rekent ook meteen.
+    readonly property var inlineCalc: {
+        let q = String(query || "").trim();
+        if (!/[0-9]/.test(q) || !/[+\-*\/%^×÷]/.test(q) || !/^[0-9.,+\-*\/%^()×÷\s]+$/.test(q)) return [];
+        let v = root.calc(q);
+        return v === "" ? [] : [{ icon: "󰃬", label: "= " + v, detail: "Enter kopieert de uitkomst", kind: "copy", value: v }];
+    }
+
+    onQueryChanged: if (prefix === "" && String(query).trim().length === 2 && !windowProc.running) windowProc.running = true
+
     readonly property var results: {
         if (helpOpen) {
             return prefixModes.map(mode => ({kind: "mode", icon: mode.icon,
@@ -305,14 +362,17 @@ FocusScope {
         if (prefix !== "") return prefixResults;
         let apps = filtered.map(app => ({kind: "app", label: app.name, app: app}));
         if (query.trim() === "") return apps;
-        return apps.concat(filteredActions.map(action => ({kind: "action", icon: action.icon,
-            label: action.label, detail: action.detail, action: action})));
+        return inlineCalc.concat(apps.slice(0, 8))
+            .concat(filteredActions.map(action => ({kind: "action", icon: action.icon,
+                label: action.label, detail: action.detail, action: action})))
+            .concat(filteredMenu, filteredWindows, filteredSettings, apps.slice(8));
     }
 
     function resultKey(result) {
         if (!result) return "";
         if (result.kind === "app") return "app:" + result.app.id;
         if (result.kind === "action") return "action:" + result.action.target + ":" + (result.action.page || "");
+        if (result.kind === "menu") return "menu:" + result.label + ":" + result.detail;
         return result.kind + ":" + String(result.value || result.label || "");
     }
 
