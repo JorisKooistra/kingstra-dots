@@ -34,6 +34,9 @@ phase_run() {
     pacman_install grim
     pacman_install slurp
     aur_install satty
+    pacman_install wf-recorder          # schermopname (vastleg-studio, Super+Shift+R)
+    pacman_install hyprpicker           # kleur kiezen
+    pacman_install tesseract tesseract-data-nld tesseract-data-eng   # tekst uit beeld
 
     log_step "Authenticatieagent installeren..."
     pacman_install polkit-gnome

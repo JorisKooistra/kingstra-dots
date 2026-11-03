@@ -105,8 +105,9 @@ end)
 bind("ALT + Tab", hl.dsp.focus({ workspace = "previous" }))
 
 exec(mod .. " + CTRL + L", "bash " .. scripts .. "/lock.sh")
-exec(mod .. " + CTRL + R", "hyprctl reload")
-bind(mod .. " + CTRL + backspace", hl.dsp.exit())
+exec(mod .. " + CTRL + R", "hyprctl reload && notify-send -u low 'Hyprland' 'Config herladen'")
+-- Afsluitmenu in plaats van direct afmelden; Uitloggen staat erin.
+exec(mod .. " + CTRL + backspace", scripts .. "/qs_manager.sh toggle power")
 
 -- Applications and shell panels
 exec(mod .. " + Return", "kitty")
@@ -114,6 +115,8 @@ exec(mod .. " + CTRL + Return", scripts .. "/qs_manager.sh toggle launcher")
 exec(mod .. " + B", "xdg-open https://")
 exec(mod .. " + E", "nautilus")
 exec(mod .. " + V", scripts .. "/qs_manager.sh toggle clipboard")
+-- Emoji en symbolen, zoals Win+. : de launcher in de emoji-stand.
+exec(mod .. " + period", scripts .. "/launcher-open.sh :")
 -- Dicteren: Super+H vasthouden en praten, loslaten typt de tekst (lokaal,
 -- whisper.cpp). De loslaat-bind negeert modifiers, zodat het ook stopt als
 -- Super eerder wordt losgelaten; zonder opname doet hij niets.
@@ -124,7 +127,6 @@ exec(mod .. " + SHIFT + C", "kitty --title=cava cava")
 exec(mod .. " + SHIFT + W", scripts .. "/wallpaper-random-safe.sh")
 exec(mod .. " + CTRL + W", scripts .. "/wallpaper-picker-safe.sh")
 exec(mod .. " + W", scripts .. "/qs_manager.sh toggle windows")
-exec(mod .. " + CTRL + B", "hyprctl reload && notify-send 'Hyprland' 'Config herladen'")
 
 exec(mod .. " + N", "~/.config/quickshell/notifications/notification_control.sh toggle")
 exec(mod .. " + SHIFT + N", "~/.config/quickshell/notifications/notification_control.sh clear")
@@ -139,12 +141,15 @@ exec(mod .. " + A", scripts .. "/qs_manager.sh toggle bediening")
 exec(mod .. " + F1", scripts .. "/qs_manager.sh toggle help")
 
 -- Screenshots
--- Print is bewust als gewone sleutel gebonden: de helper verzorgt selectie,
--- opslag, klembord en optionele Satty-annotatie.
-exec("Print", scripts .. "/screenshot.sh")
+-- Print opent de vastleg-studio (gebied/venster/scherm, foto of opname,
+-- tekst kopiëren, kleur kiezen). De snelle varianten blijven direct:
+-- Super+Print gebied naar klembord, Shift+Print met notities, Ctrl+Print
+-- het hele scherm. Super+Shift+R start of stopt een opname van een gebied.
+exec("Print", scripts .. "/qs_manager.sh toggle capture")
 exec(mod .. " + Print", scripts .. "/screenshot.sh --clipboard")
 exec("SHIFT + Print", scripts .. "/screenshot.sh --annotate")
-exec(mod .. " + SHIFT + P", scripts .. "/screenshot.sh --full")
+exec("CTRL + Print", scripts .. "/screenshot.sh --full")
+exec(mod .. " + SHIFT + R", scripts .. "/capture.sh record area")
 
 -- Media and brightness keys remain available while locked.
 local repeat_locked = { locked = true, repeating = true }

@@ -249,6 +249,23 @@ FocusScope {
         }
     }
 
+    // Starttekst: launcher-open.sh schrijft hem vlak voor het openen, zodat
+    // bijvoorbeeld Super+. meteen in de emoji-stand begint.
+    Process {
+        id: seedProc
+        running: true
+        command: ["sh", "-c", "f=/tmp/kingstra-launcher-seed; [ -f \"$f\" ] && [ $(( $(date +%s) - $(stat -c %Y \"$f\") )) -le 3 ] && cat \"$f\"; rm -f \"$f\""]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let seed = String(this.text || "").replace(/\n$/, "");
+                if (seed !== "") {
+                    searchInput.text = seed;
+                    searchInput.cursorPosition = seed.length;
+                }
+            }
+        }
+    }
+
     Process {
         id: windowProc
         command: ["bash", Quickshell.env("HOME") + "/.config/quickshell/shellsurface/window-switcher.sh", "list"]

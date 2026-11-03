@@ -117,11 +117,11 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Ctrl + Return` | App launcher |
 | `Super + B` | Browser (standaard) |
 | `Super + E` | Nautilus (bestandsbeheer) |
-| `Super + V` | Klembordgeschiedenis (cliphist) |
+| `Super + V` | Klembordgeschiedenis: Enter plakt, Shift+Enter kopieert, Ctrl+P pint vast |
+| `Super + .` | Emoji en symbolen (launcher in de emoji-stand) |
 | `Super + H` (vasthouden) | Dicteren: praten, loslaten typt de tekst (lokaal, whisper.cpp) |
 | `Super + Shift + Return` | btop in Kitty |
 | `Super + Shift + C` | cava (audio visualizer) in Kitty |
-| `Super + Ctrl + B` | Hyprland config herladen (+ melding) |
 
 ---
 
@@ -148,10 +148,11 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 
 | Toetsen | Actie |
 |---|---|
-| `Print` | Gebied selecteren → opslaan + kopiëren |
+| `Print` | Vastleg-studio: gebied, venster of scherm; foto of opname; tekst kopiëren; kleur kiezen |
 | `Super + Print` | Gebied selecteren → alleen kopiëren |
 | `Shift + Print` | Gebied selecteren → bewerken in satty |
-| `Super + Shift + P` | Volledig scherm opslaan |
+| `Ctrl + Print` | Volledig scherm opslaan |
+| `Super + Shift + R` | Schermopname van een gebied starten of stoppen |
 
 Opgeslagen in `~/Pictures/Screenshots/`.
 
@@ -196,8 +197,8 @@ de binds automatisch terug.
 |---|---|
 | `Super + Ctrl + L` | Quickshell-vergrendelscherm (hyprlock als terugval) |
 | Laptop dichtklappen | Scherm vergrendelen |
-| `Super + Ctrl + R` | Hyprland herladen |
-| `Super + Ctrl + Backspace` | Sessie afsluiten |
+| `Super + Ctrl + R` | Hyprland herladen (+ melding) |
+| `Super + Ctrl + Backspace` | Afsluitmenu (vergrendelen, slaap, herstarten, uit, uitloggen) |
 | `Super + Ctrl + F12` | Tabletmodus handmatig wisselen (touchscreen/2-in-1) |
 | Tabletmodus-schakelaar | Intern scherm roteren + schermtoetsenbord openen (automatisch) |
 

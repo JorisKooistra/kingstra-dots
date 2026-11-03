@@ -77,7 +77,7 @@ start() {
     fi
     rm -f "$AUDIO"
     # shellcheck disable=SC2016 # $$ en $1/$2 horen bij de binnenste shell
-    if command -v pw-record >/dev/null 2>    if command -v pw-record >/dev/null 2>&1; then1; then
+    if command -v pw-record >/dev/null 2>&1; then
         setsid -f sh -c 'echo $$ > "$1"; exec pw-record --rate 16000 --channels 1 --format s16 "$2"' sh "$PID_FILE" "$AUDIO" >/dev/null 2>&1
     elif command -v parecord >/dev/null 2>&1; then
         setsid -f sh -c 'echo $$ > "$1"; exec parecord --rate=16000 --channels=1 --format=s16le --file-format=wav "$2"' sh "$PID_FILE" "$AUDIO" >/dev/null 2>&1

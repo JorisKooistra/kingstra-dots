@@ -8,6 +8,9 @@
 #   screenshot.sh --annotate    → gebied-selectie + satty annotatie
 #   screenshot.sh --full        → volledig scherm, opslaan
 #   screenshot.sh --full --clipboard → volledig scherm, kopiëren
+#   screenshot.sh --window      → actief venster (combineerbaar met de andere)
+#   --preview                   → na opslaan een melding met de afbeelding en
+#                                 knoppen Bewerken en Map openen (vastleg-studio)
 # =============================================================================
 
 SCREENSHOT_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
@@ -55,12 +58,15 @@ TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
 OUTPUT_FILE="$SCREENSHOT_DIR/screenshot_${TIMESTAMP}.png"
 
 MODE="area"
+PREVIEW=false
 DEST="save"   # "save" | "clipboard" | "annotate"
 
 # Argumenten verwerken
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --full)        MODE="full"      ;;
+        --window)      MODE="window"    ;;
+        --preview)     PREVIEW=true     ;;
         --clipboard)   DEST="clipboard" ;;
         --annotate)    DEST="annotate"  ;;
         *) ;;
@@ -84,7 +90,14 @@ copy_image() {
 }
 
 # Capture
-if [[ "$MODE" == "full" ]]; then
+if [[ "$MODE" == "window" ]]; then
+    WINDOW_GEO="$(hyprctl activewindow -j 2>/dev/null \
+        | jq -r 'select(.at != null) | "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"' 2>/dev/null)"
+    if [[ -z "$WINDOW_GEO" ]] || ! grim -g "$WINDOW_GEO" "$OUTPUT_FILE"; then
+        feedback "󰅙" "Screenshot mislukt" "Geen actief venster om vast te leggen" "critical" 4500
+        exit 1
+    fi
+elif [[ "$MODE" == "full" ]]; then
     if ! grim "$OUTPUT_FILE"; then
         feedback "󰅙" "Screenshot mislukt" "Volledig scherm vastleggen is mislukt" "critical" 4500
         exit 1
@@ -131,7 +144,19 @@ case "$DEST" in
         ;;
 
     save|*)
-        if copy_image; then
+        if "$PREVIEW"; then
+            copy_image || true
+            (
+                action="$(notify-send -a "Vastleggen" -i "$OUTPUT_FILE" -h "string:image-path:$OUTPUT_FILE" \
+                    -A edit="Bewerken" -A folder="Map openen" \
+                    "Schermafbeelding opgeslagen" "Staat ook op je klembord · $(basename "$OUTPUT_FILE")" 2>/dev/null)"
+                case "$action" in
+                    edit) command -v satty >/dev/null 2>&1 && satty --filename "$OUTPUT_FILE" --output-filename "$OUTPUT_FILE" --copy-command wl-copy ;;
+                    folder) xdg-open "$(dirname "$OUTPUT_FILE")" ;;
+                esac
+            ) >/dev/null 2>&1 &
+            disown
+        elif copy_image; then
             feedback "󰄀" "Screenshot opgeslagen en gekopieerd" "$(basename "$OUTPUT_FILE")" "normal" 2400
         else
             feedback "󰄀" "Screenshot opgeslagen" "$(basename "$OUTPUT_FILE")" "normal" 2400

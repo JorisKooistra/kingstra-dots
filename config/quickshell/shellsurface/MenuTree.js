@@ -93,10 +93,14 @@ function build(home, scripts) {
             { icon: "󰓶", label: "Tabletmodus aan/uit", cmd: ["bash", scripts + "/tablet-mode.sh", "toggle"] }
         ] },
         { icon: "󰄀", label: "Vastleggen", children: [
-            { icon: "󰹑", label: "Schermafbeelding van gebied", hint: "Print", cmd: ["bash", scripts + "/screenshot.sh"] },
-            { icon: "󰍹", label: "Schermafbeelding van scherm", hint: "Super+Shift+P", cmd: ["bash", scripts + "/screenshot.sh", "--full"] },
+            { icon: "󰄀", label: "Vastleg-studio", hint: "Print", cmd: qs("capture"), panel: true },
+            { icon: "󰹑", label: "Schermafbeelding van gebied", cmd: ["bash", scripts + "/screenshot.sh", "--preview"] },
+            { icon: "󰍹", label: "Schermafbeelding van scherm", hint: "Ctrl+Print", cmd: ["bash", scripts + "/screenshot.sh", "--full"] },
+            { icon: "󰖯", label: "Schermafbeelding van venster", cmd: ["bash", scripts + "/screenshot.sh", "--window", "--preview"] },
+            { icon: "󰑋", label: "Schermopname starten of stoppen", hint: "Super+Shift+R", cmd: ["bash", scripts + "/capture.sh", "record", "area"] },
+            { icon: "󰈙", label: "Tekst uit beeld kopiëren", cmd: ["bash", scripts + "/capture.sh", "ocr"] },
             { icon: "󰏫", label: "Schermafbeelding met notities", hint: "Shift+Print", cmd: ["bash", scripts + "/screenshot.sh", "--annotate"] },
-            { icon: "󰈊", label: "Kleur kiezen", cmd: ["bash", "-lc", "command -v hyprpicker >/dev/null && hyprpicker -a"] },
+            { icon: "󰈊", label: "Kleur kiezen", cmd: ["bash", scripts + "/capture.sh", "color"] },
             { icon: "󰅌", label: "Klembord", hint: "Super+V", cmd: qs("clipboard"), panel: true }
         ] },
         { icon: "󰒓", label: "Systeem", children: [

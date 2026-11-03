@@ -4,6 +4,17 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Vastleg-studio en sneltoetsen
+- Nieuw: Print opent de vastleg-studio. Kies gebied, venster of scherm en foto of opname (met of zonder computergeluid), of gebruik Tekst kopiëren (tesseract, Nederlands en Engels) en Kleur kiezen. Na een foto verschijnt een melding met de afbeelding en de knoppen Bewerken en Map openen; tijdens een opname toont de studio een stopknop met de tijd en het eiland een rode stip. Opnames komen in `~/Videos/Opnames`.
+- Nieuwe helper `hypr/scripts/capture.sh` (opnemen met wf-recorder, tekst, kleur); `screenshot.sh` kent nu `--window` en `--preview`.
+- Sneltoetsen (keuzes van Joris, geen dubbele toetsen meer):
+  - `Ctrl+Print` legt het hele scherm vast; `Super+Shift+P` is daarvoor weg.
+  - `Super+Shift+R` start of stopt een opname van een gebied.
+  - `Super+.` opent de launcher in de emoji-stand, zoals Win+. (`hypr/scripts/launcher-open.sh`).
+  - `Super+Ctrl+Backspace` opent het afsluitmenu in plaats van direct af te melden; Uitloggen staat erin.
+  - Herladen alleen nog op `Super+Ctrl+R` (met melding); `Super+Ctrl+B` is vrij.
+- De installer/updater (fase 11) installeert `wf-recorder`, `hyprpicker` en `tesseract` met Nederlandse en Engelse taaldata.
+
 ### Alles-zoeken in de launcher, klembord plakt en pint
 - De launcher zoekt zonder voorvoegsel nu ook in alle acties van het toetsenbordmenu (met de sneltoets erbij, zodat je die leert), in open vensters en in instellingen, en rekent een som meteen uit (`12*7`). Apps blijven bovenaan; de voorvoegsels werken zoals voorheen.
 - Het toetsenbordmenu en de launcher delen één lijst met acties: `shellsurface/MenuTree.js`.
