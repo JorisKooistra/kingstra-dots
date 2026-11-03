@@ -35,7 +35,7 @@ Item {
         {title: "Werkvlak", glyph: "󰕰", rows: [
             ["2 vingers", "Meeschuiven"], ["Wiel", "Plek verder"], ["Ctrl+wiel", "Zoomen"],
             ["Ctrl+slepen", "Vrij schuiven"], ["Shift+wiel", "Werkruimte"]],
-         note: "Zonder Super: knijpen zoomt,\nvier vingers schuiven,\ndrie vingers wisselen werkruimte."}
+         note: "Zonder Super: drie vingers schuiven,\nknijpen zoomt. Op een gewone\nwerkruimte wisselen drie vingers."}
     ]
 
     anchors.fill: parent

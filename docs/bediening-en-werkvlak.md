@@ -26,11 +26,11 @@ railknoppen, Meer-lijst) gaat "Meer en muziek…" naar Instellingen › Bedienin
    een app; Super+wiel, Super+Alt+wiel of Super+Ctrl+Alt+pijlen verplaatst het zicht.
    Houd Super+Ctrl+linkermuis ingedrukt om vrij te slepen. Een app die je op een lege
    plek opent, komt op die plek.
-6. Vier vingers op het touchpad schuiven het beeld vrij. Knijpen zoomt uit of
-   terug in. Op een aanraakscherm doen twee vingers hetzelfde; één vinger blijft
-   de app bedienen. Super+drievingerveeg doet het schuiven ook, als de vierde
-   vinger niet past. Gewone appscroll en drie vingers opzij (werkruimte)
-   blijven bestaan; drie vingers omhoog of omlaag doen niets meer. Super+twee vingers schuift het
+6. Drie vingers op het touchpad (zonder Super) schuiven het beeld vrij. Op een
+   werkruimte zonder ruimtelijk werkvlak wisselen drie vingers opzij van
+   werkruimte; omhoog of omlaag doet niets. Vier vingers doen niets. Knijpen
+   zoomt uit of terug in. Op een aanraakscherm doen twee vingers hetzelfde; één
+   vinger blijft de app bedienen. Gewone appscroll blijft. Super+twee vingers schuift het
    werkvlak mee met je vingers, als een kaart; uitgezoomd hoeft Super er niet
    bij. Bij optillen klikt het op een plek vast als je dichtbij bent. Het
    muiswiel blijft in het document scrollen. De eerste keer legt een melding
@@ -130,8 +130,8 @@ belasting.
 - Nieuwe lege ruimtelijke werkruimte: eerste venster staat volledig in beeld.
 - Tweede app naar de rij erboven verplaatsen, diagonaal bewegen, kaart openen en
   een venster kiezen; normale appscroll blijft normaal.
-- Touchpad: vier vingers schuiven diagonaal, knijpen zoomt uit en terug; drie
-  vingers wisselen nog van werkruimte. Aanraakscherm: twee vingers doen hetzelfde
+- Touchpad: drie vingers schuiven diagonaal, knijpen zoomt uit en terug; op een
+  andere indeling wisselen drie vingers opzij van werkruimte. Aanraakscherm: twee vingers doen hetzelfde
   en één vinger klikt in de app. In de kaart verplaatst lang indrukken een app.
 - Scroll uitzetten: geen fout bij wiel of kolombreedteactie; ook leeg doet niets.
 - Muziekpill beweegt niet als geheel; pauze/afspelen werkt in alle gebruikte themes.

@@ -75,31 +75,52 @@ local function follow_pinch(scale)
     end
 end
 
--- Gewone tweevingerscroll blijft bij de app. Drie vingers blijven werkruimte,
--- overzicht en controlecentrum. Het ruimtelijk werkvlak gebruikt daarom
--- vier vingers om te schuiven en knijpen om te zoomen, plus Super+drie vingers
--- als de vierde vinger niet past. Zonder live Lua-gebaren blijven toetsen,
--- wiel en de kaart werken.
+-- Touchpad (Joris, 2026-11-03): drie vingers zonder Super. Op een ruimtelijk
+-- werkvlak schuift het werkvlak mee met je vingers, in elke richting; op elke
+-- andere werkruimte wisselt een veeg opzij van werkruimte. Vier vingers doen
+-- niets meer. Knijpen zoomt. Gewone tweevingerscroll blijft bij de app.
+local SWIPE_SWITCH = 80
+local hand = { on = false, pan = false, x = 0, y = 0 }
+M._three_finger = {
+    start = function(e)
+        hand.on, hand.x, hand.y = true, 0, 0
+        hand.pan = spatial_here()
+        if e and e.delta then hand.x, hand.y = e.delta.x or 0, e.delta.y or 0 end
+        if not hand.pan then return end
+        hl.dispatch(hl.dsp.layout("dragstart"))
+        if e and e.delta then pan_pixels(e.delta.x, e.delta.y) end
+    end,
+    update = function(e)
+        if not hand.on or not e or not e.delta then return end
+        hand.x, hand.y = hand.x + (e.delta.x or 0), hand.y + (e.delta.y or 0)
+        if hand.pan then pan_pixels(e.delta.x, e.delta.y) end
+    end,
+    finish = function(e)
+        if not hand.on then return end
+        hand.on = false
+        if hand.pan then
+            hand.pan = false
+            hl.dispatch(hl.dsp.layout("dragend"))
+            return
+        end
+        if e and e.cancelled then return end
+        -- Zelfde richting als voorheen (workspace_swipe_invert): vingers naar
+        -- links is de volgende werkruimte. Omhoog of omlaag doet niets.
+        if math.abs(hand.x) >= SWIPE_SWITCH and math.abs(hand.x) >= 2 * math.abs(hand.y) then
+            hl.exec_cmd("~/.config/hypr/scripts/workspace-scroll.sh " .. (hand.x < 0 and "next" or "prev"))
+        end
+    end,
+}
+M.three_finger_ready = false
 if hl.gesture then
-    local swiping = false
-    pcall(hl.gesture, {
-        fingers = 3, direction = "swipe", mods = "SUPER",
-        action = {
-            start = function(e)
-                swiping = spatial_here()
-                if not swiping then return end
-                hl.dispatch(hl.dsp.layout("dragstart"))
-                if e.delta then pan_pixels(e.delta.x, e.delta.y) end
-            end,
-            update = function(e)
-                if swiping and spatial_here() and e.delta then pan_pixels(e.delta.x, e.delta.y) end
-            end,
-            finish = function()
-                if swiping then hl.dispatch(hl.dsp.layout("dragend")) end
-                swiping = false
-            end,
-        },
-    })
+    M.three_finger_ready = pcall(hl.gesture, {
+        fingers = 3, direction = "swipe", action = M._three_finger,
+    }) and true or false
+    -- Kent deze Hyprland geen Lua-gebaren, dan blijft de ingebouwde
+    -- werkruimteveeg tenminste werken.
+    if not M.three_finger_ready then
+        pcall(hl.gesture, { fingers = 3, direction = "horizontal", action = "workspace" })
+    end
     local pinching = false
     pcall(hl.gesture, {
         fingers = 2, direction = "pinch",
@@ -120,40 +141,6 @@ if hl.gesture then
             finish = function()
                 if pinching then hl.dispatch(hl.dsp.layout("dragend")) end
                 pinching = false
-            end,
-        },
-    })
-    -- Vier vingers schuiven het ruimtelijk werkvlak. Buiten die indeling blijft
-    -- een verticale veeg de magische werkruimte togglen, zoals voorheen.
-    local hand = { on = false, x = 0, y = 0 }
-    pcall(hl.gesture, {
-        fingers = 4, direction = "swipe",
-        action = {
-            start = function(e)
-                hand.on, hand.x, hand.y = spatial_here(), 0, 0
-                if e.delta then hand.x, hand.y = e.delta.x or 0, e.delta.y or 0 end
-                if not hand.on then return end
-                hl.dispatch(hl.dsp.layout("dragstart"))
-                if e.delta then pan_pixels(e.delta.x, e.delta.y) end
-            end,
-            update = function(e)
-                if not e.delta then return end
-                hand.x, hand.y = hand.x + (e.delta.x or 0), hand.y + (e.delta.y or 0)
-                if hand.on and spatial_here() then pan_pixels(e.delta.x, e.delta.y) end
-            end,
-            finish = function(e)
-                local panned = hand.on
-                hand.on = false
-                if panned then
-                    hl.dispatch(hl.dsp.layout("dragend"))
-                    return
-                end
-                if e and e.cancelled then return end
-                -- Alleen een duidelijke verticale veeg; een korte of schuine
-                -- beweging haalt nooit ongevraagd iets tevoorschijn.
-                if math.abs(hand.y) >= 2 * math.abs(hand.x) and math.abs(hand.y) >= 140 then
-                    hl.dispatch(hl.dsp.workspace.toggle_special("magic"))
-                end
             end,
         },
     })

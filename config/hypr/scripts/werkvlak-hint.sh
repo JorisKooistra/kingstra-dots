@@ -18,9 +18,10 @@ mkdir -p "$state_dir"
 command -v notify-send >/dev/null 2>&1 || exit 0
 
 if grep -qi 'touchpad' /proc/bus/input/devices 2>/dev/null; then
-    body="Super + twee vingers: het werkvlak schuift mee met je vingers.
-Knijpen: uitzoomen en weer terug. Uitgezoomd schuiven twee vingers ook zonder Super.
-Vier vingers: vrij schuiven. Super vasthouden toont alle toetsen."
+    body="Drie vingers: het werkvlak schuift mee met je vingers.
+Knijpen: uitzoomen en weer terug.
+Op een gewone werkruimte wisselen drie vingers opzij van werkruimte.
+Super vasthouden toont alle toetsen."
 else
     body="Super + wiel: een plek verder. Super + Ctrl + wiel: uitzoomen.
 Super + Ctrl + linkermuis slepen: vrij schuiven. Super + Tab: de kaart.

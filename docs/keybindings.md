@@ -78,8 +78,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + -` | Actief venster parkeren (minimaliseren) |
 | `Super + Shift + -` | Laatst geparkeerde venster terug op zijn eigen werkruimte |
 | `Super + W` | Vensterlijst: geparkeerde vensters staan onderaan, Enter haalt terug |
-| 3 vingers opzij | Andere werkruimte (omhoog/omlaag doet bewust niets) |
-| 4 vingers slepen | Ruimtelijk werkvlak vrij schuiven; daarbuiten omhoog/omlaag de magische werkruimte |
+| 3 vingers | Ruimtelijk werkvlak: het beeld schuift mee, alle kanten op. Elders: opzij vegen wisselt van werkruimte, omhoog/omlaag doet niets |
 | Knijpen (2 vingers) | Ruimtelijk werkvlak uit- of inzoomen |
 
 ---
@@ -210,15 +209,13 @@ worden bij een update niet automatisch omgezet.
   staan er al vensters, dan komt het erbij als Dwindle-tegel, zonder maximum per pagina.
 - **Super+Ctrl+Alt+pijlen:** het zichtgebied verplaatsen, zonder vensters te verplaatsen.
   Op een scrollstrook schuift links/rechts één kolom; zo betekent deze toets overal "verder kijken".
-- **Vier vingers slepen** schuift het beeld vrij, ook diagonaal. **Knijpen** zoomt
-  uit (vingers naar elkaar) of terug in, tot 100%. Een verticale viervingerveeg
-  buiten dit werkvlak togglet nog steeds de magische werkruimte.
+- **Drie vingers slepen** (zonder Super) schuift het beeld vrij, ook diagonaal.
+  Op een andere indeling wisselt drie vingers opzij van werkruimte. **Knijpen**
+  zoomt uit (vingers naar elkaar) of terug in, tot 100%. Vier vingers doen niets.
 - **Aanraakscherm:** twee vingers slepen schuift het beeld, knijpen zoomt. Eén
   vinger blijft de app bedienen. Een veeg vanaf de schermrand wisselt nog van
   werkruimte. In de kaart: één vinger sleept het zicht, lang indrukken verplaatst
   een app, twee vingers knijpen.
-- **Super+drievingerveeg:** hetzelfde vrije schuiven als je geen vier vingers
-  kwijt kunt (vereist live Lua-gebaren).
 - **Super+wiel:** één pagina omhoog/omlaag; **Super+Alt+wiel** of een kantelwiel: links/rechts.
 - **Super+twee vingers** op het touchpad: het werkvlak schuift mee met je vingers, zoals een kaart. Bij optillen klikt het op een plek vast als je er dichtbij bent. Uitgezoomd doet een gewone tweevingerscroll (zonder Super) hetzelfde, zodat het verkleinde venster niet van binnenuit wegschiet. Het muiswiel blijft in het document scrollen. Knijpen zoomt nog.
 - **Ontdekken:** de eerste keer op een ruimtelijk werkvlak legt een melding de gebaren uit (`werkvlak-hint.sh --reset` toont hem opnieuw), en Super vasthouden toont een blok Werkvlak met dezelfde gebaren. Alle gebaren werken ook op een leeg werkvlak of met een zwevend venster in focus.
