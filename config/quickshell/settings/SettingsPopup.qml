@@ -5625,6 +5625,7 @@ Item {
                             SettingsActionButton { label: "Opnieuw zoeken"; icon: "󰑓"; accent: root.peach; onTriggered: root.refreshUpdatePage(true) }
                             SettingsActionButton { label: "Laatste update terugdraaien"; icon: "󰕍"; accent: root.red; onTriggered: root.runSystemRollback() }
                             SettingsActionButton { label: "Herstelmenu"; icon: "󰁨"; accent: root.mauve; onTriggered: root.openRescueMenu() }
+                            SettingsActionButton { label: "Dotfiles update"; icon: "󰐕"; accent: root.blue; onTriggered: root.runUpdateBootstrap() }
                         }
 
                         // Uitkomst van de vorige run.
