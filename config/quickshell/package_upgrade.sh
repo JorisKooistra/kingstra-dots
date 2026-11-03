@@ -267,6 +267,7 @@ ask_yes() {
 QUIET_TAIL=""
 REPO_COUNT=0
 AUR_COUNT=0
+AUR_LIST=""
 FLATPAK_COUNT=0
 
 # Korte samenvatting per bron; de volledige lijsten gaan naar het log.
@@ -294,6 +295,7 @@ preview_updates() {
 
     REPO_COUNT="$(count_lines "$repo_list")"
     AUR_COUNT="$(count_lines "$aur_list")"
+    AUR_LIST="$aur_list"
     FLATPAK_COUNT="$(count_lines "$flatpak_list")"
 
     if [[ -z "$repo_list$aur_list$flatpak_list" ]]; then
@@ -734,6 +736,47 @@ run_dotfiles_installer() {
     KINGSTRA_UI_EMBEDDED=true bash "$installer" --yes
 }
 
+# Bekende AUR-valkuilen vóór de build oplossen:
+# - PGP: makers (Mozilla bij firefox-bin) tekenen met een nieuwe subsleutel;
+#   de oude sleutel in je keyring kent die nog niet ("unknown public key").
+#   We verversen de sleutels uit validpgpkeys van elk AUR-pakket met een update.
+# - Afhankelijkheden die in de AUR-.SRCINFO ontbreken maar die de PKGBUILD
+#   wel eist (skwd-daemon: qt6-tools). yay installeert die dan niet.
+AUR_MISSING_DEPS=(
+    "skwd-daemon:qt6-tools"
+)
+prepare_aur() {
+    [[ -n "$AUR_LIST" ]] || return 0
+    local name keys="" srcinfo entry pkg dep
+    local -a deps=()
+    local cache="${XDG_CACHE_HOME:-$HOME/.cache}"
+    while read -r name _; do
+        [[ -n "$name" ]] || continue
+        for srcinfo in "$cache/yay/$name/.SRCINFO" "$cache/paru/clone/$name/.SRCINFO"; do
+            [[ -f "$srcinfo" ]] || continue
+            keys+=" $(awk -F' = ' '$1 ~ /validpgpkeys/ {print $2}' "$srcinfo" | tr '\n' ' ')"
+        done
+        for entry in "${AUR_MISSING_DEPS[@]}"; do
+            pkg="${entry%%:*}" dep="${entry#*:}"
+            [[ "$pkg" == "$name" ]] && ! pacman -Qq "$dep" >/dev/null 2>&1 && deps+=("$dep")
+        done
+    done <<< "$AUR_LIST"
+    # shellcheck disable=SC2086  # bewust splitsen op spaties
+    if [[ -n "${keys// /}" ]] && command -v gpg >/dev/null 2>&1; then
+        live "PGP-sleutels voor AUR verversen"
+        to_log "\$ gpg --refresh-keys$keys"
+        timeout 60 gpg --keyserver hkps://keyserver.ubuntu.com --refresh-keys $keys >>"${LOG_FILE:-/dev/null}" 2>&1 \
+            || timeout 60 gpg --refresh-keys $keys >>"${LOG_FILE:-/dev/null}" 2>&1 || true
+    fi
+    if (( ${#deps[@]} > 0 )); then
+        live "Ontbrekende bouwpakketten: ${deps[*]}"
+        to_log "\$ sudo pacman -S --needed --asdeps ${deps[*]}"
+        # shellcheck disable=SC2024  # log is van de gebruiker, bewust
+        sudo pacman -S --needed --noconfirm --asdeps "${deps[@]}" >>"${LOG_FILE:-/dev/null}" 2>&1 || true
+    fi
+    live_clear
+}
+
 # yay/paru en flatpak bijwerken. In de compacte weergave stil met
 # voortgangsbalk; mislukt dat, dan kan de run interactief opnieuw.
 update_arch() {
@@ -748,6 +791,7 @@ update_arch() {
     fi
 
     if ! $UI || $INTERACTIVE; then
+        prepare_aur
         "$helper" -Syu || rc=$?
         return "$rc"
     fi
@@ -762,6 +806,7 @@ update_arch() {
         live_clear
         sudo -v || return 1
     fi
+    prepare_aur
     run_quiet "$helper" "$helper" "${flags[@]}" || rc=$?
     if (( rc != 0 )) && ask_yes "Opnieuw draaien met de gewone $helper-uitvoer en vragen?"; then
         rc=0

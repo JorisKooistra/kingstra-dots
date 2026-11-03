@@ -11,9 +11,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Spiekbriefje (Super vasthouden)** heeft een blok Werkvlak: twee vingers, wiel, Ctrl+wiel, Ctrl+slepen, Shift+wiel, en zonder Super knijpen en vier vingers.
 
 ### Update breekt niet meer af op een optioneel pakket
+- **AUR-updates lopen weer.** Vóór de AUR-build ververst de updater de PGP-sleutels van de pakketten met een update (firefox-bin faalde op Mozilla's nieuwe subsleutel, "unknown public key"). Hij installeert ook bouwpakketten die de AUR-maintainer vergeten is te noemen (skwd-daemon eist `qt6-tools`).
+- **Dicteren**: whisper.cpp heet in de Arch-repo nu `whisper-cpp`; het oude AUR-pakket bestaat niet meer. De installer neemt `whisper-cpp` uit extra (vangnet: `whisper.cpp-git`).
+- quickshell-games-launchers-git blijft als update verschijnen omdat de AUR-versie (r138) nieuwer lijkt dan wat de bron echt levert (r80). Dat ligt bij de maintainer; het herinstalleert alleen hetzelfde pakket en kan geen kwaad.
 - **Bestandskiezer gaat weer open.** Open- en opslaan-vensters liepen via `xdg-desktop-portal-gnome` (Nautilus), maar die faalt buiten GNOME zonder terug te vallen: apps meldden dat het kiesvenster niet openging. De portal gebruikt weer de GTK-dialoog; de bladwijzers voor de data-schijven blijven.
 - **Een optioneel pakket dat niet lukt, stopt de update niet meer.** `kingstra update` brak af met "yay installeren: whisper.cpp" (code 1). Optionele AUR-pakketten (whisper.cpp, satty, mpvpaper, onlyoffice, heroic, spicetify, vesktop, logiops, python-vdf, de games-launcher en de vangnet-pakketten) geven nu een waarschuwing en de rest gaat door. Aan het eind staat welke niet lukten, met `yay -S …` om het later opnieuw te proberen. Kernpakketten (walker, oh-my-posh, skwd-wall) blijven verplicht.
-- **whisper.cpp (dicteren)** komt eerst uit de Arch-repo als die het heeft; anders wordt het uit de AUR gebouwd zonder de testronde (`check()`), die meestal de oorzaak was. Staat `whisper-cli` er al, dan wordt niets opnieuw gebouwd.
 
 ### Vangnet: eerlijke updates, terugdraaien, back-ups en een rustige opstart
 - **De updater zegt eerlijk wat er gebeurde.** Na yay leest hij in `/var/log/pacman.log` wat er echt is bijgewerkt en kijkt hij met `checkupdates` of er nog iets openstaat. Op 2 november meldde hij "bijgewerkt" terwijl er niets was geïnstalleerd (kernel bleef 7.2.11, 88 updates open); dat wordt nu een rode regel met de laatste uitvoer van yay erbij.

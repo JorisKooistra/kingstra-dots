@@ -11,6 +11,9 @@
 
 phase_run() {
     log_step "Wallpaper-pakketten installeren..."
+    # skwd-daemon eist qt6-tools, maar de AUR-.SRCINFO noemt het niet, dus
+    # yay installeert het niet zelf en de build stopt.
+    pacman_install qt6-tools
     aur_install skwd-wall               # standalone skwd-wall CLI + user daemon
     pacman_install imagemagick          # voor gradient-fallback + manipulatie
     pacman_install python-pillow        # thumbnail-cache + Mono Accent beeldbewerking

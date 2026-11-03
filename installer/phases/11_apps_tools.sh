@@ -207,10 +207,14 @@ _phase11_setup_dictation() {
     fi
     # Uit de repo's als dat kan (geen bouwen), anders AUR. Mislukt het, dan
     # werkt de rest gewoon en meldt Super+H dat dicteren nog niet klaar is.
-    if pacman_has_repo_pkg whisper.cpp; then
-        pacman_install_optional whisper.cpp
-    elif ! command -v whisper-cli >/dev/null 2>&1; then
-        AUR_NOCHECK=true aur_install_optional whisper.cpp
+    # whisper.cpp heet in extra "whisper-cpp"; het AUR-pakket whisper.cpp
+    # bestaat niet meer.
+    if command -v whisper-cli >/dev/null 2>&1; then
+        log_ok "whisper-cli aanwezig"
+    elif pacman_has_repo_pkg whisper-cpp; then
+        pacman_install_optional whisper-cpp
+    else
+        AUR_NOCHECK=true aur_install_optional whisper.cpp-git
     fi
 
     local model_dir="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/whisper"
