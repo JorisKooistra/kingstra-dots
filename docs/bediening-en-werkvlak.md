@@ -29,8 +29,8 @@ railknoppen, Meer-lijst) gaat "Meer en muziek…" naar Instellingen › Bedienin
 6. Vier vingers op het touchpad schuiven het beeld vrij. Knijpen zoomt uit of
    terug in. Op een aanraakscherm doen twee vingers hetzelfde; één vinger blijft
    de app bedienen. Super+drievingerveeg doet het schuiven ook, als de vierde
-   vinger niet past. Gewone appscroll en de drievingergebaren (werkruimte,
-   overzicht, controlecentrum) blijven bestaan. Super+twee vingers schuift het
+   vinger niet past. Gewone appscroll en drie vingers opzij (werkruimte)
+   blijven bestaan; drie vingers omhoog of omlaag doen niets meer. Super+twee vingers schuift het
    werkvlak mee met je vingers, als een kaart; uitgezoomd hoeft Super er niet
    bij. Bij optillen klikt het op een plek vast als je dichtbij bent. Het
    muiswiel blijft in het document scrollen. De eerste keer legt een melding

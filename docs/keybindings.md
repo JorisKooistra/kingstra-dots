@@ -7,7 +7,7 @@ Opgeschoond op 28-10-2026: toetsen die niet gebruikt werden zijn weg. De functie
 zelf staan in het toetsenbordmenu (`Super + Ctrl + Space`): controlecentrum,
 niet storen, schermindeling, kalender, FocusTime, games, yazi, nmtui, Blueman,
 vastzetten op alle werkruimtes en de groepsacties. Het controlecentrum opent ook
-met drie vingers omlaag of een klik op de bovenbalk.
+met een klik op de bovenbalk.
 
 ---
 
@@ -78,7 +78,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + -` | Actief venster parkeren (minimaliseren) |
 | `Super + Shift + -` | Laatst geparkeerde venster terug op zijn eigen werkruimte |
 | `Super + W` | Vensterlijst: geparkeerde vensters staan onderaan, Enter haalt terug |
-| 3 vingers omlaag / omhoog | Controlecentrum / overzicht |
+| 3 vingers opzij | Andere werkruimte (omhoog/omlaag doet bewust niets) |
 | 4 vingers slepen | Ruimtelijk werkvlak vrij schuiven; daarbuiten omhoog/omlaag de magische werkruimte |
 | Knijpen (2 vingers) | Ruimtelijk werkvlak uit- of inzoomen |
 

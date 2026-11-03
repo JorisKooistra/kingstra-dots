@@ -107,15 +107,10 @@ pcall(hl.config, { group = { groupbar = {
     scrolling = true, middle_click_close = true,
 } } })
 
--- Drie vingers omlaag opent het controlecentrum, omhoog het overzicht.
--- Lua-functies als gebaar bestaan pas in nieuwere Hyprland-versies; pcall
--- houdt de rest van de config heel als dat hier nog niet kan.
-pcall(hl.gesture, { fingers = 3, direction = "down", action = function()
-    hl.exec_cmd("~/.config/hypr/scripts/qs_manager.sh toggle tophover")
-end })
-pcall(hl.gesture, { fingers = 3, direction = "up", action = function()
-    hl.exec_cmd("~/.config/hypr/scripts/overview-toggle.sh")
-end })
+-- Drie vingers omhoog/omlaag openden het overzicht en het controlecentrum.
+-- Weggehaald 2026-11-03: wie vier vingers neerzet, begint vaak met drie en
+-- haalde zo ongewild een paneel tevoorschijn. Overzicht blijft Super+Tab,
+-- het controlecentrum een klik op de bovenbalk.
 
 hl.curve("easeOut", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } })
 hl.curve("easeIn", { type = "bezier", points = { { 0.5, 0 }, { 1, 0.5 } } })

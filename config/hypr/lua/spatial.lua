@@ -149,7 +149,9 @@ if hl.gesture then
                     return
                 end
                 if e and e.cancelled then return end
-                if math.abs(hand.y) >= math.abs(hand.x) and math.abs(hand.y) >= 24 then
+                -- Alleen een duidelijke verticale veeg; een korte of schuine
+                -- beweging haalt nooit ongevraagd iets tevoorschijn.
+                if math.abs(hand.y) >= 2 * math.abs(hand.x) and math.abs(hand.y) >= 140 then
                     hl.dispatch(hl.dsp.workspace.toggle_special("magic"))
                 end
             end,

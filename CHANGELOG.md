@@ -9,6 +9,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **De updater vraagt het bij het opruimen**, naast wezen en de pakketcache, met hoeveel ruimte het oplevert. Het herstelmenu (Ruimte maken) gooit de cache niet meer helemaal leeg maar gebruikt hetzelfde script.
 
 ### Ruimtelijk werkvlak op de laptop: meeschuiven en ontdekbaar
+- **Drie vingers omhoog/omlaag doen niets meer.** Ze openden het overzicht en het controlecentrum, en wie vier vingers neerzet begint vaak met drie: zo kwam er steeds ongevraagd een paneel tevoorschijn. Overzicht blijft Super+Tab, het controlecentrum een klik op de bovenbalk. Drie vingers opzij wisselt nog van werkruimte.
+- **Vier vingers buiten het ruimtelijk werkvlak** halen de magische werkruimte alleen nog bij een duidelijke, lange verticale veeg, niet meer bij een korte of schuine beweging.
 - **Super + twee vingers schuift het werkvlak mee met je vingers**, als een kaart, in plaats van per gebaar één hele plek te springen. Bij optillen klikt het op een plek vast als je er dichtbij bent. Uitgezoomd werkt een gewone tweevingerscroll zo, ook zonder Super. Dit zit in de zoom-plugin; `kingstra update` bouwt hem opnieuw.
 - **Gebaren werken ook op een leeg werkvlak** of als een zwevend venster de focus heeft. Knijpen, vier vingers en Super+drie vingers keken eerst naar het actieve venster en deden zonder venster niets.
 - **Eenmalige uitleg**: de eerste keer op een ruimtelijk werkvlak verschijnt een melding met de gebaren (op een pc zonder touchpad de muisbediening). `~/.config/hypr/scripts/werkvlak-hint.sh --reset` laat hem nog een keer zien.
