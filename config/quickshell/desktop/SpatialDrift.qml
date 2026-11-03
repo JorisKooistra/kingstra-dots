@@ -11,7 +11,7 @@ import "../"
 // onder de vensters) glijdt tegen de beweging in en dooft weer uit. Zo voelt
 // het alsof je over de wallpaper beweegt. De Lua-layout meldt elke
 // camerabeweging als custom>>kingstra-pan,<werkruimte>,<dx>,<dy>.
-// Uit te zetten per scherm via Instellingen › Bediening.
+// Uit te zetten per scherm via Instellingen › Schermen › Per scherm.
 Scope {
     id: root
 

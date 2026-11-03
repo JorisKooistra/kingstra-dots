@@ -6,12 +6,16 @@ import Quickshell.Io
 import Quickshell.Widgets
 import "../"
 
-// Bediening (Super+A): één overlay met alles wat je vaak wisselt, net als de
-// thema- en modekiezer maar dan alles tegelijk. Thema, wallpaper, mode voor de
-// hele desktop en per scherm, energieprofiel, indeling van de werkruimte,
-// scrollgedrag en de rail per scherm staan naast elkaar en werken direct.
-// De logica volgt Instellingen › Overzicht en › Bediening; de details blijven
-// daar.
+// Sfeer (Super+A): drie rijen, verder niets. Thema, wallpaper en "wat ga je
+// doen" (de stand van de hele desktop, plus zen). Een klik past het meteen
+// toe; het eiland biedt daarna "Ongedaan maken".
+//
+// Wat hier vroeger ook stond, heeft een vaste plek in Instellingen gekregen:
+// zijbalk, indeling, scrollen, vanzelf en speler onder Bureaublad, per scherm
+// onder Schermen, energie in Snelle instellingen (en Systeem).
+//
+// Toetsen: pijltjes of Tab lopen door de rij, omhoog/omlaag wisselt van rij,
+// 1–3 springt naar een rij, Enter of spatie kiest, Esc sluit.
 Item {
     id: overlay
     width: parent ? parent.width : 0
@@ -26,44 +30,58 @@ Item {
 
     readonly property string home: Quickshell.env("HOME")
     readonly property string scripts: home + "/.config/hypr/scripts"
-    readonly property string layoutHelper: scripts + "/workspace-layout.py"
-    readonly property string werkvlakHelper: scripts + "/werkvlak-settings.py"
+    readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (home + "/.local/state")
 
-    // ── Gekozen scherm ──────────────────────────────────────────────────
-    property string selectedName: ""
-    readonly property var monitor: {
-        let list = ScreenProfiles.monitors;
-        for (let m of list) if (m.name === selectedName) return m;
-        for (let m of list) if (m.focused) return m;
-        return list.length ? list[0] : null;
-    }
-    readonly property string screenName: monitor ? monitor.name : ""
-    readonly property var profile: ScreenProfiles.profile(screenName)
-    readonly property int workspace: monitor && monitor.activeWorkspace ? monitor.activeWorkspace.id : 0
-    readonly property var modeData: ScreenProfiles.state.presets[profile.mode] || ({})
-    readonly property var modules: profile.rail.modules !== undefined ? profile.rail.modules : (modeData.modules || [])
-    readonly property bool autohide: profile.rail.autohide !== undefined ? profile.rail.autohide : modeData.bar_autohide === true
+    readonly property var themes: [
+        {id: "matte", title: "Matte", preview: "matte"},
+        {id: "mono", title: "Mono", preview: "mono"},
+        {id: "mono-accent", title: "Mono accent", preview: "mono"},
+        {id: "neon", title: "Neon", preview: "neon"},
+        {id: "organic", title: "Organic", preview: "organic"},
+        {id: "paper", title: "Paper", preview: "paper"}
+    ]
+    // Stand van de hele desktop, in gewone woorden. Zen is een schakelaar
+    // bovenop de stand.
+    readonly property var activities: [
+        {id: "office", title: "Werken", detail: "Rustig, alles op zijn plek", glyph: "󰈙"},
+        {id: "media", title: "Kijken en luisteren", detail: "Speler groot, meldingen zacht", glyph: "󰝚"},
+        {id: "gaming", title: "Spelen", detail: "Effecten uit, niet storen aan", glyph: "󰊴"},
+        {id: "zen", title: "Zen", detail: "Alleen het venster waar je in werkt", glyph: "󰚀"}
+    ]
 
-    // ── Desktop ─────────────────────────────────────────────────────────
     property string modeName: ""
     property string themeName: ""
     property string pendingMode: ""
     property string pendingTheme: ""
-    property string currentLayout: ""
-    property string layoutError: ""
     property string currentWallpaper: ""
     property var wallpapers: []
-    property var werkvlak: ({column_width: 1.0, snap: 0.2})
-    property string werkvlakError: ""
-    property string powerProfile: "balanced"
-    property bool powerAvailable: false
+    property var customized: []
+    property bool zenOn: false
+    property string autoGame: ""
     property bool shown: false
+
+    // Toetsenbordfocus: rij 0 thema, 1 wallpaper, 2 wat ga je doen.
+    property int row: 0
+    property var cursor: [0, 0, 0]
+    readonly property var rowCounts: [themes.length + 1, wallpapers.length + 2, activities.length]
+    function setCursor(r, i) {
+        let next = cursor.slice();
+        next[r] = Math.max(0, Math.min(rowCounts[r] - 1, i));
+        cursor = next;
+    }
 
     function kingstra(args) {
         return ["bash", "-lc", "PATH=\"$HOME/.local/bin:$PATH\" kingstra " + args];
     }
+    function feedback(icon, title, detail, undo) {
+        Quickshell.execDetached(["bash", scripts + "/feedback.sh", "--undo", undo, icon, title, detail]);
+    }
     function readName(text) {
         try { return String(JSON.parse(text).name || ""); } catch (e) { return ""; }
+    }
+    function titleOf(list, id) {
+        for (let item of list) if (item.id === id) return item.title;
+        return id;
     }
     function close() {
         Quickshell.execDetached(["bash", scripts + "/qs_manager.sh", "close"]);
@@ -76,115 +94,71 @@ Item {
     function openSettings(page) {
         closeThen(["bash", scripts + "/qs_manager.sh", "open", "settings", page]);
     }
-    function setMode(name) {
-        if (name === modeName) return;
-        pendingMode = name;
-        pendingTimer.restart();
-        Quickshell.execDetached(kingstra("mode " + name));
-    }
     function setTheme(name) {
-        if (name === themeName) return;
+        if (name === themeName || pendingTheme !== "") return;
+        let before = themeName;
         pendingTheme = name;
         pendingTimer.restart();
         Quickshell.execDetached(kingstra("theme " + name));
+        if (before !== "")
+            feedback("󰏘", "Thema " + titleOf(themes, name), "Was " + titleOf(themes, before), "kingstra theme " + before);
+    }
+    function setMode(name) {
+        if (name === modeName || pendingMode !== "") return;
+        let before = modeName;
+        pendingMode = name;
+        pendingTimer.restart();
+        Quickshell.execDetached(kingstra("mode " + name));
+        if (before !== "")
+            feedback("󰾅", titleOf(activities, name), "Was " + titleOf(activities, before), "kingstra mode " + before);
+    }
+    function toggleZen() {
+        zenOn = !zenOn;
+        Quickshell.execDetached(["bash", scripts + "/zen.sh", "toggle"]);
     }
     function setWallpaper(path) {
+        if (path === currentWallpaper) return;
+        let before = currentWallpaper;
         currentWallpaper = path;
         Quickshell.execDetached(["bash", "-lc", "PATH=\"$HOME/.local/bin:$PATH\" kingstra wallpaper set \"$1\"", "_", path]);
+        if (before !== "")
+            feedback("󰸉", "Nieuwe wallpaper", path.split("/").pop(), "kingstra wallpaper set '" + before.replace(/'/g, "'\\''") + "'");
     }
-    function setPower(name) {
-        if (!powerAvailable || name === powerProfile) return;
-        powerProfile = name;
-        Quickshell.execDetached(["powerprofilesctl", "set", name]);
+    function randomWallpaper() {
+        Quickshell.execDetached(["bash", scripts + "/wallpaper-random-safe.sh"]);
     }
-    function setScreen(field, value) {
-        if (!screenName) return;
-        ScreenProfiles.action(["set", screenName, field, JSON.stringify(value)]);
+    function allWallpapers() {
+        closeThen(["bash", scripts + "/wallpaper-picker-safe.sh"]);
     }
-    function toggleModule(id) {
-        let next = modules.slice(), index = next.indexOf(id);
-        if (index >= 0) next.splice(index, 1); else next.push(id);
-        setScreen("rail.modules", next);
+    function activate(r, i) {
+        row = r;
+        setCursor(r, i);
+        if (r === 0) {
+            if (i < themes.length) setTheme(themes[i].id);
+            else openSettings("uiterlijk");
+        } else if (r === 1) {
+            if (i === 0) randomWallpaper();
+            else if (i <= wallpapers.length) setWallpaper(wallpapers[i - 1]);
+            else allWallpapers();
+        } else {
+            let a = activities[i];
+            if (a.id === "zen") toggleZen(); else setMode(a.id);
+        }
     }
-    function inspectLayout() {
-        if (!workspace || inspectProcess.running || layoutProcess.running) return;
-        inspectProcess.command = ["python3", layoutHelper, "inspect", String(workspace)];
-        inspectProcess.running = true;
-    }
-    function applyLayout(preset) {
-        if (!workspace || layoutProcess.running) return;
-        layoutError = "";
-        layoutProcess.command = ["python3", layoutHelper, "apply", preset, String(workspace)];
-        layoutProcess.running = true;
-    }
-    function acceptLayout(text) {
-        try {
-            let preset = JSON.parse(text).preset || "";
-            if (preset !== currentLayout) currentLayout = preset;
-        } catch (e) {}
-    }
-    function setWerkvlak(key, value) {
-        if (werkvlakProcess.running) return;
-        let next = Object.assign({}, werkvlak);
-        next[key] = value;
-        werkvlak = next;
-        werkvlakError = "";
-        werkvlakProcess.command = ["python3", werkvlakHelper, "set", key, String(value)];
-        werkvlakProcess.running = true;
-    }
-    function acceptWerkvlak(text) {
-        try {
-            let data = JSON.parse(text);
-            if (data && data.column_width !== undefined) werkvlak = data;
-        } catch (e) {}
-    }
-    function near(a, b) { return Math.abs(Number(a) - Number(b)) < 0.01; }
     function fileUrl(path) { return path ? "file://" + encodeURI(path) : ""; }
 
-    onWorkspaceChanged: { currentLayout = ""; inspectLayout(); }
     Component.onCompleted: {
-        inspectLayout();
-        werkvlakGet.running = true;
         wallpaperList.running = true;
-        powerReader.running = true;
+        overridesList.running = true;
+        zenProbe.running = true;
         overlay.forceActiveFocus();
         revealTimer.start();
     }
     Timer { id: revealTimer; interval: 30; onTriggered: overlay.shown = true }
-    Timer { interval: 2000; repeat: true; running: overlay.visible; onTriggered: overlay.inspectLayout() }
-    Timer { interval: 4000; repeat: true; running: overlay.visible; onTriggered: if (!powerReader.running) powerReader.running = true }
     // Een thema- of modewissel duurt even; de keuze knippert niet terug.
     Timer { id: pendingTimer; interval: 20000; onTriggered: { overlay.pendingMode = ""; overlay.pendingTheme = ""; } }
+    Timer { interval: 1500; repeat: true; running: overlay.visible; onTriggered: if (!zenProbe.running) zenProbe.running = true }
 
-    // Modi die vanzelf aanspringen (kingstra-auto-mode).
-    property var autoRules: ({ game: true, battery: true, share: true })
-    property string autoGame: ""
-    property bool autoBattery: false
-    property bool autoShare: false
-    property bool autoHasBattery: false
-    function setAutoRule(rule, on) {
-        let next = Object.assign({}, overlay.autoRules);
-        next[rule] = on;
-        overlay.autoRules = next;
-        Quickshell.execDetached([overlay.home + "/.local/bin/kingstra-auto-mode", "set", rule, on ? "on" : "off"]);
-    }
-    FileView {
-        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/kingstra-auto-mode.json"
-        watchChanges: true
-        preload: true
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: {
-            try {
-                let d = JSON.parse(text() || "{}");
-                if (d.rules) overlay.autoRules = d.rules;
-                overlay.autoGame = String(d.game || "");
-                overlay.autoBattery = d.battery === true;
-                overlay.autoShare = d.share === true;
-                overlay.autoHasBattery = d.hasBattery === true;
-            } catch (e) {}
-        }
-    }
     FileView {
         path: overlay.home + "/.config/kingstra/state/mode.json"
         watchChanges: true
@@ -197,7 +171,11 @@ Item {
         watchChanges: true
         preload: true
         onFileChanged: reload()
-        onLoaded: { overlay.themeName = overlay.readName(text()); if (overlay.themeName === overlay.pendingTheme) overlay.pendingTheme = ""; }
+        onLoaded: {
+            overlay.themeName = overlay.readName(text());
+            if (overlay.themeName === overlay.pendingTheme) overlay.pendingTheme = "";
+            if (!overridesList.running) overridesList.running = true;
+        }
     }
     FileView {
         path: overlay.home + "/.cache/kingstra/last-image-wallpaper"
@@ -206,41 +184,27 @@ Item {
         onFileChanged: reload()
         onLoaded: overlay.currentWallpaper = text().trim()
     }
+    FileView {
+        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/kingstra-auto-mode.json"
+        watchChanges: true
+        preload: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try { overlay.autoGame = String(JSON.parse(text() || "{}").game || ""); } catch (e) {}
+        }
+    }
 
     Process {
-        id: inspectProcess
-        stdout: StdioCollector { onStreamFinished: overlay.acceptLayout(this.text) }
+        id: zenProbe
+        command: ["bash", "-c", "[ -f \"${XDG_RUNTIME_DIR:-/tmp}/kingstra-zen.json\" ] && echo on || echo off"]
+        stdout: StdioCollector { onStreamFinished: overlay.zenOn = this.text.trim() === "on" }
     }
+    // Thema's met eigen aanpassingen (Instellingen › Uiterlijk) krijgen een stip.
     Process {
-        id: layoutProcess
-        stdout: StdioCollector {
-            onStreamFinished: {
-                overlay.acceptLayout(this.text);
-                if (this.text.trim()) overlay.layoutError = "";
-            }
-        }
-        stderr: StdioCollector { onStreamFinished: if (this.text.trim()) overlay.layoutError = this.text.trim() }
-    }
-    Process {
-        id: werkvlakGet
-        command: ["python3", overlay.werkvlakHelper, "get"]
-        stdout: StdioCollector { onStreamFinished: overlay.acceptWerkvlak(this.text) }
-    }
-    Process {
-        id: werkvlakProcess
-        stdout: StdioCollector { onStreamFinished: overlay.acceptWerkvlak(this.text) }
-        stderr: StdioCollector { onStreamFinished: if (this.text.trim()) overlay.werkvlakError = this.text.trim() }
-    }
-    Process {
-        id: powerReader
-        command: ["bash", "-c", "command -v powerprofilesctl >/dev/null 2>&1 && powerprofilesctl get 2>/dev/null || echo none"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let value = this.text.trim();
-                overlay.powerAvailable = value !== "" && value !== "none";
-                if (overlay.powerAvailable) overlay.powerProfile = value;
-            }
-        }
+        id: overridesList
+        command: ["bash", "-c", "ls \"$1\" 2>/dev/null | sed -n 's/\\.json$//p'", "_", overlay.stateHome + "/kingstra/theme-overrides"]
+        stdout: StdioCollector { onStreamFinished: overlay.customized = this.text.split("\n").filter(line => line !== "") }
     }
     // Zelfde map als kingstra-wallpaper: skwd-wall-config, anders ~/Pictures/Wallpapers.
     Process {
@@ -252,14 +216,22 @@ Item {
             "[ -z \"$dir\" ] && dir=\"$HOME/Pictures/Wallpapers\"; " +
             "dir=\"${dir/#\\~/$HOME}\"; [ -d \"$dir\" ] || exit 0; " +
             "find -L \"$dir\" -maxdepth 2 -type f \\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \\) " +
-            "-printf '%T@ %p\\n' 2>/dev/null | sort -rn | head -n 60 | cut -d' ' -f2-"]
+            "-printf '%T@ %p\\n' 2>/dev/null | sort -rn | head -n 24 | cut -d' ' -f2-"]
         stdout: StdioCollector {
             onStreamFinished: overlay.wallpapers = this.text.split("\n").filter(line => line.trim() !== "")
         }
     }
 
-    Keys.onEscapePressed: (event) => {
-        overlay.close();
+    Keys.onPressed: (event) => {
+        let r = overlay.row, i = overlay.cursor[r];
+        if (event.key === Qt.Key_Escape) { overlay.close(); }
+        else if (event.key === Qt.Key_Left || event.key === Qt.Key_Backtab) { overlay.setCursor(r, i - 1); }
+        else if (event.key === Qt.Key_Right || event.key === Qt.Key_Tab) { overlay.setCursor(r, i + 1); }
+        else if (event.key === Qt.Key_Up) { overlay.row = Math.max(0, r - 1); }
+        else if (event.key === Qt.Key_Down) { overlay.row = Math.min(2, r + 1); }
+        else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_3) { overlay.row = event.key - Qt.Key_1; }
+        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) { overlay.activate(r, i); }
+        else return;
         event.accepted = true;
     }
 
@@ -268,37 +240,30 @@ Item {
         id: chip
         property string label: ""
         property string glyph: ""
-        property bool chosen: false
-        property bool busy: false
-        property bool allowed: true
         signal triggered()
-        implicitHeight: overlay.s(32)
-        implicitWidth: chipRow.implicitWidth + overlay.s(26)
+        implicitHeight: overlay.s(34)
+        implicitWidth: chipRow.implicitWidth + overlay.s(28)
         radius: height / 2
-        opacity: allowed ? 1 : 0.45
         scale: chipMouse.pressed ? 0.96 : 1.0
-        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(150) } }
         Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutQuart } }
         Behavior on color { ColorAnimation { duration: ThemeConfig.duration(180) } }
-        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(180) } }
-        color: chosen || busy ? Qt.alpha(overlay.c.primary, busy ? 0.12 : 0.22)
-            : chipMouse.containsMouse ? overlay.c.shellHoverFill : overlay.c.shellRaisedFill
+        color: chipMouse.containsMouse ? overlay.c.shellHoverFill : overlay.c.shellRaisedFill
         border.width: 1
-        border.color: chosen || busy ? overlay.c.primary : overlay.c.shellOutline
+        border.color: overlay.c.shellOutline
         Row {
             id: chipRow
             anchors.centerIn: parent
-            spacing: overlay.s(6)
+            spacing: overlay.s(7)
             Text {
                 visible: chip.glyph !== ""
                 text: chip.glyph
-                color: chip.chosen ? overlay.c.primary : overlay.c.subtext1
+                color: overlay.c.subtext1
                 font.family: ThemeConfig.iconFont
                 font.pixelSize: overlay.s(14)
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
-                text: chip.busy ? chip.label + "  …" : chip.label
+                text: chip.label
                 color: overlay.c.text
                 font.family: ThemeConfig.uiFont
                 font.pixelSize: overlay.s(12)
@@ -309,152 +274,177 @@ Item {
             id: chipMouse
             anchors.fill: parent
             hoverEnabled: true
-            enabled: chip.allowed
             cursorShape: Qt.PointingHandCursor
             onClicked: chip.triggered()
         }
     }
 
-    // Keuze uit een paar standen met een glijdende markering.
-    component Segmented: Rectangle {
-        id: seg
-        property var options: []
-        property string current: ""
-        property bool allowed: true
-        signal picked(string value)
-        readonly property int activeIndex: {
-            for (let i = 0; i < options.length; ++i) if (options[i].id === current) return i;
-            return -1;
-        }
-        readonly property real slotWidth: options.length ? (width - overlay.s(8)) / options.length : 0
+    // Eén rij: kop met nummer en uitleg, daaronder een horizontale strook.
+    // Schuift met een kleine vertraging per rij binnen.
+    component Strip: ColumnLayout {
+        id: strip
+        property int order: 0
+        property string label: ""
+        property string hint: ""
+        default property alias content: stripBody.data
+        readonly property bool active: overlay.row === order
         Layout.fillWidth: true
-        implicitHeight: overlay.s(40)
-        radius: height / 2
-        color: overlay.c.shellRaisedFill
-        border.width: 1
-        border.color: overlay.c.shellOutline
-        opacity: allowed ? 1 : 0.45
-        Rectangle {
-            visible: seg.activeIndex >= 0
-            x: overlay.s(4) + Math.max(0, seg.activeIndex) * seg.slotWidth
-            y: overlay.s(4)
-            width: seg.slotWidth
-            height: seg.height - overlay.s(8)
-            radius: height / 2
-            color: Qt.alpha(overlay.c.primary, 0.24)
-            border.width: 1
-            border.color: overlay.c.primary
-            Behavior on x { NumberAnimation { duration: ThemeConfig.duration(280); easing.type: Easing.OutCubic } }
-            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(280); easing.type: Easing.OutCubic } }
+        spacing: overlay.s(10)
+        opacity: overlay.shown ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(360 + strip.order * 90); easing.type: Easing.OutCubic } }
+        transform: Translate {
+            y: overlay.shown ? 0 : overlay.s(24)
+            Behavior on y { NumberAnimation { duration: ThemeConfig.duration(500 + strip.order * 90); easing.type: Easing.OutExpo } }
         }
-        Row {
-            anchors.fill: parent
-            anchors.margins: overlay.s(4)
-            Repeater {
-                model: seg.options
-                delegate: Item {
-                    id: slot
-                    required property var modelData
-                    required property int index
-                    width: seg.slotWidth
-                    height: parent.height
-                    Row {
-                        anchors.centerIn: parent
-                        spacing: overlay.s(6)
-                        Text {
-                            visible: !!slot.modelData.glyph
-                            text: slot.modelData.glyph || ""
-                            color: slot.index === seg.activeIndex ? overlay.c.primary : overlay.c.subtext1
-                            font.family: ThemeConfig.iconFont
-                            font.pixelSize: overlay.s(15)
-                            anchors.verticalCenter: parent.verticalCenter
-                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                        }
-                        Text {
-                            text: slot.modelData.title
-                            color: slot.index === seg.activeIndex ? overlay.c.text : overlay.c.subtext0
-                            font.family: ThemeConfig.uiFont
-                            font.pixelSize: overlay.s(12)
-                            font.bold: slot.index === seg.activeIndex
-                            anchors.verticalCenter: parent.verticalCenter
-                            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
-                        }
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: seg.allowed
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: seg.picked(slot.modelData.id)
-                    }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: overlay.s(10)
+            Rectangle {
+                Layout.preferredWidth: overlay.s(24)
+                Layout.preferredHeight: overlay.s(24)
+                radius: width / 2
+                color: strip.active ? overlay.c.primary : overlay.c.shellRaisedFill
+                border.width: 1
+                border.color: strip.active ? overlay.c.primary : overlay.c.shellOutline
+                Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+                Text {
+                    anchors.centerIn: parent
+                    text: String(strip.order + 1)
+                    color: strip.active ? overlay.c.base : overlay.c.subtext0
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: overlay.s(11)
+                    font.bold: true
                 }
             }
+            Text {
+                text: strip.label
+                color: overlay.c.text
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: overlay.s(15)
+                font.bold: true
+            }
+            Text {
+                Layout.fillWidth: true
+                text: strip.hint
+                color: overlay.c.subtext0
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: overlay.s(11)
+                elide: Text.ElideRight
+            }
+        }
+        Item {
+            id: stripBody
+            Layout.fillWidth: true
+            Layout.preferredHeight: childrenRect.height
         }
     }
 
-    component Heading: Row {
-        id: heading
-        property string glyph: ""
+    // Tegel met een gladde focus- en keuzerand.
+    component Tile: Item {
+        id: tile
+        property bool chosen: false
+        property bool busy: false
+        property bool focused: false
         property string label: ""
-        spacing: overlay.s(8)
-        Text {
-            text: heading.glyph
-            color: overlay.c.primary
-            font.family: ThemeConfig.iconFont
-            font.pixelSize: overlay.s(16)
-            anchors.verticalCenter: parent.verticalCenter
+        property string sublabel: ""
+        property string glyph: ""
+        property string image: ""
+        property bool dot: false
+        property real frameHeight: overlay.s(96)
+        signal triggered()
+        height: frame.height + (label !== "" && sublabel === "" ? overlay.s(26) : 0)
+        scale: tileMouse.pressed ? 0.96 : tileMouse.containsMouse || focused ? 1.03 : 1.0
+        Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(170); easing.type: Easing.OutQuart } }
+
+        ClippingRectangle {
+            id: frame
+            width: parent.width
+            height: tile.frameHeight
+            radius: overlay.s(16)
+            color: tile.chosen ? Qt.alpha(overlay.c.primary, 0.18) : tileMouse.containsMouse ? overlay.c.shellHoverFill : Qt.alpha(overlay.c.surface1, 0.4)
+            border.width: tile.chosen || tile.busy || tile.focused ? 2 : 1
+            border.color: tile.chosen || tile.busy ? overlay.c.primary : tile.focused ? Qt.alpha(overlay.c.primary, 0.6) : overlay.c.shellOutline
+            Behavior on color { ColorAnimation { duration: ThemeConfig.duration(180) } }
+            Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(180) } }
+            Image {
+                anchors.fill: parent
+                visible: tile.image !== ""
+                source: tile.image
+                sourceSize.width: 320
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                opacity: tile.busy ? 0.55 : 1
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
+            }
+            // Tegel zonder plaatje: icoon, titel en één regel uitleg.
+            ColumnLayout {
+                visible: tile.image === ""
+                anchors.fill: parent
+                anchors.margins: overlay.s(14)
+                spacing: overlay.s(4)
+                Text {
+                    text: tile.glyph
+                    color: tile.chosen ? overlay.c.primary : overlay.c.subtext1
+                    font.family: ThemeConfig.iconFont
+                    font.pixelSize: overlay.s(tile.sublabel !== "" ? 24 : 22)
+                    Layout.alignment: tile.sublabel !== "" ? Qt.AlignLeft : Qt.AlignHCenter
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(200) } }
+                }
+                Item { Layout.fillHeight: true }
+                Text {
+                    visible: tile.sublabel !== ""
+                    Layout.fillWidth: true
+                    text: tile.busy ? tile.label + "  …" : tile.label
+                    color: overlay.c.text
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: overlay.s(14)
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+                Text {
+                    visible: tile.sublabel !== ""
+                    Layout.fillWidth: true
+                    text: tile.sublabel
+                    color: overlay.c.subtext0
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: overlay.s(11)
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 2
+                    elide: Text.ElideRight
+                }
+            }
+            Rectangle {
+                visible: tile.dot
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.margins: overlay.s(8)
+                width: overlay.s(10)
+                height: width
+                radius: width / 2
+                color: overlay.c.primary
+                border.width: 2
+                border.color: overlay.c.mantle
+            }
         }
         Text {
-            text: heading.label
-            color: overlay.c.text
+            visible: tile.label !== "" && tile.sublabel === ""
+            anchors.top: frame.bottom
+            anchors.topMargin: overlay.s(6)
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            text: tile.busy ? tile.label + "  …" : tile.label
+            color: tile.chosen ? overlay.c.primary : overlay.c.text
             font.family: ThemeConfig.uiFont
-            font.pixelSize: overlay.s(15)
-            font.bold: true
-            anchors.verticalCenter: parent.verticalCenter
+            font.pixelSize: overlay.s(12)
+            font.bold: tile.chosen
+            elide: Text.ElideRight
         }
-    }
-    component Hint: Text {
-        color: overlay.c.subtext0
-        font.family: ThemeConfig.uiFont
-        font.pixelSize: overlay.s(11)
-        wrapMode: Text.Wrap
-    }
-    component Card: Rectangle {
-        default property alias content: inner.data
-        Layout.fillWidth: true
-        Layout.preferredHeight: inner.implicitHeight + overlay.s(32)
-        radius: overlay.s(18)
-        color: Qt.alpha(overlay.c.shellRaisedFill, 0.55)
-        border.width: 1
-        border.color: overlay.c.shellOutline
-        ColumnLayout {
-            id: inner
+        MouseArea {
+            id: tileMouse
             anchors.fill: parent
-            anchors.margins: overlay.s(16)
-            spacing: overlay.s(10)
-        }
-    }
-    // Kolom die met een kleine vertraging binnenglijdt.
-    component Lane: Flickable {
-        id: lane
-        default property alias content: laneBody.data
-        property int order: 0
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        Layout.preferredWidth: 1
-        contentHeight: laneBody.implicitHeight
-        contentWidth: width
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        opacity: overlay.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(380 + lane.order * 90); easing.type: Easing.OutCubic } }
-        transform: Translate {
-            y: overlay.shown ? 0 : overlay.s(28)
-            Behavior on y { NumberAnimation { duration: ThemeConfig.duration(520 + lane.order * 90); easing.type: Easing.OutExpo } }
-        }
-        ColumnLayout {
-            id: laneBody
-            width: lane.width
-            spacing: overlay.s(14)
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: tile.triggered()
         }
     }
 
@@ -475,8 +465,8 @@ Item {
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: overlay.s(24)
-            spacing: overlay.s(18)
+            anchors.margins: overlay.s(28)
+            spacing: overlay.s(24)
 
             // Kop
             RowLayout {
@@ -491,7 +481,7 @@ Item {
                     color: Qt.alpha(overlay.c.primary, 0.18)
                     Text {
                         anchors.centerIn: parent
-                        text: "󰒓"
+                        text: "󰏘"
                         color: overlay.c.primary
                         font.family: ThemeConfig.iconFont
                         font.pixelSize: overlay.s(20)
@@ -500,464 +490,122 @@ Item {
                 ColumnLayout {
                     spacing: 0
                     Text {
-                        text: "Bediening"
+                        text: "Sfeer"
                         color: overlay.c.text
                         font.family: ThemeConfig.uiFont
                         font.pixelSize: overlay.s(22)
                         font.bold: true
                     }
-                    Hint { text: "Alles wat je vaak wisselt, tegelijk. Een klik past het meteen toe." }
+                    Text {
+                        text: "Klik is meteen toepassen. Spijt? Ongedaan maken staat rechtsboven."
+                        color: overlay.c.subtext0
+                        font.family: ThemeConfig.uiFont
+                        font.pixelSize: overlay.s(11)
+                    }
                 }
                 Item { Layout.fillWidth: true }
-                Chip { glyph: "󰒓"; label: "Alle instellingen"; onTriggered: overlay.openSettings("overzicht") }
-                Chip { glyph: "󰅖"; label: "Sluiten  ·  Esc"; onTriggered: overlay.close() }
+                Chip { glyph: "󰒓"; label: "Instellingen…"; onTriggered: overlay.openSettings("start") }
+                Chip { glyph: "󰅖"; label: "Esc"; onTriggered: overlay.close() }
             }
 
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                spacing: overlay.s(16)
-
-                // ── Uiterlijk ───────────────────────────────────────────
-                Lane {
-                    order: 0
-
-                    Card {
-                        Heading { glyph: "󰏘"; label: "Thema" }
-                        Flow {
-                            id: themeFlow
-                            Layout.fillWidth: true
-                            spacing: overlay.s(10)
-                            readonly property real tileWidth: (width - spacing * 2) / 3
-                            Repeater {
-                                model: [{id: "matte", title: "Matte", preview: "matte"}, {id: "mono", title: "Mono", preview: "mono"}, {id: "mono-accent", title: "Mono accent", preview: "mono"}, {id: "neon", title: "Neon", preview: "neon"}, {id: "organic", title: "Organic", preview: "organic"}, {id: "paper", title: "Paper", preview: "paper"}]
-                                delegate: Item {
-                                    id: themeTile
-                                    required property var modelData
-                                    readonly property bool chosen: overlay.themeName === modelData.id && overlay.pendingTheme === ""
-                                    readonly property bool busy: overlay.pendingTheme === modelData.id
-                                    width: themeFlow.tileWidth
-                                    height: themeFrame.height + overlay.s(24)
-                                    scale: themeMouse.pressed ? 0.96 : themeMouse.containsMouse ? 1.03 : 1.0
-                                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutQuart } }
-                                    ClippingRectangle {
-                                        id: themeFrame
-                                        width: parent.width
-                                        height: Math.round(width * 0.6)
-                                        radius: overlay.s(12)
-                                        color: overlay.c.shellRaisedFill
-                                        border.width: themeTile.chosen || themeTile.busy ? 2 : 1
-                                        border.color: themeTile.chosen || themeTile.busy ? overlay.c.primary : overlay.c.shellOutline
-                                        Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                                        Image {
-                                            anchors.fill: parent
-                                            source: overlay.fileUrl(overlay.home + "/.config/kingstra/themes/previews/" + themeTile.modelData.preview + ".jpg")
-                                            sourceSize.width: 260
-                                            fillMode: Image.PreserveAspectCrop
-                                            asynchronous: true
-                                            opacity: themeTile.busy ? 0.6 : 1
-                                            Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(200) } }
-                                        }
-                                    }
-                                    Text {
-                                        anchors.top: themeFrame.bottom
-                                        anchors.topMargin: overlay.s(5)
-                                        width: parent.width
-                                        horizontalAlignment: Text.AlignHCenter
-                                        text: themeTile.busy ? themeTile.modelData.title + "  …" : themeTile.modelData.title
-                                        color: themeTile.chosen ? overlay.c.primary : overlay.c.text
-                                        font.family: ThemeConfig.uiFont
-                                        font.pixelSize: overlay.s(12)
-                                        font.bold: themeTile.chosen
-                                        elide: Text.ElideRight
-                                    }
-                                    MouseArea {
-                                        id: themeMouse
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: overlay.setTheme(themeTile.modelData.id)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Card {
-                        Heading { glyph: "󰸉"; label: "Wallpaper" }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: overlay.s(12)
-                            ClippingRectangle {
-                                Layout.preferredWidth: overlay.s(150)
-                                Layout.preferredHeight: overlay.s(86)
-                                radius: overlay.s(12)
-                                color: overlay.c.shellRaisedFill
-                                border.width: 1
-                                border.color: overlay.c.shellOutline
-                                Image {
-                                    anchors.fill: parent
-                                    source: overlay.fileUrl(overlay.currentWallpaper)
-                                    sourceSize.width: 320
-                                    fillMode: Image.PreserveAspectCrop
-                                    asynchronous: true
-                                }
-                            }
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: overlay.s(8)
-                                Hint {
-                                    Layout.fillWidth: true
-                                    text: overlay.currentWallpaper ? overlay.currentWallpaper.split("/").pop() : "Nog geen wallpaper gekozen"
-                                    elide: Text.ElideMiddle
-                                    wrapMode: Text.NoWrap
-                                }
-                                Flow {
-                                    Layout.fillWidth: true
-                                    spacing: overlay.s(6)
-                                    Chip { glyph: "󰒝"; label: "Willekeurig"; onTriggered: Quickshell.execDetached(["bash", overlay.scripts + "/wallpaper-random-safe.sh"]) }
-                                    Chip { glyph: "󰋩"; label: "Grote kiezer"; onTriggered: overlay.closeThen(["bash", overlay.scripts + "/wallpaper-picker-safe.sh"]) }
-                                }
-                            }
-                        }
-                        Hint { visible: overlay.wallpapers.length === 0; Layout.fillWidth: true; text: "Geen afbeeldingen gevonden in je wallpapermap." }
-                        GridView {
-                            id: wallGrid
-                            visible: overlay.wallpapers.length > 0
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: overlay.s(250)
-                            clip: true
-                            boundsBehavior: Flickable.StopAtBounds
-                            cellWidth: width / 3
-                            cellHeight: Math.round(cellWidth * 0.6)
-                            model: overlay.wallpapers
-                            delegate: Item {
-                                id: thumb
-                                required property string modelData
-                                readonly property bool chosen: modelData === overlay.currentWallpaper
-                                width: wallGrid.cellWidth
-                                height: wallGrid.cellHeight
-                                ClippingRectangle {
-                                    anchors.fill: parent
-                                    anchors.margins: overlay.s(4)
-                                    radius: overlay.s(10)
-                                    color: overlay.c.shellRaisedFill
-                                    border.width: thumb.chosen ? 2 : 1
-                                    border.color: thumb.chosen ? overlay.c.primary : overlay.c.shellOutline
-                                    scale: thumbMouse.pressed ? 0.95 : thumbMouse.containsMouse ? 1.03 : 1.0
-                                    Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutQuart } }
-                                    Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(150) } }
-                                    Image {
-                                        anchors.fill: parent
-                                        source: overlay.fileUrl(thumb.modelData)
-                                        sourceSize.width: 240
-                                        fillMode: Image.PreserveAspectCrop
-                                        asynchronous: true
-                                    }
-                                }
-                                MouseArea {
-                                    id: thumbMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: overlay.setWallpaper(thumb.modelData)
-                                }
-                            }
-                        }
+            // ── 1 · Thema ───────────────────────────────────────────────
+            Strip {
+                order: 0
+                label: "Thema"
+                hint: "Kleuren, vormen en letters. Je wallpaper kleurt mee."
+                ListView {
+                    id: themeList
+                    width: parent.width
+                    height: overlay.s(132)
+                    orientation: ListView.Horizontal
+                    spacing: overlay.s(14)
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    currentIndex: overlay.cursor[0]
+                    highlightMoveDuration: ThemeConfig.duration(260)
+                    model: overlay.themes.length + 1
+                    delegate: Tile {
+                        id: themeTile
+                        required property int index
+                        readonly property var theme: index < overlay.themes.length ? overlay.themes[index] : null
+                        width: overlay.s(168)
+                        frameHeight: overlay.s(100)
+                        label: theme ? theme.title : "Aanpassen…"
+                        glyph: "󰏘"
+                        image: theme ? overlay.fileUrl(overlay.home + "/.config/kingstra/themes/previews/" + theme.preview + ".jpg") : ""
+                        chosen: theme !== null && overlay.themeName === theme.id && overlay.pendingTheme === ""
+                        busy: theme !== null && overlay.pendingTheme === theme.id
+                        dot: theme !== null && overlay.customized.indexOf(theme.id) >= 0
+                        focused: overlay.row === 0 && overlay.cursor[0] === index
+                        onTriggered: overlay.activate(0, index)
                     }
                 }
+            }
 
-                // ── Mode, schermen en energie ───────────────────────────
-                Lane {
-                    order: 1
-
-                    Card {
-                        Heading { glyph: "󰾅"; label: "Mode  ·  hele desktop" }
-                        Segmented {
-                            options: [{id: "office", title: "Office", glyph: "󰈙"}, {id: "media", title: "Media", glyph: "󰝚"}, {id: "gaming", title: "Gaming", glyph: "󰊴"}]
-                            current: overlay.pendingMode !== "" ? overlay.pendingMode : overlay.modeName
-                            onPicked: (value) => overlay.setMode(value)
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: overlay.s(6)
-                            Chip { glyph: "󰚀"; label: "Zen aan of uit"; onTriggered: Quickshell.execDetached(["bash", overlay.scripts + "/zen.sh", "toggle"]) }
-                            Hint { visible: overlay.pendingMode !== ""; text: "Mode wordt toegepast…"; height: overlay.s(32); verticalAlignment: Text.AlignVCenter }
-                        }
-                    }
-
-                    // Vanzelf: aangevinkte regels zet kingstra-auto-mode aan en
-                    // weer terug zodra de aanleiding weg is.
-                    Card {
-                        Heading { glyph: "󰁪"; label: "Vanzelf" }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: overlay.s(6)
-                            Chip { glyph: "󰊴"; label: "Spel → Gaming"; chosen: overlay.autoRules.game !== false; onTriggered: overlay.setAutoRule("game", !chosen) }
-                            Chip { visible: overlay.autoHasBattery; glyph: "󰁹"; label: "Batterij → zuinig"; chosen: overlay.autoRules.battery !== false; onTriggered: overlay.setAutoRule("battery", !chosen) }
-                            Chip { glyph: "󰹑"; label: "Delen → niet storen"; chosen: overlay.autoRules.share !== false; onTriggered: overlay.setAutoRule("share", !chosen) }
-                        }
-                        Hint {
-                            Layout.fillWidth: true
-                            text: overlay.autoGame !== "" ? "Nu actief: Gaming voor " + overlay.autoGame + ". Gaat terug zodra het spel sluit."
-                                : overlay.autoShare ? "Nu actief: je deelt je scherm, meldingen zijn stil."
-                                : overlay.autoBattery ? "Nu actief: zuinig op batterij."
-                                : "Gaat vanzelf aan en zet alles terug zodra de aanleiding weg is."
-                        }
-                    }
-
-                    // Speler op de mediakaart en schermvullend, per thema.
-                    Card {
-                        Heading { glyph: "󰝚"; label: "Speler  ·  dit thema" }
-                        Segmented {
-                            options: [{id: "theme", title: "Thema"}, {id: "vinyl", title: "Plaat"}, {id: "cassette", title: "Cassette"}, {id: "discman", title: "Discman"}, {id: "cover", title: "Hoes"}]
-                            current: PlayerChoice.current !== "" ? PlayerChoice.current : "theme"
-                            onPicked: (value) => PlayerChoice.set(value)
-                        }
-                        Hint { text: "Klik op de speler op je bureaublad voor de grote weergave; daar kun je ook wisselen."; Layout.fillWidth: true }
-                    }
-
-                    Card {
-                        Heading { glyph: "󰍹"; label: overlay.screenName ? "Scherm  ·  " + overlay.screenName : "Schermen" }
-                        Item {
-                            id: screenMap
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: overlay.s(110)
-                            readonly property var box: {
-                                let list = ScreenProfiles.monitors;
-                                let x0 = 0, y0 = 0, x1 = 1, y1 = 1;
-                                for (let m of list) {
-                                    let f = Number(m.scale) || 1;
-                                    x0 = Math.min(x0, m.x); y0 = Math.min(y0, m.y);
-                                    x1 = Math.max(x1, m.x + m.width / f);
-                                    y1 = Math.max(y1, m.y + m.height / f);
-                                }
-                                return {x: x0, y: y0, w: x1 - x0, h: y1 - y0};
-                            }
-                            readonly property real ratio: Math.min(width / box.w, height / box.h)
-                            readonly property real shiftX: (width - box.w * ratio) / 2
-                            Repeater {
-                                model: ScreenProfiles.monitors
-                                delegate: Rectangle {
-                                    id: display
-                                    required property var modelData
-                                    readonly property bool picked: modelData.name === overlay.screenName
-                                    x: screenMap.shiftX + (modelData.x - screenMap.box.x) * screenMap.ratio + 3
-                                    y: (modelData.y - screenMap.box.y) * screenMap.ratio + 3
-                                    width: Math.max(20, modelData.width / (modelData.scale || 1) * screenMap.ratio - 6)
-                                    height: Math.max(20, modelData.height / (modelData.scale || 1) * screenMap.ratio - 6)
-                                    radius: overlay.s(10)
-                                    color: picked ? Qt.alpha(overlay.c.primary, 0.22) : displayMouse.containsMouse ? overlay.c.shellHoverFill : overlay.c.shellRaisedFill
-                                    border.color: picked ? overlay.c.primary : overlay.c.shellOutline
-                                    border.width: picked ? 2 : 1
-                                    clip: true
-                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(180) } }
-                                    Behavior on border.color { ColorAnimation { duration: ThemeConfig.duration(180) } }
-                                    Text {
-                                        anchors.centerIn: parent
-                                        width: parent.width - 10
-                                        horizontalAlignment: Text.AlignHCenter
-                                        text: display.modelData.name + "\n" + ScreenProfiles.profile(display.modelData.name).mode
-                                        color: overlay.c.text
-                                        font.family: ThemeConfig.uiFont
-                                        font.pixelSize: overlay.s(11)
-                                        elide: Text.ElideRight
-                                    }
-                                    MouseArea {
-                                        id: displayMouse
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: overlay.selectedName = display.modelData.name
-                                    }
-                                }
-                            }
-                        }
-                        Hint { Layout.fillWidth: true; text: "Mode van dit scherm: rail, verbergen, muziek en meldingen. Volg neemt de desktopmode over." }
-                        Segmented {
-                            options: [{id: "inherit", title: "Volg"}, {id: "office", title: "Office"}, {id: "media", title: "Media"}, {id: "gaming", title: "Gaming"}]
-                            current: overlay.profile.inherited ? "inherit" : overlay.profile.mode
-                            allowed: !!overlay.screenName && !ScreenProfiles.busy
-                            onPicked: (value) => ScreenProfiles.action(["mode", overlay.screenName, value])
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: overlay.s(6)
-                            Chip {
-                                glyph: "󰘖"
-                                label: overlay.profile.wallpaperDrift ? "Wallpaper-effect: aan" : "Wallpaper-effect: uit"
-                                chosen: overlay.profile.wallpaperDrift
-                                allowed: !!overlay.screenName && !ScreenProfiles.busy
-                                onTriggered: overlay.setScreen("wallpaperDrift", !overlay.profile.wallpaperDrift)
-                            }
-                            Chip { glyph: "󰍹"; label: "Schermindeling"; onTriggered: overlay.openSettings("beeldschermen") }
-                        }
-                        Hint { text: ScreenProfiles.errorText; visible: text !== ""; color: overlay.c.red; Layout.fillWidth: true }
-                    }
-
-                    Card {
-                        Heading { glyph: "󰓅"; label: "Energieprofiel" }
-                        Segmented {
-                            options: [{id: "power-saver", title: "Zuinig", glyph: "󰌪"}, {id: "balanced", title: "Gebalanceerd", glyph: "󰾅"}, {id: "performance", title: "Prestaties", glyph: "󰓅"}]
-                            current: overlay.powerAvailable ? overlay.powerProfile : ""
-                            allowed: overlay.powerAvailable
-                            onPicked: (value) => overlay.setPower(value)
-                        }
-                        Hint { visible: !overlay.powerAvailable; Layout.fillWidth: true; text: "power-profiles-daemon draait niet; het profiel is nu niet te wisselen." }
+            // ── 2 · Wallpaper ───────────────────────────────────────────
+            Strip {
+                order: 1
+                label: "Wallpaper"
+                hint: overlay.wallpapers.length === 0 ? "Geen afbeeldingen gevonden in je wallpapermap." : "Je nieuwste " + overlay.wallpapers.length + ". Alle… opent de grote kiezer."
+                ListView {
+                    id: wallList
+                    width: parent.width
+                    height: overlay.s(132)
+                    orientation: ListView.Horizontal
+                    spacing: overlay.s(14)
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    currentIndex: overlay.cursor[1]
+                    highlightMoveDuration: ThemeConfig.duration(260)
+                    model: overlay.wallpapers.length + 2
+                    delegate: Tile {
+                        required property int index
+                        readonly property bool first: index === 0
+                        readonly property bool last: index === overlay.wallpapers.length + 1
+                        readonly property string path: !first && !last ? overlay.wallpapers[index - 1] : ""
+                        width: overlay.s(168)
+                        frameHeight: overlay.s(100)
+                        label: first ? "Willekeurig" : last ? "Alle…" : ""
+                        glyph: first ? "󰒝" : "󰋩"
+                        image: path !== "" ? overlay.fileUrl(path) : ""
+                        chosen: path !== "" && path === overlay.currentWallpaper
+                        focused: overlay.row === 1 && overlay.cursor[1] === index
+                        onTriggered: overlay.activate(1, index)
                     }
                 }
+            }
 
-                // ── Werkvlak en rail ────────────────────────────────────
-                Lane {
-                    order: 2
-
-                    Card {
-                        Heading { glyph: "󰕰"; label: "Indeling  ·  werkruimte " + overlay.workspace }
-                        Flow {
+            // ── 3 · Wat ga je doen ──────────────────────────────────────
+            Strip {
+                order: 2
+                label: "Wat ga je doen"
+                hint: overlay.autoGame !== "" ? "Spelen staat vanzelf aan voor " + overlay.autoGame + " en gaat terug als het spel sluit."
+                    : "Past de hele desktop aan. Zen kan bij elke stand."
+                RowLayout {
+                    width: parent.width
+                    spacing: overlay.s(14)
+                    Repeater {
+                        model: overlay.activities
+                        delegate: Tile {
+                            required property var modelData
+                            required property int index
+                            readonly property bool isZen: modelData.id === "zen"
                             Layout.fillWidth: true
-                            spacing: overlay.s(6)
-                            Repeater {
-                                model: [{id: "tegels", title: "Tegelen", glyph: "󰕴"}, {id: "ruimtelijk", title: "Ruimtelijk werkvlak", glyph: "󰊢"}, {id: "scrollen", title: "Scrollstrook", glyph: "󰁔"}, {id: "50-50", title: "50 / 50", glyph: "󰕭"}, {id: "70-30", title: "70 / 30", glyph: "󰕬"}, {id: "focus", title: "Eén tegelijk", glyph: "󰊓"}]
-                                delegate: Chip {
-                                    required property var modelData
-                                    glyph: modelData.glyph
-                                    label: modelData.title
-                                    chosen: overlay.currentLayout === modelData.id
-                                    busy: layoutProcess.running && (layoutProcess.command || [])[3] === modelData.id
-                                    allowed: overlay.workspace > 0 && !layoutProcess.running
-                                    onTriggered: overlay.applyLayout(modelData.id)
-                                }
-                            }
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: overlay.s(6)
-                            Chip { glyph: "󰕮"; label: "Werkvlakkaart  ·  Super+Tab"; onTriggered: overlay.closeThen(["bash", overlay.scripts + "/overview-toggle.sh"]) }
-                        }
-                        Hint { text: overlay.layoutError; visible: text !== ""; color: overlay.c.red; Layout.fillWidth: true }
-                    }
-
-                    Card {
-                        Heading { glyph: "󰁔"; label: "Scrollen en werkvlak" }
-                        Hint { Layout.fillWidth: true; text: "Breedte van een nieuw venster op een scrollstrook" }
-                        Segmented {
-                            options: [{id: "1", title: "Heel"}, {id: "0.667", title: "⅔"}, {id: "0.5", title: "½"}, {id: "0.333", title: "⅓"}]
-                            current: {
-                                for (let v of ["1", "0.667", "0.5", "0.333"])
-                                    if (overlay.near(overlay.werkvlak.column_width, v)) return v;
-                                return "";
-                            }
-                            allowed: !werkvlakProcess.running
-                            onPicked: (value) => overlay.setWerkvlak("column_width", Number(value))
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Hint { text: "Vastklikken na slepen"; Layout.fillWidth: true }
-                            Hint {
-                                readonly property real v: snapSlider.dragging ? snapSlider.live : Number(overlay.werkvlak.snap)
-                                text: v < 0.01 ? "helemaal vrij" : v < 0.27 ? "licht" : v < 0.37 ? "middel" : "sterk"
-                                color: overlay.c.primary
-                            }
-                        }
-                        // Schuif voor de snap-sterkte (0 = nooit, 0.45 = bijna altijd).
-                        Item {
-                            id: snapSlider
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: overlay.s(28)
-                            readonly property real maxValue: 0.45
-                            property bool dragging: false
-                            property real live: 0
-                            readonly property real fraction: Math.max(0, Math.min(1, (dragging ? live : Number(overlay.werkvlak.snap)) / maxValue))
-                            function valueAt(px) {
-                                return Math.round(Math.max(0, Math.min(1, (px - knob.width / 2) / (width - knob.width))) * maxValue * 100) / 100;
-                            }
-                            Rectangle {
-                                id: track
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width
-                                height: overlay.s(8)
-                                radius: height / 2
-                                color: overlay.c.shellRaisedFill
-                                border.width: 1
-                                border.color: overlay.c.shellOutline
-                                Rectangle {
-                                    width: knob.x + knob.width / 2
-                                    height: parent.height
-                                    radius: height / 2
-                                    color: Qt.alpha(overlay.c.primary, 0.55)
-                                }
-                            }
-                            Rectangle {
-                                id: knob
-                                width: overlay.s(22)
-                                height: width
-                                radius: width / 2
-                                anchors.verticalCenter: parent.verticalCenter
-                                x: snapSlider.fraction * (snapSlider.width - width)
-                                color: overlay.c.primary
-                                border.width: 2
-                                border.color: overlay.c.mantle
-                                scale: snapMouse.pressed ? 1.15 : snapMouse.containsMouse ? 1.06 : 1.0
-                                Behavior on scale { NumberAnimation { duration: ThemeConfig.duration(160); easing.type: Easing.OutBack } }
-                                Behavior on x { enabled: !snapSlider.dragging; NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
-                            }
-                            MouseArea {
-                                id: snapMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                enabled: !werkvlakProcess.running
-                                cursorShape: Qt.PointingHandCursor
-                                onPressed: (mouse) => { snapSlider.live = snapSlider.valueAt(mouse.x); snapSlider.dragging = true; }
-                                onPositionChanged: (mouse) => { if (pressed) snapSlider.live = snapSlider.valueAt(mouse.x); }
-                                onReleased: {
-                                    let value = snapSlider.live;
-                                    snapSlider.dragging = false;
-                                    if (!overlay.near(value, overlay.werkvlak.snap)) overlay.setWerkvlak("snap", value);
-                                }
-                                onCanceled: snapSlider.dragging = false
-                            }
-                        }
-                        Hint { Layout.fillWidth: true; text: "Super+wiel scrolt binnen de werkruimte, Super+Shift+wiel wisselt van werkruimte, Super+Ctrl+linkermuis sleept vrij. Touchpad: vier vingers schuiven, knijpen zoomt. Aanraakscherm: twee vingers." }
-                        Hint { text: overlay.werkvlakError; visible: text !== ""; color: overlay.c.red; Layout.fillWidth: true }
-                    }
-
-                    Card {
-                        Heading { glyph: "󰕮"; label: "Rail  ·  " + (overlay.screenName || "scherm") + "  ·  " + overlay.profile.mode }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: overlay.s(6)
-                            Chip {
-                                glyph: "󰘕"
-                                label: overlay.autohide ? "Automatisch verbergen: aan" : "Automatisch verbergen: uit"
-                                chosen: overlay.autohide
-                                allowed: !!overlay.screenName && !ScreenProfiles.busy
-                                onTriggered: overlay.setScreen("rail.autohide", !overlay.autohide)
-                            }
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: overlay.s(6)
-                            Repeater {
-                                model: [{id: "workspaces", title: "Werkruimtes"}, {id: "clock", title: "Klok"}, {id: "updates", title: "Updates"}, {id: "cpu_temp", title: "Systeem"}, {id: "network", title: "Netwerk"}, {id: "battery", title: "Batterij"}, {id: "volume", title: "Geluid"}, {id: "bluetooth", title: "Bluetooth"}, {id: "notifications", title: "Meldingen"}, {id: "media_controls", title: "Media"}]
-                                delegate: Chip {
-                                    required property var modelData
-                                    label: modelData.title
-                                    chosen: overlay.modules.indexOf(modelData.id) >= 0
-                                    allowed: !!overlay.screenName && !ScreenProfiles.busy
-                                    onTriggered: overlay.toggleModule(modelData.id)
-                                }
-                            }
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: overlay.s(6)
-                            Chip { glyph: "󰑓"; label: "Herstel voor deze mode"; allowed: !!overlay.screenName && !ScreenProfiles.busy; onTriggered: ScreenProfiles.action(["reset", overlay.screenName]) }
-                            Chip { glyph: "󰒓"; label: "Meer en muziek…"; onTriggered: overlay.openSettings("bediening") }
-                            Chip { glyph: "󰕮"; label: "Indeling en tweede rail…"; onTriggered: overlay.openSettings("rail") }
+                            Layout.preferredWidth: 1
+                            frameHeight: overlay.s(112)
+                            label: modelData.title
+                            sublabel: isZen ? (overlay.zenOn ? "Staat aan. Klik om terug te gaan." : modelData.detail) : modelData.detail
+                            glyph: modelData.glyph
+                            chosen: isZen ? overlay.zenOn : overlay.modeName === modelData.id && overlay.pendingMode === ""
+                            busy: !isZen && overlay.pendingMode === modelData.id
+                            focused: overlay.row === 2 && overlay.cursor[2] === index
+                            onTriggered: overlay.activate(2, index)
                         }
                     }
                 }
             }
+
+            Item { Layout.fillHeight: true }
         }
     }
 }

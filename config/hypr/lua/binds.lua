@@ -133,10 +133,8 @@ exec(mod .. " + SHIFT + N", "~/.config/quickshell/notifications/notification_con
 exec(mod .. " + SHIFT + M", scripts .. "/qs_manager.sh toggle music")
 exec(mod .. " + CTRL + I", scripts .. "/qs_manager.sh toggle settings")
 exec(mod .. " + CTRL + Space", scripts .. "/qs_manager.sh toggle menu")
-exec(mod .. " + CTRL + T", scripts .. "/qs_manager.sh toggle theme")
-exec(mod .. " + CTRL + M", scripts .. "/qs_manager.sh toggle mode")
--- Bediening: thema, wallpaper, mode (ook per scherm), energie, indeling,
--- scrollen en rail in één overlay.
+-- Sfeer: thema, wallpaper en stand (wat ga je doen). De losse thema- en
+-- modekiezer (Super+Ctrl+T/M) zijn hierin opgegaan.
 exec(mod .. " + A", scripts .. "/qs_manager.sh toggle bediening")
 exec(mod .. " + F1", scripts .. "/qs_manager.sh toggle help")
 

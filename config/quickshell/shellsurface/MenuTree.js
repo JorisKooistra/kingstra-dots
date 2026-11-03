@@ -43,8 +43,7 @@ function build(home, scripts) {
                 { icon: "󰝤", label: "Neon", cmd: kingstra("theme neon") },
                 { icon: "󰝤", label: "Organic", cmd: kingstra("theme organic") },
                 { icon: "󰝤", label: "Paper", cmd: kingstra("theme paper") },
-                { icon: "󰑐", label: "Volgend thema", hint: "Super+Shift+T", cmd: ["bash", scripts + "/theme-next-safe.sh"] },
-                { icon: "󰋩", label: "Themakiezer", hint: "Super+Ctrl+T", cmd: qs("theme"), panel: true }
+                { icon: "󰑐", label: "Volgend thema", hint: "Super+Shift+T", cmd: ["bash", scripts + "/theme-next-safe.sh"] }
             ] },
             { icon: "󰸉", label: "Achtergrond", children: [
                 { icon: "󰋩", label: "Kiezer", hint: "Super+Ctrl+W", cmd: ["bash", scripts + "/wallpaper-picker-safe.sh"] },
@@ -65,15 +64,15 @@ function build(home, scripts) {
                 { icon: "󰀥", label: "Draaitafel als screensaver aan", cmd: kingstra("vinyl auto 120") },
                 { icon: "󰀥", label: "Draaitafel als screensaver uit", cmd: kingstra("vinyl auto uit") }
             ] },
-            { icon: "󰒓", label: "Thema-instellingen", cmd: ["bash", scripts + "/qs_manager.sh", "open", "settings", "thema"] }
+            { icon: "󰒓", label: "Thema aanpassen", cmd: ["bash", scripts + "/qs_manager.sh", "open", "settings", "uiterlijk"] }
         ] },
-        { icon: "󰾅", label: "Modus", children: [
-            { icon: "󰈙", label: "Office", cmd: kingstra("mode office") },
-            { icon: "󰊴", label: "Gaming", cmd: kingstra("mode gaming") },
-            { icon: "󰝚", label: "Media", cmd: kingstra("mode media") },
+        { icon: "󰾅", label: "Stand", children: [
+            { icon: "󰈙", label: "Werken (Office)", cmd: kingstra("mode office") },
+            { icon: "󰊴", label: "Spelen (Gaming)", cmd: kingstra("mode gaming") },
+            { icon: "󰝚", label: "Kijken en luisteren (Media)", cmd: kingstra("mode media") },
             { icon: "󰚀", label: "Zen aan of uit", hint: "Super+Alt+Z", cmd: ["bash", scripts + "/zen.sh", "toggle"] }
         ] },
-        { icon: "󰒓", label: "Bediening (alles in één)", hint: "Super+A", cmd: qs("bediening"), panel: true },
+        { icon: "󰏘", label: "Sfeer: thema, wallpaper, stand", hint: "Super+A", cmd: qs("bediening"), panel: true },
         { icon: "󰕮", label: "Snel schakelen", children: [
             { icon: "󰕮", label: "Controlecentrum", cmd: qs("tophover"), panel: true },
             { icon: "󰤨", label: "Wi-Fi aan/uit", cmd: ["bash", "-lc", "[ \"$(nmcli radio wifi)\" = enabled ] && nmcli radio wifi off || nmcli radio wifi on"] },

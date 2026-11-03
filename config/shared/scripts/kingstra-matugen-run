@@ -260,6 +260,15 @@ index = default_index
 
 try:
     data = tomllib.loads(theme_file.read_text(encoding="utf-8"))
+    # Eigen aanpassingen (Instellingen › Uiterlijk) gaan voor het thema.
+    try:
+        import json, os
+        state = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
+        extra = json.loads(Path(state, "kingstra", "theme-overrides", theme_file.stem + ".json").read_text(encoding="utf-8"))
+        if isinstance(extra, dict) and isinstance(extra.get("matugen"), dict) and isinstance(data.get("matugen"), dict):
+            data["matugen"].update(extra["matugen"])
+    except Exception:
+        pass
     matugen = data.get("matugen", {}) if isinstance(data, dict) else {}
     if isinstance(matugen, dict):
         v = matugen.get("scheme_type")

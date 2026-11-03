@@ -134,11 +134,9 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Shift + W` | Willekeurige wallpaper (uit skwd-map) |
 | `Super + Ctrl + W` | Wallpaper picker |
 | `Super + Shift + T` | Volgend thema (cyclisch) |
-| `Super + Ctrl + T` | Thema picker |
-| `Super + Ctrl + M` | Modus picker (office / gaming / media) |
-| `Super + A` | Bediening: thema, wallpaper, mode (ook per scherm), energie, indeling, scrollen en rail in één overlay |
+| `Super + A` | Sfeer: thema, wallpaper en wat ga je doen (Werken, Kijken en luisteren, Spelen, Zen). Vervangt de losse thema- en modekiezer |
 | `Super + Shift + M` | Muziek popup |
-| `Super + Ctrl + I` | Bediening en instellingen (eigen app, ook in de launcher) |
+| `Super + Ctrl + I` | Instellingen (eigen app, ook in de launcher) |
 | `Super + Ctrl + Space` | Toetsenbordmenu voor alles (thema, modus, schermen, systeem, sessie) |
 | Klik op CPU/RAM-pil | Systeemstats popup |
 
@@ -204,7 +202,7 @@ de binds automatisch terug.
 
 ## Ruimtelijk werkvlak
 
-Kies **Ruimtelijk werkvlak** in Bediening of **Super+Z**. Bestaande werkruimtes
+Kies **Ruimtelijk** onder Instellingen › Bureaublad of met **Super+Z**. Bestaande werkruimtes
 worden bij een update niet automatisch omgezet.
 
 - **Super+pijlen:** nabijgelegen venster kiezen.

@@ -23,9 +23,15 @@ Item {
     property string title: ""
     property string detail: ""
     property string urgency: "normal"
+    // Optioneel: een knop "Ongedaan maken" die dit shell-commando draait.
+    property string undoCommand: ""
+    property string undoLabel: "Ongedaan maken"
+    // Klikbaar stuk voor de input-mask van ShellSurface; 0×0 zonder knop.
+    readonly property Item undoHit: undoHitItem
 
     width: toastWidth
-    height: 76
+    height: undoCommand !== "" ? 116 : 76
+    Behavior on height { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutCubic } }
     anchors.top: parent.top
     anchors.right: parent.right
     anchors.topMargin: topInset + 16
@@ -83,6 +89,8 @@ Item {
         title = String(payload.title || "Klaar");
         detail = String(payload.detail || "");
         urgency = String(payload.urgency || "normal");
+        undoCommand = String(payload.undo || "");
+        undoLabel = String(payload.undoLabel || "Ongedaan maken");
         shown = true;
         expireTimer.interval = Math.max(1200, Math.min(8000, Number(payload.timeout || 2400)));
         expireTimer.restart();
@@ -109,7 +117,24 @@ Item {
     Timer {
         id: expireTimer
         repeat: false
-        onTriggered: root.shown = false
+        onTriggered: { root.shown = false; root.undoCommand = ""; }
+    }
+
+    function runUndo() {
+        if (undoCommand === "") return;
+        Quickshell.execDetached(["bash", "-lc", "PATH=\"$HOME/.local/bin:$PATH\"; " + undoCommand]);
+        undoCommand = "";
+        expireTimer.interval = 900;
+        expireTimer.restart();
+    }
+
+    // Alleen dit stuk vangt klikken; de rest van de toast blijft doorklikbaar.
+    Item {
+        id: undoHitItem
+        x: undoButton.x + undoRow.x
+        y: undoButton.y + undoRow.y
+        width: root.shown && root.undoCommand !== "" ? undoButton.width : 0
+        height: root.shown && root.undoCommand !== "" ? undoButton.height : 0
     }
 
     Rectangle {
@@ -130,11 +155,13 @@ Item {
         }
 
         Row {
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: 54
             anchors.leftMargin: 16
             anchors.rightMargin: 14
             anchors.topMargin: 11
-            anchors.bottomMargin: 11
             spacing: 11
 
             Rectangle {
@@ -175,6 +202,52 @@ Item {
                     font.family: ThemeConfig.uiFont
                     font.pixelSize: 11
                     color: mocha.subtext0
+                }
+            }
+        }
+
+        Item {
+            id: undoRow
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: 65
+            anchors.rightMargin: 14
+            anchors.bottomMargin: 11
+            height: 30
+            opacity: root.undoCommand !== "" ? 1 : 0
+            visible: opacity > 0.01
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
+
+            Rectangle {
+                id: undoButton
+                height: parent.height
+                width: undoText.implicitWidth + 28
+                radius: height / 2
+                color: undoMouse.containsMouse
+                    ? Qt.rgba(root.accentForUrgency().r, root.accentForUrgency().g, root.accentForUrgency().b, 0.30)
+                    : Qt.rgba(root.accentForUrgency().r, root.accentForUrgency().g, root.accentForUrgency().b, 0.16)
+                border.width: 1
+                border.color: Qt.rgba(root.accentForUrgency().r, root.accentForUrgency().g, root.accentForUrgency().b, 0.6)
+                scale: undoMouse.pressed ? 0.95 : 1.0
+                Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+                Behavior on scale { NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: Easing.OutQuart } }
+                Text {
+                    id: undoText
+                    anchors.centerIn: parent
+                    text: "󰕌  " + root.undoLabel
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    color: mocha.text
+                }
+                MouseArea {
+                    id: undoMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.runUndo()
+                    onContainsMouseChanged: if (containsMouse) expireTimer.stop(); else if (root.shown) expireTimer.restart()
                 }
             }
         }

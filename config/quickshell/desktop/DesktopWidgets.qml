@@ -23,7 +23,7 @@ import "../shellsurface"
 // De knop op de mediakaart (of `kingstra vinyl`) opent VinylStage: de speler
 // van de kaart schermvullend in perspectief, als een screensaver. Welke
 // speler (draaitafel, cassettespeler of discman) kies je per thema in
-// Super+A of in de grote weergave (PlayerChoice); `kingstra cassette` en
+// Instellingen › Bureaublad of in de grote weergave (PlayerChoice); `kingstra cassette` en
 // `kingstra discman` openen die meteen groot.
 Scope {
     id: root

@@ -4,6 +4,20 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Schermen opgeruimd: Sfeer, Instellingen en Uiterlijk
+- **Super+A heet nu Sfeer** en heeft nog drie rijen: Thema, Wallpaper en "Wat ga je doen" (Werken, Kijken en luisteren, Spelen, Zen). Pijltjes, 1–3 en Enter werken; een klik past het meteen toe. Thema's met eigen aanpassingen krijgen een stip.
+- **De losse themakiezer en modekiezer zijn weg**, net als hun toetsen `Super+Ctrl+T` en `Super+Ctrl+M`, want Sfeer doet hetzelfde. `Super+Shift+T` (volgend thema) en de grote wallpaperkiezer (`Super+Ctrl+W`, of "Alle…" in Sfeer) blijven. `kingstra theme` en `kingstra mode` zonder naam openen Sfeer.
+- **Ongedaan maken**: na een wissel van thema, stand, wallpaper of een knop in Uiterlijk staat in de melding rechtsboven een knop Ongedaan maken (`hypr/scripts/feedback.sh --undo`).
+- **Instellingen** zijn ingedeeld naar wat je wilt regelen: Start, Uiterlijk, Bureaublad, Schermen, Geluid, Netwerk en Bluetooth, Invoer en sneltoetsen, Meldingen en rust, Systeem. Dieper liggende pagina's (Per scherm, Zijbalk-indeling, Kleurstijl, Alle onderdelen) open je vanaf de hoofdpagina en hebben een knop terug.
+  - Start: acht grote tegels en "Vaak gezocht". Het oude Overzicht (dubbel met Super+A) is weg.
+  - Bureaublad (nieuw): zijbalk verbergen en wat erin staat, indeling van de werkruimte, Vanzelf (spel, batterij, scherm delen) en de speler. Scrollbreedte en vastklikken onder Geavanceerd.
+  - Meldingen en rust (nieuw): niet storen, nachtlicht (verhuisd van Schermen) en per app Normaal, Stil, Nooit of Altijd.
+  - Per scherm (onder Schermen) houdt alleen wat echt per scherm verschilt.
+- **Uiterlijk**: vijf knoppen voor het actieve thema met een voorbeeld ernaast: Accentkleur, Licht of donker, Rondheid, Ruimte en Lettertype. Alle themavariabelen blijven onder Geavanceerd.
+- **Eigen thema-aanpassingen blijven nu bewaard bij een update.** Ze staan niet meer in de thema-toml in de repo (die zet `kingstra update` terug), maar per thema in `~/.local/state/kingstra/theme-overrides/<thema>.json`. `kingstra-theme-read` en `kingstra-matugen-run` leggen ze over het thema heen; `kingstra-theme-update --reset <thema>` (knop Origineel terug) haalt ze weg.
+- **Snelle instellingen** vanuit de zijbalk tonen nu precies hetzelfde als het controlecentrum: dezelfde knoppen, volgorde, uitklap en bewerkmodus.
+- Woorden: rail heet in de schermen nu **zijbalk**, mode heet **stand**.
+
 ### Vastleg-studio en sneltoetsen
 - Nieuw: Print opent de vastleg-studio. Kies gebied, venster of scherm en foto of opname (met of zonder computergeluid), of gebruik Tekst kopiëren (tesseract, Nederlands en Engels) en Kleur kiezen. Na een foto verschijnt een melding met de afbeelding en de knoppen Bewerken en Map openen; tijdens een opname toont de studio een stopknop met de tijd en het eiland een rode stip. Opnames komen in `~/Videos/Opnames`.
 - Nieuwe helper `hypr/scripts/capture.sh` (opnemen met wf-recorder, tekst, kleur); `screenshot.sh` kent nu `--window` en `--preview`.
@@ -26,7 +40,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - De installer/updater (fase 11) installeert `whisper.cpp` (AUR) en downloadt het model naar `~/.local/share/kingstra/whisper/`. Overslaan met `ENABLE_DICTATION=false`.
 
 ### Modi die vanzelf aanspringen
-- Nieuw: `kingstra-auto-mode` (gestart door de sessie) volgt drie regels, elk aan of uit in Bediening (Super+A) onder ‘Vanzelf’:
+- Nieuw: `kingstra-auto-mode` (gestart door de sessie) volgt drie regels, elk aan of uit onder Instellingen › Bureaublad › Vanzelf:
   - **Spel → Gaming**: een spel op volledig scherm (Steam, Lutris, Heroic, Wine, gamescope en bekende klassen) zet Niet storen aan, blur, schaduwen en animaties van Hyprland uit en schakelt naar Gaming. Sluit het spel, dan komt de vorige mode en alles terug, met een korte melding.
   - **Batterij → zuinig**: blur en schaduwen uit en energieprofiel ‘zuinig’; aan het snoer weer zoals het was. Alleen op apparaten met een batterij.
   - **Delen → niet storen**: zolang je je scherm deelt (Teams, browser, OBS) zijn meldingen stil. Korte screencast-signalen van schermafbeeldingen en werkvlakminiaturen tellen niet mee.

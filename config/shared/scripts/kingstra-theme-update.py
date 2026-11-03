@@ -92,11 +92,52 @@ def write_toml(data: dict[str, Any], out_path: Path) -> None:
     out_path.write_text(text, encoding="utf-8")
 
 
+def overrides_file(theme_id: str) -> Path:
+    state = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+    return Path(state) / "kingstra" / "theme-overrides" / f"{theme_id}.json"
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def write_overrides(theme_id: str, data: dict[str, Any]) -> Path:
+    out = overrides_file(theme_id)
+    data = {k: v for k, v in data.items() if isinstance(v, dict) and v}
+    if not data:
+        out.unlink(missing_ok=True)
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.replace(out)
+    return out
+
+
 def main() -> None:
+    # Aanpassingen komen niet meer in de thema-toml (die staat in de repo en
+    # wordt bij elke update teruggezet), maar in een eigen bestand per thema
+    # onder ~/.local/state/kingstra/theme-overrides. kingstra-theme-read legt
+    # ze over het thema heen. --reset haalt alles weg: het origineel is terug.
+    if len(sys.argv) == 3 and sys.argv[1] in ("--reset", "--show"):
+        theme_id = sys.argv[2].strip()
+        if not SAFE_THEME_ID.match(theme_id):
+            die(f"Ongeldige theme_id: {theme_id!r}")
+        if sys.argv[1] == "--reset":
+            overrides_file(theme_id).unlink(missing_ok=True)
+            print(f"[kingstra-theme-update] origineel terug: {theme_id}")
+        else:
+            print(json.dumps(load_json(overrides_file(theme_id))))
+        return
+
     if len(sys.argv) < 4 or (len(sys.argv) - 2) % 2 != 0:
         die(
             "Gebruik: kingstra-theme-update.py <theme_id> <section.key> <value> "
-            "[<section.key> <value> ...]"
+            "[<section.key> <value> ...] | --reset <theme_id> | --show <theme_id>"
         )
 
     theme_id = sys.argv[1].strip()
@@ -109,9 +150,11 @@ def main() -> None:
         die(f"Theme-bestand niet gevonden: {theme_path}")
 
     try:
-        data = tomllib.loads(theme_path.read_text(encoding="utf-8"))
+        base = tomllib.loads(theme_path.read_text(encoding="utf-8"))
     except Exception as exc:  # pragma: no cover
         die(f"Kon TOML niet lezen: {exc}")
+
+    overrides = load_json(overrides_file(theme_id))
 
     args = sys.argv[2:]
     for i in range(0, len(args), 2):
@@ -122,18 +165,20 @@ def main() -> None:
         section, key = path.split(".", 1)
         if not section or not key:
             die(f"Ongeldig pad: {path!r}")
-
-        section_obj = data.get(section)
-        if section_obj is None:
-            section_obj = {}
-            data[section] = section_obj
-        if not isinstance(section_obj, dict):
+        base_section = base.get(section, {})
+        if not isinstance(base_section, dict):
             die(f"Sectie '{section}' is geen tabel in {theme_path.name}")
 
-        section_obj[key] = parse_value(raw_value)
+        value = parse_value(raw_value)
+        section_obj = overrides.setdefault(section, {})
+        # Gelijk aan het thema zelf: dan is het geen aanpassing meer.
+        if section_obj is not None and base_section.get(key) == value:
+            section_obj.pop(key, None)
+        else:
+            section_obj[key] = value
 
-    write_toml(data, theme_path)
-    print(f"[kingstra-theme-update] bijgewerkt: {theme_path}")
+    out = write_overrides(theme_id, overrides)
+    print(f"[kingstra-theme-update] bijgewerkt: {out}")
 
 
 if __name__ == "__main__":

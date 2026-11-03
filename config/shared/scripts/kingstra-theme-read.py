@@ -30,9 +30,40 @@ def flatten(d, prefix=""):
     return items
 
 
+def overrides_path(theme_id):
+    """Eigen aanpassingen per thema, buiten de repo (een update wist ze niet)."""
+    state = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
+    return os.path.join(state, "kingstra", "theme-overrides", f"{theme_id}.json")
+
+
+def load_overrides(path):
+    """Aanpassingen voor een thema-toml uit de themamap, anders {}."""
+    if os.path.basename(os.path.dirname(os.path.abspath(path))) != "themes":
+        return {}
+    theme_id = os.path.basename(path)[:-5] if path.endswith(".toml") else ""
+    if not theme_id:
+        return {}
+    try:
+        with open(overrides_path(theme_id), encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def merge(base, extra):
+    for key, value in extra.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
 def read_toml(path):
     with open(path, "rb") as f:
-        return tomllib.load(f)
+        data = tomllib.load(f)
+    return merge(data, load_overrides(path))
 
 
 def print_shell_vars(data):
@@ -96,6 +127,7 @@ def list_themes(themes_dir, include_legacy=False):
                 "icon": meta.get("icon", "󰏘"),
                 "preview_image": meta.get("preview_image", ""),
                 "file": fname,
+                "customized": bool(load_overrides(path)),
                 "appearance": appearance,
                 "fonts": fonts,
                 "icons": icons,

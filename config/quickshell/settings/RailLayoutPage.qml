@@ -500,12 +500,12 @@ Item {
             id: body
             width: parent.width
             spacing: 16
-            Heading { text: "Rail-indeling"; font.pixelSize: 24 }
+            Heading { text: "Zijbalk-indeling"; font.pixelSize: 24 }
             Hint {
                 Layout.fillWidth: true
-                text: "Sleep onderdelen om de volgorde te veranderen, naar de tweede rail aan de " + root.secondSide
+                text: "Sleep onderdelen om de volgorde te veranderen, naar de tweede zijbalk aan de " + root.secondSide
                     + "kant of naar Niet getoond. Dit geldt per thema en wordt meteen bewaard. Welke onderdelen "
-                    + "een scherm toont en wat achter Meer staat, kies je per scherm onder Bediening."
+                    + "een scherm toont en wat achter Meer staat, kies je per scherm onder Schermen › Per scherm."
             }
 
             Hint { text: "Thema"; Layout.fillWidth: true }
@@ -528,7 +528,7 @@ Item {
                 spacing: 18
                 ColumnLayout {
                     spacing: 6
-                    Hint { text: "Rail in dit thema" }
+                    Hint { text: "Zijbalk in dit thema" }
                     Flow {
                         spacing: 8
                         Layout.preferredWidth: 330
@@ -545,7 +545,7 @@ Item {
                 }
                 ColumnLayout {
                     spacing: 6
-                    Hint { text: "Werkruimtes in de rail" }
+                    Hint { text: "Werkruimtes in de zijbalk" }
                     RowLayout {
                         spacing: 8
                         Action {
@@ -580,7 +580,7 @@ Item {
                 Layout.fillWidth: true
                 visible: !root.railShown
                 color: root.themeColors.yellow
-                text: "Dit thema toont nu geen rail, alleen de bovenstrook. Zet de rail hierboven op Aan om deze indeling te zien."
+                text: "Dit thema toont nu geen zijbalk, alleen de bovenstrook. Zet de zijbalk hierboven op Aan om deze indeling te zien."
             }
 
             RowLayout {
@@ -594,7 +594,7 @@ Item {
                 LayoutColumn {
                     id: secondColumn
                     key: "second"
-                    title: "Tweede rail  ·  " + root.secondSide
+                    title: "Tweede zijbalk  ·  " + root.secondSide
                     note: "Verschijnt zodra hier iets staat."
                 }
                 LayoutColumn {

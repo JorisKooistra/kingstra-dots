@@ -46,8 +46,8 @@ usage() {
 Gebruik: kingstra <commando> [opties]
 
 Uiterlijk
-  theme [naam|--list]      thema wisselen of tonen (zonder naam: kiezer)
-  mode [office|gaming|media]  modus wisselen (zonder naam: kiezer)
+  theme [naam|--list]      thema wisselen of tonen (zonder naam: Sfeer, Super+A)
+  mode [office|gaming|media]  stand wisselen (zonder naam: Sfeer, Super+A)
   wallpaper <set|random|pick|...>  achtergrond (zie kingstra wallpaper --help)
 
 Onderhoud
@@ -71,7 +71,7 @@ Openen
   parkeer [terug|lijst]    actief venster parkeren (minimaliseren) of terughalen
   zen [aan|uit]            zen-modus: balk verbergen, niet storen, rest dimmen
   vinyl [uit|auto <s>|auto uit]  draaitafel schermvullend; auto: als screensaver na <s> s stilstand met muziek (standaard 120)
-  cassette | discman      cassettespeler of discman schermvullend (aan/uit); welke speler op de mediakaart staat kies je per scherm in Super+A
+  cassette | discman      cassettespeler of discman schermvullend (aan/uit); welke speler op de mediakaart staat kies je in Instellingen › Bureaublad
   sessie [aan|uit|bewaar|herstel]  apps na inloggen terugzetten (zonder argument: status)
 
 Overig
@@ -86,10 +86,10 @@ cmd="${1:-help}"
 
 case "$cmd" in
     theme|thema)
-        if [[ $# -eq 0 ]]; then panel theme; fi
+        if [[ $# -eq 0 ]]; then panel bediening; fi
         run kingstra-theme-switch "$@" ;;
     mode|modus)
-        if [[ $# -eq 0 ]]; then panel mode; fi
+        if [[ $# -eq 0 ]]; then panel bediening; fi
         run kingstra-mode-switch "$@" ;;
     wallpaper|achtergrond) run kingstra-wallpaper "$@" ;;
     update|bijwerken)
@@ -103,7 +103,7 @@ case "$cmd" in
         repo="$(resolve_repo)" || { echo "kingstra: repo niet gevonden" >&2; exit 1; }
         exec bash "$repo/install.sh" "$@" ;;
     bediening|control)
-        exec "$QS_MANAGER" open settings bediening ;;
+        panel bediening ;;
     settings|instellingen)
         [[ -x "$QS_MANAGER" ]] || { echo "kingstra: qs_manager.sh niet gevonden" >&2; exit 127; }
         exec "$QS_MANAGER" open settings "${1:-}" ;;

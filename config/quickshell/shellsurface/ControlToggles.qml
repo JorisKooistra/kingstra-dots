@@ -543,7 +543,7 @@ Item {
             Layout.topMargin: -4
             text: root.editMode
                 ? "Pijltjes verplaatsen · ⇔ breed of smal · oog toont of verbergt"
-                : "Rechtsklik op een pil: vastpinnen in de rail"
+                : "Rechtsklik op een pil: vastpinnen in de zijbalk"
             font.family: ThemeConfig.uiFont
             font.pixelSize: 9
             color: Qt.rgba(mocha.subtext0.r, mocha.subtext0.g, mocha.subtext0.b, 0.75)

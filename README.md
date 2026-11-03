@@ -122,7 +122,7 @@ stays the same. Definitions live in `config/kingstra/modes/*.toml`.
 | `gaming` | Always visible | Workspaces, CPU/GPU temps, RAM, FPS, battery, volume, game launcher, clock |
 | `media` | Auto-hide | Volume, brightness, media controls, battery, clock |
 
-Switch with `Super + Ctrl + M` or `kingstra-mode-switch <mode>`.
+Switch with `Super + A` ("Wat ga je doen") or `kingstra-mode-switch <mode>`.
 
 ---
 
@@ -178,7 +178,7 @@ kingstra-theme-switch --list
 kingstra-theme-switch --current
 ```
 
-`Super + Ctrl + T` opens the theme picker; `Super + Shift + T` cycles to the next theme.
+`Super + A` opens Sfeer (theme, wallpaper and mode in one overlay); `Super + Shift + T` cycles to the next theme. Theme tweaks from Settings › Uiterlijk are stored per theme in `~/.local/state/kingstra/theme-overrides/`, so updates no longer wipe them.
 
 ---
 
@@ -516,8 +516,7 @@ for the full list.
 | `Super + N` | Notifications |
 | `Super + Ctrl + I` | Settings (own app, `kingstra-settings`) |
 | `Super + Ctrl + Space` | Keyboard menu for everything |
-| `Super + Ctrl + T` / `Super + Shift + T` | Theme picker / next theme |
-| `Super + Ctrl + M` | Mode picker |
+| `Super + A` / `Super + Shift + T` | Sfeer (theme, wallpaper, mode) / next theme |
 | `Super + Ctrl + W` / `Super + Shift + W` | Wallpaper picker / random wallpaper |
 | `Super + Ctrl + L` | Lock |
 | `Super + Escape` | Passthrough submap |

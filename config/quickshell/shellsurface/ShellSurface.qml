@@ -188,6 +188,7 @@ Scope {
                 // screenshot). Dit blijft volledig click-through en gebruikt
                 // dezelfde per-screen shell als de bar en frame.
                 FeedbackToast {
+                    id: feedbackToast
                     shellWindow: surfaceWindow
                     mocha: mocha
                     topInset: chrome.stripHeight
@@ -362,6 +363,7 @@ Scope {
                     Region { item: panelHost }
                     Region { item: notificationToasts }
                     Region { item: island }
+                    Region { item: feedbackToast.undoHit }
                 }
 
                 // Reservation windows intentionally carry no content or input.

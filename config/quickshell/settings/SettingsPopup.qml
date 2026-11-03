@@ -87,25 +87,34 @@ Item {
     // -------------------------------------------------------------------------
     // STATE
     // -------------------------------------------------------------------------
-    // Zes tabbladen, Overzicht (pagina 14) eerst; een tabblad kan meerdere pagina's hebben, die dan als
-    // ronde knoppen bovenin staan. Paginanummers zijn de oude tabnummers:
-    // 1 Thema, 2 Bar, 4 Sneltoetsen, 5 Invoer, 6 Beeldschermen, 7 Netwerk,
-    // 8 Geluid, 9 Tijd & weer, 10 Sessie, 11 Updates, 12 Onderhoud, 13 Over.
-    // Apparaten bundelt scherm, geluid, invoer en netwerk; Systeem bundelt
-    // sessie, tijd, updates en onderhoud. Technische keuzes staan per pagina
-    // in een uitklapbaar blok (AdvancedSection.qml), zodat de pagina's zelf
-    // rustig blijven. Er is daarbij niets weggehaald.
+    // Instellingen volgen de vraag "wat wil je regelen", zoals GNOME en DMS:
+    // Start plus acht onderwerpen. Een onderwerp heeft één hoofdpagina;
+    // alleen Invoer en Systeem hebben echt losse pagina's (ronde knoppen
+    // bovenin). Dieper liggende pagina's staan in `extra`: die open je via
+    // een knop op de hoofdpagina en krijgen bovenin een knop terug.
+    // Paginanummers: 0 Per scherm, 1 Kleurstijl (matugen), 2 Alle onderdelen
+    // (thema-editor), 4 Sneltoetsen, 5 Invoer, 6 Schermen, 7 Netwerk,
+    // 8 Geluid, 9 Tijd & weer, 10 Energie en sessie, 11 Updates,
+    // 12 Onderhoud, 13 Over, 15 Zijbalk-indeling, 16 Start, 17 Uiterlijk,
+    // 18 Bureaublad, 19 Meldingen en rust.
     property var tabs: [
-        { label: "Overzicht", icon: "󰕮", pages: [14], pageLabels: ["Overzicht"], keywords: "overzicht alles mode modus thema indeling scroll scrollen werkvlak wallpaper achtergrond tegels slepen" },
-        { label: "Bediening", icon: "󰍹", pages: [0, 15], pageLabels: ["Per scherm", "Rail-indeling"], keywords: "bediening mode modus scherm profiel rail indeling scroll werkvlak wallpaper muziek volgorde slepen tweede rail apps launcher werkruimtes" },
-        { label: "Uiterlijk", icon: "󰏘", pages: [1, 2], pageLabels: ["Thema", "Aanpassen"],
-          keywords: "thema kleur kleurschema matugen font lettertype icoon bar topbar positie vorm hoogte breedte rand rondheid blur effecten" },
-        { label: "Apparaten", icon: "󰌢", pages: [6, 8, 5, 7], pageLabels: ["Beeldschermen", "Geluid", "Invoer", "Netwerk"],
-          keywords: "apparaten monitor monitoren scherm display resolutie indeling layout hoofdscherm helderheid tablet touch werkruimte workspace audio volume geluid uitvoer invoer microfoon speaker mixer dempen toetsenbord touchpad muis scroll scrollen rechtsklik dead keys netwerk wifi bluetooth" },
-        { label: "Sneltoetsen", icon: "󰌌", pages: [4], pageLabels: ["Sneltoetsen"],
-          keywords: "keybind keybinds sneltoets toets binding" },
-        { label: "Systeem", icon: "󰒓", pages: [10, 9, 11, 12, 13], pageLabels: ["Sessie", "Tijd & weer", "Updates", "Onderhoud", "Over"],
-          keywords: "systeem sessie modus office gaming media idle vergrendelen lock slaap suspend energie power profiel uitloggen weer tijd datum klok notatie formaat api openweather locatie updates update pakketten onderhoud geavanceerd herstart herladen matugen verwijderen over versie" }
+        { label: "Start", icon: "󰋜", pages: [16], pageLabels: ["Start"], extra: [], extraLabels: [], keywords: "start begin home overzicht alles" },
+        { label: "Uiterlijk", icon: "󰏘", pages: [17], pageLabels: ["Uiterlijk"], extra: [1, 2], extraLabels: ["Kleurstijl en contrast", "Alle onderdelen"],
+          keywords: "uiterlijk thema kleur accent licht donker rond rondheid hoeken ruimte gaps lettertype font matugen icoon strook vorm blur effecten aanpassen origineel" },
+        { label: "Bureaublad", icon: "󰕮", pages: [18], pageLabels: ["Bureaublad"], extra: [15], extraLabels: ["Zijbalk-indeling"],
+          keywords: "bureaublad zijbalk rail verbergen indeling tegels scrollen scrollstrook ruimtelijk werkvlak vanzelf spel gaming batterij delen speler plaat cassette discman volgorde tweede rail apps werkruimtes vastklikken snap" },
+        { label: "Schermen", icon: "󰍹", pages: [6], pageLabels: ["Schermen"], extra: [0], extraLabels: ["Per scherm"],
+          keywords: "scherm schermen monitor monitoren display resolutie indeling layout hoofdscherm helderheid tablet touch werkruimte workspace per scherm stand mode muziek" },
+        { label: "Geluid", icon: "󰕾", pages: [8], pageLabels: ["Geluid"], extra: [], extraLabels: [],
+          keywords: "geluid audio volume uitvoer invoer microfoon speaker koptelefoon mixer dempen" },
+        { label: "Netwerk en Bluetooth", icon: "󰤨", pages: [7], pageLabels: ["Netwerk en Bluetooth"], extra: [], extraLabels: [],
+          keywords: "netwerk wifi bluetooth draadloos bedraad ethernet" },
+        { label: "Invoer en sneltoetsen", icon: "󰌌", pages: [5, 4], pageLabels: ["Invoer", "Sneltoetsen"], extra: [], extraLabels: [],
+          keywords: "invoer toetsenbord touchpad muis scroll scrollen rechtsklik dead keys sneltoets sneltoetsen keybind keybinds toets binding" },
+        { label: "Meldingen en rust", icon: "󰂛", pages: [19], pageLabels: ["Meldingen en rust"], extra: [], extraLabels: [],
+          keywords: "meldingen notificaties niet storen dnd rust nachtlicht warm avond schema per app stil nooit altijd" },
+        { label: "Systeem", icon: "󰒓", pages: [10, 9, 11, 12, 13], pageLabels: ["Energie en sessie", "Tijd en weer", "Updates", "Onderhoud", "Over"], extra: [], extraLabels: [],
+          keywords: "systeem sessie idle vergrendelen lock slaap suspend energie power profiel uitloggen weer tijd datum klok notatie formaat api openweather locatie updates update pakketten onderhoud geavanceerd herstart herladen matugen verwijderen over versie" }
     ]
     property int currentTab: 0
     property int currentPage: tabs[0].pages[0]
@@ -128,7 +137,7 @@ Item {
 
     function openPage(page) {
         for (let i = 0; i < tabs.length; i++) {
-            if (tabs[i].pages.indexOf(page) !== -1) {
+            if (tabs[i].pages.indexOf(page) !== -1 || tabs[i].extra.indexOf(page) !== -1) {
                 currentTab = i;
                 currentPage = page;
                 return;
@@ -204,13 +213,15 @@ Item {
     // Diepe links (qs_manager.sh open settings <naam>): elke pagina heeft een
     // vaste naam, zodat panelen Instellingen op de juiste plek kunnen openen.
     readonly property var pageNames: ({
-        "overzicht": 14, "overview": 14, "home": 14,
-        "bediening": 0, "control": 0, "apparaten": 6, "systeem": 10,
-        "rail": 15, "rail-indeling": 15, "railindeling": 15,
-        "thema": 1, "theme": 1, "bar": 2, "aanpassen": 2, "kleuren": 2, "sneltoetsen": 4, "keybinds": 4,
-        "invoer": 5, "input": 5, "beeldschermen": 6, "monitors": 6,
+        "start": 16, "home": 16, "overzicht": 16, "overview": 16,
+        "uiterlijk": 17, "appearance": 17, "bureaublad": 18, "desktop": 18,
+        "rust": 19, "meldingen": 19, "nachtlicht": 19,
+        "perscherm": 0, "per-scherm": 0, "bediening": 18, "control": 18, "apparaten": 6, "systeem": 10,
+        "rail": 15, "rail-indeling": 15, "railindeling": 15, "zijbalk": 15,
+        "thema": 1, "theme": 1, "kleurstijl": 1, "bar": 2, "aanpassen": 2, "kleuren": 2, "sneltoetsen": 4, "keybinds": 4,
+        "invoer": 5, "input": 5, "beeldschermen": 6, "schermen": 6, "monitors": 6,
         "netwerk": 7, "network": 7, "geluid": 8, "audio": 8,
-        "tijd": 9, "weer": 9, "sessie": 10, "session": 10, "updates": 11,
+        "tijd": 9, "weer": 9, "sessie": 10, "session": 10, "energie": 10, "updates": 11,
         "geavanceerd": 12, "advanced": 12, "onderhoud": 12, "over": 13, "about": 13
     })
 
@@ -2741,7 +2752,7 @@ Item {
                                         Layout.preferredWidth: root.s(24); Layout.alignment: Qt.AlignVCenter
                                         Text { anchors.centerIn: parent; text: tabButton.tab.icon; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(18); color: tabButton.isActive ? root.ambientPurple : root.subtext0; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } } }
                                     }
-                                    Text { text: tabButton.tab.label; font.family: root.uiFontFamily; font.weight: tabButton.isActive ? root.themedFontWeight : Font.Medium; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(13); color: tabButton.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } } }
+                                    Text { text: tabButton.tab.label; elide: Text.ElideRight; font.family: root.uiFontFamily; font.weight: tabButton.isActive ? root.themedFontWeight : Font.Medium; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(13); color: tabButton.isActive ? root.text : root.subtext0; Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } } }
                                 }
 
                                 Rectangle {
@@ -2816,12 +2827,15 @@ Item {
             opacity: introContent; scale: 0.95 + (0.05 * introContent)
             transform: Translate { y: root.s(20) * (1.0 - introContent) }
 
-            // Pagina's binnen het tabblad (bijv. Thema | Bar), als ronde
-            // knoppen. Bij één pagina klapt de rij in tot niets.
+            // Pagina's binnen het onderwerp (Invoer | Sneltoetsen) als ronde
+            // knoppen. Op een dieper liggende pagina (extra) staat hier een
+            // knop terug naar de hoofdpagina. Anders klapt de rij in tot niets.
             Row {
                 id: subPageRow
                 readonly property var tab: root.tabs[root.currentTab]
-                readonly property bool shown: tab && tab.pages.length > 1
+                readonly property int extraIndex: tab ? tab.extra.indexOf(root.currentPage) : -1
+                readonly property bool onExtra: extraIndex >= 0
+                readonly property bool shown: tab && (tab.pages.length > 1 || onExtra)
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.leftMargin: root.s(20)
@@ -2834,8 +2848,38 @@ Item {
                 Behavior on anchors.topMargin { NumberAnimation { duration: ThemeConfig.duration(220); easing.type: Easing.OutCubic } }
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(180) } }
 
+                Rectangle {
+                    visible: subPageRow.onExtra
+                    height: root.s(32)
+                    width: backLabel.implicitWidth + root.s(28)
+                    radius: height / 2
+                    color: backMa.containsMouse ? root.popupPanelFill : "transparent"
+                    border.width: 1
+                    border.color: root.surface1
+                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                    Text {
+                        id: backLabel
+                        anchors.centerIn: parent
+                        text: "󰁍  " + (subPageRow.tab ? subPageRow.tab.pageLabels[0] : "")
+                        font.family: root.uiFontFamily
+                        font.pixelSize: root.s(12)
+                        font.weight: Font.Medium
+                        color: root.subtext0
+                    }
+                    MouseArea { id: backMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openTab(root.currentTab) }
+                }
+                Text {
+                    visible: subPageRow.onExtra
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: subPageRow.onExtra ? subPageRow.tab.extraLabels[subPageRow.extraIndex] : ""
+                    font.family: root.uiFontFamily
+                    font.pixelSize: root.s(13)
+                    font.weight: root.themedFontWeight
+                    color: root.text
+                }
+
                 Repeater {
-                    model: subPageRow.tab ? subPageRow.tab.pages.length : 0
+                    model: subPageRow.tab && !subPageRow.onExtra && subPageRow.tab.pages.length > 1 ? subPageRow.tab.pages.length : 0
                     Rectangle {
                         id: subPageButton
                         required property int index
@@ -2878,9 +2922,27 @@ Item {
                 }
                 Loader {
                     anchors.fill: parent
-                    active: root.currentPage === 14
-                    source: "OverviewPage.qml"
-                    onLoaded: item.pageRequested.connect(root.openNamedPage)
+                    active: root.currentPage === 16
+                    source: "StartPage.qml"
+                    onLoaded: { item.unit = root.s(100) / 100; item.pageRequested.connect(root.openNamedPage); }
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: root.currentPage === 17
+                    source: "AppearancePage.qml"
+                    onLoaded: { item.unit = root.s(100) / 100; item.pageRequested.connect(root.openNamedPage); }
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: root.currentPage === 18
+                    source: "DesktopPage.qml"
+                    onLoaded: { item.unit = root.s(100) / 100; item.pageRequested.connect(root.openNamedPage); }
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: root.currentPage === 19
+                    source: "RestPage.qml"
+                    onLoaded: { item.unit = root.s(100) / 100; item.pageRequested.connect(root.openNamedPage); }
                 }
                 Loader {
                     anchors.fill: parent
@@ -4083,8 +4145,8 @@ Item {
                             spacing: root.s(12)
 
                             EditorCard {
-                                heading: "Strook en rail"
-                                hint: "De rail zelf zet je aan of uit onder Bediening › Rail-indeling."
+                                heading: "Strook en zijbalk"
+                                hint: "De zijbalk zelf zet je aan of uit onder Bureaublad › Zijbalk-indeling."
                                 glyph: "󰕮"
                                 ChoiceRow {
                                     label: "Strook met klok en status"
@@ -4106,13 +4168,13 @@ Item {
                                     onEdited: (newAmount) => root.editBarStatusStripHeight = newAmount
                                 }
                                 ChoiceRow {
-                                    label: "Rail aan de"
+                                    label: "Zijbalk aan de"
                                     options: [{ v: "left", t: "Linkerkant" }, { v: "right", t: "Rechterkant" }]
                                     current: root.editBarRailEdge
                                     onPicked: (choice) => root.editBarRailEdge = choice
                                 }
                                 NumberRow {
-                                    label: "Breedte van de rail"
+                                    label: "Breedte van de zijbalk"
                                     minimum: 44; maximum: 96
                                     amount: root.editBarRailWidth
                                     onEdited: (newAmount) => root.editBarRailWidth = newAmount
@@ -4410,7 +4472,7 @@ Item {
 
                                 Text {
                                     Layout.fillWidth: true
-                                    text: "Dit scherm is het stabiele anker voor de uitgebreide rail. Alle schermen houden dezelfde gesloten, afgeronde omlijsting; zo blijven de hoeken consistent."
+                                    text: "Dit scherm is het stabiele anker voor de uitgebreide zijbalk. Alle schermen houden dezelfde gesloten, afgeronde omlijsting; zo blijven de hoeken consistent."
                                     font.family: root.uiFontFamily
                                     font.pixelSize: root.s(11)
                                     color: root.subtext0
@@ -4420,7 +4482,7 @@ Item {
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: root.s(10)
-                                    Text { text: "Hoofd-rail"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.text }
+                                    Text { text: "Hoofdzijbalk"; font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.text }
                                     ThemedComboBox {
                                         id: primaryDisplayCombo
                                         Layout.fillWidth: true
@@ -4448,63 +4510,8 @@ Item {
                             SettingsActionButton { label: "Tabletmodus"; icon: "󰓶"; accent: root.peach; onTriggered: root.toggleTabletMode() }
                             SettingsActionButton { label: "Helderheid -"; icon: "󰃞"; accent: root.yellow; onTriggered: root.adjustBrightness(-5) }
                             SettingsActionButton { label: "Helderheid +"; icon: "󰃠"; accent: root.yellow; onTriggered: root.adjustBrightness(5) }
-                        }
-
-                        // Nachtlicht (kingstra-nightlight + hyprsunset): 's avonds
-                        // warmere kleuren, zacht overvloeiend volgens schema.
-                        Rectangle {
-                            id: nightLightCard
-                            visible: NightLight.available
-                            Layout.fillWidth: true
-                            implicitHeight: nightLightColumn.implicitHeight + root.s(24)
-                            radius: root.s(10)
-                            color: Qt.alpha(root.surface0, 0.46)
-                            border.width: 1
-                            border.color: Qt.alpha(root.peach, 0.58)
-                            readonly property string nightCmd: Quickshell.env("HOME") + "/.local/bin/kingstra-nightlight"
-
-                            ColumnLayout {
-                                id: nightLightColumn
-                                anchors.fill: parent
-                                anchors.margins: root.s(12)
-                                spacing: root.s(10)
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: root.s(8)
-                                    Text { text: NightLight.nightOn ? "󰖔" : "󰖙"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(17); color: root.peach }
-                                    Text { text: "Nachtlicht"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(14); color: root.text; Layout.fillWidth: true }
-                                    Text { text: NightLight.subtitle; font.family: root.monoFontFamily; font.pixelSize: root.s(10); color: NightLight.nightOn ? root.peach : root.subtext0 }
-                                }
-
-                                ChoiceRow {
-                                    label: "Wanneer"
-                                    options: [{ v: "schema", t: "Volgens schema" }, { v: "hand", t: "Alleen met de hand" }]
-                                    current: NightLight.scheduled ? "schema" : "hand"
-                                    onPicked: choice => NightLight.setScheduled(choice === "schema")
-                                }
-                                ChoiceRow {
-                                    visible: NightLight.scheduled
-                                    label: "Begint om"
-                                    options: [{ v: "19:00", t: "19:00" }, { v: "20:00", t: "20:00" }, { v: "21:00", t: "21:00" }, { v: "22:00", t: "22:00" }, { v: "23:00", t: "23:00" }]
-                                    current: NightLight.startTime
-                                    onPicked: choice => Quickshell.execDetached([nightLightCard.nightCmd, "set", "start", choice])
-                                }
-                                ChoiceRow {
-                                    visible: NightLight.scheduled
-                                    label: "Stopt om"
-                                    options: [{ v: "05:00", t: "05:00" }, { v: "06:00", t: "06:00" }, { v: "07:00", t: "07:00" }, { v: "08:00", t: "08:00" }]
-                                    current: NightLight.endTime
-                                    onPicked: choice => Quickshell.execDetached([nightLightCard.nightCmd, "set", "end", choice])
-                                }
-                                ChoiceRow {
-                                    label: "Hoe warm"
-                                    hint: "Het nachtlicht vloeit in twintig minuten in en uit. Met de hand schakelen (Snelle instellingen) geldt tot het volgende schemamoment."
-                                    options: [{ v: "5000", t: "Licht" }, { v: "4000", t: "Middel" }, { v: "3200", t: "Sterk" }]
-                                    current: String(NightLight.warmth)
-                                    onPicked: choice => Quickshell.execDetached([nightLightCard.nightCmd, "set", "temperature", choice])
-                                }
-                            }
+                            SettingsActionButton { label: "Nachtlicht…"; icon: "󰖔"; accent: root.peach; onTriggered: root.openPage(19) }
+                            SettingsActionButton { label: "Per scherm…"; icon: "󰍹"; accent: root.mauve; onTriggered: root.openPage(0) }
                         }
 
                         AdvancedSection {
@@ -4849,7 +4856,7 @@ Item {
                         Text { text: "Sessie"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
 
 
-                        SettingsInfoCard { title: "Mode"; icon: "󰒲"; accent: root.mauve; value: "Office, Gaming en Media kies je in Overzicht; per scherm in Bediening. Nu actief: " + (root.sessionModeText || "onbekend") }
+                        SettingsInfoCard { title: "Stand"; icon: "󰒲"; accent: root.mauve; value: "Werken, Kijken en luisteren of Spelen kies je met Super+A; per scherm onder Schermen › Per scherm. Nu actief: " + (root.sessionModeText || "onbekend") }
 
                         RowLayout {
                             Layout.fillWidth: true
@@ -5027,7 +5034,7 @@ Item {
                             Flow {
                                 Layout.fillWidth: true
                                 spacing: root.s(10)
-                                SettingsActionButton { label: "Mode verversen"; icon: "󰑓"; accent: root.sapphire; onTriggered: sessionModeProc.running = true }
+                                SettingsActionButton { label: "Stand opnieuw toepassen"; icon: "󰑓"; accent: root.sapphire; onTriggered: sessionModeProc.running = true }
                             }
 
                             Rectangle {
@@ -5501,11 +5508,11 @@ Item {
                                     RowLayout {
                                         anchors.centerIn: parent; spacing: root.s(6)
                                         Text { text: "󰍹"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(14); color: root.text }
-                                        Text { text: "Vol scherm"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.text }
+                                        Text { text: "Sfeer (Super+A)"; font.family: ThemeConfig.textFont; font.weight: Font.Bold; font.pixelSize: root.s(11); color: root.text }
                                     }
                                     MouseArea {
                                         id: themeFullscreenMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                        onClicked: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "theme"])
+                                        onClicked: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "bediening"])
                                     }
                                 }
                             }
@@ -5597,7 +5604,7 @@ Item {
                             spacing: root.s(10)
                             SettingsActionButton { label: "Kleuren en letters"; icon: "󰏘"; accent: root.mauve; primary: true; onTriggered: root.openThemeEditor("colors") }
                             SettingsActionButton { label: "Vensters"; icon: "󰖯"; accent: root.blue; onTriggered: root.openThemeEditor("windows") }
-                            SettingsActionButton { label: "Strook, rail en panelen"; icon: "󰕮"; accent: root.sapphire; onTriggered: root.openThemeEditor("shell") }
+                            SettingsActionButton { label: "Strook, zijbalk en panelen"; icon: "󰕮"; accent: root.sapphire; onTriggered: root.openThemeEditor("shell") }
                         }
                     }
                 }

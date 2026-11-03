@@ -63,9 +63,6 @@ Item {
         layoutProcess.command = ["python3", helper, "apply", preset, String(workspace)];
         layoutProcess.running = true;
     }
-    onWorkspaceChanged: inspect()
-    Component.onCompleted: inspect()
-    Timer { interval: 2000; repeat: true; running: root.visible; onTriggered: root.inspect() }
     function acceptLayout(text) {
         try {
             let preset = JSON.parse(text).preset || "";
@@ -146,8 +143,8 @@ Item {
             id: body
             width: parent.width
             spacing: 16
-            Heading { text: "Bediening"; font.pixelSize: 24 }
-            Hint { text: "Kies een scherm. Mode, rail en muziek worden voor dat scherm bewaard."; Layout.fillWidth: true }
+            Heading { text: "Per scherm"; font.pixelSize: 24 }
+            Hint { text: "Wil je een scherm anders dan de rest? Kies het scherm. Stand, zijbalk en muziek worden voor dat scherm bewaard. Indeling en vanzelf staan onder Bureaublad."; Layout.fillWidth: true }
 
             Item {
                 id: screenMap
@@ -183,7 +180,7 @@ Item {
                             anchors.centerIn: parent
                             width: parent.width - 12
                             horizontalAlignment: Text.AlignHCenter
-                            text: display.modelData.name + "\n" + ScreenProfiles.profile(display.modelData.name).mode
+                            text: display.modelData.name + "\n" + ({office: "Werken", media: "Kijken", gaming: "Spelen"}[ScreenProfiles.profile(display.modelData.name).mode] || ScreenProfiles.profile(display.modelData.name).mode)
                             color: root.themeColors.text
                             font.family: ThemeConfig.uiFont
                             font.pixelSize: 12
@@ -198,14 +195,14 @@ Item {
             Hint {
                 Layout.fillWidth: true
                 readonly property string globalMode: (ScreenProfiles.state.fallback || {}).name || "office"
-                text: "De mode van dit scherm bepaalt de railknoppen, de muziek en of meldingen verschijnen "
-                    + "(Gaming houdt ze stil). Volg standaard neemt de mode uit Overzicht over (nu: " + globalMode + ")."
+                text: "De stand van dit scherm bepaalt de zijbalkknoppen, de muziek en of meldingen verschijnen "
+                    + "(Spelen houdt ze stil). Volg standaard neemt de stand uit Super+A over (nu: " + ({office: "Werken", media: "Kijken en luisteren", gaming: "Spelen"}[globalMode] || globalMode) + ")."
             }
             Flow {
                 Layout.fillWidth: true
                 spacing: 8
                 Repeater {
-                    model: [{id: "inherit", title: "Volg standaard"}, {id: "office", title: "Office"}, {id: "media", title: "Media"}, {id: "gaming", title: "Gaming"}]
+                    model: [{id: "inherit", title: "Volg standaard"}, {id: "office", title: "Werken"}, {id: "media", title: "Kijken en luisteren"}, {id: "gaming", title: "Spelen"}]
                     delegate: Action {
                         required property var modelData
                         label: modelData.title
@@ -216,40 +213,24 @@ Item {
                 }
             }
 
-            Heading { text: "Werkruimte " + root.workspace + " op dit scherm" }
-            Hint { text: "Indeling geldt voor deze werkruimte. Ruimtelijk laat vensters boven, onder en naast elkaar staan."; Layout.fillWidth: true }
             Flow {
                 Layout.fillWidth: true; spacing: 8
-                Repeater {
-                    model: [{id: "tegels", title: "Tegelen"}, {id: "ruimtelijk", title: "Ruimtelijk werkvlak"}, {id: "scrollen", title: "Scrollstrook"}, {id: "50-50", title: "50 / 50"}, {id: "70-30", title: "70 / 30"}, {id: "focus", title: "Eén tegelijk"}]
-                    delegate: Action {
-                        required property var modelData
-                        label: modelData.title
-                        chosen: root.currentLayout === modelData.id
-                        allowed: root.workspace > 0 && !layoutProcess.running
-                        onTriggered: root.applyLayout(modelData.id)
-                    }
-                }
                 Action {
-                    label: root.profile.wallpaperDrift ? "Wallpaper-effect bij scrollen: aan" : "Wallpaper-effect bij scrollen: uit"
+                    label: root.profile.wallpaperDrift ? "Wallpaper schuift mee bij scrollen: aan" : "Wallpaper schuift mee bij scrollen: uit"
                     chosen: root.profile.wallpaperDrift
                     allowed: !!root.screenName && !ScreenProfiles.busy
                     onTriggered: root.set("wallpaperDrift", !root.profile.wallpaperDrift)
                 }
-                Action {
-                    label: "Open overzicht"
-                    allowed: root.workspace > 0
-                    onTriggered: Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/overview-toggle.sh"])
-                }
+                Action { label: "Indeling en vanzelf…"; onTriggered: root.pageRequested("bureaublad") }
             }
-            Hint { text: root.layoutError; visible: text !== ""; color: root.themeColors.red; Layout.fillWidth: true }
 
-            Heading { text: "Rail  ·  " + root.profile.mode }
+
+            Heading { text: "Zijbalk op dit scherm" }
             Flow {
                 Layout.fillWidth: true; spacing: 8
                 Action { label: root.autohide ? "Automatisch verbergen: aan" : "Automatisch verbergen: uit"; chosen: root.autohide; allowed: !ScreenProfiles.busy; onTriggered: root.set("rail.autohide", !root.autohide) }
-                Action { label: "Herstel keuzes voor deze mode"; allowed: !ScreenProfiles.busy; onTriggered: ScreenProfiles.action(["reset", root.screenName]) }
-                Action { label: "Volgorde, tweede rail en eigen apps…"; onTriggered: root.pageRequested("rail") }
+                Action { label: "Standaard herstellen"; allowed: !ScreenProfiles.busy; onTriggered: ScreenProfiles.action(["reset", root.screenName]) }
+                Action { label: "Volgorde, tweede zijbalk en eigen apps…"; onTriggered: root.pageRequested("rail") }
             }
             Hint { text: "Zichtbare onderdelen"; Layout.fillWidth: true }
             Flow {
@@ -266,10 +247,10 @@ Item {
                 }
             }
             AdvancedSection {
-                title: "Meer railknoppen"
+                title: "Meer zijbalkknoppen"
                 icon: "󰍜"
                 hint: "Wat achter Meer wegschuift, extra knoppen en hun volgorde"
-                Hint { text: "Achter Meer: deze knoppen schuiven weg tot je in de rail op Meer klikt"; Layout.fillWidth: true }
+                Hint { text: "Achter Meer: deze knoppen schuiven weg tot je in de zijbalk op Meer klikt"; Layout.fillWidth: true }
                 Flow {
                     Layout.fillWidth: true; spacing: 7
                     Repeater {
@@ -283,7 +264,7 @@ Item {
                         }
                     }
                 }
-                Hint { text: "Extra railknoppen"; Layout.fillWidth: true }
+                Hint { text: "Extra zijbalkknoppen"; Layout.fillWidth: true }
                 Flow {
                     Layout.fillWidth: true; spacing: 7
                     Repeater {
@@ -329,19 +310,7 @@ Item {
                     }
                 }
             }
-            Hint { text: "Speler voor dit thema (ook in Super+A en in de grote weergave):"; Layout.fillWidth: true }
-            Flow {
-                Layout.fillWidth: true; spacing: 8
-                Repeater {
-                    model: [{id: "theme", title: "Speler volgt thema"}, {id: "vinyl", title: "Platenspeler"}, {id: "cassette", title: "Cassettespeler"}, {id: "discman", title: "Discman"}, {id: "cover", title: "Alleen hoes"}]
-                    delegate: Action {
-                        required property var modelData
-                        label: modelData.title
-                        chosen: PlayerChoice.effective(root.profile.playerStyle) === modelData.id
-                        onTriggered: PlayerChoice.set(modelData.id)
-                    }
-                }
-            }
+            Hint { text: "Welke speler (plaat, cassette, discman) kies je onder Bureaublad."; Layout.fillWidth: true }
             Hint { text: ScreenProfiles.errorText; visible: text !== ""; color: root.themeColors.red; Layout.fillWidth: true }
         }
     }

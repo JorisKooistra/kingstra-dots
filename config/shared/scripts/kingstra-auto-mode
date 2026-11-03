@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """kingstra-auto-mode — modi die vanzelf aanspringen.
 
-Regels (aan of uit in Bediening, opgeslagen in ~/.config/kingstra/auto-modes.json):
+Regels (aan of uit in Instellingen › Bureaublad, opgeslagen in ~/.config/kingstra/auto-modes.json):
   game     Een spel op volledig scherm zet Gaming aan: Niet storen aan, blur,
            schaduwen en animaties van Hyprland uit. Sluit het spel, dan komt
            alles terug zoals het was.
