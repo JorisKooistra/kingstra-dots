@@ -95,6 +95,7 @@ FocusScope {
             { icon: "󰤨", label: "Netwerk beheren (nmtui)", cmd: ["kitty", "--title=Network", "nmtui"] },
             { icon: "󰂱", label: "Bluetooth-apparaten", cmd: ["blueman-manager"] },
             { icon: "󰂛", label: "Niet storen aan/uit", cmd: ["bash", home + "/.config/quickshell/notifications/notification_control.sh", "dnd"] },
+            { icon: "󰑐", label: "Laatst weggeklikte melding terug", cmd: ["bash", home + "/.config/quickshell/notifications/notification_control.sh", "recall"] },
             { icon: "󰓅", label: "Energieprofiel", children: [
                 { icon: "󰌪", label: "Energiebesparing", cmd: ["powerprofilesctl", "set", "power-saver"] },
                 { icon: "󰾅", label: "Gebalanceerd", cmd: ["powerprofilesctl", "set", "balanced"] },

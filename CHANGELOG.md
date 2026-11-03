@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Meldingen: uitstellen, regels per app, geschiedenis
+- Uitstellen vanaf de melding zelf (knop met het maantje): over 30 minuten, over 1 uur of morgen 08:00. De melding komt dan opnieuw binnen, met tekst en icoon; knoppen van de app vervallen. Overleeft een herstart (`~/.local/state/kingstra/notification-snoozed.json`).
+- Regel per app via het label naast de appnaam in het meldingencentrum: Normaal, Stil (alleen in het centrum), Nooit (niet tonen, wel in de geschiedenis) of Altijd (pop-up, ook bij Niet storen). Opgeslagen in `~/.config/kingstra/notification-rules.json`.
+- Geschiedenis van de laatste 24 uur met zoeken (knop met de klok); klik zet een melding opnieuw neer. Alleen tekst, geen afbeeldingen.
+- Terughalen van de laatst weggeklikte melding: knop in het centrum, toetsenbordmenu en `notification_control.sh recall`.
+
 ### Nachtlicht
 - Nieuw: 's avonds warmere schermkleuren via `hyprsunset`, aangestuurd door `kingstra-nightlight`. Volgt een schema (standaard 21:00–07:00) en vloeit in twintig minuten in en uit; met de hand schakelen vloeit in twee seconden en geldt tot het volgende schemamoment.
 - Schakelaar "Nachtlicht" in Snelle instellingen (controlecentrum en paneel); instellingen voor schema, begin, einde en warmte in Instellingen › Apparaten › Beeldschermen. Opgeslagen in `~/.config/kingstra/nachtlicht.json`.

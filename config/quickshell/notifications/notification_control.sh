@@ -24,8 +24,11 @@ case "${1:-toggle}" in
     dnd-off)
         send_command "dnd-off"
         ;;
+    recall)
+        send_command "recall"
+        ;;
     *)
-        printf 'Gebruik: %s [toggle|clear|dnd|dnd-on|dnd-off]\n' "$0" >&2
+        printf 'Gebruik: %s [toggle|clear|dnd|dnd-on|dnd-off|recall]\n' "$0" >&2
         exit 2
         ;;
 esac

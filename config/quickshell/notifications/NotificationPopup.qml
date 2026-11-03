@@ -17,9 +17,19 @@ FocusScope {
     readonly property color subtleBorder: mocha.shellOutline
     // Een leeg archief is een statuskaart, geen 620px-lange lade. Zodra er
     // meldingen zijn, groeit de lijst per kaart en blijft hij daarna scrollen.
-    readonly property int preferredPanelHeight: NotificationService.count === 0
-        ? 210
-        : Math.min(620, 100 + groupColumn.implicitHeight)
+    readonly property int preferredPanelHeight: showHistory
+        ? 620
+        : (NotificationService.count === 0
+            ? 210
+            : Math.min(620, 100 + groupColumn.implicitHeight))
+
+    // Geschiedenis van de laatste 24 uur, met zoeken.
+    property bool showHistory: false
+    property string historyQuery: ""
+    readonly property var historyList: {
+        NotificationService.history;
+        return NotificationService.searchHistory(historyQuery);
+    }
 
     // Herberekend bij elke nieuwe of verdwenen melding.
     readonly property var groupList: {
@@ -97,7 +107,7 @@ FocusScope {
 
                 Text {
                     Layout.fillWidth: true
-                    text: "Meldingen"
+                    text: root.showHistory ? "Geschiedenis" : "Meldingen"
                     font.family: ThemeConfig.displayFont
                     font.pixelSize: 17
                     font.weight: Font.Black
@@ -107,14 +117,37 @@ FocusScope {
 
                 Text {
                     Layout.fillWidth: true
-                    text: (NotificationService.dnd ? "Niet storen · " : "")
-                        + (NotificationService.count === 1
-                            ? "1 melding"
-                            : NotificationService.count + " meldingen")
+                    text: root.showHistory
+                        ? "Geschiedenis · laatste 24 uur"
+                        : (NotificationService.dnd ? "Niet storen · " : "")
+                            + (NotificationService.count === 1
+                                ? "1 melding"
+                                : NotificationService.count + " meldingen")
+                            + (NotificationService.snoozed.length > 0
+                                ? " · " + NotificationService.snoozed.length + " uitgesteld" : "")
                     font.family: ThemeConfig.uiFont
                     font.pixelSize: 11
                     color: mocha.subtext0
                     elide: Text.ElideRight
+                }
+            }
+
+            HeaderButton {
+                icon: "󰑐"
+                tooltip: "Laatst weggeklikte terughalen"
+                accent: mocha.teal
+                enabled: NotificationService.lastDismissed !== null && !root.showHistory
+                onTriggered: NotificationService.recall()
+            }
+
+            HeaderButton {
+                icon: root.showHistory ? "󰂚" : "󰋚"
+                tooltip: root.showHistory ? "Terug naar meldingen" : "Geschiedenis (24 uur)"
+                accent: mocha.blue
+                onTriggered: {
+                    root.showHistory = !root.showHistory;
+                    root.historyQuery = "";
+                    if (root.showHistory) historySearch.forceActiveFocus();
                 }
             }
 
@@ -129,7 +162,7 @@ FocusScope {
                 icon: "󰆴"
                 tooltip: "Alles wissen"
                 accent: mocha.red
-                enabled: NotificationService.count > 0
+                enabled: NotificationService.count > 0 && !root.showHistory
                 onTriggered: NotificationService.clearAll()
             }
         }
@@ -145,10 +178,145 @@ FocusScope {
             Layout.fillHeight: true
 
             ColumnLayout {
+                id: historyView
+                anchors.fill: parent
+                visible: root.showHistory
+                opacity: visible ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
+                spacing: 8
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 34
+                    radius: 17
+                    color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.40)
+                    border.width: 1
+                    border.color: historySearch.activeFocus
+                        ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.70)
+                        : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.10)
+                    Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+
+                    Text {
+                        id: historySearchIcon
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "󰍉"
+                        font.family: ThemeConfig.iconFont
+                        font.pixelSize: 13
+                        color: mocha.subtext0
+                    }
+                    TextInput {
+                        id: historySearch
+                        anchors.left: historySearchIcon.right
+                        anchors.leftMargin: 8
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.family: ThemeConfig.uiFont
+                        font.pixelSize: 12
+                        color: mocha.text
+                        clip: true
+                        onTextChanged: root.historyQuery = text
+                        Keys.onEscapePressed: event => {
+                            if (text !== "") text = "";
+                            else root.showHistory = false;
+                            event.accepted = true;
+                        }
+                        Text {
+                            anchors.fill: parent
+                            visible: historySearch.text === ""
+                            text: "Zoek in app, titel of tekst…"
+                            font: historySearch.font
+                            color: mocha.subtext0
+                        }
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    visible: root.historyList.length === 0
+                    Layout.topMargin: 24
+                    text: root.historyQuery === "" ? "Nog niets ontvangen in de laatste 24 uur." : "Niets gevonden."
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 11
+                    horizontalAlignment: Text.AlignHCenter
+                    color: mocha.subtext0
+                }
+
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    spacing: 6
+                    boundsBehavior: Flickable.StopAtBounds
+                    model: root.historyList
+                    delegate: Rectangle {
+                        required property var modelData
+                        width: ListView.view.width
+                        implicitHeight: historyColumn.implicitHeight + 16
+                        radius: root.itemRadius
+                        color: historyMouse.containsMouse ? root.cardHoverColor : root.cardColor
+                        border.width: 1
+                        border.color: root.subtleBorder
+                        Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+
+                        ColumnLayout {
+                            id: historyColumn
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 8
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 12
+                            spacing: 2
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: String(modelData.app || "") + (modelData.summary ? "  ·  " + modelData.summary : "")
+                                    font.family: ThemeConfig.displayFont
+                                    font.pixelSize: 11
+                                    font.weight: Font.Bold
+                                    color: mocha.text
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    text: Qt.formatDateTime(new Date(Number(modelData.at)), "HH:mm")
+                                    font.family: ThemeConfig.monoFont
+                                    font.pixelSize: 10
+                                    color: mocha.subtext0
+                                }
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                visible: text !== ""
+                                text: String(modelData.body || "")
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 11
+                                color: mocha.subtext1
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 3
+                                elide: Text.ElideRight
+                            }
+                        }
+                        // Klik zet de melding opnieuw neer, zoals terughalen.
+                        MouseArea {
+                            id: historyMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: NotificationService.resend(modelData)
+                        }
+                    }
+                }
+            }
+
+            ColumnLayout {
                 anchors.centerIn: parent
                 width: Math.min(parent.width - 24, 320)
                 spacing: 8
-                visible: NotificationService.count === 0
+                visible: NotificationService.count === 0 && !root.showHistory
 
                 Text {
                     Layout.alignment: Qt.AlignHCenter
@@ -187,7 +355,9 @@ FocusScope {
             Flickable {
                 id: notificationList
                 anchors.fill: parent
-                visible: NotificationService.count > 0
+                visible: NotificationService.count > 0 && !root.showHistory
+                opacity: visible ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
                 clip: true
                 contentWidth: width
                 contentHeight: groupColumn.implicitHeight
@@ -262,6 +432,7 @@ FocusScope {
                                     }
                                 }
                                 Item { Layout.fillWidth: true }
+                                RuleChip { app: group.modelData.app }
                                 IconButton {
                                     visible: group.modelData.items.length > 1
                                     icon: group.collapsed ? "󰅀" : "󰅃"
@@ -310,6 +481,7 @@ FocusScope {
         id: card
         property var notification: null
         property bool leaving: false
+        property bool snoozeOpen: false
         readonly property color accent: root.urgencyColor(notification)
         readonly property string iconSource: NotificationService.iconSource(notification)
         readonly property var visibleActions: {
@@ -415,9 +587,35 @@ FocusScope {
                     }
 
                     IconButton {
+                        icon: "󰒲"
+                        accent: card.snoozeOpen ? card.accent : mocha.subtext0
+                        onTriggered: card.snoozeOpen = !card.snoozeOpen
+                    }
+
+                    IconButton {
                         icon: "󰅖"
                         accent: mocha.subtext0
                         onTriggered: card.leave()
+                    }
+                }
+
+                // Uitstellen: de melding verdwijnt en komt later terug.
+                Flow {
+                    Layout.fillWidth: true
+                    visible: card.snoozeOpen
+                    spacing: 6
+                    Repeater {
+                        model: [30, 60, "morgen"]
+                        delegate: ActionButton {
+                            required property var modelData
+                            label: modelData === "morgen" ? "Morgen 08:00" : "Over " + NotificationService.snoozeLabel(modelData)
+                            accent: card.accent
+                            onTriggered: {
+                                NotificationService.snooze(card.notification, modelData);
+                                card.snoozeOpen = false;
+                                card.leave();
+                            }
+                        }
                     }
                 }
 
@@ -608,6 +806,47 @@ FocusScope {
             hoverEnabled: true
             enabled: buttonRoot.enabled
             onClicked: buttonRoot.triggered()
+        }
+    }
+
+    // Regel voor alle meldingen van deze app; klik wisselt Normaal → Stil →
+    // Nooit → Altijd. Stil: alleen hier, geen pop-up. Altijd: ook bij Niet storen.
+    component RuleChip: Rectangle {
+        id: chipRoot
+        property string app: ""
+        readonly property string rule: {
+            NotificationService.rules;
+            return NotificationService.ruleFor(app);
+        }
+        readonly property color tone: rule === "normaal" ? mocha.subtext0
+            : (rule === "altijd" ? mocha.yellow : (rule === "nooit" ? mocha.red : mocha.mauve))
+
+        Layout.preferredHeight: 20
+        Layout.preferredWidth: chipLabel.implicitWidth + 16
+        radius: 10
+        color: chipMouse.containsMouse
+            ? Qt.rgba(tone.r, tone.g, tone.b, 0.20)
+            : (rule === "normaal" ? "transparent" : Qt.rgba(tone.r, tone.g, tone.b, 0.12))
+        border.width: 1
+        border.color: Qt.rgba(tone.r, tone.g, tone.b, chipMouse.containsMouse ? 0.5 : 0.25)
+        Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+
+        Text {
+            id: chipLabel
+            anchors.centerIn: parent
+            text: NotificationService.ruleLabels[chipRoot.rule] || "Normaal"
+            font.family: ThemeConfig.uiFont
+            font.pixelSize: 9
+            font.weight: Font.Bold
+            color: chipRoot.tone
+        }
+
+        MouseArea {
+            id: chipMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: NotificationService.cycleRule(chipRoot.app)
         }
     }
 
