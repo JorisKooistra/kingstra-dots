@@ -130,6 +130,10 @@ start_core() {
     if [[ -x "$HOME/.local/bin/kingstra-disks" ]]; then
         run_bg_once "kingstra-disks watch" "disk automount" "$HOME/.local/bin/kingstra-disks" watch
     fi
+    # Modi die vanzelf aanspringen (spel, batterij, scherm delen).
+    if [[ -x "$HOME/.local/bin/kingstra-auto-mode" ]]; then
+        run_bg_once "kingstra-auto-mode daemon" "auto modes" "$HOME/.local/bin/kingstra-auto-mode" daemon
+    fi
     # Nachtlicht: volgt het schema uit ~/.config/kingstra/nachtlicht.json.
     if [[ -x "$HOME/.local/bin/kingstra-nightlight" ]] && has_cmd hyprsunset; then
         run_bg_once "kingstra-nightlight daemon" "night light" "$HOME/.local/bin/kingstra-nightlight" daemon

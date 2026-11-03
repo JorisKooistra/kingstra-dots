@@ -156,6 +156,35 @@ Item {
     // Een thema- of modewissel duurt even; de keuze knippert niet terug.
     Timer { id: pendingTimer; interval: 20000; onTriggered: { overlay.pendingMode = ""; overlay.pendingTheme = ""; } }
 
+    // Modi die vanzelf aanspringen (kingstra-auto-mode).
+    property var autoRules: ({ game: true, battery: true, share: true })
+    property string autoGame: ""
+    property bool autoBattery: false
+    property bool autoShare: false
+    property bool autoHasBattery: false
+    function setAutoRule(rule, on) {
+        let next = Object.assign({}, overlay.autoRules);
+        next[rule] = on;
+        overlay.autoRules = next;
+        Quickshell.execDetached([overlay.home + "/.local/bin/kingstra-auto-mode", "set", rule, on ? "on" : "off"]);
+    }
+    FileView {
+        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/kingstra-auto-mode.json"
+        watchChanges: true
+        preload: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                let d = JSON.parse(text() || "{}");
+                if (d.rules) overlay.autoRules = d.rules;
+                overlay.autoGame = String(d.game || "");
+                overlay.autoBattery = d.battery === true;
+                overlay.autoShare = d.share === true;
+                overlay.autoHasBattery = d.hasBattery === true;
+            } catch (e) {}
+        }
+    }
     FileView {
         path: overlay.home + "/.config/kingstra/state/mode.json"
         watchChanges: true
@@ -654,6 +683,26 @@ Item {
                             spacing: overlay.s(6)
                             Chip { glyph: "󰚀"; label: "Zen aan of uit"; onTriggered: Quickshell.execDetached(["bash", overlay.scripts + "/zen.sh", "toggle"]) }
                             Hint { visible: overlay.pendingMode !== ""; text: "Mode wordt toegepast…"; height: overlay.s(32); verticalAlignment: Text.AlignVCenter }
+                        }
+                    }
+
+                    // Vanzelf: aangevinkte regels zet kingstra-auto-mode aan en
+                    // weer terug zodra de aanleiding weg is.
+                    Card {
+                        Heading { glyph: "󰁪"; label: "Vanzelf" }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: overlay.s(6)
+                            Chip { glyph: "󰊴"; label: "Spel → Gaming"; chosen: overlay.autoRules.game !== false; onTriggered: overlay.setAutoRule("game", !chosen) }
+                            Chip { visible: overlay.autoHasBattery; glyph: "󰁹"; label: "Batterij → zuinig"; chosen: overlay.autoRules.battery !== false; onTriggered: overlay.setAutoRule("battery", !chosen) }
+                            Chip { glyph: "󰹑"; label: "Delen → niet storen"; chosen: overlay.autoRules.share !== false; onTriggered: overlay.setAutoRule("share", !chosen) }
+                        }
+                        Hint {
+                            Layout.fillWidth: true
+                            text: overlay.autoGame !== "" ? "Nu actief: Gaming voor " + overlay.autoGame + ". Gaat terug zodra het spel sluit."
+                                : overlay.autoShare ? "Nu actief: je deelt je scherm, meldingen zijn stil."
+                                : overlay.autoBattery ? "Nu actief: zuinig op batterij."
+                                : "Gaat vanzelf aan en zet alles terug zodra de aanleiding weg is."
                         }
                     }
 

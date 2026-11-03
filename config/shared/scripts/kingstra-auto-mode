@@ -1,0 +1,424 @@
+#!/usr/bin/env python3
+"""kingstra-auto-mode — modi die vanzelf aanspringen.
+
+Regels (aan of uit in Bediening, opgeslagen in ~/.config/kingstra/auto-modes.json):
+  game     Een spel op volledig scherm zet Gaming aan: Niet storen aan, blur,
+           schaduwen en animaties van Hyprland uit. Sluit het spel, dan komt
+           alles terug zoals het was.
+  battery  Op batterij: blur en schaduwen uit en energieprofiel 'zuinig'.
+           Terug aan het snoer: alles zoals het was.
+  share    Scherm delen (Teams, browser, OBS): Niet storen aan zolang het delen duurt.
+
+Gebruik:
+  kingstra-auto-mode daemon            regels volgen (gestart door kingstra-session-start)
+  kingstra-auto-mode set <regel> on|off
+  kingstra-auto-mode status
+"""
+import json
+import os
+import socket
+import subprocess
+import sys
+import threading
+import time
+
+HOME = os.path.expanduser("~")
+CONFIG_FILE = os.path.join(os.environ.get("XDG_CONFIG_HOME", HOME + "/.config"), "kingstra/auto-modes.json")
+MODE_JSON = os.path.join(os.environ.get("XDG_CONFIG_HOME", HOME + "/.config"), "kingstra/state/mode.json")
+DND_FILE = os.path.join(os.environ.get("XDG_STATE_HOME", HOME + "/.local/state"), "kingstra/notification-dnd")
+RUNTIME = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+STATUS_FILE = os.path.join(RUNTIME, "kingstra-auto-mode.json")
+RULES = ("game", "battery", "share")
+
+# Vensterklassen die altijd een spel zijn; daarnaast herkent de omgeving van
+# het proces Steam, Lutris, Heroic en Wine.
+GAME_CLASS_PREFIXES = ("steam_app_", "gamescope", "minecraft", "factorio", "osu", "retroarch")
+GAME_ENV_KEYS = (b"SteamAppId=", b"SteamGameId=", b"LUTRIS_GAME_UUID=", b"HEROIC_APP_NAME=", b"WINEPREFIX=")
+
+lock = threading.Lock()
+
+
+def load_rules():
+    try:
+        with open(CONFIG_FILE) as fh:
+            data = json.load(fh)
+    except Exception:
+        data = {}
+    return {rule: data.get(rule, True) is not False for rule in RULES}
+
+
+def save_rules(rules):
+    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+    tmp = CONFIG_FILE + ".tmp"
+    with open(tmp, "w") as fh:
+        json.dump(rules, fh, indent=2)
+    os.replace(tmp, CONFIG_FILE)
+
+
+def run(cmd, timeout=5):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
+    except Exception:
+        return ""
+
+
+def hyprctl_json(*args):
+    try:
+        return json.loads(run(["hyprctl", *args, "-j"]) or "null")
+    except Exception:
+        return None
+
+
+def get_option(name):
+    data = hyprctl_json("getoption", name)
+    if not isinstance(data, dict):
+        return None
+    for key in ("int", "float", "bool"):
+        if key in data:
+            return data[key]
+    return None
+
+
+def lua_bool(value):
+    return "true" if value else "false"
+
+
+def set_hypr(blur=None, shadow=None, animations=None):
+    parts = []
+    deco = []
+    if blur is not None:
+        deco.append("blur = { enabled = %s }" % lua_bool(blur))
+    if shadow is not None:
+        deco.append("shadow = { enabled = %s }" % lua_bool(shadow))
+    if deco:
+        parts.append("decoration = { %s }" % ", ".join(deco))
+    if animations is not None:
+        parts.append("animations = { enabled = %s }" % lua_bool(animations))
+    if parts:
+        run(["hyprctl", "eval", "hl.config({ %s })" % ", ".join(parts)])
+
+
+def notif_command(name):
+    try:
+        with open("/tmp/qs_notifications_command", "w") as fh:
+            fh.write("%s:%d\n" % (name, time.time_ns()))
+    except OSError:
+        pass
+
+
+def dnd_is_on():
+    try:
+        with open(DND_FILE) as fh:
+            return fh.read().strip() == "1"
+    except OSError:
+        return False
+
+
+def current_mode():
+    try:
+        with open(MODE_JSON) as fh:
+            return json.load(fh).get("name") or "office"
+    except Exception:
+        return "office"
+
+
+def switch_mode(name):
+    exe = os.path.join(HOME, ".local/bin/kingstra-mode-switch")
+    if os.access(exe, os.X_OK):
+        run([exe, name], timeout=30)
+
+
+def feedback(icon, title, detail):
+    token = "%d%d" % (int(time.time() * 1000), os.getpid())
+    payload = {"token": token, "icon": icon, "title": title, "detail": detail, "timeout": 3500}
+    tmp = "/tmp/kingstra-feedback.json.%d" % os.getpid()
+    try:
+        with open(tmp, "w") as fh:
+            json.dump(payload, fh)
+        os.replace(tmp, "/tmp/kingstra-feedback.json")
+    except OSError:
+        pass
+
+
+def power_profile():
+    return run(["powerprofilesctl", "get"]).strip()
+
+
+def set_power_profile(name):
+    if name:
+        run(["powerprofilesctl", "set", name])
+
+
+def on_battery():
+    """True op batterij, False aan het snoer, None zonder batterij."""
+    base = "/sys/class/power_supply"
+    has_battery = False
+    mains_online = False
+    try:
+        entries = os.listdir(base)
+    except OSError:
+        return None
+    for entry in entries:
+        try:
+            with open(os.path.join(base, entry, "type")) as fh:
+                kind = fh.read().strip()
+        except OSError:
+            continue
+        if kind == "Battery":
+            has_battery = True
+        elif kind in ("Mains", "USB"):
+            try:
+                with open(os.path.join(base, entry, "online")) as fh:
+                    mains_online = mains_online or fh.read().strip() == "1"
+            except OSError:
+                pass
+    if not has_battery:
+        return None
+    return not mains_online
+
+
+def is_game(client):
+    cls = str(client.get("class") or client.get("initialClass") or "").lower()
+    if cls.endswith(".exe") or cls.startswith(GAME_CLASS_PREFIXES):
+        return True
+    pid = client.get("pid")
+    if not isinstance(pid, int) or pid <= 0:
+        return False
+    try:
+        with open("/proc/%d/environ" % pid, "rb") as fh:
+            env = fh.read()
+    except OSError:
+        return False
+    return any(key in env for key in GAME_ENV_KEYS)
+
+
+def window_title(client):
+    return str(client.get("title") or client.get("class") or "spel")[:60]
+
+
+class AutoMode:
+    def __init__(self):
+        self.rules = load_rules()
+        self.game_addr = None
+        self.game_name = ""
+        self.game_saved = None
+        self.battery_active = False
+        self.battery_saved = None
+        self.share_active = False
+        self.share_saved_dnd = None
+        self.share_sessions = 0
+
+    # --- status voor de shell -------------------------------------------------
+    def write_status(self):
+        data = {
+            "rules": self.rules,
+            "game": self.game_name if self.game_addr else "",
+            "battery": self.battery_active,
+            "share": self.share_active,
+            "hasBattery": on_battery() is not None,
+        }
+        tmp = STATUS_FILE + ".tmp"
+        try:
+            with open(tmp, "w") as fh:
+                json.dump(data, fh)
+            os.replace(tmp, STATUS_FILE)
+        except OSError:
+            pass
+
+    # --- spel -----------------------------------------------------------------
+    def game_start(self, client):
+        if self.game_addr or not self.rules["game"]:
+            return
+        self.game_addr = client.get("address")
+        self.game_name = window_title(client)
+        self.game_saved = {
+            "mode": current_mode(),
+            "dnd": dnd_is_on(),
+            "blur": get_option("decoration:blur:enabled"),
+            "shadow": get_option("decoration:shadow:enabled"),
+            "animations": get_option("animations:enabled"),
+        }
+        # Eerst Niet storen, zodat de modusmelding niet over het spel valt.
+        notif_command("dnd-on")
+        set_hypr(blur=False, shadow=False, animations=False)
+        if self.game_saved["mode"] != "gaming":
+            switch_mode("gaming")
+        self.write_status()
+
+    def game_stop(self):
+        if not self.game_addr:
+            return
+        saved = self.game_saved or {}
+        self.game_addr = None
+        name = self.game_name
+        self.game_name = ""
+        # Op batterij blijven blur en schaduw uit.
+        keep_light = self.battery_active
+        set_hypr(
+            blur=None if keep_light else bool(saved.get("blur", 1)),
+            shadow=None if keep_light else bool(saved.get("shadow", 1)),
+            animations=bool(saved.get("animations", 1)),
+        )
+        if not saved.get("dnd") and not self.share_active:
+            notif_command("dnd-off")
+        mode = saved.get("mode") or "office"
+        if mode != "gaming":
+            switch_mode(mode)
+        feedback("󰊗", "Gaming-modus uit", "%s is gesloten · terug naar %s" % (name, mode.capitalize()))
+        self.write_status()
+
+    def check_fullscreen(self):
+        client = hyprctl_json("activewindow")
+        if isinstance(client, dict) and client.get("fullscreen") and is_game(client):
+            self.game_start(client)
+
+    def check_game_alive(self):
+        if not self.game_addr:
+            return
+        clients = hyprctl_json("clients")
+        if isinstance(clients, list) and not any(c.get("address") == self.game_addr for c in clients):
+            self.game_stop()
+
+    # --- batterij -------------------------------------------------------------
+    def check_battery(self):
+        state = on_battery()
+        want = bool(state) and self.rules["battery"]
+        if want and not self.battery_active:
+            self.battery_active = True
+            self.battery_saved = {
+                "profile": power_profile(),
+                "blur": get_option("decoration:blur:enabled"),
+                "shadow": get_option("decoration:shadow:enabled"),
+            }
+            if not self.game_addr:
+                set_hypr(blur=False, shadow=False)
+            set_power_profile("power-saver")
+            feedback("󰁹", "Zuinig op batterij", "Blur en schaduwen uit · terug aan het snoer")
+            self.write_status()
+        elif not want and self.battery_active:
+            saved = self.battery_saved or {}
+            self.battery_active = False
+            if not self.game_addr:
+                set_hypr(blur=bool(saved.get("blur", 1)), shadow=bool(saved.get("shadow", 1)))
+            elif self.game_saved is not None:
+                # Na het spel moet blur terug naar de stand van voor de batterij.
+                self.game_saved["blur"] = saved.get("blur", 1)
+                self.game_saved["shadow"] = saved.get("shadow", 1)
+            set_power_profile(saved.get("profile") or "balanced")
+            if state is False:
+                feedback("󰂄", "Aan het snoer", "Alles staat weer zoals het was")
+            self.write_status()
+
+    # --- scherm delen ---------------------------------------------------------
+    def share_changed(self, active):
+        if active and not self.share_active and self.rules["share"]:
+            self.share_active = True
+            self.share_saved_dnd = dnd_is_on()
+            notif_command("dnd-on")
+            self.write_status()
+        elif not active and self.share_active:
+            self.share_active = False
+            if not self.share_saved_dnd and not self.game_addr:
+                notif_command("dnd-off")
+            feedback("󰹑", "Delen gestopt", "Meldingen komen weer gewoon binnen")
+            self.write_status()
+
+    # --- gebeurtenissen van Hyprland -------------------------------------------
+    def handle_event(self, line):
+        name, _, data = line.partition(">>")
+        with lock:
+            if name == "fullscreen" and data.strip() == "1":
+                self.check_fullscreen()
+            elif name == "closewindow" and self.game_addr:
+                if "0x" + data.strip() == self.game_addr or data.strip() == self.game_addr:
+                    self.game_stop()
+            elif name == "screencast":
+                # Schermafbeeldingen en de miniaturen van het werkvlak geven
+                # ook een kort screencast-signaal; pas na een paar seconden
+                # aaneengesloten delen telt het als scherm delen.
+                if data.split(",")[0].strip() == "1":
+                    self.share_sessions += 1
+                    threading.Timer(4.0, self.share_settle).start()
+                else:
+                    self.share_sessions = max(0, self.share_sessions - 1)
+                    if self.share_sessions == 0:
+                        self.share_changed(False)
+
+    def share_settle(self):
+        with lock:
+            if self.share_sessions > 0:
+                self.share_changed(True)
+
+    def listen(self):
+        sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
+        path = os.path.join(RUNTIME, "hypr", sig, ".socket2.sock")
+        while True:
+            try:
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                sock.connect(path)
+                buf = b""
+                while True:
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    buf += chunk
+                    while b"\n" in buf:
+                        raw, buf = buf.split(b"\n", 1)
+                        self.handle_event(raw.decode("utf-8", "replace"))
+            except OSError:
+                pass
+            time.sleep(3)
+
+    def poll(self):
+        while True:
+            with lock:
+                fresh = load_rules()
+                if fresh != self.rules:
+                    self.rules = fresh
+                    if not fresh["game"]:
+                        self.game_stop()
+                    if not fresh["share"]:
+                        self.share_changed(False)
+                    self.write_status()
+                self.check_battery()
+                self.check_game_alive()
+                # Een spel dat al op volledig scherm stond voor de daemon startte.
+                if not self.game_addr:
+                    self.check_fullscreen()
+            time.sleep(20)
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else "status"
+    if cmd == "daemon":
+        auto = AutoMode()
+        auto.write_status()
+        threading.Thread(target=auto.listen, daemon=True).start()
+        auto.poll()
+    elif cmd == "set" and len(argv) == 4 and argv[2] in RULES and argv[3] in ("on", "off"):
+        rules = load_rules()
+        rules[argv[2]] = argv[3] == "on"
+        save_rules(rules)
+        try:
+            with open(STATUS_FILE) as fh:
+                status = json.load(fh)
+            status["rules"] = rules
+            with open(STATUS_FILE + ".tmp", "w") as fh:
+                json.dump(status, fh)
+            os.replace(STATUS_FILE + ".tmp", STATUS_FILE)
+        except Exception:
+            pass
+    elif cmd == "status":
+        try:
+            with open(STATUS_FILE) as fh:
+                print(fh.read().strip())
+        except OSError:
+            print(json.dumps({"rules": load_rules(), "game": "", "battery": False, "share": False}))
+    else:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

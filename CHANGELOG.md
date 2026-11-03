@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Modi die vanzelf aanspringen
+- Nieuw: `kingstra-auto-mode` (gestart door de sessie) volgt drie regels, elk aan of uit in Bediening (Super+A) onder ‘Vanzelf’:
+  - **Spel → Gaming**: een spel op volledig scherm (Steam, Lutris, Heroic, Wine, gamescope en bekende klassen) zet Niet storen aan, blur, schaduwen en animaties van Hyprland uit en schakelt naar Gaming. Sluit het spel, dan komt de vorige mode en alles terug, met een korte melding.
+  - **Batterij → zuinig**: blur en schaduwen uit en energieprofiel ‘zuinig’; aan het snoer weer zoals het was. Alleen op apparaten met een batterij.
+  - **Delen → niet storen**: zolang je je scherm deelt (Teams, browser, OBS) zijn meldingen stil. Korte screencast-signalen van schermafbeeldingen en werkvlakminiaturen tellen niet mee.
+- Regels in `~/.config/kingstra/auto-modes.json`; actuele stand in `$XDG_RUNTIME_DIR/kingstra-auto-mode.json`.
+
 ### Meldingen: uitstellen, regels per app, geschiedenis
 - Uitstellen vanaf de melding zelf (knop met het maantje): over 30 minuten, over 1 uur of morgen 08:00. De melding komt dan opnieuw binnen, met tekst en icoon; knoppen van de app vervallen. Overleeft een herstart (`~/.local/state/kingstra/notification-snoozed.json`).
 - Regel per app via het label naast de appnaam in het meldingencentrum: Normaal, Stil (alleen in het centrum), Nooit (niet tonen, wel in de geschiedenis) of Altijd (pop-up, ook bij Niet storen). Opgeslagen in `~/.config/kingstra/notification-rules.json`.
