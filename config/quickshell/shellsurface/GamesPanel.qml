@@ -128,7 +128,7 @@ FocusScope {
                 Text { anchors.centerIn: parent; text: "󰊴"; font.family: ThemeConfig.iconFont; font.pixelSize: 17; color: mocha.accent2 }
             }
             ColumnLayout {
-                Layout.fillWidth: true; spacing: 1
+                spacing: 1
                 Text { text: "Games"; font.family: ThemeConfig.displayFont; font.pixelSize: 18; font.weight: Font.Black; color: mocha.text }
                 Text {
                     text: !root.loaded ? "Bibliotheek lezen…"
@@ -136,6 +136,7 @@ FocusScope {
                     font.family: ThemeConfig.uiFont; font.pixelSize: 10; color: mocha.subtext0
                 }
             }
+            Item { Layout.fillWidth: true }
             Rectangle {
                 Layout.preferredWidth: 32; Layout.preferredHeight: 32; radius: 10
                 color: refreshMouse.containsMouse ? Qt.rgba(mocha.accent2.r, mocha.accent2.g, mocha.accent2.b, 0.16) : Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.72)
@@ -218,19 +219,23 @@ FocusScope {
                                 opacity: status === Image.Ready ? 1 : 0
                                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
                             }
-                            // Zonder hoesje: het app-icoon of een gamepad.
+                            // Zonder hoesje: het app-icoon (uit het icoonthema of een
+                            // pad in de .desktop), anders een gamepad.
                             Image {
+                                id: appIcon
+                                readonly property string name: String(card.modelData.icon || "")
                                 anchors.centerIn: parent
-                                width: parent.width * 0.42; height: width
-                                visible: cover.status !== Image.Ready && String(card.modelData.icon || "") !== ""
-                                source: visible ? Quickshell.iconPath(String(card.modelData.icon), true) : ""
-                                sourceSize.width: 128; sourceSize.height: 128
+                                width: parent.width * 0.46; height: width
+                                visible: cover.status !== Image.Ready && status === Image.Ready
+                                source: cover.status === Image.Ready || name === "" ? ""
+                                    : (name.charAt(0) === "/" ? "file://" + name : Quickshell.iconPath(name, "applications-games"))
+                                sourceSize.width: 256; sourceSize.height: 256
                                 fillMode: Image.PreserveAspectFit
+                                asynchronous: true
                             }
                             Text {
                                 anchors.centerIn: parent
-                                visible: cover.status !== Image.Ready
-                                    && (String(card.modelData.icon || "") === "" || Quickshell.iconPath(String(card.modelData.icon), true) === "")
+                                visible: cover.status !== Image.Ready && appIcon.status !== Image.Ready
                                 text: "󰊴"; font.family: ThemeConfig.iconFont; font.pixelSize: 34
                                 color: Qt.rgba(mocha.subtext0.r, mocha.subtext0.g, mocha.subtext0.b, 0.7)
                             }
