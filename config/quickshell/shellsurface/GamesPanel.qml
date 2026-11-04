@@ -220,7 +220,9 @@ FocusScope {
                                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
                             }
                             // Zonder hoesje: het app-icoon (uit het icoonthema of een
-                            // pad in de .desktop), anders een gamepad.
+                            // pad in de .desktop), anders een gamepad. iconPath(…, true)
+                            // geeft "" als het thema het icoon niet kent; met een
+                            // fallback-naam toont Qt anders een zwart-magenta schaakbord.
                             Image {
                                 id: appIcon
                                 readonly property string name: String(card.modelData.icon || "")
@@ -228,7 +230,7 @@ FocusScope {
                                 width: parent.width * 0.46; height: width
                                 visible: cover.status !== Image.Ready && status === Image.Ready
                                 source: cover.status === Image.Ready || name === "" ? ""
-                                    : (name.charAt(0) === "/" ? "file://" + name : Quickshell.iconPath(name, "applications-games"))
+                                    : (name.charAt(0) === "/" ? "file://" + name : Quickshell.iconPath(name, true))
                                 sourceSize.width: 256; sourceSize.height: 256
                                 fillMode: Image.PreserveAspectFit
                                 asynchronous: true
