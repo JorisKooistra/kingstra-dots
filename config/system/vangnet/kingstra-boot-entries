@@ -129,7 +129,8 @@ def backup():
 
 
 def set_loader():
-    """default op de kingstra-items, menu alleen bij een ingedrukte toets."""
+    """default op de kingstra-items, menu 2 s zichtbaar (een toets vasthouden bij
+    timeout 0 werkte op Joris' pc niet: het menu was onbereikbaar)."""
     lines = LOADER.read_text().splitlines() if LOADER.exists() else []
     out, seen = [], set()
     for line in lines:
@@ -138,13 +139,13 @@ def set_loader():
             if key in seen:
                 continue
             seen.add(key)
-            out.append("default kingstra-*" if key == "default" else "timeout 0")
+            out.append("default kingstra-*" if key == "default" else "timeout 2")
         else:
             out.append(line)
     if "default" not in seen:
         out.append("default kingstra-*")
     if "timeout" not in seen:
-        out.append("timeout 0")
+        out.append("timeout 2")
     LOADER.write_text("\n".join(out) + "\n")
 
 

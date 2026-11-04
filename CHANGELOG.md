@@ -6,7 +6,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ### Inlogscherm kwam niet na herstart
 - **Grijs scherm, SDDM startte niet** (4 november, eerste herstart met het opstartvangnet). Oorzaak: de koppeling die het opstartbeeld liet staan tot het inlogscherm (`sddm.service.d/kingstra-plymouth.conf` met `plymouth quit --retain-splash`). Live bevestigd: zonder dat bestand komt SDDM direct. De installer zet hem niet meer en haalt hem weg waar hij al stond (ook op de laptop bij de volgende update). Tussen opstartbeeld en inlogscherm kan nu weer kort zwart zitten.
-- Het opstartmenu krijg je door **herhaald op spatie te tikken** zodra het BIOS-logo weg is; vasthouden werkt niet op elk toetsenbord.
+- **Opstartmenu staat 2 seconden in beeld** in plaats van verborgen (`timeout 0`): spatie vasthouden werkte op Joris' pc niet, waardoor het menu onbereikbaar was toen het nodig was.
+- **Opstart wordt alleen nog goedgekeurd als het inlogscherm of Hyprland echt draait.** Eerst was "SDDM-dienst actief" genoeg, en zo werd de start met het grijze scherm toch als geslaagd gemarkeerd en viel het vangnet niet terug.
 
 ### Zoom-plugin voor Hyprland 0.57.1
 - **"Native zoom niet beschikbaar" na de update van 4 november**: het bouwscript kende alleen Hyprland 0.56.2 en 0.57.0 en weigerde 0.57.1 zonder te proberen. Daardoor werkten knijpzoomen en meeschuiven met twee vingers niet. Elke 0.57.x bouwt nu uit dezelfde bron; per versie een eigen build in de cache.

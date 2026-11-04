@@ -1,5 +1,5 @@
 [Unit]
-Description=Kingstra: opstart geslaagd zodra het inlogscherm draait
+Description=Kingstra: opstart geslaagd zodra inlogscherm of bureaublad echt draait
 Documentation=man:systemd-bless-boot.service(8)
 DefaultDependencies=no
 Requires=display-manager.service
@@ -8,9 +8,11 @@ Before=boot-complete.target
 
 [Service]
 Type=oneshot
-# Het inlogscherm moet een paar seconden blijven draaien; een crashende
-# compositor telt dan niet als geslaagde opstart.
-ExecStart=/bin/sh -c 'sleep 8; systemctl is-active --quiet display-manager.service'
+TimeoutStartSec=150
+# Alleen "display-manager actief" was niet genoeg: op 4 november bleef SDDM
+# achter een grijs scherm hangen en werd de start toch goedgekeurd. Nu moet
+# de greeter (of al een Hyprland-sessie) echt draaien, en 5 s later nog steeds.
+ExecStart=/bin/sh -c 'up(){ pgrep -x sddm-greeter-qt6 >/dev/null || pgrep -x sddm-greeter >/dev/null || pgrep -x Hyprland >/dev/null; }; i=0; while [ $i -lt 60 ]; do if up; then sleep 5; up && exit 0; fi; sleep 2; i=$((i+1)); done; exit 1'
 
 [Install]
 RequiredBy=boot-complete.target
