@@ -9,10 +9,20 @@ if not ok_spatial then
     end }
 end
 local noop = function() end
+-- Spiekbriefje bij Super vasthouden (versie 2, zie super-hold.lua): legt geen
+-- extra binds op bestaande toetsen.
+local ok_hold, super_hold = pcall(require, "lua.super-hold")
+if not ok_hold then super_hold = { wrap = function(fn) return fn end, setup = noop } end
 local function exec(keys, command, options)
     hl.bind(keys, hl.dsp.exec_cmd(command), options)
 end
 local function bind(keys, dispatcher, options)
+    -- Alleen Super+muis/wiel met een Lua-handler: die meldt "bezig" zodat
+    -- scrollen of slepen met Super ingedrukt het briefje niet laat verschijnen.
+    if type(dispatcher) == "function" and type(keys) == "string"
+            and keys:upper():find("SUPER", 1, true) and keys:find("mouse", 1, true) then
+        dispatcher = super_hold.wrap(dispatcher)
+    end
     return hl.bind(keys, dispatcher, options)
 end
 
@@ -194,3 +204,5 @@ hl.define_submap("passthrough", function()
     bind(mod .. " + Escape", hl.dsp.submap("reset"))
 end)
 bind(mod .. " + Escape", hl.dsp.submap("passthrough"))
+
+super_hold.setup()

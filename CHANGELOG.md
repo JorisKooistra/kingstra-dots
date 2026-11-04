@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Spiekbriefje bij Super vasthouden, tweede poging
+- **Houd Super ongeveer 0,8 s vast** zonder iets anders te doen en de belangrijkste sneltoetsen verschijnen; loslaten sluit het. Deze versie legt **geen extra bind op bestaande toetsen** (dat brak op 3 november Super+Q). Alleen Super_L en Super_R zelf krijgen een bind. Het briefje blijft weg als je de muis beweegt, met Super scrollt of sleept, of als er een ander venster of andere werkruimte actief wordt (Super+1, Super+pijl, Super+Q). Op een volledig scherm verschijnt het nooit.
+- Een nieuwe test controleert dat elke toets maar één bind heeft (`tests/smoke/spatial-binds.lua`).
+
 ### Installer getest in een schone Arch
 - **Bij elke push** draait op GitHub een check in een verse Arch-container: bestaat elk pakket dat de installer kan installeren nog in de Arch-repo's of de AUR (zoals whisper.cpp dat ineens whisper-cpp heette), en loopt de installer in `--dry-run` door alle fases, met een pc- en een laptopprofiel. Zo valt een fout op vóór hij op je laptop komt. (`tests/ci/arch-check.sh`)
 

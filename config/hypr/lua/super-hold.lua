@@ -1,7 +1,9 @@
--- UITGESCHAKELD (2026-11-03): niet meer geladen vanuit binds.lua. Een
--- tweede hl.bind op dezelfde toets (de "busy"-bind van M.watch) verving in
--- Hyprland de echte bind, waardoor o.a. Super+Q niets meer deed. Alleen weer
--- aanzetten met een aanpak die geen extra binds op bestaande toetsen legt.
+-- Versie 2 (2026-11-04). Versie 1 legde via M.watch een tweede bind op elke
+-- Super-toets; Hyprland verving daarmee de echte bind en Super+Q deed niets
+-- meer. Deze versie legt GEEN binds op bestaande toetsen. Alleen Super_L en
+-- Super_R zelf krijgen een non_consuming bind (die hebben verder geen functie).
+-- "Bezig" komt nu uit: muisbeweging, Super+wiel/slepen (binds.lua wikkelt
+-- alleen die Lua-handlers in M.wrap) en wissel van venster of werkruimte.
 -- Spiekbriefje: Super een moment vasthouden (zonder andere toets of klik)
 -- toont de belangrijkste sneltoetsen; loslaten verbergt ze weer.
 --
@@ -101,14 +103,21 @@ function M.busy()
     hide()
 end
 
--- binds.lua roept dit aan voor elke bind; alleen Super-combinaties tellen.
--- De extra bind is non_consuming en voert verder niets uit. Bewust geen
--- ontdubbeling: dezelfde toets kan ook in een submap staan (Super+Escape).
-function M.watch(keys, options)
-    if type(keys) ~= "string" then return end
-    if options and options.release then return end
-    if not keys:upper():find("SUPER", 1, true) then return end
-    pcall(hl.bind, keys, M.busy, { non_consuming = true })
+-- Oude aanroep uit binds.lua; bewust leeg (zie bovenaan).
+function M.watch() end
+
+-- Voor Lua-handlers van Super+muis/wiel: eerst "bezig" melden, dan de
+-- handler zelf. Geen extra bind, dezelfde toets houdt één bind.
+function M.wrap(fn)
+    if type(fn) ~= "function" then return fn end
+    return function(...)
+        if state.down then M.busy() end
+        return fn(...)
+    end
+end
+
+local function busy_if_down()
+    if state.down then M.busy() end
 end
 
 function M.setup()
@@ -116,6 +125,9 @@ function M.setup()
         pcall(hl.bind, key, M.down, { ignore_mods = true, non_consuming = true })
         pcall(hl.bind, key, M.up, { release = true, ignore_mods = true, non_consuming = true })
     end
+    -- Super+1, Super+pijl, Super+Q enz. wisselen venster of werkruimte.
+    pcall(hl.on, "window.active", busy_if_down)
+    pcall(hl.on, "workspace.active", busy_if_down)
     -- Na een herlaadactie nooit een blijvend briefje.
     write("hide")
 end

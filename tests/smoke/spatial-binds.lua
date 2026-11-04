@@ -1,4 +1,5 @@
 local bindings, events, sent = {}, {}, {}
+local current_submap = nil
 local active={title='App',layout={name='lua:hyprscroll2d'}}
 local function dsp(path)
  return setmetatable({}, {
@@ -18,16 +19,33 @@ _G.hl={
  dsp=dsp('dsp'),dispatch=function(d) sent[#sent+1]=d end,
  exec_cmd=function() end,
  bind=function(keys,handler,options)
-  local b={keys=keys,handler=handler,options=options or {},enabled=true}
+  local b={keys=keys,handler=handler,options=options or {},enabled=true,submap=current_submap}
   function b:set_enabled(value) self.enabled=value end
   bindings[#bindings+1]=b
   return b
  end,
- on=function(name,fn) events[name]=fn end,
+ on=function(name,fn)
+  local prev=events[name]
+  events[name]=prev and function(...) prev(...); return fn(...) end or fn
+ end,
  get_active_window=function() return active end,
- define_submap=function(_,fn) fn() end,
+ define_submap=function(name,fn) current_submap=name; fn(); current_submap=nil end,
 }
+package.loaded['lua.super-hold']=assert(loadfile('config/hypr/lua/super-hold.lua'))()
 assert(loadfile('config/hypr/lua/binds.lua'))()
+-- Eén bind per toets (per submap, muis/los, indrukken/loslaten). Een tweede
+-- bind op dezelfde toets verving op 3 november Super+Q.
+do
+ local seen={}
+ for _,b in ipairs(bindings) do
+  local id=table.concat({b.submap or '', b.keys, tostring(not not b.options.mouse), tostring(not not b.options.release)},'|')
+  assert(not seen[id], 'dubbele bind: '..id)
+  seen[id]=true
+ end
+ local supers=0
+ for _,b in ipairs(bindings) do if b.keys=='Super_L' or b.keys=='Super_R' then supers=supers+1 end end
+ assert(supers==4, 'spiekbriefje: alleen Super_L/Super_R indrukken en loslaten, kreeg '..supers)
+end
 local function find(key,mouse)
  for _,b in ipairs(bindings) do
   if b.keys==key and (not not b.options.mouse)==mouse then return b end
