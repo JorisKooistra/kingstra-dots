@@ -15,15 +15,13 @@ missing=()
 aur_names=()
 for line in "${lines[@]}"; do
     src="${line%% *}" name="${line#* }"
-    if [[ "$src" == repo ]]; then
-        pacman -Si "$name" >/dev/null 2>&1 && continue
-        # Een groep (bv. base-devel) of een naam die een ander pakket levert.
-        pacman -Sg "$name" >/dev/null 2>&1 && continue
-        pacman -Ssq "^${name}$" >/dev/null 2>&1 && continue
-        aur_names+=("$name")   # misschien inmiddels in de AUR
-    else
-        aur_names+=("$name")
-    fi
+    # Ook een aur:-pakket mag inmiddels in de repo's staan (yay pakt die dan).
+    pacman -Si "$name" >/dev/null 2>&1 && continue
+    # Een groep (bv. base-devel) of een naam die een ander pakket levert.
+    pacman -Sg "$name" >/dev/null 2>&1 && continue
+    pacman -Ssq "^${name}$" >/dev/null 2>&1 && continue
+    aur_names+=("$name")
+    [[ "$src" == repo ]] && echo "  let op: $name staat niet meer in de repo's, zoek in de AUR"
 done
 if ((${#aur_names[@]})); then
     query="$(printf '&arg[]=%s' "${aur_names[@]}")"
