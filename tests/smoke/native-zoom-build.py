@@ -44,7 +44,7 @@ if '--build' in sys.argv:
         for name,body in scripts.items():
             path=self.bin/name;path.write_text("#!/usr/bin/env python3\n"+body);path.chmod(0o755)
     def run_build(self,version,fail=False):
-        abi={"0.56.2":"aaaa","0.57.0":"bbbb"}.get(version,"cccc")
+        abi={"0.56.2":"aaaa","0.57.0":"bbbb","0.57.1":"dddd"}.get(version,"cccc")
         (self.headers/"version.h").write_text('#define GIT_COMMIT_HASH    "'+abi+'"\n')
         env=dict(self.env,TEST_BUILD_VERSION=version)
         if fail:env["TEST_BUILD_FAIL"]="1"
@@ -70,6 +70,11 @@ if '--build' in sys.argv:
         self.assertNotEqual(unknown.returncode,0)
         self.assertEqual(self.stamp(),current)
         self.assertEqual(str(self.destination.resolve()),current[1])
+    def test_patch_release_uses_modern_source(self):
+        res=self.run_build("0.57.1");self.assertEqual(res.returncode,0,res.stderr)
+        current=self.stamp();self.assertEqual(current[0],"dddd")
+        self.assertIn("kingstra-0.57.1-dddd",current[1])
+        self.assertTrue((Path(current[1]).parents[1]/"source/main.cpp").exists())
     def test_failed_build_keeps_last_working_entry(self):
         old=self.run_build("0.56.2");self.assertEqual(old.returncode,0,old.stderr)
         previous=self.stamp()

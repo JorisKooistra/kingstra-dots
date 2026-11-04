@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Opt-in integration test: opens a nested compositor with disposable GTK apps.
-Requires a real Wayland session, Hyprland 0.56.2 or 0.57.0, the matching native plugin,
+Requires a real Wayland session, Hyprland 0.56.2 or 0.57.x, the matching native plugin,
 python-gobject/GTK4, Pillow, grim, wtype, cc, and wayland-scanner. Never dispatches to the
 parent compositor. Retains its /tmp/kz* directory for diagnosis.
 """

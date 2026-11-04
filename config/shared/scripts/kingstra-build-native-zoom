@@ -11,13 +11,17 @@ for tool in git cmake ninja pkg-config c++; do
 done
 version="$(pkg-config --modversion hyprland)"
 case "$version" in
-    0.56.2|0.57.0) ;;
-    *) echo "Native zoom: Hyprland $version is nog niet getest (0.56.2/0.57.0 ondersteund)" >&2; exit 1 ;;
+    0.56.2|0.57.*) ;;
+    *) echo "Native zoom: Hyprland $version is nog niet getest (0.56.2 en 0.57.x ondersteund)" >&2; exit 1 ;;
 esac
+# Every 0.57.x patch release builds from the modern source; the ABI hash in the
+# cache key keeps builds for different releases apart.
+modern=false
+[[ "$version" == 0.57.* ]] && modern=true
 headers="$(pkg-config --variable=prefix hyprland)/hyprland/src/version.h"
 abi="$(sed -n 's/^#define GIT_COMMIT_HASH[[:space:]]*"\([a-f0-9]*\)".*/\1/p' "$headers")"
 [[ -n "$abi" ]] || { echo 'Native zoom: Hyprland ABI ontbreekt' >&2; exit 1; }
-if [[ "$version" == 0.57.0 ]]; then
+if "$modern"; then
     source_root="$repo/config/hypr/native-zoom/modern"
     digest="$(sha256sum "$source_root/CMakeLists.txt" "$source_root/main.cpp" "$source_root/Symbols.hpp" | sha256sum | cut -d ' ' -f1)"
     revision="kingstra-$version"
@@ -32,7 +36,7 @@ mkdir -p "$cache"
 exec 9>"$cache/build.lock"
 flock 9
 if [[ ! -s "$binary" ]]; then
-    if [[ "$version" == 0.57.0 ]]; then
+    if "$modern"; then
         mkdir -p "$cache/source"
         cp "$source_root/CMakeLists.txt" "$source_root/main.cpp" "$source_root/Symbols.hpp" "$cache/source/"
     else

@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Zoom-plugin voor Hyprland 0.57.1
+- **"Native zoom niet beschikbaar" na de update van 4 november**: het bouwscript kende alleen Hyprland 0.56.2 en 0.57.0 en weigerde 0.57.1 zonder te proberen. Daardoor werkten knijpzoomen en meeschuiven met twee vingers niet. Elke 0.57.x bouwt nu uit dezelfde bron; per versie een eigen build in de cache.
+
 ### Dicteren typt live mee
 - **Kort op Super+H tikken start live dicteren**: elke zin wordt getypt zodra je even pauzeert (ongeveer 0,6 s stilte), terwijl je doorpraat. Nog een keer tikken stopt; na vijf minuten stopt het vanzelf. Voorheen gaf een korte tik alleen "Te kort".
 - **Vasthouden werkt als voorheen, maar sneller klaar**: zinnen worden al omgezet terwijl je praat, dus na loslaten hoeft alleen de laatste zin nog. De tekst wordt pas na loslaten getypt (0,6 s marge), omdat getypte letters met Super nog ingedrukt als sneltoetsen zouden binnenkomen.
