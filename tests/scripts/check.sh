@@ -10,12 +10,15 @@ cd "$REPO_ROOT"
 QMLLINT="${QMLLINT:-$(command -v qmllint || command -v qmllint6 || echo /usr/lib/qt6/bin/qmllint)}"
 
 run_smoke() {
-    local test failed=0
+    local test failed=()
     for test in tests/smoke/*.sh; do
         printf '==> %s\n' "$test"
-        bash "$test" || failed=1
+        bash "$test" || failed+=("$test")
     done
-    return "$failed"
+    if ((${#failed[@]})); then
+        printf 'MISLUKT: %s\n' "${failed[@]}" >&2
+        return 1
+    fi
 }
 
 # All tracked *.sh files plus extensionless scripts with a sh/bash shebang.
