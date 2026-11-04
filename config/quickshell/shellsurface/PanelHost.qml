@@ -25,7 +25,7 @@ Item {
             // focus meestal nog van de vorige keer, dus dat signaal blijft uit
             // en zou het zoekveld leeg laten. callLater wacht tot de Loader
             // zijn inhoud heeft geplaatst.
-            if (sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "windows" || sourceEntryId === "menu" || sourceEntryId === "snap" || sourceEntryId === "capture") Qt.callLater(focusContent);
+            if (sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "gaming" || sourceEntryId === "windows" || sourceEntryId === "menu" || sourceEntryId === "snap" || sourceEntryId === "capture") Qt.callLater(focusContent);
         } else {
             visualClearTimer.restart();
         }
@@ -117,7 +117,7 @@ Item {
     // Alleen panelen met tekstinvoer hebben een focusgrab nodig. Bij de
     // overige panelen zou de grab botsen met de legacy focus-afhandeling
     // in qs_manager.sh en het paneel meteen weer sluiten.
-    readonly property bool needsKeyboard: sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "windows" || sourceEntryId === "menu" || sourceEntryId === "snap" || sourceEntryId === "capture"
+    readonly property bool needsKeyboard: sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "gaming" || sourceEntryId === "windows" || sourceEntryId === "menu" || sourceEntryId === "snap" || sourceEntryId === "capture"
     readonly property bool fromStrip: ThemeConfig.barStatusStripEnabled && !stripOnBottom
                                       && anchorY < stripH + 4
     readonly property string visualEdge: edgeFor(visualEntryId)
@@ -289,7 +289,7 @@ Item {
         if (entryId === "performance") return Qt.resolvedUrl("PerformanceDrawer.qml");
         if (entryId === "quicksettings") return Qt.resolvedUrl("QuickSettingsPanel.qml");
         if (entryId === "audiomedia") return Qt.resolvedUrl("AudioMediaPanel.qml");
-        if (entryId === "gaming") return Qt.resolvedUrl("../monitors/GamingPopup.qml");
+        if (entryId === "gaming") return Qt.resolvedUrl("GamesPanel.qml");
         if (entryId === "settings") return Qt.resolvedUrl("../settings/SettingsPopup.qml");
         if (entryId === "power") return Qt.resolvedUrl("../power/PowerMenu.qml");
         if (entryId === "notifications") return Qt.resolvedUrl("../notifications/NotificationPopup.qml");

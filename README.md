@@ -356,7 +356,7 @@ Keybinds: `Super + Shift + W` (random) and `Super + Ctrl + W` (visual picker).
 - **Clipboard** — cliphist with a Quickshell panel (`Super + V`), text and images.
 - **Lockscreen** — `lock.sh` starts the Quickshell lock (`Lock.qml`) and falls back to hyprlock,
   then `loginctl lock-session`. Fingerprint works through PAM when detected.
-- **Game launcher** — [quickshell-games-launchers](https://github.com/Eaquo/quickshell-games-launchers)
+- **Games** — eigen paneel (`kingstra-games`): Steam, Heroic, Lutris en games uit het appmenu
   (keyboard menu or the rail).
 - **Files** — Nautilus (`Super + E`) and yazi (keyboard menu).
 - **Monitoring** — btop, lm_sensors, and the performance drawer and HUD telemetry in the shell.

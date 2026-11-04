@@ -1,0 +1,283 @@
+#!/usr/bin/env python3
+"""kingstra-games: eigen, eenvoudige games-lijst voor het Games-paneel.
+
+  kingstra-games list          JSON-lijst van geïnstalleerde games
+  kingstra-games launch <id>   start een game (los van de shell)
+
+Bronnen: Steam (ook Flatpak), Heroic (Epic, GOG, Amazon; ook Flatpak),
+Lutris en .desktop-bestanden met Categories=Game. Alleen lezen; er wordt
+niets gedownload. Hoesjes komen uit de lokale Steam-/Lutris-cache, bij
+Heroic uit de bibliotheek-cache (URL). Laatst gespeeld voor games zonder
+eigen tijd (desktop-items) bewaren we in ~/.local/state/kingstra/games.json.
+"""
+import configparser
+import json
+import os
+import re
+import shlex
+import sqlite3
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HOME = Path.home()
+XDG_DATA = Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
+XDG_CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config")
+STATE = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local/state") / "kingstra/games.json"
+
+# Steam zet ook runtimes en Proton in de bibliotheek; die zijn geen game.
+STEAM_TOOLS = re.compile(r"^(Proton|Steam Linux Runtime|Steamworks Common|SteamVR)", re.I)
+
+
+def read_json(path, default=None):
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return default
+
+
+# ── Steam ────────────────────────────────────────────────────────────────────
+def steam_roots():
+    seen = []
+    for root, flatpak in ((XDG_DATA / "Steam", False), (HOME / ".steam/steam", False),
+                          (HOME / ".var/app/com.valvesoftware.Steam/.local/share/Steam", True)):
+        try:
+            real = root.resolve()
+        except OSError:
+            continue
+        if (real / "steamapps").is_dir() and real not in [r for r, _ in seen]:
+            seen.append((real, flatpak))
+    return seen
+
+
+def acf_values(text):
+    return dict(re.findall(r'^\s*"(\w+)"\s+"([^"]*)"', text, re.M))
+
+
+def steam_cover(root, appid):
+    cache = root / "appcache/librarycache"
+    for candidate in (cache / appid / "library_600x900.jpg",
+                      cache / f"{appid}_library_600x900.jpg",
+                      cache / appid / "header.jpg",
+                      cache / f"{appid}_header.jpg"):
+        if candidate.is_file():
+            return str(candidate)
+    # Nieuwere Steam: library_600x900.jpg staat in een submap met een hash.
+    folder = cache / appid
+    if folder.is_dir():
+        for found in sorted(folder.rglob("library_600x900*.jpg")):
+            return str(found)
+    return ""
+
+
+def steam_games():
+    games = []
+    for root, flatpak in steam_roots():
+        libraries = [root]
+        vdf = root / "steamapps/libraryfolders.vdf"
+        try:
+            for path in re.findall(r'"path"\s+"([^"]+)"', vdf.read_text(encoding="utf-8", errors="replace")):
+                lib = Path(path.replace("\\\\", "/"))
+                if lib not in libraries:
+                    libraries.append(lib)
+        except OSError:
+            pass
+        runner = ["flatpak", "run", "com.valvesoftware.Steam"] if flatpak else ["steam"]
+        for lib in libraries:
+            for manifest in sorted((lib / "steamapps").glob("appmanifest_*.acf")):
+                try:
+                    values = acf_values(manifest.read_text(encoding="utf-8", errors="replace"))
+                except OSError:
+                    continue
+                appid, name = values.get("appid", ""), values.get("name", "")
+                if not appid or not name or STEAM_TOOLS.match(name):
+                    continue
+                # StateFlags 4 = volledig geïnstalleerd; bijwerken (6, 1026…) telt ook.
+                if not int(values.get("StateFlags", "0") or 0) & 4:
+                    continue
+                games.append({
+                    "id": f"steam:{appid}", "title": name, "source": "Steam",
+                    "cover": steam_cover(root, appid), "icon": "steam",
+                    "lastPlayed": int(values.get("LastPlayed", "0") or 0),
+                    "launch": runner + [f"steam://rungameid/{appid}"],
+                })
+    return games
+
+
+# ── Heroic ───────────────────────────────────────────────────────────────────
+def heroic_roots():
+    roots = []
+    for root, flatpak in ((XDG_CONFIG / "heroic", False),
+                          (HOME / ".var/app/com.heroicgameslauncher.hgl/config/heroic", True)):
+        if root.is_dir():
+            roots.append((root, flatpak))
+    return roots
+
+
+def heroic_games():
+    games = []
+    for root, flatpak in heroic_roots():
+        cache = root / "store_cache"
+        art = {}
+        for library_file, key in (("legendary_library.json", "library"), ("gog_library.json", "games"),
+                                  ("nile_library.json", "library")):
+            data = read_json(cache / library_file, {}) or {}
+            for item in data.get(key, []) or []:
+                if isinstance(item, dict) and item.get("app_name"):
+                    art[item["app_name"]] = item
+
+        installed = []  # (runner, app_name, title)
+        legendary = read_json(root / "legendaryConfig/legendary/installed.json", {}) or {}
+        if isinstance(legendary, dict):
+            for app, info in legendary.items():
+                installed.append(("legendary", app, (info or {}).get("title", "")))
+        gog = read_json(root / "gog_store/installed.json", {}) or {}
+        for info in gog.get("installed", []) if isinstance(gog, dict) else []:
+            if isinstance(info, dict) and info.get("appName"):
+                installed.append(("gog", info["appName"], ""))
+        nile = read_json(root / "nile_config/nile/installed.json", []) or []
+        for info in nile if isinstance(nile, list) else []:
+            if isinstance(info, dict) and info.get("id"):
+                installed.append(("nile", info["id"], ""))
+
+        played = read_json(root / "store/timestamp.json", {}) or {}
+        command = ["flatpak", "run", "com.heroicgameslauncher.hgl"] if flatpak else ["heroic"]
+        for runner, app, title in installed:
+            meta = art.get(app, {})
+            title = title or meta.get("title") or app
+            last = 0
+            stamp = played.get(app) if isinstance(played, dict) else None
+            if isinstance(stamp, dict) and stamp.get("lastPlayed"):
+                try:
+                    last = int(time.mktime(time.strptime(str(stamp["lastPlayed"])[:19], "%Y-%m-%dT%H:%M:%S")))
+                except ValueError:
+                    last = 0
+            games.append({
+                "id": f"heroic:{runner}:{app}", "title": title, "source": "Heroic",
+                "cover": meta.get("art_square") or meta.get("art_cover") or "", "icon": "heroic",
+                "lastPlayed": last,
+                "launch": command + ["--no-gui", f"heroic://launch?appName={app}&runner={runner}"],
+            })
+    return games
+
+
+# ── Lutris ───────────────────────────────────────────────────────────────────
+def lutris_games():
+    db = XDG_DATA / "lutris/pga.db"
+    if not db.is_file():
+        return []
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        rows = con.execute("SELECT id, name, slug, lastplayed FROM games WHERE installed = 1").fetchall()
+        con.close()
+    except sqlite3.Error:
+        return []
+    games = []
+    for gid, name, slug, last in rows:
+        cover = ""
+        for folder in (XDG_DATA / "lutris/coverart", HOME / ".cache/lutris/coverart"):
+            if (folder / f"{slug}.jpg").is_file():
+                cover = str(folder / f"{slug}.jpg")
+                break
+        games.append({
+            "id": f"lutris:{gid}", "title": name or slug, "source": "Lutris", "cover": cover,
+            "icon": f"lutris_{slug}", "lastPlayed": int(last or 0),
+            "launch": ["lutris", f"lutris:rungameid/{gid}"],
+        })
+    return games
+
+
+# ── .desktop met Categories=Game ─────────────────────────────────────────────
+def desktop_dirs():
+    dirs = [XDG_DATA / "applications"]
+    for base in (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":"):
+        if base:
+            dirs.append(Path(base) / "applications")
+    dirs.append(XDG_DATA / "flatpak/exports/share/applications")
+    dirs.append(Path("/var/lib/flatpak/exports/share/applications"))
+    return dirs
+
+
+# Launchers zelf zijn geen game; hun games komen al via de bronnen hierboven.
+LAUNCHERS = {"steam", "com.valvesoftware.Steam", "heroic", "com.heroicgameslauncher.hgl",
+             "net.lutris.Lutris", "lutris", "quickshell-game"}
+
+
+def desktop_games():
+    games, seen = [], set()
+    for folder in desktop_dirs():
+        for path in sorted(folder.glob("*.desktop")) if folder.is_dir() else []:
+            stem = path.stem
+            if stem in seen:
+                continue
+            seen.add(stem)
+            parser = configparser.ConfigParser(interpolation=None, strict=False)
+            parser.optionxform = str
+            try:
+                parser.read(path, encoding="utf-8")
+                entry = parser["Desktop Entry"]
+            except (configparser.Error, KeyError, UnicodeDecodeError):
+                continue
+            cats = entry.get("Categories", "").split(";")
+            exec_line = entry.get("Exec", "")
+            if ("Game" not in cats or stem in LAUNCHERS or entry.get("Type", "Application") != "Application"
+                    or entry.get("NoDisplay", "").lower() == "true" or entry.get("Hidden", "").lower() == "true"
+                    or "steam://" in exec_line or "heroic://" in exec_line or "lutris:" in exec_line
+                    or not exec_line):
+                continue
+            # %f, %U enzovoort weglaten; zonder bestand openen.
+            argv = [a for a in shlex.split(re.sub(r"%[fFuUdDnNickvm]", "", exec_line)) if a]
+            if not argv:
+                continue
+            games.append({
+                "id": f"desktop:{stem}", "title": entry.get("Name", stem), "source": "App",
+                "cover": "", "icon": entry.get("Icon", ""), "lastPlayed": 0, "launch": argv,
+            })
+    return games
+
+
+def all_games():
+    games = []
+    for source in (steam_games, heroic_games, lutris_games, desktop_games):
+        try:
+            games.extend(source())
+        except Exception as error:  # een kapotte bron mag de rest niet tegenhouden
+            print(f"kingstra-games: {source.__name__}: {error}", file=sys.stderr)
+    own = read_json(STATE, {}) or {}
+    for game in games:
+        game["lastPlayed"] = max(int(game.get("lastPlayed") or 0), int(own.get(game["id"], 0) or 0))
+    games.sort(key=lambda g: (-g["lastPlayed"], g["title"].lower()))
+    return games
+
+
+def launch(game_id):
+    for game in all_games():
+        if game["id"] == game_id:
+            own = read_json(STATE, {}) or {}
+            own[game_id] = int(time.time())
+            try:
+                STATE.parent.mkdir(parents=True, exist_ok=True)
+                STATE.write_text(json.dumps(own), encoding="utf-8")
+            except OSError:
+                pass
+            subprocess.Popen(game["launch"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            return 0
+    print(f"kingstra-games: onbekende game {game_id}", file=sys.stderr)
+    return 1
+
+
+def main(argv):
+    if len(argv) >= 2 and argv[1] == "list":
+        json.dump(all_games(), sys.stdout, ensure_ascii=False)
+        print()
+        return 0
+    if len(argv) >= 3 and argv[1] == "launch":
+        return launch(argv[2])
+    print("gebruik: kingstra-games list | launch <id>", file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

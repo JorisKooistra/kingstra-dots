@@ -48,8 +48,8 @@ phase_run() {
     log_step "GTK-apps (Nautilus) aan matugen-kleuren koppelen..."
     _phase08_link_gtk_colors
 
-    log_step "Game launcher installeren..."
-    _phase08_install_game_launcher
+    log_step "Oude games-launcher opruimen..."
+    _phase08_retire_game_launcher
 
     log_step "Eerste kleurapplicatie uitvoeren..."
     _phase08_initial_apply
@@ -84,17 +84,16 @@ phase_run() {
     validate_dir  "$HOME/.config/kingstra/themes"                 "kingstra/themes/"
     validate_dir  "$HOME/.config/kingstra/modes"                  "kingstra/modes/"
     validate_dir  "$HOME/.config/spicetify/Themes/Matugen"        "spicetify/Themes/Matugen"
-    validate_cmd  quickshell-game
+    validate_file "$HOME/.local/bin/kingstra-games"               "kingstra-games"
     validate_file "$HOME/.config/gtk-4.0/gtk.css"                 "gtk-4.0/gtk.css"
     validate_file "$HOME/.config/gtk-3.0/gtk.css"                 "gtk-3.0/gtk.css"
-    validate_file "$HOME/.config/quickshell/game-launcher/config.toml" "game-launcher/config.toml"
     validate_report
 
     log_ok "Fase 08 voltooid."
     log_info "Thema wisselen:      kingstra-theme-switch <thema_naam>"
     log_info "Mode wisselen:       kingstra-mode-switch <office|gaming|media>"
     log_info "State toepassen:     apply-shell-state"
-    log_info "Game launcher:       quickshell-game  (of via het toetsenbordmenu)"
+    log_info "Games:               Games-knop in de rail of kingstra-games list"
 }
 
 # ---------------------------------------------------------------------------
@@ -166,6 +165,7 @@ _phase08_deploy_state_scripts() {
         ["kingstra-rollback"]="kingstra-rollback"
         ["kingstra-doctor"]="kingstra-doctor"
         ["kingstra-refresh"]="kingstra-refresh"
+        ["kingstra-games"]="kingstra-games"
         ["kingstra"]="kingstra"
         ["kingstra-shell-watch"]="kingstra-shell-watch"
         ["kingstra-welcome"]="kingstra-welcome"
@@ -484,31 +484,26 @@ _phase08_ensure_template() {
     log_ok "Matugen ${name}-template toegevoegd: $matugen_conf"
 }
 
-_phase08_install_game_launcher() {
+# De games staan nu in ons eigen Games-paneel (kingstra-games). Het oude
+# AUR-pakket quickshell-games-launchers-git bouwde bij elke update opnieuw en
+# hing aan python-vdf, dat niet meer bouwt. Joris koos (2026-11-04) om het
+# weg te halen; python-vdf alleen als niets anders het nog nodig heeft.
+_phase08_retire_game_launcher() {
+    pacman -Q quickshell-games-launchers-git >/dev/null 2>&1 || return 0
     if "${DRY_RUN:-false}"; then
-        log_dry "quickshell-games-launchers-git zou worden geïnstalleerd"
+        log_dry "quickshell-games-launchers-git zou worden verwijderd (vervangen door het Games-paneel)"
         return 0
     fi
-
-    # Afhankelijkheden eerst los: python-vdf (AUR) heeft python-nose als
-    # checkdepend, en dat bouwt niet meer op de huidige Python. Zonder check
-    # installeert het gewoon, en daarna kan de launcher zelf bijwerken.
-    pacman_install python-evdev python-tomlkit
-    AUR_NOCHECK=true aur_install_optional python-vdf
-
-    # Installeer AUR package (levert /usr/bin/quickshell-game)
-    aur_install_optional quickshell-games-launchers-git
-
-    # Zorg dat de config directory bestaat (symlink via deploy_config "quickshell")
-    local cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/game-launcher"
-    ensure_dir "$cfg_dir"
-
-    # Initialiseer user-config als quickshell-game dat nog niet heeft gedaan
-    if [[ ! -f "$cfg_dir/config.toml" ]]; then
-        quickshell-game --init 2>/dev/null || true
+    if sudo pacman -Rns --noconfirm quickshell-games-launchers-git >/dev/null 2>&1; then
+        log_ok "quickshell-games-launchers-git verwijderd; games staan nu in het Games-paneel"
+    else
+        log_warn "quickshell-games-launchers-git verwijderen lukte niet; later: sudo pacman -Rns quickshell-games-launchers-git"
+        return 0
     fi
-
-    log_ok "Game launcher beschikbaar: quickshell-game"
+    if pacman -Qi python-vdf 2>/dev/null | grep -qE '^Required By +: None'; then
+        sudo pacman -Rns --noconfirm python-vdf >/dev/null 2>&1 && log_ok "python-vdf verwijderd (niet meer nodig)"
+    fi
+    return 0
 }
 
 _phase08_initial_apply() {

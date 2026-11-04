@@ -110,7 +110,7 @@ function build(home, scripts) {
             { icon: "󰑓", label: "Shell herstarten", cmd: kingstra("restart") },
             { icon: "󰃭", label: "Kalender", cmd: qs("calendar"), panel: true },
             { icon: "󱎫", label: "FocusTime", cmd: qs("focustime"), panel: true },
-            { icon: "󰊴", label: "Games", cmd: ["quickshell-game"] },
+            { icon: "󰊴", label: "Games", cmd: qs("gaming"), panel: true },
             { icon: "󰉋", label: "Yazi (bestanden in terminal)", cmd: ["kitty", "--title=yazi", "yazi"] },
             { icon: "󰍛", label: "Systeemmonitor", cmd: ["kitty", "--title", "btop — Kingstra", "bash", "-lc", "exec btop"] }
         ] },

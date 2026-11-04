@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Eigen Games-paneel
+- **De Games-knop opent nu ons eigen paneel** in plaats van quickshell-games-launchers. Je ziet de hoesjes van je geïnstalleerde games uit Steam (ook Flatpak), Heroic (Epic, GOG, Amazon), Lutris en games uit het appmenu, laatst gespeeld eerst. Typen zoekt, pijltjes kiezen, Enter of klik start. Onderaan staan CPU, GPU en RAM. Ook het menu (Systeem → Games) en de gamepad-knop in de balk openen dit paneel.
+- `kingstra-games list` geeft dezelfde lijst als JSON en `kingstra-games launch <id>` start een game. Er wordt niets gedownload: hoesjes komen uit de lokale cache van Steam en Lutris, bij Heroic uit de bibliotheek die Heroic al bewaart.
+- **quickshell-games-launchers-git en python-vdf gaan eruit** bij de volgende `kingstra update`. Ze bouwden bij elke update opnieuw en python-vdf bouwt niet meer op de huidige Python.
+- CI: de smoke-tests draaien weer helemaal groen in Arch (`cmp`, nep-ninja voor de zoomtest, en de dicteertest gaf bij het opruimen ten onrechte een fout). Een mislukte test wordt aan het eind bij naam genoemd.
+
 ### Spiekbriefje bij Super vasthouden, tweede poging
 - **Houd Super ongeveer 0,8 s vast** zonder iets anders te doen en de belangrijkste sneltoetsen verschijnen; loslaten sluit het. Deze versie legt **geen extra bind op bestaande toetsen** (dat brak op 3 november Super+Q). Alleen Super_L en Super_R zelf krijgen een bind. Het briefje blijft weg als je de muis beweegt, met Super scrollt of sleept, of als er een ander venster of andere werkruimte actief wordt (Super+1, Super+pijl, Super+Q). Op een volledig scherm verschijnt het nooit.
 - Een nieuwe test controleert dat elke toets maar één bind heeft (`tests/smoke/spatial-binds.lua`).

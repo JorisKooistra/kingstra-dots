@@ -81,10 +81,8 @@ config/matugen/generated/*
 !config/matugen/generated/.gitkeep
 config/cava/config
 
-# quickshell-game kopieert zijn eigen bestanden naar
-# ~/.config/quickshell/game-launcher; alleen onze config.toml hoort in git.
-config/quickshell/game-launcher/*
-!config/quickshell/game-launcher/config.toml
+# Restanten van het oude quickshell-game (vervangen door het Games-paneel).
+config/quickshell/game-launcher/
 
 # Eigen keuzes van package_audit.sh --keep (~/.config/kingstra is een
 # symlink naar config/kingstra); persoonlijk, hoort niet in git.

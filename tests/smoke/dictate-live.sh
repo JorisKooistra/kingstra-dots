@@ -3,7 +3,7 @@
 # Nep-microfoon (spraak/stilte-patroon), nep-whisper en nep-wtype.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-TMP="$(mktemp -d)"; trap 'pkill -f "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
+TMP="$(mktemp -d)"; trap 'pkill -f "$TMP" 2>/dev/null || true; rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/bin" "$TMP/rt" "$TMP/data/kingstra/whisper"
 cp "$ROOT/tests/smoke/dictate-live/"* "$TMP/bin/"
 sed -i "s#/tmp/claude-0/dict/typed.log#$TMP/typed.log#" "$TMP/bin/wtype"

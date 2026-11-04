@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 import "../"
 
-// GameLauncher — Opent quickshell-games-launchers (toetsenbordmenu of rail)
+// GameLauncher — Opent het Games-paneel (eigen launcher, kingstra-games)
 Rectangle {
     id: root
     property var mocha
@@ -36,8 +36,7 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: Quickshell.execDetached(["bash", "-c",
-            "LC_ALL=C LANG=C quickshell-game 2>/dev/null || steam 2>/dev/null || true"
-        ])
+        onClicked: Quickshell.execDetached(["bash",
+            Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "toggle", "gaming"])
     }
 }
