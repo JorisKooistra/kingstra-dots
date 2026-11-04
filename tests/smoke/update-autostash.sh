@@ -108,4 +108,12 @@ grep -q "Proefdraai" "$CASE/out" || { cat "$CASE/out"; fail "geen proefdraai-sta
 grep -q "Eigen wijziging in een bestand dat de update ook verandert: binds.lua" "$CASE/out" || { cat "$CASE/out"; fail "botsing niet gemeld"; }
 grep -q "Terugzetpunt" "$CASE/out" && fail "proefdraai ging door naar de echte update"
 
+# 6. Afgebroken update: de volgende run zegt waar hij stopte en ruimt de markering op.
+setup
+mkdir -p "$TEST_HOME/.local/state/kingstra/updates"
+printf '%s\tArch/AUR\t\n' "$(date +%s)" > "$TEST_HOME/.local/state/kingstra/updates/in-progress"
+run_updater
+grep -q 'De vorige update stopte bij "Arch/AUR"' "$CASE/out" || { cat "$CASE/out"; fail "afgebroken update niet gemeld"; }
+[[ ! -e "$TEST_HOME/.local/state/kingstra/updates/in-progress" ]] || { cat "$CASE/out"; cat "$TEST_HOME/.local/state/kingstra/updates/in-progress"; fail "markering bleef staan na een volledige run"; }
+
 echo "Update autostash smoke test: OK"

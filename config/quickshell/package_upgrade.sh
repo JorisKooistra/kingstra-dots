@@ -30,6 +30,8 @@ RESULT_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/update-result.json"
 HOLD_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/update-hold"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/updates"
 LAST_RUN_FILE="$STATE_DIR/last-run"
+# Bij welke stap de lopende update is; blijft staan als hij afbreekt.
+PROGRESS_FILE="$STATE_DIR/in-progress"
 NEWS_URL="https://archlinux.org/feeds/news/"
 LOG_KEEP=10
 overall_exit=0
@@ -133,6 +135,10 @@ section() {
     STEP_NUM=$((STEP_NUM + 1))
     STEP_TITLE="$1"
     to_log "" "== $1 =="
+    if ! $CHECK && [[ "$1" != "Klaar" ]]; then
+        mkdir -p "$STATE_DIR" 2>/dev/null
+        printf '%s\t%s\t%s\n' "$(date +%s)" "$1" "${LOG_FILE:-}" > "$PROGRESS_FILE" 2>/dev/null || true
+    fi
     if $UI; then
         live_clear
         printf '\n  %s%s%s %s%d/%d%s  %s%s%s\n' \
@@ -979,6 +985,7 @@ update_flatpak() {
 finish() {
     local code="$1" line kind title msg glyph color
     write_result "$code"
+    rm -f "$PROGRESS_FILE" 2>/dev/null
     if $UI; then
         live_clear
         printf '\n  %s%s%s %s100%%%s  %sKlaar%s\n' "$C_GREEN" "$(bar 1 1 14)" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET"
@@ -1130,6 +1137,30 @@ run_check() {
     fi
 }
 
+# Na een afgebroken update (terminal dicht, laptop in slaap, stroom weg):
+# zeggen waar hij stopte en de restjes opruimen die de volgende run blokkeren.
+# De stappen zelf zijn veilig om opnieuw te draaien; wat al klaar was gaat snel.
+resume_after_abort() {
+    local when step oldlog age
+    if [[ -f "$PROGRESS_FILE" ]]; then
+        IFS=$'\t' read -r when step oldlog < "$PROGRESS_FILE" || true
+        age=$(( $(date +%s) - ${when:-0} ))
+        if [[ "$when" =~ ^[0-9]+$ ]] && (( age < 14 * 86400 )); then
+            result warn "De vorige update stopte bij \"$step\" ($(date -d "@$when" '+%d-%m %H:%M')). Hij loopt nu opnieuw; wat al klaar was gaat snel."
+            [[ -n "$oldlog" && -f "$oldlog" ]] && log "${C_DIM}Log van toen: $oldlog${C_RESET}"
+        fi
+        rm -f "$PROGRESS_FILE"
+    fi
+    # Een achtergebleven pacman-slot zonder pacman erachter houdt yay tegen
+    # ("unable to lock database").
+    if [[ -e /var/lib/pacman/db.lck ]] && ! pgrep -x pacman >/dev/null 2>&1 && ! pgrep -x yay >/dev/null 2>&1; then
+        result warn "Pacman-slot van een afgebroken update gevonden (/var/lib/pacman/db.lck)."
+        if ask_yes "Slot weghalen? (er draait geen pacman)"; then
+            sudo rm -f /var/lib/pacman/db.lck && log "Slot weggehaald."
+        fi
+    fi
+}
+
 # Eén update tegelijk. Twee runs naast elkaar (terminal plus het venster uit
 # Instellingen) wachten op elkaars sudo, git en installer.
 LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/kingstra-update.lock"
@@ -1180,8 +1211,13 @@ elif [[ "$KINGSTRA_UPDATE_REEXEC" =~ ^[0-9a-f]{7,}$ ]]; then
     to_log "Opnieuw gestart na dotfiles-update vanaf $KINGSTRA_UPDATE_REEXEC"
 fi
 
+if ! $CHECK && [[ -z "${KINGSTRA_UPDATE_REEXEC:-}" || "${KINGSTRA_UPDATE_REEXEC}" =~ ^[0-9a-f]{7,}$ ]]; then
+    resume_after_abort
+fi
+
 section "Arch-nieuws"
 if ! check_arch_news; then
+    rm -f "$PROGRESS_FILE" 2>/dev/null
     [[ -n "$LOG_FILE" ]] && log "Log: $LOG_FILE"
     live_clear
     read -r -p "Druk Enter om te sluiten..." _

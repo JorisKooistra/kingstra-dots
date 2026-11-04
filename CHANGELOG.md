@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Afgebroken update
+- **Stopt een update halverwege** (terminal dicht, laptop in slaap, stroom weg), dan zegt de volgende `kingstra update` bij welke stap en wanneer hij stopte, met het log van toen. Daarna loopt hij gewoon opnieuw; alle stappen zijn veilig om te herhalen en wat al klaar was gaat snel.
+- **Achtergebleven pacman-slot** (`/var/lib/pacman/db.lck` zonder pacman erachter, "unable to lock database") wordt herkend en na een vraag weggehaald.
+
 ### Proefdraai: kingstra update --check
 - **`kingstra update --check`** (of `--proef`) loopt na wat de echte update kan laten mislukken, zonder iets te installeren of de dotfiles te veranderen: ruimte op / en /boot (bij een kernel-update), of de zoom-plugin de nieuwe Hyprland-versie kent (de fout van 4 november), eigen dotfiles-commits die niet op GitHub staan, eigen wijzigingen in bestanden die de update ook verandert, syntaxfouten in de nieuwe installer, AUR-afhankelijkheden die nergens meer bestaan, openstaande .pacnew-bestanden, een openstaande herstart en mislukte diensten. Handig vóór een update op de laptop.
 
