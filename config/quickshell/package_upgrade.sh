@@ -45,6 +45,10 @@ SELF="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURC
 
 INTERACTIVE=false
 [[ "${1:-}" == "--interactief" || "${1:-}" == "--interactive" ]] && INTERACTIVE=true
+# --check / --proef: alles nalopen wat de update kan laten mislukken, zonder
+# iets te installeren of de dotfiles te veranderen.
+CHECK=false
+[[ "${1:-}" == "--check" || "${1:-}" == "--proef" ]] && CHECK=true
 
 # ---------------------------------------------------------------------------
 # Weergave
@@ -53,6 +57,7 @@ UI=false
 [[ -t 0 && -t 1 && "${TERM:-}" != "dumb" ]] && UI=true
 
 STEPS_TOTAL=9
+$CHECK && STEPS_TOTAL=3
 STEP_NUM=0
 STEP_TITLE=""
 SUMMARY=()
@@ -276,6 +281,7 @@ ask_yes() {
 
 QUIET_TAIL=""
 DOTFILES_SKIP=""
+REPO_LIST=""
 REPO_COUNT=0
 AUR_COUNT=0
 AUR_LIST=""
@@ -306,6 +312,7 @@ preview_updates() {
     fi
     live_clear
 
+    REPO_LIST="$repo_list"
     REPO_COUNT="$(count_lines "$repo_list")"
     AUR_COUNT="$(count_lines "$aur_list")"
     AUR_LIST="$aur_list"
@@ -368,6 +375,7 @@ check_arch_news() {
         return 0
     fi
     log "Lees ze op https://archlinux.org/news/ als er handwerk bij staat."
+    $CHECK && return 0
     if ! ask_yes "Doorgaan met updaten?"; then
         log "Update op verzoek gestopt na het nieuws."
         return 1
@@ -997,6 +1005,131 @@ finish() {
     read -r -p "Druk Enter om te sluiten..." _
 }
 
+# Proefdraai: wat de echte update zou tegenhouden, vooraf en zonder wijzigingen.
+CHECK_WARNS=0
+check_warn() { CHECK_WARNS=$((CHECK_WARNS + 1)); result warn "$1"; }
+
+run_check() {
+    local avail boot_avail kernel_update=false repo upstream branch ahead behind unique
+    local hypr_new dirty incoming clash f bad_syntax="" pkg dep missing
+
+    # Ruimte: yay bouwt in ~/.cache, mkinitcpio schrijft naar /boot.
+    avail="$(df -Pm / 2>/dev/null | awk 'NR==2 {print $4}')"
+    if [[ -n "$avail" && "$avail" -lt 3072 ]]; then
+        check_warn "Weinig ruimte op /: $((avail / 1024)) GB vrij; AUR-builds en de pakketcache hebben meer nodig."
+    else
+        result ok "Ruimte op /: $((${avail:-0} / 1024)) GB vrij."
+    fi
+    printf '%s\n' "$REPO_LIST" | grep -qE '^linux(-lts|-zen|-hardened)? ' && kernel_update=true
+    boot_avail="$(df -Pm /boot 2>/dev/null | awk 'NR==2 {print $4}')"
+    if $kernel_update && [[ -n "$boot_avail" && "$boot_avail" -lt 150 ]]; then
+        check_warn "Kernel-update met maar ${boot_avail} MB vrij op /boot; nieuwe initramfs past mogelijk niet."
+    elif [[ -n "$boot_avail" ]]; then
+        result ok "Ruimte op /boot: ${boot_avail} MB vrij."
+    fi
+
+    # Hyprland-update: bouwt de zoom-plugin straks nog? Vraag het de versie van
+    # het bouwscript die de update gaat ophalen.
+    repo="$(resolve_dotfiles_repo 2>/dev/null || true)"
+    branch="$( [[ -n "$repo" ]] && git -C "$repo" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+    upstream=""
+    if [[ -n "$repo" && -n "$branch" ]]; then
+        live "Dotfiles ophalen (alleen kijken)"
+        if git -C "$repo" fetch --quiet origin "$branch" 2>/dev/null; then
+            upstream="origin/$branch"
+        else
+            check_warn "Dotfiles ophalen lukte niet (netwerk of GitHub)."
+        fi
+        live_clear
+    fi
+    hypr_new="$(printf '%s\n' "$REPO_LIST" | awk '$1 == "hyprland" {print $NF}' | sed 's/-[0-9]*$//')"
+    if [[ -n "$hypr_new" ]]; then
+        if [[ -n "$upstream" ]] && git -C "$repo" show "$upstream:config/shared/scripts/kingstra-build-native-zoom" 2>/dev/null \
+                | bash -s -- --supports "$hypr_new"; then
+            result ok "Hyprland $hypr_new: zoom-plugin wordt ervoor gebouwd."
+        else
+            check_warn "Hyprland $hypr_new: de zoom-plugin kent deze versie nog niet. Na de update werken knijpzoomen en meeschuiven niet tot dat is bijgewerkt."
+        fi
+    fi
+
+    # Dotfiles: kunnen ze straks netjes mee?
+    if [[ -n "$upstream" ]]; then
+        if [[ -f "$HOLD_FILE" ]]; then
+            check_warn "Dotfiles staan vast na een rollback; ze worden niet bijgewerkt (kingstra-rollback --release)."
+        fi
+        behind="$(git -C "$repo" rev-list --count "HEAD..$upstream" 2>/dev/null || echo 0)"
+        ahead="$(git -C "$repo" rev-list --count "$upstream..HEAD" 2>/dev/null || echo 0)"
+        if [[ "$ahead" -gt 0 ]]; then
+            unique="$(git -C "$repo" cherry "$upstream" HEAD 2>/dev/null | grep -c '^+' || true)"
+            if [[ "$unique" -gt 0 ]]; then
+                check_warn "$unique eigen dotfiles-commit(s) staan niet op GitHub; de update haalt dan niets op. Push ze eerst."
+            else
+                result ok "Lokale commit(s) staan al op GitHub; de update zet ze gelijk."
+            fi
+        fi
+        dirty="$(git -C "$repo" diff --name-only HEAD 2>/dev/null)"
+        incoming="$(git -C "$repo" diff --name-only HEAD "$upstream" 2>/dev/null)"
+        clash="$(comm -12 <(sort -u <<< "$dirty") <(sort -u <<< "$incoming") | grep . || true)"
+        if [[ -n "$clash" ]]; then
+            check_warn "Eigen wijziging in een bestand dat de update ook verandert: $(inline_names "$clash"). Lukt samenvoegen niet, dan blijven de dotfiles op de oude stand."
+        elif [[ "$behind" -gt 0 ]]; then
+            result ok "Dotfiles: $behind nieuwe commit(s), geen botsing met eigen wijzigingen."
+        else
+            result ok "Dotfiles zijn al actueel."
+        fi
+        # Syntaxcheck van de installer zoals hij straks draait.
+        for f in $(git -C "$repo" ls-tree --name-only "$upstream" installer/phases/ installer/lib/ 2>/dev/null | grep '\.sh$'); do
+            git -C "$repo" show "$upstream:$f" 2>/dev/null | bash -n 2>/dev/null || bad_syntax+="$f "
+        done
+        if [[ -n "$bad_syntax" ]]; then
+            check_warn "Installer-scripts met een syntaxfout in de nieuwe versie: $bad_syntax"
+        else
+            result ok "Installer van de nieuwe versie: geen syntaxfouten."
+        fi
+    fi
+
+    # AUR: afhankelijkheden die nergens meer bestaan (zoals whisper.cpp).
+    if [[ -n "$AUR_LIST" ]] && command -v yay >/dev/null 2>&1; then
+        live "AUR-pakketten nalopen"
+        missing=""
+        while read -r pkg _; do
+            [[ -n "$pkg" ]] || continue
+            for dep in $(timeout 30 yay -Si --aur "$pkg" 2>/dev/null \
+                    | awk -F': ' '/^(Depends On|Make Deps)/ {print $2}' | tr ' ' '\n' \
+                    | grep -v '^None$' | sed 's/[<>=].*//' | sort -u); do
+                pacman -T "$dep" >/dev/null 2>&1 && continue
+                pacman -Si "$dep" >/dev/null 2>&1 && continue
+                pacman -Ssq "^${dep}$" >/dev/null 2>&1 && continue
+                timeout 20 yay -Si --aur "$dep" >/dev/null 2>&1 && continue
+                missing+="$pkg→$dep "
+            done
+        done <<< "$AUR_LIST"
+        live_clear
+        if [[ -n "$missing" ]]; then
+            check_warn "AUR-pakketten met een afhankelijkheid die nergens te vinden is: $missing(die bouw mislukt; de rest gaat door)."
+        else
+            result ok "AUR: alle afhankelijkheden te vinden."
+        fi
+    fi
+
+    # Wat nu al openstaat en de update moeilijker maakt.
+    local pacnew
+    pacnew="$(find /etc -name '*.pacnew' 2>/dev/null | wc -l)"
+    [[ "$pacnew" -gt 0 ]] && check_warn "Er staan al $pacnew .pacnew-bestand(en) open; de update vraagt ze na."
+    if command -v pacman >/dev/null 2>&1 && [[ ! -d "/usr/lib/modules/$(uname -r)" ]]; then
+        check_warn "Er staat nog een herstart open van de vorige update; doe die eerst."
+    fi
+    if systemctl --failed --no-legend 2>/dev/null | grep -q .; then
+        check_warn "Mislukte diensten: $(systemctl --failed --no-legend --plain 2>/dev/null | awk '{print $1}' | paste -sd ' ' -)"
+    fi
+
+    if [[ $CHECK_WARNS -eq 0 ]]; then
+        result ok "Niets gevonden dat de update tegenhoudt. Bijwerken: kingstra update"
+    else
+        log "$CHECK_WARNS punt(en) om op te letten; er is niets geïnstalleerd of veranderd."
+    fi
+}
+
 # Eén update tegelijk. Twee runs naast elkaar (terminal plus het venster uit
 # Instellingen) wachten op elkaars sudo, git en installer.
 LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/kingstra-update.lock"
@@ -1027,7 +1160,9 @@ to_log "Gestart: $(date '+%Y-%m-%d %H:%M:%S')"
 # Eerst de dotfiles ophalen en dan met de nieuwe updater verder. Anders
 # draaien Arch/AUR, configbestanden en de controle nog met de code van vóór
 # de update, en werken fixes pas bij de keer daarna.
-if [[ -z "${KINGSTRA_UPDATE_REEXEC:-}" ]]; then
+if $CHECK; then
+    : # proefdraai: niets ophalen of veranderen
+elif [[ -z "${KINGSTRA_UPDATE_REEXEC:-}" ]]; then
     self_before="$(git -C "$(resolve_dotfiles_repo 2>/dev/null || echo /nonexistent)" rev-parse HEAD 2>/dev/null || true)"
     live "Updater bijwerken"
     # Stil: wat er gebeurt staat in het log en komt bij Dotfiles terug.
@@ -1055,6 +1190,15 @@ fi
 
 section "Wat er bijwerkt"
 preview_updates
+if $CHECK; then
+    section "Proefdraai"
+    run_check
+    echo
+    [[ -n "$LOG_FILE" ]] && log "${C_DIM}Log: $LOG_FILE${C_RESET}"
+    live_clear
+    $UI && { read -r -p "Druk Enter om te sluiten..." _ || true; }
+    exit 0
+fi
 if $UI && ! $INTERACTIVE && (( REPO_COUNT + AUR_COUNT + FLATPAK_COUNT > 0 )); then
     if ! ask_yes "Updates installeren?"; then
         log "Update op verzoek gestopt."

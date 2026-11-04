@@ -6,14 +6,17 @@ repo="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../.." && pwd)"
 pin=a1e8a0806541640d01503ac861a8a39548de8724
 patch_file="$repo/config/hypr/native-zoom/kingstra.patch"
 destination="${KINGSTRA_NATIVE_ZOOM_DESTINATION:-$repo/config/hypr/native-zoom/kingstra-native-zoom.so}"
+supported() { case "$1" in 0.56.2|0.57.*) return 0 ;; *) return 1 ;; esac; }
+# kingstra update --check vraagt vooraf of een nieuwe Hyprland-versie bouwt.
+if [[ "${1:-}" == "--supports" ]]; then supported "${2:-}"; exit $?; fi
 for tool in git cmake ninja pkg-config c++; do
     command -v "$tool" >/dev/null || { echo "Native zoom: $tool ontbreekt" >&2; exit 1; }
 done
 version="$(pkg-config --modversion hyprland)"
-case "$version" in
-    0.56.2|0.57.*) ;;
-    *) echo "Native zoom: Hyprland $version is nog niet getest (0.56.2 en 0.57.x ondersteund)" >&2; exit 1 ;;
-esac
+if ! supported "$version"; then
+    echo "Native zoom: Hyprland $version is nog niet getest (0.56.2 en 0.57.x ondersteund)" >&2
+    exit 1
+fi
 # Every 0.57.x patch release builds from the modern source; the ABI hash in the
 # cache key keeps builds for different releases apart.
 modern=false

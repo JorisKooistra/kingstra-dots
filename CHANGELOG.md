@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Proefdraai: kingstra update --check
+- **`kingstra update --check`** (of `--proef`) loopt na wat de echte update kan laten mislukken, zonder iets te installeren of de dotfiles te veranderen: ruimte op / en /boot (bij een kernel-update), of de zoom-plugin de nieuwe Hyprland-versie kent (de fout van 4 november), eigen dotfiles-commits die niet op GitHub staan, eigen wijzigingen in bestanden die de update ook verandert, syntaxfouten in de nieuwe installer, AUR-afhankelijkheden die nergens meer bestaan, openstaande .pacnew-bestanden, een openstaande herstart en mislukte diensten. Handig vóór een update op de laptop.
+
 ### Dotfiles blijven niet meer ongemerkt achter
 - **Een commit die al op GitHub staat met een andere hash** (zoals een patch van de laptop die vanuit de cloud is gepusht) hield de dotfiles-update tegen: de updater meldde "Dotfiles bijgewerkt" maar haalde niets op. Nu ziet hij dat het dezelfde wijziging is, bewaart de oude stand als branch `kingstra-voor-update-<datum>` en zet de dotfiles gelijk met GitHub. Eigen wijzigingen in bestanden blijven zoals altijd staan.
 - **Echt eigen commits** die niet op GitHub staan geven nu een gele regel ("N eigen commit(s) die niet op GitHub staan; dotfiles niet bijgewerkt") in plaats van een groen vinkje.

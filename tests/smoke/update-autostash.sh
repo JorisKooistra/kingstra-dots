@@ -48,7 +48,7 @@ run_updater() {
     KINGSTRA_SNAPSHOT_CMD=/nonexistent \
     GIT_CONFIG_GLOBAL=/dev/null \
     PATH="$FAKE_BIN:/usr/bin:/bin" \
-        bash "$UPDATER" </dev/null >"$CASE/out" 2>&1 || true
+        bash "$UPDATER" "$@" </dev/null >"$CASE/out" 2>&1 || true
 }
 
 # 1. Geen botsing: update en eigen wijziging allebei aanwezig.
@@ -95,5 +95,17 @@ run_updater
 [[ "$(git -C "$LOCAL" rev-parse HEAD)" == "$old" ]] || fail "eigen commit overschreven"
 grep -q "eigen commit(s) die niet op GitHub staan" "$CASE/out" || { cat "$CASE/out"; fail "geen waarschuwing bij eigen commit"; }
 grep -q "Dotfiles bijgewerkt\." "$CASE/out" && fail "meldt bijgewerkt terwijl niets is opgehaald"
+
+# 5. Proefdraai: meldt een botsing maar verandert niets.
+setup
+old="$(git -C "$LOCAL" rev-parse HEAD)"
+printf 'b\n' > "$UPSTREAM/binds.lua" && git -C "$UPSTREAM" commit -q -am upd && git -C "$UPSTREAM" push -q origin main
+printf 'eigen\n' > "$LOCAL/binds.lua"
+run_updater --check
+[[ "$(git -C "$LOCAL" rev-parse HEAD)" == "$old" ]] || fail "proefdraai veranderde de dotfiles"
+[[ "$(cat "$LOCAL/binds.lua")" == "eigen" ]] || fail "proefdraai raakte eigen wijziging aan"
+grep -q "Proefdraai" "$CASE/out" || { cat "$CASE/out"; fail "geen proefdraai-stap"; }
+grep -q "Eigen wijziging in een bestand dat de update ook verandert: binds.lua" "$CASE/out" || { cat "$CASE/out"; fail "botsing niet gemeld"; }
+grep -q "Terugzetpunt" "$CASE/out" && fail "proefdraai ging door naar de echte update"
 
 echo "Update autostash smoke test: OK"

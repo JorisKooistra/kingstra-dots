@@ -52,6 +52,7 @@ Uiterlijk
 
 Onderhoud
   update                   alles bijwerken (systeem, Flatpak, dotfiles)
+  update --check           proefdraai: wat de update zou tegenhouden, zonder iets te installeren
   doctor                   installatie controleren, met hersteladvies
   snapshot [list|create]   terugzetpunten tonen of maken
   rollback [--list|--release|<tag>]  dotfiles terug naar een terugzetpunt
