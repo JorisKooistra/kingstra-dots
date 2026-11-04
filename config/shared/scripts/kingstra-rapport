@@ -28,16 +28,16 @@ block() {
     block "Mislukte diensten (systeem)" systemctl --failed --no-pager --no-legend
     block "Mislukte diensten (gebruiker)" systemctl --user --failed --no-pager --no-legend
     block "Opstartitems" sh -c 'bootctl list 2>/dev/null | grep -E "title|id:|tries|selected|default" | head -40'
-    block "Zoom-plugin" sh -c 'hyprctl plugin list 2>/dev/null | head -3'
+    block "Zoom-plugin" sh -c 'hyprctl plugin list 2>/dev/null | head -6'
     latest="$(ls -1t "$state"/updates/update-*.log 2>/dev/null | head -1)"
     if [[ -n "$latest" ]]; then
-        block "Laatste update ($(basename "$latest")): waarschuwingen" grep -n -E '\[(warn|fail)\]|fout|mislukt|error' "$latest"
+        block "Laatste update ($(basename "$latest")): waarschuwingen" grep -n -E '\[(warn|fail)\]' "$latest"
         block "Laatste update: laatste 120 regels" tail -n 120 "$latest"
     else
         printf '\n===== Laatste update =====\ngeen update-log gevonden\n'
     fi
     if [[ -f "$share/install.log" ]]; then
-        block "Installer: waarschuwingen" sh -c "grep -n -E 'WARN|ERROR|warn|fout' '$share/install.log' | tail -40"
+        block "Installer: waarschuwingen" sh -c "grep -n -E '(^|[[:space:]])(WARN|ERROR|FOUT)([[:space:]]|:)' '$share/install.log' | tail -40"
     fi
     block "Systeemfouten deze opstart" journalctl -b -p err --no-pager -n 80
     block "Gebruikersfouten deze opstart" journalctl --user -b -p warning --no-pager -n 60
