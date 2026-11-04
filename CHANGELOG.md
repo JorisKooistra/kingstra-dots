@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Update-uitvoer klopt beter
+- Fase **14b Vangnet** heet weer 14b; hij stond als tweede "15" naast Afronden.
+- Pakketcache opruimen geeft één regel met wat het opleverde, in plaats van twee keer de ruwe "finished"-melding van paccache.
+- Flatpak opruimen zegt "Geen ongebruikte Flatpak-runtimes" in plaats van de Engelse melding over gepinde runtimes, die op een fout leek.
+
 ### Inlogscherm kwam niet na herstart
 - **Grijs scherm, SDDM startte niet** (4 november, eerste herstart met het opstartvangnet). Oorzaak: de koppeling die het opstartbeeld liet staan tot het inlogscherm (`sddm.service.d/kingstra-plymouth.conf` met `plymouth quit --retain-splash`). Live bevestigd: zonder dat bestand komt SDDM direct. De installer zet hem niet meer en haalt hem weg waar hij al stond (ook op de laptop bij de volgende update). Tussen opstartbeeld en inlogscherm kan nu weer kort zwart zitten.
 - **Opstartmenu staat 2 seconden in beeld** in plaats van verborgen (`timeout 0`): spatie vasthouden werkte op Joris' pc niet, waardoor het menu onbereikbaar was toen het nodig was.

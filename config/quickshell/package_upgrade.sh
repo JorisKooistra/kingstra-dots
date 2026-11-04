@@ -602,7 +602,18 @@ cleanup_system() {
     if command -v paccache >/dev/null 2>&1; then
         if ask_no "Oude pakketcache opruimen (houdt de laatste 3 versies)?"; then
             # Drie versies: de huidige plus twee om naar terug te kunnen.
-            sudo paccache -rk3 && sudo paccache -ruk0 && log "Pakketcache opgeruimd."
+            # paccache meldt per run "finished: ..."; vat beide samen in één regel.
+            local pc_out pc_saved
+            if pc_out="$( { sudo paccache -rk3 && sudo paccache -ruk0; } 2>&1 )"; then
+                pc_saved="$(sed -n 's/.*disk space saved: \([^)]*\)).*/\1/p' <<< "$pc_out" | paste -sd '+' -)"
+                if [[ -n "$pc_saved" ]]; then
+                    log "Pakketcache opgeruimd (vrijgemaakt: ${pc_saved//+/ + })."
+                else
+                    log "Pakketcache was al schoon."
+                fi
+            else
+                result warn "Pakketcache opruimen lukte niet: $(tail -n 2 <<< "$pc_out" | tr '\n' ' ')"
+            fi
         fi
     fi
 
@@ -619,7 +630,17 @@ cleanup_system() {
 
     if command -v flatpak >/dev/null 2>&1; then
         if ask_no "Ongebruikte Flatpak-runtimes verwijderen?"; then
-            flatpak uninstall --unused -y && log "Ongebruikte Flatpak-runtimes verwijderd."
+            # Gepinde runtimes noemt flatpak altijd; dat is geen fout.
+            local fp_out
+            if fp_out="$(flatpak uninstall --unused -y 2>&1)"; then
+                if grep -q 'Nothing unused' <<< "$fp_out"; then
+                    log "Geen ongebruikte Flatpak-runtimes."
+                else
+                    log "Ongebruikte Flatpak-runtimes verwijderd."
+                fi
+            else
+                result warn "Flatpak opruimen lukte niet: $(tail -n 2 <<< "$fp_out" | tr '\n' ' ')"
+            fi
         fi
     fi
 

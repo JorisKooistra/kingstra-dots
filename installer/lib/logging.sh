@@ -521,7 +521,7 @@ log_phase() {
         fi
         UI_PHASE_ID="$name"
         UI_PHASE_NUM="${name%%_*}"
-        [[ "$UI_PHASE_NUM" =~ ^[0-9]+$ ]] || UI_PHASE_NUM="$(printf '%02d' "$current")"
+        [[ "$UI_PHASE_NUM" =~ ^[0-9]+[a-z]?$ ]] || UI_PHASE_NUM="$(printf '%02d' "$current")"
         UI_PHASE_TITLE="$(_ui_phase_title "$name")"
         UI_PHASE_START=$SECONDS
         UI_PHASE_WARNS=0
