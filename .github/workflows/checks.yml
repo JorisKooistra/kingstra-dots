@@ -13,14 +13,18 @@ jobs:
   smoke:
     name: Smoke tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
+    # Arch, zodat Qt (QtQuick.Effects, qmltestrunner) dezelfde versie heeft als
+    # op de pc en laptop; Ubuntu 24.04 zit op Qt 6.4.
+    container: archlinux:latest
     steps:
-      - uses: actions/checkout@v4
       - name: Install dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends lua5.4 ripgrep jq
+        run: pacman -Syu --noconfirm --needed git lua ripgrep jq python python-pillow qt6-declarative qt6-5compat qt6-svg ttf-dejavu
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: tests/scripts/check.sh smoke
+        env:
+          QT_QPA_PLATFORM: offscreen
 
   shellcheck:
     name: ShellCheck

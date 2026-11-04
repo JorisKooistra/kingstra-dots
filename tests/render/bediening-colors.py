@@ -174,12 +174,19 @@ def build(folder, baseline):
         qmldir += f"singleton {name[:-4]} 1.0 {name}\n"
     (quickshell / "qmldir").write_text(qmldir)
     shutil.copyfile(REPO / "config/quickshell/MatugenColors.qml", quickshell / "MatugenColors.qml")
+    # MatugenColors leest sinds de Matte-ronde uit het gedeelde Colors-singleton.
+    shutil.copyfile(REPO / "config/quickshell/Colors.qml", quickshell / "Colors.qml")
+    qmldir += "singleton Colors 1.0 Colors.qml\n"
+    (quickshell / "qmldir").write_text(qmldir)
     source = (REPO / "config/quickshell/settings/BedieningPage.qml").read_text()
     if baseline:
         source = source.replace("MatugenColors { id: pageColors }", "MatugenColors { id: palette }")
         source = source.replace("    readonly property var themeColors: pageColors\n", "")
         source = source.replace("root.themeColors.", "palette.")
     (quickshell / "settings/BedieningPage.qml").write_text(source)
+    # Hulpcomponenten uit dezelfde map die de pagina gebruikt.
+    for helper in ("AdvancedSection.qml",):
+        shutil.copyfile(REPO / "config/quickshell/settings" / helper, quickshell / "settings" / helper)
     (folder / "Host.qml").write_text(HOST)
     return imports
 
@@ -209,7 +216,7 @@ def main():
             environment.setProperty("background", QColor(seed["base"]))
             environment.setProperty("colorsJson", json.dumps(seed))
             wait()
-            heading = rendered_text(root, "Bediening")
+            heading = rendered_text(root, "Per scherm")
             actual = QColor(heading["color"]).name()
             if args.baseline:
                 if actual == QColor(seed["text"]).name():
@@ -222,13 +229,13 @@ def main():
                 view.setSource(QUrl())
                 return 0
             assert actual == QColor(seed["text"]).name(), (name, actual, seed["text"])
-            for label in ("Office", "Volg standaard", "Ruimtelijk werkvlak", "Tegelen"):
+            for label in ("Volg standaard", "Werken", "Standaard herstellen", "Indeling en vanzelf…"):
                 caption = rendered_text(root, label)
                 assert QColor(caption["color"]).name() == QColor(seed["text"]).name(), (name, label, "text")
                 background = composite(QColor(caption["background"]), QColor(seed["base"]))
                 ratio = contrast(QColor(caption["color"]), background)
                 assert ratio >= 4.5, (name, label, "contrast", ratio)
-            for label in ("DP-4\noffice", "DP-3\noffice", "DP-1\noffice"):
+            for label in ("DP-4\nWerken", "DP-3\nWerken", "DP-1\nWerken"):
                 caption = rendered_text(root, label)
                 assert QColor(caption["color"]).name() == QColor(seed["text"]).name(), (name, label)
             bad = [m for m in messages if any(part in m for part in
