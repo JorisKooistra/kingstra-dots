@@ -175,7 +175,7 @@ _phase14b_boot_entries() {
     local out
     if out="$(sudo /usr/bin/python3 -I "$VANGNET_LIB/kingstra-boot-entries" setup 2>&1)"; then
         log_ok "$out"
-        log_info "Opstartmenu: houd spatie ingedrukt bij het aanzetten."
+        log_info "Opstartmenu: tik herhaald op spatie zodra het BIOS-logo weg is."
     else
         log_warn "Opstartmenu instellen mislukt: $out"
     fi
@@ -189,9 +189,13 @@ _phase14b_plymouth() {
         log_warn "Opstartbeeld instellen mislukt"
         return 0
     fi
-    if _phase14b_install 0644 "$VANGNET_SRC/sddm-plymouth.conf" /etc/systemd/system/sddm.service.d/kingstra-plymouth.conf; then
-        sudo systemctl daemon-reload
-        log_ok "Opstartbeeld blijft staan tot het inlogscherm er is"
+    # De SDDM-koppeling (plymouth quit --retain-splash vóór SDDM) hield op
+    # 4 november het inlogscherm tegen: grijs scherm, SDDM startte niet.
+    # Niet meer installeren en een eerder geïnstalleerde versie weghalen.
+    local dropin=/etc/systemd/system/sddm.service.d/kingstra-plymouth.conf
+    if [[ -e "$dropin" ]]; then
+        sudo rm -f "$dropin" && sudo systemctl daemon-reload
+        log_ok "Oude opstartbeeld-koppeling aan SDDM verwijderd"
     fi
 }
 
