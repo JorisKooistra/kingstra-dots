@@ -40,6 +40,9 @@ if '--build' in sys.argv:
  p=Path(sys.argv[sys.argv.index('--build')+1]);p.mkdir(parents=True,exist_ok=True)
  (p/'libspatialoverview.so').write_text('test binary')
 """,
+            # Alleen aanwezig zijn telt; de echte bouw loopt via cmake.
+            "ninja":"",
+            "c++":"",
         }
         for name,body in scripts.items():
             path=self.bin/name;path.write_text("#!/usr/bin/env python3\n"+body);path.chmod(0o755)

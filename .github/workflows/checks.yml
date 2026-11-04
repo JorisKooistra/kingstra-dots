@@ -19,7 +19,7 @@ jobs:
     container: archlinux:latest
     steps:
       - name: Install dependencies
-        run: pacman -Syu --noconfirm --needed git lua ripgrep jq python python-pillow qt6-declarative qt6-5compat qt6-svg ttf-dejavu
+        run: pacman -Syu --noconfirm --needed git diffutils lua ripgrep jq python python-pillow qt6-declarative qt6-5compat qt6-svg ttf-dejavu
       - uses: actions/checkout@v4
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: tests/scripts/check.sh smoke
