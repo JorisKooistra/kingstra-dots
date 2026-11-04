@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### kingstra rapport
+- **`kingstra rapport`** maakt één tekstbestand in je persoonlijke map met wat nodig is om een mislukte update of opstart te begrijpen: versies, dotfiles-stand, gezondheid, mislukte diensten, opstartitems, de waarschuwingen en het einde van het laatste update-log, installerwaarschuwingen en de fouten van deze en de vorige opstart. Iets wat op een wachtwoord of sleutel lijkt wordt weggelaten. In een Wayland-sessie staat het bestand meteen op je klembord om in de chat te plakken.
+
 ### Update-uitvoer klopt beter
 - Fase **14b Vangnet** heet weer 14b; hij stond als tweede "15" naast Afronden.
 - Pakketcache opruimen geeft één regel met wat het opleverde, in plaats van twee keer de ruwe "finished"-melding van paccache.

@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# kingstra rapport: één tekstbestand met alles wat nodig is om een mislukte
+# update of opstart te begrijpen, om in de chat te slepen. Alleen lezen; er
+# gaan geen wachtwoorden, sleutels of bestandsinhoud uit je persoonlijke map in.
+set -uo pipefail
+
+out="${1:-$HOME/kingstra-rapport-$(date +%Y%m%d-%H%M).txt}"
+state="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra"
+share="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra"
+repo="$(readlink -f "$HOME/.local/bin/kingstra" 2>/dev/null | sed 's#/config/shared/scripts/kingstra$##')"
+[[ -d "$repo/.git" ]] || repo="$HOME/kingstra-dots"
+
+strip() { sed -E 's/\x1b\[[0-9;?]*[A-Za-z]//g; s/\r//g'; }
+# Verberg wat op een geheim lijkt (token=, password=, Authorization:).
+redact() { sed -E 's/((pass(word)?|token|secret|api[_-]?key|authorization)[^=:]*[=:] *)[^ ]+/\1[weg]/Ig'; }
+block() {
+    printf '\n===== %s =====\n' "$1"
+    shift
+    "$@" 2>&1 | strip | redact
+}
+
+{
+    printf 'Kingstra-rapport %s\n' "$(date '+%Y-%m-%d %H:%M:%S')"
+    block "Machine" sh -c 'cat /etc/hostname 2>/dev/null; uname -r; cat /proc/cmdline; uptime'
+    block "Versies" sh -c 'hyprctl version 2>/dev/null | head -2; pacman -Q hyprland quickshell sddm linux linux-lts 2>/dev/null'
+    block "Dotfiles" sh -c "git -C '$repo' log --oneline -5; git -C '$repo' status -sb | head -20"
+    block "Gezondheid" sh -c 'command -v kingstra-health >/dev/null && kingstra-health --after-update || echo "kingstra-health ontbreekt"'
+    block "Mislukte diensten (systeem)" systemctl --failed --no-pager --no-legend
+    block "Mislukte diensten (gebruiker)" systemctl --user --failed --no-pager --no-legend
+    block "Opstartitems" sh -c 'bootctl list 2>/dev/null | grep -E "title|id:|tries|selected|default" | head -40'
+    block "Zoom-plugin" sh -c 'hyprctl plugin list 2>/dev/null | head -3'
+    latest="$(ls -1t "$state"/updates/update-*.log 2>/dev/null | head -1)"
+    if [[ -n "$latest" ]]; then
+        block "Laatste update ($(basename "$latest")): waarschuwingen" grep -n -E '\[(warn|fail)\]|fout|mislukt|error' "$latest"
+        block "Laatste update: laatste 120 regels" tail -n 120 "$latest"
+    else
+        printf '\n===== Laatste update =====\ngeen update-log gevonden\n'
+    fi
+    if [[ -f "$share/install.log" ]]; then
+        block "Installer: waarschuwingen" sh -c "grep -n -E 'WARN|ERROR|warn|fout' '$share/install.log' | tail -40"
+    fi
+    block "Systeemfouten deze opstart" journalctl -b -p err --no-pager -n 80
+    block "Gebruikersfouten deze opstart" journalctl --user -b -p warning --no-pager -n 60
+    block "Vorige opstart: laatste fouten" journalctl -b -1 -p err --no-pager -n 40
+    block "Schijven" df -h / /boot "$HOME"
+    block ".pacnew" sh -c 'find /etc -name "*.pacnew" 2>/dev/null'
+} > "$out"
+
+printf 'Rapport gemaakt: %s (%s)\n' "$out" "$(du -h "$out" | cut -f1)"
+if command -v wl-copy >/dev/null 2>&1 && [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+    printf 'file://%s\n' "$out" | wl-copy -t text/uri-list 2>/dev/null \
+        && echo "Het bestand staat op je klembord: plak of sleep het in de chat."
+fi
