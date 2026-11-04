@@ -4,6 +4,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Installer getest in een schone Arch
+- **Bij elke push** draait op GitHub een check in een verse Arch-container: bestaat elk pakket dat de installer kan installeren nog in de Arch-repo's of de AUR (zoals whisper.cpp dat ineens whisper-cpp heette), en loopt de installer in `--dry-run` door alle fases, met een pc- en een laptopprofiel. Zo valt een fout op vóór hij op je laptop komt. (`tests/ci/arch-check.sh`)
+
 ### Afgebroken update
 - **Stopt een update halverwege** (terminal dicht, laptop in slaap, stroom weg), dan zegt de volgende `kingstra update` bij welke stap en wanneer hij stopte, met het log van toen. Daarna loopt hij gewoon opnieuw; alle stappen zijn veilig om te herhalen en wat al klaar was gaat snel.
 - **Achtergebleven pacman-slot** (`/var/lib/pacman/db.lck` zonder pacman erachter, "unable to lock database") wordt herkend en na een vraag weggehaald.

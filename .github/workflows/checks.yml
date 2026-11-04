@@ -73,3 +73,27 @@ jobs:
           name: bediening-render
           path: artifacts/bediening-colors/*.png
           if-no-files-found: ignore
+
+  arch-installer:
+    name: Installer in schone Arch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    container: archlinux:latest
+    steps:
+      - name: Basis
+        run: |
+          pacman -Syu --noconfirm --needed git sudo base-devel python curl pacman-contrib
+          useradd -m kingstra
+          echo 'kingstra ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/kingstra
+      - uses: actions/checkout@v4
+      - name: Pakketten en installer-proefdraai (pc en laptop)
+        run: |
+          chown -R kingstra "$GITHUB_WORKSPACE"
+          sudo -u kingstra -H env HOME=/home/kingstra bash "$GITHUB_WORKSPACE/tests/ci/arch-check.sh"
+      - name: Installerlogs bewaren
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-installer-logs
+          path: /tmp/install-*.log
+          if-no-files-found: ignore

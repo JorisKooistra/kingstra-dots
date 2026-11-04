@@ -99,6 +99,7 @@ cat > "$T/pacman.log" <<'EOF'
 EOF
 lines="$(sed -n '/^record_transaction() {/,/^}/p' "$REPO_ROOT/config/quickshell/package_upgrade.sh")"
 (
+    # shellcheck disable=SC2034  # gelezen door de ge-evalde functie
     PACMAN_LOG="$T/pacman.log" STATE_DIR="$T/state/kingstra/updates" LOG_FILE=""
     to_log() { :; }
     eval "$lines"

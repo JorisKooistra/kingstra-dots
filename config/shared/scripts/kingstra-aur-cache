@@ -54,7 +54,6 @@ dir_installed() {
 scan_dir() {
     local dir="$1" entry base name
     local -A tracked=() seen=()
-    local -a builds=()
 
     if ! dir_installed "$dir"; then
         add "$dir" "niet meer geïnstalleerd"
