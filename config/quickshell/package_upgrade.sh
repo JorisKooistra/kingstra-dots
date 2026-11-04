@@ -275,6 +275,7 @@ ask_yes() {
 }
 
 QUIET_TAIL=""
+DOTFILES_SKIP=""
 REPO_COUNT=0
 AUR_COUNT=0
 AUR_LIST=""
@@ -768,10 +769,26 @@ update_dotfiles() {
         return 0
     fi
 
+    # Lokale commits die al op GitHub staan met een andere hash (bv. een
+    # patch van de laptop die vanuit de cloud is gepusht) zijn geen eigen
+    # werk meer: die mogen weg. Echt eigen commits houden de update tegen.
+    local same_upstream=false unique=0
     if [[ "$ahead" -gt 0 ]]; then
-        log "De lokale branch loopt ook $ahead commit(s) voor op upstream."
-        log "Automatisch samenvoegen is overgeslagen."
-        return 0
+        unique="$(git -C "$repo" cherry "$upstream" HEAD 2>/dev/null | grep -c '^+' || true)"
+        if [[ "$unique" -eq 0 ]]; then
+            same_upstream=true
+            git -C "$repo" branch --force "kingstra-voor-update-$(date '+%Y%m%d-%H%M%S')" HEAD 2>/dev/null || true
+            log "Je $ahead lokale commit(s) staan al op GitHub (zelfde wijziging, andere hash); lokaal gelijkgezet."
+        else
+            if [[ -z "$DOTFILES_SKIP" ]]; then
+                DOTFILES_SKIP="$unique eigen commit(s) die niet op GitHub staan; dotfiles niet bijgewerkt"
+                result warn "Dotfiles: $DOTFILES_SKIP."
+            else
+                log "Dotfiles: $DOTFILES_SKIP."
+            fi
+            log "Bekijk: git -C $repo log --oneline $upstream..HEAD  (push ze, of zet ze opzij)"
+            return 0
+        fi
     fi
 
     log "$behind nieuwe dotfiles-commit(s) gevonden."
@@ -794,7 +811,13 @@ update_dotfiles() {
         stashed=true
     fi
 
-    if ! git -C "$repo" merge --ff-only --quiet "$upstream"; then
+    if $same_upstream; then
+        if ! git -C "$repo" reset --quiet --keep "$upstream"; then
+            log "Gelijkzetten mislukt; dotfiles blijven op de oude stand."
+            $stashed && git -C "$repo" stash pop --quiet
+            return 1
+        fi
+    elif ! git -C "$repo" merge --ff-only --quiet "$upstream"; then
         log "Bijwerken mislukt; waarschijnlijk staat er een los bestand in de weg (zie hierboven)."
         $stashed && git -C "$repo" stash pop --quiet
         return 1
@@ -1089,6 +1112,8 @@ fi
 
 if [[ $dotfiles_update_exit -ne 0 || $installer_exit -ne 0 ]]; then
     result fail "Dotfiles: ophalen of installer mislukt (code $dotfiles_update_exit/$installer_exit)."
+elif [[ -n "$DOTFILES_SKIP" ]]; then
+    : # al als waarschuwing gemeld
 else
     result ok "Dotfiles bijgewerkt."
 fi

@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Dotfiles blijven niet meer ongemerkt achter
+- **Een commit die al op GitHub staat met een andere hash** (zoals een patch van de laptop die vanuit de cloud is gepusht) hield de dotfiles-update tegen: de updater meldde "Dotfiles bijgewerkt" maar haalde niets op. Nu ziet hij dat het dezelfde wijziging is, bewaart de oude stand als branch `kingstra-voor-update-<datum>` en zet de dotfiles gelijk met GitHub. Eigen wijzigingen in bestanden blijven zoals altijd staan.
+- **Echt eigen commits** die niet op GitHub staan geven nu een gele regel ("N eigen commit(s) die niet op GitHub staan; dotfiles niet bijgewerkt") in plaats van een groen vinkje.
+
 ### kingstra rapport
 - **`kingstra rapport`** maakt één tekstbestand in je persoonlijke map met wat nodig is om een mislukte update of opstart te begrijpen: versies, dotfiles-stand, gezondheid, mislukte diensten, opstartitems, de waarschuwingen en het einde van het laatste update-log, installerwaarschuwingen en de fouten van deze en de vorige opstart. Iets wat op een wachtwoord of sleutel lijkt wordt weggelaten. In een Wayland-sessie staat het bestand meteen op je klembord om in de chat te plakken.
 
