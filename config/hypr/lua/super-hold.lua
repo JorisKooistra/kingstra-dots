@@ -15,11 +15,18 @@
 --   telt dat ook als "bezig" en verschijnt er niets.
 -- * Op een volledig-schermvenster (spel, film) verschijnt het nooit.
 -- De shell (SuperCheatSheet.qml) leest de toestand uit één bestand.
+--
+-- Aan/uit (2026-11-05): standaard UIT. Joris vond het briefje bij gewoon
+-- Super-gebruik irritant. Aanzetten: zet in ~/.config/kingstra/super-hold
+-- het aantal seconden vasthouden (bijv. "2"); "uit" of geen bestand = uit.
+-- Wordt gelezen bij het (her)laden van Hyprland.
 local M = {}
+
+local SETTING_FILE = (os.getenv("HOME") or "") .. "/.config/kingstra/super-hold"
 
 local STATE_FILE = "/tmp/kingstra-superhold"
 local TICK_MS = 100
-local SHOW_AFTER_TICKS = 8 -- 0,8 s
+local SHOW_AFTER_TICKS = 8 -- 0,8 s; overschreven door SETTING_FILE
 local MOVE_LIMIT = 6
 
 local state = { down = false, busy = false, shown = false, ticks = 0, pos = nil, timer = nil, seq = 0 }
@@ -120,7 +127,23 @@ local function busy_if_down()
     if state.down then M.busy() end
 end
 
+-- Leest SETTING_FILE: nil = uit, anders het aantal ticks.
+local function setting_ticks()
+    local f = io.open(SETTING_FILE, "r")
+    if not f then return nil end
+    local text = f:read("*l") or ""
+    f:close()
+    local secs = tonumber((text:gsub(",", "."):match("^%s*([%d%.]+)")))
+    if not secs or secs <= 0 then return nil end
+    return math.max(3, math.floor(secs * 1000 / TICK_MS + 0.5))
+end
+
 function M.setup()
+    -- Na een herlaadactie nooit een blijvend briefje.
+    write("hide")
+    local ticks = setting_ticks()
+    if not ticks then return end
+    SHOW_AFTER_TICKS = ticks
     for _, key in ipairs({ "Super_L", "Super_R" }) do
         pcall(hl.bind, key, M.down, { ignore_mods = true, non_consuming = true })
         pcall(hl.bind, key, M.up, { release = true, ignore_mods = true, non_consuming = true })
@@ -128,8 +151,6 @@ function M.setup()
     -- Super+1, Super+pijl, Super+Q enz. wisselen venster of werkruimte.
     pcall(hl.on, "window.active", busy_if_down)
     pcall(hl.on, "workspace.active", busy_if_down)
-    -- Na een herlaadactie nooit een blijvend briefje.
-    write("hide")
 end
 
 return M

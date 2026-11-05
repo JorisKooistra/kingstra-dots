@@ -20,6 +20,11 @@ RowLayout {
     property string valueText: label + "  " + Math.max(0, value) + "%"
     // Zonder icoon (bijv. een voortgangsbalk) valt het knopje links weg.
     property bool showIcon: true
+    // Scrollstap in procenten per muiswiel-klik (120 eenheden). Muizen met
+    // fijn scrollen sturen per klik meerdere kleine events; die tellen we op
+    // zodat één klik altijd precies één stap is.
+    property int wheelStep: 5
+    property real wheelAccumulator: 0
     signal iconClicked()
     signal moved(real percent)
     signal dragToggled(bool dragging)
@@ -110,8 +115,18 @@ RowLayout {
             onReleased: slider.dragToggled(false)
             onCanceled: slider.dragToggled(false)
             onWheel: (wheel) => {
-                slider.moved(slider.value + (wheel.angleDelta.y > 0 ? 5 : -5));
                 wheel.accepted = true;
+                let delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.angleDelta.x;
+                if (delta === 0) return;
+                // Richting omgedraaid: opgebouwde rest weggooien.
+                if ((delta > 0) !== (slider.wheelAccumulator > 0)) slider.wheelAccumulator = 0;
+                slider.wheelAccumulator += delta;
+                let steps = slider.wheelAccumulator > 0
+                    ? Math.floor(slider.wheelAccumulator / 120)
+                    : Math.ceil(slider.wheelAccumulator / 120);
+                if (steps === 0) return;
+                slider.wheelAccumulator -= steps * 120;
+                slider.moved(slider.value + steps * slider.wheelStep);
             }
         }
     }

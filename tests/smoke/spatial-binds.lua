@@ -44,7 +44,8 @@ do
  end
  local supers=0
  for _,b in ipairs(bindings) do if b.keys=='Super_L' or b.keys=='Super_R' then supers=supers+1 end end
- assert(supers==4, 'spiekbriefje: alleen Super_L/Super_R indrukken en loslaten, kreeg '..supers)
+ -- Spiekbriefje staat standaard uit (geen instellingenbestand): dan 0 binds.
+ assert(supers==0 or supers==4, 'spiekbriefje: alleen Super_L/Super_R indrukken en loslaten, kreeg '..supers)
 end
 local function find(key,mouse)
  for _,b in ipairs(bindings) do
