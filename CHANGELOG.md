@@ -10,6 +10,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Pushen vanaf de laptop
+- **`kingstra github-login`**: eenmalig inloggen bij GitHub. Je krijgt een code, je browser opent github.com/login/device en je typt hem in. Daarna werkt `git push` vanuit ~/kingstra-dots gewoon (git gebruikt de login van de GitHub-CLI; een ssh-adres wordt https). `--check` kijkt alleen. De updater zet `github-cli` en het commando neer.
+
 ### Rustiger geluidspaneel
 - **Wisselen tussen koptelefoon en speakers staat meteen onder de volumeschuif**, als knopjes met de naam van elke uitgang. Je hoeft de lijst met uitvoerapparaten niet meer open te klappen. De lijst zelf (poorten, volume per apparaat) blijft achter het pijltje.
 - **Testtoon, Route herstellen en de equalizer staan samen onder Geavanceerd**, ingeklapt. Er is niets weggehaald.

@@ -25,7 +25,7 @@ phase_run() {
     # onderdeel over, niet de hele update.
     local pkg
     for pkg in restic fuse3 rsync smartmontools etckeeper reflector \
-        kernel-modules-hook plymouth python-pillow pacman-contrib; do
+        kernel-modules-hook plymouth python-pillow pacman-contrib github-cli; do
         pacman_install_optional "$pkg"
     done
 
@@ -77,11 +77,11 @@ phase_run() {
 _phase14b_deploy_scripts() {
     local scripts_dir="$REPO_ROOT/config/shared/scripts" name
     if "${DRY_RUN:-false}"; then
-        log_dry "kingstra-health, -herstel, -backup, -plymouth-sync, -aur-cache, -pacnew-merge en -rapport zouden in ~/.local/bin komen"
+        log_dry "kingstra-health, -herstel, -backup, -plymouth-sync, -aur-cache, -pacnew-merge, -rapport en -github-login zouden in ~/.local/bin komen"
         return 0
     fi
     ensure_dir "$HOME/.local/bin"
-    for name in kingstra-health kingstra-herstel kingstra-backup kingstra-plymouth-sync kingstra-aur-cache kingstra-pacnew-merge kingstra-rapport; do
+    for name in kingstra-health kingstra-herstel kingstra-backup kingstra-plymouth-sync kingstra-aur-cache kingstra-pacnew-merge kingstra-rapport kingstra-github-login; do
         chmod +x "$scripts_dir/$name"
         deploy_link "$scripts_dir/$name" "$HOME/.local/bin/$name"
     done

@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-github-login — eenmalig inloggen bij GitHub, zodat `git push`
+# vanuit ~/kingstra-dots werkt (bijvoorbeeld op de laptop).
+# =============================================================================
+# Gebruikt de GitHub-CLI (gh): die toont een code, opent github.com/login/device
+# in je browser, en jij typt de code daar in. Daarna zet hij git zo dat push en
+# pull over https zijn login gebruiken. Er komt geen wachtwoord of token in de
+# dotfiles; gh bewaart de login in je eigen sleutelring of ~/.config/gh.
+#
+#   kingstra github-login          inloggen (of laten zien dat het al werkt)
+#   kingstra github-login --check  alleen kijken, niets veranderen
+# =============================================================================
+set -uo pipefail
+
+REPO="${KINGSTRA_REPO:-$HOME/kingstra-dots}"
+check_only=false
+[[ "${1:-}" == "--check" ]] && check_only=true
+
+say()  { printf '  %s\n' "$*"; }
+ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
+warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
+
+if ! command -v gh >/dev/null 2>&1; then
+    if $check_only; then warn "GitHub-CLI (gh) ontbreekt"; exit 1; fi
+    say "GitHub-CLI (gh) installeren..."
+    sudo pacman -S --needed --noconfirm github-cli || { warn "gh installeren lukte niet"; exit 1; }
+fi
+
+if gh auth status --hostname github.com >/dev/null 2>&1; then
+    ok "Al ingelogd bij GitHub als $(gh api user --jq .login 2>/dev/null || echo '?')"
+else
+    if $check_only; then warn "Niet ingelogd bij GitHub"; exit 1; fi
+    say "Je krijgt zo een code van acht tekens. Je browser opent github.com/login/device;"
+    say "typ de code daar in en klik op Authorize. Daarna gaat het hier vanzelf verder."
+    gh auth login --hostname github.com --git-protocol https --web --scopes repo \
+        || { warn "Inloggen is niet gelukt; probeer het opnieuw"; exit 1; }
+    ok "Ingelogd als $(gh api user --jq .login 2>/dev/null || echo '?')"
+fi
+
+if ! $check_only && gh auth setup-git --hostname github.com >/dev/null 2>&1; then
+    ok "git gebruikt deze login voor github.com"
+fi
+
+if [[ -d "$REPO/.git" ]]; then
+    url="$(git -C "$REPO" remote get-url origin 2>/dev/null || true)"
+    if [[ "$url" == git@github.com:* ]] && ! $check_only; then
+        new="https://github.com/${url#git@github.com:}"
+        git -C "$REPO" remote set-url origin "$new" && ok "Dotfiles halen en pushen nu via https ($new)"
+    fi
+    if git -C "$REPO" push --dry-run origin HEAD >/dev/null 2>&1; then
+        ok "Pushen vanuit $REPO werkt"
+    else
+        warn "Pushen vanuit $REPO lukt nog niet (heeft dit account schrijfrechten op de repo?)"
+        exit 1
+    fi
+fi

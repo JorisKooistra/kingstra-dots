@@ -60,6 +60,7 @@ Onderhoud
   herstel                  herstelmenu, werkt ook zonder bureaublad
   gezondheid               korte check: schijven, back-up, opstart, updates
   rapport                  één bestand met logs en fouten om in de chat te sturen
+  github-login [--check]   eenmalig inloggen bij GitHub, zodat pushen vanaf deze computer werkt
   backup [run|status|list|browse|close|restore <pad>]  back-up van je persoonlijke map
   refresh <onderdeel>      één config terug naar de standaard (bv. kitty)
   restart                  shell herstarten (bar, panelen, overzicht)
@@ -107,6 +108,7 @@ case "$cmd" in
     herstel|rescue) run kingstra-herstel "$@" ;;
     gezondheid|health) run kingstra-health "$@" ;;
     rapport|report) run kingstra-rapport "$@" ;;
+    github-login|github) run kingstra-github-login "$@" ;;
     backup|back-up) run kingstra-backup "${@:-status}" ;;
     restart|herstart) run kingstra-session-start restart-shell ;;
     install)
