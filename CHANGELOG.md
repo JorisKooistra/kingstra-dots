@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Volume scrollen in de Matte-bar
+- In de Matte-stijl regel je het volume nu met het muiswiel boven het volume- of muziekicoon rechts in de bar: 5% per wielklik. Andere knoppen in die bar reageren niet op het wiel.
+- Scrollen in de rail/strip blijft 1% per klik; omdraaien van de scrollrichting gooit een halve klik niet meer mee.
+
 ### Eigen Games-paneel
 - **De Games-knop opent nu ons eigen paneel** in plaats van quickshell-games-launchers. Je ziet de hoesjes van je geïnstalleerde games uit Steam (ook Flatpak), Heroic (Epic, GOG, Amazon), Lutris en games uit het appmenu, laatst gespeeld eerst. Typen zoekt, pijltjes kiezen, Enter of klik start. Onderaan staan CPU, GPU en RAM. Ook het menu (Systeem → Games) en de gamepad-knop in de balk openen dit paneel.
 - `kingstra-games list` geeft dezelfde lijst als JSON en `kingstra-games launch <id>` start een game. Er wordt niets gedownload: hoesjes komen uit de lokale cache van Steam en Lutris, bij Heroic uit de bibliotheek die Heroic al bewaart.

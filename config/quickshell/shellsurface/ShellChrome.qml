@@ -638,8 +638,12 @@ Item {
         ]);
     }
 
-    function handleVolumeWheel(deltaY) {
+    // stepPercent: procenten per wielklik (120 eenheden); standaard 1.
+    function handleVolumeWheel(deltaY, stepPercent) {
         if (!deltaY || deltaY === 0) return;
+        let stepSize = stepPercent > 0 ? stepPercent : 1;
+        // Richting omgedraaid: opgebouwde rest weggooien.
+        if ((deltaY > 0) !== (root.volumeWheelAccumulator > 0)) root.volumeWheelAccumulator = 0;
         root.volumeWheelAccumulator += deltaY;
         let steps = 0;
         while (root.volumeWheelAccumulator >= 120) { steps += 1; root.volumeWheelAccumulator -= 120; }
@@ -650,8 +654,8 @@ Item {
             "bash",
             "-lc",
             steps > 0
-                ? "wpctl set-volume @DEFAULT_AUDIO_SINK@ " + steps + "%+"
-                : "wpctl set-volume @DEFAULT_AUDIO_SINK@ " + Math.abs(steps) + "%-"
+                ? "wpctl set-volume @DEFAULT_AUDIO_SINK@ " + (steps * stepSize) + "%+"
+                : "wpctl set-volume @DEFAULT_AUDIO_SINK@ " + (Math.abs(steps) * stepSize) + "%-"
         ]);
         if (!volPoller.running) volPoller.running = true;
     }

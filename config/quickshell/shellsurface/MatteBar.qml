@@ -36,6 +36,9 @@ Item {
         property string tip: ""
         property string target: ""
         property bool lit: false
+        // Alleen knoppen met wheelEnabled vangen het muiswiel (volume).
+        property bool wheelEnabled: false
+        signal wheelDelta(int delta)
         implicitWidth: label !== "" ? labelText.implicitWidth + 10 : 24
         implicitHeight: 24
         radius: 6
@@ -57,6 +60,12 @@ Item {
             onEntered: bar.chrome.showTooltip(button, button.tip, false)
             onExited: bar.chrome.hideTooltip(button.tip)
             onClicked: bar.openFrom(button, button.target)
+            onWheel: wheel => {
+                if (!button.wheelEnabled) { wheel.accepted = false; return; }
+                let delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.angleDelta.x;
+                if (delta !== 0) button.wheelDelta(delta);
+                wheel.accepted = true;
+            }
         }
     }
 
@@ -153,8 +162,16 @@ Item {
             QuietButton {
                 visible: bar.chrome.mediaVisible
                 icon: "󰝚"; tip: bar.chrome.audioTooltip; target: "audiomedia"
+                // Scrollen = volume, 5% per wielklik (net als de schuifregelaars).
+                wheelEnabled: true
+                onWheelDelta: delta => bar.chrome.handleVolumeWheel(delta, 5)
             }
-            QuietButton { visible: bar.chrome.moduleEnabled("volume"); icon: bar.chrome.isMuted ? "󰖁" : "󰕾"; tip: bar.chrome.audioTooltip; target: "audiomedia" }
+            QuietButton {
+                visible: bar.chrome.moduleEnabled("volume")
+                icon: bar.chrome.isMuted ? "󰖁" : "󰕾"; tip: bar.chrome.audioTooltip; target: "audiomedia"
+                wheelEnabled: true
+                onWheelDelta: delta => bar.chrome.handleVolumeWheel(delta, 5)
+            }
             QuietButton {
                 visible: bar.chrome.moduleEnabled("network")
                 icon: bar.chrome.hasWifi ? (bar.chrome.isWifiOn ? "󰤨" : "󰤮") : "󰈀"
