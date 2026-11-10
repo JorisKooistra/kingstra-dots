@@ -82,6 +82,7 @@ Item {
             || entryId === "calendar"
             || entryId === "clipboard"
             || entryId === "windows"
+            || entryId === "phone"
             || entryId === "settings";
     }
     function isRailEntry(entryId) {
@@ -274,6 +275,7 @@ Item {
         if (entryId === "snap") return Qt.resolvedUrl("SnapLayoutPanel.qml");
         if (entryId === "capture") return Qt.resolvedUrl("CapturePanel.qml");
         if (entryId === "switcher") return Qt.resolvedUrl("WindowCarouselPanel.qml");
+        if (entryId === "phone") return Qt.resolvedUrl("PhonePanel.qml");
         if (entryId === "clipboard") return Qt.resolvedUrl("ClipboardPanel.qml");
         if (entryId === "windows") return Qt.resolvedUrl("WindowSwitcherPanel.qml");
         if (entryId === "tophover") return Qt.resolvedUrl("TopHoverWidget.qml");

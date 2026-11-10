@@ -91,7 +91,7 @@ Item {
     readonly property string hotspotScript: Quickshell.env("HOME") + "/.config/hypr/scripts/hotspot.sh"
 
     // --- Bewerkmodus: volgorde, breedte, verborgen ---------------------------
-    readonly property var pillIds: ["wifi", "eth", "bt", "dnd", "night", "power", "monitors", "keyboard", "hotspot"]
+    readonly property var pillIds: ["wifi", "eth", "bt", "dnd", "night", "power", "monitors", "keyboard", "hotspot", "phone"]
     property var ccOrder: pillIds
     property var ccHidden: []
     property var ccWide: []
@@ -171,11 +171,12 @@ Item {
         if (id === "monitors") return "󰍹";
         if (id === "keyboard") return "󰌌";
         if (id === "hotspot") return "󰀂";
+        if (id === "phone") return "󰄜";
         return "";
     }
     function pillLabel(id) {
         return ({ wifi: "Wi-Fi", eth: "Bedraad", bt: "Bluetooth", dnd: "Niet storen", night: "Nachtlicht", power: "Energie",
-                  monitors: "Beeldschermen", keyboard: "Toetsenbord", hotspot: "Hotspot" })[id] || id;
+                  monitors: "Beeldschermen", keyboard: "Toetsenbord", hotspot: "Hotspot", phone: "Telefoon" })[id] || id;
     }
     function pillSubtitle(id) {
         if (id === "wifi") return !wifiOn ? "Uit" : (wifiName !== "" ? wifiName : "Aan");
@@ -186,6 +187,7 @@ Item {
         if (id === "power") return profileLabel(powerProfileName);
         if (id === "monitors") return Quickshell.screens.length === 1 ? "1 scherm" : Quickshell.screens.length + " schermen";
         if (id === "keyboard") return kbLayout !== "" ? kbLayout : "Volgende indeling";
+        if (id === "phone") return "KDE Connect";
         if (id === "hotspot") return hotspotBusy ? "Bezig…" : (hotspot.active ? String(hotspot.ssid || "Aan") : "Uit");
         return "";
     }
@@ -239,6 +241,8 @@ Item {
         } else if (id === "keyboard") {
             Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"]);
             refreshSoon.restart();
+        } else if (id === "phone") {
+            openPanel("phone");
         } else if (id === "hotspot") {
             if (hotspotBusy) return;
             hotspotBusy = true;

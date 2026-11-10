@@ -82,6 +82,12 @@ phase_run() {
     log_step "Pdf ondertekenen (Xournal++)..."
     _phase11_pdf_sign
 
+    log_step "Telefoon koppelen (KDE Connect)..."
+    # Geen autostart: de dienst start via D-Bus zodra het paneel Telefoon
+    # (of kdeconnect-cli) hem nodig heeft en blijft dan de sessie draaien.
+    pacman_install_optional kdeconnect
+    pacman_install_optional zenity      # bestand kiezen om naar de telefoon te sturen
+
     log_step "Fase 11 valideren..."
     validate_cmd nautilus
     validate_cmd cliphist

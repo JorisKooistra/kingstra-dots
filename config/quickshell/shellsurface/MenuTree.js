@@ -81,6 +81,7 @@ function build(home, scripts) {
             { icon: "󰂯", label: "Bluetooth aan/uit", cmd: ["bash", home + "/.config/quickshell/network/bluetooth_panel_logic.sh", "--toggle"] },
             { icon: "󰤨", label: "Netwerk beheren (nmtui)", cmd: ["kitty", "--title=Network", "nmtui"] },
             { icon: "󰂱", label: "Bluetooth-apparaten", cmd: ["blueman-manager"] },
+            { icon: "󰄜", label: "Telefoon (KDE Connect)", cmd: qs("phone"), panel: true },
             { icon: "󰂛", label: "Niet storen aan/uit", cmd: ["bash", home + "/.config/quickshell/notifications/notification_control.sh", "dnd"] },
             { icon: "󰑐", label: "Laatst weggeklikte melding terug", cmd: ["bash", home + "/.config/quickshell/notifications/notification_control.sh", "recall"] },
             { icon: "󰓅", label: "Energieprofiel", children: [

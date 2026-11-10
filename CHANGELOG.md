@@ -10,6 +10,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Telefoon koppelen (KDE Connect)
+- Nieuw paneel **Telefoon** (Snelle instellingen › Telefoon, of het menu onder Snel schakelen): per telefoon de batterij en knoppen voor laten afgaan ("zoek mijn telefoon"), klembord sturen, bestand sturen en een testbericht. Koppelen… opent KDE Connect voor de eerste koppeling.
+- Meldingen van je telefoon komen in het gewone meldingencentrum. Alles gaat via je eigen netwerk. De dienst start niet vanzelf bij het inloggen, maar zodra je het paneel opent, en blijft dan de rest van de sessie aan. De installer zet `kdeconnect` en `zenity` erbij.
+
 ### Pdf ondertekenen
 - Rechtsklik op een pdf › **Openen met › PDF ondertekenen** (ook in de launcher). Opent de pdf in Xournal++; teken je handtekening met de pen of plak een bewaarde met Ctrl+V, en sla op met Bestand › Exporteren als pdf. Het origineel blijft heel en Papers blijft de standaard pdf-app.
 - `kingstra-pdf-sign --handtekening <foto>` bewaart een handtekening (bijsnijden gaat vanzelf); die staat daarna bij elke pdf klaar op het klembord. De installer zet Xournal++ erbij.
