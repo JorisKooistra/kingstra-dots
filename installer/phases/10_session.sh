@@ -14,6 +14,7 @@ phase_run() {
     pacman_install hyprlock
     pacman_install hypridle
     pacman_install brightnessctl          # dimmen via hypridle listener
+    pacman_install qrencode               # QR-code voor de hotspot in Snelle instellingen
 
     log_step "SDDM installeren..."
     _phase10_install_sddm

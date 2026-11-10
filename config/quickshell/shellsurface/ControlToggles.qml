@@ -85,9 +85,13 @@ Item {
     property var btConnected: []
     property var btPaired: []
     property string busyId: ""
+    // Hotspot: deel de verbinding van deze pc via wifi (hotspot.sh).
+    property var hotspot: ({ available: false, active: false, ssid: "", password: "", qr: "" })
+    property bool hotspotBusy: false
+    readonly property string hotspotScript: Quickshell.env("HOME") + "/.config/hypr/scripts/hotspot.sh"
 
     // --- Bewerkmodus: volgorde, breedte, verborgen ---------------------------
-    readonly property var pillIds: ["wifi", "eth", "bt", "dnd", "night", "power", "monitors", "keyboard"]
+    readonly property var pillIds: ["wifi", "eth", "bt", "dnd", "night", "power", "monitors", "keyboard", "hotspot"]
     property var ccOrder: pillIds
     property var ccHidden: []
     property var ccWide: []
@@ -154,6 +158,7 @@ Item {
         if (id === "bt") return hasBluetooth;
         if (id === "keyboard") return kbLayoutCount > 1;
         if (id === "night") return NightLight.available;
+        if (id === "hotspot") return hasWifi;
         return true;
     }
     function pillIcon(id) {
@@ -165,11 +170,12 @@ Item {
         if (id === "power") return powerProfileName === "performance" ? "󰓅" : (powerProfileName === "power-saver" ? "󰌪" : "󰾅");
         if (id === "monitors") return "󰍹";
         if (id === "keyboard") return "󰌌";
+        if (id === "hotspot") return "󰀂";
         return "";
     }
     function pillLabel(id) {
         return ({ wifi: "Wi-Fi", eth: "Bedraad", bt: "Bluetooth", dnd: "Niet storen", night: "Nachtlicht", power: "Energie",
-                  monitors: "Beeldschermen", keyboard: "Toetsenbord" })[id] || id;
+                  monitors: "Beeldschermen", keyboard: "Toetsenbord", hotspot: "Hotspot" })[id] || id;
     }
     function pillSubtitle(id) {
         if (id === "wifi") return !wifiOn ? "Uit" : (wifiName !== "" ? wifiName : "Aan");
@@ -180,6 +186,7 @@ Item {
         if (id === "power") return profileLabel(powerProfileName);
         if (id === "monitors") return Quickshell.screens.length === 1 ? "1 scherm" : Quickshell.screens.length + " schermen";
         if (id === "keyboard") return kbLayout !== "" ? kbLayout : "Volgende indeling";
+        if (id === "hotspot") return hotspotBusy ? "Bezig…" : (hotspot.active ? String(hotspot.ssid || "Aan") : "Uit");
         return "";
     }
     function pillActive(id) {
@@ -189,6 +196,7 @@ Item {
         if (id === "dnd") return NotificationService.dnd;
         if (id === "night") return NightLight.nightOn;
         if (id === "power") return powerProfileName !== "balanced";
+        if (id === "hotspot") return !!hotspot.active;
         return false;
     }
     function pillAccent(id) {
@@ -202,11 +210,13 @@ Item {
         if (id === "wifi") return "wifi";
         if (id === "bt") return "bt";
         if (id === "power") return "power";
+        if (id === "hotspot") return "hotspot";
         return "";
     }
     function pillExpandable(id) {
         if (id === "wifi") return wifiOn;
         if (id === "bt") return bluetoothOn;
+        if (id === "hotspot") return !!hotspot.active;
         return id === "power";
     }
     function pillTrigger(id) {
@@ -229,6 +239,12 @@ Item {
         } else if (id === "keyboard") {
             Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"]);
             refreshSoon.restart();
+        } else if (id === "hotspot") {
+            if (hotspotBusy) return;
+            hotspotBusy = true;
+            if (hotspot.active && expanded === "hotspot") expanded = "";
+            hotspotToggle.command = ["bash", hotspotScript, hotspot.active ? "off" : "on"];
+            hotspotToggle.running = true;
         }
     }
 
@@ -246,6 +262,7 @@ Item {
             refreshWifi();
         }
         if (expanded === "bt") refreshBt();
+        if (expanded === "hotspot") refreshHotspot();
     }
 
     function profileLabel(name) {
@@ -325,11 +342,40 @@ Item {
         if (!wifiPoller.running) wifiPoller.running = true;
         if (!savedPoller.running) savedPoller.running = true;
     }
+    function refreshHotspot() {
+        if (!hotspotPoller.running) hotspotPoller.running = true;
+    }
     function refreshBt() {
         if (!btPoller.running) btPoller.running = true;
     }
 
-    Component.onCompleted: refresh()
+    Component.onCompleted: {
+        refresh();
+        refreshHotspot();
+    }
+
+    Process {
+        id: hotspotPoller
+        command: ["bash", root.hotspotScript, "status"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let data = JSON.parse(this.text.trim() || "{}");
+                    root.hotspot = data;
+                } catch (e) {}
+            }
+        }
+    }
+    Process {
+        id: hotspotToggle
+        onExited: (code) => {
+            root.hotspotBusy = false;
+            root.refreshHotspot();
+            root.refreshWifi();
+            if (code !== 0) Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/feedback.sh",
+                "󰀂", "Hotspot lukt niet", "Deze wifi-kaart kan misschien geen hotspot zijn", "3500"]);
+        }
+    }
 
     Process {
         id: statePoller
@@ -651,9 +697,58 @@ Item {
                     }
                 }
 
+                // Hotspot: QR-code om te scannen, plus naam en wachtwoord.
+                RowLayout {
+                    visible: root.expanded === "hotspot"
+                    Layout.fillWidth: true
+                    Layout.margins: 6
+                    spacing: 12
+                    Rectangle {
+                        Layout.preferredWidth: 112
+                        Layout.preferredHeight: 112
+                        radius: Math.min(14, root.itemRadius)
+                        color: "white"
+                        visible: String(root.hotspot.qr || "") !== ""
+                        Image {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            source: root.expanded === "hotspot" && String(root.hotspot.qr || "") !== ""
+                                ? "file://" + root.hotspot.qr + "?" + String(root.hotspot.ssid) : ""
+                            cache: false
+                            smooth: false
+                            fillMode: Image.PreserveAspectFit
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Scan met je telefoon"
+                            font.family: ThemeConfig.uiFont; font.pixelSize: 11; font.weight: Font.DemiBold
+                            color: mocha.text
+                            visible: String(root.hotspot.qr || "") !== ""
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Naam: " + String(root.hotspot.ssid || "")
+                            font.family: ThemeConfig.uiFont; font.pixelSize: 11
+                            color: mocha.subtext0
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Wachtwoord: " + String(root.hotspot.password || "")
+                            font.family: ThemeConfig.monoFont; font.pixelSize: 11
+                            color: mocha.subtext0
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+
                 // Naar het volledige paneel, zoals "Meer instellingen" bij GNOME.
                 ListRow {
-                    visible: root.expanded !== ""
+                    visible: root.expanded !== "" && root.expanded !== "hotspot"
                     icon: "󰒓"
                     label: root.expanded === "wifi" ? "Alle wifi-instellingen"
                         : (root.expanded === "bt" ? "Koppelen en meer" : (root.hasBattery ? "Batterij en energie" : "Energie-instellingen"))

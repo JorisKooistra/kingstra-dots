@@ -10,6 +10,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Hotspot in Snelle instellingen
+- Nieuwe pil **Hotspot**: één tik deelt de verbinding van deze pc via wifi. Het pijltje toont een QR-code om met je telefoon te scannen, plus naam en wachtwoord. De verbinding heet "Kingstra-hotspot" en onthoudt naam en wachtwoord, dus je telefoon vindt hem de volgende keer vanzelf. Lukt het niet (niet elke wifi-kaart kan een hotspot zijn), dan zegt een melding dat. Installer zet `qrencode` erbij. Zoals elke pil te verbergen of te verplaatsen in de bewerkmodus.
+
 ### Vensterwisselaar met voorbeelden (Super+Ctrl+Tab)
 - Een rij afgeronde kaartjes met een live voorbeeld van elk open venster, meest recent eerst, over alle werkruimtes. Houd Super+Ctrl vast en tik Tab om verder te gaan (Shift+Tab terug); loslaten springt naar het gekozen venster. Pijltjes, Enter en klikken werken ook, en typen filtert op titel of app. Vensters op een andere werkruimte tonen hun beginletter.
 - Alt+Tab (vorige werkruimte), Super+Tab (overzicht) en Super+W (vensterlijst met geparkeerde vensters) blijven zoals ze waren. Ook in het menu onder Vensters.
