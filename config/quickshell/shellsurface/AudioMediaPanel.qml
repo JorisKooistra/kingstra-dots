@@ -182,6 +182,7 @@ Item {
     property bool inputsExpanded: false
     property bool appsExpanded: false
     property bool eqExpanded: false
+    property bool advancedExpanded: false
     // Equalizer-presets via EasyEffects, dezelfde als in de muziekpopup.
     readonly property string eqScript: Quickshell.env("HOME") + "/.config/quickshell/music/equalizer.sh"
     readonly property var eqPresets: ["Flat", "Bass", "Treble", "Vocal", "Pop", "Rock", "Jazz", "Classic"]
@@ -213,6 +214,7 @@ Item {
         if (section === "outputs") root.outputsExpanded = !root.outputsExpanded;
         else if (section === "inputs") root.inputsExpanded = !root.inputsExpanded;
         else if (section === "eq") root.eqExpanded = !root.eqExpanded;
+        else if (section === "advanced") root.advancedExpanded = !root.advancedExpanded;
         else root.appsExpanded = !root.appsExpanded;
     }
 
@@ -842,6 +844,76 @@ Item {
                     onDetailRequested: root.toggleSection("outputs")
                 }
 
+                // Snel wisselen tussen koptelefoon en speakers: altijd in
+                // beeld zodra er meer dan één uitgang is, zonder uitklappen.
+                Flow {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 8
+                    visible: outputsModel.count > 1 && !root.outputsExpanded
+                    spacing: 6
+
+                    Repeater {
+                        model: outputsModel
+                        delegate: Rectangle {
+                            id: outChip
+                            required property var model
+                            readonly property bool active: !!outChip.model.is_default
+                            readonly property string fullName: String(outChip.model.description || outChip.model.name || "")
+                            readonly property bool headphones: /head|koptel|hoofd|airpods|buds|bluez/i.test(fullName + " " + String(outChip.model.name || ""))
+                            width: Math.min(outChipRow.implicitWidth + 22, 200)
+                            height: 28
+                            radius: height / 2
+                            color: active
+                                ? Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.26)
+                                : (outChipMouse.containsMouse
+                                    ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+                                    : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05))
+                            border.width: 1
+                            border.color: active
+                                ? Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.62)
+                                : "transparent"
+                            scale: outChipMouse.pressed ? 0.94 : (outChipMouse.containsMouse ? 1.05 : 1.0)
+                            Behavior on color {
+                                ColorAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                            }
+                            Behavior on scale {
+                                NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("emphasized") }
+                            }
+
+                            Row {
+                                id: outChipRow
+                                anchors.centerIn: parent
+                                spacing: 6
+                                Text {
+                                    text: outChip.headphones ? "󰋋" : "󰓃"
+                                    font.family: ThemeConfig.iconFont
+                                    font.pixelSize: 13
+                                    color: outChip.active ? mocha.accent3 : mocha.text
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Text {
+                                    width: Math.min(implicitWidth, 150)
+                                    text: outChip.fullName
+                                    elide: Text.ElideRight
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 11
+                                    font.weight: outChip.active ? Font.Bold : Font.Normal
+                                    color: outChip.active ? mocha.accent3 : mocha.text
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+
+                            MouseArea {
+                                id: outChipMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: outChip.active ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                onClicked: if (!outChip.active) root.setDefaultNode("sink", String(outChip.model.id), String(outChip.model.name))
+                            }
+                        }
+                    }
+                }
+
                 Reveal {
                     shown: root.outputsExpanded
                     gap: 8
@@ -852,18 +924,6 @@ Item {
 
                         SectionLabel { text: "Uitvoer" }
                         Item { Layout.fillWidth: true }
-                        CtlButton {
-                            visible: root.defaultOutput.name !== ""
-                            icon: "󰋋"
-                            label: "Testtoon"
-                            onTriggered: root.audioControl(["test-sound", "sink", root.defaultOutput.name])
-                        }
-                        CtlButton {
-                            visible: root.defaultOutput.name !== ""
-                            icon: "󰓦"
-                            label: "Route herstellen"
-                            onTriggered: root.setDefaultNode("sink", root.defaultOutput.id, root.defaultOutput.name)
-                        }
                     }
 
                     Repeater {
@@ -966,6 +1026,43 @@ Item {
                     }
                 }
             }
+
+            // --- Geavanceerd -------------------------------------------------
+            // Testtoon, route herstellen en de equalizer: zelden nodig, dus
+            // ingeklapt onder één kopregel, zoals Geavanceerd in Instellingen.
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+
+                SectionToggle {
+                    icon: "󰒓"
+                    label: "Geavanceerd"
+                    detail: root.eqAvailable ? "testtoon, route, equalizer" : "testtoon, route"
+                    expanded: root.advancedExpanded
+                    onTriggered: root.toggleSection("advanced")
+                }
+
+                Reveal {
+                    shown: root.advancedExpanded
+                    gap: 8
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        visible: root.defaultOutput.name !== ""
+                        spacing: 6
+
+                        CtlButton {
+                            icon: "󰋋"
+                            label: "Testtoon"
+                            onTriggered: root.audioControl(["test-sound", "sink", root.defaultOutput.name])
+                        }
+                        CtlButton {
+                            icon: "󰓦"
+                            label: "Route herstellen"
+                            onTriggered: root.setDefaultNode("sink", root.defaultOutput.id, root.defaultOutput.name)
+                        }
+                        Item { Layout.fillWidth: true }
+                    }
 
             // --- Equalizer ---------------------------------------------------
             // Alleen met EasyEffects; een preset geldt direct voor alle uitvoer.
@@ -1091,6 +1188,8 @@ Item {
                             }
                         }
                     }
+                }
+            }
                 }
             }
         }

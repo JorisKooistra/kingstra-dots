@@ -10,6 +10,15 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Rustiger geluidspaneel
+- **Wisselen tussen koptelefoon en speakers staat meteen onder de volumeschuif**, als knopjes met de naam van elke uitgang. Je hoeft de lijst met uitvoerapparaten niet meer open te klappen. De lijst zelf (poorten, volume per apparaat) blijft achter het pijltje.
+- **Testtoon, Route herstellen en de equalizer staan samen onder Geavanceerd**, ingeklapt. Er is niets weggehaald.
+
+### Launcher onthoudt wat je gebruikt
+- **Bij een leeg zoekveld staan je laatst gebruikte menuacties en instellingen bovenaan** (maximaal vier, met "Recent"), daaronder de apps zoals altijd op gebruik gesorteerd.
+- **Emoji**: `:` zonder woord (of Super+.) toont je laatst gebruikte emoji.
+- **Tekstveld zoals in een terminal**: Ctrl+W haalt het vorige woord weg, Ctrl+U alles voor de cursor, Ctrl+A en Ctrl+E springen naar begin en eind.
+
 ### Indeling per werkruimte als één begrip
 - **Volgende indeling**: `kingstra indeling volgende` (en `vorige`), of in het toetsenbordmenu onder Vensters, wisselt de werkruimte van tegels naar scrollen naar ruimtelijk werkvlak en weer terug. Is het ruimtelijk werkvlak niet geladen, dan slaat hij dat over. Een eigen sneltoets komt er pas als je die kiest.
 - **Elke indelingswissel geeft een korte melding** ("Werkruimte 3 · Scrollen"), ook vanuit de snap-kiezer (Super+Z) en Super+Alt+S.

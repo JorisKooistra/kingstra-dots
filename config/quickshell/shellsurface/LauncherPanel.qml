@@ -25,6 +25,12 @@ FocusScope {
     property var usageCounts: ({})
     property var lastLaunchTimes: ({})
     property var pinnedIds: []
+    // Laatst gebruikte menuacties en instellingen (bij een leeg zoekveld
+    // bovenaan) en emoji (bij ':' zonder woord). Eigen klein bestand.
+    property var recentItems: []
+    property var recentEmoji: []
+    readonly property int maxRecentItems: 4
+    readonly property int maxRecentEmoji: 16
     property int maxPinnedApps: 3
     property string query: ""
     property int selectedIndex: 0
@@ -102,7 +108,10 @@ FocusScope {
             ];
         }
         if (prefix === ":") {
-            if (t === "") return [{ icon: "󰞅", label: "Typ een woord", detail: "Bijv. :hart of :rocket", kind: "none" }];
+            if (t === "") {
+                let recent = (root.recentEmoji || []).map(e => ({ icon: e.char, label: e.name, detail: "Laatst gebruikt  ·  Enter kopieert", kind: "copy", value: e.char, emoji: true }));
+                return recent.length > 0 ? recent : [{ icon: "󰞅", label: "Typ een woord", detail: "Bijv. :hart of :rocket", kind: "none" }];
+            }
             return emojiResults.map(e => ({ icon: e.char, label: e.name, detail: "Enter kopieert", kind: "copy", value: e.char, emoji: true }));
         }
         if (prefix === "/") {
@@ -204,8 +213,60 @@ FocusScope {
         if (item.kind !== "setting") closePanel();
     }
 
+    FileView {
+        id: recentFile
+        path: Quickshell.env("HOME") + "/.local/state/kingstra/launcher-recent.json"
+        printErrors: false
+        onLoaded: {
+            try {
+                let data = JSON.parse(text()) || ({});
+                root.recentItems = Array.isArray(data.items) ? data.items.slice(0, root.maxRecentItems) : [];
+                root.recentEmoji = Array.isArray(data.emoji) ? data.emoji.slice(0, root.maxRecentEmoji) : [];
+            } catch (e) {}
+        }
+    }
+
+    function rememberResult(result) {
+        if (!result) return;
+        let entry = null;
+        if (result.kind === "menu") entry = { kind: "menu", label: String(result.label), detail: String(result.detail) };
+        else if (result.kind === "setting") entry = { kind: "setting", label: String(result.label), detail: String(result.detail), value: String(result.value) };
+        if (entry) {
+            let items = (root.recentItems || []).filter(i => !(i.kind === entry.kind && i.label === entry.label));
+            items.unshift(entry);
+            root.recentItems = items.slice(0, root.maxRecentItems);
+        } else if (result.emoji) {
+            let list = (root.recentEmoji || []).filter(e => e.char !== result.value);
+            list.unshift({ char: String(result.value), name: String(result.label) });
+            root.recentEmoji = list.slice(0, root.maxRecentEmoji);
+        } else {
+            return;
+        }
+        recentFile.setText(JSON.stringify({ items: root.recentItems, emoji: root.recentEmoji }) + "\n");
+    }
+
+    // Een bewaarde menuactie zoeken in de huidige menuboom: zo werkt hij ook
+    // als het commando erachter sindsdien veranderd is.
+    readonly property var recentResults: {
+        let out = [];
+        let items = root.recentItems || [];
+        for (let i = 0; i < items.length; i++) {
+            let r = items[i];
+            if (r.kind === "menu") {
+                let hit = menuActions.find(a => a.item.label === r.label
+                    && ((a.path !== "" ? a.path : "Menu") + (a.item.hint ? "  ·  " + a.item.hint : "")) === r.detail);
+                if (hit) out.push({ kind: "menu", icon: hit.item.icon, label: hit.item.label,
+                                    detail: "Recent  ·  " + r.detail, item: hit.item });
+            } else if (r.kind === "setting") {
+                out.push({ kind: "setting", icon: "󰒓", label: r.label, detail: "Recent  ·  " + String(r.detail).replace(/^Recent  ·  /, ""), value: r.value });
+            }
+        }
+        return out;
+    }
+
     function activateResult(result) {
         if (!result) return;
+        rememberResult(result);
         if (result.kind === "app") launch(result.app);
         else if (result.kind === "action") runQuickAction(result.action);
         else if (result.kind === "menu") {
@@ -378,7 +439,7 @@ FocusScope {
         }
         if (prefix !== "") return prefixResults;
         let apps = filtered.map(app => ({kind: "app", label: app.name, app: app}));
-        if (query.trim() === "") return apps;
+        if (query.trim() === "") return recentResults.concat(apps);
         return inlineCalc.concat(apps.slice(0, 8))
             .concat(filteredActions.map(action => ({kind: "action", icon: action.icon,
                 label: action.label, detail: action.detail, action: action})))
@@ -693,6 +754,28 @@ FocusScope {
                     font.pixelSize: 15
                     selectByMouse: true
                     selectionColor: Qt.rgba(mocha.primary.r, mocha.primary.g, mocha.primary.b, 0.25)
+                    // Zoals in een terminal: Ctrl+W woord weg, Ctrl+U alles
+                    // voor de cursor weg, Ctrl+A en Ctrl+E naar begin en eind.
+                    Keys.onPressed: event => {
+                        if (!(event.modifiers & Qt.ControlModifier) || (event.modifiers & (Qt.AltModifier | Qt.ShiftModifier))) return;
+                        let pos = searchInput.cursorPosition;
+                        if (event.key === Qt.Key_W) {
+                            let before = searchInput.text.slice(0, pos).replace(/\s+$/, "");
+                            let start = before.search(/\S+$/);
+                            if (start < 0) start = before.length;
+                            searchInput.remove(start, pos);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_U) {
+                            searchInput.remove(0, pos);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_A) {
+                            searchInput.cursorPosition = 0;
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_E) {
+                            searchInput.cursorPosition = searchInput.text.length;
+                            event.accepted = true;
+                        }
+                    }
                     onTextChanged: {
                         root.helpOpen = false;
                         root.query = text;
