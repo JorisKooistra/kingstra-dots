@@ -96,7 +96,7 @@ Item {
     // (thema-editor), 4 Sneltoetsen, 5 Invoer, 6 Schermen, 7 Netwerk,
     // 8 Geluid, 9 Tijd & weer, 10 Energie en sessie, 11 Updates,
     // 12 Onderhoud, 13 Over, 15 Zijbalk-indeling, 16 Start, 17 Uiterlijk,
-    // 18 Bureaublad, 19 Meldingen en rust, 20 Back-up.
+    // 18 Bureaublad, 19 Meldingen en rust, 20 Back-up, 21 Ruimte.
     property var tabs: [
         { label: "Start", icon: "󰋜", pages: [16], pageLabels: ["Start"], extra: [], extraLabels: [], keywords: "start begin home overzicht alles" },
         { label: "Uiterlijk", icon: "󰏘", pages: [17], pageLabels: ["Uiterlijk"], extra: [1, 2], extraLabels: ["Kleurstijl en contrast", "Alle onderdelen"],
@@ -113,8 +113,8 @@ Item {
           keywords: "invoer toetsenbord touchpad muis scroll scrollen rechtsklik dead keys sneltoets sneltoetsen keybind keybinds toets binding" },
         { label: "Meldingen en rust", icon: "󰂛", pages: [19], pageLabels: ["Meldingen en rust"], extra: [], extraLabels: [],
           keywords: "meldingen notificaties niet storen dnd rust nachtlicht warm avond schema per app stil nooit altijd" },
-        { label: "Systeem", icon: "󰒓", pages: [10, 9, 11, 20, 12, 13], pageLabels: ["Energie en sessie", "Tijd en weer", "Updates", "Back-up", "Onderhoud", "Over"], extra: [], extraLabels: [],
-          keywords: "back-up backup versies terughalen terugdraaien herstel gezondheid schijf schijven smart opstart kernel systeem sessie idle vergrendelen lock slaap suspend energie power profiel uitloggen weer tijd datum klok notatie formaat api openweather locatie updates update pakketten onderhoud geavanceerd herstart herladen matugen verwijderen over versie" }
+        { label: "Systeem", icon: "󰒓", pages: [10, 9, 11, 20, 21, 12, 13], pageLabels: ["Energie en sessie", "Tijd en weer", "Updates", "Back-up", "Ruimte", "Onderhoud", "Over"], extra: [], extraLabels: [],
+          keywords: "ruimte schijfruimte vol opruimen cache prullenbak docker spotify back-up backup versies terughalen terugdraaien herstel gezondheid schijf schijven smart opstart kernel systeem sessie idle vergrendelen lock slaap suspend energie power profiel uitloggen weer tijd datum klok notatie formaat api openweather locatie updates update pakketten onderhoud geavanceerd herstart herladen matugen verwijderen over versie" }
     ]
     property int currentTab: 0
     property int currentPage: tabs[0].pages[0]
@@ -223,6 +223,7 @@ Item {
         "netwerk": 7, "network": 7, "geluid": 8, "audio": 8,
         "tijd": 9, "weer": 9, "sessie": 10, "session": 10, "energie": 10, "updates": 11, "update": 11,
         "backup": 20, "back-up": 20, "terughalen": 20,
+        "ruimte": 21, "schijfruimte": 21, "opruimen": 21, "disk": 21, "space": 21,
         "geavanceerd": 12, "advanced": 12, "onderhoud": 12, "over": 13, "about": 13
     })
 
@@ -252,6 +253,7 @@ Item {
         if (currentPage === 10) refreshCloseFully();
         if (currentPage === 11) refreshUpdatePage(false);
         if (currentPage === 20) refreshBackupPage();
+        if (currentPage === 21) refreshSpacePage(false);
     }
 
     property real introBase: 0.0
@@ -295,6 +297,10 @@ Item {
     property var upResult: ({})
     property var vnHealth: []
     property var bkStatus: ({})
+    // Ruimte-pagina: kingstra-ruimte (schijven, grootste mappen, opruimen).
+    property var spaceData: ({})
+    property bool spaceBusy: false
+    property string spaceCleaning: ""
     readonly property string kingstraBin: Quickshell.env("HOME") + "/.local/bin/"
     property string advancedStatusText: "Klaar"
     property bool showUninstallConfirm: false
@@ -1351,6 +1357,28 @@ Item {
         Quickshell.execDetached(["kitty", "--class", "kingstra-update", "--title", "Kingstra herstel", "bash", "-lc", "'" + kingstraBin + "kingstra-herstel'"]);
     }
 
+    function refreshSpacePage(full) {
+        if (!full && !spaceData.checked) spaceCachedProc.running = true;
+        if (full || !spaceData.checked || (Date.now() / 1000 - spaceData.checked) > 600) {
+            spaceBusy = true;
+            spaceMeasureProc.running = true;
+        }
+    }
+
+    function spaceClean(item) {
+        if (!item) return;
+        if (item.sudo) {
+            // Wachtwoord nodig: in een terminal, daarna opnieuw meten.
+            Quickshell.execDetached(["kitty", "--class", "kingstra-update", "--title", "Ruimte maken: " + item.label, "bash", "-lc",
+                "cmd=$('" + kingstraBin + "kingstra-ruimte' --sudo-cmd " + item.id + ") && echo \"$cmd\" && eval \"$cmd\"; '" + kingstraBin + "kingstra-ruimte' --json >/dev/null; echo; read -rp 'Klaar. Enter sluit dit venster.' _"]);
+            spaceAfterTimer.restart();
+            return;
+        }
+        spaceCleaning = item.id;
+        spaceCleanProc.command = [kingstraBin + "kingstra-ruimte", "--clean", item.id];
+        spaceCleanProc.running = true;
+    }
+
     function refreshBackupPage() {
         backupStatusProc.running = true;
         healthProc.running = true;
@@ -2384,6 +2412,48 @@ Item {
             onStreamFinished: {
                 try { root.bkStatus = JSON.parse(this.text); } catch (e) { root.bkStatus = ({}); }
             }
+        }
+    }
+
+    Process {
+        id: spaceCachedProc
+        command: ["bash", "-c", "\"$HOME/.local/bin/kingstra-ruimte\" --cached 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { let d = JSON.parse(this.text); if (d && d.checked) root.spaceData = d; } catch (e) {}
+            }
+        }
+    }
+    Process {
+        id: spaceMeasureProc
+        command: ["bash", "-c", "\"$HOME/.local/bin/kingstra-ruimte\" --json 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { let d = JSON.parse(this.text); if (d && d.checked) root.spaceData = d; } catch (e) {}
+                root.spaceBusy = false;
+            }
+        }
+        onExited: root.spaceBusy = false
+    }
+    Process {
+        id: spaceCleanProc
+        onExited: {
+            let label = root.spaceCleaning;
+            root.spaceCleaning = "";
+            spaceCachedProc.running = true;
+            root.notify("Ruimte", "Opgeruimd");
+        }
+    }
+    // Na een sudo-stap in de terminal: het nieuwe overzicht ophalen.
+    Timer {
+        id: spaceAfterTimer
+        interval: 4000
+        repeat: true
+        property int rounds: 0
+        onTriggered: {
+            spaceCachedProc.running = true;
+            rounds += 1;
+            if (rounds >= 15) { rounds = 0; stop(); }
         }
     }
 
@@ -5838,6 +5908,165 @@ Item {
                             icon: "󰈉"
                             accent: root.overlay0
                             value: "Caches, prullenbak, Steam en ~/Games, Claude-VM's, node_modules. Eigen uitzonderingen zet je in ~/.config/kingstra/backup-exclude.local.txt, één pad per regel."
+                        }
+                        Item { Layout.fillHeight: true }
+                    }
+                }
+            }
+
+            // =================================================================
+            // TAB 21: RUIMTE — wat neemt ruimte in, wat kan veilig weg
+            // =================================================================
+            Item {
+                anchors.fill: parent
+                visible: root.currentPage === 21
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
+
+                ScrollView {
+                    anchors.fill: parent
+                    anchors.margins: root.s(20)
+                    clip: true
+                    ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+
+                    ColumnLayout {
+                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        spacing: root.s(14)
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Text { text: "Ruimte"; Layout.fillWidth: true; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
+                            SettingsActionButton {
+                                label: root.spaceBusy ? "Meten…" : "Opnieuw meten"; icon: "󰑓"; accent: root.blue
+                                onTriggered: if (!root.spaceBusy) root.refreshSpacePage(true)
+                            }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0
+                            text: "Wat er op je schijven staat en wat veilig weg kan. "
+                                  + (root.spaceData.checked ? "Gemeten " + root.fmtWhen(root.spaceData.checked) + "." : "Nog niet gemeten.")
+                        }
+
+                        // Schijven: één afgeronde balk per schijf.
+                        Repeater {
+                            model: root.spaceData.disks || []
+                            delegate: Rectangle {
+                                id: diskCard
+                                required property var modelData
+                                readonly property real frac: Math.max(0, Math.min(1, Number(modelData.pct || 0) / 100))
+                                readonly property color tone: frac >= 0.9 ? root.red : (frac >= 0.8 ? root.yellow : root.green)
+                                Layout.fillWidth: true
+                                implicitHeight: diskCol.implicitHeight + root.s(24)
+                                radius: root.s(14)
+                                color: Qt.alpha(root.text, 0.04)
+                                border.width: 1
+                                border.color: Qt.alpha(tone, 0.35)
+                                ColumnLayout {
+                                    id: diskCol
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(12)
+                                    spacing: root.s(6)
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "󰋊"; font.family: ThemeConfig.iconFont; font.pixelSize: root.s(16); color: diskCard.tone }
+                                        Text { text: String(diskCard.modelData.label) + "  ·  " + String(diskCard.modelData.mount); Layout.fillWidth: true; elide: Text.ElideRight; font.family: root.uiFontFamily; font.weight: Font.DemiBold; font.pixelSize: root.s(13); color: root.text }
+                                        Text { text: root.fmtBytes(diskCard.modelData.free) + " vrij van " + root.fmtBytes(diskCard.modelData.size); font.family: root.monoFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                    }
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        implicitHeight: root.s(8)
+                                        radius: height / 2
+                                        color: Qt.alpha(root.text, 0.08)
+                                        Rectangle {
+                                            width: parent.width * diskCard.frac
+                                            height: parent.height
+                                            radius: height / 2
+                                            color: diskCard.tone
+                                            Behavior on width { NumberAnimation { duration: ThemeConfig.duration(420); easing.type: Easing.OutCubic } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Text { text: "Kan veilig weg"; Layout.topMargin: root.s(6); font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(17); color: root.text }
+                        Repeater {
+                            model: (root.spaceData.cleaners || []).filter(c => Number(c.bytes) > 0)
+                            delegate: Rectangle {
+                                id: cleanRow
+                                required property var modelData
+                                Layout.fillWidth: true
+                                implicitHeight: cleanLayout.implicitHeight + root.s(20)
+                                radius: root.s(12)
+                                color: Qt.alpha(root.text, 0.04)
+                                RowLayout {
+                                    id: cleanLayout
+                                    anchors.fill: parent
+                                    anchors.margins: root.s(10)
+                                    spacing: root.s(12)
+                                    Text { text: root.fmtBytes(cleanRow.modelData.bytes); Layout.preferredWidth: root.s(78); horizontalAlignment: Text.AlignRight; font.family: root.monoFontFamily; font.weight: Font.Bold; font.pixelSize: root.s(13); color: root.peach }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: root.s(1)
+                                        Text { text: String(cleanRow.modelData.label) + (cleanRow.modelData.sudo ? "  ·  wachtwoord nodig" : ""); font.family: root.uiFontFamily; font.weight: Font.DemiBold; font.pixelSize: root.s(12); color: root.text }
+                                        Text { text: String(cleanRow.modelData.detail); Layout.fillWidth: true; wrapMode: Text.WordWrap; font.family: root.uiFontFamily; font.pixelSize: root.s(10); color: root.subtext0 }
+                                    }
+                                    SettingsActionButton {
+                                        label: root.spaceCleaning === cleanRow.modelData.id ? "Bezig…" : "Opruimen"
+                                        icon: "󰃢"; accent: root.peach
+                                        onTriggered: if (root.spaceCleaning === "") root.spaceClean(cleanRow.modelData)
+                                    }
+                                }
+                            }
+                        }
+                        Text {
+                            visible: !!root.spaceData.checked && (root.spaceData.cleaners || []).filter(c => Number(c.bytes) > 0).length === 0
+                            text: "Niets om op te ruimen."
+                            font.family: root.uiFontFamily; font.pixelSize: root.s(11); color: root.subtext0
+                        }
+
+                        Text { text: "Grootste mappen in je persoonlijke map"; Layout.topMargin: root.s(6); font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.pixelSize: root.s(17); color: root.text }
+                        Repeater {
+                            model: root.spaceData.home || []
+                            delegate: Item {
+                                id: homeRow
+                                required property var modelData
+                                readonly property real maxSize: Math.max(1, Number(((root.spaceData.home || [])[0] || {}).size || 1))
+                                Layout.fillWidth: true
+                                implicitHeight: root.s(30)
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    height: parent.height
+                                    width: parent.width * Math.max(0.02, Number(homeRow.modelData.size) / homeRow.maxSize)
+                                    radius: root.s(8)
+                                    color: Qt.alpha(root.blue, homeMouse.containsMouse ? 0.28 : 0.16)
+                                    Behavior on width { NumberAnimation { duration: ThemeConfig.duration(420); easing.type: Easing.OutCubic } }
+                                    Behavior on color { ColorAnimation { duration: ThemeConfig.duration(150) } }
+                                }
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: root.s(10)
+                                    anchors.rightMargin: root.s(10)
+                                    Text { text: String(homeRow.modelData.name); Layout.fillWidth: true; elide: Text.ElideMiddle; font.family: root.uiFontFamily; font.pixelSize: root.s(12); color: root.text }
+                                    Text { text: root.fmtBytes(homeRow.modelData.size); font.family: root.monoFontFamily; font.pixelSize: root.s(11); color: root.subtext0 }
+                                }
+                                MouseArea {
+                                    id: homeMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: Quickshell.execDetached(["xdg-open", String(homeRow.modelData.path)])
+                                }
+                            }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.family: root.uiFontFamily; font.pixelSize: root.s(10); color: root.subtext0
+                            text: "Klik op een map om hem te openen. In een terminal geeft kingstra-ruimte hetzelfde overzicht."
                         }
                         Item { Layout.fillHeight: true }
                     }

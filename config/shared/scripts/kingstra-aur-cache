@@ -5,6 +5,7 @@
 # Gebruik:
 #   kingstra-aur-cache            laten zien wat weg kan (alleen lezen)
 #   kingstra-aur-cache --size     alleen hoeveel ruimte vrijkomt (leesbaar)
+#   kingstra-aur-cache --bytes    hetzelfde in bytes (voor Instellingen › Ruimte)
 #   kingstra-aur-cache --clean    opruimen
 #
 # yay bewaart per AUR-pakket de downloads (debs, jars, AppImages), de
@@ -22,6 +23,7 @@ MODE="show"
 case "${1:-}" in
     --clean) MODE="clean" ;;
     --size) MODE="size" ;;
+    --bytes) MODE="bytes" ;;
     -h|--help) sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     "") ;;
     *) printf 'Onbekende optie: %s\n' "$1" >&2; exit 2 ;;
@@ -101,6 +103,9 @@ human="$(numfmt --to=iec --suffix=B "${total:-0}" 2>/dev/null || printf '%sB' "$
 case "$MODE" in
     size)
         printf '%s\n' "$human"
+        ;;
+    bytes)
+        printf '%s\n' "${total:-0}"
         ;;
     show)
         if (( ${#CANDIDATES[@]} == 0 )); then

@@ -60,6 +60,7 @@ Onderhoud
   herstel                  herstelmenu, werkt ook zonder bureaublad
   gezondheid               korte check: schijven, back-up, opstart, updates
   rapport                  één bestand met logs en fouten om in de chat te sturen
+  ruimte                   wat er op je schijven staat en wat veilig weg kan (ook Instellingen › Systeem › Ruimte)
   github-login [--check]   eenmalig inloggen bij GitHub, zodat pushen vanaf deze computer werkt
   backup [run|status|list|browse|close|restore <pad>]  back-up van je persoonlijke map
   refresh <onderdeel>      één config terug naar de standaard (bv. kitty)
@@ -109,6 +110,9 @@ case "$cmd" in
     gezondheid|health) run kingstra-health "$@" ;;
     rapport|report) run kingstra-rapport "$@" ;;
     github-login|github) run kingstra-github-login "$@" ;;
+    ruimte|space|schijf)
+        if [[ $# -eq 0 && -n "${WAYLAND_DISPLAY:-}" && ! -t 1 ]]; then exec "$CONFIG_HOME/hypr/scripts/qs_manager.sh" open settings ruimte; fi
+        run kingstra-ruimte "$@" ;;
     backup|back-up) run kingstra-backup "${@:-status}" ;;
     restart|herstart) run kingstra-session-start restart-shell ;;
     install)

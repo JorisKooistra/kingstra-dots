@@ -10,6 +10,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Schijfruimte zichtbaar en veilig opruimen
+- **Instellingen › Systeem › Ruimte** (`kingstra settings ruimte`): per schijf een afgeronde balk met wat er vrij is (groen, geel boven 80%, rood boven 90%), de grootste mappen in je persoonlijke map (klik opent de map), en een lijst met wat veilig weg kan, elk met hoeveel het oplevert: AUR-bouwcache, pakketcache, systeemlogboek, Docker (alleen als hij al draait, meten start hem niet), Spotify-cache, miniaturen en de prullenbak. Opruimen is één knop; stappen die een wachtwoord nodig hebben openen een terminal.
+- `kingstra ruimte` geeft hetzelfde overzicht in de terminal. Meten gebeurt met lage prioriteit en wordt bewaard, zodat de pagina meteen iets laat zien.
+
 ### Bovenbalk zuiniger in rust
 - **De shell las vier kleine statusbestanden elke 75 tot 125 ms opnieuw**, per scherm (sneltoetsen, feedback, volume-OSD in het eiland, spiekbriefje). Gemeten op Joris' pc kostte dat samen ongeveer 8 van de 15% CPU die de bovenbalk in rust gebruikte. Nu kijkt één `inotifywait` naar die bestanden en leest de shell ze alleen als er echt iets verandert; de oude poll blijft als rustig vangnet (elke 2 s). Zonder inotify-tools werkt alles zoals vroeger.
 

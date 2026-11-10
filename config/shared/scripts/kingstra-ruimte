@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+"""kingstra-ruimte — wat neemt ruimte in, en wat kan veilig weg.
+
+  kingstra-ruimte                 overzicht als tekst
+  kingstra-ruimte --json          overzicht als JSON (Instellingen › Systeem › Ruimte)
+  kingstra-ruimte --cached        laatst gemeten overzicht (snel), anders --json
+  kingstra-ruimte --clean <id>    één opruimstap zonder sudo (spotify, thumbnails, prullenbak, aur)
+  kingstra-ruimte --sudo-cmd <id> het commando voor een stap die sudo nodig heeft
+
+Meten gebeurt met lage prioriteit (nice/ionice) en een tijdslimiet, zodat het
+de pc niet ophoudt. Het resultaat komt in ~/.cache/kingstra/ruimte.json.
+"""
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HOME = Path.home()
+CACHE = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache"))
+OUT = CACHE / "kingstra" / "ruimte.json"
+BIN = HOME / ".local" / "bin"
+LOW = ["nice", "-n", "19", "ionice", "-c", "3"] if shutil.which("ionice") else ["nice", "-n", "19"]
+
+
+def run(cmd, timeout=20):
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
+        return r.stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def du(paths, timeout=40):
+    """Bytes per pad (zelfde bestandssysteem, zonder symlinks te volgen)."""
+    paths = [str(p) for p in paths if Path(p).exists()]
+    if not paths:
+        return {}
+    out = run(LOW + ["du", "-sxb", "--", *paths], timeout=timeout)
+    sizes = {}
+    for line in out.splitlines():
+        parts = line.split("\t", 1)
+        if len(parts) == 2 and parts[0].isdigit():
+            sizes[parts[1]] = int(parts[0])
+    return sizes
+
+
+def disks():
+    labels = {"/": "Systeem", "/boot": "Opstart", "/home": "Persoonlijk"}
+    out = run(["df", "-B1", "--output=target,size,used,avail,fstype"], timeout=5)
+    rows = []
+    for line in out.splitlines()[1:]:
+        parts = line.split()
+        if len(parts) < 5:
+            continue
+        target, size, used, avail, fstype = parts[0], *map(int, parts[1:4]), parts[4]
+        if fstype in ("tmpfs", "devtmpfs", "efivarfs", "overlay", "squashfs", "proc", "sysfs") or size < 512 * 1024 * 1024:
+            continue
+        if not (target in labels or target.startswith("/mnt/") or target.startswith("/run/media/")):
+            continue
+        label = labels.get(target) or Path(target).name.replace("data", "Data ").strip().title()
+        rows.append({"mount": target, "label": label, "size": size, "used": used, "free": avail,
+                     "pct": round(used * 100 / size) if size else 0})
+    order = {"/": 0, "/home": 1, "/boot": 2}
+    rows.sort(key=lambda r: (order.get(r["mount"], 3), r["mount"]))
+    return rows
+
+
+def home_usage():
+    """Grootste mappen in je persoonlijke map, met de verborgen grote erbij."""
+    candidates = [p for p in HOME.iterdir() if p.is_dir() and not p.is_symlink()
+                  and p.name not in (".cache", ".local", ".config")]
+    extra = [HOME / ".cache", HOME / ".local" / "share", HOME / ".config"]
+    sizes = du(candidates + extra)
+    rows = [{"name": Path(k).name if Path(k).parent == HOME else str(Path(k).relative_to(HOME)),
+             "path": k, "size": v} for k, v in sizes.items()]
+    rows.sort(key=lambda r: -r["size"])
+    return rows[:12]
+
+
+def pacman_cache():
+    if not shutil.which("paccache"):
+        return None
+    out = run(["paccache", "-dk3"], timeout=20)
+    m = re.search(r"disk space saved:\s*([\d.]+)\s*([KMGT]i?B)", out)
+    if not m:
+        return 0
+    mult = {"K": 1 << 10, "M": 1 << 20, "G": 1 << 30, "T": 1 << 40}[m.group(2)[0]]
+    return int(float(m.group(1)) * mult)
+
+
+def journal():
+    out = run(["journalctl", "--disk-usage"], timeout=10)
+    m = re.search(r"take up ([\d.]+)([KMGT])", out)
+    if not m:
+        return None
+    total = int(float(m.group(1)) * {"K": 1 << 10, "M": 1 << 20, "G": 1 << 30, "T": 1 << 40}[m.group(2)])
+    keep = 200 << 20
+    return max(0, total - keep)
+
+
+def docker_size():
+    """Alleen als Docker al draait: anders zou meten hem opstarten."""
+    if not shutil.which("docker"):
+        return None
+    if run(["systemctl", "is-active", "docker.service"], timeout=5).strip() != "active":
+        return None
+    out = run(["docker", "system", "df", "--format", "{{.Reclaimable}}"], timeout=20)
+    total = 0
+    for line in out.splitlines():
+        m = re.match(r"([\d.]+)\s*([kKMGT]?B)", line.strip())
+        if m:
+            unit = m.group(2).upper()
+            total += int(float(m.group(1)) * {"B": 1, "KB": 1000, "MB": 1000**2, "GB": 1000**3, "TB": 1000**4}[unit])
+    return total
+
+
+CLEANERS = [
+    # id, label, uitleg, sudo
+    ("aur", "AUR-bouwcache", "Oude bouwmappen en downloads van yay; de laatste drie versies per pakket blijven voor terugdraaien.", False),
+    ("pacman", "Pakketcache", "Oude pakketversies; de nieuwste drie blijven voor terugdraaien.", True),
+    ("journal", "Systeemlogboek", "Oude logregels; de laatste 200 MB blijven.", True),
+    ("docker", "Docker", "Gestopte containers, losse images en bouwcache.", False),
+    ("spotify", "Spotify-cache", "Gedownloade stukjes muziek; Spotify haalt ze opnieuw op als je ze afspeelt.", False),
+    ("thumbnails", "Miniaturen", "Voorbeeldplaatjes van bestanden; worden opnieuw gemaakt.", False),
+    ("trash", "Prullenbak", "Bestanden die je hebt weggegooid. Dit is definitief.", False),
+]
+SPOTIFY = [HOME / ".cache" / "spotify", HOME / ".var/app/com.spotify.Client/cache"]
+THUMBS = [HOME / ".cache" / "thumbnails"]
+TRASH = [HOME / ".local/share/Trash"]
+
+
+def cleaner_sizes():
+    sizes = du(SPOTIFY + THUMBS + TRASH, timeout=20)
+    def total(paths):
+        return sum(sizes.get(str(p), 0) for p in paths)
+    aur = run([str(BIN / "kingstra-aur-cache"), "--bytes"], timeout=30).strip() if (BIN / "kingstra-aur-cache").exists() else ""
+    values = {
+        "aur": int(aur) if aur.isdigit() else None,
+        "pacman": pacman_cache(),
+        "journal": journal(),
+        "docker": docker_size(),
+        "spotify": total(SPOTIFY),
+        "thumbnails": total(THUMBS),
+        "trash": total(TRASH),
+    }
+    rows = []
+    for cid, label, detail, sudo in CLEANERS:
+        value = values.get(cid)
+        if value is None:
+            continue
+        rows.append({"id": cid, "label": label, "detail": detail, "bytes": int(value), "sudo": sudo})
+    return rows
+
+
+def measure():
+    data = {"checked": int(time.time()), "disks": disks(), "home": home_usage(), "cleaners": cleaner_sizes()}
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    tmp = OUT.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data))
+    os.replace(tmp, OUT)
+    return data
+
+
+def empty_dir_contents(paths):
+    for base in paths:
+        if not base.is_dir() or base.is_symlink():
+            continue
+        for child in base.iterdir():
+            try:
+                if child.is_dir() and not child.is_symlink():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+            except OSError:
+                pass
+
+
+def clean(cid):
+    if cid == "spotify":
+        empty_dir_contents(SPOTIFY)
+    elif cid == "thumbnails":
+        empty_dir_contents(THUMBS)
+    elif cid == "trash":
+        if shutil.which("gio"):
+            run(["gio", "trash", "--empty"], timeout=120)
+        empty_dir_contents([HOME / ".local/share/Trash/files", HOME / ".local/share/Trash/info"])
+    elif cid == "aur":
+        subprocess.run([str(BIN / "kingstra-aur-cache"), "--clean"], check=False)
+    elif cid == "docker":
+        if run(["systemctl", "is-active", "docker.service"], timeout=5).strip() == "active":
+            subprocess.run(["docker", "system", "prune", "-f"], check=False)
+    else:
+        print("Onbekende of sudo-stap: " + cid, file=sys.stderr)
+        return 2
+    measure()
+    return 0
+
+
+SUDO_CMDS = {
+    "pacman": "sudo paccache -rk3 && sudo paccache -ruk0",
+    "journal": "sudo journalctl --vacuum-size=200M",
+}
+
+
+def human(n):
+    v = float(n)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if v < 1024 or unit == "TB":
+            return (f"{v:.0f} {unit}" if unit == "B" else f"{v:.1f} {unit}")
+        v /= 1024
+    return str(n)
+
+
+def main(args):
+    if args[:1] == ["--json"]:
+        print(json.dumps(measure()))
+    elif args[:1] == ["--cached"]:
+        try:
+            print(OUT.read_text().strip())
+        except OSError:
+            print(json.dumps(measure()))
+    elif args[:1] == ["--clean"] and len(args) > 1:
+        return clean(args[1])
+    elif args[:1] == ["--sudo-cmd"] and len(args) > 1:
+        cmd = SUDO_CMDS.get(args[1])
+        if not cmd:
+            return 2
+        print(cmd)
+    elif not args:
+        data = measure()
+        print("Schijven")
+        for d in data["disks"]:
+            print(f"  {d['label']:<12} {d['mount']:<14} {human(d['used']):>9} van {human(d['size']):>9}  ({d['pct']}%, {human(d['free'])} vrij)")
+        print("\nGrootste mappen in je persoonlijke map")
+        for h in data["home"]:
+            print(f"  {human(h['size']):>9}  {h['name']}")
+        print("\nKan veilig weg")
+        for c in data["cleaners"]:
+            print(f"  {human(c['bytes']):>9}  {c['label']}" + ("  (sudo)" if c["sudo"] else ""))
+    else:
+        print(__doc__.strip())
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
