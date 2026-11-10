@@ -230,6 +230,16 @@ Scope {
                     suppressed: panelHost.open && panelHost.visualEdge === (island.fromBottom ? "bottom" : "top")
                 }
 
+                // Dock op zwevende werkruimtes (indeling "Zwevend met dock").
+                FloatingDock {
+                    id: floatingDock
+                    shellWindow: surfaceWindow
+                    mocha: mocha
+                    bottomInset: ThemeConfig.barStatusStripEnabled && ThemeConfig.barStatusStripEdge === "bottom"
+                        ? chrome.stripHeight : chrome.shellBorderWidth
+                    suppressed: panelHost.open && panelHost.visualEdge === "bottom"
+                }
+
                 // Klik-buiten-om-te-sluiten. De geometrie is bewust aan de
                 // open-state gekoppeld i.p.v. alleen `visible`: de mask-Region
                 // hieronder volgt de item-geometrie en niet de zichtbaarheid,
@@ -378,6 +388,7 @@ Scope {
                     Region { item: notificationToasts }
                     Region { item: island }
                     Region { item: feedbackToast.undoHit }
+                    Region { item: floatingDock.hitItem }
                 }
 
                 // Reservation windows intentionally carry no content or input.

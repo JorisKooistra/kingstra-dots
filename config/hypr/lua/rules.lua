@@ -73,6 +73,22 @@ if ok_file and float_file then
     float_file:close()
 end
 
+-- Zwevende werkruimtes (indeling "Zwevend met dock"): elk venster dat daar
+-- opent zweeft. workspace-layout.py schrijft één werkruimte per regel en zet
+-- de regel tijdens de sessie zelf aan of uit via _G.__kingstra_float.
+_G.__kingstra_float = {}
+local ok_floating, floating_file = pcall(io.open, state_home .. "/kingstra/workspace-floating", "r")
+if ok_floating and floating_file then
+    for line in floating_file:lines() do
+        local ws = line:match("^%s*([1-9]%d*)%s*$")
+        if ws then
+            local ok_rule, handle = pcall(hl.window_rule, { name = "kingstra-zwevend-" .. ws, match = { workspace = ws }, float = true })
+            if ok_rule then _G.__kingstra_float[ws] = handle end
+        end
+    end
+    floating_file:close()
+end
+
 -- Indeling per werkruimte (Super+Z, `kingstra indeling`). layout-tool.sh
 -- schrijft "werkruimte layout" per regel; zo overleeft de keuze een herstart.
 local ok_layouts, layouts_file = pcall(io.open, state_home .. "/kingstra/workspace-layouts", "r")

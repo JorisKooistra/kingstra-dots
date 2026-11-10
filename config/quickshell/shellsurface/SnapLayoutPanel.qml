@@ -33,7 +33,8 @@ FocusScope {
         { id: "kolommen", label: "Drie kolommen", hint: "Gelijke delen", zones: [[0, 0, .333, 1, true], [.333, 0, .334, 1], [.667, 0, .333, 1]] },
         { id: "scrollen", label: "Scrollen", hint: "Oneindige strook", scroll: true, zones: [[-.3, 0, .5, 1], [.25, 0, .5, 1, true], [.8, 0, .5, 1]] },
         { id: "ruimtelijk", label: "Ruimtelijk", hint: "Boven, onder én opzij", zones: [[.1, .05, .35, .38], [.55, .05, .35, .38], [.1, .57, .35, .38], [.55, .57, .35, .38]] },
-        { id: "focus", label: "Eén tegelijk", hint: "Rest erachter", stack: true, zones: [[0, 0, 1, 1, true]] }
+        { id: "focus", label: "Eén tegelijk", hint: "Rest erachter", stack: true, zones: [[0, 0, 1, 1, true]] },
+        { id: "zwevend", label: "Zwevend", hint: "Vrij schuiven, met dock", zones: [[.06, .08, .5, .55], [.42, .3, .5, .5], [.3, .78, .4, .16]] }
     ]
 
     function close() {

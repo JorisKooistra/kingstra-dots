@@ -11,15 +11,19 @@ import time
 
 LAYOUTS = {"tegels": "dwindle", "50-50": "master", "70-30": "master",
            "midden": "master", "kolommen": "scrolling", "scrollen": "scrolling",
-           "ruimtelijk": "lua:hyprscroll2d", "focus": "monocle"}
+           "ruimtelijk": "lua:hyprscroll2d", "focus": "monocle",
+           # Zwevend: gewone tegel-layout, maar elk venster zweeft (regel per
+           # werkruimte, zie float_workspace en lua/rules.lua) en er is een dock.
+           "zwevend": "dwindle"}
 STATE = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "kingstra"
 HYPR = os.environ.get("HYPRCTL_BIN", "hyprctl")
 NAMES = {"tegels": "Tegels", "50-50": "Tegels 50/50", "70-30": "Tegels 70/30", "midden": "Midden",
-         "kolommen": "Kolommen", "scrollen": "Scrollen", "ruimtelijk": "Ruimtelijk werkvlak", "focus": "Focus"}
+         "kolommen": "Kolommen", "scrollen": "Scrollen", "ruimtelijk": "Ruimtelijk werkvlak", "focus": "Focus",
+         "zwevend": "Zwevend met dock"}
 ICONS = {"tegels": "󰕴", "50-50": "󰕰", "70-30": "󰕰", "midden": "󰕰", "kolommen": "󰁔",
-         "scrollen": "󰁔", "ruimtelijk": "󰆾", "focus": "󰊓"}
+         "scrollen": "󰁔", "ruimtelijk": "󰆾", "focus": "󰊓", "zwevend": "󰖲"}
 # Volgorde voor "volgende indeling": de drie soorten, niet elke tegelvariant.
-CYCLE = ["tegels", "scrollen", "ruimtelijk"]
+CYCLE = ["tegels", "scrollen", "ruimtelijk", "zwevend"]
 
 
 def hypr(*args):
@@ -67,6 +71,9 @@ def save(workspace, preset):
     flat = "".join(f"{w} {LAYOUTS[p]}\n" for w, p in sorted(data.items())
                    if re.fullmatch(r"[1-9]\d*", str(w)) and p in LAYOUTS)
     atomic(STATE / "workspace-layouts", flat)
+    floating = "".join(f"{w}\n" for w, p in sorted(data.items())
+                       if re.fullmatch(r"[1-9]\d*", str(w)) and p == "zwevend")
+    atomic(STATE / "workspace-floating", floating)
     atomic(STATE / "workspace-layouts.json", json.dumps(data, indent=2) + "\n")
 
 
@@ -115,6 +122,22 @@ def current(workspace_id=None):
             "windows": int(workspace.get("windows", 0))}
 
 
+FLOAT_LUA = (
+    'local id=%s; local on=%s; _G.__kingstra_float=_G.__kingstra_float or {}; '
+    'local r=_G.__kingstra_float[id]; '
+    'if on then if r then r:set_enabled(true) else '
+    '_G.__kingstra_float[id]=hl.window_rule({name="kingstra-zwevend-"..id, match={workspace=id}, float=true}) end '
+    'elseif r then r:set_enabled(false) end; '
+    'for _,w in ipairs(hl.get_workspace_windows(tonumber(id)) or {}) do '
+    'if (w.floating == true) ~= on then '
+    'hl.dispatch(hl.dsp.window.float({action=(on and "enable" or "disable"), window="address:"..w.address})) end end')
+
+
+def float_workspace(workspace, on):
+    """Zwevend aan of uit voor één werkruimte, ook voor vensters die er al staan."""
+    hypr("eval", FLOAT_LUA % (json.dumps(str(workspace)), "true" if on else "false"))
+
+
 def apply(preset, workspace=None):
     if preset not in LAYOUTS:
         raise ValueError("Onbekende indeling: " + preset)
@@ -156,6 +179,9 @@ def apply(preset, workspace=None):
         if before["layout"]:
             hypr("eval", rule % (json.dumps(target), json.dumps(before["layout"])))
         raise
+    was_floating = saved().get(target) == "zwevend"
+    if preset == "zwevend" or was_floating:
+        float_workspace(target, preset == "zwevend")
     save(target, preset)
     return current()
 
@@ -213,6 +239,8 @@ def announce(state):
 def step(direction):
     state = current()
     kind = {"scrolling": "scrollen", "lua:hyprscroll2d": "ruimtelijk"}.get(state["layout"], "tegels")
+    if state["preset"] == "zwevend":
+        kind = "zwevend"
     order = list(CYCLE)
     if spatial_registered() is False:
         order.remove("ruimtelijk")

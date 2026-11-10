@@ -25,16 +25,24 @@ class LayoutTests(unittest.TestCase):
 
     def test_next_cycles_kinds_and_skips_missing_spatial(self):
         cases = [("dwindle", True, "scrollen"), ("master", True, "scrollen"),
-                 ("scrolling", True, "ruimtelijk"), ("scrolling", False, "tegels"),
-                 ("lua:hyprscroll2d", True, "tegels")]
+                 ("scrolling", True, "ruimtelijk"), ("scrolling", False, "zwevend"),
+                 ("lua:hyprscroll2d", True, "zwevend")]
         for layout, spatial, wanted in cases:
             with patch.object(module, "query", return_value=self.state(layout)), \
                  patch.object(module, "spatial_registered", return_value=spatial), \
-                 patch.object(module, "apply", side_effect=lambda p: p) as apply:
+                 patch.object(module, "saved", return_value={}), \
+             patch.object(module, "apply", side_effect=lambda p: p) as apply:
                 self.assertEqual(module.step("next"), wanted, layout)
         with patch.object(module, "query", return_value=self.state("dwindle")), \
              patch.object(module, "spatial_registered", return_value=True), \
              patch.object(module, "apply", side_effect=lambda p: p):
+            self.assertEqual(module.step("prev"), "zwevend")
+        # Zwevend gebruikt de tegel-layout; de opgeslagen keuze bepaalt de soort.
+        with patch.object(module, "query", return_value=self.state("dwindle")), \
+             patch.object(module, "saved", return_value={"3": "zwevend"}), \
+             patch.object(module, "spatial_registered", return_value=True), \
+             patch.object(module, "apply", side_effect=lambda p: p):
+            self.assertEqual(module.step("next"), "tegels")
             self.assertEqual(module.step("prev"), "ruimtelijk")
 
     def test_empty_spatial_workspace_does_nothing(self):

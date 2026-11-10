@@ -10,6 +10,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Zwevende werkruimte met dock
+- Nieuwe indeling **Zwevend** in Super+Z (en in "volgende indeling": tegels, scrollen, ruimtelijk, zwevend). Alle vensters op die werkruimte zweven, ook nieuwe; terug naar een andere indeling legt ze weer in tegels. De keuze blijft na een herstart.
+- Op zo'n werkruimte staat onderaan een afgerond **dock** met je vastgezette apps uit de launcher, de open vensters van die werkruimte (stip = actief, klik = focus) en een knop naar alle apps. De rail blijft gewoon; op andere werkruimtes is het dock weg en klikt de onderkant door.
+
 ### Eiland: één plek voor "wat gebeurt er nu"
 - Korte bevestigingen (schermafbeelding gemaakt, indeling gewisseld, modus aangesprongen, "Telefoon niet bereikt") verschijnen nu in het eiland, met hun knop **Ongedaan maken** erin, in plaats van als losse kaart rechtsboven. Een gewone melding blijft een melding. Met de muis erop blijft hij staan; rechts- of middenklik haalt hem weg.
 - Groeit er een paneel uit dezelfde rand, dan komt de oude kaart rechtsboven. `kingstra eiland feedback uit` zet de oude kaart terug.

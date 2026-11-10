@@ -22,7 +22,7 @@ Item {
     property var workspaceLayouts: ({})
     property var parkedPerWorkspace: ({})
     readonly property var layoutGlyphs: ({ "50-50": "󰕰", "70-30": "󰕰", "midden": "󰕰", "kolommen": "󰁔",
-                                           "scrollen": "󰁔", "ruimtelijk": "󰆾", "focus": "󰊓" })
+                                           "scrollen": "󰁔", "ruimtelijk": "󰆾", "focus": "󰊓", "zwevend": "󰖲" })
     function layoutGlyph(wsId) {
         return layoutGlyphs[String(workspaceLayouts[String(wsId)] || "tegels")] || "";
     }
