@@ -10,6 +10,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Scherm delen in Kingstra-stijl
+- Als Teams, de browser of OBS je scherm wil delen, verschijnt nu een eigen kiezer in de shell in plaats van de kale portal-kiezer: tabbladen **Scherm**, **Werkruimte** (als je Hyprland-portal dat kan) en **Venster**, elk met live voorbeeld. Tab of 1/2/3 wisselt, pijltjes en Enter kiezen, Esc annuleert. Draait de shell niet, dan komt de oude kiezer.
+- Zolang je deelt staat er een **rode stip in het eiland** ("Je deelt je scherm").
+- De installer schrijft `~/.config/hypr/xdph.conf` (een eigen xdph.conf blijft staan) en start de portal opnieuw, behalve als je op dat moment deelt.
+
 ### Telefoon koppelen (KDE Connect)
 - Nieuw paneel **Telefoon** (Snelle instellingen › Telefoon, of het menu onder Snel schakelen): per telefoon de batterij en knoppen voor laten afgaan ("zoek mijn telefoon"), klembord sturen, bestand sturen en een testbericht. Koppelen… opent KDE Connect voor de eerste koppeling.
 - Meldingen van je telefoon komen in het gewone meldingencentrum. Alles gaat via je eigen netwerk. De dienst start niet vanzelf bij het inloggen, maar zodra je het paneel opent, en blijft dan de rest van de sessie aan. De installer zet `kdeconnect` en `zenity` erbij.

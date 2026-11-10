@@ -107,3 +107,6 @@ config/kingstra/wallpaper-sources.lock
 # Back-up: instellingen en eigen uitzonderingen per pc (kingstra-backup)
 config/kingstra/backup.conf
 config/kingstra/backup-exclude.local.txt
+
+# Door de installer geschreven (absoluut pad naar de deelkiezer)
+config/hypr/xdph.conf

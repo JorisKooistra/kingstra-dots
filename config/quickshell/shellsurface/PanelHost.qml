@@ -25,7 +25,7 @@ Item {
             // focus meestal nog van de vorige keer, dus dat signaal blijft uit
             // en zou het zoekveld leeg laten. callLater wacht tot de Loader
             // zijn inhoud heeft geplaatst.
-            if (sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "gaming" || sourceEntryId === "windows" || sourceEntryId === "menu" || sourceEntryId === "snap" || sourceEntryId === "capture" || sourceEntryId === "switcher") Qt.callLater(focusContent);
+            if (sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "gaming" || sourceEntryId === "windows" || sourceEntryId === "menu" || sourceEntryId === "snap" || sourceEntryId === "capture" || sourceEntryId === "switcher" || sourceEntryId === "share") Qt.callLater(focusContent);
         } else {
             visualClearTimer.restart();
         }
@@ -110,7 +110,7 @@ Item {
         // Launcher en klembord zijn beide zoekflows. Ze groeien uit dezelfde
         // onderrand en vormen zo één herkenbare Quickshell-taal, in plaats van
         // dat het klembord als een los zijpaneel naast de rail voelt.
-        if (entryId === "launcher" || entryId === "clipboard" || entryId === "menu" || entryId === "snap" || entryId === "capture" || entryId === "switcher") return "bottom";
+        if (entryId === "launcher" || entryId === "clipboard" || entryId === "menu" || entryId === "snap" || entryId === "capture" || entryId === "switcher" || entryId === "share") return "bottom";
         if (isRailEntry(entryId)) return (railOnRight !== secondRailActive) ? "right" : "left";
         if (isStripEntry(entryId)) return stripOnBottom ? "bottom" : "top";
         return "";
@@ -118,7 +118,7 @@ Item {
     // Alleen panelen met tekstinvoer hebben een focusgrab nodig. Bij de
     // overige panelen zou de grab botsen met de legacy focus-afhandeling
     // in qs_manager.sh en het paneel meteen weer sluiten.
-    readonly property bool needsKeyboard: sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "gaming" || sourceEntryId === "windows" || sourceEntryId === "menu" || sourceEntryId === "snap" || sourceEntryId === "capture" || sourceEntryId === "switcher"
+    readonly property bool needsKeyboard: sourceEntryId === "launcher" || sourceEntryId === "clipboard" || sourceEntryId === "gaming" || sourceEntryId === "windows" || sourceEntryId === "menu" || sourceEntryId === "snap" || sourceEntryId === "capture" || sourceEntryId === "switcher" || sourceEntryId === "share"
     readonly property bool fromStrip: ThemeConfig.barStatusStripEnabled && !stripOnBottom
                                       && anchorY < stripH + 4
     readonly property string visualEdge: edgeFor(visualEntryId)
@@ -276,6 +276,7 @@ Item {
         if (entryId === "capture") return Qt.resolvedUrl("CapturePanel.qml");
         if (entryId === "switcher") return Qt.resolvedUrl("WindowCarouselPanel.qml");
         if (entryId === "phone") return Qt.resolvedUrl("PhonePanel.qml");
+        if (entryId === "share") return Qt.resolvedUrl("SharePickerPanel.qml");
         if (entryId === "clipboard") return Qt.resolvedUrl("ClipboardPanel.qml");
         if (entryId === "windows") return Qt.resolvedUrl("WindowSwitcherPanel.qml");
         if (entryId === "tophover") return Qt.resolvedUrl("TopHoverWidget.qml");

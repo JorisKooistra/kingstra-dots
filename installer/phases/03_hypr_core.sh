@@ -19,6 +19,7 @@ phase_run() {
 
     log_step "XDG-portalen configureren..."
     _phase03_configure_portals
+    _phase03_configure_share_picker
 
     log_step "Fase 03 valideren..."
     _phase03_validate
@@ -188,6 +189,46 @@ EOF
     # niet open". De portal leest de keuze alleen bij het starten in.
     systemctl --user try-restart xdg-desktop-portal.service >/dev/null 2>&1 || true
     log_ok "XDG-portalconfiguratie geschreven"
+}
+
+# Eigen kiezer voor scherm delen (paneel "share" in de shell). XDPH leest
+# xdph.conf alleen bij het starten; een eigen xdph.conf zonder onze kop
+# blijft staan.
+_phase03_configure_share_picker() {
+    local conf="$HOME/.config/hypr/xdph.conf"
+    local picker="$HOME/.config/hypr/scripts/share-picker.sh"
+    if "${DRY_RUN:-false}"; then
+        log_dry "Kiezer voor scherm delen zou in $conf komen"
+        return 0
+    fi
+    if [[ -f "$conf" ]] && ! grep -q '^# kingstra-share-picker' "$conf"; then
+        log_warn "Eigen $conf gevonden; Kingstra-kiezer voor scherm delen niet ingesteld"
+        return 0
+    fi
+    local new
+    new="$(cat <<CONF
+# kingstra-share-picker (door de installer geschreven; verwijder deze regel om zelf te beheren)
+screencopy {
+    custom_picker_binary = $picker
+    allow_token_by_default = true
+}
+CONF
+)"
+    if [[ -f "$conf" ]] && [[ "$(cat "$conf")" == "$new" ]]; then
+        log_ok "Kiezer voor scherm delen staat al"
+        return 0
+    fi
+    printf '%s\n' "$new" > "$conf"
+    # Opnieuw starten zodat de nieuwe kiezer meteen geldt; D-Bus start hem
+    # zelf weer zodra een app wil delen.
+    # Niet herstarten midden in een gesprek waarin je deelt.
+    if command -v pw-cli &>/dev/null && pw-cli ls Node 2>/dev/null | grep -q 'xdph-streaming-'; then
+        log_info "Je deelt nu je scherm; de nieuwe kiezer geldt na opnieuw inloggen"
+    else
+        systemctl --user try-restart xdg-desktop-portal-hyprland.service >/dev/null 2>&1 \
+            || pkill -x xdg-desktop-portal-hyprland >/dev/null 2>&1 || true
+    fi
+    log_ok "Kiezer voor scherm delen ingesteld (Kingstra-stijl)"
 }
 
 _phase03_validate() {

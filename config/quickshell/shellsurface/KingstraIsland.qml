@@ -61,6 +61,7 @@ Item {
     property bool privacyMic: false
     property bool privacyCamera: false
     property bool privacyRecording: false
+    property bool privacySharing: false
 
     readonly property var activePlayer: {
         let players = Mpris.players.values;
@@ -70,7 +71,7 @@ Item {
         return null;
     }
     readonly property bool mediaLive: liveEnabled && !floatingIsland && activePlayer !== null && ScreenProfiles.musicVisible(shellWindow.screen ? shellWindow.screen.name : "")
-    readonly property bool privacyLive: liveEnabled && (privacyMic || privacyCamera || privacyRecording)
+    readonly property bool privacyLive: liveEnabled && (privacyMic || privacyCamera || privacyRecording || privacySharing)
     readonly property bool hasLive: mediaLive || privacyLive
 
     // Aan zolang een paneel uit dezelfde rand groeit (bv. het
@@ -286,6 +287,7 @@ Item {
                     root.privacyMic = d.mic === true;
                     root.privacyCamera = d.camera === true;
                     root.privacyRecording = d.recording === true;
+                    root.privacySharing = d.sharing === true;
                 } catch (e) {}
             }
         }
@@ -452,7 +454,8 @@ Item {
                     model: [
                         { on: root.privacyMic, color: root.mocha.peach },
                         { on: root.privacyCamera, color: root.mocha.green },
-                        { on: root.privacyRecording, color: root.mocha.red }
+                        { on: root.privacyRecording, color: root.mocha.red },
+                        { on: root.privacySharing, color: root.mocha.red }
                     ]
                     delegate: Rectangle {
                         required property var modelData
@@ -702,7 +705,8 @@ Item {
                 model: [
                     { on: root.privacyMic, icon: "󰍬", text: "Microfoon in gebruik", color: root.mocha.peach },
                     { on: root.privacyCamera, icon: "󰄀", text: "Camera in gebruik", color: root.mocha.green },
-                    { on: root.privacyRecording, icon: "󰑋", text: "Schermopname loopt", color: root.mocha.red }
+                    { on: root.privacyRecording, icon: "󰑋", text: "Schermopname loopt", color: root.mocha.red },
+                    { on: root.privacySharing, icon: "󰹑", text: "Je deelt je scherm", color: root.mocha.red }
                 ]
                 delegate: RowLayout {
                     required property var modelData

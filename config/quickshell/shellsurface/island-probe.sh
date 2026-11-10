@@ -33,4 +33,11 @@ if pgrep -x 'wf-recorder|wl-screenrec|gpu-screen-recorder|obs' >/dev/null 2>&1; 
     recording=true
 fi
 
-printf '{"mic":%s,"camera":%s,"recording":%s}\n' "$mic" "$camera" "$recording"
+# Scherm delen: xdg-desktop-portal-hyprland maakt per deelsessie een
+# PipeWire-stroom "xdph-streaming-…"; zolang die bestaat, kijkt iemand mee.
+sharing=false
+if command -v pw-cli >/dev/null 2>&1 && pw-cli ls Node 2>/dev/null | grep -q 'xdph-streaming-'; then
+    sharing=true
+fi
+
+printf '{"mic":%s,"camera":%s,"recording":%s,"sharing":%s}\n' "$mic" "$camera" "$recording" "$sharing"
