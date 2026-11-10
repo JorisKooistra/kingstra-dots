@@ -10,6 +10,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Eiland: één plek voor "wat gebeurt er nu"
+- Korte bevestigingen (schermafbeelding gemaakt, indeling gewisseld, modus aangesprongen, "Telefoon niet bereikt") verschijnen nu in het eiland, met hun knop **Ongedaan maken** erin, in plaats van als losse kaart rechtsboven. Een gewone melding blijft een melding. Met de muis erop blijft hij staan; rechts- of middenklik haalt hem weg.
+- Groeit er een paneel uit dezelfde rand, dan komt de oude kaart rechtsboven. `kingstra eiland feedback uit` zet de oude kaart terug.
+
 ### Scherm delen in Kingstra-stijl
 - Als Teams, de browser of OBS je scherm wil delen, verschijnt nu een eigen kiezer in de shell in plaats van de kale portal-kiezer: tabbladen **Scherm**, **Werkruimte** (als je Hyprland-portal dat kan) en **Venster**, elk met live voorbeeld. Tab of 1/2/3 wisselt, pijltjes en Enter kiezen, Esc annuleert. Draait de shell niet, dan komt de oude kiezer.
 - Zolang je deelt staat er een **rode stip in het eiland** ("Je deelt je scherm").

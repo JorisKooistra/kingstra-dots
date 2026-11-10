@@ -26,6 +26,9 @@ Item {
     // Optioneel: een knop "Ongedaan maken" die dit shell-commando draait.
     property string undoCommand: ""
     property string undoLabel: "Ongedaan maken"
+    // Aan: niet zelf tonen maar doorgeven aan het eiland (ShellSurface).
+    property bool routeToIsland: false
+    signal routed(var payload)
     // Klikbaar stuk voor de input-mask van ShellSurface; 0×0 zonder knop.
     readonly property Item undoHit: undoHitItem
 
@@ -84,6 +87,12 @@ Item {
 
         if (String(payload.scope || "focused") === "focused" && !onFocusedScreen())
             return;
+
+        // Het eiland neemt het over (één plek voor "wat gebeurt er nu").
+        if (routeToIsland) {
+            routed(payload);
+            return;
+        }
 
         icon = String(payload.icon || "󰄀");
         title = String(payload.title || "Klaar");

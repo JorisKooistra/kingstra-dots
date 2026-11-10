@@ -20,7 +20,7 @@ import ".."
 // Klik op de muziekpil om hem uit te klappen.
 //
 // Instellingen in ~/.local/state/kingstra/island.json:
-//   { "osd": true, "notifications": true, "live": true }
+//   { "osd": true, "notifications": true, "live": true, "feedback": true }
 // `kingstra eiland ...` schrijft dit. Met "notifications": false komen de
 // oude kaartjes rechtsboven terug.
 Item {
@@ -35,6 +35,11 @@ Item {
     property bool osdEnabled: true
     property bool notificationsEnabled: true
     property bool liveEnabled: true
+    // Korte bevestigingen (feedback.sh: schermafbeelding, indeling, modus)
+    // ook in het eiland, met hun knop "Ongedaan maken". "feedback": false
+    // in island.json geeft de oude kaart rechtsboven terug.
+    property bool feedbackEnabled: true
+    readonly property bool handlesFeedback: feedbackEnabled
     readonly property bool handlesNotifications: notificationsEnabled
     // Matte houdt muziek achter het kleine bar-icoon. OSD, meldingen en
     // privacy-indicatoren blijven kort zichtbaar als losse afgeronde kaart.
@@ -62,6 +67,13 @@ Item {
     property bool privacyCamera: false
     property bool privacyRecording: false
     property bool privacySharing: false
+    property bool fbActive: false
+    property string fbIcon: ""
+    property string fbTitle: ""
+    property string fbDetail: ""
+    property string fbUrgency: "normal"
+    property string fbUndo: ""
+    property string fbUndoLabel: "Ongedaan maken"
 
     readonly property var activePlayer: {
         let players = Mpris.players.values;
@@ -82,18 +94,21 @@ Item {
         if (suppressed) return "";
         // Een toetsdruk gaat voor: je wilt meteen zien wat je deed.
         if (osdActive) return "osd";
+        if (fbActive) return "feedback";
         if (currentNotif !== null) return "notif";
         if (expanded && hasLive) return "expanded";
         if (hasLive) return "live";
         return "";
     }
 
-    readonly property int targetWidth: mode === "notif" ? 440
+    readonly property int targetWidth: mode === "feedback" ? 400
+        : mode === "notif" ? 440
         : mode === "osd" ? 320
         : mode === "expanded" ? 440
         : mode === "live" ? (mediaLive ? 260 : 120)
         : 140
-    readonly property int targetHeight: mode === "notif" ? Math.max(72, notifContent.implicitHeight + 24)
+    readonly property int targetHeight: mode === "feedback" ? Math.max(48, feedbackContent.implicitHeight + 20)
+        : mode === "notif" ? Math.max(72, notifContent.implicitHeight + 24)
         : mode === "osd" ? 48
         : mode === "expanded" ? expandedContent.implicitHeight + 28
         : mode === "live" ? 34
@@ -139,6 +154,7 @@ Item {
                 root.osdEnabled = data.osd !== false;
                 root.notificationsEnabled = data.notifications !== false;
                 root.liveEnabled = data.live !== false;
+                root.feedbackEnabled = data.feedback !== false;
             } catch (e) {}
         }
     }
@@ -215,6 +231,33 @@ Item {
         return osdMuted ? "Gedempt" : "Volume";
     }
     readonly property bool osdShowsBar: osdKind === "volume" || osdKind === "brightness"
+
+    // --- Feedback (feedback.sh, via FeedbackToast doorgegeven) -----------
+    function showFeedback(p) {
+        if (!handlesFeedback || !p) return;
+        fbIcon = String(p.icon || "󰄀");
+        fbTitle = String(p.title || "Klaar");
+        fbDetail = String(p.detail || "");
+        fbUrgency = String(p.urgency || "normal");
+        fbUndo = String(p.undo || "");
+        fbUndoLabel = String(p.undoLabel || "Ongedaan maken");
+        fbActive = true;
+        fbTimer.interval = Math.max(1200, Math.min(8000, Number(p.timeout || 2400)));
+        fbTimer.restart();
+    }
+    function runFeedbackUndo() {
+        if (fbUndo === "") return;
+        Quickshell.execDetached(["bash", "-lc", "PATH=\"$HOME/.local/bin:$PATH\"; " + fbUndo]);
+        fbUndo = "";
+        fbActive = false;
+    }
+    Timer {
+        id: fbTimer
+        onTriggered: {
+            if (islandHover.hovered) restart();
+            else { root.fbActive = false; root.fbUndo = ""; }
+        }
+    }
 
     // --- Meldingen ------------------------------------------------------
     function showNotification(notification) {
@@ -526,6 +569,78 @@ Item {
             }
         }
 
+        // --- Feedback ---------------------------------------------------
+        RowLayout {
+            id: feedbackContent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 16
+            anchors.rightMargin: 12
+            spacing: 12
+            opacity: root.mode === "feedback" ? 1 : 0
+            visible: opacity > 0.01
+            Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("fast") } }
+
+            Text {
+                text: root.fbIcon
+                font.family: ThemeConfig.iconFont
+                font.pixelSize: 18
+                color: root.fbUrgency === "critical" ? root.mocha.red
+                    : (root.fbUrgency === "warning" ? root.mocha.yellow : root.mocha.primary)
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+                Text {
+                    Layout.fillWidth: true
+                    text: root.fbTitle
+                    elide: Text.ElideRight
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                    color: root.mocha.text
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: root.fbDetail !== ""
+                    text: root.fbDetail
+                    elide: Text.ElideRight
+                    maximumLineCount: 2
+                    wrapMode: Text.WordWrap
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 11
+                    color: root.mocha.subtext0
+                }
+            }
+            Rectangle {
+                visible: root.fbUndo !== ""
+                implicitWidth: undoText.implicitWidth + 20
+                implicitHeight: 28
+                radius: 14
+                color: undoMouse.containsMouse
+                    ? Qt.rgba(root.mocha.primary.r, root.mocha.primary.g, root.mocha.primary.b, 0.30)
+                    : Qt.rgba(root.mocha.primary.r, root.mocha.primary.g, root.mocha.primary.b, 0.16)
+                Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+                Text {
+                    id: undoText
+                    anchors.centerIn: parent
+                    text: root.fbUndoLabel
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                    color: root.mocha.text
+                }
+                MouseArea {
+                    id: undoMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.runFeedbackUndo()
+                }
+            }
+        }
+
         // --- Melding ----------------------------------------------------
         RowLayout {
             id: notifContent
@@ -760,6 +875,7 @@ Item {
         acceptedButtons: Qt.RightButton
         onTapped: {
             if (root.mode === "notif") NotificationService.dismiss(root.currentNotif);
+            else if (root.mode === "feedback") root.fbActive = false;
             else root.expanded = false;
         }
     }
@@ -768,6 +884,7 @@ Item {
         onTapped: {
             if (root.mode === "notif") root.advanceFrom(root.currentNotif);
             else if (root.mode === "osd") root.osdActive = false;
+            else if (root.mode === "feedback") root.fbActive = false;
         }
     }
 }

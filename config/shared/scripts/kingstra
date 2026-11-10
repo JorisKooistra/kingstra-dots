@@ -164,17 +164,18 @@ PY
         python3 - "$file" "${1:-}" "${2:-}" <<'PY'
 import json, sys
 path, part, value = sys.argv[1], sys.argv[2], sys.argv[3]
-keys = {"osd": "osd", "meldingen": "notifications", "notifications": "notifications", "live": "live"}
+keys = {"osd": "osd", "meldingen": "notifications", "notifications": "notifications", "live": "live",
+        "feedback": "feedback", "bevestigingen": "feedback"}
 if part in ("aan", "uit", "on", "off"):
     part, value = "", part
 if value not in ("aan", "uit", "on", "off") or (part and part not in keys):
-    sys.exit("gebruik: kingstra eiland [osd|meldingen|live] aan|uit")
+    sys.exit("gebruik: kingstra eiland [osd|meldingen|live|feedback] aan|uit")
 try:
     data = json.load(open(path))
 except Exception:
     data = {}
 on = value in ("aan", "on")
-for key in ([keys[part]] if part else ["osd", "notifications", "live"]):
+for key in ([keys[part]] if part else ["osd", "notifications", "live", "feedback"]):
     data[key] = on
 json.dump(data, open(path, "w"))
 PY

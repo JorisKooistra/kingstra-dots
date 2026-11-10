@@ -193,6 +193,10 @@ Scope {
                     mocha: mocha
                     topInset: chrome.stripHeight
                     rightInset: chrome.rightEdgeExtent > 0 ? chrome.rightEdgeExtent : chrome.shellBorderWidth
+                    // Het eiland toont deze bevestigingen zelf, behalve als
+                    // er een paneel uit dezelfde rand groeit.
+                    routeToIsland: island.handlesFeedback && !island.suppressed
+                    onRouted: (payload) => island.showFeedback(payload)
                 }
 
                 // Spiekbriefje bij Super vasthouden; doorklikbaar, geen focus.
