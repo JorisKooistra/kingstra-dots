@@ -65,7 +65,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 |---|---|
 | `Super + Z` | Snap-indeling kiezen voor deze werkruimte (1-8, klik een vak) |
 | `Super + Alt + S` | Scrollende kolommen aan/uit op deze werkruimte |
-| `Super + Alt + Z` | Zen-modus aan/uit (balk verborgen, niet storen, rest gedimd) |
+| `Super + Shift + Z` | Zen-modus aan/uit (balk verborgen, niet storen, rest gedimd) |
 | `Super + wiel` | Binnen de werkruimte: strook volgende/vorige pagina; ruimtelijk omhoog/omlaag |
 | `Super + Alt + wiel` | Binnen de werkruimte opzij (ruimtelijk links/rechts) |
 | `Super + Ctrl + linkermuis slepen` | Werkvlak vrij verschuiven; klikt alleen vast als je dicht bij een plek loslaat |
@@ -135,7 +135,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 | `Super + Ctrl + W` | Wallpaper picker |
 | `Super + Shift + T` | Volgend thema (cyclisch) |
 | `Super + A` | Sfeer: thema, wallpaper en wat ga je doen (Werken, Kijken en luisteren, Spelen, Zen). Vervangt de losse thema- en modekiezer |
-| `Super + Shift + M` | Muziek popup |
+| `Super + Ctrl + P` | Muziekpaneel |
 | `Super + Ctrl + I` | Instellingen (eigen app, ook in de launcher) |
 | `Super + Ctrl + Space` | Toetsenbordmenu voor alles (thema, modus, schermen, systeem, sessie) |
 | Klik op CPU/RAM-pil | Systeemstats popup |
@@ -146,7 +146,8 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 
 | Toetsen | Actie |
 |---|---|
-| `Print` | Vastleg-studio: gebied, venster of scherm; foto of opname; tekst kopiëren; kleur kiezen |
+| `Print` | Gebied vastleggen: opslaan en kopiëren, met voorbeeld |
+| `Super + Ctrl + Print` | Vastleg-studio: gebied, venster of scherm; foto of opname; tekst kopiëren; kleur kiezen |
 | `Super + Print` | Gebied selecteren → alleen kopiëren |
 | `Shift + Print` | Gebied selecteren → bewerken in satty |
 | `Ctrl + Print` | Volledig scherm opslaan |

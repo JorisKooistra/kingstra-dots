@@ -14,7 +14,7 @@ import ".."
 // Het "volume"-doel van rail, sneltoetsen en qs_manager opent dit paneel.
 // Ook de oude muziekpopup is hierin opgegaan: draaitafel, tijdlijn, shuffle
 // en herhalen in de kaart "Nu speelt", de tien EQ-banden onder Equalizer.
-// Het "music"-doel (Super+Shift+M, launcher) opent daarom ook dit paneel.
+// Het "music"-doel (Super+Ctrl+P, launcher) opent daarom ook dit paneel.
 // De vorm (blob, hoeken, groei-animatie) komt volledig uit PanelHost.
 Item {
     id: root

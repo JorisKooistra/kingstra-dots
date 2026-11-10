@@ -70,7 +70,7 @@ function build(home, scripts) {
             { icon: "󰈙", label: "Werken (Office)", cmd: kingstra("mode office") },
             { icon: "󰊴", label: "Spelen (Gaming)", cmd: kingstra("mode gaming") },
             { icon: "󰝚", label: "Kijken en luisteren (Media)", cmd: kingstra("mode media") },
-            { icon: "󰚀", label: "Zen aan of uit", hint: "Super+Alt+Z", cmd: ["bash", scripts + "/zen.sh", "toggle"] }
+            { icon: "󰚀", label: "Zen aan of uit", hint: "Super+Shift+Z", cmd: ["bash", scripts + "/zen.sh", "toggle"] }
         ] },
         { icon: "󰏘", label: "Sfeer: thema, wallpaper, stand", hint: "Super+A", cmd: qs("bediening"), panel: true },
         { icon: "󰕮", label: "Snel schakelen", children: [
@@ -92,7 +92,7 @@ function build(home, scripts) {
             { icon: "󰓶", label: "Tabletmodus aan/uit", cmd: ["bash", scripts + "/tablet-mode.sh", "toggle"] }
         ] },
         { icon: "󰄀", label: "Vastleggen", children: [
-            { icon: "󰄀", label: "Vastleg-studio", hint: "Print", cmd: qs("capture"), panel: true },
+            { icon: "󰄀", label: "Vastleg-studio", hint: "Super+Ctrl+Print", cmd: qs("capture"), panel: true },
             { icon: "󰹑", label: "Schermafbeelding van gebied", cmd: ["bash", scripts + "/screenshot.sh", "--preview"] },
             { icon: "󰍹", label: "Schermafbeelding van scherm", hint: "Ctrl+Print", cmd: ["bash", scripts + "/screenshot.sh", "--full"] },
             { icon: "󰖯", label: "Schermafbeelding van venster", cmd: ["bash", scripts + "/screenshot.sh", "--window", "--preview"] },

@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Sneltoetsen volgens jouw grammatica (novemberronde 2)
+- **Muziekpaneel: Super+Ctrl+P** (P van player). Een paneel is een kiezer, dus Ctrl. Super+Shift+M doet niets meer.
+- **Vastleg-studio: Super+Ctrl+Print.** Gewoon **Print** legt weer meteen een gebied vast (opslaan en kopiëren, met voorbeeldmelding). Super+Print, Shift+Print, Ctrl+Print en Super+Shift+R blijven zoals ze waren.
+- **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
+- Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
+
 ### Volume scrollen in de Matte-bar
 - In de Matte-stijl regel je het volume nu met het muiswiel boven het volume- of muziekicoon rechts in de bar: 5% per wielklik. Andere knoppen in die bar reageren niet op het wiel.
 - Scrollen in de rail/strip blijft 1% per klik; omdraaien van de scrollrichting gooit een halve klik niet meer mee.

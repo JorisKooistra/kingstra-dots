@@ -140,7 +140,8 @@ exec(mod .. " + W", scripts .. "/qs_manager.sh toggle windows")
 
 exec(mod .. " + N", "~/.config/quickshell/notifications/notification_control.sh toggle")
 exec(mod .. " + SHIFT + N", "~/.config/quickshell/notifications/notification_control.sh clear")
-exec(mod .. " + SHIFT + M", scripts .. "/qs_manager.sh toggle music")
+-- Muziekpaneel: een paneel is een kiezer, dus Ctrl (P van player).
+exec(mod .. " + CTRL + P", scripts .. "/qs_manager.sh toggle music")
 exec(mod .. " + CTRL + I", scripts .. "/qs_manager.sh toggle settings")
 exec(mod .. " + CTRL + Space", scripts .. "/qs_manager.sh toggle menu")
 -- Sfeer: thema, wallpaper en stand (wat ga je doen). De losse thema- en
@@ -149,11 +150,13 @@ exec(mod .. " + A", scripts .. "/qs_manager.sh toggle bediening")
 exec(mod .. " + F1", scripts .. "/qs_manager.sh toggle help")
 
 -- Screenshots
--- Print opent de vastleg-studio (gebied/venster/scherm, foto of opname,
--- tekst kopiëren, kleur kiezen). De snelle varianten blijven direct:
--- Super+Print gebied naar klembord, Shift+Print met notities, Ctrl+Print
--- het hele scherm. Super+Shift+R start of stopt een opname van een gebied.
-exec("Print", scripts .. "/qs_manager.sh toggle capture")
+-- Print legt meteen een gebied vast (opslaan en kopiëren). De vastleg-studio
+-- (gebied/venster/scherm, foto of opname, tekst kopiëren, kleur kiezen) is
+-- een kiezer en zit dus op Super+Ctrl+Print. Super+Print gebied naar
+-- klembord, Shift+Print met notities, Ctrl+Print het hele scherm.
+-- Super+Shift+R start of stopt een opname van een gebied.
+exec("Print", scripts .. "/screenshot.sh --preview")
+exec(mod .. " + CTRL + Print", scripts .. "/qs_manager.sh toggle capture")
 exec(mod .. " + Print", scripts .. "/screenshot.sh --clipboard")
 exec("SHIFT + Print", scripts .. "/screenshot.sh --annotate")
 exec("CTRL + Print", scripts .. "/screenshot.sh --full")
@@ -183,11 +186,12 @@ bind(mod .. " + D", hl.dsp.workspace.toggle_special("discord"))
 bind(mod .. " + SHIFT + D", hl.dsp.window.move({ workspace = "special:discord" }))
 
 -- Indelingen en kladblok. Super+Z kiest een snap-indeling voor deze
--- werkruimte; Super+Alt+S zet scrollende kolommen aan of uit. Super+`
+-- werkruimte; Super+Shift+Z zet zen aan of uit; Super+Alt+S zet scrollende kolommen aan of uit. Super+`
 -- toont het kladblok, Super+Shift+` stuurt het actieve venster erheen
 -- (of haalt het terug).
 exec(mod .. " + Z", scripts .. "/qs_manager.sh toggle snap")
-exec(mod .. " + ALT + Z", scripts .. "/zen.sh toggle")
+-- Zen aan/uit is direct doen, dus Shift.
+exec(mod .. " + SHIFT + Z", scripts .. "/zen.sh toggle")
 exec(mod .. " + ALT + S", scripts .. "/layout-tool.sh scroll")
 exec(mod .. " + grave", scripts .. "/scratchpad.sh toggle")
 exec(mod .. " + SHIFT + grave", scripts .. "/scratchpad.sh send")

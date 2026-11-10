@@ -7,7 +7,7 @@
 #   - vensters zonder focus worden gedimd
 #
 # Uitzetten zet alles terug zoals het was. Gebruik: zen.sh toggle|on|off|status
-# (Super+Alt+Z, `kingstra zen`, het toetsenbordmenu onder Modus).
+# (Super+Shift+Z, `kingstra zen`, het toetsenbordmenu onder Modus).
 set -uo pipefail
 
 RUNTIME="${XDG_RUNTIME_DIR:-/tmp}"
@@ -80,7 +80,7 @@ zen_on() {
     "$HOME/.local/bin/kingstra" widgets uit >/dev/null 2>&1 \
         || "$CONFIG_HOME/shared/scripts/kingstra" widgets uit >/dev/null 2>&1 || true
     hypr eval 'hl.config({ decoration = { dim_inactive = true, dim_strength = 0.35 } })' >/dev/null 2>&1 || true
-    feedback "󰚀" "Zen-modus aan" "Super+Alt+Z zet alles terug"
+    feedback "󰚀" "Zen-modus aan" "Super+Shift+Z zet alles terug"
 }
 
 zen_off() {
