@@ -10,6 +10,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Bovenbalk zuiniger in rust
+- **De shell las vier kleine statusbestanden elke 75 tot 125 ms opnieuw**, per scherm (sneltoetsen, feedback, volume-OSD in het eiland, spiekbriefje). Gemeten op Joris' pc kostte dat samen ongeveer 8 van de 15% CPU die de bovenbalk in rust gebruikte. Nu kijkt één `inotifywait` naar die bestanden en leest de shell ze alleen als er echt iets verandert; de oude poll blijft als rustig vangnet (elke 2 s). Zonder inotify-tools werkt alles zoals vroeger.
+
 ### Pushen vanaf de laptop
 - **`kingstra github-login`**: eenmalig inloggen bij GitHub. Je krijgt een code, je browser opent github.com/login/device en je typt hem in. Daarna werkt `git push` vanuit ~/kingstra-dots gewoon (git gebruikt de login van de GitHub-CLI; een ssh-adres wordt https). `--check` kijkt alleen. De updater zet `github-cli` en het commando neer.
 

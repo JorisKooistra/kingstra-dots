@@ -185,10 +185,14 @@ Item {
     // FileView mist op Quickshell 0.3 geregeld een write; zelfde truc als
     // FeedbackToast. Het bestand is één korte regel.
     Timer {
-        interval: 90
+        interval: TmpWatch.pollInterval(90)
         running: root.osdEnabled
         repeat: true
         onTriggered: osdFile.reload()
+    }
+    Connections {
+        target: TmpWatch
+        function onChanged(path) { if (path === "/tmp/kingstra-island.json") osdFile.reload(); }
     }
     Timer {
         id: osdTimer

@@ -340,10 +340,14 @@ Scope {
                     // FileView mist op Quickshell 0.3.0 geregeld een write.
                     // Dit bestand bevat maar één korte regel; een snelle poll
                     // houdt met name de launcher-sneltoets direct responsief.
-                    interval: 75
+                    interval: TmpWatch.pollInterval(75)
                     running: true
                     repeat: true
                     onTriggered: widgetStateView.reload()
+                }
+                Connections {
+                    target: TmpWatch
+                    function onChanged(path) { if (path === "/tmp/qs_widget_state") widgetStateView.reload(); }
                 }
 
                 WlrLayershell.namespace: "quickshell:kingstra-shell-surface"

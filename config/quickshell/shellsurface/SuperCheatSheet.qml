@@ -71,10 +71,14 @@ Item {
     }
     // FileView mist soms een schrijfactie; alleen kort nalezen.
     Timer {
-        interval: 100
+        interval: TmpWatch.pollInterval(100)
         running: true
         repeat: true
         onTriggered: stateFile.reload()
+    }
+    Connections {
+        target: TmpWatch
+        function onChanged(path) { if (path === "/tmp/kingstra-superhold") stateFile.reload(); }
     }
     // Mocht een loslaat-gebeurtenis zoekraken (bv. vergrendelscherm): na
     // twintig seconden ruimt het briefje zichzelf op.

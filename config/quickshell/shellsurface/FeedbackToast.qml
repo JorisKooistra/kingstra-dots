@@ -108,10 +108,14 @@ Item {
 
     // Quickshell 0.3 FileView occasionally misses a write after preload.
     Timer {
-        interval: 125
+        interval: TmpWatch.pollInterval(125)
         running: true
         repeat: true
         onTriggered: feedbackFile.reload()
+    }
+    Connections {
+        target: TmpWatch
+        function onChanged(path) { if (path === "/tmp/kingstra-feedback.json") feedbackFile.reload(); }
     }
 
     Timer {
