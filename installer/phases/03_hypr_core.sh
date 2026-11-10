@@ -225,8 +225,13 @@ CONF
     if command -v pw-cli &>/dev/null && pw-cli ls Node 2>/dev/null | grep -q 'xdph-streaming-'; then
         log_info "Je deelt nu je scherm; de nieuwe kiezer geldt na opnieuw inloggen"
     else
-        systemctl --user try-restart xdg-desktop-portal-hyprland.service >/dev/null 2>&1 \
-            || pkill -x xdg-desktop-portal-hyprland >/dev/null 2>&1 || true
+        # kingstra-session-start start hem los van systemd, dus try-restart
+        # doet dan niets; pkill -x past niet (naam > 15 tekens), vandaar -f.
+        if systemctl --user is-active --quiet xdg-desktop-portal-hyprland.service 2>/dev/null; then
+            systemctl --user restart xdg-desktop-portal-hyprland.service >/dev/null 2>&1 || true
+        else
+            pkill -f '^/usr/lib/xdg-desktop-portal-hyprland' >/dev/null 2>&1 || true
+        fi
     fi
     log_ok "Kiezer voor scherm delen ingesteld (Kingstra-stijl)"
 }
