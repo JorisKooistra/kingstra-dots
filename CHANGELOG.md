@@ -10,6 +10,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Indeling per werkruimte als één begrip
+- **Volgende indeling**: `kingstra indeling volgende` (en `vorige`), of in het toetsenbordmenu onder Vensters, wisselt de werkruimte van tegels naar scrollen naar ruimtelijk werkvlak en weer terug. Is het ruimtelijk werkvlak niet geladen, dan slaat hij dat over. Een eigen sneltoets komt er pas als je die kiest.
+- **Elke indelingswissel geeft een korte melding** ("Werkruimte 3 · Scrollen"), ook vanuit de snap-kiezer (Super+Z) en Super+Alt+S.
+- **De rail laat het zien**: een werkruimte die niet gewoon tegelt krijgt rechtsboven in zijn knop een klein icoontje (scrollen, ruimtelijk, 50/50 en zo), en een werkruimte met geparkeerde vensters een open oranje ringetje rechtsonder. Bij hover blijft de knop zoals hij was.
+
 ### Pdf's niet meer in Firefox
 - **Een gedownloade pdf opent niet meer vanzelf in Firefox.** Hij wordt opgeslagen in Downloads; klik je erop in Firefox' downloadlijst of in Bestanden, dan opent hij in Papers. Firefox' eigen pdf-lezer staat uit (`pdfjs.disabled`) en `kingstra-firefox-optimize` zet de pdf-regel in elk profiel van "in Firefox openen" op "opslaan". Werkt na de volgende `kingstra update` en een herstart van Firefox.
 - Volumepaneel: de cache van het paneel (laatste stand meteen tonen bij openen) werkte niet door een QSettings-fout bij het opstarten; hij heeft nu een eigen bestand.

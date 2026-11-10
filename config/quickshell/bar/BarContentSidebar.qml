@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Io
 import Quickshell.Services.SystemTray
 import Quickshell.Services.Mpris
 import ".."
@@ -15,6 +16,59 @@ Item {
     required property var mocha
 
     property var currentDate: new Date()
+
+    // Indeling per werkruimte (workspace-layout.py) en geparkeerde vensters
+    // (park-window.py), voor een klein icoontje en een stip in de rail.
+    property var workspaceLayouts: ({})
+    property var parkedPerWorkspace: ({})
+    readonly property var layoutGlyphs: ({ "50-50": "󰕰", "70-30": "󰕰", "midden": "󰕰", "kolommen": "󰁔",
+                                           "scrollen": "󰁔", "ruimtelijk": "󰆾", "focus": "󰊓" })
+    function layoutGlyph(wsId) {
+        return layoutGlyphs[String(workspaceLayouts[String(wsId)] || "tegels")] || "";
+    }
+    FileView {
+        id: layoutsFile
+        path: Quickshell.env("HOME") + "/.local/state/kingstra/workspace-layouts.json"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try { root.workspaceLayouts = JSON.parse(text()) || ({}); }
+            catch (e) { root.workspaceLayouts = ({}); }
+        }
+        onLoadFailed: root.workspaceLayouts = ({})
+    }
+    FileView {
+        id: parkedFile
+        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/kingstra-parked.json"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            let counts = ({});
+            try {
+                let data = JSON.parse(text()) || ({});
+                for (let key in data) {
+                    let ws = String((data[key] || {}).workspace || "");
+                    if (ws !== "") counts[ws] = (counts[ws] || 0) + 1;
+                }
+            } catch (e) {}
+            root.parkedPerWorkspace = counts;
+        }
+        onLoadFailed: root.parkedPerWorkspace = ({})
+    }
+    // Atomische vervangingen ziet FileView niet altijd; rustig nalezen is
+    // genoeg (één klein bestand, geen proces) en bij elke werkruimtewissel.
+    Timer {
+        interval: 4000
+        running: true
+        repeat: true
+        onTriggered: { layoutsFile.reload(); parkedFile.reload(); }
+    }
+    Connections {
+        target: Hyprland
+        function onFocusedWorkspaceChanged() { layoutsFile.reload(); parkedFile.reload(); }
+    }
     readonly property bool compactAnimatedSidebar: ThemeConfig.effectiveBarTemplate === "compact-sidebar"
                                                   || ThemeConfig.effectiveBarTemplate === "compact-sidebar"
     readonly property bool expandAllowed: ThemeConfig.drawerStyle !== "none"
@@ -542,6 +596,35 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             radius: width / 2
                             color: Qt.rgba(mocha.teal.r, mocha.teal.g, mocha.teal.b, 0.90)
+                        }
+
+                        // Indeling van deze werkruimte (alleen als het geen gewone tegels zijn).
+                        Text {
+                            readonly property string glyph: root.layoutGlyph(wsPill.wsId)
+                            visible: glyph !== "" && !wsPill.hovered
+                            text: glyph
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.topMargin: shell.s(2)
+                            anchors.rightMargin: shell.s(3)
+                            font.family: ThemeConfig.iconFont
+                            font.pixelSize: shell.s(8)
+                            color: Qt.rgba(mocha.subtext0.r, mocha.subtext0.g, mocha.subtext0.b, 0.85)
+                        }
+
+                        // Geparkeerde vensters op deze werkruimte: een open ringetje.
+                        Rectangle {
+                            visible: (root.parkedPerWorkspace[String(wsPill.wsId)] || 0) > 0 && !wsPill.hovered
+                            width: shell.s(5)
+                            height: width
+                            radius: width / 2
+                            color: "transparent"
+                            border.width: 1
+                            border.color: Qt.rgba(mocha.peach.r, mocha.peach.g, mocha.peach.b, 0.95)
+                            anchors.bottom: parent.bottom
+                            anchors.right: parent.right
+                            anchors.bottomMargin: shell.s(3)
+                            anchors.rightMargin: shell.s(4)
                         }
 
                         Item {

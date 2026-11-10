@@ -14,6 +14,12 @@ LAYOUTS = {"tegels": "dwindle", "50-50": "master", "70-30": "master",
            "ruimtelijk": "lua:hyprscroll2d", "focus": "monocle"}
 STATE = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "kingstra"
 HYPR = os.environ.get("HYPRCTL_BIN", "hyprctl")
+NAMES = {"tegels": "Tegels", "50-50": "Tegels 50/50", "70-30": "Tegels 70/30", "midden": "Midden",
+         "kolommen": "Kolommen", "scrollen": "Scrollen", "ruimtelijk": "Ruimtelijk werkvlak", "focus": "Focus"}
+ICONS = {"tegels": "󰕴", "50-50": "󰕰", "70-30": "󰕰", "midden": "󰕰", "kolommen": "󰁔",
+         "scrollen": "󰁔", "ruimtelijk": "󰆾", "focus": "󰊓"}
+# Volgorde voor "volgende indeling": de drie soorten, niet elke tegelvariant.
+CYCLE = ["tegels", "scrollen", "ruimtelijk"]
 
 
 def hypr(*args):
@@ -189,6 +195,31 @@ def action(kind, value="", extra=""):
     return True
 
 
+def announce(state):
+    """Korte melding (eiland/feedback) met de nieuwe indeling; nooit fataal."""
+    if os.environ.get("KINGSTRA_LAYOUT_QUIET"):
+        return
+    preset = state.get("preset", "")
+    script = Path(__file__).with_name("feedback.sh")
+    try:
+        subprocess.Popen(["bash", str(script), ICONS.get(preset, "󰕰"),
+                          "Werkruimte " + str(state.get("workspace", "")) + " · " + NAMES.get(preset, preset),
+                          "", "1800"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        pass
+
+
+def step(direction):
+    state = current()
+    kind = {"scrolling": "scrollen", "lua:hyprscroll2d": "ruimtelijk"}.get(state["layout"], "tegels")
+    order = list(CYCLE)
+    if spatial_registered() is False:
+        order.remove("ruimtelijk")
+    index = order.index(kind) if kind in order else 0
+    return apply(order[(index + (1 if direction == "next" else -1)) % len(order)])
+
+
 def overview():
     state = current()
     if state["layout"] != "lua:hyprscroll2d":
@@ -211,10 +242,18 @@ def main(args):
     elif command == "inspect":
         print(json.dumps(current(args[1])))
     elif command == "apply":
-        print(json.dumps(apply(args[1], args[2] if len(args) > 2 else None)))
+        state = apply(args[1], args[2] if len(args) > 2 else None)
+        announce(state)
+        print(json.dumps(state))
     elif command == "scroll":
         state = current()
-        print(json.dumps(apply("tegels" if state["layout"] in ("scrolling", "lua:hyprscroll2d") else "scrollen")))
+        state = apply("tegels" if state["layout"] in ("scrolling", "lua:hyprscroll2d") else "scrollen")
+        announce(state)
+        print(json.dumps(state))
+    elif command in ("next", "prev"):
+        state = step(command)
+        announce(state)
+        print(json.dumps(state))
     elif command == "overview":
         return 0 if overview() else 3
     elif command == "select":

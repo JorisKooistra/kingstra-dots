@@ -23,6 +23,20 @@ class LayoutTests(unittest.TestCase):
             self.assertEqual(module.current()["preset"], "tegels")
             dispatch.assert_not_called()
 
+    def test_next_cycles_kinds_and_skips_missing_spatial(self):
+        cases = [("dwindle", True, "scrollen"), ("master", True, "scrollen"),
+                 ("scrolling", True, "ruimtelijk"), ("scrolling", False, "tegels"),
+                 ("lua:hyprscroll2d", True, "tegels")]
+        for layout, spatial, wanted in cases:
+            with patch.object(module, "query", return_value=self.state(layout)), \
+                 patch.object(module, "spatial_registered", return_value=spatial), \
+                 patch.object(module, "apply", side_effect=lambda p: p) as apply:
+                self.assertEqual(module.step("next"), wanted, layout)
+        with patch.object(module, "query", return_value=self.state("dwindle")), \
+             patch.object(module, "spatial_registered", return_value=True), \
+             patch.object(module, "apply", side_effect=lambda p: p):
+            self.assertEqual(module.step("prev"), "ruimtelijk")
+
     def test_empty_spatial_workspace_does_nothing(self):
         with patch.object(module, "query", return_value=self.state("lua:hyprscroll2d", 0)), \
              patch.object(module, "dispatch") as dispatch:

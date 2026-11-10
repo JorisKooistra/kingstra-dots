@@ -72,7 +72,7 @@ Openen
   menu                     toetsenbordmenu voor alles (Super+Alt+Spatie)
   widgets aan|uit|klok <plek>  bureaubladklok en media (plek: linksboven, rechtsboven, midden, linksonder, rechtsonder)
   eiland [osd|meldingen|live] aan|uit  wat het eiland onder de balk toont
-  indeling [naam|scroll|kies]  indeling van deze werkruimte (tegels, 50-50, 70-30, midden, kolommen, scrollen, focus)
+  indeling [naam|scroll|volgende|vorige|kies]  indeling van deze werkruimte (tegels, 50-50, 70-30, midden, kolommen, scrollen, focus)
   kladblok [stuur]         kladblok tonen, of het actieve venster erheen sturen
   parkeer [terug|lijst]    actief venster parkeren (minimaliseren) of terughalen
   zen [aan|uit]            zen-modus: balk verbergen, niet storen, rest dimmen
@@ -177,6 +177,8 @@ PY
         case "${1:-kies}" in
             kies|pick) panel snap ;;
             scroll|scrollen-wissel) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" scroll ;;
+            volgende|next) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" next ;;
+            vorige|prev) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" prev ;;
             list|lijst) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" list ;;
             *) exec "$CONFIG_HOME/hypr/scripts/layout-tool.sh" apply "$1" ;;
         esac ;;

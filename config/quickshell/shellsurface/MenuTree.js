@@ -25,6 +25,7 @@ function build(home, scripts) {
         { icon: "󰊢", label: "Werkruimte-overzicht", hint: "Super+Tab", cmd: ["bash", scripts + "/overview-toggle.sh"] },
         { icon: "󰕰", label: "Vensters", children: [
             { icon: "󰕰", label: "Indeling kiezen", hint: "Super+Z", cmd: qs("snap"), panel: true },
+            { icon: "󰕰", label: "Volgende indeling (tegels, scrollen, ruimtelijk)", cmd: ["bash", scripts + "/layout-tool.sh", "next"] },
             { icon: "󰁔", label: "Scrollen aan of uit", hint: "Super+Alt+S", cmd: ["bash", scripts + "/layout-tool.sh", "scroll"] },
             { icon: "󰕴", label: "Terug naar tegels", cmd: ["bash", scripts + "/layout-tool.sh", "apply", "tegels"] },
             { icon: "󰠮", label: "Kladblok tonen", hint: "Super+`", cmd: ["bash", scripts + "/scratchpad.sh", "toggle"] },
