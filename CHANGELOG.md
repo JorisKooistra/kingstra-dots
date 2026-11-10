@@ -10,6 +10,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Vensterwisselaar met voorbeelden (Super+Ctrl+Tab)
+- Een rij afgeronde kaartjes met een live voorbeeld van elk open venster, meest recent eerst, over alle werkruimtes. Houd Super+Ctrl vast en tik Tab om verder te gaan (Shift+Tab terug); loslaten springt naar het gekozen venster. Pijltjes, Enter en klikken werken ook, en typen filtert op titel of app. Vensters op een andere werkruimte tonen hun beginletter.
+- Alt+Tab (vorige werkruimte), Super+Tab (overzicht) en Super+W (vensterlijst met geparkeerde vensters) blijven zoals ze waren. Ook in het menu onder Vensters.
+
 ### Schijfruimte zichtbaar en veilig opruimen
 - **Instellingen › Systeem › Ruimte** (`kingstra settings ruimte`): per schijf een afgeronde balk met wat er vrij is (groen, geel boven 80%, rood boven 90%), de grootste mappen in je persoonlijke map (klik opent de map), en een lijst met wat veilig weg kan, elk met hoeveel het oplevert: AUR-bouwcache, pakketcache, systeemlogboek, Docker (alleen als hij al draait, meten start hem niet), Spotify-cache, miniaturen en de prullenbak. Opruimen is één knop; stappen die een wachtwoord nodig hebben openen een terminal.
 - `kingstra ruimte` geeft hetzelfde overzicht in de terminal. Meten gebeurt met lage prioriteit en wordt bewaard, zodat de pagina meteen iets laat zien.

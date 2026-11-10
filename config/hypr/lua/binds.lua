@@ -113,6 +113,8 @@ bind(mod .. " + Tab", function()
     hl.exec_cmd(scripts .. "/overview-toggle.sh")
 end)
 bind("ALT + Tab", hl.dsp.focus({ workspace = "previous" }))
+-- Vensterwisselaar met voorbeelden; nog eens Tab (Super+Ctrl ingehouden) gaat verder.
+exec(mod .. " + CTRL + Tab", scripts .. "/window-carousel.sh")
 
 exec(mod .. " + CTRL + L", "bash " .. scripts .. "/lock.sh")
 exec(mod .. " + CTRL + R", "hyprctl reload && notify-send -u low 'Hyprland' 'Config herladen'")

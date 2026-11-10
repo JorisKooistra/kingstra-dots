@@ -35,7 +35,7 @@ Item {
         command: ["sh", "-c",
             "command -v inotifywait >/dev/null 2>&1 || exit 3; " +
             "exec inotifywait -m -q -e close_write,moved_to,create --format '%w%f' " +
-            "--include '^/tmp/(qs_widget_state|kingstra-(feedback\\.json|island\\.json|superhold))$' /tmp"]
+            "--include '^/tmp/(qs_widget_state|kingstra-(feedback\\.json|island\\.json|superhold|switcher-step))$' /tmp"]
         stdout: SplitParser {
             onRead: line => {
                 root.available = true;

@@ -99,6 +99,7 @@ Alle combinaties worden bij installatie automatisch gecontroleerd op duplicaten.
 |---|---|
 | `Super + 1–0` | Naar werkruimte 1–10 |
 | `Super + Tab` | Werkruimte-overzicht; op een ruimtelijke werkruimte de vensterkaart |
+| `Super + Ctrl + Tab` | Vensterwisselaar met voorbeelden, meest recent eerst; houd Super+Ctrl vast en tik Tab om verder te gaan, loslaten wisselt. Typen filtert, Esc sluit |
 | `Alt + Tab` | Vorige werkruimte |
 | `Super + Shift + wiel` | Door werkruimten bladeren |
 | `Super + Shift + 1–0` | Venster naar werkruimte 1–10 verplaatsen |
