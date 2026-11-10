@@ -10,6 +10,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Pdf ondertekenen
+- Rechtsklik op een pdf › **Openen met › PDF ondertekenen** (ook in de launcher). Opent de pdf in Xournal++; teken je handtekening met de pen of plak een bewaarde met Ctrl+V, en sla op met Bestand › Exporteren als pdf. Het origineel blijft heel en Papers blijft de standaard pdf-app.
+- `kingstra-pdf-sign --handtekening <foto>` bewaart een handtekening (bijsnijden gaat vanzelf); die staat daarna bij elke pdf klaar op het klembord. De installer zet Xournal++ erbij.
+
 ### Hotspot in Snelle instellingen
 - Nieuwe pil **Hotspot**: één tik deelt de verbinding van deze pc via wifi. Het pijltje toont een QR-code om met je telefoon te scannen, plus naam en wachtwoord. De verbinding heet "Kingstra-hotspot" en onthoudt naam en wachtwoord, dus je telefoon vindt hem de volgende keer vanzelf. Lukt het niet (niet elke wifi-kaart kan een hotspot zijn), dan zegt een melding dat. Installer zet `qrencode` erbij. Zoals elke pil te verbergen of te verplaatsen in de bewerkmodus.
 

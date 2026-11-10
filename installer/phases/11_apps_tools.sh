@@ -79,6 +79,9 @@ phase_run() {
     _phase11_disk_bookmarks
     _phase11_apps_sync
 
+    log_step "Pdf ondertekenen (Xournal++)..."
+    _phase11_pdf_sign
+
     log_step "Fase 11 valideren..."
     validate_cmd nautilus
     validate_cmd cliphist
@@ -146,6 +149,38 @@ _phase11_default_apps() {
     done
     mkdir -p "$(dirname "$marker")" && touch "$marker"
     log_ok "Foto's: Loupe, pdf: Papers, tekst: Teksteditor, video: Showtime"
+}
+
+# "PDF ondertekenen" in Openen met (rechtsklik in Nautilus) en de launcher.
+# Papers blijft de standaard pdf-app; dit is alleen een extra keuze.
+_phase11_pdf_sign() {
+    local src="$REPO_ROOT/config/shared/scripts/kingstra-pdf-sign"
+    local desktop="${XDG_DATA_HOME:-$HOME/.local/share}/applications/kingstra-pdf-sign.desktop"
+    pacman_install_optional xournalpp
+    if "${DRY_RUN:-false}"; then
+        log_dry "kingstra-pdf-sign en $desktop zouden worden geplaatst"
+        return 0
+    fi
+    ensure_dir "$HOME/.local/bin"
+    chmod +x "$src"
+    deploy_link "$src" "$HOME/.local/bin/kingstra-pdf-sign"
+    ensure_dir "$(dirname "$desktop")"
+    cat > "$desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=PDF ondertekenen
+Comment=Handtekening op een pdf zetten en als nieuwe pdf opslaan
+Exec=$HOME/.local/bin/kingstra-pdf-sign %f
+Icon=document-edit-sign
+Terminal=false
+MimeType=application/pdf;
+Categories=Office;
+Keywords=handtekening;tekenen;sign;signature;pdf;
+NoDisplay=false
+DESKTOP
+    command -v update-desktop-database &>/dev/null \
+        && update-desktop-database "$(dirname "$desktop")" 2>/dev/null || true
+    log_ok "PDF ondertekenen staat in Openen met en in de launcher"
 }
 
 # Data-schijven (/mnt/data*) als vaste plek in de zijbalk van Nautilus en

@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# kingstra-pdf-sign — een pdf ondertekenen met Xournal++.
+#
+#   kingstra-pdf-sign <bestand.pdf>    open om te ondertekenen
+#   kingstra-pdf-sign --handtekening <afbeelding>
+#                                      bewaar een afbeelding als je handtekening
+#
+# Staat er een handtekening in ~/.local/share/kingstra/handtekening.png, dan
+# staat die meteen op het klembord: Ctrl+V in Xournal++ plakt hem, slepen
+# plaatst en schaalt hem. Zonder afbeelding teken je hem met de pen. Opslaan
+# als nieuwe pdf: Bestand › Exporteren als pdf (het origineel blijft heel).
+set -uo pipefail
+
+SIG="${XDG_DATA_HOME:-$HOME/.local/share}/kingstra/handtekening.png"
+FEEDBACK="$HOME/.config/hypr/scripts/feedback.sh"
+
+say() {
+    if [[ -x "$FEEDBACK" || -f "$FEEDBACK" ]]; then
+        bash "$FEEDBACK" "󰏫" "$1" "$2" 6000 >/dev/null 2>&1 &
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -a "PDF ondertekenen" "$1" "$2"
+    else
+        printf '%s: %s\n' "$1" "$2"
+    fi
+}
+
+if [[ "${1:-}" == "--handtekening" ]]; then
+    src="${2:-}"
+    [[ -f "$src" ]] || { echo "gebruik: kingstra-pdf-sign --handtekening <afbeelding>" >&2; exit 2; }
+    mkdir -p "$(dirname "$SIG")"
+    if command -v magick >/dev/null 2>&1; then
+        magick "$src" -trim +repage "$SIG"
+    else
+        cp -f -- "$src" "$SIG"
+    fi
+    say "Handtekening bewaard" "Hij staat voortaan klaar als je een pdf ondertekent."
+    exit 0
+fi
+
+pdf="${1:-}"
+if [[ -z "$pdf" || ! -f "$pdf" ]]; then
+    echo "gebruik: kingstra-pdf-sign <bestand.pdf>" >&2
+    exit 2
+fi
+if ! command -v xournalpp >/dev/null 2>&1; then
+    say "Xournal++ ontbreekt" "Draai de updater (kingstra update) of: sudo pacman -S xournalpp"
+    exit 1
+fi
+
+if [[ -f "$SIG" ]] && command -v wl-copy >/dev/null 2>&1; then
+    wl-copy --type image/png < "$SIG"
+    say "Ondertekenen" "Ctrl+V plakt je handtekening. Opslaan: Bestand › Exporteren als pdf."
+else
+    say "Ondertekenen" "Teken je handtekening met de pen. Opslaan: Bestand › Exporteren als pdf. Tip: kingstra-pdf-sign --handtekening <foto> bewaart er één."
+fi
+exec xournalpp "$pdf"
