@@ -10,6 +10,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Pdf's niet meer in Firefox
+- **Een gedownloade pdf opent niet meer vanzelf in Firefox.** Hij wordt opgeslagen in Downloads; klik je erop in Firefox' downloadlijst of in Bestanden, dan opent hij in Papers. Firefox' eigen pdf-lezer staat uit (`pdfjs.disabled`) en `kingstra-firefox-optimize` zet de pdf-regel in elk profiel van "in Firefox openen" op "opslaan". Werkt na de volgende `kingstra update` en een herstart van Firefox.
+- Volumepaneel: de cache van het paneel (laatste stand meteen tonen bij openen) werkte niet door een QSettings-fout bij het opstarten; hij heeft nu een eigen bestand.
+
 ### Volume scrollen in de Matte-bar
 - In de Matte-stijl regel je het volume nu met het muiswiel boven het volume- of muziekicoon rechts in de bar: 5% per wielklik. Andere knoppen in die bar reageren niet op het wiel.
 - Scrollen in de rail/strip blijft 1% per klik; omdraaien van de scrollrichting gooit een halve klik niet meer mee.

@@ -15,4 +15,9 @@ user_pref("browser.newtabpage.activity-stream.showSponsored", false);
 user_pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
 user_pref("browser.newtabpage.activity-stream.feeds.section.topstories", false);
 user_pref("browser.newtabpage.activity-stream.feeds.topsites", true);
+// Pdf's: Firefox opent ze niet meer zelf (ook niet vanzelf na downloaden).
+// Een gedownloade pdf blijft in Downloads; klik je erop, dan opent Papers
+// (de standaard-app). kingstra-firefox-optimize zet handlers.json op opslaan.
+user_pref("pdfjs.disabled", true);
+user_pref("browser.download.open_pdf_attachments_inline", false);
 // <<< kingstra performance profile <<<

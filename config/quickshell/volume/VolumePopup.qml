@@ -134,8 +134,11 @@ Item {
     // -------------------------------------------------------------------------
     // CACHING & DATA LOGIC
     // -------------------------------------------------------------------------
+    // Eigen bestand: Qt.application.organization wordt pas in TopBar's
+    // onCompleted gezet, ná deze Settings, en zonder locatie faalde de cache.
     Settings {
         id: cache
+        location: "file://" + Quickshell.env("HOME") + "/.local/state/kingstra/volume-cache.ini"
         property string lastAudioJson: ""
     }
 

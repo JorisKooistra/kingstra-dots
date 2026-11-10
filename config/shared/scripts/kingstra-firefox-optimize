@@ -107,6 +107,35 @@ apply_css_to_profile() {
     log "managed ${name} bijgewerkt in $(basename "$profile_dir")"
 }
 
+# Pdf's opslaan in plaats van in Firefox openen (handlers.json action 0 =
+# opslaan; 3 = in Firefox). Firefox schrijft dit bestand zelf bij afsluiten,
+# dus het werkt pas zeker na een herstart van Firefox; pdfjs.disabled in
+# user.js vangt het ook op als Firefox open stond.
+apply_pdf_handler_to_profile() {
+    local handlers="$1/handlers.json"
+    [[ -f "$handlers" ]] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    python3 - "$handlers" <<'PY' && log "pdf's opslaan in plaats van openen in $(basename "$1")"
+import json, sys, os, tempfile
+path = sys.argv[1]
+try:
+    data = json.load(open(path))
+except Exception:
+    sys.exit(1)
+pdf = data.setdefault("mimeTypes", {}).setdefault("application/pdf", {})
+if pdf.get("action") == 0 and pdf.get("ask") is not True:
+    sys.exit(1)
+pdf["action"] = 0
+pdf.pop("ask", None)
+pdf.setdefault("extensions", ["pdf"])
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path))
+with os.fdopen(fd, "w") as f:
+    json.dump(data, f)
+os.replace(tmp, path)
+PY
+    return 0
+}
+
 apply_chrome_to_profile() {
     apply_css_to_profile "$1" "$CHROME_TEMPLATE_FILE" userChrome.css
     apply_css_to_profile "$1" "$CONTENT_TEMPLATE_FILE" userContent.css
@@ -135,6 +164,7 @@ main() {
                     profile_dir="$(resolve_profile_path "$current_relative" "$current_path")"
                     apply_template_to_profile "$profile_dir"
                     apply_chrome_to_profile "$profile_dir"
+                    apply_pdf_handler_to_profile "$profile_dir"
                     applied=$((applied + 1))
                 fi
                 current_path=""
@@ -154,6 +184,7 @@ main() {
         profile_dir="$(resolve_profile_path "$current_relative" "$current_path")"
         apply_template_to_profile "$profile_dir"
         apply_chrome_to_profile "$profile_dir"
+        apply_pdf_handler_to_profile "$profile_dir"
         applied=$((applied + 1))
     fi
 
