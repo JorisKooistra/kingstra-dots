@@ -245,7 +245,13 @@ Scope {
     }
     Timer {
         interval: 500; repeat: true; running: root.shown
-        onTriggered: Hyprland.dispatch('hl.dsp.layout("snapshot")')
+        // Alleen de ruimtelijke layout kent "snapshot"; op een andere
+        // werkruimte gaf dit "Unknown dwindle layoutmsg" in configerrors.
+        onTriggered: {
+            let ws = Hyprland.focusedWorkspace;
+            if (ws && Number(ws.id) === Number(root.workspace))
+                Hyprland.dispatch('hl.dsp.layout("snapshot")');
+        }
     }
     Timer {
         id: settleCamera
