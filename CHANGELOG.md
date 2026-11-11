@@ -18,6 +18,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Venster ook daar openen**: toetsenbordmenu › Vensters › "Dit venster ook openen op de andere machine" (of `kingstra koppel open`). Opent dezelfde app aan de andere kant; bestanden uit dat venster en links gaan mee. Een venster echt overslepen kan op Wayland niet.
 - **Beeldschermen** toont de andere machine als extra scherm. Sleep hem naar links, rechts, boven of onder je schermen en druk op Toepassen; beide machines nemen de nieuwe kant over. Ook: `kingstra koppel kant links|rechts|boven|onder`.
 - Toetsenbordmenu › Snel schakelen › "Andere machine (pc ↔ laptop)": bestanden sturen, venster openen, plaats, delen aan/uit, status.
+- **Snelle instellingen** heeft een pil voor de andere machine: klik zet delen aan of uit, het pijltje toont bestanden sturen, venster daar openen en plaats naast je schermen. Nog niet gekoppeld? Dan opent de pil een terminal die vraagt naar de naam van de andere machine.
+- **Bovenbalk (Matte)**: stil laptop-icoon zodra je gekoppeld bent (licht op als delen aan staat). Klik opent Snelle instellingen, bestanden erop slepen stuurt ze erheen.
 - `kingstra koppel status`, `aan`, `uit`, `vergeet`.
 - De installer (fase 12) installeert lan-mouse, zet de ssh-server aan en plaatst het script en de twee diensten. Die starten bij inloggen alleen als er een koppeling is.
 

@@ -725,23 +725,39 @@ Item {
 
     // Gekoppelde machine (kingstra koppel): label voor de railknop "Naar …".
     property string koppelLabel: ""
+    property bool koppelActief: false
     readonly property string koppelScript: Quickshell.env("HOME") + "/.local/bin/kingstra-koppel"
     function applyKoppeling(raw) {
         let label = "";
+        let txt = String(raw || "");
+        let cut = txt.lastIndexOf("}");
         try {
-            let k = JSON.parse(String(raw || "").trim() || "{}");
+            let k = JSON.parse(cut >= 0 ? txt.substring(0, cut + 1) : "{}");
             if (k && k.host) label = String(k.label || k.host);
         } catch (e) {}
         root.koppelLabel = label === "pc" ? "PC" : (label ? label.charAt(0).toUpperCase() + label.slice(1) : "");
+        root.koppelActief = label !== "" && cut >= 0 && txt.substring(cut + 1).trim() === "active";
+    }
+    function fileUrlsToPaths(urls) {
+        let files = [];
+        for (let u of (urls || [])) {
+            let s = String(u);
+            if (s.indexOf("file://") === 0) files.push(decodeURIComponent(s.substring(7)));
+        }
+        return files;
+    }
+    function sendToKoppeling(files) {
+        if (files.length > 0) Quickshell.execDetached([root.koppelScript, "stuur"].concat(files));
     }
     Process {
         id: koppelingReader
-        command: ["sh", "-c", "cat \"$HOME/.config/kingstra/koppeling.json\" 2>/dev/null; true"]
+        command: ["sh", "-c", "if [ -f \"$HOME/.config/kingstra/koppeling.json\" ]; then cat \"$HOME/.config/kingstra/koppeling.json\"; " +
+            "echo; systemctl --user is-active kingstra-lan-mouse.service 2>/dev/null; fi; true"]
         running: true
         stdout: StdioCollector { onStreamFinished: root.applyKoppeling(this.text) }
     }
     Timer {
-        interval: 15000
+        interval: 5000
         running: true
         repeat: true
         onTriggered: if (!koppelingReader.running) koppelingReader.running = true
@@ -2111,14 +2127,9 @@ Item {
                 onExited: koppelBtn.dropHover = false
                 onDropped: (drop) => {
                     koppelBtn.dropHover = false;
-                    if (!drop.hasUrls) return;
-                    let files = [];
-                    for (let u of drop.urls) {
-                        let s = String(u);
-                        if (s.indexOf("file://") === 0) files.push(decodeURIComponent(s.substring(7)));
-                    }
+                    let files = root.fileUrlsToPaths(drop.urls);
                     if (files.length === 0) return;
-                    Quickshell.execDetached([root.koppelScript, "stuur"].concat(files));
+                    root.sendToKoppeling(files);
                     drop.accept(Qt.CopyAction);
                 }
             }
