@@ -875,6 +875,9 @@ def download_video(identifier, record, hosts, preview):
     transfer_video(url, target, hosts, headers=extra if not preview else None)
     if preview:
         if not saved:
+            # AV1/VP9-voorbeelden → h264, anders blijft het beeld stil.
+            emit("progress", stage="download", label="Voorbeeld klaarmaken…", percent=-1)
+            target = videonorm.playable_preview(target)
             os.utime(target, None)
             trim_previews(target)
         emit("preview", id=identifier, path=str(target), url=target.as_uri(), video=True,
@@ -903,7 +906,10 @@ def valid_video(path):
 
 def transfer_video(url, target, hosts, limit=400 * 1024 * 1024, headers=None):
     if target.is_file() and valid_video(target): return
-    fd, temp = tempfile.mkstemp(dir=target.parent, prefix=".picker-", suffix=target.suffix)
+    # Downloaden buiten de wallpapermap; pas een complete video verhuist erheen.
+    incoming = CACHE / "incoming"
+    incoming.mkdir(parents=True, exist_ok=True)
+    fd, temp = tempfile.mkstemp(dir=incoming, prefix="picker-", suffix=target.suffix)
     try:
         with os.fdopen(fd, "wb") as output:
             emit("progress", stage="download", label="Video downloaden…", percent=-1)
@@ -924,7 +930,7 @@ def transfer_video(url, target, hosts, limit=400 * 1024 * 1024, headers=None):
                 if expected and total != expected: raise ValueError("Download onderbroken; probeer opnieuw")
         if not valid_video(Path(temp)): raise ValueError("Het gedownloade bestand is geen bruikbare video")
         os.chmod(temp, 0o644)
-        os.replace(temp, target)
+        shutil.move(temp, str(target))
     finally:
         with contextlib.suppress(FileNotFoundError): os.unlink(temp)
 

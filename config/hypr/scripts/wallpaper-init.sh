@@ -26,6 +26,23 @@ fi
 # ---------------------------------------------------------------------------
 # Pad 2 — Fallback: minimale skwd-aanroep zonder orchestrator
 # ---------------------------------------------------------------------------
+# Video → stilstaand beeld (het frame dat kingstra-wallpaper maakt). skwd en
+# matugen krijgen nooit een video als foto: een mp4 als "static" liet skwd's
+# magick tot 12 GB groeien en na een herstart bleef de achtergrond leeg
+# (2026-11-11). Geen frame bekend → geen pad (return 1).
+_kingstra_still() {
+    local file="${1:-}" hash frame
+    case "${file,,}" in
+        *.mp4|*.webm|*.mkv|*.mov|*.avi|*.m4v) ;;
+        *) printf '%s\n' "$file"; return 0 ;;
+    esac
+    [[ -f "$file" ]] || return 1
+    hash="$(printf '%s:%s:%s' "$file" "$(stat -c '%Y' "$file" 2>/dev/null || echo 0)" "$(stat -c '%s' "$file" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
+    frame="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/video-frames/$hash.jpg"
+    [[ -s "$frame" ]] || return 1
+    printf '%s\n' "$frame"
+}
+
 _set_wallpaper() {
     local file="$1"
     if command -v skwd &>/dev/null; then
@@ -37,6 +54,7 @@ _set_wallpaper() {
 # Herstel laatste wallpaper als die er is
 if [[ -f "$STATE_FILE" ]]; then
     last="$(cat "$STATE_FILE")"
+    last="$(_kingstra_still "$last" || echo "")"
     if [[ -f "$last" ]]; then
         _set_wallpaper "$last"
         exit 0

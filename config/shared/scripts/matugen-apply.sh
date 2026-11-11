@@ -31,10 +31,31 @@ _notify() {
 # ---------------------------------------------------------------------------
 # Argumenten
 # ---------------------------------------------------------------------------
+# Video → stilstaand beeld (het frame dat kingstra-wallpaper maakt). skwd en
+# matugen krijgen nooit een video als foto: een mp4 als "static" liet skwd's
+# magick tot 12 GB groeien en na een herstart bleef de achtergrond leeg
+# (2026-11-11). Geen frame bekend → geen pad (return 1).
+_kingstra_still() {
+    local file="${1:-}" hash frame
+    case "${file,,}" in
+        *.mp4|*.webm|*.mkv|*.mov|*.avi|*.m4v) ;;
+        *) printf '%s\n' "$file"; return 0 ;;
+    esac
+    [[ -f "$file" ]] || return 1
+    hash="$(printf '%s:%s:%s' "$file" "$(stat -c '%Y' "$file" 2>/dev/null || echo 0)" "$(stat -c '%s' "$file" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
+    frame="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/video-frames/$hash.jpg"
+    [[ -s "$frame" ]] || return 1
+    printf '%s\n' "$frame"
+}
+
 RELOAD_ONLY=false
 if [[ "${WALLPAPER:-}" == "--reload" ]]; then
     RELOAD_ONLY=true
     WALLPAPER="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+fi
+
+if [[ -n "$WALLPAPER" && "$WALLPAPER" != --* ]]; then
+    WALLPAPER="$(_kingstra_still "$WALLPAPER" || echo "")"
 fi
 
 if [[ -z "$WALLPAPER" ]]; then

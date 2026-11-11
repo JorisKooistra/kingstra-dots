@@ -169,8 +169,27 @@ _theme_wallpaper_source() {
     printf '%s\n' "$current"
 }
 
+
+# Video → stilstaand beeld (het frame dat kingstra-wallpaper maakt). skwd en
+# matugen krijgen nooit een video als foto: een mp4 als "static" liet skwd's
+# magick tot 12 GB groeien en na een herstart bleef de achtergrond leeg
+# (2026-11-11). Geen frame bekend → geen pad (return 1).
+_kingstra_still() {
+    local file="${1:-}" hash frame
+    case "${file,,}" in
+        *.mp4|*.webm|*.mkv|*.mov|*.avi|*.m4v) ;;
+        *) printf '%s\n' "$file"; return 0 ;;
+    esac
+    [[ -f "$file" ]] || return 1
+    hash="$(printf '%s:%s:%s' "$file" "$(stat -c '%Y' "$file" 2>/dev/null || echo 0)" "$(stat -c '%s' "$file" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
+    frame="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/video-frames/$hash.jpg"
+    [[ -s "$frame" ]] || return 1
+    printf '%s\n' "$frame"
+}
+
 _write_wallpaper_state() {
     local file="$1"
+    file="$(_kingstra_still "$file")" || return 0
     [[ -n "$file" && -f "$file" ]] || return 0
 
     mkdir -p "$CACHE_DIR" "$STATE_DIR" "$SKWD_CACHE"
@@ -196,6 +215,7 @@ _path_matches() {
 
 _apply_skwd_static_wallpaper() {
     local file="$1"
+    file="$(_kingstra_still "$file")" || return 0
     [[ -n "$file" && -f "$file" ]] || return 0
     command -v skwd >/dev/null 2>&1 || return 0
 

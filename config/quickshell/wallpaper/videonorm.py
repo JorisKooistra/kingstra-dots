@@ -27,6 +27,7 @@ FPS = {"30", "60", "0"}
 # Ruim voldoende voor stilstaande natuur/anime-loops op 1080p; schaalt mee
 # met het aantal pixels.
 BITRATE_1080 = 8000
+WORK = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "kingstra/video-normalize"
 
 
 def monitor_height():
@@ -108,7 +109,10 @@ def convert(source, height, fps, info, progress=None):
     if fps and info["fps"] > fps + 0.5: filters.append(f"fps={fps}")
     filters.append("format=yuv420p")
     cap = bitrate_cap(height or short)
-    fd, temp = tempfile.mkstemp(dir=source.parent, prefix=".norm-", suffix=".mp4")
+    # Buiten de wallpapermap werken: anders ziet skwd een half bestand (thumb
+    # FAILED om de 2 s) en start de mapbewaker steeds opnieuw.
+    WORK.mkdir(parents=True, exist_ok=True)
+    fd, temp = tempfile.mkstemp(dir=WORK, prefix="norm-", suffix=".mp4")
     os.close(fd)
     command = ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(source), "-an", "-sn", "-dn",
                "-map", "0:v:0", "-vf", ",".join(filters), "-c:v", "libx264", "-preset", "medium", "-crf", "20",
@@ -186,11 +190,33 @@ def normalize(path, settings, progress=None, trash_original=True):
             with contextlib.suppress(FileNotFoundError): os.unlink(temp)
             raise ValueError("Origineel kon niet naar de prullenbak; niets gewijzigd")
     os.chmod(temp, 0o644)
-    os.replace(temp, target_path)
+    shutil.move(str(temp), str(target_path))
     if meta or not trash_original:
         meta = dict(meta, path=str(target_path), normalized=marker,
                     normalized_from=dict(width=info["width"], height=info["height"], fps=round(info["fps"], 2),
                                          codec=info["codec"], kbps=round(info["kbps"])))
-        meta.pop("auto_version", None) if meta.get("source") == "kingstra-auto" else None
         write_json(sidecar(target_path), meta)
     return target_path, True, found
+
+
+def playable_preview(path):
+    """Voorbeeldclip die de kiezer zeker kan afspelen. MoeWalls levert AV1;
+    Qt probeert dat via de GPU en valt op kaarten zonder AV1 niet terug op
+    software. Niet-h264 wordt daarom eenmalig een kleine h264-mp4 (±2 s)."""
+    path = Path(path)
+    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"): return path
+    target = path.with_name(path.stem + ".h264.mp4")
+    if target.is_file() and target.stat().st_size: return target
+    with contextlib.suppress(Exception):
+        if probe(path)["codec"] == "h264": return path
+    fd, temp = tempfile.mkstemp(dir=path.parent, prefix=".prev-", suffix=".mp4")
+    os.close(fd)
+    try:
+        result = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(path), "-an", "-sn",
+                                 "-vf", "scale='min(1280,iw)':-2,format=yuv420p", "-c:v", "libx264", "-preset", "veryfast",
+                                 "-crf", "26", "-movflags", "+faststart", temp], capture_output=True, timeout=120)
+        if result.returncode or not Path(temp).stat().st_size: return path
+        os.replace(temp, target)
+        return target
+    finally:
+        with contextlib.suppress(FileNotFoundError): os.unlink(temp)

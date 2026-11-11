@@ -10,6 +10,9 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Instellingen › Bureaublad › Wallpapers** (nieuw): weergave bij openen, sorteren, Sfeer, Geen AI, videomaat en -beelden per seconde, hexagonrijen en welke bronnen als tab verschijnen. De Sfeer-knop is uit de kiezer naar hier verhuisd; weergave, sorteren en filters wissel je nog steeds in de kiezer zelf.
 - Standaard verborgen bronnen (aan te zetten in Instellingen): GoodFon (weinig resultaten), HDQwalls (alleen een link), Pixabay foto's (max. 1280 px met een gewone sleutel), WallpapersCraft, WallpapersWide en Wallpapers.com (grotendeels hetzelfde aanbod als Alpha Coders). Pixabay video blijft.
 - **Pexels** en Pexels video zijn verwijderd: Pexels geeft geen nieuwe sleutels meer uit. Eerder opgeslagen bestanden houden hun gegevens.
+- **Achtergrond weg na een herstart (opgelost):** stond er een videowallpaper aan, dan kreeg skwd na een herstart het mp4-bestand als foto. Zijn beeldverwerking (magick) liep dan tot 12 GB op en werd steeds gestopt, waardoor de achtergrond leeg bleef. `last-wallpaper` bevat bij een video nu het stilstaande frame (de video zelf staat in `last-video-wallpaper`), en apply-shell-state, kingstra-theme-switch, kingstra-matugen-run, matugen-apply.sh en wallpaper-init.sh zetten een videopad altijd om naar dat frame.
+- Omzetten en downloaden gebeurt nu buiten de wallpapermap (`~/.cache/kingstra/video-normalize`, `…/wallpaper-picker/incoming`), zodat skwd geen halve bestanden ziet en er na een onderbreking geen `.norm-*`-resten achterblijven.
+- MoeWalls-voorbeelden zijn AV1 of VP9; de kiezer kon AV1 niet afspelen op kaarten zonder AV1-hardware. Zo'n voorbeeld wordt nu eenmalig een kleine h264-clip (±2 s).
 - mpvpaper schrijft geen statusregel per frame meer in `~/.cache/kingstra/mpvpaper.log`, en het log wordt boven 1 MB ingekort.
 
 ### Koppeling: muis delen werkt weer na een herstart van de andere machine

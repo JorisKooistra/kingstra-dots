@@ -298,6 +298,24 @@ _expand_user_path() {
     fi
 }
 
+
+# Video → stilstaand beeld (het frame dat kingstra-wallpaper maakt). skwd en
+# matugen krijgen nooit een video als foto: een mp4 als "static" liet skwd's
+# magick tot 12 GB groeien en na een herstart bleef de achtergrond leeg
+# (2026-11-11). Geen frame bekend → geen pad (return 1).
+_kingstra_still() {
+    local file="${1:-}" hash frame
+    case "${file,,}" in
+        *.mp4|*.webm|*.mkv|*.mov|*.avi|*.m4v) ;;
+        *) printf '%s\n' "$file"; return 0 ;;
+    esac
+    [[ -f "$file" ]] || return 1
+    hash="$(printf '%s:%s:%s' "$file" "$(stat -c '%Y' "$file" 2>/dev/null || echo 0)" "$(stat -c '%s' "$file" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
+    frame="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/video-frames/$hash.jpg"
+    [[ -s "$frame" ]] || return 1
+    printf '%s\n' "$frame"
+}
+
 _resolve_wallpaper() {
     # Bewust géén daemon-query meer: skwd is de enige renderer en de
     # state-bestanden hieronder zijn leidend. De oude `awww query`-stap gaf
@@ -443,6 +461,8 @@ MODE="${MODE_AND_INDEX%%|*}"
 COLOR_INDEX="${MODE_AND_INDEX#*|}"
 
 WALLPAPER="$(_resolve_wallpaper)"
+# Videowallpaper: kleuren en skwd uit het stilstaande frame.
+WALLPAPER="$(_kingstra_still "$WALLPAPER" || true)"
 
 if [[ -z "$SCHEME_TYPE" ]] || ! _valid_scheme "$SCHEME_TYPE"; then
     _warn "Ongeldige scheme_type '$SCHEME_TYPE', fallback naar $DEFAULT_SCHEME"
