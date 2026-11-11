@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Koppeling: muis delen werkt weer na een herstart van de andere machine
+- Na een herstart kon de laptop een ander IP-adres gebruiken dan in de koppeling stond (bv. twee DHCP-clients: NetworkManager én systemd-networkd, dus twee adressen). lan-mouse antwoordde dan vanaf het andere adres en muis delen naar die machine lukte niet meer.
+- `kingstra-lan-mouse` vraagt nu bij het starten via ssh aan de andere machine welk adres hij richting deze machine gebruikt en werkt `koppeling.json` en de lan-mouse-config bij. Niet bereikbaar via ssh: het opgeslagen adres blijft staan.
+- Nieuwe lichte timer (`kingstra-koppel-ip.timer`, elke 2 min): alleen als de handshake de laatste minuten mislukte, controleert hij het adres opnieuw en herstart hij lan-mouse als het veranderd is.
+- De installer schakelt systemd-networkd (en de socket/wait-online) uit als NetworkManager ook aan staat, zodat er één DHCP-client overblijft. Alleen in die combinatie.
+- De smoke-test van de koppeling schreef via `XDG_CACHE_HOME` in je echte klembordmap; hij blijft nu in zijn eigen tijdelijke map.
+
 ### Video-wallpapers in de picker
 - Video's in je collectie (mp4, webm, mkv, mov, ook in `~/Pictures/Wallpapers/video`) krijgen een rond ▶-teken op de kaart. Nieuwe keuze naast de sortering: "Foto’s en video’s", "Alleen foto’s" of "Alleen video’s".
 - **Spatie** op een eigen wallpaper opent hem groot; een video speelt dan geluidloos af (klik = pauze). Enter zet hem in.

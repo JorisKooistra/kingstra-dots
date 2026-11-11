@@ -21,6 +21,7 @@
 #
 # Achter de schermen (via ssh door de andere machine aangeroepen):
 #   _bevestig, _klembord-ontvang, _klembord-bestanden, _melding, _downloads, _start, _kant
+# Door de diensten zelf: _ververs-ip [--als-nodig] (IP van de ander bijwerken)
 # =============================================================================
 set -uo pipefail
 USER="${USER:-$(id -un)}"
@@ -38,7 +39,7 @@ MAX_BYTES=$((20 * 1024 * 1024))
 # Gekopieerde bestanden gaan mee tot deze omvang; groter → "Naar … sturen".
 MAX_BESTANDEN=$((2 * 1024 * 1024 * 1024))
 KLEMBORD_MAP="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/klembord"
-UNITS=(kingstra-lan-mouse.service kingstra-klembord.service)
+UNITS=(kingstra-lan-mouse.service kingstra-klembord.service kingstra-koppel-ip.timer)
 
 say()  { printf '  %s\n' "$*"; }
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
@@ -642,6 +643,58 @@ PY
     systemctl --user restart kingstra-lan-mouse.service 2>/dev/null || true
 }
 
+# ---------------------------------------------------------------------------
+# IP van de ander verversen. Een machine kan na een herstart een ander
+# (bron)adres gebruiken, bv. met twee DHCP-clients op één interface: dan
+# antwoordt lan-mouse vanaf een ander adres dan waar wij naartoe sturen en
+# mislukt de DTLS-handshake. Daarom vragen we de ander via ssh welk bronadres
+# hij richting ons gebruikt en zetten dat in koppeling.json en lan-mouse.
+#   _ververs-ip              bij het starten van kingstra-lan-mouse (ExecStartPre)
+#   _ververs-ip --als-nodig  timer: alleen als de handshake recent mislukte;
+#                            herstart lan-mouse als het adres veranderde
+# Geeft 0 als het adres is bijgewerkt, anders 1. ssh-falen = opgeslagen IP houden.
+# ---------------------------------------------------------------------------
+is_ipv4() { [[ "$1" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; }
+
+handshake_mislukt() {
+    journalctl --user -u kingstra-lan-mouse.service --since "-3min" -q --no-pager 2>/dev/null \
+        | grep -q 'failed to connect to'
+}
+
+zet_ip() {
+    local ip="$1"
+    python3 - "$STATE" "$ip" <<'PY'
+import json, sys
+path, ip = sys.argv[1:3]
+data = json.load(open(path))
+data["ip"] = ip
+json.dump(data, open(path, "w"), indent=2)
+PY
+    [[ -f "$LM_CONF" ]] && sed -i "s/^ips = \[.*\]/ips = [\"$ip\"]/" "$LM_CONF"
+}
+
+cmd_ververs_ip() {
+    local als_nodig=0
+    [[ "${1:-}" == --als-nodig ]] && als_nodig=1
+    [[ -f "$STATE" ]] || return 1
+    if (( als_nodig )); then
+        systemctl --user is-active --quiet kingstra-lan-mouse.service || return 1
+        handshake_mislukt || return 1
+    fi
+    local oud mijn nieuw
+    oud="$(state_get ip)"
+    is_ipv4 "$oud" || return 1
+    mijn="$(eigen_ip_naar "$oud")"
+    is_ipv4 "$mijn" || return 1
+    nieuw="$(peer_ssh "ip -4 route get $mijn" 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1)"
+    is_ipv4 "$nieuw" || return 1
+    [[ "$nieuw" != "$oud" ]] || return 1
+    zet_ip "$nieuw"
+    printf 'kingstra-koppel: %s gebruikt nu %s (was %s)\n' "$(state_get host)" "$nieuw" "$oud" >&2
+    (( als_nodig )) && systemctl --user restart kingstra-lan-mouse.service 2>/dev/null
+    return 0
+}
+
 cmd_vergeet() {
     systemctl --user stop "${UNITS[@]}" >/dev/null 2>&1 || true
     local label; label="$(state_get label 2>/dev/null)"
@@ -666,6 +719,7 @@ case "${1:-status}" in
     vergeet|forget) cmd_vergeet ;;
     kant|side) shift; cmd_kant "$@" ;;
     _kant) shift; [[ -f "$STATE" ]] && zet_kant "$1" ;;
+    _ververs-ip) shift; cmd_ververs_ip "$@" ;;
     klembord) cmd_klembord ;;
     _klembord-stuur) cmd_klembord_stuur ;;
     _klembord-ontvang) shift; cmd_klembord_ontvang "$@" ;;

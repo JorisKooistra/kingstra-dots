@@ -1,0 +1,10 @@
+[Unit]
+Description=Kingstra koppeling: IP van de andere machine periodiek controleren
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+# Gestart door kingstra-session-start zodra er een koppeling is.
+ConditionPathExists=%h/.config/kingstra/koppeling.json
+
+[Timer]
+OnActiveSec=1min
+OnUnitActiveSec=2min
+AccuracySec=15s

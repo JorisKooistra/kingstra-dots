@@ -1,0 +1,10 @@
+[Unit]
+Description=Kingstra koppeling: IP van de andere machine controleren
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+ConditionPathExists=%h/.config/kingstra/koppeling.json
+
+[Service]
+Type=oneshot
+# Alleen als de lan-mouse-handshake recent mislukte: vraag de ander via ssh
+# welk adres hij gebruikt en herstart lan-mouse als dat veranderd is.
+ExecStart=-/usr/bin/timeout 20 %h/.local/bin/kingstra-koppel _ververs-ip --als-nodig

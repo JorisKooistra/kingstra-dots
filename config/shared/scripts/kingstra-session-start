@@ -148,7 +148,7 @@ start_core() {
     # klembord delen. Alleen als er een koppeling is; restart pakt de nieuwe
     # WAYLAND_DISPLAY op na opnieuw inloggen.
     if [[ -f "$CONFIG_HOME/kingstra/koppeling.json" ]]; then
-        systemctl_user restart kingstra-lan-mouse.service kingstra-klembord.service
+        systemctl_user restart kingstra-lan-mouse.service kingstra-klembord.service kingstra-koppel-ip.timer
     fi
     # Nachtlicht: volgt het schema uit ~/.config/kingstra/nachtlicht.json.
     if [[ -x "$HOME/.local/bin/kingstra-nightlight" ]] && has_cmd hyprsunset; then

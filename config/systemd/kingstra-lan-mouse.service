@@ -6,6 +6,9 @@ ConditionPathExists=%h/.config/kingstra/koppeling.json
 
 [Service]
 Type=simple
+# Eerst het IP van de ander verversen (die kan na een herstart een ander
+# bronadres gebruiken). Mislukt dat, dan gewoon met het opgeslagen IP door.
+ExecStartPre=-/usr/bin/timeout 8 %h/.local/bin/kingstra-koppel _ververs-ip
 ExecStart=/usr/bin/lan-mouse daemon
 Restart=on-failure
 RestartSec=3

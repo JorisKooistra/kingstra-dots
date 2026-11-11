@@ -194,6 +194,8 @@ _phase12_enable_services() {
             sudo systemctl start NetworkManager 2>/dev/null || true
     fi
 
+    _phase12_single_dhcp_client
+
     # Bluetooth
     if ! systemctl is-enabled bluetooth &>/dev/null; then
         sudo systemctl enable --now bluetooth 2>/dev/null && \
@@ -206,6 +208,30 @@ _phase12_enable_services() {
     # wpa_supplicant — standaard backend voor NetworkManager
     if ! systemctl is-enabled wpa_supplicant &>/dev/null; then
         sudo systemctl enable wpa_supplicant 2>/dev/null || true
+    fi
+}
+
+# NetworkManager én systemd-networkd tegelijk = twee DHCP-clients op dezelfde
+# interface en dus twee IP-adressen. Welk adres "primair" wordt verschilt per
+# boot; lan-mouse (kingstra koppel) antwoordt dan vanaf een ander adres dan
+# waar de andere machine naartoe stuurt en muis delen werkt niet meer.
+# Alleen als NetworkManager enabled én actief is: networkd uitschakelen.
+_phase12_single_dhcp_client() {
+    [[ "$(systemctl is-enabled NetworkManager 2>/dev/null)" == enabled ]] || return 0
+    systemctl is-active --quiet NetworkManager || return 0
+    [[ "$(systemctl is-enabled systemd-networkd.service 2>/dev/null)" == enabled ]] || return 0
+
+    log_warn "NetworkManager en systemd-networkd draaien allebei: twee DHCP-clients, twee IP-adressen"
+    local units=(systemd-networkd.service systemd-networkd.socket) u
+    [[ "$(systemctl is-enabled systemd-networkd-wait-online.service 2>/dev/null)" == enabled ]] \
+        && units+=(systemd-networkd-wait-online.service)
+    for u in "${units[@]}"; do
+        sudo systemctl disable --now "$u" 2>/dev/null || true
+    done
+    if [[ "$(systemctl is-enabled systemd-networkd.service 2>/dev/null)" == enabled ]]; then
+        log_warn "systemd-networkd uitschakelen mislukt — handmatig: sudo systemctl disable --now ${units[*]}"
+    else
+        log_ok "systemd-networkd uitgeschakeld; NetworkManager is nu de enige DHCP-client"
     fi
 }
 
@@ -229,7 +255,7 @@ _phase12_koppeling() {
     deploy_link "$src" "$HOME/.local/bin/kingstra-koppel"
 
     ensure_dir "$HOME/.config/systemd/user"
-    for unit in kingstra-lan-mouse.service kingstra-klembord.service; do
+    for unit in kingstra-lan-mouse.service kingstra-klembord.service kingstra-koppel-ip.service kingstra-koppel-ip.timer; do
         deploy_link "$REPO_ROOT/config/systemd/$unit" "$HOME/.config/systemd/user/$unit"
     done
     systemctl --user daemon-reload 2>/dev/null || true
@@ -245,7 +271,7 @@ _phase12_koppeling() {
     fi
 
     if [[ -f "$HOME/.config/kingstra/koppeling.json" ]]; then
-        systemctl --user restart kingstra-lan-mouse.service kingstra-klembord.service 2>/dev/null || true
+        systemctl --user restart kingstra-lan-mouse.service kingstra-klembord.service kingstra-koppel-ip.timer 2>/dev/null || true
         log_ok "Koppeling actief ($(python3 -c 'import json;print(json.load(open("'"$HOME"'/.config/kingstra/koppeling.json")).get("host","?"))' 2>/dev/null))"
     else
         log_info "Koppelen met je andere machine: kingstra koppel <naam> [links|rechts]"
