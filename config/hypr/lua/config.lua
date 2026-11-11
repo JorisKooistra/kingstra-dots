@@ -13,6 +13,16 @@ end
 -- (pragma Env QT_QPA_PLATFORMTHEME=), zodat de shell zijn eigen stijl houdt.
 if type(hl.env) == "function" then
     pcall(hl.env, "QT_QPA_PLATFORMTHEME", "qt6ct")
+
+    -- Standaardpapier A4 in printdialogen. De installer schrijft de locale
+    -- pas in dit bestand nadat hij gegenereerd is (anders klagen apps).
+    local paper_file = (os.getenv("HOME") or "") .. "/.config/kingstra/paper-locale"
+    local fh = io.open(paper_file, "r")
+    if fh then
+        local paper = (fh:read("*l") or ""):match("^%s*([%w_%.%-@]+)%s*$")
+        fh:close()
+        if paper then pcall(hl.env, "LC_PAPER", paper) end
+    end
 end
 
 hl.config({

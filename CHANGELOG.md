@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Printen: passend op A4
+- **"Passend op pagina" weer te kiezen.** GTK4 (4.24) gebruikt ook buiten Flatpak de print-portal. Die dialoog laat de eigen tabbladen van apps weg, zoals "Page Handling" in Papers, en dan blijft de schaal op "geen": een grote PDF of foto kwam op 100% half van het A4 af. De installer zet nu `org.freedesktop.impl.portal.Print=none` in `portals.conf`, zodat GTK-apps hun eigen printdialoog met "Fit to Printable Area" tonen.
+- **A4 standaard in plaats van US Letter.** Met de en_US-locale kozen printdialogen Letter. De installer genereert `nl_NL.UTF-8` en zet `LC_PAPER` via `~/.config/kingstra/paper-locale` (Hyprland-env en dbus/systemd). Na opnieuw inloggen is A4 de standaard. Papers/Evince-instellingen die nog op Letter stonden, gaan eenmalig naar A4.
+
 ### Startscherm na het inloggen, vloeiend afsluiten
 - **Startscherm**: na het inloggen dekt hetzelfde Kingstra-beeld als het opstartbeeld (vervaagde achtergrond, bol, ringen) alle schermen af tot de balk en de achtergrond er zijn. Daarna vervaagt het in één keer, zodat je de onderdelen niet meer één voor één ziet verschijnen. Het beeld staat hooguit 12 s, met een harde limiet van 15 s, en klikken gaan erdoorheen. `config/quickshell/splash/Splash.qml`, gestart als eerste stap van `kingstra-session-start`. Uitzetten kan met `touch ~/.config/kingstra/geen-startscherm`.
 - **Balk ~2 s eerder**: wallpaper-init (dat zelf 1,2 s op skwd wacht) draait nu op de achtergrond en houdt de balk niet meer op.

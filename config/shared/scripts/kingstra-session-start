@@ -109,9 +109,13 @@ start_splash() {
 start_core() {
     log "start core"
 
+    # LC_PAPER (A4) komt uit hypr/lua/config.lua; geef hem ook door aan apps
+    # die via dbus/systemd starten.
+    local env_vars=(WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
+    [[ -n "${LC_PAPER:-}" ]] && env_vars+=(LC_PAPER)
     has_cmd dbus-update-activation-environment && \
-        dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP >> "$LOG_FILE" 2>&1 || true
-    systemctl_user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+        dbus-update-activation-environment --systemd "${env_vars[@]}" >> "$LOG_FILE" 2>&1 || true
+    systemctl_user import-environment "${env_vars[@]}"
 
     run_bg_once "xdg-desktop-portal-hyprland" "xdg-desktop-portal-hyprland" /usr/lib/xdg-desktop-portal-hyprland
     run_bg_once "xdg-desktop-portal$" "xdg-desktop-portal" /usr/lib/xdg-desktop-portal

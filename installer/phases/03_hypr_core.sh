@@ -21,6 +21,9 @@ phase_run() {
     _phase03_configure_portals
     _phase03_configure_share_picker
 
+    log_step "Papierformaat A4 instellen..."
+    _phase03_configure_paper
+
     log_step "Fase 03 valideren..."
     _phase03_validate
 
@@ -184,11 +187,64 @@ org.freedesktop.impl.portal.Screenshot=hyprland
 org.freedesktop.impl.portal.ScreenCast=hyprland
 org.freedesktop.impl.portal.FileChooser=gtk
 org.freedesktop.impl.portal.Notification=gtk
+org.freedesktop.impl.portal.Print=none
 EOF
+    # Print=none: GTK4 (4.2x) kiest anders ook buiten een sandbox de
+    # print-portal. Die dialoog mist de eigen tabbladen van apps, zoals
+    # "Page Handling" (passend op pagina) in Papers; de schaal blijft dan op
+    # "geen" en grote PDF's vallen van het A4 af. Zonder Print-portal tonen
+    # GTK-apps hun eigen printdialoog weer.
     # FileChooser via gnome (Nautilus) faalde buiten GNOME: "kiesvenster ging
     # niet open". De portal leest de keuze alleen bij het starten in.
     systemctl --user try-restart xdg-desktop-portal.service >/dev/null 2>&1 || true
     log_ok "XDG-portalconfiguratie geschreven"
+}
+
+# Printdialogen halen het standaardpapier uit LC_PAPER. Met een en_US-locale
+# is dat US Letter. We genereren nl_NL.UTF-8 (alleen voor papier/A4) en zetten
+# LC_PAPER via ~/.config/kingstra/paper-locale (gelezen in hypr/lua/config.lua
+# en doorgegeven aan dbus/systemd in kingstra-session-start).
+_phase03_configure_paper() {
+    local want="nl_NL.UTF-8"
+    local marker="$HOME/.config/kingstra/paper-locale"
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "Papier-locale $want zou worden gegenereerd en in $marker gezet"
+        return 0
+    fi
+
+    if ! locale -a 2>/dev/null | grep -qix 'nl_NL\.utf-\?8'; then
+        if [[ -f /etc/locale.gen ]] && grep -qE '^#\s*nl_NL\.UTF-8 UTF-8' /etc/locale.gen; then
+            sudo sed -i -E 's/^#\s*(nl_NL\.UTF-8 UTF-8)/\1/' /etc/locale.gen || true
+        elif [[ -f /etc/locale.gen ]] && ! grep -qE '^nl_NL\.UTF-8 UTF-8' /etc/locale.gen; then
+            echo 'nl_NL.UTF-8 UTF-8' | sudo tee -a /etc/locale.gen >/dev/null || true
+        fi
+        sudo locale-gen >/dev/null 2>&1 || log_warn "locale-gen mislukte; papier blijft op de standaard van je taal"
+    fi
+
+    if locale -a 2>/dev/null | grep -qix 'nl_NL\.utf-\?8'; then
+        ensure_dir "$(dirname "$marker")"
+        printf '%s\n' "$want" > "$marker"
+        log_ok "Standaardpapier A4 (LC_PAPER=$want, actief na opnieuw inloggen)"
+    else
+        log_warn "Locale $want niet beschikbaar; LC_PAPER niet gezet"
+    fi
+
+    # Papers/Evince onthouden het laatst gekozen papier. Stond dat op Letter
+    # (door de oude locale), zet het dan eenmalig op A4.
+    local f
+    for f in "$HOME/.config/papers/print-settings" "$HOME/.config/evince/print-settings"; do
+        [[ -f "$f" ]] || continue
+        grep -q '^PPDName=Letter$' "$f" || continue
+        sed -i -e 's/^PPDName=Letter$/PPDName=A4/' \
+               -e 's/^DisplayName=US Letter$/DisplayName=A4/' \
+               -e 's/^Width=215\.8.*/Width=210/' \
+               -e 's/^Height=279\.3.*/Height=297/' \
+               -e 's/^paper-format=na_letter$/paper-format=iso_a4/' \
+               -e 's/^paper-width=215\.8.*/paper-width=210/' \
+               -e 's/^paper-height=279\.3.*/paper-height=297/' "$f"
+        log_ok "Printinstellingen van $(basename "$(dirname "$f")") van Letter naar A4"
+    done
 }
 
 # Eigen kiezer voor scherm delen (paneel "share" in de shell). XDPH leest
