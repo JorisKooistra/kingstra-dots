@@ -168,6 +168,15 @@ def on_battery():
         except OSError:
             continue
         if kind == "Battery":
+            # Batterijen van muis, toetsenbord of headset (scope "Device",
+            # bijv. hidpp_battery_0 van een Logitech-muis) tellen niet: een pc
+            # zonder eigen batterij liep anders op "zuinig op batterij".
+            try:
+                with open(os.path.join(base, entry, "scope")) as fh:
+                    if fh.read().strip().lower() == "device":
+                        continue
+            except OSError:
+                pass
             has_battery = True
         elif kind in ("Mains", "USB"):
             try:
