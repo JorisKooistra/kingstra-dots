@@ -138,17 +138,35 @@ Item {
         saveLayout();
     }
 
+    // De indeling wordt meteen bij het aanmaken gelezen (blockLoading). Las
+    // hij hem pas later, dan verschoven tegels nadat het paneel al opende en
+    // groeide het paneel in stappen.
+    function applyLayout(txt) {
+        try {
+            let data = JSON.parse(txt || "{}");
+            if (Array.isArray(data.order)) root.ccOrder = data.order;
+            if (Array.isArray(data.hidden)) root.ccHidden = data.hidden;
+            if (Array.isArray(data.wide)) root.ccWide = data.wide;
+        } catch (e) {}
+    }
     FileView {
+        id: layoutView
         path: root.layoutFile
         preload: true
-        onLoaded: {
-            try {
-                let data = JSON.parse(text() || "{}");
-                if (Array.isArray(data.order)) root.ccOrder = data.order;
-                if (Array.isArray(data.hidden)) root.ccHidden = data.hidden;
-                if (Array.isArray(data.wide)) root.ccWide = data.wide;
-            } catch (e) {}
-        }
+        blockLoading: true
+        onLoaded: root.applyLayout(text())
+    }
+
+    // Laatst gemeten toestand (helderheid, volume, toetsenbordindelingen).
+    // Het paneel begint daarmee, zodat de schuifregelaars en tegels er bij
+    // het openen al staan; de poller werkt ze daarna bij. Zonder deze cache
+    // groeide het paneel pas na de meting (~0,5 s) naar zijn echte maat.
+    readonly property string stateCacheFile: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/kingstra-cc-state"
+    FileView {
+        id: stateCache
+        path: root.stateCacheFile
+        blockLoading: true
+        printErrors: false
     }
 
     // --- Pil-gegevens per id ---------------------------------------------------
@@ -354,6 +372,8 @@ Item {
     }
 
     Component.onCompleted: {
+        applyLayout(layoutView.text());
+        applyState(stateCache.text());
         refresh();
         refreshHotspot();
     }
@@ -383,35 +403,41 @@ Item {
 
     Process {
         id: statePoller
-        command: ["bash", "-lc",
+        // Geen login-shell (-l): die laadt eerst het hele profiel.
+        command: ["bash", "-c",
             "bri=''; if command -v brightnessctl >/dev/null 2>&1; then bri=$(brightnessctl -m 2>/dev/null | awk -F, 'NR==1{gsub(/%/,\"\",$4); print $4}'); fi; " +
             "vol=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null); " +
             "ssid=$(nmcli -t -f NAME,TYPE connection show --active 2>/dev/null | awk -F: '$2==\"802-11-wireless\"{print $1; exit}'); " +
             "kbn=1; kb=''; if command -v jq >/dev/null 2>&1; then " +
             "kbn=$(hyprctl getoption input:kb_layout -j 2>/dev/null | jq -r '.str // \"us\"' | awk -F, '{n=0; for(i=1;i<=NF;i++) if($i!=\"\") n++; print n}'); " +
             "kb=$(hyprctl devices -j 2>/dev/null | jq -r '[.keyboards[] | select(.main==true) | .active_keymap][0] // \"\"'); fi; " +
-            "printf 'bri=%s\\nvol=%s\\nssid=%s\\nkbn=%s\\nkb=%s\\n' \"$bri\" \"$vol\" \"$ssid\" \"$kbn\" \"$kb\""
+            "out=$(printf 'bri=%s\\nvol=%s\\nssid=%s\\nkbn=%s\\nkb=%s\\n' \"$bri\" \"$vol\" \"$ssid\" \"$kbn\" \"$kb\"); " +
+            "printf '%s\\n' \"$out\"; printf '%s\\n' \"$out\" > \"$1.tmp\" && mv -f \"$1.tmp\" \"$1\"",
+            "kingstra-cc-state", root.stateCacheFile
         ]
         stdout: StdioCollector {
-            onStreamFinished: {
-                let state = {};
-                let lines = this.text.split("\n");
-                for (let i = 0; i < lines.length; i++) {
-                    let eq = lines[i].indexOf("=");
-                    if (eq > 0) state[lines[i].substring(0, eq)] = lines[i].substring(eq + 1).trim();
-                }
-                let bright = parseInt(state.bri);
-                if (!root.draggingBrightness) root.brightness = isNaN(bright) ? -1 : bright;
-                // wpctl: "Volume: 0.45" of "Volume: 0.45 [MUTED]"
-                let m = String(state.vol || "").match(/([0-9.]+)/);
-                if (m && !root.draggingVolume) root.volume = Math.round(parseFloat(m[1]) * 100);
-                root.muted = String(state.vol || "").indexOf("MUTED") !== -1;
-                root.wifiName = state.ssid || "";
-                let kbCount = parseInt(state.kbn);
-                root.kbLayoutCount = isNaN(kbCount) ? 1 : kbCount;
-                root.kbLayout = state.kb || "";
-            }
+            onStreamFinished: root.applyState(this.text)
         }
+    }
+
+    function applyState(txt) {
+        if (!txt) return;
+        let state = {};
+        let lines = String(txt).split("\n");
+        for (let i = 0; i < lines.length; i++) {
+            let eq = lines[i].indexOf("=");
+            if (eq > 0) state[lines[i].substring(0, eq)] = lines[i].substring(eq + 1).trim();
+        }
+        let bright = parseInt(state.bri);
+        if (!root.draggingBrightness) root.brightness = isNaN(bright) ? -1 : bright;
+        // wpctl: "Volume: 0.45" of "Volume: 0.45 [MUTED]"
+        let m = String(state.vol || "").match(/([0-9.]+)/);
+        if (m && !root.draggingVolume) root.volume = Math.round(parseFloat(m[1]) * 100);
+        root.muted = String(state.vol || "").indexOf("MUTED") !== -1;
+        root.wifiName = state.ssid || "";
+        let kbCount = parseInt(state.kbn);
+        root.kbLayoutCount = isNaN(kbCount) ? 1 : kbCount;
+        root.kbLayout = state.kb || "";
     }
 
     Process {
