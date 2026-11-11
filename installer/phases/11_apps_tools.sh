@@ -88,7 +88,8 @@ phase_run() {
     pacman_install_optional kdeconnect
     pacman_install_optional zenity      # bestand kiezen om naar de telefoon te sturen
     pacman_install_optional sshfs       # bestanden van de telefoon bladeren (Telefoon > Bladeren)
-    pacman_install_optional scrcpy      # telefoonscherm op de pc (Telefoon > Scherm op pc)
+    pacman_install_optional scrcpy      # telefoonscherm op de pc (Telefoon > Scherm op pc), brengt adb mee
+    pacman_install_optional wayvnc      # pc-scherm op de telefoon (Telefoon > Pc op telefoon, via Tailscale)
 
     log_step "Fase 11 valideren..."
     validate_cmd nautilus

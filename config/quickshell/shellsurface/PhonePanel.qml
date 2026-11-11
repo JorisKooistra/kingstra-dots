@@ -39,6 +39,9 @@ Item {
     property bool hasSshfs: false
     property bool hasSmsApp: false
     property bool hasScrcpy: false
+    property bool hasWayvnc: false
+    property bool vncActive: false
+    readonly property string screenScript: Quickshell.env("HOME") + "/.config/hypr/scripts/phone-screen.sh"
     property var devices: []
     property string selectedId: ""
     readonly property var dev: {
@@ -135,10 +138,21 @@ Item {
     }
     Process {
         id: toolProc
-        command: ["sh", "-c", "command -v scrcpy >/dev/null && echo 1 || echo 0"]
+        command: ["bash", root.screenScript, "tools"]
         running: true
-        stdout: StdioCollector { onStreamFinished: root.hasScrcpy = this.text.trim() === "1" }
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let t = JSON.parse(this.text);
+                    root.hasScrcpy = !!t.scrcpy;
+                    root.hasWayvnc = !!t.wayvnc;
+                    root.vncActive = !!t.vnc;
+                } catch (e) {}
+            }
+        }
     }
+    // Na aan/uit zetten van scherm delen de toestand opnieuw lezen.
+    Timer { id: toolRecheck; interval: 1500; onTriggered: toolProc.running = true }
     Process {
         id: actProc
         onExited: (code) => {
@@ -576,12 +590,22 @@ Item {
             ActionTile {
                 action: "mirror"; icon: "󰍹"; label: "Scherm op pc"; accent: mocha.accent3
                 visible: root.hasScrcpy
-                tip: "Toon en bedien je telefoon op de pc (scrcpy, USB-foutopsporing nodig)"
+                tip: "Toon en bedien je telefoon op de pc. Eerste keer met kabel (USB-foutopsporing), daarna via wifi"
                 onTriggered: {
-                    Quickshell.execDetached(["bash", "-lc",
-                        "scrcpy --window-title='Telefoon' >/dev/null 2>&1 || bash ~/.config/hypr/scripts/feedback.sh '󰍹' 'Scherm spiegelen lukte niet' 'Zet USB-foutopsporing aan op je telefoon en sluit hem één keer met een kabel aan.' 5000"]);
+                    Quickshell.execDetached(["bash", root.screenScript, "mirror"]);
                     root.done = "mirror";
                     doneTimer.restart();
+                }
+            }
+            ActionTile {
+                action: "vnc"; icon: "󰍺"; label: root.vncActive ? "Delen stoppen" : "Pc op telefoon"; accent: mocha.accent2
+                visible: root.hasWayvnc
+                toggled: root.vncActive
+                tip: root.vncActive ? "Stop met je pc-scherm delen"
+                                    : "Bekijk en bedien dit scherm op je telefoon (VNC-app, via Tailscale)"
+                onTriggered: {
+                    Quickshell.execDetached(["bash", root.screenScript, "share", "toggle"]);
+                    toolRecheck.restart();
                 }
             }
         }
