@@ -1431,6 +1431,8 @@ Item {
                 StripButton { tooltip: root.notificationTooltip; visible: root.moduleEnabled("notifications"); icon: NotificationService.dnd ? "󰂛" : (NotificationService.count > 0 ? "󰂚" : "󰂜"); badge: NotificationService.dnd ? 0 : NotificationService.count; accent: NotificationService.dnd ? root.mocha.subtext0 : root.mocha.accent2; onTriggered: root.togglePanel("notifications"); onMiddleClicked: NotificationService.toggleDnd() }
                 StripButton { tooltip: root.updateTooltip(); visible: root.moduleEnabled("updates") && root.updateCount > 0; icon: "󰚰"; text: root.updateCount.toString(); accent: root.updateCount > 0 ? root.mocha.yellow : root.mocha.subtext0; onTriggered: root.openUpdatesTerminal() }
                 StripButton { tooltip: "Games"; visible: root.moduleEnabled("game_launcher"); icon: "󰊴"; accent: root.mocha.accent2; onTriggered: root.togglePanel("gaming") }
+                // Telefoon: in de strip alleen zonder rail (de rail heeft zijn eigen knop).
+                StripButton { tooltip: PhoneState.tooltip; visible: !root.railEnabled && PhoneState.present; icon: PhoneState.icon; text: PhoneState.batteryText; badge: PhoneState.notifications; accent: PhoneState.reachable ? root.mocha.accent2 : root.mocha.subtext0; onTriggered: root.togglePanel("phone") }
             }
 
             // De klok is de agendaknop: klik opent de agenda. Hover geeft
@@ -2122,6 +2124,54 @@ Item {
             }
         }
     }
+    // Telefoon (KDE Connect): batterij onder het icoon, meldingen als
+    // bolletje; klik opent het paneel Telefoon, bestanden erop slepen stuurt
+    // ze naar de telefoon. Alleen zichtbaar als er een gekoppelde telefoon is.
+    Component {
+        id: telefoonSlot
+        RailButton {
+            id: phoneBtn
+            property bool dropHover: false
+            tooltip: PhoneState.tooltip + (PhoneState.reachable ? " · sleep bestanden hierheen" : "")
+            available: PhoneState.present
+            icon: PhoneState.icon
+            text: PhoneState.batteryText
+            badge: PhoneState.notifications
+            accent: PhoneState.reachable ? root.mocha.accent2 : root.mocha.subtext0
+            onTriggered: root.togglePanel("phone")
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: Qt.rgba(phoneBtn.accent.r, phoneBtn.accent.g, phoneBtn.accent.b, 0.22)
+                border.width: 1
+                border.color: phoneBtn.accent
+                opacity: phoneBtn.dropHover ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                }
+            }
+            DropArea {
+                anchors.fill: parent
+                onEntered: (drag) => {
+                    phoneBtn.dropHover = drag.hasUrls && PhoneState.reachable;
+                    if (phoneBtn.dropHover) drag.accept(Qt.CopyAction);
+                }
+                onExited: phoneBtn.dropHover = false
+                onDropped: (drop) => {
+                    phoneBtn.dropHover = false;
+                    if (!drop.hasUrls || !PhoneState.reachable) return;
+                    let files = [];
+                    for (let u of drop.urls) {
+                        let s = String(u);
+                        if (s.indexOf("file://") === 0) files.push(decodeURIComponent(s.substring(7)));
+                    }
+                    if (files.length === 0) return;
+                    Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/phone.py", "share-first"].concat(files));
+                    drop.accept(Qt.CopyAction);
+                }
+            }
+        }
+    }
     // Vastgepinde modules uit het controlecentrum: één klik schakelt,
     // middelklik maakt los (rechtsklik op de pil pint weer vast).
     Component {
@@ -2266,6 +2316,7 @@ Item {
         case "updates": return updatesSlot;
         case "games": return gamesSlot;
         case "koppeling": return koppelingSlot;
+        case "telefoon": return telefoonSlot;
         case "pins": return pinsSlot;
         case "more": return moreSlot;
         case "tray": return traySlot;

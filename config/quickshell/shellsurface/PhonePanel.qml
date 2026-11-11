@@ -132,6 +132,7 @@ Item {
                 try {
                     root.apply(JSON.parse(this.text.trim() || "{}"));
                     root.fresh = true;
+                    PhoneState.refresh();
                 } catch (e) {
                     root.loaded = true;
                 }

@@ -4,11 +4,14 @@
   phone.py status               JSON met apparaten, batterij, netwerk,
                                 meldingen en media (snel, via D-Bus)
   phone.py cached               laatst bekende status (direct, voor openen)
+  phone.py bar                  korte stand voor de barknop; start KDE Connect
+                                niet (geen autostart) en vraagt de telefoon niets
   phone.py refresh              opnieuw zoeken op het netwerk
   phone.py ring <id>            telefoon laten afgaan ("zoek mijn telefoon")
   phone.py ping <id>            testbericht
   phone.py clipboard <id>       klembord van de pc naar de telefoon
   phone.py share <id> [pad]     bestand sturen (zonder pad: kiezer)
+  phone.py share-first <pad>…   naar de eerste bereikbare telefoon (barknop)
   phone.py browse <id>          bestanden van de telefoon openen (sshfs)
   phone.py sms <id> <nr> <txt>  sms sturen
   phone.py messages <id>        berichten-app (kdeconnect-sms) openen
@@ -274,6 +277,61 @@ def status():
             "smsApp": bool(shutil.which("kdeconnect-sms"))}
 
 
+def daemon_running():
+    data = busctl("call", "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+                  "NameHasOwner", "s", BUS)
+    d = data.get("data") if isinstance(data, dict) else None
+    return bool(d and d[0])
+
+
+def trusted_ids():
+    path = os.path.join(os.path.expanduser("~"), ".config", "kdeconnect", "trusted_devices")
+    found = []
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                m = re.match(r"^\[([A-Za-z0-9_\-]+)\]\s*$", line.strip())
+                if m:
+                    found.append(m.group(1))
+    except OSError:
+        pass
+    return found
+
+
+def bar():
+    # Voor de knop in rail, strip en Matte-balk: elke 20 s, dus licht.
+    # Alleen wat kdeconnectd al weet; draait hij niet, dan niet starten.
+    out = {"present": False, "reachable": False, "name": "", "battery": -1,
+           "charging": False, "notifications": 0}
+    paired = trusted_ids()
+    if not daemon_running():
+        out["present"] = bool(paired)
+        return out
+    names = daemon_devices(False, True) or {}
+    if not names and not paired:
+        return out
+    out["present"] = True
+    best = None
+    for dev_id, name in names.items():
+        p = get_all(f"{ROOT}/devices/{dev_id}", DEV_IFACE)
+        if best is None or (p.get("isReachable") and not best[2]):
+            best = (dev_id, p.get("name") or name, bool(p.get("isReachable")))
+    if best is None:
+        return out
+    dev_id, name, reachable = best
+    out["name"] = name
+    out["reachable"] = reachable
+    if reachable:
+        base = f"{ROOT}/devices/{dev_id}"
+        b = get_all(base + "/battery", "org.kde.kdeconnect.device.battery")
+        if isinstance(b.get("charge"), int):
+            out["battery"] = b["charge"]
+            out["charging"] = bool(b.get("isCharging"))
+        ids = call(base + "/notifications", "org.kde.kdeconnect.device.notifications", "activeNotifications")
+        out["notifications"] = len(ids) if isinstance(ids, list) else 0
+    return out
+
+
 def write_cache(data):
     try:
         tmp = CACHE + ".tmp"
@@ -319,12 +377,24 @@ def main(args):
         print(json.dumps(data))
         return 0
     action = args[0]
+    if action == "bar":
+        print(json.dumps(bar()))
+        return 0
     if action == "cached":
         print(json.dumps(read_cache()))
         return 0
     if action == "refresh":
         call(ROOT, "org.kde.kdeconnect.daemon", "forceOnNetworkChange")
         return 0
+    if action == "share-first":
+        reach = daemon_devices(True, True) or {}
+        if not reach or len(args) < 2:
+            return 1
+        dev = next(iter(reach))
+        code = 0
+        for path in args[1:]:
+            code |= run(["kdeconnect-cli", "-d", dev, "--share", path], timeout=30)[0]
+        return code
     if action == "app":
         for cmd in (["kdeconnect-app"], ["kdeconnect-settings"]):
             if shutil.which(cmd[0]):

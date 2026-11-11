@@ -20,10 +20,10 @@ Item {
     // Vaste onderdelen; "gap" (kleine adem) en "fill" (duwt de rest naar
     // onderen) mogen vaker voorkomen. Houd gelijk met rail-layout.py.
     readonly property var known: ["launcher", "workspaces", "specials", "overview", "notifications", "system", "updates",
-        "games", "koppeling", "pins", "more", "tray", "audio", "status", "clock", "power", "settings"]
+        "games", "koppeling", "telefoon", "pins", "more", "tray", "audio", "status", "clock", "power", "settings"]
     readonly property var repeatable: ["gap", "fill"]
     readonly property var defaultMain: ["launcher", "workspaces", "specials", "overview", "gap",
-        "notifications", "system", "updates", "games", "koppeling", "pins", "more", "fill",
+        "notifications", "system", "updates", "games", "koppeling", "telefoon", "pins", "more", "fill",
         "tray", "audio", "status", "clock", "power", "settings"]
     readonly property var themes: [{id: "organic", title: "Organic"}, {id: "neon", title: "Neon"},
         {id: "matte", title: "Matte"}, {id: "paper", title: "Paper"}, {id: "mono", title: "Mono"}, {id: "mono-accent", title: "Mono accent"}]
@@ -38,6 +38,7 @@ Item {
         updates: {title: "Updates", icon: "󰚰"},
         games: {title: "Games", icon: "󰊴"},
         koppeling: {title: "Andere machine (alleen als gekoppeld)", icon: "󰌢"},
+        telefoon: {title: "Telefoon (alleen als gekoppeld)", icon: "󰄜"},
         pins: {title: "Extra knoppen", icon: "󰐃"},
         more: {title: "Meer", icon: "󰇘"},
         tray: {title: "Systeemvak", icon: "󰀻"},

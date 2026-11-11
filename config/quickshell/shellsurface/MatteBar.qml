@@ -181,6 +181,7 @@ Item {
                 tip: "Netwerk en snelle instellingen"; target: "quicksettings"
             }
             QuietButton { visible: bar.chrome.hasBluetooth && bar.chrome.isBtOn; icon: "󰂯"; tip: "Bluetooth"; target: "quicksettings" }
+            QuietButton { visible: PhoneState.present; icon: PhoneState.icon; lit: PhoneState.reachable; tip: PhoneState.tooltip; target: "phone" }
             QuietButton { visible: bar.chrome.hasBattery; label: bar.chrome.batCap + "%"; tip: "Batterij"; target: "battery" }
             QuietButton { icon: "󰇘"; tip: "Menu en overige bediening"; target: "menu" }
         }

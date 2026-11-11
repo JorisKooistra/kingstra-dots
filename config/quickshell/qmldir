@@ -13,3 +13,4 @@ singleton PlayerChoice 1.0 PlayerChoice.qml
 singleton ArtCache 1.0 ArtCache.qml
 singleton NightLight 1.0 NightLight.qml
 singleton TmpWatch 1.0 TmpWatch.qml
+singleton PhoneState 1.0 PhoneState.qml
