@@ -460,7 +460,7 @@ Item {
                         visible: root.usable && root.dev.signal >= 0
                         icon: root.usable ? root.signalIcon(root.dev.signal) : ""
                         tint: root.phoneAccent
-                        label: root.usable && root.dev.network !== "" ? root.dev.network : "Signaal " + Math.max(0, root.dev.signal) + "/4"
+                        label: !root.usable ? "" : (root.dev.network !== "" ? root.dev.network : "Signaal " + Math.max(0, root.dev.signal) + "/4")
                     }
                     InfoChip {
                         visible: root.notes.length > 0
