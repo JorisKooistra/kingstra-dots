@@ -37,6 +37,9 @@ phase_run() {
     log_step "Systeemservices activeren..."
     _phase12_enable_services
 
+    log_step "Koppeling met je andere machine (muis, toetsenbord, klembord)..."
+    _phase12_koppeling
+
     log_step "Fase 12 valideren..."
     validate_cmd nmcli
     validate_cmd nm-applet
@@ -46,6 +49,7 @@ phase_run() {
     validate_file "$HOME/.config/hypr/scripts/lid-lock.sh"             "lid-lock.sh"
     validate_file "$HOME/.config/systemd/user/kingstra-resume.service" "kingstra-resume.service"
     validate_file "$HOME/.config/systemd/user/kingstra-lid-lock.service" "kingstra-lid-lock.service"
+    validate_file "$HOME/.local/bin/kingstra-koppel" "kingstra-koppel"
     validate_report
 
     log_ok "Fase 12 voltooid — Netwerk- en resume-fixes actief."
@@ -202,5 +206,48 @@ _phase12_enable_services() {
     # wpa_supplicant — standaard backend voor NetworkManager
     if ! systemctl is-enabled wpa_supplicant &>/dev/null; then
         sudo systemctl enable wpa_supplicant 2>/dev/null || true
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# kingstra koppel: pc en laptop aan elkaar koppelen. Hier alleen klaarzetten
+# (pakketten, ssh-server, script en diensten); het koppelen zelf doe je één
+# keer met `kingstra koppel <machine> [links|rechts]`. De diensten starten pas
+# als ~/.config/kingstra/koppeling.json bestaat (kingstra-session-start).
+_phase12_koppeling() {
+    pacman_install_optional lan-mouse
+    pacman_install_optional openssh
+
+    if "${DRY_RUN:-false}"; then
+        log_dry "kingstra-koppel, kingstra-lan-mouse.service en kingstra-klembord.service zouden worden geplaatst; sshd aan"
+        return 0
+    fi
+
+    local src="$REPO_ROOT/config/shared/scripts/kingstra-koppel" unit
+    ensure_dir "$HOME/.local/bin"
+    chmod +x "$src"
+    deploy_link "$src" "$HOME/.local/bin/kingstra-koppel"
+
+    ensure_dir "$HOME/.config/systemd/user"
+    for unit in kingstra-lan-mouse.service kingstra-klembord.service; do
+        deploy_link "$REPO_ROOT/config/systemd/$unit" "$HOME/.config/systemd/user/$unit"
+    done
+    systemctl --user daemon-reload 2>/dev/null || true
+
+    # De andere machine komt via ssh binnen (klembord, bestanden, koppelen).
+    # Thuis achter de router; root mag niet inloggen (Arch-standaard).
+    if systemctl list-unit-files sshd.service &>/dev/null; then
+        if [[ "$(systemctl is-enabled sshd 2>/dev/null)" != "enabled" ]]; then
+            sudo systemctl enable --now sshd 2>/dev/null \
+                && log_ok "ssh-server aan (voor kingstra koppel)" \
+                || log_warn "ssh-server aanzetten mislukt"
+        fi
+    fi
+
+    if [[ -f "$HOME/.config/kingstra/koppeling.json" ]]; then
+        systemctl --user restart kingstra-lan-mouse.service kingstra-klembord.service 2>/dev/null || true
+        log_ok "Koppeling actief ($(python3 -c 'import json;print(json.load(open("'"$HOME"'/.config/kingstra/koppeling.json")).get("host","?"))' 2>/dev/null))"
+    else
+        log_info "Koppelen met je andere machine: kingstra koppel <naam> [links|rechts]"
     fi
 }

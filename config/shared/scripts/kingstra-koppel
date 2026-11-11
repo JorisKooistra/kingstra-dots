@@ -1,0 +1,406 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kingstra-koppel — twee Kingstra-machines aan elkaar koppelen (pc ↔ laptop)
+# =============================================================================
+# Muis en toetsenbord schuiven over de schermrand naar de andere machine
+# (lan-mouse), het klembord loopt mee (eigen sync over ssh) en bestanden stuur
+# je met één opdracht of via Bestanden naar de andere kant.
+#
+#   kingstra koppel <machine> [links|rechts|boven|onder]
+#                              eenmalig koppelen; de kant is waar de ANDERE
+#                              machine staat, gezien vanaf deze (standaard links)
+#   kingstra koppel status     laat zien of alles draait en de ander bereikbaar is
+#   kingstra koppel stuur <bestand...>   naar Downloads op de andere machine
+#   kingstra koppel aan|uit    delen tijdelijk aan- of uitzetten
+#   kingstra koppel vergeet    koppeling op deze machine weghalen
+#
+# Achter de schermen (via ssh door de andere machine aangeroepen):
+#   _bevestig, _klembord-ontvang, _melding, _downloads, _vingerafdruk
+# =============================================================================
+set -uo pipefail
+USER="${USER:-$(id -un)}"
+
+SELF="$HOME/.local/bin/kingstra-koppel"
+REMOTE_SELF='~/.local/bin/kingstra-koppel'
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra"
+STATE="$STATE_DIR/koppeling.json"
+LM_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/lan-mouse"
+LM_CONF="$LM_DIR/config.toml"
+LM_CERT="$LM_DIR/lan-mouse.pem"
+RUN_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+LAST_HASH="$RUN_DIR/kingstra-klembord.laatst"
+MAX_BYTES=$((20 * 1024 * 1024))
+UNITS=(kingstra-lan-mouse.service kingstra-klembord.service)
+
+say()  { printf '  %s\n' "$*"; }
+ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
+warn() { printf '  \033[33m!\033[0m %s\n' "$*" >&2; }
+die()  { warn "$*"; exit 1; }
+
+# Sessie-omgeving vinden als we via ssh draaien (geen WAYLAND_DISPLAY e.d.).
+sessie_env() {
+    export XDG_RUNTIME_DIR="$RUN_DIR"
+    if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
+        local s
+        for s in "$RUN_DIR"/wayland-*; do
+            [[ -S "$s" ]] && { export WAYLAND_DISPLAY="${s##*/}"; break; }
+        done
+    fi
+    if [[ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" && -d "$RUN_DIR/hypr" ]]; then
+        local sig
+        sig="$(ls -t "$RUN_DIR/hypr" 2>/dev/null | head -n1)"
+        [[ -n "$sig" ]] && export HYPRLAND_INSTANCE_SIGNATURE="$sig"
+    fi
+    export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=$RUN_DIR/bus}"
+}
+
+state_get() {
+    [[ -f "$STATE" ]] || return 1
+    python3 -c 'import json,sys; v=json.load(open(sys.argv[1])).get(sys.argv[2],""); print(v)' "$STATE" "$1" 2>/dev/null
+}
+
+eigen_label() {
+    if compgen -G "/sys/class/power_supply/BAT*" >/dev/null; then echo laptop; else echo pc; fi
+}
+
+# Weergavenaam: "pc" → "PC", "laptop" → "Laptop".
+toon() { [[ "$1" == pc ]] && echo PC || echo "${1^}"; }
+
+eigen_host() { cat /etc/hostname 2>/dev/null || uname -n; }
+
+# Eerste IPv4-adres waarmee we de ander bereiken (route ernaartoe).
+eigen_ip_naar() {
+    ip -4 route get "$1" 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1
+}
+
+resolve_ip() { getent ahostsv4 "$1" 2>/dev/null | awk 'NR==1{print $1}'; }
+
+tegenkant() {
+    case "$1" in links) echo rechts ;; rechts) echo links ;; boven) echo onder ;; onder) echo boven ;; esac
+}
+
+lm_positie() {
+    case "$1" in links) echo left ;; rechts) echo right ;; boven) echo top ;; onder) echo bottom ;; esac
+}
+
+ssh_opts() {
+    printf '%s\n' -o BatchMode=yes -o ConnectTimeout=3 \
+        -o StrictHostKeyChecking=accept-new \
+        -o ServerAliveInterval=5 -o ServerAliveCountMax=2
+}
+
+# Adres van de ander: eerst de naam, anders het laatst bekende IP.
+peer_doel() {
+    local host ip user
+    host="$(state_get host)" || return 1
+    ip="$(state_get ip)"; user="$(state_get user)"
+    if [[ -n "$host" ]] && getent hosts "$host" >/dev/null 2>&1; then
+        printf '%s@%s\n' "${user:-$USER}" "$host"
+    else
+        printf '%s@%s\n' "${user:-$USER}" "${ip:-$host}"
+    fi
+}
+
+peer_ssh() {
+    local doel opts
+    doel="$(peer_doel)" || return 1
+    mapfile -t opts < <(ssh_opts)
+    ssh "${opts[@]}" "$doel" "$@"
+}
+
+vingerafdruk() {
+    [[ -f "$LM_CERT" ]] || return 1
+    openssl x509 -in "$LM_CERT" -outform der 2>/dev/null | sha256sum | awk '{print $1}' \
+        | sed 's/../&:/g; s/:$//'
+}
+
+# lan-mouse maakt zijn certificaat bij de eerste start; even starten als het ontbreekt.
+zorg_certificaat() {
+    [[ -f "$LM_CERT" ]] && return 0
+    command -v lan-mouse >/dev/null 2>&1 || return 1
+    sessie_env
+    mkdir -p "$LM_DIR"
+    timeout 4 lan-mouse daemon >/dev/null 2>&1 || true
+    [[ -f "$LM_CERT" ]]
+}
+
+schrijf_lan_mouse() {
+    # $1 host  $2 ip  $3 kant  $4 vingerafdruk  $5 label
+    local host="$1" ip="$2" kant="$3" fp="$4" label="$5"
+    mkdir -p "$LM_DIR"
+    [[ -f "$LM_CONF" && ! -f "$LM_CONF.voor-kingstra" ]] && cp "$LM_CONF" "$LM_CONF.voor-kingstra"
+    cat > "$LM_CONF" <<EOF
+# Gemaakt door kingstra koppel — wordt bij opnieuw koppelen overschreven.
+# Loslaten als de muis vastzit: linker Ctrl+Shift+Super+Alt tegelijk.
+port = 4242
+
+[authorized_fingerprints]
+"$fp" = "$label"
+
+[[clients]]
+position = "$(lm_positie "$kant")"
+hostname = "$host"
+ips = ["$ip"]
+activate_on_startup = true
+EOF
+}
+
+schrijf_state() {
+    # $1 host  $2 ip  $3 user  $4 kant  $5 label (van de ander)
+    mkdir -p "$STATE_DIR"
+    python3 - "$STATE" "$@" <<'PY'
+import json, sys
+path, host, ip, user, kant, label = sys.argv[1:7]
+json.dump({"host": host, "ip": ip, "user": user, "kant": kant, "label": label},
+          open(path, "w"), indent=2)
+PY
+}
+
+# Bladwijzer in Bestanden en het rechtermuismenu "Naar <label>".
+schrijf_bestanden() {
+    local host="$1" ip="$2" user="$3" label="$4" naam bookmarks scripts doel
+    naam="$(toon "$label")"
+    doel="$host"; getent hosts "$host" >/dev/null 2>&1 || doel="$ip"
+    bookmarks="$HOME/.config/gtk-3.0/bookmarks"
+    mkdir -p "${bookmarks%/*}"; touch "$bookmarks"
+    sed -i "\\|^sftp://[^ ]* $naam\$|d" "$bookmarks"
+    printf 'sftp://%s@%s/home/%s %s\n' "$user" "$doel" "$user" "$naam" >> "$bookmarks"
+    scripts="$HOME/.local/share/nautilus/scripts"
+    mkdir -p "$scripts"
+    cat > "$scripts/Naar $naam" <<EOF
+#!/usr/bin/env bash
+# kingstra-koppel: geselecteerde bestanden naar $naam sturen
+exec "$SELF" stuur "\$@"
+EOF
+    chmod +x "$scripts/Naar $naam"
+}
+
+diensten_aan() {
+    # Geen enable: kingstra-session-start start ze bij elke login (dan klopt
+    # WAYLAND_DISPLAY). Nu meteen herstarten zodat de nieuwe instellingen gelden.
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user restart "${UNITS[@]}" 2>/dev/null || true
+}
+
+# ---------------------------------------------------------------------------
+# Koppelen (op de machine waar je het typt)
+# ---------------------------------------------------------------------------
+cmd_koppel() {
+    local host="$1" kant="${2:-links}" user="${KOPPEL_USER:-$USER}"
+    case "$kant" in links|rechts|boven|onder) ;; *) die "kant moet links, rechts, boven of onder zijn" ;; esac
+    command -v lan-mouse >/dev/null 2>&1 || die "lan-mouse ontbreekt; draai eerst: kingstra update dotfiles"
+    command -v wl-copy >/dev/null 2>&1   || die "wl-clipboard ontbreekt; draai eerst: kingstra update dotfiles"
+
+    local ip; ip="$(resolve_ip "$host")"
+    [[ -n "$ip" ]] || die "Kan '$host' niet vinden op het netwerk. Staat hij aan? (of geef het IP-adres)"
+    say "Koppelen met $host ($ip); die staat $kant van deze machine."
+
+    [[ -f "$HOME/.ssh/id_ed25519" ]] || ssh-keygen -q -t ed25519 -N '' -f "$HOME/.ssh/id_ed25519" -C "$USER@$(eigen_host) (kingstra)"
+    local opts; mapfile -t opts < <(ssh_opts)
+    if ! ssh "${opts[@]}" "$user@$host" true 2>/dev/null; then
+        say "Eenmalig het wachtwoord van $user op $host, om een sleutel te plaatsen:"
+        ssh-copy-id -o StrictHostKeyChecking=accept-new -i "$HOME/.ssh/id_ed25519.pub" "$user@$host" >/dev/null \
+            || die "Lukt niet. Draai op $host eerst 'kingstra update dotfiles' (zet ssh aan) en probeer opnieuw."
+        ssh "${opts[@]}" "$user@$host" true || die "ssh naar $host werkt nog niet zonder wachtwoord"
+    fi
+    ok "ssh naar $host werkt"
+
+    ssh "${opts[@]}" "$user@$host" "test -x $REMOTE_SELF && command -v lan-mouse >/dev/null" \
+        || die "Op $host ontbreekt kingstra-koppel of lan-mouse; draai daar eerst 'kingstra update dotfiles'."
+
+    zorg_certificaat || die "lan-mouse-certificaat maken lukte niet"
+    local mijn_fp mijn_ip mijn_host mijn_label pubkey
+    mijn_fp="$(vingerafdruk)"; mijn_ip="$(eigen_ip_naar "$ip")"
+    mijn_host="$(eigen_host)"; mijn_label="$(eigen_label)"
+    pubkey="$(cat "$HOME/.ssh/id_ed25519.pub")"
+
+    local antwoord peer_fp peer_label
+    antwoord="$(ssh "${opts[@]}" "$user@$host" "$REMOTE_SELF" _bevestig \
+        "$(printf '%q' "$mijn_host")" "$mijn_ip" "$(tegenkant "$kant")" "$mijn_fp" "$mijn_label" "$USER" \
+        "$(printf '%q' "$pubkey")")" || die "De andere kant kon de koppeling niet opslaan"
+    peer_fp="$(sed -n 's/^fp=//p' <<<"$antwoord")"
+    peer_label="$(sed -n 's/^label=//p' <<<"$antwoord")"
+    [[ -n "$peer_fp" ]] || die "Geen vingerafdruk van $host ontvangen"
+    ok "$host is ingesteld (${peer_label:-?})"
+
+    schrijf_lan_mouse "$host" "$ip" "$kant" "$peer_fp" "${peer_label:-$host}"
+    schrijf_state "$host" "$ip" "$user" "$kant" "${peer_label:-$host}"
+    schrijf_bestanden "$host" "$ip" "$user" "${peer_label:-$host}"
+    local peer_pub; peer_pub="$(sed -n 's/^pubkey=//p' <<<"$antwoord")"
+    if [[ -n "$peer_pub" ]]; then
+        mkdir -p "$HOME/.ssh"; touch "$HOME/.ssh/authorized_keys"; chmod 600 "$HOME/.ssh/authorized_keys"
+        grep -qxF "$peer_pub" "$HOME/.ssh/authorized_keys" || printf '%s\n' "$peer_pub" >> "$HOME/.ssh/authorized_keys"
+    fi
+    diensten_aan
+    ok "Muis, toetsenbord en klembord gedeeld"
+
+    if ssh "${opts[@]}" "$user@$host" "ssh -o BatchMode=yes -o ConnectTimeout=3 -o StrictHostKeyChecking=accept-new $USER@$mijn_ip true" 2>/dev/null; then
+        ok "$host kan ook terug naar deze machine"
+    else
+        warn "$host komt nog niet terug naar deze machine (staat sshd hier aan? draai 'kingstra update dotfiles')"
+    fi
+    echo
+    local rand; case "$kant" in links) rand=linkerrand ;; rechts) rand=rechterrand ;; *) rand="${kant}rand" ;; esac
+    say "Klaar. Schuif de muis over de $rand naar je ${peer_label:-$host}."
+    say "Muis vast? Linker Ctrl+Shift+Super+Alt tegelijk haalt hem terug."
+    say "Bestanden: Bestanden › $(toon "${peer_label:-$host}") in de zijbalk, of rechtsklik › Scripts › Naar $(toon "${peer_label:-$host}")."
+}
+
+# Draait op de ANDERE machine, via ssh vanuit cmd_koppel.
+cmd_bevestig() {
+    local host="$1" ip="$2" kant="$3" fp="$4" label="$5" user="$6" pubkey="$7"
+    mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
+    touch "$HOME/.ssh/authorized_keys"; chmod 600 "$HOME/.ssh/authorized_keys"
+    grep -qxF "$pubkey" "$HOME/.ssh/authorized_keys" || printf '%s\n' "$pubkey" >> "$HOME/.ssh/authorized_keys"
+    [[ -f "$HOME/.ssh/id_ed25519" ]] || ssh-keygen -q -t ed25519 -N '' -f "$HOME/.ssh/id_ed25519" -C "$USER@$(eigen_host) (kingstra)"
+    zorg_certificaat || { echo "fout=certificaat"; exit 1; }
+    schrijf_lan_mouse "$host" "$ip" "$kant" "$fp" "$label"
+    schrijf_state "$host" "$ip" "$user" "$kant" "$label"
+    schrijf_bestanden "$host" "$ip" "$user" "$label"
+    diensten_aan
+    echo "fp=$(vingerafdruk)"
+    echo "label=$(eigen_label)"
+    echo "pubkey=$(cat "$HOME/.ssh/id_ed25519.pub")"
+}
+
+# ---------------------------------------------------------------------------
+# Klembord
+# ---------------------------------------------------------------------------
+cmd_klembord() {
+    sessie_env
+    [[ -f "$STATE" ]] || die "nog niet gekoppeld"
+    rm -f "$LAST_HASH"
+    exec wl-paste --watch "$SELF" _klembord-stuur
+}
+
+cmd_klembord_stuur() {
+    cat >/dev/null 2>&1 || true
+    [[ -f "$STATE" ]] || exit 0
+    local types mime hash
+    types="$(wl-paste --list-types 2>/dev/null)" || exit 0
+    # Wachtwoordmanagers markeren geheime kopieën; die gaan niet over het netwerk.
+    grep -qx 'x-kde-passwordManagerHint' <<<"$types" && exit 0
+    if grep -qx 'image/png' <<<"$types"; then
+        mime='image/png'
+    elif grep -qE '^(text/plain|UTF8_STRING|STRING|TEXT)' <<<"$types"; then
+        mime='text/plain;charset=utf-8'
+    else
+        exit 0
+    fi
+    KLEMBORD_TMP="$(mktemp "$RUN_DIR/kingstra-klembord.XXXXXX")"
+    trap 'rm -f "$KLEMBORD_TMP"' EXIT
+    local tmp="$KLEMBORD_TMP"
+    if [[ "$mime" == image/png ]]; then
+        wl-paste -n -t image/png >"$tmp" 2>/dev/null || exit 0
+    else
+        wl-paste -n -t text >"$tmp" 2>/dev/null || exit 0
+    fi
+    [[ -s "$tmp" ]] || exit 0
+    (( $(stat -c %s "$tmp") <= MAX_BYTES )) || exit 0
+    hash="$(sha256sum "$tmp" | awk '{print $1}')"
+    [[ -f "$LAST_HASH" && "$(cat "$LAST_HASH")" == "$hash" ]] && exit 0
+    printf '%s\n' "$hash" > "$LAST_HASH"
+    peer_ssh "$REMOTE_SELF _klembord-ontvang '$mime'" <"$tmp" >/dev/null 2>&1 || true
+}
+
+cmd_klembord_ontvang() {
+    local mime="${1:-text/plain;charset=utf-8}" tmp hash
+    sessie_env
+    tmp="$(mktemp "$RUN_DIR/kingstra-klembord-in.XXXXXX")"
+    head -c "$MAX_BYTES" >"$tmp"
+    hash="$(sha256sum "$tmp" | awk '{print $1}')"
+    printf '%s\n' "$hash" > "$LAST_HASH"
+    setsid -f sh -c 'wl-copy -t "$1" <"$2"; rm -f "$2"' _ "$mime" "$tmp" </dev/null >/dev/null 2>&1
+}
+
+# ---------------------------------------------------------------------------
+# Bestanden sturen
+# ---------------------------------------------------------------------------
+cmd_downloads() {
+    local d
+    d="$(xdg-user-dir DOWNLOAD 2>/dev/null)"
+    [[ -n "$d" && "$d" != "$HOME" ]] || d="$HOME/Downloads"
+    mkdir -p "$d"; printf '%s\n' "$d"
+}
+
+cmd_melding() {
+    local titel="$1" tekst="$2" pad="${3:-}"
+    sessie_env
+    setsid -f bash -c '
+        a="$(notify-send -a Kingstra -i folder-download -A open=Openen -A map=Map "$1" "$2" 2>/dev/null)"
+        case "$a" in
+            open) xdg-open "$3" ;;
+            map)  xdg-open "$(dirname "$3")" ;;
+        esac' _ "$titel" "$tekst" "$pad" </dev/null >/dev/null 2>&1
+}
+
+cmd_stuur() {
+    [[ $# -gt 0 ]] || die "gebruik: kingstra koppel stuur <bestand...>"
+    [[ -f "$STATE" ]] || die "nog niet gekoppeld; zie: kingstra koppel <machine>"
+    local label doel dir opts f n=0 eerste=""
+    label="$(toon "$(state_get label)")"
+    doel="$(peer_doel)"; mapfile -t opts < <(ssh_opts)
+    dir="$(peer_ssh "$REMOTE_SELF _downloads" 2>/dev/null)" \
+        || { notify-send -a Kingstra "Niet verstuurd" "$label is niet bereikbaar" 2>/dev/null; die "$label is niet bereikbaar"; }
+    for f in "$@"; do
+        [[ -e "$f" ]] || continue
+        n=$((n + 1)); [[ -n "$eerste" ]] || eerste="${f##*/}"
+    done
+    (( n > 0 )) || die "geen bestanden gevonden"
+    notify-send -a Kingstra -i folder-upload "Naar $label" "$n bestand(en) versturen…" 2>/dev/null || true
+    if scp -q -r "${opts[@]}" -- "$@" "$doel:$(printf '%q' "$dir")/"; then
+        local tekst="$eerste"; (( n > 1 )) && tekst="$eerste en nog $((n - 1))"
+        peer_ssh "$REMOTE_SELF _melding $(printf '%q' "Van $(toon "$(eigen_label)")") $(printf '%q' "$tekst") $(printf '%q' "$dir/$eerste")" >/dev/null 2>&1 || true
+        notify-send -a Kingstra -i emblem-ok "Naar $label" "$tekst staat in Downloads" 2>/dev/null || true
+        ok "$tekst → $label:$dir"
+    else
+        notify-send -a Kingstra "Niet verstuurd" "Kopiëren naar $label mislukte" 2>/dev/null || true
+        die "kopiëren mislukte"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+cmd_status() {
+    if [[ ! -f "$STATE" ]]; then
+        say "Nog niet gekoppeld. Gebruik: kingstra koppel <machine> [links|rechts]"
+        return 1
+    fi
+    local label host kant u
+    label="$(state_get label)"; host="$(state_get host)"; kant="$(state_get kant)"
+    say "Gekoppeld met $host (${label}), die staat $kant."
+    if peer_ssh true 2>/dev/null; then ok "$host is bereikbaar"; else warn "$host is nu niet bereikbaar"; fi
+    for u in "${UNITS[@]}"; do
+        if systemctl --user is-active --quiet "$u"; then ok "$u draait"; else warn "$u draait niet"; fi
+    done
+}
+
+cmd_vergeet() {
+    systemctl --user stop "${UNITS[@]}" >/dev/null 2>&1 || true
+    local label; label="$(state_get label 2>/dev/null)"
+    rm -f "$STATE"
+    [[ -f "$LM_CONF.voor-kingstra" ]] && mv -f "$LM_CONF.voor-kingstra" "$LM_CONF"
+    [[ -n "$label" ]] && sed -i "\\|^sftp://[^ ]* $(toon "$label")\$|d" "$HOME/.config/gtk-3.0/bookmarks" 2>/dev/null
+    rm -f "$HOME/.local/share/nautilus/scripts/Naar $(toon "$label")" 2>/dev/null
+    ok "Koppeling op deze machine weggehaald (ssh-sleutels blijven staan)"
+}
+
+case "${1:-status}" in
+    status) cmd_status ;;
+    stuur|send) shift; cmd_stuur "$@" ;;
+    aan|on)
+        [[ -f "$STATE" ]] || die "nog niet gekoppeld"
+        systemctl --user start "${UNITS[@]}" && ok "Delen staat aan" ;;
+    uit|off)
+        systemctl --user stop "${UNITS[@]}" && ok "Delen staat uit (tot 'kingstra koppel aan' of opnieuw inloggen)" ;;
+    vergeet|forget) cmd_vergeet ;;
+    klembord) cmd_klembord ;;
+    _klembord-stuur) cmd_klembord_stuur ;;
+    _klembord-ontvang) shift; cmd_klembord_ontvang "$@" ;;
+    _bevestig) shift; cmd_bevestig "$@" ;;
+    _melding) shift; cmd_melding "$@" ;;
+    _downloads) cmd_downloads ;;
+    _vingerafdruk) zorg_certificaat && vingerafdruk ;;
+    -h|--help|help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+    -*) die "onbekende optie: $1" ;;
+    *) cmd_koppel "$@" ;;
+esac

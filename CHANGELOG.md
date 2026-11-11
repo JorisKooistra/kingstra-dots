@@ -4,6 +4,14 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### PC en laptop koppelen (eerste deel: muis, toetsenbord, klembord, bestanden)
+- Nieuw: `kingstra koppel <machine> [links|rechts]`. Eén keer op één machine draaien (bijvoorbeeld `kingstra koppel titus links` op de pc); de andere kant wordt via ssh meteen mee ingesteld.
+- **Muis en toetsenbord** schuiven over de schermrand naar de andere machine met lan-mouse (versleuteld, alleen de gekoppelde machine mag erin). Vastgelopen? Linker Ctrl+Shift+Super+Alt tegelijk haalt de muis terug.
+- **Klembord** loopt mee, tekst en afbeeldingen tot 20 MB (`kingstra-klembord`-dienst). Kopieën uit een wachtwoordmanager gaan niet over het netwerk.
+- **Bestanden**: de andere machine staat als map in de zijbalk van Bestanden (sftp), rechtsklik › Scripts › "Naar Laptop" (of "Naar PC") stuurt de selectie naar Downloads daar, met een melding en een knop Openen. Ook: `kingstra koppel stuur <bestand...>`.
+- `kingstra koppel status`, `aan`, `uit`, `vergeet`.
+- De installer (fase 12) installeert lan-mouse, zet de ssh-server aan en plaatst het script en de twee diensten. Die starten bij inloggen alleen als er een koppeling is.
+
 ### Updater: kiezen en zien wat er gebeurt
 - `kingstra update` begint met een keuzemenu: **1 Alles** (systeem, AUR, Flatpak en dotfiles; Enter), **2 Alleen dotfiles** (config, shell en scripts plus de installer, geen pakketupdates), **3 Proefdraai** of **q** stoppen. Onder de keuzes staat hoeveel pakketupdates er klaarstaan en of er net nieuwe dotfiles zijn opgehaald.
 - Zonder menu: `kingstra update dotfiles` of `kingstra update alles` (ook `--dotfiles` / `--alles`). Zeg je nee op "Updates installeren?", dan vraagt hij of je dan alleen de dotfiles wilt.

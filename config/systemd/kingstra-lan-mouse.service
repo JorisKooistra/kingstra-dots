@@ -1,0 +1,12 @@
+[Unit]
+Description=Kingstra koppeling: muis en toetsenbord delen (lan-mouse)
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+# Gestart door kingstra-session-start zodra er een koppeling is.
+ConditionPathExists=%h/.config/kingstra/koppeling.json
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/lan-mouse daemon
+Restart=on-failure
+RestartSec=3
+Environment=XDG_RUNTIME_DIR=/run/user/%U
