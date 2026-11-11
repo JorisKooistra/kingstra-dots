@@ -21,6 +21,10 @@ bar_opacity = 0.98
 popup_opacity = 0.98
 blur_size = 3
 blur_passes = 4
+# Hyprland 0.57-blursoort (kawase, frost, aurora, acrylic, haze, …) en
+# wiebelende vensters bij slepen. Uit te zetten met `kingstra effecten uit`.
+blur_variant = "acrylic"
+wobble = false
 shadow_range = 8
 shadow_opacity = 0.28
 animation_speed = 1.0

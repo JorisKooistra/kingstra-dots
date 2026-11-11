@@ -162,6 +162,40 @@ else:
 json.dump(data, open(path, "w"))
 PY
         ;;
+    effecten|effects)
+        # Thema-effecten (blursoort, wiebelende vensters) aan of uit.
+        case "${1:-}" in
+            aan|on) value=true ;;
+            uit|off) value=false ;;
+            *) echo "gebruik: kingstra effecten aan|uit" >&2; exit 2 ;;
+        esac
+        python3 - "${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/motion.json" "$value" \
+            "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json" "${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/themes" <<'PY'
+import json, os, re, subprocess, sys
+path, value, theme_json, themes = sys.argv[1], sys.argv[2] == "true", sys.argv[3], sys.argv[4]
+os.makedirs(os.path.dirname(path), exist_ok=True)
+try:
+    data = json.load(open(path))
+except Exception:
+    data = {}
+data["effects"] = value
+json.dump(data, open(path, "w"))
+variants = {"frost": 1, "ripple": 2, "drops": 3, "water": 4, "fluid_jar": 5, "prism": 6,
+            "heat_shimmer": 7, "acrylic": 8, "aurora": 9, "haze": 10}
+variant, wobble = 0, False
+if value:
+    try:
+        name = json.load(open(theme_json)).get("theme", "")
+        text = open(os.path.join(themes, name + ".toml")).read()
+        m = re.search(r'^blur_variant\s*=\s*"([^"]*)"', text, re.M)
+        variant = variants.get(m.group(1), 0) if m else 0
+        wobble = bool(re.search(r'^wobble\s*=\s*true', text, re.M))
+    except Exception:
+        pass
+lua = "hl.config({ decoration = { blur = { variant = %d }, wobble = { enabled = %s } } })" % (variant, "true" if wobble else "false")
+subprocess.run(["hyprctl", "eval", lua], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+PY
+        ;;
     veren|springs)
         # Veer-animaties in panelen en het eiland aan of uit (motion.json).
         case "${1:-}" in

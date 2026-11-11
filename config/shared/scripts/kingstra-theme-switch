@@ -817,6 +817,20 @@ _prepare_theme_wallpaper "$THEME_NAME"
 # ---------------------------------------------------------------------------
 # Step 2 — Generate theme.lua (Hyprland Lua overrides)
 # ---------------------------------------------------------------------------
+# Thema-effecten (Hyprland 0.57): blursoort als getal, wobble aan/uit.
+case "${APPEARANCE_BLUR_VARIANT:-kawase}" in
+    frost) BLUR_VARIANT_NUM=1 ;; ripple) BLUR_VARIANT_NUM=2 ;; drops) BLUR_VARIANT_NUM=3 ;;
+    water) BLUR_VARIANT_NUM=4 ;; fluid_jar) BLUR_VARIANT_NUM=5 ;; prism) BLUR_VARIANT_NUM=6 ;;
+    heat_shimmer) BLUR_VARIANT_NUM=7 ;; acrylic) BLUR_VARIANT_NUM=8 ;; aurora) BLUR_VARIANT_NUM=9 ;;
+    haze) BLUR_VARIANT_NUM=10 ;; *) BLUR_VARIANT_NUM=0 ;;
+esac
+[[ "${APPEARANCE_WOBBLE:-false}" == "true" ]] && WOBBLE_LUA=true || WOBBLE_LUA=false
+# Live toepassen (hieronder) volgt dezelfde schakelaar als theme.lua.
+FX_VARIANT=$BLUR_VARIANT_NUM; FX_WOBBLE=$WOBBLE_LUA
+if grep -qE '"effects"[[:space:]]*:[[:space:]]*false' "${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/motion.json" 2>/dev/null; then
+    FX_VARIANT=0; FX_WOBBLE=false
+fi
+
 mkdir -p "$(dirname "$THEME_CONF")"
 THEME_CONF_TMP="$(mktemp "${THEME_CONF}.XXXXXX")"
 SCREEN_SHADER_LUA="${SCREEN_SHADER//\\/\\\\}"
@@ -828,7 +842,21 @@ if ! cat > "$THEME_CONF_TMP" <<EOF
 -- =============================================================================
 
 local M = {}
+
+-- Thema-effecten staan aan tenzij motion.json "effects": false zegt
+-- (\`kingstra effecten uit\`). Nooit in de Spelen-stand: kingstra-auto-mode
+-- zet ze dan zelf uit.
+local function effects_on()
+    local base = os.getenv("XDG_STATE_HOME") or ((os.getenv("HOME") or "") .. "/.local/state")
+    local f = io.open(base .. "/kingstra/motion.json", "r")
+    if not f then return true end
+    local text = f:read("*a") or ""
+    f:close()
+    return not text:match('"effects"%s*:%s*false')
+end
+
 function M.apply()
+    local fx = effects_on()
     hl.config({
         general = {
             gaps_in = ${APPEARANCE_GAPS_IN:-5},
@@ -839,7 +867,8 @@ function M.apply()
             rounding = ${APPEARANCE_BORDER_RADIUS:-12},
             screen_shader = "${SCREEN_SHADER_LUA}",
             shadow = { range = ${WINDOW_SHADOW_RANGE}, color = "rgba(000000${WINDOW_SHADOW_HEX})" },
-            blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3} },
+            blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3}, variant = fx and ${BLUR_VARIANT_NUM} or 0 },
+            wobble = { enabled = fx and ${WOBBLE_LUA} or false },
         },
     })
 end
@@ -1018,7 +1047,7 @@ _log "Walker theme override gegenereerd"
 # Step 4 — Apply Hyprland changes live through the Lua API.
 # ---------------------------------------------------------------------------
 if command -v hyprctl &>/dev/null; then
-    hyprctl eval "hl.config({ general = { gaps_in = ${APPEARANCE_GAPS_IN:-5}, gaps_out = ${APPEARANCE_GAPS_OUT:-10}, border_size = ${APPEARANCE_BORDER_WIDTH:-2} }, decoration = { rounding = ${APPEARANCE_BORDER_RADIUS:-12}, shadow = { range = ${WINDOW_SHADOW_RANGE}, color = \"rgba(000000${WINDOW_SHADOW_HEX})\" }, blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3} } } })" 2>/dev/null || true
+    hyprctl eval "hl.config({ general = { gaps_in = ${APPEARANCE_GAPS_IN:-5}, gaps_out = ${APPEARANCE_GAPS_OUT:-10}, border_size = ${APPEARANCE_BORDER_WIDTH:-2} }, decoration = { rounding = ${APPEARANCE_BORDER_RADIUS:-12}, shadow = { range = ${WINDOW_SHADOW_RANGE}, color = \"rgba(000000${WINDOW_SHADOW_HEX})\" }, blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3}, variant = ${FX_VARIANT} }, wobble = { enabled = ${FX_WOBBLE} } } })" 2>/dev/null || true
     _log "Hyprland live bijgewerkt"
 fi
 

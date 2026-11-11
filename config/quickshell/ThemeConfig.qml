@@ -365,6 +365,8 @@ Item {
     // Veer-animaties in panelen en het eiland. Standaard aan; Instellingen ›
     // Uiterlijk of `kingstra veren aan|uit` schrijft motion.json.
     property bool springMotion: true
+    // Hyprland-thema-effecten (blursoort, wiebelende vensters); `kingstra effecten`.
+    property bool themeEffects: true
     // Hoe ver een veer doorschiet (OutBack-overshoot; 1.7 ≈ 10% voorbij het doel).
     readonly property real springOvershoot: 1.7
     FileView {
@@ -374,9 +376,13 @@ Item {
         preload: true
         printErrors: false
         onLoaded: {
-            try { root.springMotion = JSON.parse(text() || "{}").springs !== false; } catch (e) {}
+            try {
+                let data = JSON.parse(text() || "{}");
+                root.springMotion = data.springs !== false;
+                root.themeEffects = data.effects !== false;
+            } catch (e) {}
         }
-        onLoadFailed: root.springMotion = true
+        onLoadFailed: { root.springMotion = true; root.themeEffects = true; }
         onFileChanged: reload()
     }
 

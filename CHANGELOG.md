@@ -46,6 +46,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Thema-effecten uit Hyprland 0.57
+- Elk thema heeft nu een eigen soort blur achter vensters: **Neon** een bewegend noorderlicht (aurora), **Matte** acryl, **Organic** berijpt glas, **Paper** en **Mono** de gewone rustige blur. Bij **Organic** wiebelen vensters zacht als je ze sleept.
+- Uit te zetten in Instellingen › Uiterlijk › Thema-effecten in vensters, of met `kingstra effecten uit`. In de Spelen-stand gaan ze vanzelf uit en daarna weer aan.
+
 ### Verende panelen en eiland
 - Panelen en het eiland lopen nu verend uit: ze schieten een klein stukje door en veren terug, ook als je halverwege naar een ander paneel springt. Dichtgaan blijft rustig, en de launcher blijft snel en strak.
 - Aan of uit in Instellingen › Uiterlijk › Panelen en beweging › **Verende panelen**, of met `kingstra veren aan|uit`. Geldt meteen, voor elk thema.

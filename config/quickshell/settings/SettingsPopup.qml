@@ -4439,6 +4439,12 @@ Item {
                                 }
                                 // Geldt direct en voor elk thema (geen opslaan nodig).
                                 ChoiceRow {
+                                    label: "Thema-effecten in vensters"
+                                    options: [{ v: "aan", t: "Aan" }, { v: "uit", t: "Uit" }]
+                                    current: ThemeConfig.themeEffects ? "aan" : "uit"
+                                    onPicked: (choice) => Quickshell.execDetached([Quickshell.env("HOME") + "/.local/bin/kingstra", "effecten", choice])
+                                }
+                                ChoiceRow {
                                     label: "Verende panelen"
                                     options: [{ v: "aan", t: "Aan" }, { v: "uit", t: "Uit" }]
                                     current: ThemeConfig.springMotion ? "aan" : "uit"

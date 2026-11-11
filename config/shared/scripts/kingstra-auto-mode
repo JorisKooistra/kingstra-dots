@@ -88,6 +88,9 @@ def set_hypr(blur=None, shadow=None, animations=None):
     deco = []
     if blur is not None:
         deco.append("blur = { enabled = %s }" % lua_bool(blur))
+        # Spelen: ook de thema-effecten (wobble) uit; terug via theme.lua.
+        if not blur:
+            deco.append("wobble = { enabled = false }")
     if shadow is not None:
         deco.append("shadow = { enabled = %s }" % lua_bool(shadow))
     if deco:
@@ -259,6 +262,14 @@ class AutoMode:
             shadow=None if keep_light else bool(saved.get("shadow", 1)),
             animations=bool(saved.get("animations", 1)),
         )
+        # Thema-effecten (wobble) terug zoals ze stonden.
+        if not keep_light:
+            try:
+                fx_off = '"effects": false' in open(os.path.join(
+                    os.environ.get("XDG_STATE_HOME", HOME + "/.local/state"), "kingstra/motion.json")).read()
+            except OSError:
+                fx_off = False
+            run([HOME + "/.local/bin/kingstra", "effecten", "uit" if fx_off else "aan"])
         if not saved.get("dnd") and not self.share_active:
             notif_command("dnd-off")
         mode = saved.get("mode") or "office"
