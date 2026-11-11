@@ -42,7 +42,9 @@ PanelWindow {
     property string sourceTab: "local"
     readonly property bool online: sourceTab !== "local"
     property var extraSources: []
-    readonly property var allSources: [{id: "local", label: "Collectie"}, {id: "wallhaven", label: "Wallhaven", url: "https://wallhaven.cc/"}, {id: "nasa", label: "NASA", url: "https://images.nasa.gov/"}, {id: "commons", label: "Commons", url: "https://commons.wikimedia.org/"}].concat(extraSources.filter(source => source.id !== "wallhaven" && ((source.keySource || source.id) !== "pexels" || source.configured)))
+    // Welke tabs je ziet stel je in bij Instellingen › Bureaublad › Wallpapers.
+    property var hiddenSources: ["goodfon", "hdqwalls", "pixabay", "wallpaperscraft", "wallpaperswide", "wallpaperscom"]
+    readonly property var allSources: [{id: "local", label: "Collectie"}, {id: "wallhaven", label: "Wallhaven", url: "https://wallhaven.cc/"}, {id: "nasa", label: "NASA", url: "https://images.nasa.gov/"}, {id: "commons", label: "Commons", url: "https://commons.wikimedia.org/"}].concat(extraSources.filter(source => source.id !== "wallhaven")).filter(source => source.id === "local" || source.id === sourceTab || hiddenSources.indexOf(source.id) < 0)
     readonly property var sourceInfo: allSources.find(source => source.id === sourceTab) || ({})
     readonly property bool externalSource: sourceInfo.externalOnly === true
     readonly property bool videoSource: sourceInfo.media === "video"
@@ -50,7 +52,7 @@ PanelWindow {
     // Collectie: alles, alleen foto's of alleen video's.
     property string mediaFilter: "all"
     readonly property string sourceName: (allSources.find(source => source.id === sourceTab) || {}).label || "Wallpapers"
-    readonly property bool hasRemoteColors: ["wallhaven", "pexels", "pixabay"].includes(sourceTab)
+    readonly property bool hasRemoteColors: ["wallhaven", "pixabay"].includes(sourceTab)
     readonly property string safetyNote: online && !externalSource && !["wallhaven", "pixabay", "pixabayvideo"].includes(sourceTab) ? "Geen instelbaar SFW-filter bij deze bron" : ""
     readonly property var pixabayCategories: [""].concat((extraSources.find(source => source.id === "pixabay") || {}).categories || [])
     property var wallhavenPurity: [true, false, false]
@@ -70,7 +72,7 @@ PanelWindow {
     property string operationStage: ""
     property int operationPercent: -1
     property string waitingDownloadId: ""
-    readonly property string operationButtonLabel: operationStage === "download" || operationStage === "metadata" ? (operationPercent < 0 ? "Downloaden…" : operationPercent + "%") : operationStage === "colors" ? "Kleuren…" : operationStage === "apps" ? "Afronden…" : "Instellen…"
+    readonly property string operationButtonLabel: operationStage === "download" || operationStage === "metadata" ? (operationPercent < 0 ? "Downloaden…" : operationPercent + "%") : operationStage === "colors" ? "Kleuren…" : operationStage === "apps" ? "Afronden…" : operationStage === "convert" ? (operationPercent < 0 ? "Omzetten…" : "Omzetten " + operationPercent + "%") : "Instellen…"
     property string currentPath: ""
     property bool tagsUpdated: false
     property string folder: ""
@@ -351,7 +353,7 @@ PanelWindow {
             search(remotePage + 1);
     }
     function search(page, force) {
-        let signature = JSON.stringify([sourceTab, remoteTopic.currentIndex, searchField.text, remoteSort.currentIndex, categoryBox.currentIndex, purityMask, safeSearch, excludeAi, colorFilter, resolutionField.text, ratioField.text, pixabayCategory.currentIndex, pexelsSize.currentIndex]);
+        let signature = JSON.stringify([sourceTab, remoteTopic.currentIndex, searchField.text, remoteSort.currentIndex, categoryBox.currentIndex, purityMask, safeSearch, excludeAi, colorFilter, resolutionField.text, ratioField.text, pixabayCategory.currentIndex]);
         if (page === 1 && !force && signature === lastSearchSignature && remoteItems.length && !remoteLoadFailed)
             return;
         if (searchProcess.running) {
@@ -378,7 +380,7 @@ PanelWindow {
         message = "";
         let topic = (sourceTab === "nasa" ? ["", "nebula", "galaxy", "earth", "moon", "mars", "jupiter"] : (videoSource ? ["", "nature", "ocean", "space", "abstract", "rain", "clouds", "city night", "fire", "particles", "forest", "snow"] : ["", "nature", "landscape", "space", "abstract", "minimalism", "architecture", "cyberpunk", "digital art", "video game", "movie", "car", "fantasy", "retro", "animal"]))[remoteTopic.currentIndex] || "";
         let query = [searchField.text.trim(), topic].filter(Boolean).join(" ");
-        let parameters = ["search", "--source", sourceTab, "--query", query, "--page", String(page), "--sort", ["toplist", "date_added", "random", "favorites", "views"][remoteSort.currentIndex] || "toplist", "--categories", ["111", "100", "010", "001"][categoryBox.currentIndex], "--purity", sourceTab === "wallhaven" ? purityMask : (safeSearch ? "100" : "111"), "--color", hasRemoteColors ? colorFilter : "", "--atleast", resolutionField.visible ? resolutionField.text.trim() : "", "--ratios", ratioField.visible ? ratioField.text.trim() : "", "--seed", page > 1 ? remoteSeed : "", "--category", pixabayLike ? (pixabayCategories[pixabayCategory.currentIndex] || "") : "", "--size", sourceTab === "pexels" || sourceTab === "pexelsvideo" ? (["", "small", "medium", "large"][pexelsSize.currentIndex] || "") : ""];
+        let parameters = ["search", "--source", sourceTab, "--query", query, "--page", String(page), "--sort", ["toplist", "date_added", "random", "favorites", "views"][remoteSort.currentIndex] || "toplist", "--categories", ["111", "100", "010", "001"][categoryBox.currentIndex], "--purity", sourceTab === "wallhaven" ? purityMask : (safeSearch ? "100" : "111"), "--color", hasRemoteColors ? colorFilter : "", "--atleast", resolutionField.visible ? resolutionField.text.trim() : "", "--ratios", ratioField.visible ? ratioField.text.trim() : "", "--seed", page > 1 ? remoteSeed : "", "--category", pixabayLike ? (pixabayCategories[pixabayCategory.currentIndex] || "") : ""];
         if (excludeAi) parameters.push("--exclude-ai");
         searchProcess.command = worker(parameters);
         searchProcess.running = true;
@@ -492,6 +494,7 @@ PanelWindow {
                 pickerLayout = event.settings.layout || ({});
                 backdropEnabled = event.settings.backdrop !== false;
                 excludeAi = event.settings.excludeAi === true;
+                hiddenSources = event.settings.hiddenSources || [];
                 catalogInitialized = true;
             }
             filter();
@@ -516,8 +519,6 @@ PanelWindow {
     }
     function setSources(sources) {
         extraSources = sources;
-        if ((sourceTab === "pexels" || sourceTab === "pexelsvideo") && !sources.some(source => source.id === "pexels" && source.configured))
-            switchSource("local");
     }
     function searchTag(tag) {
         previewOpen = false;
@@ -1153,14 +1154,6 @@ PanelWindow {
                 model: ["Alle categorieën", "Achtergronden", "Mode", "Natuur", "Wetenschap", "Onderwijs", "Gevoelens", "Gezondheid", "Mensen", "Religie", "Plaatsen", "Dieren", "Industrie", "Computers", "Eten", "Sport", "Vervoer", "Reizen", "Gebouwen", "Zakelijk", "Muziek"]
                 onActivated: root.scheduleSearch()
             }
-            PickerCombo {
-                id: pexelsSize
-                objectName: "pexels-size"
-                visible: root.sourceTab === "pexels" || root.sourceTab === "pexelsvideo"
-                colors: c
-                model: ["Alle formaten", "Min. 4 MP", "Min. 12 MP", "Min. 24 MP"]
-                onActivated: root.scheduleSearch()
-            }
             TextField {
                 id: resolutionField
                 objectName: "remote-resolution"
@@ -1286,17 +1279,6 @@ PanelWindow {
                     text: modelData.label
                     selected: root.mode === modelData.key
                     onClicked: root.setMode(modelData.key)
-                }
-            }
-            PickerButton {
-                objectName: "backdrop-toggle"
-                colors: c
-                text: "Sfeer"
-                selected: root.backdropEnabled
-                onClicked: {
-                    root.backdropEnabled = !root.backdropEnabled;
-                    root.savePreference("backdrop", String(root.backdropEnabled));
-                    root.focusBrowser();
                 }
             }
         }

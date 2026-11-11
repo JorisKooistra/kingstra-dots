@@ -21,14 +21,16 @@ SOURCES = {
     "hdqwalls": dict(label="HDQwalls", url="https://hdqwalls.com/", kind="external", externalOnly=True,
                      notice="HDQwalls vraagt een browsercontrole. Open de website om daar wallpapers te bekijken en te downloaden."),
     "wallpaperswide": dict(label="WallpapersWide", url="https://wallpaperswide.com/", kind="site", tagSearch=True),
-    "pexels": dict(label="Pexels", url="https://www.pexels.com/", keyUrl="https://www.pexels.com/api/", needsKey=True, kind="api"),
     "pixabay": dict(label="Pixabay", url="https://pixabay.com/", keyUrl="https://pixabay.com/api/docs/", needsKey=True, kind="api"),
     # Videowallpapers. Ze gebruiken de sleutel van hun fotobron (keySource).
     "pixabayvideo": dict(label="Pixabay video", url="https://pixabay.com/videos/", keyUrl="https://pixabay.com/api/docs/", needsKey=True, kind="api", keySource="pixabay", media="video"),
-    "pexelsvideo": dict(label="Pexels video", url="https://www.pexels.com/videos/", keyUrl="https://www.pexels.com/api/", needsKey=True, kind="api", keySource="pexels", media="video"),
+    # Videowallpapers zonder API: zoeken via de openbare HTML met de eerlijke
+    # picker-user-agent. Downloaden alleen op jouw klik (Opslaan), nooit
+    # vooraf. Voor persoonlijk gebruik; de rechten blijven bij de makers.
+    "moewalls": dict(label="MoeWalls", url="https://moewalls.com/", kind="site", media="video"),
 }
 # Preserve the metadata of images already saved from a removed source.
-LEGACY_SOURCES = {"zedge"}
+LEGACY_SOURCES = {"zedge", "pexels", "pexelsvideo"}
 PIXABAY_CATEGORIES = ["backgrounds", "fashion", "nature", "science", "education", "feelings", "health", "people", "religion", "places", "animals", "industry", "computer", "food", "sports", "transportation", "travel", "buildings", "business", "music"]
 SOURCES["pixabay"]["categories"] = PIXABAY_CATEGORIES
 IMAGE_HOSTS = {
@@ -39,10 +41,9 @@ IMAGE_HOSTS = {
     "goodfon": {"img.goodfon.com"},
     "hdqwalls": set(),
     "wallpaperswide": {"wallpaperswide.com", "hd.wallpaperswide.com"},
-    "pexels": {"images.pexels.com"},
     "pixabay": {"pixabay.com", "cdn.pixabay.com"},
     "pixabayvideo": {"cdn.pixabay.com"},
-    "pexelsvideo": {"images.pexels.com", "videos.pexels.com"},
+    "moewalls": {"moewalls.com", "go.moewalls.com"},
 }
 PAGE_HOSTS = {
     "wallpaperscom": {"wallpapers.com"},
@@ -52,10 +53,9 @@ PAGE_HOSTS = {
     "goodfon": {"www.goodfon.com", "goodfon.com"},
     "hdqwalls": {"hdqwalls.com", "www.hdqwalls.com"},
     "wallpaperswide": {"wallpaperswide.com", "www.wallpaperswide.com"},
-    "pexels": {"www.pexels.com", "api.pexels.com"},
     "pixabay": {"pixabay.com"},
     "pixabayvideo": {"pixabay.com"},
-    "pexelsvideo": {"www.pexels.com", "api.pexels.com"},
+    "moewalls": {"moewalls.com"},
 }
 
 
@@ -168,19 +168,6 @@ def search(source, args, fetch, key=""):
                                   row.get("high") or row.get("webp", "")))
         more = page * 24 < len(rows)
         notice = "Tot 60 resultaten per onderwerp · Wallpapers.com"
-    elif source == "pexels":
-        params = dict(page=page, per_page=24, orientation="landscape")
-        params["query"] = query or "wallpaper"
-        if args.color: params["color"] = "#" + args.color.lstrip("#")
-        if getattr(args, "size", ""): params["size"] = args.size
-        data = fetch("https://api.pexels.com/v1/search?" + urlencode(params), headers={"Authorization": key}, ttl=3600)
-        for row in data.get("photos", []):
-            item = record(source, row["id"], row.get("alt") or "Pexels " + str(row["id"]), row.get("url", ""),
-                          row.get("src", {}).get("large", ""), row.get("src", {}).get("original", ""))
-            item.update(uploader=row.get("photographer", ""), resolution=dimension(row.get("width"), row.get("height")))
-            records.append(item)
-        more = bool(data.get("next_page"))
-        notice = "Foto’s van Pexels · fotograaf en bron bij elke afbeelding"
     elif source == "pixabay":
         params = dict(key=key, q=(query or "wallpaper")[:100], page=page, per_page=24, orientation="horizontal",
                       image_type="all", safesearch="true" if getattr(args, "purity", "100") == "100" else "false",
@@ -227,22 +214,33 @@ def search(source, args, fetch, key=""):
             records.append(item)
         more = page * 24 < min(500, data.get("totalHits", 0))
         notice = "Video’s van Pixabay · gratis te gebruiken, maker bij elke video"
-    elif source == "pexelsvideo":
-        params = dict(page=page, per_page=24, orientation="landscape", query=query or "loop background")
-        if getattr(args, "size", ""): params["size"] = args.size
-        data = fetch("https://api.pexels.com/videos/search?" + urlencode(params), headers={"Authorization": key}, ttl=3600)
-        for row in data.get("videos", []):
-            files = [dict(url=value.get("link", ""), width=value.get("width") or 0, height=value.get("height") or 0, size=value.get("size") or 0)
-                     for value in row.get("video_files", []) if value.get("file_type") == "video/mp4"]
-            choice = best_video(files)
-            if not choice: continue
-            small = min(files, key=lambda value: value["width"] or 99999)
-            item = record(source, row["id"], "Pexels video " + str(row["id"]), row.get("url", ""), row.get("image", ""), choice["url"])
-            item.update(uploader=(row.get("user") or {}).get("name", ""), resolution=dimension(choice["width"], choice["height"]),
-                        media="video", duration=row.get("duration", 0), preview_url=small["url"], file_size=choice.get("size", 0))
+    elif source == "moewalls":
+        base = "https://moewalls.com/" + (f"page/{page}/" if page > 1 else "")
+        url = base + ("?" + urlencode({"s": query}) if query else "")
+        body = fetch(url, as_json=False, ttl=1800)
+        for block in re.findall(r"<article\b[^>]*>.*?</article>", body, re.S):
+            classes = (re.search(r'<article\b[^>]*class="([^"]*)"', block) or [None, ""])[1].split()
+            link = re.search(r'<a\b[^>]*class="g1-frame"[^>]*>', block)
+            if not link: continue
+            href = (re.search(r'href="([^"]+)"', link[0]) or [None, ""])[1]
+            title = html.unescape((re.search(r'title="([^"]*)"', link[0]) or [None, ""])[1])
+            images = re.findall(r'(https://moewalls\.com/wp-content/uploads/[^"\s,]+-thumb(?:-[0-9]+x[0-9]+)?\.(?:jpe?g|png|webp))', block)
+            if not href or not images: continue
+            # Liefst de 728-breed versie: scherp genoeg voor een kaart.
+            thumb = next((image for image in images if "-728x" in image), images[0])
+            post = next((name[5:] for name in classes if re.fullmatch(r"post-[0-9]+", name)), href)
+            item = record(source, post, re.sub(r"\s+Live Wallpaper$", "", title, flags=re.I), href, thumb)
+            tag_slugs = [name[4:] for name in classes if name.startswith("tag-")]
+            item["tag_names"] = [tag.replace("-", " ") for tag in tag_slugs][:24]
+            item["categories"] = [name[9:] for name in classes if name.startswith("category-")]
+            size = next((re.fullmatch(r"resolutions-([0-9]+)x([0-9]+)", name) for name in classes if name.startswith("resolutions-")), None)
+            if size: item["resolution"] = dimension(size[1], size[2])
+            # MoeWalls zet AI-werk zelf onder de tags "ai" / "ai-art".
+            item["is_ai"] = bool({"ai", "ai-art", "ai-generated"} & set(tag_slugs))
+            item["media"] = "video"
             records.append(item)
-        more = bool(data.get("next_page"))
-        notice = "Video’s van Pexels · maker en bron bij elke video"
+        more = f"/page/{page + 1}/" in body
+        notice = "MoeWalls · live wallpapers voor persoonlijk gebruik · downloaden alleen als je Opslaan kiest"
     elif source == "alphacoders":
         url = "https://alphacoders.com/" + (quote(slug(query)) + "-wallpapers" if query else "resolution/4k-wallpapers") + "?" + urlencode({"page": page})
         body = fetch(url, as_json=False)
@@ -345,7 +343,7 @@ def search(source, args, fetch, key=""):
 
 def details(item, fetch):
     source = item["source"]
-    if source not in {"wallpaperscom", "alphacoders", "backiee", "wallpaperscraft", "goodfon", "wallpaperswide"}: return item
+    if source not in {"wallpaperscom", "alphacoders", "backiee", "wallpaperscraft", "goodfon", "wallpaperswide", "moewalls"}: return item
     body = fetch(item["url"], as_json=False, ttl=3600)
     doc = Document(body).root
     result = dict(item)
@@ -421,6 +419,19 @@ def details(item, fetch):
             creator = data.get("creator", {})
             if isinstance(creator, dict): result["uploader"] = creator.get("name", result["uploader"])
         if not result.get("download_url"): raise ValueError("De originele GoodFon-download ontbreekt op de bronpagina")
+    elif source == "moewalls":
+        # De knop "Download" draagt een token; de site bouwt daar zelf de
+        # link go.moewalls.com/download.php?video=<token> van. Token
+        # ongewijzigd doorgeven (hercoderen geeft een HTML-pagina terug).
+        token = re.search(r'id="moe-download"[^>]*?data-url="([A-Za-z0-9%+/=_.-]{8,600})"', body)
+        if not token: raise ValueError("MoeWalls toont geen downloadlink op deze pagina; open hem in de browser")
+        result["download_url"] = "https://go.moewalls.com/download.php?video=" + token[1]
+        result["download_headers"] = {"Referer": item["url"]}
+        preview = re.search(r'<source\b[^>]*src="([^"]+-preview\.(?:webm|mp4))"', body)
+        if preview: result["preview_url"] = urljoin(item["url"], html.unescape(preview[1]))
+        result["tag_names"] = item.get("tag_names") or result["tag_names"]
+        result["uploader"] = "MoeWalls"
+        result["license"] = "Persoonlijk, niet-commercieel gebruik"
     elif source == "wallpaperswide":
         published = next((node for node in doc.all("a") if "contentUrl" in node.attrs.get("itemprop", "").split()), None)
         if not published or not re.search(r"/download/[^/]+-wallpaper-[0-9]+x[0-9]+\.[a-z]+$", published.attrs.get("href", "")):

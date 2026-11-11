@@ -43,6 +43,13 @@ CREDENTIALS = CONFIG / "kingstra/wallpaper-sources.json"
 _autotag_spec = importlib.util.spec_from_file_location("kingstra_wallpaper_autotag", Path(__file__).with_name("autotag.py"))
 autotag = importlib.util.module_from_spec(_autotag_spec)
 _autotag_spec.loader.exec_module(autotag)
+_videonorm_spec = importlib.util.spec_from_file_location("kingstra_wallpaper_videonorm", Path(__file__).with_name("videonorm.py"))
+videonorm = importlib.util.module_from_spec(_videonorm_spec)
+_videonorm_spec.loader.exec_module(videonorm)
+# Tabs die standaard verborgen zijn (Instellingen › Bureaublad › Wallpapers):
+# weinig resultaten, te kleine beelden of grotendeels hetzelfde aanbod.
+DEFAULT_HIDDEN_SOURCES = ["goodfon", "hdqwalls", "pixabay", "wallpaperscraft", "wallpaperswide", "wallpaperscom"]
+VIEW_MODES = {"slices", "hex", "wall", "mosaic", "coverflow", "orbit"}
 
 
 class ExcludedAI(ValueError):
@@ -64,7 +71,7 @@ def source_status():
 
 def credential(payload):
     source, key = payload.get("provider", ""), payload.get("key", "")
-    if source not in {"wallhaven", "pexels", "pixabay", "wallpaperscom"} or not isinstance(key, str):
+    if source not in {"wallhaven", "pixabay", "wallpaperscom"} or not isinstance(key, str):
         raise ValueError("Onbekende broninstelling")
     key = key.strip()
     if key and not re.fullmatch(r"[A-Za-z0-9_./:+-]{6,512}", key): raise ValueError("Ongeldige API-sleutel")
@@ -136,7 +143,7 @@ def atomic_json(path, data):
 
 
 def preferences(key, value):
-    if key not in {"mode", "favorites", "sort", "backdrop", "excludeAi"}:
+    if key not in {"mode", "favorites", "sort", "backdrop", "excludeAi", "hiddenSources", "videoHeight", "videoFps", "hexRows"}:
         raise ValueError("Onbekende instelling")
     SETTINGS.parent.mkdir(parents=True, exist_ok=True)
     with SETTINGS.with_suffix(".lock").open("a") as lock:
@@ -147,8 +154,23 @@ def preferences(key, value):
             favorites = set(data.get("favorites", []))
             favorites.symmetric_difference_update([value])
             data[key] = sorted(favorites)
+        elif key == "hiddenSources":
+            # Eén bron per keer aan/uit, net als favorieten.
+            if value not in {"nasa", "commons", *providers.SOURCES}: raise ValueError("Onbekende bron")
+            hidden = set(data.get("hiddenSources", DEFAULT_HIDDEN_SOURCES))
+            hidden.symmetric_difference_update([value])
+            data[key] = sorted(hidden)
+        elif key == "videoHeight":
+            if value not in videonorm.HEIGHTS: raise ValueError("Onbekende videomaat")
+            data[key] = value
+        elif key == "videoFps":
+            if value not in videonorm.FPS: raise ValueError("Onbekende beeldsnelheid")
+            data[key] = value
+        elif key == "hexRows":
+            if value not in {"1", "2", "3", "4", "5"}: raise ValueError("Ongeldig aantal rijen")
+            data[key] = int(value)
         elif key == "mode":
-            if value not in {"slices", "hex", "wall", "mosaic", "coverflow", "orbit"}:
+            if value not in VIEW_MODES:
                 raise ValueError("Onbekende weergave")
             data[key] = value
         elif key in {"backdrop", "excludeAi"}:
@@ -420,10 +442,13 @@ def catalog():
     settings.setdefault("mode", upstream_mode if upstream_mode in {"hex", "slices", "wall", "mosaic", "coverflow", "orbit"} else "hex")
     settings.setdefault("backdrop", True)
     settings.setdefault("sort", "color")
+    settings.setdefault("hiddenSources", DEFAULT_HIDDEN_SOURCES)
     layout = skwd_config().get("components", {}).get("wallpaperSelector", {})
     settings["layout"] = {key: layout.get(key, default) for key, default in
                           dict(hexRows=2, hexCols=9, hexRadius=140, hexArc=True, hexArcIntensity=1.2,
                                hexScrollStep=1, sliceSpacing=-30).items()}
+    # Rijen uit Instellingen gaan voor op de skwd-indeling.
+    if settings.get("hexRows") in {1, 2, 3, 4, 5}: settings["layout"]["hexRows"] = settings["hexRows"]
     favorites = set(settings.get("favorites", []))
     tag_index = read_json(CONFIG / "kingstra/state/wallhaven-tags.json")
     items, seen = [], set()
@@ -640,7 +665,7 @@ def search_extra(args):
         if record.get("download_url") and not valid_url(record["download_url"], providers.IMAGE_HOSTS[source]): continue
         previous = read_json(CACHE / "metadata" / (identifier + ".json"))
         if previous.get("details_ready") and time.time() - previous.get("detail_time", 0) < 3600:
-            for field in ["tag_names", "uploader", "license", "license_url", "attribution", "is_ai", "resolution", "details_ready", "detail_time"]:
+            for field in ["tag_names", "uploader", "license", "license_url", "attribution", "is_ai", "resolution", "details_ready", "detail_time", "preview_url", "download_headers"]:
                 if field in previous: record[field] = previous[field]
             if previous.get("download_url"): record["download_url"] = previous["download_url"]
         record["path"] = saved_wallhaven(identifier) or previous.get("path", "")
@@ -844,7 +869,10 @@ def download_video(identifier, record, hosts, preview):
     else:
         target = Path(saved) if saved else library() / "video" / (identifier + suffix)
     target.parent.mkdir(parents=True, exist_ok=True)
-    transfer_video(url, target, hosts)
+    # Alleen een Referer (MoeWalls wil weten van welke pagina je komt).
+    extra = {key: value for key, value in (record.get("download_headers") or {}).items()
+             if key == "Referer" and valid_url(value, providers.PAGE_HOSTS.get(record["source"], set()))}
+    transfer_video(url, target, hosts, headers=extra if not preview else None)
     if preview:
         if not saved:
             os.utime(target, None)
@@ -855,8 +883,14 @@ def download_video(identifier, record, hosts, preview):
              duration=record.get("duration", 0), license=record.get("license", ""), notice=record.get("asset_note", ""))
         return
     record["path"] = str(target)
-    atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
     atomic_json(metadata_file(target), record)
+    # Op maat van de schermen (instelbaar): geen 4K-decode per scherm.
+    label = "Video omzetten naar je schermmaat…"
+    emit("progress", stage="convert", label=label, percent=-1)
+    target, _, _ = videonorm.normalize(target, read_json(SETTINGS),
+                                       progress=lambda percent: emit("progress", stage="convert", label=label, percent=percent))
+    record = read_json(metadata_file(target)) or dict(record, path=str(target))
+    atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
     emit("download", id=identifier, path=str(target), tags=record.get("tag_names", []))
 
 
@@ -867,13 +901,13 @@ def valid_video(path):
     return result.returncode == 0 and "video" in result.stdout
 
 
-def transfer_video(url, target, hosts, limit=400 * 1024 * 1024):
+def transfer_video(url, target, hosts, limit=400 * 1024 * 1024, headers=None):
     if target.is_file() and valid_video(target): return
     fd, temp = tempfile.mkstemp(dir=target.parent, prefix=".picker-", suffix=target.suffix)
     try:
         with os.fdopen(fd, "wb") as output:
             emit("progress", stage="download", label="Video downloaden…", percent=-1)
-            request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.3"})
+            request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.3 (https://github.com/JorisKooistra/kingstra-dots)", **(headers or {})})
             with urllib.request.urlopen(request, timeout=60) as response:
                 if not valid_url(response.url, hosts): raise ValueError("Onverwachte downloadredirect")
                 expected = int(response.headers.get("Content-Length", 0) or 0)
@@ -1063,6 +1097,45 @@ def trash(path):
     emit("removed", id="", path=str(original), remaining="")
 
 
+def normalize_videos(path=""):
+    """Video's in de collectie op maat zetten (alleen wat te groot/zwaar is).
+    De actieve videowallpaper slaan we over; die volgt na een wissel."""
+    folder = library()
+    settings = read_json(SETTINGS)
+    if path:
+        resolved = Path(path).resolve(strict=True)
+        if folder.resolve() not in resolved.parents: raise ValueError("Alleen video's uit je wallpapermap")
+        paths = [resolved]
+    else:
+        paths = sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in VIDEOS
+                       and not any(part.startswith(".") for part in p.relative_to(folder).parts))
+    lock_path = CACHE / "normalize.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a") as lock:
+        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            emit("normalized", count=0, busy=True)
+            return
+        current = current_wallpaper()
+        done = 0
+        for video in paths:
+            if current and Path(current).resolve() == video.resolve(): continue
+            try:
+                # Wordt hij nog gekopieerd? Dan bij de volgende ronde.
+                before = video.stat()
+                if time.time() - before.st_mtime < 60:
+                    time.sleep(2)
+                    if video.stat().st_size != before.st_size: continue
+                new, changed, why = videonorm.normalize(video, settings)
+            except (OSError, ValueError, subprocess.SubprocessError) as error:
+                emit("normalize-error", path=str(video), message=str(error))
+                continue
+            if changed:
+                done += 1
+                emit("normalized", path=str(video), result=str(new), reasons=why)
+        emit("normalized", count=done)
+
+
 def apply(path):
     path = Path(path).resolve(strict=True)
     if not path.is_file() or path.suffix.lower() not in IMAGES | VIDEOS:
@@ -1121,6 +1194,7 @@ def main():
     sub.add_parser("apply").add_argument("path")
     sub.add_parser("providers")
     sub.add_parser("autotag")
+    sub.add_parser("normalize").add_argument("path", nargs="?", default="")
     sub.add_parser("credential")
     args = parser.parse_args()
     try:
@@ -1133,6 +1207,7 @@ def main():
         elif args.command == "trash": trash(args.path)
         elif args.command == "apply": apply(args.path)
         elif args.command == "autotag": emit("autotag", tagged=autotag_folder())
+        elif args.command == "normalize": normalize_videos(args.path)
         elif args.command == "providers": emit("providers", sources=source_status())
         elif args.command == "credential": credential(json.loads(sys.stdin.readline(2048)))
     except urllib.error.HTTPError as error:

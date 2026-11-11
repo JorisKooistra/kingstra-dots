@@ -36,6 +36,35 @@ Item {
     property bool autoShare: false
     property bool autoHasBattery: false
 
+    // Wallpaperkiezer (Super+Ctrl+W): vaste keuzes. Wisselen tijdens het
+    // kiezen (weergave, sorteren, filters) kan in de kiezer zelf.
+    readonly property string pickerBackend: home + "/.config/quickshell/wallpaper/backend.py"
+    readonly property var defaultHiddenSources: ["goodfon", "hdqwalls", "pixabay", "wallpaperscraft", "wallpaperswide", "wallpaperscom"]
+    property var picker: ({})
+    readonly property var hiddenSources: picker.hiddenSources !== undefined ? picker.hiddenSources : defaultHiddenSources
+    property string pickerError: ""
+    property var pickerQueue: []
+
+    function setPicker(key, value) {
+        let next = Object.assign({}, picker);
+        if (key === "hiddenSources") {
+            let hidden = hiddenSources.slice(), index = hidden.indexOf(value);
+            if (index >= 0) hidden.splice(index, 1); else hidden.push(value);
+            next.hiddenSources = hidden;
+        } else next[key] = key === "backdrop" ? value === "true" : key === "hexRows" ? Number(value) : value;
+        picker = next;
+        pickerError = "";
+        pickerQueue = pickerQueue.concat([[key, String(value)]]);
+        runPickerQueue();
+    }
+    function runPickerQueue() {
+        if (pickerProcess.running || !pickerQueue.length) return;
+        let job = pickerQueue[0];
+        pickerQueue = pickerQueue.slice(1);
+        pickerProcess.command = ["python3", pickerBackend, "preferences", job[0], job[1]];
+        pickerProcess.running = true;
+    }
+
     MatugenColors { id: pageColors }
     readonly property var c: pageColors
 
@@ -109,6 +138,29 @@ Item {
             } catch (e) {}
         }
     }
+    FileView {
+        id: pickerFile
+        path: root.home + "/.config/kingstra/wallpaper-picker.json"
+        watchChanges: true
+        preload: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            if (pickerProcess.running || root.pickerQueue.length) return;
+            try { root.picker = JSON.parse(text() || "{}"); } catch (e) {}
+        }
+    }
+    Process {
+        id: pickerProcess
+        stderr: StdioCollector { onStreamFinished: if (this.text.trim()) root.pickerError = this.text.trim() }
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let match = this.text.match(/"event": "error", "message": "([^"]*)"/);
+                if (match) root.pickerError = match[1];
+            }
+        }
+        onExited: root.runPickerQueue()
+    }
     Process {
         id: inspectProcess
         stdout: StdioCollector { onStreamFinished: root.acceptLayout(this.text) }
@@ -155,7 +207,7 @@ Item {
             spacing: 16
 
             Text { text: "Bureaublad"; color: root.c.text; font.family: ThemeConfig.uiFont; font.pixelSize: 24; font.bold: true }
-            Note { text: "Hoe je desktop werkt. Thema en wallpaper kies je met Super+A." }
+            Note { text: "Hoe je desktop werkt. Thema en wallpaper kies je met Super+A; de wallpaperkiezer stel je hieronder in." }
 
             SimpleCard {
                 colors: root.c
@@ -264,6 +316,88 @@ Item {
                     current: PlayerChoice.current !== "" ? PlayerChoice.current : "theme"
                     onPicked: (value) => PlayerChoice.set(value)
                 }
+            }
+
+            SimpleCard {
+                colors: root.c
+                glyph: "󰸉"
+                heading: "Wallpapers"
+                hint: "Vaste keuzes voor de wallpaperkiezer (Super+Ctrl+W). Geldt vanaf de volgende keer dat je hem opent."
+                SimpleChoice {
+                    colors: root.c
+                    label: "Weergave bij openen"
+                    hint: "In de kiezer kun je altijd even wisselen; de laatste keuze blijft bewaard."
+                    options: [{id: "wall", title: "Raster"}, {id: "hex", title: "Hexagons"}, {id: "slices", title: "Slices"}, {id: "mosaic", title: "Mozaïek"}, {id: "coverflow", title: "Coverflow"}, {id: "orbit", title: "Orbit"}]
+                    current: root.picker.mode || "hex"
+                    onPicked: (value) => root.setPicker("mode", value)
+                }
+                SimpleChoice {
+                    colors: root.c
+                    label: "Sorteren"
+                    options: [{id: "color", title: "Kleur"}, {id: "date", title: "Nieuwste"}, {id: "name", title: "Naam"}]
+                    current: root.picker.sort || "color"
+                    onPicked: (value) => root.setPicker("sort", value)
+                }
+                SimpleSwitch {
+                    colors: root.c
+                    label: "Sfeer achter de kaarten"
+                    hint: "Een vage versie van de gekozen wallpaper als achtergrond van de kiezer."
+                    checked: root.picker.backdrop !== false
+                    onToggled: (on) => root.setPicker("backdrop", on ? "true" : "false")
+                }
+                SimpleSwitch {
+                    colors: root.c
+                    label: "Geen AI-beelden"
+                    hint: "Verbergt wat de bron als AI markeert. Niet elke bron levert die labels."
+                    checked: root.picker.excludeAi === true
+                    onToggled: (on) => root.setPicker("excludeAi", on ? "true" : "false")
+                }
+                SimpleChoice {
+                    colors: root.c
+                    label: "Video's opslaan op"
+                    hint: "Grotere of zwaardere video's worden bij opslaan omgezet; het origineel gaat naar de prullenbak. Elke video speelt op elk scherm apart, dus groter dan je scherm kost alleen rekenkracht."
+                    options: [{id: "auto", title: "Mijn schermen"}, {id: "1080", title: "1080p"}, {id: "1440", title: "1440p"}, {id: "2160", title: "4K"}, {id: "0", title: "Origineel"}]
+                    current: root.picker.videoHeight || "auto"
+                    onPicked: (value) => root.setPicker("videoHeight", value)
+                }
+                SimpleChoice {
+                    colors: root.c
+                    label: "Beelden per seconde"
+                    options: [{id: "30", title: "30"}, {id: "60", title: "60"}, {id: "0", title: "Origineel"}]
+                    current: root.picker.videoFps || "30"
+                    onPicked: (value) => root.setPicker("videoFps", value)
+                }
+                Note { text: "Bronnen in de kiezer"; color: root.c.text; font.pixelSize: 13; font.weight: Font.DemiBold }
+                Note { text: "Je collectie en Wallhaven staan er altijd. Uitgezette bronnen blijven werken; ze staan alleen niet meer als tab." }
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 7
+                    Repeater {
+                        model: [{id: "moewalls", title: "MoeWalls (video)"}, {id: "pixabayvideo", title: "Pixabay video"}, {id: "nasa", title: "NASA"}, {id: "commons", title: "Commons"}, {id: "alphacoders", title: "Alpha Coders"}, {id: "backiee", title: "backiee"}, {id: "wallpaperscraft", title: "WallpapersCraft"}, {id: "wallpaperswide", title: "WallpapersWide"}, {id: "wallpaperscom", title: "Wallpapers.com"}, {id: "pixabay", title: "Pixabay foto's (max. 1280 px)"}, {id: "goodfon", title: "GoodFon"}, {id: "hdqwalls", title: "HDQwalls (link)"}]
+                        delegate: SimpleChip {
+                            required property var modelData
+                            colors: root.c
+                            label: modelData.title
+                            glyph: chosen ? "󰄬" : ""
+                            chosen: root.hiddenSources.indexOf(modelData.id) < 0
+                            onTriggered: root.setPicker("hiddenSources", modelData.id)
+                        }
+                    }
+                }
+                AdvancedSection {
+                    title: "Hexagons"
+                    icon: "󰋙"
+                    hint: "Aantal rijen in de hexagonweergave"
+                    unit: root.unit
+                    SimpleChoice {
+                        colors: root.c
+                        label: "Rijen"
+                        options: [{id: "1", title: "1"}, {id: "2", title: "2"}, {id: "3", title: "3"}, {id: "4", title: "4"}, {id: "5", title: "5"}]
+                        current: root.picker.hexRows ? String(root.picker.hexRows) : "2"
+                        onPicked: (value) => root.setPicker("hexRows", value)
+                    }
+                }
+                Note { text: root.pickerError; visible: text !== ""; color: root.c.red }
             }
 
             AdvancedSection {

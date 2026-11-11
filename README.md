@@ -215,8 +215,8 @@ The subject control is explicitly labelled **Zoekonderwerp**: these are prepared
 terms, not shared categories supplied by every source. Wallhaven's SFW, Sketchy and NSFW
 are independent checkboxes; only SFW is checked on startup. Pixabay has a separate
 safe-search checkbox, enabled by default, plus its own actual API categories, colour,
-minimum dimensions and popular/latest filters. Pexels supports colour and minimum
-megapixel size. Sources without an adjustable safety filter say so in the picker.
+minimum dimensions and popular/latest filters. Sources without an adjustable safety filter
+say so in the picker.
 A second source uses the free [NASA Image Library API](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf)
 without an API key. It offers topic search, automatic pagination, HD previews, download,
 apply and trash; downloaded sidecars retain the original title, keywords, credit and
@@ -230,12 +230,13 @@ kept in the image sidecar and shown in the preview.
 Additional source tabs provide [Wallpapers.com](https://wallpapers.com/api/),
 [Alpha Coders](https://alphacoders.com/), [backiee](https://backiee.com/),
 [WallpapersCraft](https://wallpaperscraft.com/), [GoodFon](https://www.goodfon.com/),
-[WallpapersWide](https://wallpaperswide.com/),
-[Pexels](https://www.pexels.com/api/) and [Pixabay](https://pixabay.com/api/docs/).
-Wallpapers.com uses its public API (up to 60 results per topic); Pexels and Pixabay
-require a key. Pexels is hidden from the source selector until a key is configured;
-its key field remains available. Removing its key while browsing Pexels returns to
-the local collection. The other five use publicly available site data rather than a
+[WallpapersWide](https://wallpaperswide.com/) and [Pixabay](https://pixabay.com/api/docs/)
+(photos and video), plus [MoeWalls](https://moewalls.com/) for live/video wallpapers.
+Wallpapers.com uses its public API (up to 60 results per topic); Pixabay requires a key.
+Pexels was removed (no new API keys are issued); saved Pexels files keep their metadata.
+Which source tabs are shown is set in **Instellingen › Bureaublad › Wallpapers**; by default
+GoodFon, HDQwalls, Pixabay photos (1280 px with a normal key), WallpapersCraft,
+WallpapersWide and Wallpapers.com are hidden. The other site sources use publicly available site data rather than a
 supported developer API. GoodFon resolves its original image, creator and license from
 the published ImageObject data. WallpapersWide searches its native tags and uses its
 published main HD download link. Public site parsers may need maintenance when
@@ -247,14 +248,25 @@ challenge currently prevents automated access. Its picker page opens the officia
 website and does not invent search results or attempt to bypass the challenge.
 Zedge is no longer offered; existing downloaded files and their metadata remain usable.
 
+MoeWalls has no API. The picker reads its public search pages with its own honest
+user-agent, uses the site's preview clip for **Vergroten**, and only downloads the full
+video when you choose save/apply (the page's `moe-download` token on
+`go.moewalls.com/download.php`, with the page as Referer). MoeWalls files are for
+personal, non-commercial use; rights stay with the original artists.
+
+Saved videos are normalised to the size set in **Instellingen › Bureaublad › Wallpapers ›
+Video's opslaan op** (default: the tallest monitor in use, 30 fps, h264 8-bit, bitrate
+capped at ~8 Mb/s per 1080p). Only videos above that are re-encoded; the original goes to
+the trash. The wallpaper folder watcher (`kingstra-wallpaper-tags`) applies the same to
+videos you drop into `~/Pictures/Wallpapers` (`backend.py normalize` runs it by hand).
+
 The **API-sleutels** button contains masked local key fields for Wallhaven (optional),
-Wallpapers.com (optional), Pexels and Pixabay, with request links and remove controls.
+Wallpapers.com (optional) and Pixabay, with request links and remove controls.
 Keys are stored with mode `0600` in `~/.config/kingstra/wallpaper-sources.json`, which
 is ignored by git. They are sent to the worker through stdin and never returned in
 UI state or logs. Existing Wallhaven keys in the skwd config remain supported.
 Pixabay responses are cached for 24 hours; original/Full HD access requires separate
 full API approval (normal keys return images up to 1280 px, shown in the picker).
-Pexels currently pauses new API key issuance; an existing key can be entered.
 On smaller screens the source tabs become a dropdown to leave more room for images.
 
 **Geen AI** is a remembered option: Wallhaven excludes its AI art tag (`133451`),

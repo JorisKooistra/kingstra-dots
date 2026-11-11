@@ -1,11 +1,15 @@
 [Unit]
-Description=Kingstra: wallpapers zonder tags automatisch taggen
+Description=Kingstra: nieuwe wallpapers op maat zetten en taggen
 Documentation=https://github.com/JorisKooistra/kingstra-dots
 
 [Service]
 Type=oneshot
 # Even wachten tot een kopieerslag van meerdere bestanden klaar is.
 ExecStartPre=/usr/bin/sleep 3
+# Eerst video's op schermmaat (instelbaar in Instellingen › Bureaublad;
+# alleen wat te groot/zwaar is, origineel naar de prullenbak), dan taggen.
+# Een mislukte omzetting houdt het taggen niet tegen.
+ExecStart=-/usr/bin/python3 %h/.config/quickshell/wallpaper/backend.py normalize
 ExecStart=/usr/bin/python3 %h/.config/quickshell/wallpaper/backend.py autotag
 Nice=15
 IOSchedulingClass=idle

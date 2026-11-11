@@ -161,7 +161,7 @@ Rectangle {
 
             PickerText {
                 Layout.fillWidth: true
-                text: "Pexels verstrekt momenteel geen nieuwe sleutels. Vraag bij Pixabay ook volledige API-toegang aan voor originele resoluties. De Pixabay- en Pexels-sleutel werken ook voor het zoeken naar video’s. De andere bronnen hebben geen sleutel nodig."
+                text: "Vraag bij Pixabay volledige API-toegang aan voor originele resoluties. De Pixabay-sleutel werkt ook voor het zoeken naar video’s. De andere bronnen hebben geen sleutel nodig. Welke bronnen je als tab ziet, kies je in Instellingen › Bureaublad › Wallpapers."
                 wrapMode: Text.WordWrap
                 color: dialog.colors.onSurfaceVariant
                 font.pixelSize: 12

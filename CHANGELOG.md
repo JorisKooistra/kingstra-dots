@@ -4,6 +4,14 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Wallpaperkiezer opgeschoond, MoeWalls erbij, video's op schermmaat
+- **MoeWalls** is een nieuwe videobron in de kiezer: zoeken, Vergroten speelt het voorbeeldfilmpje van de site, Opslaan haalt de echte video op. De kiezer stelt zich eerlijk voor (geen nagemaakte browser) en downloadt alleen als jij op Opslaan drukt. Voor persoonlijk gebruik; de rechten blijven bij de makers. AI-werk is herkenbaar aan de tags van de site, dus **Geen AI** werkt ook hier.
+- **Video's op schermmaat**: een opgeslagen video wordt omgezet naar de maat uit Instellingen › Bureaublad › Wallpapers (standaard je hoogste scherm, 30 beelden per seconde, h264). Alleen wat groter, sneller of zwaarder is wordt omgezet; het origineel gaat naar de prullenbak. De mapbewaker doet hetzelfde voor video's die je zelf in `~/Pictures/Wallpapers` zet. Elke video speelt op elk scherm apart, dus dit scheelt drie keer rekenwerk.
+- **Instellingen › Bureaublad › Wallpapers** (nieuw): weergave bij openen, sorteren, Sfeer, Geen AI, videomaat en -beelden per seconde, hexagonrijen en welke bronnen als tab verschijnen. De Sfeer-knop is uit de kiezer naar hier verhuisd; weergave, sorteren en filters wissel je nog steeds in de kiezer zelf.
+- Standaard verborgen bronnen (aan te zetten in Instellingen): GoodFon (weinig resultaten), HDQwalls (alleen een link), Pixabay foto's (max. 1280 px met een gewone sleutel), WallpapersCraft, WallpapersWide en Wallpapers.com (grotendeels hetzelfde aanbod als Alpha Coders). Pixabay video blijft.
+- **Pexels** en Pexels video zijn verwijderd: Pexels geeft geen nieuwe sleutels meer uit. Eerder opgeslagen bestanden houden hun gegevens.
+- mpvpaper schrijft geen statusregel per frame meer in `~/.cache/kingstra/mpvpaper.log`, en het log wordt boven 1 MB ingekort.
+
 ### Koppeling: muis delen werkt weer na een herstart van de andere machine
 - Na een herstart kon de laptop een ander IP-adres gebruiken dan in de koppeling stond (bv. twee DHCP-clients: NetworkManager én systemd-networkd, dus twee adressen). lan-mouse antwoordde dan vanaf het andere adres en muis delen naar die machine lukte niet meer.
 - `kingstra-lan-mouse` vraagt nu bij het starten via ssh aan de andere machine welk adres hij richting deze machine gebruikt en werkt `koppeling.json` en de lan-mouse-config bij. Niet bereikbaar via ssh: het opgeslagen adres blijft staan.

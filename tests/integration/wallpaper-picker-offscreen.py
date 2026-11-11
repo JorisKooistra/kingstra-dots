@@ -122,6 +122,8 @@ def setup(base):
     palette = base / "config/kingstra/state/matugen-palette.json"
     palette.parent.mkdir(parents=True)
     palette.write_text("{}")
+    # Alle bronnen als tab, zodat de test elke parser kan aanklikken.
+    (base / "config/kingstra/wallpaper-picker.json").write_text('{"hiddenSources": []}')
     runtime = base / "runtime"
     runtime.mkdir(mode=0o700)
     env = dict(os.environ, XDG_RUNTIME_DIR=str(runtime), XDG_CONFIG_HOME=str(base / "config"),
@@ -284,9 +286,7 @@ def exercise(picker):
     deadline=time.monotonic()+3
     while not (p.base/"clipboard.txt").exists() and time.monotonic()<deadline:time.sleep(.02)
     assert (p.base/"clipboard.txt").read_text()==first_color
-    p.click("backdrop-toggle")
-    assert not p.state()["backdrop"]
-    p.click("backdrop-toggle")
+    # Sfeer aan/uit staat sinds 2026-11 in Instellingen › Bureaublad › Wallpapers.
     assert p.state()["backdrop"]
     p.click("local-colour-0")
     p.wait(lambda s: 0 < s["count"] < 48 and s["filter"] == 0, "local colour filter")
@@ -316,10 +316,8 @@ def exercise(picker):
     frames = sorted(sample["dt"] for sample in samples)
     (p.base / "scroll-metrics.json").write_text(json.dumps(dict(frames=len(frames), medianMs=frames[len(frames)//2],
                                                              p95Ms=frames[int(len(frames)*.95)], maxMs=max(frames), backwardSteps=0), indent=2))
-    p.click("backdrop-toggle")
     time.sleep(.3)
-    p.capture("hexagons")  # Verify card shaders without the photo layer behind them.
-    p.click("backdrop-toggle")
+    p.capture("hexagons")
     p.picture()
     applied = p.wait(lambda s: s["message"] == "Wallpaper ingesteld", "one click applies local image")
     assert (p.base / "applied.log").read_text() == applied["current"]
@@ -483,13 +481,13 @@ def exercise(picker):
 
 
 def exercise_sources(p):
-    assert 'pexels' not in p.state()['availableSources'], 'Pexels shown without a key'
+    assert 'pexels' not in p.state()['availableSources'], 'Removed Pexels source is still shown'
     assert 'zedge' not in p.state()['availableSources'], 'Removed Zedge source is still shown'
     # Keys travel through a real masked field and stdin into isolated storage.
     p.click("sources-settings")
     p.wait(lambda s:s["credentialsOpen"], "key settings")
     p.capture("api-settings-compact")
-    for source in ["wallhaven", "wallpaperscom", "pixabay", "pexels"]:
+    for source in ["wallhaven", "wallpaperscom", "pixabay"]:
         secret="test-private-" + source + "-123456"
         p.ipc("harness", "keyText", "key-" + source, secret)
         p.click("save-key-" + source)
@@ -497,19 +495,9 @@ def exercise_sources(p):
         assert secret not in json.dumps(p.state())
     keys=p.base/"config/kingstra/wallpaper-sources.json"
     assert keys.stat().st_mode & 0o777 == 0o600
-    assert set(json.loads(keys.read_text()))=={"wallhaven","wallpaperscom","pixabay","pexels"}
+    assert set(json.loads(keys.read_text()))=={"wallhaven","wallpaperscom","pixabay"}
     p.click("sources-close")
-    p.click("source-pexels")
-    p.wait(lambda s:s['source']=='pexels' and s['count']>0 and not s['loading'], 'configured Pexels is available')
-    p.click("sources-settings")
-    p.click("remove-key-pexels")
-    p.wait(lambda s:any(v["id"]=="pexels" and not v["configured"] for v in s["credentials"]), "remove key")
-    assert p.state()['source']=='local' and 'pexels' not in p.state()['availableSources'], 'removing the active key left a hidden source selected'
-    p.ipc("harness", "keyText", "key-pexels", "test-private-pexels-123456")
-    p.click("save-key-pexels")
-    p.wait(lambda s:'pexels' in s['availableSources'] and s["credentialMessage"], "key unlocks source")
-    p.click("sources-close")
-    for source in ["wallpaperscom","alphacoders","backiee","wallpaperscraft","goodfon","wallpaperswide","pexels","pixabay"]:
+    for source in ["wallpaperscom","alphacoders","backiee","wallpaperscraft","goodfon","wallpaperswide","pixabay"]:
         p.click("source-"+source)
         p.wait(lambda s:s["source"]==source and s.get("chosenId", "").startswith(source+"-") and not s["loading"], "source " + source)
         p.picture()

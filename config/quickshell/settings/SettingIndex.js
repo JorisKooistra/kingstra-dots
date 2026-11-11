@@ -17,6 +17,8 @@ var entries = [
     { label: "Indeling van de werkruimte", page: 18, where: "Bureaublad", keywords: "indeling tegels scrollen scrollstrook ruimtelijk werkvlak 50 70 layout" },
     { label: "Vanzelf: spel, batterij, scherm delen", page: 18, where: "Bureaublad › Vanzelf", keywords: "automatisch vanzelf gaming spel batterij zuinig delen screencast" },
     { label: "Speler op het bureaublad", page: 18, where: "Bureaublad", keywords: "speler muziek plaat vinyl cassette discman hoes" },
+    { label: "Wallpaperkiezer: weergave en bronnen", page: 18, where: "Bureaublad › Wallpapers", keywords: "wallpaper kiezer picker weergave hexagon raster bronnen tabs moewalls pixabay wallhaven sfeer sorteren ai" },
+    { label: "Video-wallpapers op schermmaat", page: 18, where: "Bureaublad › Wallpapers", keywords: "video wallpaper resolutie 1080p 1440p 4k fps beelden per seconde normaliseren omzetten mpvpaper" },
     { label: "Scrollbreedte en vastklikken", page: 18, where: "Bureaublad › Geavanceerd", keywords: "scroll kolom breedte snap vastklikken slepen" },
     { label: "Niet storen", page: 19, where: "Meldingen en rust", keywords: "dnd niet storen stil meldingen" },
     { label: "Meldingen per app", page: 19, where: "Meldingen en rust", keywords: "meldingen app regels stil nooit altijd notificaties" },

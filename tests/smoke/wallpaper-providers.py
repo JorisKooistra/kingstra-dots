@@ -43,43 +43,54 @@ class ProviderTests(unittest.TestCase):
         return [json.loads(line) for line in output.getvalue().splitlines() if json.loads(line)['event'] != 'progress']
 
     def test_keys_are_private_never_echoed_and_can_be_removed(self):
-        for source in ['wallhaven', 'wallpaperscom', 'pixabay', 'pexels']:
+        for source in ['wallhaven', 'wallpaperscom', 'pixabay']:
             events = self.capture(picker.credential, dict(provider=source, key='private-test-secret-123'))
             self.assertNotIn('private-test-secret', json.dumps(events))
             self.assertTrue(next(row for row in events[0]['sources'] if row['id']==source)['configured'])
         self.assertEqual(picker.CREDENTIALS.stat().st_mode & 0o777, 0o600)
         self.capture(picker.credential, dict(provider='pixabay', key=''))
         self.assertNotIn('pixabay', picker.provider_keys())
-        for payload in [dict(provider='zedge',key='secret-123'), dict(provider='pexels',key='a\nb'), dict(provider='../evil',key='secret-123')]:
+        for payload in [dict(provider='zedge',key='secret-123'), dict(provider='pixabay',key='a\nb'), dict(provider='pexels',key='secret-123'), dict(provider='../evil',key='secret-123')]:
             with self.assertRaises(ValueError): picker.credential(payload)
 
     def test_missing_key_makes_no_network_request(self):
         with patch.object(picker, 'provider_fetch') as fetch:
-            for source in ['pixabay','pexels']:
+            for source in ['pixabay','pixabayvideo']:
                 event=self.capture(picker.search, args(source))[0]
                 self.assertEqual(event['event'], 'error')
                 self.assertTrue(event['needsKey'])
             fetch.assert_not_called()
 
     def test_authenticated_redirect_cannot_send_key_to_other_host(self):
-        request=picker.urllib.request.Request('https://api.pexels.com/v1/search',headers={'Authorization':'private-key'})
-        handler=picker.SafeRedirect({'api.pexels.com'})
-        with self.assertRaises(ValueError): handler.redirect_request(request,None,302,'',{},'https://www.pexels.com/other')
-        with self.assertRaises(ValueError): picker.provider_fetch('pexels','https://evil.test/?key=secret')
-        self.assertFalse(picker.valid_url('http://api.pexels.com/',p.PAGE_HOSTS['pexels']))
+        request=picker.urllib.request.Request('https://pixabay.com/api/?key=private-key')
+        handler=picker.SafeRedirect({'pixabay.com'})
+        with self.assertRaises(ValueError): handler.redirect_request(request,None,302,'',{},'https://evil.test/other')
+        with self.assertRaises(ValueError): picker.provider_fetch('pixabay','https://evil.test/?key=secret')
+        self.assertFalse(picker.valid_url('http://pixabay.com/',p.PAGE_HOSTS['pixabay']))
 
-    def test_pexels_uses_original_author_header_and_real_pagination(self):
-        def fetch(url, **kwargs):
-            self.assertEqual(urlparse(url).hostname,'api.pexels.com')
-            self.assertEqual(kwargs['headers'], {'Authorization':'private-test-key'})
-            self.assertEqual(parse_qs(urlparse(url).query)['orientation'],['landscape'])
-            return dict(photos=[dict(id=7,alt='Blue sea',url='https://www.pexels.com/photo/7/',photographer='Alice',width=6000,height=4000,
-                                    src=dict(large='https://images.pexels.com/thumb.jpeg',original='https://images.pexels.com/full.jpeg'))],next_page='next')
-        result=p.search('pexels',args('pexels'),fetch,'private-test-key')
-        item=result['records'][0]
-        self.assertTrue(item['download_url'].endswith('/full.jpeg'))
-        self.assertEqual(item['uploader'],'Alice')
-        self.assertEqual(result['lastPage'],2)
+    def test_moewalls_html_search_and_token_download(self):
+        body = ('<article class="entry-tpl-grid post-21501 category-anime tag-ai-art tag-ocean resolutions-2560x1440">'
+                '<a title="Ocean Princess Live Wallpaper" class="g1-frame" href="https://moewalls.com/anime/ocean-princess-live-wallpaper/">'
+                '<img src="https://moewalls.com/wp-content/uploads/2026/10/ocean-princess-thumb-364x205.jpg" '
+                'srcset="https://moewalls.com/wp-content/uploads/2026/10/ocean-princess-thumb-728x410.jpg 728w"></a></article>'
+                '<a href="https://moewalls.com/page/2/?s=ocean">2</a>')
+        urls = []
+        result = p.search('moewalls', args('moewalls', query='ocean'), lambda url, **kwargs: urls.append(url) or body)
+        self.assertEqual(urls, ['https://moewalls.com/?s=ocean'])
+        item = result['records'][0]
+        self.assertEqual((item['name'], item['resolution'], item['media'], result['lastPage']), ('Ocean Princess', '2560 × 1440', 'video', 2))
+        self.assertTrue(item['thumb_url'].endswith('-728x410.jpg'))
+        self.assertTrue(p.is_ai(item))
+        detail = ('<a id="moe-download" data-id ="21501" data-url="abc%2BdefGHIJ" href="#">x</a>'
+                  '<source src="/wp-content/uploads/preview/2026/ocean-princess-preview.webm" type="video/mp4" />')
+        ready = p.details(item, lambda url, **kwargs: detail)
+        # Token blijft precies zoals op de pagina; Referer is de bronpagina.
+        self.assertEqual(ready['download_url'], 'https://go.moewalls.com/download.php?video=abc%2BdefGHIJ')
+        self.assertEqual(ready['download_headers'], {'Referer': item['url']})
+        self.assertEqual(ready['preview_url'], 'https://moewalls.com/wp-content/uploads/preview/2026/ocean-princess-preview.webm')
+        with self.assertRaises(ValueError): p.details(item, lambda url, **kwargs: '<a id="moe-download" href="#">x</a>')
+        page2 = p.search('moewalls', args('moewalls', page=2, query=''), lambda url, **kwargs: urls.append(url) or '')
+        self.assertEqual((urls[-1], page2['records']), ('https://moewalls.com/page/2/', []))
 
     def test_pixabay_24_hour_cache_original_tags_and_resolution_limit(self):
         for original in [False,True]:
@@ -110,15 +121,6 @@ class ProviderTests(unittest.TestCase):
         query.purity='111'
         p.search('pixabay',query,fetch,'private-key')
         self.assertEqual(calls[-1]['safesearch'],['false'])
-
-    def test_pexels_default_search_honours_size_and_hex_colour(self):
-        query=args('pexels',query='');query.size='large'
-        calls=[]
-        p.search('pexels',query,lambda url,**kwargs:calls.append(url) or dict(photos=[]),'private-key')
-        params=parse_qs(urlparse(calls[0]).query)
-        self.assertEqual(params['query'],['wallpaper'])
-        self.assertEqual(params['color'],['#0066cc'])
-        self.assertEqual(params['size'],['large'])
 
     def test_no_ai_uses_explicit_labels_and_keeps_human_art(self):
         for value in [dict(AIGenerated=1),dict(tags=['AI art']),dict(tag_names=['Midjourney']),dict(name='AI-generated landscape')]:

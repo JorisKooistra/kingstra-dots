@@ -34,7 +34,8 @@ STATIC_EXTS=("jpg" "jpeg" "png" "webp" "gif")
 VIDEO_EXTS=("mp4" "mkv" "webm" "avi" "mov")
 
 # mpv-opties voor mpvpaper (-o). panscan vult het scherm zonder zwarte randen.
-MPVPAPER_OPTS="${MPVPAPER_OPTS:-no-audio loop hwdec=auto panscan=1.0 no-osc no-osd-bar no-input-default-bindings}"
+# quiet: geen statusregel per frame in het log (die liet het tot 1,5 MB groeien).
+MPVPAPER_OPTS="${MPVPAPER_OPTS:-no-audio loop hwdec=auto panscan=1.0 no-osc no-osd-bar no-input-default-bindings quiet}"
 VIDEO_FRAME_DIR="$CACHE_DIR/video-frames"
 VIDEO_LOOP_DIR="$CACHE_DIR/video-loops"
 
@@ -336,6 +337,12 @@ _set_video() {
 
     play="$(_smooth_loop "$file")"
     _stop_video
+
+    # Log klein houden: boven 1 MB alleen de laatste 300 regels bewaren.
+    local log="$CACHE_DIR/mpvpaper.log"
+    if [[ -f "$log" ]] && (( $(stat -c '%s' "$log" 2>/dev/null || echo 0) > 1048576 )); then
+        tail -n 300 "$log" > "$log.tmp" 2>/dev/null && mv -f "$log.tmp" "$log"
+    fi
 
     # Eén mpvpaper per monitor. Eigen sessie en geen gedeelde stdout: anders
     # wacht de picker op de uitvoer van een proces dat nooit stopt.
