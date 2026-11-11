@@ -165,14 +165,18 @@ def normalize(path, settings, progress=None, trash_original=True):
     height, fps = target(settings)
     marker = signature(height, fps)
     meta = read_json(sidecar(path))
-    if meta.get("normalized") == marker: return path, False, []
+    # Marker alleen vertrouwen als hij bij precies dit bestand hoort (een
+    # opnieuw gedownloade video kan een oude sidecar/cache-record meekrijgen).
+    with contextlib.suppress(OSError):
+        if meta.get("normalized") == marker and meta.get("normalized_bytes") == path.stat().st_size:
+            return path, False, []
     info = probe(path)
     # Onleesbaar of half gekopieerd (mp4 zonder index): niet aankomen.
     if not info["codec"] or not info["height"] or info["duration"] <= 0: return path, False, []
     found = reasons(info, height, fps)
     if not found:
         if meta:
-            meta["normalized"] = marker
+            meta.update(normalized=marker, normalized_bytes=path.stat().st_size)
             write_json(sidecar(path), meta)
         return path, False, []
     temp = convert(path, height, fps, info, progress)
@@ -195,7 +199,7 @@ def normalize(path, settings, progress=None, trash_original=True):
     os.chmod(temp, 0o644)
     shutil.move(str(temp), str(target_path))
     if meta or not trash_original:
-        meta = dict(meta, path=str(target_path), normalized=marker,
+        meta = dict(meta, path=str(target_path), normalized=marker, normalized_bytes=target_path.stat().st_size,
                     normalized_from=dict(width=info["width"], height=info["height"], fps=round(info["fps"], 2),
                                          codec=info["codec"], kbps=round(info["kbps"])))
         write_json(sidecar(target_path), meta)

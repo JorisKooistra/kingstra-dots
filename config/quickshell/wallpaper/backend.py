@@ -902,6 +902,8 @@ def download_video(identifier, record, hosts, preview):
         # mapbewaker de ruwe download en zet hem tegelijk nog eens om.
         final_dir = final_target.parent
         staging = target
+        # Oude omzetgegevens uit de cache horen niet bij deze nieuwe download.
+        for field in ("normalized", "normalized_from", "normalized_bytes"): record.pop(field, None)
         record["path"] = str(staging)
         atomic_json(metadata_file(staging), record)
         emit("progress", stage="convert", label=label, percent=-1)
