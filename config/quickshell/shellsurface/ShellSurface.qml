@@ -13,15 +13,13 @@ Scope {
     id: shellSurface
 
     // Overleeft een zachte herlaadactie (bestandswijziging of
-    // `call shell reload`): de intro speelt dan niet opnieuw en de
-    // ruimtereservering bovenaan houdt zijn laatst bekende hoogte, ook als
-    // theme.json in de nieuwe instantie nog niet gelezen is.
+    // `call shell reload`): de intro en de thema-overgang spelen dan niet
+    // opnieuw.
     PersistentProperties {
         id: surfacePersist
         reloadableId: "kingstraShellSurfacePersist"
         property bool introPlayed: false
-        property bool zonesKnown: false
-        property int stripHeight: 0
+        property string lastTheme: ""
     }
 
     readonly property bool neonHudActive: String(ThemeConfig.theme || ThemeConfig.styleFamily || "").toLowerCase() === "neon"
@@ -44,6 +42,7 @@ Scope {
         delegate: Component {
             PanelWindow {
                 id: surfaceWindow
+                reloadableId: "kingstra-shell-surface"
 
                 required property var modelData
                 screen: modelData
@@ -115,12 +114,20 @@ Scope {
                     }
                 }
 
-                Component.onCompleted: if (!surfacePersist.introPlayed) playIntro(false)
+                Component.onCompleted: {
+                    if (surfacePersist.lastTheme === "") surfacePersist.lastTheme = String(ThemeConfig.theme || "");
+                    if (!surfacePersist.introPlayed) playIntro(false);
+                }
 
                 Connections {
                     target: ThemeConfig
                     function onThemeChanged() {
-                        if (surfaceWindow.introSettled) surfaceWindow.playIntro(true);
+                        // Alleen bij een echte themawissel, niet als een
+                        // herladen instantie hetzelfde thema opnieuw inleest.
+                        let t = String(ThemeConfig.theme || "");
+                        let changed = surfacePersist.lastTheme !== "" && t !== surfacePersist.lastTheme;
+                        surfacePersist.lastTheme = t;
+                        if (surfaceWindow.introSettled && changed) surfaceWindow.playIntro(true);
                     }
                 }
 
@@ -407,6 +414,7 @@ Scope {
                 // Reservation windows intentionally carry no content or input.
                 // They let the single visual host reserve two independent edges.
                 PanelWindow {
+                    reloadableId: "kingstra-shell-rail-reservation"
                     screen: surfaceWindow.screen
                     visible: ThemeConfig.barZoneSchemaLoaded && ThemeConfig.barRailEnabled
                     anchors.left: ThemeConfig.barRailEdge === "left"
@@ -426,6 +434,7 @@ Scope {
 
                 // Tweede rail aan de overkant (Rail-indeling).
                 PanelWindow {
+                    reloadableId: "kingstra-shell-second-rail-reservation"
                     screen: surfaceWindow.screen
                     visible: ThemeConfig.barZoneSchemaLoaded && chrome.secondRailEnabled
                     anchors.left: !chrome.secondRailOnRight
@@ -441,48 +450,27 @@ Scope {
                     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
                 }
 
-                // Na een zachte herlaadactie is theme.json even nog niet
-                // gelezen; dan houdt de strip de laatst bekende hoogte vast in
-                // plaats van te verdwijnen en terug te komen.
-                readonly property bool stripZoneHeld: !ThemeConfig.barZoneSchemaLoaded
-                    && surfacePersist.zonesKnown && surfacePersist.stripHeight > 0
-                readonly property int stripZoneHeight: stripZoneHeld ? surfacePersist.stripHeight : chrome.stripHeight
-                Binding {
-                    when: ThemeConfig.barZoneSchemaLoaded && ThemeConfig.barStatusStripEnabled
-                        && ThemeConfig.barStatusStripEdge === "top"
-                    target: surfacePersist
-                    property: "stripHeight"
-                    value: chrome.stripHeight
-                    restoreMode: Binding.RestoreNone
-                }
-                Binding {
-                    when: ThemeConfig.barZoneSchemaLoaded
-                    target: surfacePersist
-                    property: "zonesKnown"
-                    value: true
-                    restoreMode: Binding.RestoreNone
-                }
-
                 PanelWindow {
+                    reloadableId: "kingstra-shell-strip-reservation"
                     screen: surfaceWindow.screen
-                    visible: surfaceWindow.stripZoneHeld
-                        || (ThemeConfig.barZoneSchemaLoaded && ThemeConfig.barStatusStripEnabled)
+                    visible: ThemeConfig.barZoneSchemaLoaded && ThemeConfig.barStatusStripEnabled
                     anchors.left: true
                     anchors.right: true
-                    anchors.top: surfaceWindow.stripZoneHeld || ThemeConfig.barStatusStripEdge === "top"
-                    anchors.bottom: !surfaceWindow.stripZoneHeld && ThemeConfig.barStatusStripEdge === "bottom"
-                    implicitHeight: surfaceWindow.stripZoneHeight
+                    anchors.top: ThemeConfig.barStatusStripEdge === "top"
+                    anchors.bottom: ThemeConfig.barStatusStripEdge === "bottom"
+                    implicitHeight: chrome.stripHeight
                     color: "transparent"
                     mask: Region {}
                     WlrLayershell.namespace: "quickshell:kingstra-shell-strip-reservation"
                     WlrLayershell.layer: WlrLayer.Top
-                    WlrLayershell.exclusiveZone: surfaceWindow.stripZoneHeight
+                    WlrLayershell.exclusiveZone: chrome.stripHeight
                     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
                 }
 
                 // Dunne omlijning rechts/onder: alleen ruimte reserveren, het
                 // tekenwerk zit in ShellChrome.
                 PanelWindow {
+                    reloadableId: "kingstra-shell-right-reservation"
                     screen: surfaceWindow.screen
                     // Staat er een tweede rail rechts, dan reserveert die al.
                     visible: ThemeConfig.barZoneSchemaLoaded && chrome.frameEnabled
@@ -500,6 +488,7 @@ Scope {
                 }
 
                 PanelWindow {
+                    reloadableId: "kingstra-shell-bottom-reservation"
                     screen: surfaceWindow.screen
                     visible: ThemeConfig.barZoneSchemaLoaded && chrome.frameEnabled
                     anchors.left: true

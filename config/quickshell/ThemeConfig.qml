@@ -238,120 +238,127 @@ Item {
         return "horizontal";
     }
 
+    // Leest theme.json. Wordt bij het aanmaken meteen (blokkerend) aangeroepen,
+    // zodat strip, rail en reserveringen direct hun echte maat hebben: geen
+    // tussenstand met standaardwaarden waarbij vensters in stappen schuiven,
+    // ook niet bij herladen.
+    function applyThemeText(raw) {
+        let txt = String(raw || "").trim();
+        if (txt === "") { root.themeFileParsed = true; return; }
+        if (txt === root.rawJson) { root.themeFileParsed = true; return; }
+
+        root.rawJson = txt;
+        try {
+            let data = JSON.parse(txt);
+            let material = data.material || {};
+            let terminal = data.terminal || {};
+
+            if (data.theme !== undefined) root.theme = root.canonicalTheme(data.theme);
+            if (data.name !== undefined) root.name = String(data.name);
+            if (data.icon !== undefined) root.icon = String(data.icon);
+
+            if (data.border_radius !== undefined) root.borderRadius = root.intOr(data.border_radius, root.borderRadius);
+            if (data.border_width !== undefined) root.borderWidth = root.intOr(data.border_width, root.borderWidth);
+            if (data.gaps_in !== undefined) root.gapsIn = root.intOr(data.gaps_in, root.gapsIn);
+            if (data.gaps_out !== undefined) root.gapsOut = root.intOr(data.gaps_out, root.gapsOut);
+            if (data.bar_opacity !== undefined) root.barOpacity = root.clamp(Number(data.bar_opacity), 0.15, 1.0);
+            if (data.popup_opacity !== undefined) root.popupOpacity = root.clamp(Number(data.popup_opacity), 0.15, 1.0);
+            if (data.blur_size !== undefined) root.blurSize = root.intOr(data.blur_size, root.blurSize);
+            if (data.blur_passes !== undefined) root.blurPasses = root.intOr(data.blur_passes, root.blurPasses);
+            if (data.animation_speed !== undefined) root.animationSpeed = root.clamp(Number(data.animation_speed), 0.25, 3.0);
+
+            if (data.ui_font !== undefined) root.uiFont = String(data.ui_font);
+            if (data.ui_font_size !== undefined) root.uiFontSize = root.intOr(data.ui_font_size, root.uiFontSize);
+            if (data.mono_font !== undefined) root.monoFont = String(data.mono_font);
+            if (data.mono_font_size !== undefined) root.monoFontSize = root.intOr(data.mono_font_size, root.monoFontSize);
+            if (data.display_font !== undefined) root.displayFont = String(data.display_font);
+            if (data.font_weight !== undefined) root.fontWeightName = String(data.font_weight);
+            if (data.letter_spacing !== undefined) root.letterSpacing = Number(data.letter_spacing) || 0.0;
+            if (data.icon_theme !== undefined) root.iconTheme = String(data.icon_theme);
+
+            if (data.bar_height !== undefined) {
+                let parsedBarHeight = Number(data.bar_height);
+                if (!isNaN(parsedBarHeight)) {
+                    root.barHeight = parseInt(root.clamp(parsedBarHeight, 36, 96));
+                }
+            }
+            if (data.bar_position !== undefined) root.barPosition = root.normalizeBarPosition(data.bar_position);
+            let legacyPosition = root.normalizeBarPosition(data.bar_position !== undefined ? data.bar_position : root.barPosition);
+            root.barZoneSchemaLoaded = data.bar_rail_enabled !== undefined
+                || data.bar_status_strip_enabled !== undefined;
+            root.themeRailEnabled = data.bar_rail_enabled !== undefined
+                ? !!data.bar_rail_enabled : (legacyPosition === "left" || legacyPosition === "right");
+            root.barRailEdge = root.normalizeEdge(data.bar_rail_edge, legacyPosition === "right" ? "right" : "left");
+            root.barRailWidth = parseInt(root.clamp(Number(data.bar_rail_width !== undefined ? data.bar_rail_width : 52), 44, 96));
+            root.barStatusStripEnabled = data.bar_status_strip_enabled !== undefined
+                ? !!data.bar_status_strip_enabled : (legacyPosition === "top" || legacyPosition === "bottom");
+            root.barStatusStripEdge = root.normalizeEdge(data.bar_status_strip_edge, legacyPosition === "bottom" ? "bottom" : "top");
+            root.barStatusStripHeight = parseInt(root.clamp(Number(data.bar_status_strip_height !== undefined ? data.bar_status_strip_height : root.barHeight), 30, 96));
+            if (data.bar_template !== undefined) root.barTemplate = root.normalizeBarTemplate(data.bar_template);
+            if (data.topbar_loose_blocks !== undefined) {
+                root.topBarLooseBlocksOverride = data.topbar_loose_blocks ? 1 : 0;
+            } else {
+                root.topBarLooseBlocksOverride = -1;
+            }
+            if (data.bar_shape !== undefined) root.barShape = String(data.bar_shape);
+            if (data.bar_width_mode !== undefined) root.barWidthMode = String(data.bar_width_mode);
+            if (data.bar_floating !== undefined) root.barFloating = !!data.bar_floating;
+            if (data.bar_attach_to_screen_edge !== undefined) root.barAttachToScreenEdge = !!data.bar_attach_to_screen_edge;
+            if (data.bar_top_edge_style !== undefined) root.barTopEdgeStyle = String(data.bar_top_edge_style);
+            if (data.bar_bottom_edge_style !== undefined) root.barBottomEdgeStyle = String(data.bar_bottom_edge_style);
+            if (data.clock_style !== undefined) root.clockStyle = String(data.clock_style);
+            if (data.widget_shape !== undefined) root.widgetShape = String(data.widget_shape);
+            if (data.widget_surface !== undefined) root.widgetSurfaceStyle = String(data.widget_surface);
+            if (data.particle_type !== undefined) root.particleType = String(data.particle_type);
+            if (data.particle_count !== undefined) root.particleCount = parseInt(root.clamp(Number(data.particle_count), 0, 50));
+            if (data.particle_speed !== undefined) root.particleSpeed = root.clamp(Number(data.particle_speed), 0.0, 2.0);
+            if (data.ambient_effect !== undefined) root.ambientEffect = String(data.ambient_effect);
+            if (data.effect_intensity !== undefined) root.effectIntensity = root.clamp(Number(data.effect_intensity), 0.0, 2.0);
+            if (data.effect_cycle_ms !== undefined) root.effectCycleMs = parseInt(root.clamp(Number(data.effect_cycle_ms), 0, 30000));
+            if (data.hover_reactivity !== undefined) root.hoverReactivity = root.clamp(Number(data.hover_reactivity), 0.0, 1.0);
+            if (data.continuous_effects !== undefined) root.continuousEffects = !!data.continuous_effects;
+            if (data.texture_overlay_asset !== undefined) root.textureOverlayAsset = String(data.texture_overlay_asset);
+            if (data.terminal_overlay_asset !== undefined) root.terminalOverlayAsset = String(data.terminal_overlay_asset);
+            if (data.terminal_overlay_opacity !== undefined) root.terminalOverlayOpacity = root.clamp(Number(data.terminal_overlay_opacity), 0.0, 1.0);
+
+            if (material.texture !== undefined) root.materialTexture = String(material.texture);
+            if (material.texture_asset !== undefined) root.textureOverlayAsset = String(material.texture_asset);
+            if (material.overlay_opacity !== undefined) root.materialOverlayOpacity = root.clamp(Number(material.overlay_opacity), 0.0, 0.35);
+            if (material.glow_intensity !== undefined) root.materialGlowIntensity = root.clamp(Number(material.glow_intensity), 0.0, 0.35);
+
+            let style = data.style_profile || {};
+            if (style.family !== undefined) root.styleFamily = String(style.family);
+            if (style.density !== undefined) root.styleDensity = String(style.density);
+            if (style.surface_mode !== undefined) root.styleSurfaceMode = String(style.surface_mode);
+            if (style.motion !== undefined) root.styleMotion = String(style.motion);
+            if (style.panel_shadow !== undefined) root.stylePanelShadow = root.clamp(Number(style.panel_shadow), 0.0, 0.5);
+            if (style.outline_strength !== undefined) root.styleOutlineStrength = root.clamp(Number(style.outline_strength), 0.0, 0.5);
+            if (style.glass_strength !== undefined) root.styleGlassStrength = root.clamp(Number(style.glass_strength), 0.0, 0.5);
+            if (style.widget_radius !== undefined) root.styleWidgetRadius = root.intOr(style.widget_radius, root.styleWidgetRadius);
+            if (style.panel_padding !== undefined) root.stylePanelPadding = root.intOr(style.panel_padding, root.stylePanelPadding);
+
+            let barDynamics = data.bar_dynamics || {};
+            if (barDynamics.drawer_style !== undefined) root.drawerStyle = String(barDynamics.drawer_style);
+            if (barDynamics.module_density !== undefined) root.moduleDensity = String(barDynamics.module_density);
+            if (barDynamics.workspace_preview !== undefined) root.workspacePreview = String(barDynamics.workspace_preview);
+            if (barDynamics.rail_accent !== undefined) root.railAccent = String(barDynamics.rail_accent);
+
+            if (terminal.cursor_style !== undefined) root.terminalCursorStyle = String(terminal.cursor_style);
+            if (terminal.bg_opacity !== undefined) root.terminalBgOpacity = root.clamp(Number(terminal.bg_opacity), 0.15, 1.0);
+            if (terminal.blur !== undefined) root.terminalBlur = !!terminal.blur;
+            if (terminal.padding !== undefined) root.terminalPadding = root.intOr(terminal.padding, root.terminalPadding);
+        } catch (e) {}
+        root.themeFileParsed = true;
+    }
+
     FileView {
         id: themeFileView
         path: Quickshell.env("HOME") + "/.config/quickshell/theme.json"
         watchChanges: true
         preload: true
         onLoadFailed: root.themeFileParsed = true
-        onInternalTextChanged: {
-            let txt = __text.trim();
-            if (txt === "") { root.themeFileParsed = true; return; }
-            if (txt === root.rawJson) return;
-
-            root.rawJson = txt;
-            try {
-                let data = JSON.parse(txt);
-                let material = data.material || {};
-                let terminal = data.terminal || {};
-
-                if (data.theme !== undefined) root.theme = root.canonicalTheme(data.theme);
-                if (data.name !== undefined) root.name = String(data.name);
-                if (data.icon !== undefined) root.icon = String(data.icon);
-
-                if (data.border_radius !== undefined) root.borderRadius = root.intOr(data.border_radius, root.borderRadius);
-                if (data.border_width !== undefined) root.borderWidth = root.intOr(data.border_width, root.borderWidth);
-                if (data.gaps_in !== undefined) root.gapsIn = root.intOr(data.gaps_in, root.gapsIn);
-                if (data.gaps_out !== undefined) root.gapsOut = root.intOr(data.gaps_out, root.gapsOut);
-                if (data.bar_opacity !== undefined) root.barOpacity = root.clamp(Number(data.bar_opacity), 0.15, 1.0);
-                if (data.popup_opacity !== undefined) root.popupOpacity = root.clamp(Number(data.popup_opacity), 0.15, 1.0);
-                if (data.blur_size !== undefined) root.blurSize = root.intOr(data.blur_size, root.blurSize);
-                if (data.blur_passes !== undefined) root.blurPasses = root.intOr(data.blur_passes, root.blurPasses);
-                if (data.animation_speed !== undefined) root.animationSpeed = root.clamp(Number(data.animation_speed), 0.25, 3.0);
-
-                if (data.ui_font !== undefined) root.uiFont = String(data.ui_font);
-                if (data.ui_font_size !== undefined) root.uiFontSize = root.intOr(data.ui_font_size, root.uiFontSize);
-                if (data.mono_font !== undefined) root.monoFont = String(data.mono_font);
-                if (data.mono_font_size !== undefined) root.monoFontSize = root.intOr(data.mono_font_size, root.monoFontSize);
-                if (data.display_font !== undefined) root.displayFont = String(data.display_font);
-                if (data.font_weight !== undefined) root.fontWeightName = String(data.font_weight);
-                if (data.letter_spacing !== undefined) root.letterSpacing = Number(data.letter_spacing) || 0.0;
-                if (data.icon_theme !== undefined) root.iconTheme = String(data.icon_theme);
-
-                if (data.bar_height !== undefined) {
-                    let parsedBarHeight = Number(data.bar_height);
-                    if (!isNaN(parsedBarHeight)) {
-                        root.barHeight = parseInt(root.clamp(parsedBarHeight, 36, 96));
-                    }
-                }
-                if (data.bar_position !== undefined) root.barPosition = root.normalizeBarPosition(data.bar_position);
-                let legacyPosition = root.normalizeBarPosition(data.bar_position !== undefined ? data.bar_position : root.barPosition);
-                root.barZoneSchemaLoaded = data.bar_rail_enabled !== undefined
-                    || data.bar_status_strip_enabled !== undefined;
-                root.themeRailEnabled = data.bar_rail_enabled !== undefined
-                    ? !!data.bar_rail_enabled : (legacyPosition === "left" || legacyPosition === "right");
-                root.barRailEdge = root.normalizeEdge(data.bar_rail_edge, legacyPosition === "right" ? "right" : "left");
-                root.barRailWidth = parseInt(root.clamp(Number(data.bar_rail_width !== undefined ? data.bar_rail_width : 52), 44, 96));
-                root.barStatusStripEnabled = data.bar_status_strip_enabled !== undefined
-                    ? !!data.bar_status_strip_enabled : (legacyPosition === "top" || legacyPosition === "bottom");
-                root.barStatusStripEdge = root.normalizeEdge(data.bar_status_strip_edge, legacyPosition === "bottom" ? "bottom" : "top");
-                root.barStatusStripHeight = parseInt(root.clamp(Number(data.bar_status_strip_height !== undefined ? data.bar_status_strip_height : root.barHeight), 30, 96));
-                if (data.bar_template !== undefined) root.barTemplate = root.normalizeBarTemplate(data.bar_template);
-                if (data.topbar_loose_blocks !== undefined) {
-                    root.topBarLooseBlocksOverride = data.topbar_loose_blocks ? 1 : 0;
-                } else {
-                    root.topBarLooseBlocksOverride = -1;
-                }
-                if (data.bar_shape !== undefined) root.barShape = String(data.bar_shape);
-                if (data.bar_width_mode !== undefined) root.barWidthMode = String(data.bar_width_mode);
-                if (data.bar_floating !== undefined) root.barFloating = !!data.bar_floating;
-                if (data.bar_attach_to_screen_edge !== undefined) root.barAttachToScreenEdge = !!data.bar_attach_to_screen_edge;
-                if (data.bar_top_edge_style !== undefined) root.barTopEdgeStyle = String(data.bar_top_edge_style);
-                if (data.bar_bottom_edge_style !== undefined) root.barBottomEdgeStyle = String(data.bar_bottom_edge_style);
-                if (data.clock_style !== undefined) root.clockStyle = String(data.clock_style);
-                if (data.widget_shape !== undefined) root.widgetShape = String(data.widget_shape);
-                if (data.widget_surface !== undefined) root.widgetSurfaceStyle = String(data.widget_surface);
-                if (data.particle_type !== undefined) root.particleType = String(data.particle_type);
-                if (data.particle_count !== undefined) root.particleCount = parseInt(root.clamp(Number(data.particle_count), 0, 50));
-                if (data.particle_speed !== undefined) root.particleSpeed = root.clamp(Number(data.particle_speed), 0.0, 2.0);
-                if (data.ambient_effect !== undefined) root.ambientEffect = String(data.ambient_effect);
-                if (data.effect_intensity !== undefined) root.effectIntensity = root.clamp(Number(data.effect_intensity), 0.0, 2.0);
-                if (data.effect_cycle_ms !== undefined) root.effectCycleMs = parseInt(root.clamp(Number(data.effect_cycle_ms), 0, 30000));
-                if (data.hover_reactivity !== undefined) root.hoverReactivity = root.clamp(Number(data.hover_reactivity), 0.0, 1.0);
-                if (data.continuous_effects !== undefined) root.continuousEffects = !!data.continuous_effects;
-                if (data.texture_overlay_asset !== undefined) root.textureOverlayAsset = String(data.texture_overlay_asset);
-                if (data.terminal_overlay_asset !== undefined) root.terminalOverlayAsset = String(data.terminal_overlay_asset);
-                if (data.terminal_overlay_opacity !== undefined) root.terminalOverlayOpacity = root.clamp(Number(data.terminal_overlay_opacity), 0.0, 1.0);
-
-                if (material.texture !== undefined) root.materialTexture = String(material.texture);
-                if (material.texture_asset !== undefined) root.textureOverlayAsset = String(material.texture_asset);
-                if (material.overlay_opacity !== undefined) root.materialOverlayOpacity = root.clamp(Number(material.overlay_opacity), 0.0, 0.35);
-                if (material.glow_intensity !== undefined) root.materialGlowIntensity = root.clamp(Number(material.glow_intensity), 0.0, 0.35);
-
-                let style = data.style_profile || {};
-                if (style.family !== undefined) root.styleFamily = String(style.family);
-                if (style.density !== undefined) root.styleDensity = String(style.density);
-                if (style.surface_mode !== undefined) root.styleSurfaceMode = String(style.surface_mode);
-                if (style.motion !== undefined) root.styleMotion = String(style.motion);
-                if (style.panel_shadow !== undefined) root.stylePanelShadow = root.clamp(Number(style.panel_shadow), 0.0, 0.5);
-                if (style.outline_strength !== undefined) root.styleOutlineStrength = root.clamp(Number(style.outline_strength), 0.0, 0.5);
-                if (style.glass_strength !== undefined) root.styleGlassStrength = root.clamp(Number(style.glass_strength), 0.0, 0.5);
-                if (style.widget_radius !== undefined) root.styleWidgetRadius = root.intOr(style.widget_radius, root.styleWidgetRadius);
-                if (style.panel_padding !== undefined) root.stylePanelPadding = root.intOr(style.panel_padding, root.stylePanelPadding);
-
-                let barDynamics = data.bar_dynamics || {};
-                if (barDynamics.drawer_style !== undefined) root.drawerStyle = String(barDynamics.drawer_style);
-                if (barDynamics.module_density !== undefined) root.moduleDensity = String(barDynamics.module_density);
-                if (barDynamics.workspace_preview !== undefined) root.workspacePreview = String(barDynamics.workspace_preview);
-                if (barDynamics.rail_accent !== undefined) root.railAccent = String(barDynamics.rail_accent);
-
-                if (terminal.cursor_style !== undefined) root.terminalCursorStyle = String(terminal.cursor_style);
-                if (terminal.bg_opacity !== undefined) root.terminalBgOpacity = root.clamp(Number(terminal.bg_opacity), 0.15, 1.0);
-                if (terminal.blur !== undefined) root.terminalBlur = !!terminal.blur;
-                if (terminal.padding !== undefined) root.terminalPadding = root.intOr(terminal.padding, root.terminalPadding);
-            } catch (e) {}
-            root.themeFileParsed = true;
-        }
+        blockLoading: true
+        onInternalTextChanged: root.applyThemeText(__text)
     }
 
     // QS 0.3.0: watchChanges mist inode-vervanging; poll als vangnet
@@ -398,8 +405,14 @@ Item {
         path: Quickshell.env("HOME") + "/.local/state/kingstra/rail-layout.json"
         watchChanges: true
         preload: true
+        blockLoading: true
         onLoaded: root.applyRailOverrides(text())
         onFileChanged: reload()
+    }
+
+    Component.onCompleted: {
+        root.applyThemeText(themeFileView.text());
+        root.applyRailOverrides(railLayoutView.text());
     }
     Timer { interval: 2000; running: true; repeat: true; onTriggered: railLayoutView.reload() }
 }
