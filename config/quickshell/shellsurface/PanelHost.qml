@@ -422,8 +422,9 @@ Item {
     Behavior on width {
         id: widthBehavior
         enabled: !root.visualVerticalEdge
-        onTargetValueChanged: root.springWidth = targetValue > 1 && root.width < 2
+        onTargetValueChanged: root.springWidth = targetValue > 1 && (root.width < 2 || (root.springWidth && widthAnim.running))
         NumberAnimation {
+            id: widthAnim
             duration: root.springWidth ? ThemeConfig.durationToken("spring") : ThemeConfig.durationToken("spatial")
             easing.type: root.springWidth ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized")
             easing.overshoot: ThemeConfig.springOvershoot
@@ -431,8 +432,11 @@ Item {
     }
     Behavior on height {
         id: heightBehavior
-        onTargetValueChanged: root.springHeight = targetValue > 1 && root.height < 2
+        // Een nieuwe doelmaat tijdens het openen (inhoud net geladen) houdt
+        // de veer; daarna, en bij dichtgaan, niet.
+        onTargetValueChanged: root.springHeight = targetValue > 1 && (root.height < 2 || (root.springHeight && heightAnim.running))
         NumberAnimation {
+            id: heightAnim
             // De launcher is primair toetsenbordgereedschap en moet meteen
             // bruikbaar voelen; de langere ruimtelijke animatie voegt daar
             // onnodig wachttijd aan toe.
