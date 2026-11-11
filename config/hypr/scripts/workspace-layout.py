@@ -307,7 +307,9 @@ def main(args):
         window = next((w for w in query("clients") if w.get("address")==address), None)
         if window and window.get("floating"):
             hypr("dispatch", f"hl.dsp.window.move({{x={int(x)},y={int(y)},relative=false,window={json.dumps('address:'+address)}}})")
-            dispatch("snapshot")
+            # Alleen het ruimtelijk werkvlak kent "snapshot" (anders configerror).
+            if current()["layout"] == "lua:hyprscroll2d":
+                dispatch("snapshot")
     elif command == "tileplace":
         address, target, edge = args[1:4]
         if (not all(re.fullmatch(r"0x[0-9a-fA-F]+", value) for value in (address, target))
