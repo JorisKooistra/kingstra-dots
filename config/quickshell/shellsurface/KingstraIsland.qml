@@ -262,14 +262,38 @@ Item {
     }
 
     // --- Meldingen ------------------------------------------------------
+    function isCritical(notification) {
+        return !!notification && notification.urgency === NotificationUrgency.Critical;
+    }
+
     function showNotification(notification) {
-        if (!handlesNotifications || !notification || activeMode === "gaming" || !onFocusedScreen()) return;
+        // Kritieke meldingen (bijv. batterij bijna leeg) komen ook tijdens gamen door.
+        if (!handlesNotifications || !notification || !onFocusedScreen()) return;
+        if (activeMode === "gaming" && !isCritical(notification)) return;
+        // Een vervangen melding (zelfde object) niet nog eens in de rij.
+        if (currentNotif === notification) {
+            restartNotifTimer();
+            return;
+        }
+        let q = notifQueue.filter(n => n !== notification);
         if (currentNotif === null) {
+            notifQueue = q;
             currentNotif = notification;
             restartNotifTimer();
             return;
         }
-        let q = notifQueue.slice();
+        if (isCritical(notification)) {
+            // Kritiek gaat voor. Een oudere kritieke melding van dezelfde app
+            // is achterhaald; de rest schuift één plek op.
+            let cur = currentNotif;
+            let sameApp = isCritical(cur) && String(cur.appName || "") === String(notification.appName || "");
+            if (!sameApp) q.unshift(cur);
+            while (q.length > 3) q.pop();
+            notifQueue = q;
+            currentNotif = notification;
+            restartNotifTimer();
+            return;
+        }
         q.push(notification);
         while (q.length > 3) q.shift();
         notifQueue = q;
@@ -282,11 +306,14 @@ Item {
     }
 
     function nextNotification() {
-        if (notifQueue.length === 0) {
+        // Al gesloten meldingen (bijv. weggehaald door de app) overslaan,
+        // anders bleef er even een lege "?"-kaart staan.
+        let q = notifQueue.filter(n => NotificationService.isOpen(n));
+        if (q.length === 0) {
+            notifQueue = [];
             currentNotif = null;
             return;
         }
-        let q = notifQueue.slice();
         currentNotif = q.shift();
         notifQueue = q;
         restartNotifTimer();
@@ -409,9 +436,9 @@ Item {
             height: 2
             radius: 1
             y: root.fromBottom ? 0 : parent.height - height
-            color: root.mode === "notif" && root.currentNotif && root.currentNotif.urgency === NotificationUrgency.Critical
-                ? root.mocha.red : root.mocha.primary
-            opacity: root.mode === "" ? 0 : 0.55
+            readonly property bool critical: root.mode === "notif" && root.isCritical(root.currentNotif)
+            color: critical ? root.mocha.red : root.mocha.primary
+            opacity: root.mode === "" ? 0 : (critical ? 1 : 0.55)
             Behavior on opacity { NumberAnimation { duration: ThemeConfig.durationToken("normal") } }
         }
 
@@ -663,7 +690,11 @@ Item {
                 Layout.preferredHeight: 40
                 Layout.alignment: Qt.AlignTop
                 radius: 12
-                color: Qt.rgba(root.mocha.primary.r, root.mocha.primary.g, root.mocha.primary.b, 0.16)
+                readonly property color tint: root.isCritical(notifContent.n) ? root.mocha.red : root.mocha.primary
+                color: Qt.rgba(tint.r, tint.g, tint.b, root.isCritical(notifContent.n) ? 0.24 : 0.16)
+                border.width: root.isCritical(notifContent.n) ? 1 : 0
+                border.color: Qt.rgba(tint.r, tint.g, tint.b, 0.6)
+                Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
                 Image {
                     id: notifIcon
                     anchors.centerIn: parent
@@ -677,11 +708,12 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     visible: !notifIcon.visible
-                    text: String(notifContent.n && notifContent.n.appName ? notifContent.n.appName : "?").charAt(0).toUpperCase()
-                    font.family: ThemeConfig.displayFont
-                    font.pixelSize: 15
+                    readonly property bool glyph: NotificationService.isBattery(notifContent.n)
+                    text: NotificationService.fallbackGlyph(notifContent.n)
+                    font.family: glyph ? ThemeConfig.iconFont : ThemeConfig.displayFont
+                    font.pixelSize: glyph ? 20 : 15
                     font.weight: ThemeConfig.headingWeight
-                    color: root.mocha.primary
+                    color: parent.tint
                 }
             }
             ColumnLayout {
@@ -718,6 +750,49 @@ Item {
                     font.family: ThemeConfig.uiFont
                     font.pixelSize: 11
                     color: root.mocha.subtext1
+                }
+                // Knoppen uit de melding zelf ("Uitstellen (10 min)"...).
+                Flow {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    visible: notifActions.count > 0
+                    spacing: 6
+                    Repeater {
+                        id: notifActions
+                        model: NotificationService.extraActions(notifContent.n)
+                        delegate: Rectangle {
+                            id: actionChip
+                            required property var modelData
+                            readonly property color tint: root.isCritical(notifContent.n) ? root.mocha.red : root.mocha.primary
+                            implicitWidth: actionText.implicitWidth + 20
+                            implicitHeight: 28
+                            radius: 14
+                            color: actionMouse.containsMouse
+                                ? Qt.rgba(tint.r, tint.g, tint.b, 0.32)
+                                : Qt.rgba(tint.r, tint.g, tint.b, 0.16)
+                            Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+                            Text {
+                                id: actionText
+                                anchors.centerIn: parent
+                                text: String(actionChip.modelData.text || "")
+                                font.family: ThemeConfig.uiFont
+                                font.pixelSize: 11
+                                font.weight: Font.DemiBold
+                                color: root.mocha.text
+                            }
+                            MouseArea {
+                                id: actionMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    let n = notifContent.n;
+                                    actionChip.modelData.invoke();
+                                    root.advanceFrom(n);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

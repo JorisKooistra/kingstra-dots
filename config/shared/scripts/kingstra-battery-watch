@@ -303,6 +303,8 @@ class Watch:
                                "critical", "battery-empty")
                 return
             bat = read_battery()
+            if bat is None and self.dry_run:
+                continue  # proef op een pc zonder batterij
             if bat is None or bat["charging"]:
                 self.reset()
                 return

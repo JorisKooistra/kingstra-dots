@@ -59,7 +59,13 @@ Item {
     }
 
     function show(notification) {
-        if (suppressed || !notification || activeMode === "gaming" || !onFocusedScreen()) return;
+        if (suppressed || !notification || !onFocusedScreen()) return;
+        // Kritieke meldingen (batterij bijna leeg) komen ook tijdens gamen door.
+        if (activeMode === "gaming" && notification.urgency !== NotificationUrgency.Critical) return;
+        // Vervangen melding (zelfde object): oude kaart weg, nieuwe bovenaan.
+        for (let i = toastModel.count - 1; i >= 0; i--) {
+            if (byKey[toastModel.get(i).key] === notification) removeAt(i);
+        }
         let key = nextKey++;
         let map = Object.assign({}, byKey);
         map[key] = notification;
@@ -174,9 +180,10 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         visible: !toastIcon.visible
-                        text: String(toast.notification && toast.notification.appName ? toast.notification.appName : "?").charAt(0).toUpperCase()
-                        font.family: ThemeConfig.displayFont
-                        font.pixelSize: 15
+                        readonly property bool glyph: NotificationService.isBattery(toast.notification)
+                        text: NotificationService.fallbackGlyph(toast.notification)
+                        font.family: glyph ? ThemeConfig.iconFont : ThemeConfig.displayFont
+                        font.pixelSize: glyph ? 20 : 15
                         font.weight: Font.Black
                         color: toast.accent
                     }
@@ -218,6 +225,47 @@ Item {
                         font.family: ThemeConfig.uiFont
                         font.pixelSize: 11
                         color: root.mocha.subtext1
+                    }
+                    // Knoppen uit de melding zelf ("Uitstellen (10 min)"...).
+                    Flow {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 4
+                        visible: toastActions.count > 0
+                        spacing: 6
+                        Repeater {
+                            id: toastActions
+                            model: NotificationService.extraActions(toast.notification)
+                            delegate: Rectangle {
+                                id: toastChip
+                                required property var modelData
+                                implicitWidth: toastChipText.implicitWidth + 20
+                                implicitHeight: 28
+                                radius: 14
+                                color: toastChipMouse.containsMouse
+                                    ? Qt.rgba(toast.accent.r, toast.accent.g, toast.accent.b, 0.32)
+                                    : Qt.rgba(toast.accent.r, toast.accent.g, toast.accent.b, 0.16)
+                                Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("fast") } }
+                                Text {
+                                    id: toastChipText
+                                    anchors.centerIn: parent
+                                    text: String(toastChip.modelData.text || "")
+                                    font.family: ThemeConfig.uiFont
+                                    font.pixelSize: 11
+                                    font.weight: Font.DemiBold
+                                    color: root.mocha.text
+                                }
+                                MouseArea {
+                                    id: toastChipMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        toastChip.modelData.invoke();
+                                        root.removeKey(toast.key);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

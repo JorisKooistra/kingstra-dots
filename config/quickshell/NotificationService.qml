@@ -225,6 +225,36 @@ Item {
         return Quickshell.iconPath(icon, true);
     }
 
+    // Nog open (niet gesloten door de app of via CloseNotification)?
+    function isOpen(notification) {
+        return !!notification && server.trackedNotifications.values.indexOf(notification) >= 0;
+    }
+
+    // Knoppen van de melding zelf (zonder de standaardactie, die zit onder
+    // een klik op de hele kaart), bijv. "Uitstellen (10 min)" bij de batterij.
+    function extraActions(notification) {
+        let out = [];
+        let actions = notification ? (notification.actions || []) : [];
+        for (let i = 0; i < actions.length; i++) {
+            if (String(actions[i].identifier || "") !== "default") out.push(actions[i]);
+        }
+        return out;
+    }
+
+    // Batterijmeldingen (kingstra-battery-watch) krijgen een eigen glyph als
+    // het icoonthema geen batterij-icoon heeft.
+    function isBattery(notification) {
+        if (!notification) return false;
+        let hints = notification.hints || {};
+        return String(hints["x-kingstra-category"] || "") === "battery" || String(notification.appName || "") === "Batterij";
+    }
+
+    function fallbackGlyph(notification) {
+        if (isBattery(notification))
+            return notification.urgency === NotificationUrgency.Critical ? String.fromCodePoint(0xf0083) : String.fromCodePoint(0xf007b);
+        return String(notification && notification.appName ? notification.appName : "?").charAt(0).toUpperCase();
+    }
+
     function invokeDefault(notification) {
         if (!notification) return false;
         let actions = notification.actions || [];

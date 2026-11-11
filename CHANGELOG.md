@@ -9,6 +9,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Bij **3%** telt hij 60 seconden af met een knop "Uitstellen (10 min)" en gaat de laptop daarna vergrendeld in slaapstand. Lader erin tijdens het aftellen: niets gebeurt. Na wakker worden eerst 5 minuten rust.
 - Lader erin: de meldingen verdwijnen en alle drempels gaan opnieuw scherp.
 - Alleen de eigen laptopbatterij telt (geen muis of headset); op de pc doet hij niets. Start bij inloggen.
+- Meldingen in het eiland en de pop-ups tonen nu ook de knoppen van een melding (zoals "Uitstellen"), een kritieke melding schuift vóór de wachtrij en is duidelijk rood, ook tijdens gamen komt een kritieke melding door, en batterijmeldingen krijgen een batterij-icoon. Een melding die de app zelf sluit laat geen lege "?"-kaart meer achter.
 - Aanpassen in `~/.config/kingstra/batterij.json`, bijvoorbeeld `{"waarschuwingen": [25, 10, 5], "slapen": 3, "actie": "suspend"}` (`"slapen": 0` = nooit vanzelf slapen, `"aan": false` = helemaal uit). Proberen: `kingstra-battery-watch test 20|10|5|slapen` (slapen telt af maar slaapt niet).
 
 ### Reparaties (11 nov)
