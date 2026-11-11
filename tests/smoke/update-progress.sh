@@ -32,6 +32,13 @@ expect "Afronden: Updating icon" ":: Running post-transaction hooks..." "(2/4) U
     "==> Image generation successful" "(3/4) Updating icon theme caches..."
 expect "AUR bouwen: foo-bin" ":: Searching AUR for updates..." "==> Making package: foo-bin 2-1 (x)" "  -> Extracting sources..."
 [[ "$PROG_DONE/$PROG_TOTAL" == "1/2" ]] || fail "AUR-teller: $PROG_DONE/$PROG_TOTAL"
+# Echte pacman zonder terminal (log 10-11): geen tellers bij controles en installeren.
+REPO_COUNT=4
+expect "Sleutels controleren" ":: Proceed with installation? [Y/n] " "checking keyring..."
+expect "Bestandsconflicten zoeken" "checking keyring..." "checking for file conflicts..."
+expect "Installeren: claude-desktop" ":: Processing package changes..." "upgrading shelly-bin..." "upgrading claude-desktop..."
+[[ "$PROG_DONE/$PROG_TOTAL" == "2/4" ]] || fail "teller zonder pacman-nummers: $PROG_DONE/$PROG_TOTAL"
+expect "Afronden: etckeeper" ":: Running post-transaction hooks..." "(5/5) etckeeper: post-transaction commit"
 # Een gewone pakketupdate van mkinitcpio is geen kernel-stap.
 expect "Installeren: mkinitcpio" ":: Processing package changes..." "(1/1) upgrading mkinitcpio"
 $PROG_KERNEL && fail "mkinitcpio-pakket ten onrechte als kernel-stap gezien"

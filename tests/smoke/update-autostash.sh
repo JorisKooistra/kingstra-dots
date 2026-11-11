@@ -48,7 +48,7 @@ run_updater() {
     KINGSTRA_SNAPSHOT_CMD=/nonexistent \
     GIT_CONFIG_GLOBAL=/dev/null \
     PATH="$FAKE_BIN:/usr/bin:/bin" \
-        bash "$UPDATER" "$@" </dev/null >"$CASE/out" 2>&1 || true
+        bash "$UPDATER" "${@:-alles}" </dev/null >"$CASE/out" 2>&1 || true
 }
 
 # 1. Geen botsing: update en eigen wijziging allebei aanwezig.

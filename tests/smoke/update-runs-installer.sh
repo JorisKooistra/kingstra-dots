@@ -43,6 +43,12 @@ cat > "$FAKE_BIN/flatpak" <<'EOF'
 exit 0
 EOF
 
+# Geen echte pakketcontrole: op een Arch-pc telt die anders de echte updates.
+for tool in checkupdates pacman; do
+    printf '#!/usr/bin/env bash\nexit 0\n' > "$FAKE_BIN/$tool"
+    chmod +x "$FAKE_BIN/$tool"
+done
+
 cat > "$FAKE_REPO/install.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -65,11 +71,13 @@ chmod +x \
 HOME="$TEST_HOME" \
 XDG_DATA_HOME="$TEST_HOME/.local/share" \
 XDG_CACHE_HOME="$TEST_HOME/.cache" \
+XDG_STATE_HOME="$TEST_HOME/.local/state" \
+KINGSTRA_SNAPSHOT_CMD=/nonexistent \
 TEST_INSTALL_MARKER="$INSTALL_MARKER" \
 PATH="$FAKE_BIN:/usr/bin" \
-    bash "$UPDATER" </dev/null >/dev/null
+    bash "$UPDATER" alles </dev/null >"$TEST_ROOT/out" 2>&1 || true
 
-[[ -s "$INSTALL_MARKER" ]]
+[[ -s "$INSTALL_MARKER" ]] || { cat "$TEST_ROOT/out"; echo "installer niet gestart" >&2; exit 1; }
 grep -q -- '--yes' "$INSTALL_MARKER"
 
 printf 'Update runner installer hand-off smoke test: OK\n'

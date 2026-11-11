@@ -261,7 +261,7 @@ init_log() {
 # packages", ":: Processing package changes", ":: Running post-transaction
 # hooks") lijkt de balk steeds opnieuw te beginnen. Zet PROG_LABEL, PROG_DONE,
 # PROG_TOTAL en PROG_KERNEL (true zodra de kernel-/initramfs-stap bezig is).
-PROG_LABEL="" PROG_DONE="" PROG_TOTAL="" PROG_KERNEL=false
+PROG_LABEL="" PROG_DONE="" PROG_TOTAL="" PROG_KERNEL=false PROG_EXPECT=""
 describe_output() {
     local file="$1" fallback="$2" tail header="" last="" counter="" what="" made=0
     PROG_LABEL="" PROG_DONE="" PROG_TOTAL=""
@@ -317,7 +317,25 @@ describe_output() {
             what="${header#*Making package: }"
             PROG_LABEL="AUR bouwen: ${what%% *}" what="" ;;
     esac
+    # Zonder terminal nummert pacman de controles en het installeren niet
+    # ("checking keyring...", "upgrading foo..."); dan de laatste regel lezen
+    # en zelf tellen tegen het aantal klaarstaande updates.
+    if [[ -z "$what" && "$last" =~ ^(checking|loading|upgrading|installing|reinstalling|downgrading|removing)\ (.*)$ ]]; then
+        what="$last"
+        what="${what%...}"
+        if [[ "$what" =~ ^(upgrading|installing|reinstalling|downgrading)\  ]]; then
+            local n
+            n="$(sed -n '/^:: Processing package changes/,$p' "$file" 2>/dev/null \
+                | grep -cE '^(upgrading|installing|reinstalling|downgrading) ' || true)"
+            local expect="${PROG_EXPECT:-$REPO_COUNT}"
+            if (( expect > 0 && n > 0 )); then
+                PROG_DONE="$n" PROG_TOTAL="$expect"
+                (( PROG_DONE > PROG_TOTAL )) && PROG_TOTAL="$PROG_DONE"
+            fi
+        fi
+    fi
     case "$what" in
+        "checking keyring"*) PROG_LABEL="Sleutels controleren" what="" ;;
         "checking keys in keyring"*) PROG_LABEL="Sleutels controleren" what="" ;;
         "checking package integrity"*) PROG_LABEL="Pakketten controleren" what="" ;;
         "loading package files"*) PROG_LABEL="Pakketten laden" what="" ;;
@@ -1198,7 +1216,9 @@ update_arch() {
     else
         log "Geen AUR-updates; $helper controleert alleen nog of alles klopt."
     fi
+    PROG_EXPECT="$AUR_COUNT"
     run_quiet "$helper" "$helper" "${flags[@]}" || rc=$?
+    PROG_EXPECT=""
     if (( rc != 0 )) && ask_yes "Opnieuw draaien met de gewone $helper-uitvoer en vragen?"; then
         rc=0
         "$helper" -Syu "${ignore[@]+"${ignore[@]}"}" || rc=$?
@@ -1422,8 +1442,10 @@ choose_mode() {
     if [[ -n "$MODE" ]]; then
         return 0
     fi
-    if ! $UI; then
-        MODE="alles"
+    if [[ ! -t 0 ]]; then
+        # Geen terminal om te vragen: nooit stilzwijgend een systeemupdate.
+        MODE="stop"
+        STOP_REASON="Geen keuze opgegeven en geen terminal om te vragen. Gebruik: kingstra update alles  of  kingstra update dotfiles"
         return 0
     fi
     local ts=0 total=0 pkgs=0 flat=0 _d _c sys_hint="" dot_hint="" repo reply=""
@@ -1438,7 +1460,7 @@ choose_mode() {
     if [[ "${KINGSTRA_UPDATE_REEXEC:-}" =~ ^[0-9a-f]{7,}$ && -n "$repo" ]]; then
         dot_hint="$(git -C "$repo" rev-list --count "$KINGSTRA_UPDATE_REEXEC..HEAD" 2>/dev/null || echo '?') nieuwe commit(s) net opgehaald"
     elif [[ -n "$repo" ]]; then
-        dot_hint="al actueel ($(git -C "$repo" log -1 --format='%h, %cr' 2>/dev/null))"
+        dot_hint="al actueel ($(git -C "$repo" log -1 --date=format:'%d-%m %H:%M' --format='%h van %cd' 2>/dev/null))"
     fi
 
     live_clear
@@ -1552,6 +1574,8 @@ elif [[ -z "${KINGSTRA_UPDATE_REEXEC:-}" ]]; then
     # Stil: wat er gebeurt staat in het log en komt bij Dotfiles terug.
     if [[ -n "$self_before" ]] && update_dotfiles >/dev/null; then
         self_after="$(git -C "$DOTFILES_REPO" rev-parse HEAD 2>/dev/null || true)"
+        # update_dotfiles wiste zijn eigen regel in /dev/null; deze nog niet.
+        LIVE_SHOWN=true
         live_clear
         if [[ -n "$self_after" && "$self_after" != "$self_before" && -f "$SELF" ]]; then
             log "Dotfiles bijgewerkt (${self_before:0:7} → ${self_after:0:7}); verder met de nieuwe updater."
@@ -1559,15 +1583,18 @@ elif [[ -z "${KINGSTRA_UPDATE_REEXEC:-}" ]]; then
             exec bash "$SELF" "${ORIG_ARGS[@]+"${ORIG_ARGS[@]}"}"
         fi
     fi
+    LIVE_SHOWN=true
     live_clear
     DOTFILES_REPO=""
 elif [[ "$KINGSTRA_UPDATE_REEXEC" =~ ^[0-9a-f]{7,}$ ]]; then
     to_log "Opnieuw gestart na dotfiles-update vanaf $KINGSTRA_UPDATE_REEXEC"
 fi
 
+STOP_REASON=""
 choose_mode
 if [[ "$MODE" == "stop" ]]; then
-    log "Niets bijgewerkt."
+    printf '\n'
+    log "Niets bijgewerkt.${STOP_REASON:+ $STOP_REASON}"
     [[ -n "$LOG_FILE" ]] && to_log "Gestopt bij het keuzemenu."
     exit 0
 fi
