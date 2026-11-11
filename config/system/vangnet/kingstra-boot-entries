@@ -32,11 +32,15 @@ BACKUPS = Path(os.environ.get("KINGSTRA_BOOT_BACKUPS", "/var/backups/kingstra-bo
 TRIES = 3
 
 # plymouth.use-simpledrm: zonder deze optie slaat Plymouth het firmwarebeeld
-# (simpledrm) over en wacht op de NVIDIA-driver, die pas ~0,8 s vóór het
-# inlogscherm klaar is. Dan zie je het opstartbeeld niet. Met de optie tekent
-# Plymouth meteen en schuift het over naar de NVIDIA-driver zodra die er is.
-QUIET = ["quiet", "splash", "plymouth.use-simpledrm", "loglevel=3", "rd.udev.log_level=3",
+# (simpledrm) over en wacht op de NVIDIA-driver, die zonder vroege driver pas
+# ~0,8 s vóór het inlogscherm klaar is. Met de optie tekent Plymouth meteen,
+# maar alleen op het opstartscherm. Zit NVIDIA in de initramfs van linux
+# (kingstra-opstart-nvidia), dan is de optie daar niet nodig: Plymouth wacht
+# dan kort op de driver en staat op alle schermen.
+QUIET = ["quiet", "splash", "loglevel=3", "rd.udev.log_level=3",
          "systemd.show_status=auto", "vt.global_cursor_default=0"]
+SIMPLEDRM = "plymouth.use-simpledrm"
+LINUX_PRESET = Path(os.environ.get("KINGSTRA_LINUX_PRESET", "/etc/mkinitcpio.d/linux.preset"))
 # Deze opties beheren wij; ze komen niet dubbel uit het bestaande item mee.
 MANAGED = re.compile(r"^(quiet|splash|loglevel=.*|rd\.udev\.log_level=.*|systemd\.show_status=.*|"
                      r"vt\.global_cursor_default=.*|systemd\.unit=.*|plymouth\..*)$")
@@ -153,6 +157,16 @@ def set_loader():
     LOADER.write_text("\n".join(out) + "\n")
 
 
+def early_kms(pkgbase):
+    """Heeft de initramfs van deze kernel de grafische driver al (kingstra-opstart-nvidia)?"""
+    if pkgbase != "linux":
+        return False
+    try:
+        return 'default_config="/etc/mkinitcpio-kingstra.conf"' in LINUX_PRESET.read_text().splitlines()
+    except OSError:
+        return False
+
+
 def installed(pkgbase):
     return (ESP / f"vmlinuz-{pkgbase}").exists()
 
@@ -178,6 +192,8 @@ def setup():
             continue
         # Een nieuw item krijgt meteen pogingen; een bestaand houdt zijn stand.
         counter = quiet and current(name) is None
+        if quiet and not early_kms(kernel):
+            extra = [SIMPLEDRM, *extra]
         written.append(write_entry(name, base, kernel, title, version, extra, quiet, counter).name)
     set_loader()
     # Een via bootctl gezette standaard wint van loader.conf; die halen we weg.

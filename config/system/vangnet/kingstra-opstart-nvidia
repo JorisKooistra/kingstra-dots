@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# Kingstra: NVIDIA en Plymouth in de initramfs van de gewone kernel (linux),
+# zodat het opstartbeeld op alle schermen staat.
+#
+#   sudo kingstra-opstart-nvidia            instellen (met back-up, draait zichzelf terug bij fouten)
+#   sudo kingstra-opstart-nvidia --undo     terug naar de gewone initramfs
+#   kingstra-opstart-nvidia --status        tonen wat er staat
+#
+# linux-lts ("Kingstra (veilig)", "Kingstra herstel") en de fallback-images
+# worden niet aangeraakt en blijven zo een terugval.
+set -euo pipefail
+
+SRC="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+PRESET=/etc/mkinitcpio.d/linux.preset
+CONF=/etc/mkinitcpio-kingstra.conf
+HOOK=/etc/pacman.d/hooks/92-kingstra-nvidia-initramfs.hook
+BOOT="${KINGSTRA_ESP:-/boot}"
+BACKUP=/var/backups/kingstra-boot/opstart-nvidia
+IMAGE="$BOOT/initramfs-linux.img"
+LINE="default_config=\"$CONF\""
+ENTRIES_TOOL=/usr/local/lib/kingstra/kingstra-boot-entries
+
+say() { printf '%s\n' "$*"; }
+die() { printf 'FOUT: %s\n' "$*" >&2; exit 1; }
+
+active() { [[ -f $PRESET ]] && grep -qxF "$LINE" "$PRESET"; }
+
+status() {
+    if active; then say "Opstartbeeld-NVIDIA: aan ($PRESET gebruikt $CONF)"; else say "Opstartbeeld-NVIDIA: uit"; fi
+    if command -v lsinitcpio >/dev/null && [[ -r $IMAGE ]]; then
+        local list; list="$(lsinitcpio "$IMAGE" 2>/dev/null || true)"
+        grep -q 'nvidia-drm\.ko' <<<"$list" && say "  initramfs-linux.img: nvidia-drm aanwezig" || say "  initramfs-linux.img: geen nvidia-drm"
+        grep -q 'plymouthd' <<<"$list" && say "  initramfs-linux.img: plymouth aanwezig" || say "  initramfs-linux.img: geen plymouth"
+    fi
+    df -h "$BOOT" | tail -1 | awk '{print "  /boot: " $4 " vrij van " $2}'
+}
+
+refresh_entries() {
+    # Opstartopties: met NVIDIA vroeg geen plymouth.use-simpledrm meer voor linux.
+    if [[ -x $ENTRIES_TOOL ]]; then
+        "$ENTRIES_TOOL" setup || say "Let op: opstartmenu bijwerken mislukt; draai: sudo $ENTRIES_TOOL setup"
+    fi
+}
+
+restore() {
+    say "Terugdraaien..."
+    [[ -f $BACKUP/linux.preset ]] && install -m644 "$BACKUP/linux.preset" "$PRESET"
+    if [[ -f $BACKUP/initramfs-linux.img ]]; then
+        rm -f "$IMAGE" && cp -f "$BACKUP/initramfs-linux.img" "$IMAGE"
+    fi
+    rm -f "$HOOK"
+    sync
+}
+
+install_it() {
+    [[ $EUID -eq 0 ]] || die "Draai dit met sudo."
+    [[ -f $PRESET ]] || die "$PRESET ontbreekt; alleen voor de gewone kernel met mkinitcpio."
+    grep -q '^default_image=' "$PRESET" || die "$PRESET maakt geen gewone initramfs (UKI?); niets gewijzigd."
+    [[ -f /usr/lib/initcpio/install/plymouth ]] || die "plymouth ontbreekt (sudo pacman -S plymouth)."
+    local kver="" dir
+    for dir in /usr/lib/modules/*/; do
+        [[ -f ${dir}pkgbase && "$(<"${dir}pkgbase")" == linux ]] && kver="$(basename "$dir")"
+    done
+    [[ -n $kver ]] || die "Kernelversie van linux niet gevonden in /usr/lib/modules."
+    modinfo -k "$kver" -n nvidia_drm >/dev/null 2>&1 || die "Geen NVIDIA-driver voor kernel $kver; niets gewijzigd."
+    if active; then say "Staat al aan; initramfs wordt opnieuw gemaakt."; fi
+
+    # Ruimte: nvidia.ko is ~90 MB; met marge 150 MB vrij nodig naast de huidige image.
+    local free_kb need_kb mod_kb
+    free_kb="$(df -Pk "$BOOT" | awk 'NR==2{print $4}')"
+    mod_kb="$(du -kL "$(modinfo -k "$kver" -n nvidia)" | cut -f1)"
+    need_kb=$(( mod_kb + 60 * 1024 ))
+    (( free_kb > need_kb )) || die "Te weinig ruimte op $BOOT: $((free_kb/1024)) MB vrij, $((need_kb/1024)) MB nodig. Niets gewijzigd."
+
+    mkdir -p "$BACKUP"
+    if ! active; then
+        cp -f "$PRESET" "$BACKUP/linux.preset"
+    fi
+    cp -f "$IMAGE" "$BACKUP/initramfs-linux.img"
+    say "Back-up: $BACKUP"
+
+    install -m644 "$SRC/mkinitcpio-kingstra.conf" "$CONF"
+    install -Dm644 "$SRC/92-kingstra-nvidia-initramfs.hook" "$HOOK"
+    if ! active; then
+        if grep -q '^#\?default_config=' "$PRESET"; then
+            sed -i "s|^#\?default_config=.*|$LINE|" "$PRESET"
+        else
+            sed -i "/^default_image=/i $LINE" "$PRESET"
+        fi
+    fi
+    active || { restore; die "Preset aanpassen mislukt."; }
+
+    say "Initramfs voor linux maken (duurt even)..."
+    if ! mkinitcpio -p linux; then
+        restore
+        die "mkinitcpio mislukte; alles is teruggezet."
+    fi
+    local list
+    list="$(lsinitcpio "$IMAGE")"
+    if ! grep -q 'nvidia-drm\.ko' <<<"$list" || ! grep -q 'plymouthd' <<<"$list"; then
+        restore
+        die "Nieuwe initramfs mist nvidia-drm of plymouth; alles is teruggezet."
+    fi
+    sync
+    refresh_entries
+    say "Klaar. Herstart om het opstartbeeld te zien."
+    say "Gaat het mis: tik herhaald op spatie na het BIOS-logo en kies 'Kingstra (veilig)'."
+    say "Daarna terug: sudo $0 --undo"
+    status
+}
+
+undo_it() {
+    [[ $EUID -eq 0 ]] || die "Draai dit met sudo."
+    if [[ -f $BACKUP/linux.preset ]]; then
+        install -m644 "$BACKUP/linux.preset" "$PRESET"
+    else
+        sed -i "s|^default_config=\"/etc/mkinitcpio-kingstra.conf\"$|#default_config=\"/etc/mkinitcpio.conf\"|" "$PRESET"
+    fi
+    rm -f "$HOOK"
+    mkinitcpio -p linux
+    sync
+    refresh_entries
+    say "Terug naar de gewone initramfs."
+}
+
+case "${1:-}" in
+    --undo) undo_it ;;
+    --status) status ;;
+    ""|--install) install_it ;;
+    *) sed -n '2,10p' "$0"; exit 2 ;;
+esac

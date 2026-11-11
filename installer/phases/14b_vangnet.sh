@@ -197,6 +197,20 @@ _phase14b_plymouth() {
             "/etc/systemd/system/$unit.service.d/kingstra-wacht-op-scherm.conf" && changed=true
     done
     $changed && sudo systemctl daemon-reload && log_ok "Afsluitbeeld wacht nu tot het scherm vrij is"
+    # NVIDIA + Plymouth in de initramfs van linux (opstartbeeld op alle
+    # schermen): het hulpmiddel staat klaar, aanzetten doe je zelf met
+    # `sudo /usr/local/lib/kingstra/kingstra-opstart-nvidia`. Staat het al aan,
+    # dan houden we config en pacman-hook bij; de initramfs maken we hier niet.
+    local f
+    for f in kingstra-opstart-nvidia mkinitcpio-kingstra.conf 92-kingstra-nvidia-initramfs.hook; do
+        _phase14b_install "$([[ $f == kingstra-opstart-nvidia ]] && echo 0755 || echo 0644)" \
+            "$VANGNET_SRC/$f" "$VANGNET_LIB/$f" || true
+    done
+    if grep -qxF 'default_config="/etc/mkinitcpio-kingstra.conf"' /etc/mkinitcpio.d/linux.preset 2>/dev/null; then
+        _phase14b_install 0644 "$VANGNET_SRC/mkinitcpio-kingstra.conf" /etc/mkinitcpio-kingstra.conf || true
+        _phase14b_install 0644 "$VANGNET_SRC/92-kingstra-nvidia-initramfs.hook" \
+            /etc/pacman.d/hooks/92-kingstra-nvidia-initramfs.hook || true
+    fi
     # De SDDM-koppeling (plymouth quit --retain-splash vóór SDDM) hield op
     # 4 november het inlogscherm tegen: grijs scherm, SDDM startte niet.
     # Niet meer installeren en een eerder geïnstalleerde versie weghalen.

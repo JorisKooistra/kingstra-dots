@@ -1,0 +1,17 @@
+# Kingstra: de NVIDIA-driver zit in de initramfs van de gewone kernel.
+# Na een driverupdate zonder kernelupdate moet die initramfs opnieuw, anders
+# past de module in de initramfs niet bij de rest van de driver.
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Target = nvidia*-dkms
+Target = nvidia
+Target = nvidia-open
+Target = nvidia-lts
+Target = nvidia-open-dkms
+
+[Action]
+Description = Kingstra: initramfs met NVIDIA opnieuw maken...
+When = PostTransaction
+Exec = /usr/bin/mkinitcpio -p linux

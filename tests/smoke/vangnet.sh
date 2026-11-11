@@ -39,15 +39,17 @@ except SystemExit as exc:
         raise
 PY
 }
-export KINGSTRA_ESP="$ESP" KINGSTRA_BOOT_BACKUPS="$T/boot-backups"
+export KINGSTRA_ESP="$ESP" KINGSTRA_BOOT_BACKUPS="$T/boot-backups" KINGSTRA_LINUX_PRESET="$T/geen.preset"
 boot setup >/dev/null
 [[ -f "$ESP/loader/entries/kingstra-linux+3.conf" ]] || fail "kingstra-linux+3.conf ontbreekt"
 [[ -f "$ESP/loader/entries/kingstra-linux-lts+3.conf" ]] || fail "lts-item ontbreekt"
 [[ -f "$ESP/loader/entries/kingstra-herstel.conf" ]] || fail "herstel-item ontbreekt"
 grep -q '^default kingstra-\*$' "$ESP/loader/loader.conf" || fail "default niet gezet"
 grep -q '^timeout 2$' "$ESP/loader/loader.conf" || fail "timeout niet gezet"
-grep -q 'root=PARTUUID=abc rw rootfstype=ext4 quiet splash plymouth.use-simpledrm' "$ESP/loader/entries/kingstra-linux+3.conf" \
+grep -q 'root=PARTUUID=abc rw rootfstype=ext4 quiet splash' "$ESP/loader/entries/kingstra-linux+3.conf" \
     || fail "opties niet overgenomen of quiet dubbel"
+# Zonder NVIDIA in de initramfs (geen kingstra-preset): firmwarebeeld voor Plymouth.
+grep -q 'plymouth.use-simpledrm' "$ESP/loader/entries/kingstra-linux+3.conf" || fail "use-simpledrm ontbreekt"
 grep -q 'initramfs-linux-lts.img' "$ESP/loader/entries/kingstra-herstel.conf" || fail "herstel hoort de lts-kernel te gebruiken"
 grep -q 'systemd.unit=multi-user.target' "$ESP/loader/entries/kingstra-herstel.conf" || fail "herstel start niet zonder inlogscherm"
 [[ -f "$ESP/loader/entries/arch_linux.conf" ]] || fail "bestaand item verdwenen"
