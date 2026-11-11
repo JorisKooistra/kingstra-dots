@@ -193,7 +193,7 @@ Scope {
         stageOrigin = Qt.rect(0, 0, 0, 0);
         stageSpin = ({});
         let slot = pick ? deckItems[pick.name] : null;
-        let shown = slot ? slot.device : "";
+        let shown = slot && slot.device ? String(slot.device) : "";
         stageDevice = kind ? kind : (shown !== "" ? shown : "vinyl");
         let deck = slot && shown === stageDevice ? slot.activeDeck : null;
         if (deck && deck.visible && deck.opacity > 0.5 && deck.width > 0 && slot.parentCard.shown) {
