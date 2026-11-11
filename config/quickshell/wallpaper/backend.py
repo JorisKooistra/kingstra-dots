@@ -1036,6 +1036,25 @@ def remove(identifier):
     emit("removed", id=identifier, path=str(path), remaining=saved_wallhaven(identifier))
 
 
+def trash(path):
+    """Eigen wallpaper (foto of video) naar de prullenbak, met sidecar."""
+    original = Path(path)
+    path = original.resolve(strict=True)
+    folder = library().resolve()
+    if folder not in path.parents or not path.is_file() or path.suffix.lower() not in IMAGES | VIDEOS:
+        raise ValueError("Alleen bestanden uit je wallpapermap kunnen weg")
+    current = current_wallpaper()
+    if current and Path(current).resolve() == path:
+        raise ValueError("Deze wallpaper is in gebruik; kies eerst een andere")
+    gio = shutil.which("gio")
+    if not gio:
+        raise ValueError("De prullenbak is niet beschikbaar")
+    files = [str(path)] + [str(extra) for extra in (metadata_file(path),) if extra.is_file()]
+    result = subprocess.run([gio, "trash", *files], capture_output=True)
+    if result.returncode: raise ValueError("Naar de prullenbak verplaatsen is niet gelukt")
+    emit("removed", id="", path=str(original), remaining="")
+
+
 def apply(path):
     path = Path(path).resolve(strict=True)
     if not path.is_file() or path.suffix.lower() not in IMAGES | VIDEOS:
@@ -1088,6 +1107,7 @@ def main():
         transfer.add_argument("id")
         transfer.add_argument("--exclude-ai", action="store_true")
     sub.add_parser("remove").add_argument("id")
+    sub.add_parser("trash").add_argument("path")
     sub.add_parser("apply").add_argument("path")
     sub.add_parser("providers")
     sub.add_parser("autotag")
@@ -1100,6 +1120,7 @@ def main():
         elif args.command == "download": download(args.id, exclude_ai=args.exclude_ai)
         elif args.command == "preview": download(args.id, preview=True, exclude_ai=args.exclude_ai)
         elif args.command == "remove": remove(args.id)
+        elif args.command == "trash": trash(args.path)
         elif args.command == "apply": apply(args.path)
         elif args.command == "autotag": emit("autotag", tagged=autotag_folder())
         elif args.command == "providers": emit("providers", sources=source_status())

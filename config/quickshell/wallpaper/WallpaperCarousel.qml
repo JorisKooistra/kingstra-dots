@@ -301,6 +301,7 @@ Item {
                     remote: carousel.controller.sourceTab !== "local"
                     actionBusy: !!carousel.controller.busy
                     removable: !!itemData.path && itemData.path !== carousel.controller.currentPath
+                    confirmingRemove: !!itemData.path && carousel.controller.confirmRemovePath === itemData.path
                     thumbnail: carousel.controller.thumbnailFor(itemData)
                     shaderSource: carousel.controller.cardShader || ""
                     vertexSource: carousel.controller.cardVertexShader || ""

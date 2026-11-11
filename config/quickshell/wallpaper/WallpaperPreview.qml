@@ -42,6 +42,7 @@ Rectangle {
     Keys.onRightPressed: controller.previewNavigate(1)
     Keys.onReturnPressed: controller.applyChosen()
     Keys.onEnterPressed: controller.applyChosen()
+    Keys.onDeletePressed: controller.removeAt(controller.selected)
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal) {
             zoomBy(1);
@@ -272,7 +273,8 @@ Rectangle {
             PickerButton {
                 objectName: "preview-remove"
                 colors: preview.colors
-                text: preview.controller.canRemove(preview.controller.chosen) ? "Naar prullenbak" : "In gebruik"
+                text: !preview.controller.canRemove(preview.controller.chosen) ? "In gebruik" : (preview.controller.confirmRemovePath === preview.controller.chosen.path ? "Echt weggooien?" : "Naar prullenbak")
+                selected: preview.controller.confirmRemovePath === preview.controller.chosen.path
                 visible: !!preview.controller.chosen.path
                 available: !preview.controller.busy && preview.controller.canRemove(preview.controller.chosen)
                 onClicked: preview.controller.removeAt(preview.controller.selected)

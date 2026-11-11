@@ -19,8 +19,11 @@ Item {
     property bool remote: false
     property bool actionBusy: false
     property bool removable: false
+    property bool confirmingRemove: false
     readonly property int actionSize: width < 150 ? (shape === "hex" ? 24 : 26) : 32
-    readonly property int actionRows: width < 150 && shape !== "hex" ? (itemData.path ? 3 : 2) : 1
+    // Eigen collectie: alleen de prullenbakknop.
+    readonly property int actionCount: remote ? (itemData.path ? 3 : 2) : 1
+    readonly property int actionRows: width < 150 && shape !== "hex" ? actionCount : 1
     readonly property int actionsHeight: actionRows * actionSize + (actionRows - 1) * 4
     readonly property bool hovered: interactiveHover && (input.containsMouse || applyButton.hovered || downloadButton.hovered || removeButton.hovered)
     readonly property bool highlighted: selected || hovered
@@ -111,13 +114,14 @@ Item {
         Grid {
             x: (card.width - width) / 2
             y: 10 + card.bend(card.width / 2) - input.y
-            columns: card.width < 150 && card.shape !== "hex" ? 1 : (card.itemData.path ? 3 : 2)
+            columns: card.width < 150 && card.shape !== "hex" ? 1 : card.actionCount
             spacing: 4
             // Keep the centre of small cards clickable. The persistent footer
             // and preview provide the same actions when inline icons won't fit.
-            visible: card.remote && card.height > 2 * (10 + card.actionsHeight) + 16 && (card.hovered || card.selected)
+            visible: (card.remote || !!card.itemData.path) && card.height > 2 * (10 + card.actionsHeight) + 16 && (card.hovered || card.selected)
             PickerIconButton {
                 id: applyButton
+                visible: card.remote
                 width: card.actionSize
                 height: width
                 objectName: "wallpaper-apply"
@@ -130,6 +134,7 @@ Item {
             }
             PickerIconButton {
                 id: downloadButton
+                visible: card.remote
                 width: card.actionSize
                 height: width
                 objectName: "wallpaper-download"
@@ -146,8 +151,9 @@ Item {
                 objectName: "wallpaper-remove"
                 colors: card.colors
                 icon: "trash"
-                label: card.removable ? "Naar prullenbak" : "Deze wallpaper is actief"
+                label: !card.removable ? "Deze wallpaper is actief" : (card.confirmingRemove ? "Nog een keer: echt naar prullenbak" : "Naar prullenbak")
                 visible: !!card.itemData.path
+                selected: card.confirmingRemove
                 available: !card.actionBusy && card.removable
                 onClicked: card.removeRequested()
             }

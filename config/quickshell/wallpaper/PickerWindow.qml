@@ -443,16 +443,29 @@ PanelWindow {
     function canRemove(item) {
         return !!item.path && item.path !== currentPath;
     }
+    // Eerste klik vraagt bevestiging, tweede klik (binnen 5 s) gooit weg.
+    property string confirmRemovePath: ""
     function removeAt(index) {
         let item = items[index];
-        if (busy || !item || !canRemove(item))
+        if (busy || !item || !item.path)
             return;
         selected = index;
         if (views.item && views.item.pause)
             views.item.pause();
+        if (!canRemove(item)) {
+            showMessage("Deze wallpaper is in gebruik; kies eerst een andere");
+            return;
+        }
+        if (confirmRemovePath !== item.path) {
+            confirmRemovePath = item.path;
+            confirmRemoveTimer.restart();
+            showMessage("Nog een keer klikken (of Delete) om “" + (item.displayName || item.name) + "” naar de prullenbak te verplaatsen");
+            return;
+        }
+        confirmRemovePath = "";
         showMessage("");
         operationLabel = "Naar prullenbak…";
-        removeProcess.command = worker(["remove", item.id]);
+        removeProcess.command = item.id ? worker(["remove", item.id]) : worker(["trash", item.path]);
         removeProcess.running = true;
     }
     function applyPath(path) {
@@ -807,6 +820,8 @@ PanelWindow {
                 if (event.event === "error")
                     root.showMessage(event.message);
                 if (event.event === "removed") {
+                    if (!event.id && root.previewOpen)
+                        root.previewOpen = false;
                     root.localItems = root.localItems.filter(item => item.path !== event.path);
                     root.remoteItems = root.remoteItems.map(item => item.id === event.id ? Object.assign({}, item, {
                             path: event.remaining || ""
@@ -852,6 +867,15 @@ PanelWindow {
         running: root.paletteOpen
         repeat: true
         onTriggered: paletteFile.reload()
+    }
+    Timer {
+        id: confirmRemoveTimer
+        interval: 5000
+        onTriggered: {
+            if (root.confirmRemovePath && root.message.startsWith("Nog een keer klikken"))
+                root.showMessage("");
+            root.confirmRemovePath = "";
+        }
     }
     Timer {
         id: localSearchDelay
@@ -1305,6 +1329,9 @@ PanelWindow {
                 if (event.key === Qt.Key_F && root.sourceTab === "local") {
                     root.favorite(root.selected);
                     event.accepted = true;
+                } else if (event.key === Qt.Key_Delete && root.items.length) {
+                    root.removeAt(root.selected);
+                    event.accepted = true;
                 } else if (event.key === Qt.Key_Space && root.sourceTab === "local" && root.items.length) {
                     // Spatie: eigen foto of video groot bekijken/afspelen.
                     root.openPreview(root.selected);
@@ -1564,6 +1591,7 @@ PanelWindow {
                 remote: root.online
                 actionBusy: root.busy
                 removable: root.canRemove(itemData)
+                confirmingRemove: !!itemData.path && root.confirmRemovePath === itemData.path
                 shaderSource: root.cardShader
                 vertexSource: root.cardVertexShader
                 thumbnail: root.thumbnailFor(itemData)
