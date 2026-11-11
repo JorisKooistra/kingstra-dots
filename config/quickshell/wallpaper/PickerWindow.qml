@@ -577,7 +577,7 @@ PanelWindow {
                 root.filter();
             }
         }
-        function show(): void {
+        function openPreview(): void {
             root.openPreview(root.selected);
         }
         function current(): void {

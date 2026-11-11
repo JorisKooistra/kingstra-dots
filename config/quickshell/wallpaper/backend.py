@@ -356,12 +356,26 @@ def cached_visuals(target):
     return result
 
 
+def video_dimensions(path):
+    with contextlib.suppress(OSError, subprocess.SubprocessError, ValueError):
+        result = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+                                 "-of", "csv=p=0:s=x", str(path)], capture_output=True, text=True, timeout=20)
+        width, height = result.stdout.strip().splitlines()[0].split("x")[:2]
+        return f"{int(width)} × {int(height)}"
+    return ""
+
+
 def make_thumbnail(item):
     from PIL import Image, ImageOps
     path = Path(item["path"])
     target = CACHE / "thumbs" / (thumbnail_key(path) + ".jpg")
     sidecar = target.with_suffix(".json")
     metadata = read_json(sidecar)
+    if target.is_file() and metadata.get("color") and metadata.get("dimensions") and item.get("type") == "video" and not metadata.get("probed"):
+        # Oudere cache: maat van het verkleinde frame i.p.v. die van de video.
+        metadata["dimensions"] = video_dimensions(path) or metadata["dimensions"]
+        metadata["probed"] = True
+        atomic_json(sidecar, metadata)
     if target.is_file() and metadata.get("color") and metadata.get("dimensions"):
         if not metadata.get("palette") or not target.with_name(target.stem + ".bg.jpg").is_file():
             with Image.open(target) as image: metadata.update(image_details(image, target))
@@ -389,7 +403,9 @@ def make_thumbnail(item):
             details = image_details(image, target)
             image.save(temp, "JPEG", quality=83)
         os.replace(temp, target)
+        if item["type"] == "video": dimensions = video_dimensions(path) or dimensions
         metadata = dict(color=color, dimensions=dimensions, **color_metrics(color), **details)
+        if item["type"] == "video": metadata["probed"] = True
         atomic_json(sidecar, metadata)
         return dict(path=str(path), thumb=target.as_uri(), **metadata)
     finally:
@@ -438,7 +454,7 @@ def catalog():
                     continue
     items.sort(key=lambda i: (-i["mtime"], i["name"]))
     emit("catalog", items=items, folder=str(folder), current=current_wallpaper(), settings=settings, sources=source_status())
-    missing = [item for item in items if not item.get("thumb") or not item.get("palette") or not item.get("backdrop")]
+    missing = [item for item in items if not item.get("thumb") or not item.get("palette") or not item.get("backdrop") or (item["type"] == "video" and not item.get("probed"))]
     # Exactly two decoders; thumbnails arrive incrementally, after the UI opens.
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         pending = {pool.submit(make_thumbnail, item): item for item in missing}
