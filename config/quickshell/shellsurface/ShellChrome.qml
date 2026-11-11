@@ -2480,6 +2480,9 @@ Item {
         property string text: ""
         property color accent: root.hotColor
         property string tooltip: ""
+        // Tekst verandert terwijl je erboven hangt (bijv. volume scrollen):
+        // tooltip direct bijwerken.
+        onTooltipChanged: if (mouse.containsMouse) root.showTooltip(btn, btn.tooltip, false)
         property int badge: 0
         signal triggered()
         signal middleClicked()

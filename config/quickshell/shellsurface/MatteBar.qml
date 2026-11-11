@@ -39,6 +39,9 @@ Item {
         // Alleen knoppen met wheelEnabled vangen het muiswiel (volume).
         property bool wheelEnabled: false
         signal wheelDelta(int delta)
+        // Tekst verandert terwijl je erboven hangt (bijv. volume scrollen):
+        // tooltip direct bijwerken.
+        onTipChanged: if (mouse.containsMouse) bar.chrome.showTooltip(button, button.tip, false)
         implicitWidth: label !== "" ? labelText.implicitWidth + 10 : 24
         implicitHeight: 24
         radius: 6

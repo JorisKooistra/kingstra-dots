@@ -74,6 +74,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ### Volume scrollen in de Matte-bar
 - In de Matte-stijl regel je het volume nu met het muiswiel boven het volume- of muziekicoon rechts in de bar: 5% per wielklik. Andere knoppen in die bar reageren niet op het wiel.
+- De hovertekst loopt nu live mee met het volume tijdens scrollen (Matte-bar en strip).
 - Scrollen in de rail/strip blijft 1% per klik; omdraaien van de scrollrichting gooit een halve klik niet meer mee.
 
 ### Eigen Games-paneel
