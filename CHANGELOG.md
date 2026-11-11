@@ -28,8 +28,6 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Meldingen van de telefoon in het paneel: wegvegen, en antwoorden waar de app dat toestaat.
 - Het paneel opent meteen met de laatst bekende stand en haalt alles nu via D-Bus op in plaats van kdeconnect-cli (was ruim 2 seconden "Zoeken…").
 - Installer zet sshfs en scrcpy er optioneel bij.
-- **Scherm op pc** werkt na één keer met de kabel ook via wifi: `phone-screen.sh mirror` onthoudt het IP-adres van de telefoon en zet adb op wifi (na een herstart van de telefoon is de kabel één keer opnieuw nodig).
-- Nieuwe tegel **Pc op telefoon**: deelt het scherm met de muis erop via wayvnc, alleen op het Tailscale-adres (dus alleen voor je eigen apparaten, thuis en onderweg). Op de telefoon: Tailscale-app plus een VNC-app zoals AVNC. Blijft aan tot je de tegel weer uitzet. De installer zet wayvnc er optioneel bij.
 
 ### Update kan de opstart niet meer slopen
 - Op 10 november stopte pacman midden in een kernel-update: de oude kernels waren al van /boot gehaald, de nieuwe nog niet neergezet. De pc toonde daarna in het opstartmenu alleen "Reboot Into Firmware Interface". Hersteld via een live-USB met `pacman -S linux linux-lts`.
