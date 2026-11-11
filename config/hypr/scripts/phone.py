@@ -48,8 +48,11 @@ def run(cmd, timeout=8):
 
 def busctl(*args, timeout=3):
     code, out = run(["busctl", "--user", "--json=short", *args], timeout=timeout)
-    if code != 0 or not out.strip():
+    if code != 0:
         return None
+    if not out.strip():
+        # Methodes zonder antwoord (ring, setPluginEnabled…) geven niets terug.
+        return {"data": []}
     try:
         return json.loads(out)
     except ValueError:
