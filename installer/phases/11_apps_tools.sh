@@ -87,6 +87,8 @@ phase_run() {
     # (of kdeconnect-cli) hem nodig heeft en blijft dan de sessie draaien.
     pacman_install_optional kdeconnect
     pacman_install_optional zenity      # bestand kiezen om naar de telefoon te sturen
+    pacman_install_optional sshfs       # bestanden van de telefoon bladeren (Telefoon > Bladeren)
+    pacman_install_optional scrcpy      # telefoonscherm op de pc (Telefoon > Scherm op pc)
 
     log_step "Fase 11 valideren..."
     validate_cmd nautilus

@@ -12,6 +12,14 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - De voortgangsregel zegt nu in gewone woorden wat pacman doet (pakketlijsten ophalen, downloaden, sleutels controleren, installeren: <pakket>, afronden) met een lopende tijd, en bij de AUR welk pakket er gebouwd wordt (1/2, 2/2). pacman draait via `stdbuf`, zodat zijn uitvoer meteen doorkomt in plaats van in blokken.
 - **Kernel-stap**: zodra de oude opstartbestanden weg gaan verschijnt één vaste regel "Kernel-stap begonnen (1 tot 3 minuten). Zet de pc niet uit; dit venster sluiten mag". Daarna toont de regel welk preset en welke hook mkinitcpio bouwt.
 - Elke stille stap meldt na afloop hoe lang hij duurde; het eind toont de totale tijd.
+### Telefoonpaneel opnieuw (KDE Connect)
+- Nieuwe opbouw in de stijl van Batterij & energie: kaart met naam, status, batterij (balk met laadglans), mobiel netwerk en aantal meldingen.
+- Gekoppeld maar weg? Dat staat er nu duidelijk, met uitleg en een knop **Opnieuw zoeken** (ook rechtsboven). Koppelverzoeken van de telefoon kun je accepteren of weigeren, met de code erbij.
+- Tegels: Zoek telefoon, Klembord, Bestand (meerdere tegelijk), Bladeren (bestanden van de telefoon via sshfs), Sms (direct typen en sturen), Gesprekken (KDE Connect SMS), Testbericht en Scherm op pc (scrcpy). Een tegel draait tijdens het werk en toont een vinkje als het gelukt is.
+- Media van de telefoon: titel, vorige/afspelen/volgende en het volume van de telefoon.
+- Meldingen van de telefoon in het paneel: wegvegen, en antwoorden waar de app dat toestaat.
+- Het paneel opent meteen met de laatst bekende stand en haalt alles nu via D-Bus op in plaats van kdeconnect-cli (was ruim 2 seconden "Zoeken…").
+- Installer zet sshfs en scrcpy er optioneel bij.
 
 ### Update kan de opstart niet meer slopen
 - Op 10 november stopte pacman midden in een kernel-update: de oude kernels waren al van /boot gehaald, de nieuwe nog niet neergezet. De pc toonde daarna in het opstartmenu alleen "Reboot Into Firmware Interface". Hersteld via een live-USB met `pacman -S linux linux-lts`.
