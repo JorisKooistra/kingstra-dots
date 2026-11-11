@@ -30,6 +30,10 @@ ShellRoot {
     IpcHandler {
         target: "shell"
         function reload(): void { Quickshell.reload(false) }
+        // Thema meteen opnieuw inlezen (kingstra-theme-switch roept dit aan
+        // vlak vóór het zetten van Hyprlands gaps), zodat strip en gaps in
+        // één beweging veranderen in plaats van seconden na elkaar.
+        function rereadTheme(): void { ThemeConfig.rereadThemeFile() }
     }
 
     BarShell {}

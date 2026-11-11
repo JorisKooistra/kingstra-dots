@@ -242,6 +242,11 @@ Item {
     // zodat strip, rail en reserveringen direct hun echte maat hebben: geen
     // tussenstand met standaardwaarden waarbij vensters in stappen schuiven,
     // ook niet bij herladen.
+    function rereadThemeFile() {
+        themeFileView.reload();
+        applyThemeText(themeFileView.text());
+    }
+
     function applyThemeText(raw) {
         let txt = String(raw || "").trim();
         if (txt === "") { root.themeFileParsed = true; return; }

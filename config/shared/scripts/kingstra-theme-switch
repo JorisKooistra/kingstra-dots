@@ -1066,6 +1066,12 @@ _log "Walker theme override gegenereerd"
 # ---------------------------------------------------------------------------
 # Step 4 — Apply Hyprland changes live through the Lua API.
 # ---------------------------------------------------------------------------
+# Laat de bar theme.json nu meteen inlezen, vlak vóór de gaps: zo schuiven
+# vensters één keer in plaats van eerst door de gaps en seconden later nog
+# eens door de nieuwe strip-hoogte.
+if command -v quickshell &>/dev/null && pgrep -f "quickshell.*${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/TopBar.qml" >/dev/null 2>&1; then
+    timeout 2 quickshell ipc -p "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/TopBar.qml" call shell rereadTheme >/dev/null 2>&1 || true
+fi
 if command -v hyprctl &>/dev/null; then
     hyprctl eval "hl.config({ general = { gaps_in = ${APPEARANCE_GAPS_IN:-5}, gaps_out = ${APPEARANCE_GAPS_OUT:-10}, border_size = ${APPEARANCE_BORDER_WIDTH:-2} }, decoration = { rounding = ${APPEARANCE_BORDER_RADIUS:-12}, shadow = { range = ${WINDOW_SHADOW_RANGE}, color = \"rgba(000000${WINDOW_SHADOW_HEX})\" }, blur = { size = ${APPEARANCE_BLUR_SIZE:-8}, passes = ${APPEARANCE_BLUR_PASSES:-3}, variant = ${FX_VARIANT} }, wobble = { enabled = ${FX_WOBBLE} } } })" 2>/dev/null || true
     _log "Hyprland live bijgewerkt"
