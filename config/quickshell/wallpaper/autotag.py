@@ -7,9 +7,10 @@ with source "kingstra-auto", the same sidecar the picker already reads.
 """
 import datetime
 import re
+import warnings
 from pathlib import Path
 
-VERSION = 1
+VERSION = 2
 SOURCE = "kingstra-auto"
 
 # Hue ranges in degrees → (Dutch, English). Red wraps around 0.
@@ -31,7 +32,11 @@ ENGLISH = {"donker": "dark", "licht": "bright", "kleurrijk": "colorful", "gedemp
 # File-name noise from cameras, phones and download sites.
 NOISE = re.compile(r"^(img|dsc|dscn|dcim|pxl|mvimg|photo|image|foto|screenshot|scherm\w*|wallpaper|wallhaven|"
                    r"edit\w*|copy|kopie|final|jpe?g|png|webp|heic|raw|whatsapp|signal|unsplash|pexels|"
-                   r"pixabay|\d+x\d+|\d+k|hd|uhd|fhd|qhd)$", re.IGNORECASE)
+                   r"pixabay|\d+x\d+|\d+k|hd|uhd|fhd|qhd|"
+                   # Download-site names and filler words that say nothing about the image.
+                   r"com|net|org|www|http|https|moewalls|wallsflow|wallpaperflare|wallpaperaccess|wallpapercave|"
+                   r"alphacoders|backiee|wallpaperscraft|motionbgs|desktophut|live|animated|unknown|untitled|"
+                   r"the|and|with|for|from|een|het|van|met|der|des|von|und|les|del)$", re.IGNORECASE)
 
 
 def hue_name(degrees):
@@ -129,7 +134,8 @@ def name_tags(path):
 def describe(path, frame=None):
     """Tags and colour summary for one image file. Videos pass a still frame."""
     from PIL import Image, ImageOps
-    with Image.open(frame or path) as original:
+    with warnings.catch_warnings(), Image.open(frame or path) as original:
+        warnings.simplefilter("ignore")  # Palette-transparency notices from PNGs.
         width, height = original.width, original.height
         info = {} if frame else exif_info(original)
         original.draft("RGB", (512, 512))
