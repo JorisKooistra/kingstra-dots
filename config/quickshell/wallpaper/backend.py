@@ -259,7 +259,7 @@ def tag_file(path):
     return record
 
 
-def autotag_folder(events=False, network_limit=None):
+def autotag_folder(events=False, network_limit=None, budget=None):
     """Tag every untagged file in the library. Safe to run from the picker and
     the folder watcher at the same time: the second one simply skips."""
     folder = library()
@@ -271,12 +271,14 @@ def autotag_folder(events=False, network_limit=None):
         except OSError: return 0
         index = read_json(CONFIG / "kingstra/state/wallhaven-tags.json")
         done = fetched = 0
+        deadline = time.monotonic() + budget if budget else None
         for parent, dirs, files in os.walk(folder):
             dirs[:] = sorted(d for d in dirs if not d.startswith("."))
             for name in sorted(files):
                 path = Path(parent) / name
                 if name.startswith(".") or path.suffix.lower() not in IMAGES | VIDEOS or not needs_tags(path, index):
                     continue
+                if deadline and time.monotonic() > deadline: return done  # The folder watcher finishes the rest.
                 if wallhaven_id(path):
                     if network_limit is not None and fetched >= network_limit: continue
                     if fetched: time.sleep(1.5)  # Wallhaven allows 45 requests a minute.
@@ -446,7 +448,7 @@ def catalog():
             except Exception:
                 emit("thumbnail-error", path=pending[task]["path"])
     with contextlib.suppress(Exception):
-        autotag_folder(events=True, network_limit=5)
+        autotag_folder(events=True, network_limit=5, budget=20)
     emit("ready")
     trim_cache()
 
