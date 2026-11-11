@@ -43,6 +43,9 @@ phase_run() {
     log_step "Wallpaper-map aanmaken..."
     _phase09_ensure_wallpaper_dir
 
+    log_step "Automatisch taggen van nieuwe wallpapers aanzetten..."
+    _phase09_enable_autotag
+
     log_step "Fase 09 valideren..."
     if "${DRY_RUN:-false}"; then
         log_dry "Commando-check overgeslagen (dry-run): skwd"
@@ -337,6 +340,26 @@ _phase09_ensure_wallpaper_dir() {
         _phase09_generate_fallback_wallpaper "$wdir"
     elif [[ ! -f "${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/last-wallpaper" ]]; then
         _phase09_set_initial_wallpaper_from_dir "$wdir"
+    fi
+}
+
+_phase09_enable_autotag() {
+    local unit
+    if "${DRY_RUN:-false}"; then
+        log_dry "kingstra-wallpaper-tags.path/.service zouden worden geplaatst en aangezet"
+        return 0
+    fi
+    ensure_dir "$HOME/.config/systemd/user"
+    for unit in kingstra-wallpaper-tags.path kingstra-wallpaper-tags.service; do
+        deploy_link "$REPO_ROOT/config/systemd/$unit" "$HOME/.config/systemd/user/$unit"
+    done
+    systemctl --user daemon-reload 2>/dev/null || true
+    if systemctl --user enable --now kingstra-wallpaper-tags.path >/dev/null 2>&1; then
+        # Eén keer de bestaande map nalopen; daarna alleen bij nieuwe bestanden.
+        systemctl --user start --no-block kingstra-wallpaper-tags.service >/dev/null 2>&1 || true
+        log_ok "Nieuwe wallpapers krijgen automatisch tags (kleur, vorm, fotodatum)"
+    else
+        log_warn "Kon kingstra-wallpaper-tags.path niet aanzetten; de picker tagt dan bij openen"
     fi
 }
 

@@ -40,6 +40,9 @@ _provider_spec = importlib.util.spec_from_file_location("kingstra_wallpaper_prov
 providers = importlib.util.module_from_spec(_provider_spec)
 _provider_spec.loader.exec_module(providers)
 CREDENTIALS = CONFIG / "kingstra/wallpaper-sources.json"
+_autotag_spec = importlib.util.spec_from_file_location("kingstra_wallpaper_autotag", Path(__file__).with_name("autotag.py"))
+autotag = importlib.util.module_from_spec(_autotag_spec)
+_autotag_spec.loader.exec_module(autotag)
 
 
 class ExcludedAI(ValueError):
@@ -214,7 +217,7 @@ def metadata_file(path):
 def local_metadata(path, index):
     record = read_json(metadata_file(path))
     if not isinstance(record, dict): record = {}
-    if record.get("source") not in {"wallhaven", "nasa", "commons", *providers.SOURCES, *providers.LEGACY_SOURCES}:
+    if record.get("source") not in {"wallhaven", "nasa", "commons", autotag.SOURCE, *providers.SOURCES, *providers.LEGACY_SOURCES}:
         identifier = wallhaven_id(path)
         record = index.get(identifier) or read_json(CACHE / "metadata" / (identifier + ".json")) if identifier else {}
         if record and not metadata_file(path).exists():
@@ -225,6 +228,60 @@ def local_metadata(path, index):
                 wallhavenColors=record.get("colors", []), source=record.get("source", ""),
                 sourcePage=record.get("url", ""), credit=record.get("uploader", ""),
                 license=record.get("license", ""), displayName=record.get("name", ""), isAi=providers.is_ai(record))
+
+
+def needs_tags(path, index):
+    """True when no sidecar, Wallhaven index or cache entry gives this file tags."""
+    record = read_json(metadata_file(path))
+    if isinstance(record, dict) and record:
+        return record.get("source") == autotag.SOURCE and record.get("auto_version", 0) < autotag.VERSION
+    identifier = wallhaven_id(path)
+    return not (identifier and (index.get(identifier) or read_json(CACHE / "metadata" / (identifier + ".json"))))
+
+
+def tag_file(path):
+    """Wallhaven files get their real tags; everything else offline auto-tags."""
+    identifier = wallhaven_id(path)
+    if identifier:
+        data = remote_json("https://wallhaven.cc/api/v1/w/" + identifier).get("data") or {}
+        return remember_wallhaven(identifier, data, path, save_sidecar=True) if data.get("id") else None
+    frame = None
+    if path.suffix.lower() in VIDEOS:
+        frame = CACHE / "thumbs" / (thumbnail_key(path) + ".jpg")
+        if not frame.is_file(): make_thumbnail(dict(path=str(path), type="video"))
+    record = autotag.describe(path, frame)
+    atomic_json(metadata_file(path), record)
+    return record
+
+
+def autotag_folder(events=False, network_limit=None):
+    """Tag every untagged file in the library. Safe to run from the picker and
+    the folder watcher at the same time: the second one simply skips."""
+    folder = library()
+    if not folder.is_dir(): return 0
+    lock_path = CACHE / "autotag.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a") as lock:
+        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError: return 0
+        index = read_json(CONFIG / "kingstra/state/wallhaven-tags.json")
+        done = fetched = 0
+        for parent, dirs, files in os.walk(folder):
+            dirs[:] = sorted(d for d in dirs if not d.startswith("."))
+            for name in sorted(files):
+                path = Path(parent) / name
+                if name.startswith(".") or path.suffix.lower() not in IMAGES | VIDEOS or not needs_tags(path, index):
+                    continue
+                if wallhaven_id(path):
+                    if network_limit is not None and fetched >= network_limit: continue
+                    if fetched: time.sleep(1.5)  # Wallhaven allows 45 requests a minute.
+                    fetched += 1
+                try: record = tag_file(path)
+                except Exception: continue  # Half-copied file or offline: next run retries.
+                if record:
+                    done += 1
+                    if events: emit("tags", path=str(path), **local_metadata(path, index))
+        return done
 
 
 def remember_wallhaven(identifier, data, path, save_sidecar=False):
@@ -383,6 +440,8 @@ def catalog():
                 emit("thumbnail", **task.result())
             except Exception:
                 emit("thumbnail-error", path=pending[task]["path"])
+    with contextlib.suppress(Exception):
+        autotag_folder(events=True, network_limit=5)
     emit("ready")
     trim_cache()
 
@@ -938,6 +997,7 @@ def main():
     sub.add_parser("remove").add_argument("id")
     sub.add_parser("apply").add_argument("path")
     sub.add_parser("providers")
+    sub.add_parser("autotag")
     sub.add_parser("credential")
     args = parser.parse_args()
     try:
@@ -948,6 +1008,7 @@ def main():
         elif args.command == "preview": download(args.id, preview=True, exclude_ai=args.exclude_ai)
         elif args.command == "remove": remove(args.id)
         elif args.command == "apply": apply(args.path)
+        elif args.command == "autotag": emit("autotag", tagged=autotag_folder())
         elif args.command == "providers": emit("providers", sources=source_status())
         elif args.command == "credential": credential(json.loads(sys.stdin.readline(2048)))
     except urllib.error.HTTPError as error:

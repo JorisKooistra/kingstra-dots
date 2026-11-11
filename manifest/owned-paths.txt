@@ -66,6 +66,8 @@
 
 ~/.config/systemd/user/kingstra-resume.service|symlink
 ~/.config/systemd/user/kingstra-lid-lock.service|symlink
+~/.config/systemd/user/kingstra-wallpaper-tags.path|symlink
+~/.config/systemd/user/kingstra-wallpaper-tags.service|symlink
 ~/.config/systemd/user/skwd-daemon.service.d/10-kingstra-overlay.conf|file
 ~/.config/skwd-wall/config.json|file
 ~/.config/hyprlock/hyprlock.conf|file

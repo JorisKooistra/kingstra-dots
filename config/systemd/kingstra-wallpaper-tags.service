@@ -1,0 +1,11 @@
+[Unit]
+Description=Kingstra: wallpapers zonder tags automatisch taggen
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+
+[Service]
+Type=oneshot
+# Even wachten tot een kopieerslag van meerdere bestanden klaar is.
+ExecStartPre=/usr/bin/sleep 3
+ExecStart=/usr/bin/python3 %h/.config/quickshell/wallpaper/backend.py autotag
+Nice=15
+IOSchedulingClass=idle

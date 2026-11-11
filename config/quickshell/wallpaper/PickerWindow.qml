@@ -68,6 +68,7 @@ PanelWindow {
     property string waitingDownloadId: ""
     readonly property string operationButtonLabel: operationStage === "download" || operationStage === "metadata" ? (operationPercent < 0 ? "Downloaden…" : operationPercent + "%") : operationStage === "colors" ? "Kleuren…" : operationStage === "apps" ? "Afronden…" : "Instellen…"
     property string currentPath: ""
+    property bool tagsUpdated: false
     property string folder: ""
     property var localItems: []
     property bool catalogInitialized: false
@@ -468,9 +469,17 @@ PanelWindow {
             let next = Object.assign({}, thumbnails);
             next[event.path] = event;
             thumbnails = next;
+        } else if (event.event === "tags") {
+            localItems = localItems.map(item => item.path === event.path ? Object.assign({}, item, {
+                    tags: event.tags || [],
+                    tagAliases: event.tagAliases || [],
+                    source: event.source || item.source
+                }) : item);
+            tagsUpdated = true;
         } else if (event.event === "ready") {
-            if (sourceTab === "local" && sortMode === "color")
+            if (sourceTab === "local" && (sortMode === "color" || tagsUpdated))
                 filter();
+            tagsUpdated = false;
         } else if (event.event === "error")
             showMessage(event.message);
     }

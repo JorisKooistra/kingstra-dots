@@ -1,0 +1,15 @@
+[Unit]
+Description=Kingstra: nieuwe wallpapers automatisch taggen
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+
+[Path]
+# Afbeeldingen of video's in de wallpapermap (of de map video/) erbij gezet:
+# de dienst geeft ze kleur-, vorm- en fototags (alles lokaal, geen internet
+# behalve de echte tags voor wallhaven-bestanden).
+PathChanged=%h/Pictures/Wallpapers
+PathChanged=%h/Pictures/Wallpapers/video
+TriggerLimitIntervalSec=10s
+TriggerLimitBurst=20
+
+[Install]
+WantedBy=default.target
