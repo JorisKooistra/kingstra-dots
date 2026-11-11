@@ -365,8 +365,8 @@ Item {
     // Veer-animaties in panelen en het eiland. Standaard aan; Instellingen ›
     // Uiterlijk of `kingstra veren aan|uit` schrijft motion.json.
     property bool springMotion: true
-    // Hoe ver een veer doorschiet (OutBack-overshoot; Qt-standaard is 1.70).
-    readonly property real springOvershoot: 1.25
+    // Hoe ver een veer doorschiet (OutBack-overshoot; 1.7 ≈ 10% voorbij het doel).
+    readonly property real springOvershoot: 1.7
     FileView {
         id: motionView
         path: Quickshell.env("HOME") + "/.local/state/kingstra/motion.json"
