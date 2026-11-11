@@ -1044,11 +1044,19 @@ def trash(path):
     if folder not in path.parents or not path.is_file() or path.suffix.lower() not in IMAGES | VIDEOS:
         raise ValueError("Alleen bestanden uit je wallpapermap kunnen weg")
     current = current_wallpaper()
-    if current and Path(current).resolve() == path:
-        raise ValueError("Deze wallpaper is in gebruik; kies eerst een andere")
     gio = shutil.which("gio")
     if not gio:
         raise ValueError("De prullenbak is niet beschikbaar")
+    if current and Path(current).resolve() == path:
+        if path.suffix.lower() not in VIDEOS:
+            raise ValueError("Deze wallpaper is in gebruik; kies eerst een andere")
+        # Actieve video: stoppen en de laatste foto terugzetten, dan weggooien.
+        emit("progress", stage="apply", label="Video stoppen, vorige foto terugzetten…", percent=-1)
+        helper = Path(__file__).resolve().parents[2] / "wallpaper/kingstra-wallpaper"
+        env = dict(os.environ, PATH=str(HOME / ".local/bin") + ":" + os.environ.get("PATH", ""))
+        subprocess.run(["bash", str(helper), "stop-video"], env=env, stdin=subprocess.DEVNULL,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=90)
+        emit("wallpaper-set", path=current_wallpaper())
     files = [str(path)] + [str(extra) for extra in (metadata_file(path),) if extra.is_file()]
     result = subprocess.run([gio, "trash", *files], capture_output=True)
     if result.returncode: raise ValueError("Naar de prullenbak verplaatsen is niet gelukt")

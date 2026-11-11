@@ -441,7 +441,8 @@ PanelWindow {
         operationLabel = event.label + (operationPercent >= 0 ? " " + operationPercent + "%" : "");
     }
     function canRemove(item) {
-        return !!item.path && item.path !== currentPath;
+        // Een actieve video mag weg: de vorige foto komt dan terug.
+        return !!item.path && (item.path !== currentPath || item.type === "video");
     }
     // Eerste klik vraagt bevestiging, tweede klik (binnen 5 s) gooit weg.
     property string confirmRemovePath: ""
@@ -819,6 +820,8 @@ PanelWindow {
                 root.operationProgress(event);
                 if (event.event === "error")
                     root.showMessage(event.message);
+                if (event.event === "wallpaper-set" && event.path)
+                    root.currentPath = event.path;
                 if (event.event === "removed") {
                     if (!event.id && root.previewOpen)
                         root.previewOpen = false;
