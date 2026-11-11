@@ -13,6 +13,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Aanpassen in `~/.config/kingstra/batterij.json`, bijvoorbeeld `{"waarschuwingen": [25, 10, 5], "slapen": 3, "actie": "suspend"}` (`"slapen": 0` = nooit vanzelf slapen, `"aan": false` = helemaal uit). Proberen: `kingstra-battery-watch test 20|10|5|slapen` (slapen telt af maar slaapt niet).
 
 ### Reparaties (11 nov)
+- Bestanden toonde de dataschijven dubbel: als bladwijzer "data1/2/3" én onder Apparaten als "Data 1/2/3". De installer/updater zet geen bladwijzer meer voor een schijf die /etc/fstab al zichtbaar maakt (`x-gvfs-show`) en haalt zo'n eerder gezette bladwijzer weg.
 - Snelle instellingen opent weer in één beweging: de indeling en de laatste meting (helderheid, volume) staan er meteen, in plaats van dat het paneel in stappen groeide.
 - Vanzelf › "Zuinig op batterij" zag de batterij van een draadloze muis aan voor een laptopbatterij. Apparaatbatterijen tellen niet meer mee; wat de batterijstand overschrijft, wordt buiten /run bewaard zodat een herstart het energieprofiel niet op zuinig laat hangen.
 - Zen-modus overleeft geen herstart meer: stond hij nog aan, dan zet het inloggen alles terug (bureaubladwidgets, niet storen, balk).

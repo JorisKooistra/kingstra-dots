@@ -193,12 +193,15 @@ DESKTOP
 }
 
 # Data-schijven (/mnt/data*) als vaste plek in de zijbalk van Nautilus en
-# elke open-/opslaan-dialoog. Bestaande bladwijzers blijven staan.
+# elke open-/opslaan-dialoog. Een schijf die /etc/fstab al zichtbaar maakt
+# (x-gvfs-show) staat al onder Apparaten; een bladwijzer zou hem dubbel tonen,
+# dus die krijgt er geen en een eerder gezette bladwijzer gaat weer weg.
+# Andere bladwijzers blijven staan.
 _phase11_disk_bookmarks() {
     local bookmarks="$HOME/.config/gtk-3.0/bookmarks"
     local mnt label
     if "${DRY_RUN:-false}"; then
-        log_dry "Data-schijven zouden als bladwijzer worden toegevoegd"
+        log_dry "Data-schijven zouden als bladwijzer worden bijgewerkt"
         return 0
     fi
     command -v findmnt &>/dev/null || return 0
@@ -206,6 +209,13 @@ _phase11_disk_bookmarks() {
     touch "$bookmarks"
     for mnt in /mnt/data*; do
         [[ -d "$mnt" ]] && findmnt -rn "$mnt" &>/dev/null || continue
+        if findmnt --fstab -rn -o OPTIONS "$mnt" 2>/dev/null | grep -q 'x-gvfs-show'; then
+            if grep -q "^file://$mnt\( \|$\)" "$bookmarks"; then
+                sed -i "\#^file://$mnt\( \|$\)#d" "$bookmarks"
+                log_ok "Dubbele bladwijzer weg: $mnt (staat al onder Apparaten)"
+            fi
+            continue
+        fi
         grep -q "^file://$mnt\( \|$\)" "$bookmarks" && continue
         label="$(findmnt -rn -o LABEL "$mnt" 2>/dev/null | head -n1)"
         [[ -n "$label" ]] || label="$(basename "$mnt")"
