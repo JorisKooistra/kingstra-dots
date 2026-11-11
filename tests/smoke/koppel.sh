@@ -3,6 +3,8 @@
 # bestanden sturen. ssh/wl-paste/wl-copy/notify-send zijn stubs; de "andere
 # machine" is een tweede HOME in een tijdelijke map.
 set -euo pipefail
+# Nooit de echte config raken: alles via de nep-HOME hieronder.
+unset XDG_CONFIG_HOME XDG_RUNTIME_DIR WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 STUB="$T/stub"; mkdir -p "$STUB"

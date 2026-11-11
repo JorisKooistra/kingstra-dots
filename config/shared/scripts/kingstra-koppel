@@ -217,7 +217,7 @@ diensten_aan() {
 # Koppelen (op de machine waar je het typt)
 # ---------------------------------------------------------------------------
 cmd_koppel() {
-    local host="$1" kant="${2:-links}" user="${KOPPEL_USER:-$USER}"
+    local host="$1" kant="${2:-$(cat "$STATE_DIR/koppel-kant" 2>/dev/null || echo links)}" user="${KOPPEL_USER:-$USER}"
     case "$kant" in links|rechts|boven|onder) ;; *) die "kant moet links, rechts, boven of onder zijn" ;; esac
     command -v lan-mouse >/dev/null 2>&1 || die "lan-mouse ontbreekt; draai eerst: kingstra update dotfiles"
     command -v wl-copy >/dev/null 2>&1   || die "wl-clipboard ontbreekt; draai eerst: kingstra update dotfiles"

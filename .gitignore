@@ -110,3 +110,7 @@ config/kingstra/backup-exclude.local.txt
 
 # Door de installer geschreven (absoluut pad naar de deelkiezer)
 config/hypr/xdph.conf
+
+# kingstra koppel: per machine (~/.config/kingstra is een symlink naar config/kingstra).
+config/kingstra/koppeling.json
+config/kingstra/koppel-kant
