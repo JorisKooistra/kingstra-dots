@@ -60,11 +60,14 @@ class LayoutTests(unittest.TestCase):
             module.main(["tileplace", "0xABC", "0xDEF", "garbage"])
 
     def test_floating_window_move_keeps_it_floating(self):
-        with patch.object(module, "query", return_value=[{"address":"0xABC", "floating":True}]), \
-             patch.object(module, "hypr") as hypr, patch.object(module, "dispatch") as dispatch:
-            module.main(["movefloating", "0xABC", "120", "80"])
-            hypr.assert_called_once_with("dispatch", 'hl.dsp.window.move({x=120,y=80,relative=false,window="address:0xABC"})')
-            dispatch.assert_called_once_with("snapshot")
+        for layout, snapshots in (("lua:hyprscroll2d", 1), ("dwindle", 0)):
+            with patch.object(module, "query", return_value=[{"address":"0xABC", "floating":True}]), \
+                 patch.object(module, "current", return_value={"layout": layout}), \
+                 patch.object(module, "hypr") as hypr, patch.object(module, "dispatch") as dispatch:
+                module.main(["movefloating", "0xABC", "120", "80"])
+                hypr.assert_called_once_with("dispatch", 'hl.dsp.window.move({x=120,y=80,relative=false,window="address:0xABC"})')
+                # Alleen het ruimtelijk werkvlak kent "snapshot".
+                self.assertEqual(dispatch.call_count, snapshots, layout)
 
     def test_selecting_a_floating_window_does_not_center_the_tiled_camera(self):
         with patch.object(module, "query", return_value=[{"address":"0xABC", "floating":True}]), \
