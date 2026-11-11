@@ -58,7 +58,7 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - Meldingen van de telefoon in het paneel: wegvegen, en antwoorden waar de app dat toestaat.
 - Het paneel opent meteen met de laatst bekende stand en haalt alles nu via D-Bus op in plaats van kdeconnect-cli (was ruim 2 seconden "Zoeken…").
 - Kaart **Scherm** in hetzelfde paneel, met status en één knop per richting:
-  - **Telefoon op pc** (scrcpy): de eerste keer met kabel en USB-foutopsporing, daarna via wifi. Verschijnt als zwevend venster "Telefoon"; het scherm van de telefoon gaat zolang uit (spaart batterij) en bij stoppen gaat hij op slot.
+  - **Telefoon op pc** (scrcpy): de eerste keer met kabel en USB-foutopsporing, daarna via wifi. Verschijnt als zwevend venster "Telefoon"; het scherm van de telefoon gaat zolang uit (spaart batterij) en bij stoppen gaat het meteen weer aan.
   - **Pc op telefoon** (wayvnc): alleen op het Tailscale-adres, dus alleen je eigen apparaten. Op de telefoon een VNC-app zoals AVNC. Blijft aan tot je op Stoppen drukt.
 - Installer zet sshfs, scrcpy en wayvnc er optioneel bij.
 - **Telefoonknop in de balken:** in de rail (onderdeel "Telefoon", te verplaatsen in de rail-indeling), in de statusstrip zonder rail en in de Matte-balk naast Bluetooth. Toont de batterij onder het icoon en het aantal meldingen als bolletje; grijs als de telefoon weg is. Klik opent het paneel Telefoon; bestanden op de railknop slepen stuurt ze naar de telefoon. Alleen zichtbaar als er een gekoppelde telefoon is. De stand komt elke 20 s van de pc zelf; KDE Connect wordt er niet door gestart.

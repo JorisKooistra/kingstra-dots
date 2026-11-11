@@ -11,8 +11,9 @@
 # Telefoon → pc: scrcpy via adb. De eerste keer met een kabel (USB-
 # foutopsporing aan); daarna zet dit script adb op wifi en onthoudt het
 # IP-adres, zodat het voortaan zonder kabel werkt. Zuinig: het scherm van de
-# telefoon gaat uit zolang hij op de pc staat, en bij sluiten gaat hij op slot. Na een herstart van de
-# telefoon is één keer de kabel weer nodig (Android zet adb-wifi dan uit).
+# telefoon gaat uit zolang hij op de pc staat, en bij sluiten gaat het meteen
+# weer aan. Na een herstart van de telefoon is één keer de kabel weer nodig
+# (Android zet adb-wifi dan uit).
 #
 # Pc → telefoon: wayvnc deelt het scherm met de muis erop. Het luistert
 # alleen op het Tailscale-adres van deze pc, dus alleen je eigen apparaten
@@ -57,8 +58,25 @@ phone_wifi_ip() {
         | awk '{split($4, a, "/"); print a[1]; exit}' | tr -d '\r'
 }
 
-# Scherm van de telefoon uit tijdens spiegelen, op slot bij sluiten.
-SCRCPY_OPTS=(--turn-screen-off --power-off-on-close --max-fps=60)
+# Scherm van de telefoon uit tijdens spiegelen; bij sluiten zet scrcpy het
+# zelf weer aan, en phone_wake() zorgt dat het echt aan staat.
+SCRCPY_OPTS=(--turn-screen-off --max-fps=60)
+
+# Telefoonscherm aan na het spiegelen (ook als scrcpy is afgebroken).
+phone_wake() {
+    local dev="$1"
+    [[ -n "$dev" ]] || return 0
+    timeout 5 adb -s "$dev" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+}
+
+# scrcpy draaien en daarna het telefoonscherm weer aanzetten.
+run_scrcpy() {
+    local dev="$1"; shift
+    local rc=0
+    scrcpy --window-title=Telefoon "${SCRCPY_OPTS[@]}" "$@" || rc=$?
+    phone_wake "$dev"
+    return "$rc"
+}
 
 mirror_stop() { mirror_running && pkill -u "$UID" -x scrcpy; return 0; }
 
@@ -80,13 +98,18 @@ mirror() {
         if [[ -n "$ip" ]]; then
             printf '%s\n' "$ip" > "$IP_FILE"
             say "󰍹" "Telefoon gevonden" "Volgende keer werkt het ook zonder kabel." 4000
-            exec scrcpy --tcpip --serial="$serial" --window-title=Telefoon "${SCRCPY_OPTS[@]}"
+            run_scrcpy "$ip:5555" --tcpip --serial="$serial"
+            local rc=$?
+            # Kabel zit er misschien nog in: dan ook via usb wekken.
+            phone_wake "$serial"
+            return "$rc"
         fi
-        exec scrcpy --serial="$serial" --window-title=Telefoon "${SCRCPY_OPTS[@]}"
+        run_scrcpy "$serial" --serial="$serial"
+        return $?
     fi
     ip="$(cat "$IP_FILE" 2>/dev/null)"
     if [[ -n "$ip" ]]; then
-        if scrcpy --tcpip="$ip:5555" --window-title=Telefoon "${SCRCPY_OPTS[@]}"; then
+        if run_scrcpy "$ip:5555" --tcpip="$ip:5555"; then
             return 0
         fi
         say "󰍹" "Telefoon niet bereikt via wifi" \
