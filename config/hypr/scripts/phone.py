@@ -162,7 +162,8 @@ def device_info(dev_id, name):
 
     conn = get_all(base + "/connectivity_report", "org.kde.kdeconnect.device.connectivity_report")
     if conn:
-        dev["network"] = str(conn.get("cellularNetworkType") or "")
+        net = str(conn.get("cellularNetworkType") or "")
+        dev["network"] = "" if net.lower() in ("unknown", "none", "") else net
         sig = conn.get("cellularNetworkStrength")
         dev["signal"] = sig if isinstance(sig, int) else -1
 
