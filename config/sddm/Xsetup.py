@@ -11,6 +11,17 @@ import subprocess
 import sys
 
 PROFILE = Path("/usr/share/sddm/themes/kingstra/displays.json")
+# SDDM gooit stderr van dit script weg; daarom ook naar de journal en een
+# momentopname van xrandr in /run (alleen-lezen voor diagnose).
+SNAPSHOT = Path("/run/kingstra-sddm-xsetup.txt")
+
+
+def log(message):
+    print(f"kingstra-sddm-xsetup: {message}", file=sys.stderr)
+    try:
+        subprocess.run(["/usr/bin/logger", "-t", "kingstra-sddm-xsetup", "--", str(message)], timeout=3)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 def edid_ids(data):
@@ -101,7 +112,7 @@ def display_command(profile, outputs):
     for index, monitor in enumerate(monitors):
         name = pairs.get(index)
         if not name:
-            print(f"kingstra-sddm-xsetup: geen X-uitgang voor {monitor.get('name')}", file=sys.stderr)
+            log(f"geen X-uitgang voor {monitor.get('name')}")
             continue
         # Xrandr krijgt alleen vaste opties en gecontroleerde waarden als argv.
         x, y = int(monitor["x"]), int(monitor["y"])
@@ -110,7 +121,7 @@ def display_command(profile, outputs):
         scale = float(monitor.get("scale", 1))
         if not (0 < width <= 32768 and 0 < height <= 32768 and 0.25 <= scale <= 8 and 0 <= transform <= 3):
             continue
-        print(f"kingstra-sddm-xsetup: {monitor.get('name')} -> {name} op {x}x{y}", file=sys.stderr)
+        log(f"{monitor.get('name')} ({monitor.get('serial', '').strip()}) -> {name} op {x}x{y}")
         rows.append((name, x, y, width, height, transform, scale, monitor.get("focused", False)))
     command = ["/usr/bin/xrandr"]
     min_x = min((r[1] for r in rows), default=0)
@@ -129,16 +140,33 @@ def main():
         return
     try:
         profile = json.loads(PROFILE.read_text())
+    except (OSError, ValueError) as error:
+        log(f"fout in {PROFILE}: {error}")
+        return
+    # Schermen en toetsenbord los van elkaar: zonder xrandr (pakket xorg-xrandr
+    # ontbrak op 11 november) bleef ook de toetsenbordindeling achterwege.
+    try:
         result = subprocess.run(["/usr/bin/xrandr", "--props"], capture_output=True, text=True, timeout=5, check=True)
-        command = display_command(profile, outputs_from_xrandr(result.stdout))
+        outputs = outputs_from_xrandr(result.stdout)
+        log("X-uitgangen: " + ", ".join(f"{n}={ids}" for n, ids in outputs.items()))
+        command = display_command(profile, outputs)
+        log("commando: " + " ".join(command))
+        try:
+            SNAPSHOT.write_text(result.stdout + "\n# commando: " + " ".join(command) + "\n")
+        except OSError:
+            pass
         if len(command) > 1:
-            subprocess.run(command, timeout=10, check=True)
+            done = subprocess.run(command, timeout=10, capture_output=True, text=True)
+            log(f"xrandr klaar (code {done.returncode}) {done.stderr.strip()}")
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
+        log(f"schermindeling mislukt (is xorg-xrandr geïnstalleerd?): {error}")
+    try:
         keyboard = profile.get("keyboard", {})
         layout, variant = keyboard.get("layout", "us"), keyboard.get("variant", "")
         if re.fullmatch(r"[a-zA-Z0-9_,+-]+", layout) and re.fullmatch(r"[a-zA-Z0-9_,+-]*", variant):
             subprocess.run(["/usr/bin/setxkbmap", "-layout", layout, "-variant", variant], timeout=5, check=True)
-    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
-        print(f"kingstra-sddm-xsetup: {error}", file=sys.stderr)
+    except (OSError, AttributeError, subprocess.SubprocessError) as error:
+        log(f"toetsenbord instellen mislukt: {error}")
 
 
 if __name__ == "__main__":

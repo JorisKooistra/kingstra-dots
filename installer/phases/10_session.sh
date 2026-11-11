@@ -46,7 +46,8 @@ phase_run() {
 # ---------------------------------------------------------------------------
 
 _phase10_install_sddm() {
-    pacman_install sddm
+    # xorg-xrandr: kingstra-sddm-xsetup zet daarmee de schermindeling van het inlogscherm.
+    pacman_install sddm xorg-xrandr
 
     if [[ "${ENABLE_SDDM:-true}" != "true" ]]; then
         return 0

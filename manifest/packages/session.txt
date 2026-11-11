@@ -10,6 +10,8 @@ hypridle
 
 # SDDM (login manager)
 sddm
+# Schermindeling van het inlogscherm (kingstra-sddm-xsetup)
+xorg-xrandr
 
 # SDDM theme — sugar-candy stijl
 aur:sddm-sugar-candy-git
