@@ -20,7 +20,7 @@
 #   kingstra koppel vergeet    koppeling op deze machine weghalen
 #
 # Achter de schermen (via ssh door de andere machine aangeroepen):
-#   _bevestig, _klembord-ontvang, _melding, _downloads, _start, _kant
+#   _bevestig, _klembord-ontvang, _klembord-bestanden, _melding, _downloads, _start, _kant
 # =============================================================================
 set -uo pipefail
 USER="${USER:-$(id -un)}"
@@ -35,6 +35,9 @@ LM_CERT="$LM_DIR/lan-mouse.pem"
 RUN_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 LAST_HASH="$RUN_DIR/kingstra-klembord.laatst"
 MAX_BYTES=$((20 * 1024 * 1024))
+# Gekopieerde bestanden gaan mee tot deze omvang; groter → "Naar … sturen".
+MAX_BESTANDEN=$((2 * 1024 * 1024 * 1024))
+KLEMBORD_MAP="${XDG_CACHE_HOME:-$HOME/.cache}/kingstra/klembord"
 UNITS=(kingstra-lan-mouse.service kingstra-klembord.service)
 
 say()  { printf '  %s\n' "$*"; }
@@ -312,6 +315,10 @@ cmd_klembord_stuur() {
     types="$(wl-paste --list-types 2>/dev/null)" || exit 0
     # Wachtwoordmanagers markeren geheime kopieën; die gaan niet over het netwerk.
     grep -qx 'x-kde-passwordManagerHint' <<<"$types" && exit 0
+    # Gekopieerde bestanden (Bestanden/Nautilus e.d.): de bestanden zelf gaan mee.
+    if grep -qxE 'x-special/gnome-copied-files|text/uri-list' <<<"$types"; then
+        klembord_bestanden_stuur "$types" && exit 0
+    fi
     if grep -qx 'image/png' <<<"$types"; then
         mime='image/png'
     elif grep -qE '^(text/plain|UTF8_STRING|STRING|TEXT)' <<<"$types"; then
@@ -333,6 +340,85 @@ cmd_klembord_stuur() {
     [[ -f "$LAST_HASH" && "$(cat "$LAST_HASH")" == "$hash" ]] && exit 0
     printf '%s\n' "$hash" > "$LAST_HASH"
     peer_ssh "$REMOTE_SELF _klembord-ontvang '$mime'" <"$tmp" >/dev/null 2>&1 || true
+}
+
+# Lokale paden uit het klembord (x-special/gnome-copied-files of text/uri-list),
+# één per regel. Niets als er geen lokale bestanden in staan.
+klembord_paden() {
+    local types="$1" raw
+    if grep -qx 'x-special/gnome-copied-files' <<<"$types"; then
+        raw="$(wl-paste -n -t x-special/gnome-copied-files 2>/dev/null)"
+    else
+        raw="$(wl-paste -n -t text/uri-list 2>/dev/null)"
+    fi
+    python3 -c '
+import sys, os
+from urllib.parse import urlparse, unquote
+for line in sys.stdin.read().replace("\r", "").split("\n"):
+    line = line.strip()
+    if not line or line.startswith("#") or line in ("copy", "cut"):
+        continue
+    u = urlparse(line)
+    if u.scheme != "file" or u.netloc not in ("", "localhost"):
+        continue
+    p = unquote(u.path)
+    if os.path.exists(p):
+        print(p)' <<<"$raw"
+}
+
+# Stuurt gekopieerde bestanden naar een vaste klembordmap aan de andere kant;
+# daar komen ze als "gekopieerde bestanden" op het klembord, zodat Ctrl+V in
+# Bestanden ze plakt. Geeft 1 terug als er geen lokale bestanden waren (dan
+# gaat het klembord als tekst verder).
+klembord_bestanden_stuur() {
+    local types="$1" paden=() p totaal hash label
+    mapfile -t paden < <(klembord_paden "$types")
+    [[ ${#paden[@]} -gt 0 && -n "${paden[0]}" ]] || return 1
+    # Wat we zelf net ontvangen hebben niet terugsturen.
+    local eigen="$KLEMBORD_MAP/"
+    local alle_eigen=1
+    for p in "${paden[@]}"; do [[ "$p/" == "$eigen"* ]] || alle_eigen=0; done
+    (( alle_eigen )) && return 0
+    hash="$(for p in "${paden[@]}"; do stat -c '%n %s %Y' -- "$p"; done | sha256sum | awk '{print $1}')"
+    [[ -f "$LAST_HASH" && "$(cat "$LAST_HASH")" == "bestanden-$hash" ]] && return 0
+    printf 'bestanden-%s\n' "$hash" > "$LAST_HASH"
+    label="$(toon "$(state_get label)")"
+    totaal="$(du -scb -- "${paden[@]}" 2>/dev/null | tail -n1 | awk '{print $1}')"
+    if (( ${totaal:-0} > MAX_BESTANDEN )); then
+        notify-send -a Kingstra -i dialog-information "Niet naar $label gekopieerd" \
+            "Meer dan $((MAX_BESTANDEN / 1024 / 1024 / 1024)) GB; gebruik ‘Naar $label sturen’" 2>/dev/null || true
+        return 0
+    fi
+    local args=()
+    for p in "${paden[@]}"; do args+=(-C "$(dirname -- "$p")" "./$(basename -- "$p")"); done
+    # Grote stapels: even laten weten dat het onderweg is.
+    (( totaal > 50 * 1024 * 1024 )) && notify-send -a Kingstra -i folder-upload "Naar $label" \
+        "${#paden[@]} bestand(en) klaarzetten om te plakken…" 2>/dev/null
+    if tar -cf - "${args[@]}" 2>/dev/null | peer_ssh "$REMOTE_SELF _klembord-bestanden" >/dev/null 2>&1; then
+        (( totaal > 50 * 1024 * 1024 )) && notify-send -a Kingstra -i emblem-ok "Naar $label" \
+            "Klaar: plak met Ctrl+V in Bestanden op $label" 2>/dev/null
+    else
+        rm -f "$LAST_HASH"
+    fi
+    return 0
+}
+
+# Draait op de ontvangende machine: tar op stdin uitpakken in de klembordmap en
+# de bestanden als gekopieerde bestanden op het klembord zetten.
+cmd_klembord_bestanden() {
+    sessie_env
+    local nieuw="$KLEMBORD_MAP.nieuw" lijst=() f payload
+    rm -rf "$nieuw"; mkdir -p "$nieuw"
+    tar -xf - -C "$nieuw" || { rm -rf "$nieuw"; exit 1; }
+    rm -rf "$KLEMBORD_MAP"; mv "$nieuw" "$KLEMBORD_MAP"
+    mapfile -t lijst < <(find "$KLEMBORD_MAP" -mindepth 1 -maxdepth 1 | sort)
+    [[ ${#lijst[@]} -gt 0 ]] || exit 0
+    payload="$(python3 -c '
+import sys
+from urllib.parse import quote
+print("copy\n" + "\n".join("file://" + quote(p) for p in sys.argv[1:]), end="")' "${lijst[@]}")"
+    printf 'bestanden-ontvangen\n' > "$LAST_HASH"
+    setsid -f sh -c 'printf %s "$1" | wl-copy -t x-special/gnome-copied-files' _ "$payload" </dev/null >/dev/null 2>&1
 }
 
 cmd_klembord_ontvang() {
@@ -583,6 +669,7 @@ case "${1:-status}" in
     klembord) cmd_klembord ;;
     _klembord-stuur) cmd_klembord_stuur ;;
     _klembord-ontvang) shift; cmd_klembord_ontvang "$@" ;;
+    _klembord-bestanden) cmd_klembord_bestanden ;;
     _bevestig) shift; cmd_bevestig "$@" ;;
     _melding) shift; cmd_melding "$@" ;;
     _downloads) cmd_downloads ;;

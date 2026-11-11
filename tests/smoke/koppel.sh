@@ -33,11 +33,17 @@ cp -r "${args[@]}" "${dest/#$T\/$peer\/home/$T/$peer/home}"
 S
 cat > "$STUB/wl-paste" <<'S'
 #!/usr/bin/env bash
-case "$1" in --list-types) printf 'text/plain;charset=utf-8\nUTF8_STRING\n' ;; *) cat "$HOME/clip" ;; esac
+if [[ "$1" == --list-types ]]; then
+    if [[ -f "$HOME/clip.type" ]]; then cat "$HOME/clip.type"; else printf 'text/plain;charset=utf-8\nUTF8_STRING\n'; fi
+else
+    cat "$HOME/clip"
+fi
 S
 cat > "$STUB/wl-copy" <<'S'
 #!/usr/bin/env bash
+t=""; [[ "${1:-}" == -t ]] && t="$2"
 cat > "$HOME/clip"
+if [[ "$t" == x-special/* ]]; then printf '%s\n' "$t" > "$HOME/clip.type"; else rm -f "$HOME/clip.type"; fi
 S
 printf '#!/bin/sh\nexit 0\n' > "$STUB/notify-send"
 printf '#!/bin/sh\nexit 0\n' > "$STUB/systemctl"
@@ -66,6 +72,26 @@ echo "terug van B" > "$T/B/home/clip"
 side B _klembord-stuur </dev/null
 sleep 0.5
 [[ "$(cat "$T/A/home/clip")" == "terug van B" ]] || { echo "FOUT: A kreeg B's klembord niet"; exit 1; }
+
+# Gekopieerde bestanden (Nautilus): de bestanden zelf komen op B klaar om te plakken
+mkdir -p "$T/A/home/map met spatie/sub"
+echo een > "$T/A/home/map met spatie/sub/a.txt"; echo twee > "$T/A/home/b é.txt"
+printf 'copy\nfile://%s\nfile://%s' "${T// /%20}/A/home/map%20met%20spatie" "${T// /%20}/A/home/b%20%C3%A9.txt" > "$T/A/home/clip"
+printf 'x-special/gnome-copied-files\ntext/uri-list\ntext/plain;charset=utf-8\n' > "$T/A/home/clip.type"
+rm -f "$T/B/home/clip"
+side A _klembord-stuur </dev/null
+for i in 1 2 3 4 5 6 7 8 9 10; do [[ -f "$T/B/home/clip" ]] && break; sleep 0.2; done
+km="$T/B/home/.cache/kingstra/klembord"
+[[ "$(cat "$km/map met spatie/sub/a.txt" 2>/dev/null)" == een && -f "$km/b é.txt" ]] \
+    || { echo "FOUT: gekopieerde bestanden niet aangekomen"; ls -R "$T/B/home/.cache" 2>&1; exit 1; }
+grep -qx 'x-special/gnome-copied-files' "$T/B/home/clip.type" || { echo "FOUT: B kreeg geen bestanden op het klembord"; exit 1; }
+[[ "$(head -n1 "$T/B/home/clip")" == copy ]] && grep -q "file://.*/klembord/b%20%C3%A9.txt" "$T/B/home/clip" \
+    || { echo "FOUT: klembord op B klopt niet:"; cat "$T/B/home/clip"; exit 1; }
+# B's watcher ziet zijn eigen klembordmap: niet terugsturen
+n="$(wc -l < "$T/log")"
+side B _klembord-stuur </dev/null
+[[ "$(wc -l < "$T/log")" == "$n" ]] || { echo "FOUT: B stuurde ontvangen bestanden terug"; exit 1; }
+rm -f "$T/A/home/clip.type" "$T/B/home/clip.type"
 
 # Bestand sturen
 echo inhoud > "$T/A/home/test bestand.txt"

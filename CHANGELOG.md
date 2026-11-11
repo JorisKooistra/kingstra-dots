@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Koppeling: gekopieerde bestanden plakken op de andere machine
+- Bestanden of mappen die je in Bestanden kopieert (Ctrl+C) gaan nu zelf mee naar de gekoppelde machine en staan daar klaar om met Ctrl+V in Bestanden te plakken. Eerder ging alleen het pad als tekst mee, waardoor plakken niets deed.
+- Ze worden klaargezet in `~/.cache/kingstra/klembord` aan de andere kant (alleen de laatste kopie). Boven 2 GB gaat er niets mee; gebruik dan ‘Naar … sturen’. Boven 50 MB krijg je een melding als het klaar is.
+- Tekst en afbeeldingen werken zoals voorheen.
+
 ### Opruimen: kapotte koppelingen en rommel in de repo
 - De updater haalt nu bij elke run kapotte symlinks weg in `~`, `~/.config`, `~/.local/bin` en `~/.local/share/applications` die naar een map in kingstra-dots wezen die er niet meer is (zoals `~/.config/swaync`). Alleen dode links die echt in de repo wezen; verder wordt niets aangeraakt.
 - Een per ongeluk meegecommit shellcheck-pakket (`.whl`) is uit de repo-root gehaald.
