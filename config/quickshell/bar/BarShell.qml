@@ -19,7 +19,7 @@ Variants {
 
         // New theme state is rendered by ShellSurface. Legacy state keeps this
         // window until it is migrated by kingstra-theme-switch.
-        visible: !ThemeConfig.barZoneSchemaLoaded
+        visible: ThemeConfig.themeFileParsed && !ThemeConfig.barZoneSchemaLoaded
         readonly property bool runtimeActive: visible
 
         required property var modelData

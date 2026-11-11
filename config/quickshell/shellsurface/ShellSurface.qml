@@ -12,6 +12,18 @@ import ".."
 Scope {
     id: shellSurface
 
+    // Overleeft een zachte herlaadactie (bestandswijziging of
+    // `call shell reload`): de intro speelt dan niet opnieuw en de
+    // ruimtereservering bovenaan houdt zijn laatst bekende hoogte, ook als
+    // theme.json in de nieuwe instantie nog niet gelezen is.
+    PersistentProperties {
+        id: surfacePersist
+        reloadableId: "kingstraShellSurfacePersist"
+        property bool introPlayed: false
+        property bool zonesKnown: false
+        property int stripHeight: 0
+    }
+
     readonly property bool neonHudActive: String(ThemeConfig.theme || ThemeConfig.styleFamily || "").toLowerCase() === "neon"
 
     HudTelemetry {
@@ -51,21 +63,21 @@ Scope {
 
                 // ── Intro ────────────────────────────────────────────────
                 // Hyprland liet deze schermvullende laag met een slide +
-                // overshoot van boven invliegen. Die laaganimatie staat nu uit
-                // (rules.lua); de shell komt zelf binnen: het kader zakt vanaf
-                // net buiten de schermranden rustig op zijn plek terwijl het
-                // opkomt, zonder doorschieten. Bij een themawissel speelt een
-                // zachte versie, zodat de nieuwe vorm "neerstrijkt".
+                // overshoot van boven invliegen. Die laaganimatie staat uit
+                // (rules.lua). Bij het opstarten komt de shell alleen rustig
+                // op (geen zoom of verschuiving meer); na een herlaadactie
+                // staat hij er meteen. Bij een themawissel speelt een zachte
+                // versie, zodat de nieuwe vorm "neerstrijkt".
                 // Alleen opacity/scale van het contentItem: vormen, blobs en
                 // alle bestaande animaties blijven ongemoeid.
-                property real introOpacity: 0
-                property real introScale: 1.04
-                property bool introSettled: false
+                property real introOpacity: surfacePersist.introPlayed ? 1 : 0
+                property real introScale: 1
+                property bool introSettled: surfacePersist.introPlayed
 
                 function playIntro(soft) {
                     introAnim.stop();
                     introOpacity = soft ? 0.55 : 0;
-                    introScale = soft ? 1.012 : 1.04;
+                    introScale = soft ? 1.012 : 1;
                     introAnim.soft = soft;
                     introAnim.start();
                 }
@@ -86,12 +98,12 @@ Scope {
                     property bool soft: false
                     NumberAnimation {
                         target: surfaceWindow; property: "introOpacity"; to: 1
-                        duration: ThemeConfig.duration(introAnim.soft ? 380 : 560)
+                        duration: ThemeConfig.duration(introAnim.soft ? 380 : 320)
                         easing.type: Easing.OutCubic
                     }
                     NumberAnimation {
                         target: surfaceWindow; property: "introScale"; to: 1
-                        duration: ThemeConfig.duration(introAnim.soft ? 520 : 860)
+                        duration: ThemeConfig.duration(introAnim.soft ? 520 : 0)
                         easing.type: Easing.OutQuint
                     }
                     onFinished: {
@@ -99,10 +111,11 @@ Scope {
                         surfaceWindow.introOpacity = 1;
                         surfaceWindow.introScale = 1;
                         surfaceWindow.introSettled = true;
+                        surfacePersist.introPlayed = true;
                     }
                 }
 
-                Component.onCompleted: playIntro(false)
+                Component.onCompleted: if (!surfacePersist.introPlayed) playIntro(false)
 
                 Connections {
                     target: ThemeConfig
@@ -428,19 +441,42 @@ Scope {
                     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
                 }
 
+                // Na een zachte herlaadactie is theme.json even nog niet
+                // gelezen; dan houdt de strip de laatst bekende hoogte vast in
+                // plaats van te verdwijnen en terug te komen.
+                readonly property bool stripZoneHeld: !ThemeConfig.barZoneSchemaLoaded
+                    && surfacePersist.zonesKnown && surfacePersist.stripHeight > 0
+                readonly property int stripZoneHeight: stripZoneHeld ? surfacePersist.stripHeight : chrome.stripHeight
+                Binding {
+                    when: ThemeConfig.barZoneSchemaLoaded && ThemeConfig.barStatusStripEnabled
+                        && ThemeConfig.barStatusStripEdge === "top"
+                    target: surfacePersist
+                    property: "stripHeight"
+                    value: chrome.stripHeight
+                    restoreMode: Binding.RestoreNone
+                }
+                Binding {
+                    when: ThemeConfig.barZoneSchemaLoaded
+                    target: surfacePersist
+                    property: "zonesKnown"
+                    value: true
+                    restoreMode: Binding.RestoreNone
+                }
+
                 PanelWindow {
                     screen: surfaceWindow.screen
-                    visible: ThemeConfig.barZoneSchemaLoaded && ThemeConfig.barStatusStripEnabled
+                    visible: surfaceWindow.stripZoneHeld
+                        || (ThemeConfig.barZoneSchemaLoaded && ThemeConfig.barStatusStripEnabled)
                     anchors.left: true
                     anchors.right: true
-                    anchors.top: ThemeConfig.barStatusStripEdge === "top"
-                    anchors.bottom: ThemeConfig.barStatusStripEdge === "bottom"
-                    implicitHeight: chrome.stripHeight
+                    anchors.top: surfaceWindow.stripZoneHeld || ThemeConfig.barStatusStripEdge === "top"
+                    anchors.bottom: !surfaceWindow.stripZoneHeld && ThemeConfig.barStatusStripEdge === "bottom"
+                    implicitHeight: surfaceWindow.stripZoneHeight
                     color: "transparent"
                     mask: Region {}
                     WlrLayershell.namespace: "quickshell:kingstra-shell-strip-reservation"
                     WlrLayershell.layer: WlrLayer.Top
-                    WlrLayershell.exclusiveZone: chrome.stripHeight
+                    WlrLayershell.exclusiveZone: surfaceWindow.stripZoneHeight
                     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
                 }
 

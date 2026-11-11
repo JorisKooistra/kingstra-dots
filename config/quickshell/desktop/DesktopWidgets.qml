@@ -28,6 +28,13 @@ import "../shellsurface"
 Scope {
     id: root
 
+    // Na een zachte herlaadactie van de bar niet opnieuw infaden.
+    PersistentProperties {
+        id: widgetsPersist
+        reloadableId: "kingstraDesktopWidgetsPersist"
+        property bool introPlayed: false
+    }
+
     property bool enabled: true
     property string clockPos: "top-left"
     property bool showMedia: true
@@ -287,21 +294,21 @@ Scope {
 
                 // Komt na het shellkader zacht op in plaats van met Hyprlands
                 // laag-slide mee te vliegen (die staat uit in rules.lua).
-                property real introOpacity: 0
+                property real introOpacity: widgetsPersist.introPlayed ? 1 : 0
                 Binding {
                     target: win.contentItem
                     property: "opacity"
                     value: win.introOpacity
                 }
                 SequentialAnimation {
-                    running: true
+                    running: !widgetsPersist.introPlayed
                     PauseAnimation { duration: ThemeConfig.duration(220) }
                     NumberAnimation {
                         target: win; property: "introOpacity"; to: 1
                         duration: ThemeConfig.duration(620)
                         easing.type: Easing.OutCubic
                     }
-                    ScriptAction { script: win.introOpacity = 1 }
+                    ScriptAction { script: { win.introOpacity = 1; widgetsPersist.introPlayed = true; } }
                 }
 
                 readonly property var nl: Qt.locale("nl_NL")

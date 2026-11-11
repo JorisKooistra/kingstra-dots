@@ -44,6 +44,10 @@ Item {
     property string barStatusStripEdge: "top"
     property int barStatusStripHeight: 40
     property bool barZoneSchemaLoaded: false
+    // Pas true als theme.json gelezen (of ontbrekend) is. Zo flitst de oude
+    // BarShell niet met zijn eigen ruimtereservering op tijdens het opstarten,
+    // waardoor alle vensters omhoog en weer omlaag sprongen.
+    property bool themeFileParsed: false
     property string barTemplate: "auto"
     property int topBarLooseBlocksOverride: -1
     property string barShape: "rounded"
@@ -239,9 +243,11 @@ Item {
         path: Quickshell.env("HOME") + "/.config/quickshell/theme.json"
         watchChanges: true
         preload: true
+        onLoadFailed: root.themeFileParsed = true
         onInternalTextChanged: {
             let txt = __text.trim();
-            if (txt === "" || txt === root.rawJson) return;
+            if (txt === "") { root.themeFileParsed = true; return; }
+            if (txt === root.rawJson) return;
 
             root.rawJson = txt;
             try {
@@ -344,6 +350,7 @@ Item {
                 if (terminal.blur !== undefined) root.terminalBlur = !!terminal.blur;
                 if (terminal.padding !== undefined) root.terminalPadding = root.intOr(terminal.padding, root.terminalPadding);
             } catch (e) {}
+            root.themeFileParsed = true;
         }
     }
 

@@ -1133,6 +1133,9 @@ Item {
             "bash", "-lc",
             "if ! command -v quickshell >/dev/null 2>&1; then echo 'quickshell niet gevonden' >&2; exit 1; fi; " +
             "if [ ! -f \"$HOME/.config/quickshell/TopBar.qml\" ]; then echo 'TopBar.qml niet gevonden' >&2; exit 1; fi; " +
+            // Eerst zacht herladen in hetzelfde proces: vensters en
+            // ruimtereserveringen blijven staan, er springt niets.
+            "if pgrep -f 'quickshell.*[T]opBar.qml' >/dev/null 2>&1 && timeout 3 quickshell ipc -p \"$HOME/.config/quickshell/TopBar.qml\" call shell reload >/dev/null 2>&1; then exit 0; fi; " +
             "pkill -f 'quickshell.*[T]opBar.qml' >/dev/null 2>&1 || true; " +
             "sleep 0.2; " +
             "export QML_IMPORT_PATH=\"$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}\"; " +

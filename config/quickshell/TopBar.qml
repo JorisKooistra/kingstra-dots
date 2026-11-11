@@ -4,6 +4,7 @@
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import "bar"
 import "shellsurface"
 import "volume"
@@ -20,6 +21,16 @@ ShellRoot {
     LazyLoader { active: true; source: "settings/SpatialOverviewWindow.qml" }
     LazyLoader { active: true; source: "desktop/SpatialDrift.qml" }
     LazyLoader { active: true; source: "desktop/SpatialZoomControl.qml" }
+
+    // Zacht herladen: Quickshell herlaadt de QML in hetzelfde proces en
+    // hergebruikt de bestaande vensters. De ruimtereserveringen blijven dan
+    // staan, dus vensters springen niet omhoog en weer terug zoals bij
+    // stoppen en opnieuw starten. Instellingen › "Alleen de bar herladen"
+    // roept dit aan via `quickshell ipc -p TopBar.qml call shell reload`.
+    IpcHandler {
+        target: "shell"
+        function reload(): void { Quickshell.reload(false) }
+    }
 
     BarShell {}
     ShellSurface {}
