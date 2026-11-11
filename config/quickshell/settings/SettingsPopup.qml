@@ -4437,6 +4437,13 @@ Item {
                                     amount: Math.round(parseFloat(root.editAnimationSpeed) * 100)
                                     onEdited: (newAmount) => root.setEditFloat("editAnimationSpeed", newAmount)
                                 }
+                                // Geldt direct en voor elk thema (geen opslaan nodig).
+                                ChoiceRow {
+                                    label: "Verende panelen"
+                                    options: [{ v: "aan", t: "Aan" }, { v: "uit", t: "Uit" }]
+                                    current: ThemeConfig.springMotion ? "aan" : "uit"
+                                    onPicked: (choice) => Quickshell.execDetached([Quickshell.env("HOME") + "/.local/bin/kingstra", "veren", choice])
+                                }
                                 ChoiceRow {
                                     label: "Bewegingsstijl"
                                     options: [{ v: "calm", t: "Rustig" }, { v: "gentle", t: "Zacht" }, { v: "snappy", t: "Vlot" }, { v: "firm", t: "Strak" }]

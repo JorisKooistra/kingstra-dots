@@ -415,7 +415,13 @@ Item {
     }
     Behavior on width {
         enabled: !root.visualVerticalEdge
-        NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") }
+        NumberAnimation {
+            duration: ThemeConfig.durationToken("spring")
+            // Dichtgaan zonder veer: doorschieten voorbij 0 geeft een
+            // negatieve maat en breekt de vorm.
+            easing.type: root.open ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized")
+            easing.overshoot: ThemeConfig.springOvershoot
+        }
     }
     Behavior on height {
         NumberAnimation {
@@ -424,8 +430,12 @@ Item {
             // onnodig wachttijd aan toe.
             duration: root.visualEntryId === "launcher"
                 ? ThemeConfig.durationToken("fast")
-                : ThemeConfig.durationToken("spatial")
-            easing.type: root.visualVerticalEdge ? ThemeConfig.easingToken("standard") : ThemeConfig.easingToken("emphasized")
+                : ThemeConfig.durationToken("spring")
+            // Ook panelen uit de boven- of onderrand veren nu uit; de
+            // launcher blijft snel en strak.
+            easing.type: root.visualEntryId === "launcher" ? ThemeConfig.easingToken("standard")
+                : (root.open ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"))
+            easing.overshoot: ThemeConfig.springOvershoot
         }
     }
 

@@ -162,6 +162,8 @@ Item {
         let ms = token === "fast" ? 120
                : token === "slow" ? 300
                : token === "spatial" ? 260
+               // Veer: iets langer, zodat het uitlopen te zien is.
+               : token === "spring" ? (springMotion ? 420 : 260)
                : 180;
         return duration(ms);
     }
@@ -172,6 +174,9 @@ Item {
         // spatial-duur leest dat als trillen in plaats van als accent.
         if (token === "emphasized") return Easing.OutQuint;
         if (token === "effects") return Easing.InOutSine;
+        // Veer-animaties (panelen, eiland): licht doorschieten en terugveren.
+        // Uit (motion.json "springs": false) = de oude rustige curve.
+        if (token === "spring") return springMotion ? Easing.OutBack : Easing.OutQuint;
         return Easing.OutCubic;
     }
 
@@ -357,6 +362,24 @@ Item {
             if (JSON.stringify(next) !== JSON.stringify(root.railOverrides)) root.railOverrides = next;
         } catch (e) {}
     }
+    // Veer-animaties in panelen en het eiland. Standaard aan; Instellingen ›
+    // Uiterlijk of `kingstra veren aan|uit` schrijft motion.json.
+    property bool springMotion: true
+    // Hoe ver een veer doorschiet (OutBack-overshoot; Qt-standaard is 1.70).
+    readonly property real springOvershoot: 1.25
+    FileView {
+        id: motionView
+        path: Quickshell.env("HOME") + "/.local/state/kingstra/motion.json"
+        watchChanges: true
+        preload: true
+        printErrors: false
+        onLoaded: {
+            try { root.springMotion = JSON.parse(text() || "{}").springs !== false; } catch (e) {}
+        }
+        onLoadFailed: root.springMotion = true
+        onFileChanged: reload()
+    }
+
     FileView {
         id: railLayoutView
         path: Quickshell.env("HOME") + "/.local/state/kingstra/rail-layout.json"

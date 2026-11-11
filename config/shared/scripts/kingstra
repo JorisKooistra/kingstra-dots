@@ -162,6 +162,26 @@ else:
 json.dump(data, open(path, "w"))
 PY
         ;;
+    veren|springs)
+        # Veer-animaties in panelen en het eiland aan of uit (motion.json).
+        case "${1:-}" in
+            aan|on) value=true ;;
+            uit|off) value=false ;;
+            *) echo "gebruik: kingstra veren aan|uit" >&2; exit 2 ;;
+        esac
+        file="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/motion.json"
+        mkdir -p "$(dirname "$file")"
+        python3 - "$file" "$value" <<'PY'
+import json, sys
+path, value = sys.argv[1], sys.argv[2] == "true"
+try:
+    data = json.load(open(path))
+except Exception:
+    data = {}
+data["springs"] = value
+json.dump(data, open(path, "w"))
+PY
+        ;;
     eiland|island)
         # Kingstra-eiland: wat het toont. Zonder onderdeel: alles tegelijk.
         file="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/island.json"

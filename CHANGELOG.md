@@ -43,6 +43,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Zen aan/uit: Super+Shift+Z** in plaats van Super+Alt+Z (aan/uit is direct doen).
 - Menu, spiekbriefje en `docs/keybindings.md` noemen de nieuwe toetsen.
 
+### Verende panelen en eiland
+- Panelen en het eiland lopen nu verend uit: ze schieten een klein stukje door en veren terug, ook als je halverwege naar een ander paneel springt. Dichtgaan blijft rustig, en de launcher blijft snel en strak.
+- Aan of uit in Instellingen › Uiterlijk › Panelen en beweging › **Verende panelen**, of met `kingstra veren aan|uit`. Geldt meteen, voor elk thema.
+
 ### Zwevende werkruimte met dock
 - Nieuwe indeling **Zwevend** in Super+Z (en in "volgende indeling": tegels, scrollen, ruimtelijk, zwevend). Alle vensters op die werkruimte zweven, ook nieuwe; terug naar een andere indeling legt ze weer in tegels. De keuze blijft na een herstart.
 - Op zo'n werkruimte staat onderaan een afgerond **dock** met je vastgezette apps uit de launcher, de open vensters van die werkruimte (stip = actief, klik = focus) en een knop naar alle apps. De rail blijft gewoon; op andere werkruimtes is het dock weg en klikt de onderkant door.

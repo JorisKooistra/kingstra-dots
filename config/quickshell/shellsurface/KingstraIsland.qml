@@ -122,8 +122,8 @@ Item {
 
     property real visualWidth: targetWidth
     property real visualHeight: targetHeight
-    Behavior on visualWidth { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }
-    Behavior on visualHeight { NumberAnimation { duration: ThemeConfig.durationToken("spatial"); easing.type: ThemeConfig.easingToken("emphasized") } }
+    Behavior on visualWidth { NumberAnimation { duration: ThemeConfig.durationToken("spring"); easing.type: root.mode !== "" ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"); easing.overshoot: ThemeConfig.springOvershoot } }
+    Behavior on visualHeight { NumberAnimation { duration: ThemeConfig.durationToken("spring"); easing.type: root.mode !== "" ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"); easing.overshoot: ThemeConfig.springOvershoot } }
 
     function onFocusedScreen() {
         let monitor = Hyprland.monitorFor(shellWindow.screen);
