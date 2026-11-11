@@ -206,7 +206,10 @@ QUIET_PLUGINS = [
     "mousepad", "remotecontrol", "remotekeyboard", "presenter", "digitizer",
     "shareinputdevices", "shareinputdevicesremote",
 ]
-TUNED_DIR = os.path.join(os.path.expanduser("~"), ".config", "kingstra", "phone")
+# Buiten ~/.config/kingstra: dat is een symlink naar de repo.
+TUNED_DIR = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(os.path.expanduser("~"), ".local", "state"),
+                         "kingstra", "phone")
+OLD_TUNED_DIR = os.path.join(os.path.expanduser("~"), ".config", "kingstra", "phone")
 
 
 def set_clipboard_manual(dev_id):
@@ -249,6 +252,15 @@ def make_quiet(dev_id):
 def ensure_quiet(dev_id):
     marker = os.path.join(TUNED_DIR, dev_id + ".zuinig")
     if os.path.exists(marker):
+        return
+    old = os.path.join(OLD_TUNED_DIR, dev_id + ".zuinig")
+    if os.path.exists(old):
+        try:
+            os.makedirs(TUNED_DIR, exist_ok=True)
+            os.replace(old, marker)
+            os.rmdir(OLD_TUNED_DIR)
+        except OSError:
+            pass
         return
     if make_quiet(dev_id):
         try:
