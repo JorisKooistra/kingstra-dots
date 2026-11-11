@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Reparaties (11 nov)
+- Snelle instellingen opent weer in één beweging: de indeling en de laatste meting (helderheid, volume) staan er meteen, in plaats van dat het paneel in stappen groeide.
+- Vanzelf › "Zuinig op batterij" zag de batterij van een draadloze muis aan voor een laptopbatterij. Apparaatbatterijen tellen niet meer mee; wat de batterijstand overschrijft, wordt buiten /run bewaard zodat een herstart het energieprofiel niet op zuinig laat hangen.
+- Zen-modus overleeft geen herstart meer: stond hij nog aan, dan zet het inloggen alles terug (bureaubladwidgets, niet storen, balk).
+
 ### PC en laptop koppelen (eerste deel: muis, toetsenbord, klembord, bestanden)
 - Nieuw: `kingstra koppel <machine> [links|rechts]`. Eén keer op één machine draaien (bijvoorbeeld `kingstra koppel titus links` op de pc); de andere kant wordt via ssh meteen mee ingesteld.
 - **Muis en toetsenbord** schuiven over de schermrand naar de andere machine met lan-mouse (versleuteld, alleen de gekoppelde machine mag erin). Vastgelopen? Linker Ctrl+Shift+Super+Alt tegelijk haalt de muis terug.

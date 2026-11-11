@@ -10,10 +10,16 @@
 # (Super+Shift+Z, `kingstra zen`, het toetsenbordmenu onder Modus).
 set -uo pipefail
 
-RUNTIME="${XDG_RUNTIME_DIR:-/tmp}"
-ZEN_FILE="$RUNTIME/kingstra-zen.json"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+# Buiten /run bewaard: bleef zen aan bij herstarten, dan wist zen.sh anders
+# niet meer wat het moest terugzetten en bleven de bureaubladwidgets weg.
+# kingstra-session-start zet zen bij het inloggen terug uit (zen.sh off).
+ZEN_FILE="$STATE_HOME/kingstra/zen.json"
+OLD_ZEN_FILE="${XDG_RUNTIME_DIR:-/tmp}/kingstra-zen.json"
+if [[ -f "$OLD_ZEN_FILE" && ! -f "$ZEN_FILE" ]]; then
+    mkdir -p "${ZEN_FILE%/*}" && mv -f "$OLD_ZEN_FILE" "$ZEN_FILE"
+fi
 MODE_JSON="$CONFIG_HOME/kingstra/state/mode.json"
 DND_FILE="$STATE_HOME/kingstra/notification-dnd"
 WIDGETS_FILE="$STATE_HOME/kingstra/desktop-widgets.json"
@@ -72,6 +78,7 @@ zen_on() {
     dim="$(option_value decoration:dim_inactive)"
     dim_strength="$(option_value decoration:dim_strength)"
 
+    mkdir -p "${ZEN_FILE%/*}"
     printf '{"autohide":%s,"dnd":"%s","widgets":%s,"dim":"%s","dim_strength":"%s"}\n' \
         "$autohide" "$dnd" "$widgets" "$dim" "$dim_strength" >"$ZEN_FILE"
 

@@ -197,7 +197,7 @@ Item {
 
     Process {
         id: zenProbe
-        command: ["bash", "-c", "[ -f \"${XDG_RUNTIME_DIR:-/tmp}/kingstra-zen.json\" ] && echo on || echo off"]
+        command: ["bash", "-c", "[ -f \"${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/zen.json\" ] && echo on || echo off"]
         stdout: StdioCollector { onStreamFinished: overlay.zenOn = this.text.trim() === "on" }
     }
     // Thema's met eigen aanpassingen (Instellingen › Uiterlijk) krijgen een stip.

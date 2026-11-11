@@ -130,6 +130,11 @@ start_core() {
     if [[ -x "$HOME/.local/bin/kingstra-disks" ]]; then
         run_bg_once "kingstra-disks watch" "disk automount" "$HOME/.local/bin/kingstra-disks" watch
     fi
+    # Zen hoort niet een herstart te overleven: stond hij nog aan, dan alles
+    # terugzetten (widgets, niet storen, balk) zoals het voor zen was.
+    if [[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/kingstra/zen.json" && -x "$CONFIG_HOME/hypr/scripts/zen.sh" ]]; then
+        "$CONFIG_HOME/hypr/scripts/zen.sh" off >/dev/null 2>&1 || true
+    fi
     # Modi die vanzelf aanspringen (spel, batterij, scherm delen).
     if [[ -x "$HOME/.local/bin/kingstra-auto-mode" ]]; then
         run_bg_once "kingstra-auto-mode daemon" "auto modes" "$HOME/.local/bin/kingstra-auto-mode" daemon

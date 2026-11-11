@@ -28,6 +28,10 @@ MODE_JSON = os.path.join(os.environ.get("XDG_CONFIG_HOME", HOME + "/.config"), "
 DND_FILE = os.path.join(os.environ.get("XDG_STATE_HOME", HOME + "/.local/state"), "kingstra/notification-dnd")
 RUNTIME = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
 STATUS_FILE = os.path.join(RUNTIME, "kingstra-auto-mode.json")
+# Wat de batterijstand overschreef, buiten /run bewaard: na een herstart of
+# een nieuwe daemon kan hij het dan nog terugzetten (anders bleef het
+# energieprofiel op 'zuinig' hangen).
+BATTERY_SAVED_FILE = os.path.join(os.environ.get("XDG_STATE_HOME", HOME + "/.local/state"), "kingstra/auto-mode-battery.json")
 RULES = ("game", "battery", "share")
 
 # Vensterklassen die altijd een spel zijn; daarnaast herkent de omgeving van
@@ -216,6 +220,14 @@ class AutoMode:
         self.game_saved = None
         self.battery_active = False
         self.battery_saved = None
+        try:
+            with open(BATTERY_SAVED_FILE) as fh:
+                saved = json.load(fh)
+            if isinstance(saved, dict):
+                self.battery_active = True
+                self.battery_saved = saved
+        except (OSError, ValueError):
+            pass
         self.share_active = False
         self.share_saved_dnd = None
         self.share_sessions = 0
@@ -310,6 +322,13 @@ class AutoMode:
                 "blur": get_option("decoration:blur:enabled"),
                 "shadow": get_option("decoration:shadow:enabled"),
             }
+            try:
+                os.makedirs(os.path.dirname(BATTERY_SAVED_FILE), exist_ok=True)
+                with open(BATTERY_SAVED_FILE + ".tmp", "w") as fh:
+                    json.dump(self.battery_saved, fh)
+                os.replace(BATTERY_SAVED_FILE + ".tmp", BATTERY_SAVED_FILE)
+            except OSError:
+                pass
             if not self.game_addr:
                 set_hypr(blur=False, shadow=False)
             set_power_profile("power-saver")
@@ -318,6 +337,10 @@ class AutoMode:
         elif not want and self.battery_active:
             saved = self.battery_saved or {}
             self.battery_active = False
+            try:
+                os.remove(BATTERY_SAVED_FILE)
+            except OSError:
+                pass
             if not self.game_addr:
                 set_hypr(blur=bool(saved.get("blur", 1)), shadow=bool(saved.get("shadow", 1)))
             elif self.game_saved is not None:
