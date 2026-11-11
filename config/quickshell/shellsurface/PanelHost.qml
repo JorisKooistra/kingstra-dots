@@ -414,16 +414,20 @@ Item {
         }
     }
     Behavior on width {
+        id: widthBehavior
         enabled: !root.visualVerticalEdge
         NumberAnimation {
             duration: ThemeConfig.durationToken("spring")
             // Dichtgaan zonder veer: doorschieten voorbij 0 geeft een
             // negatieve maat en breekt de vorm.
-            easing.type: root.open ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized")
+            // targetValue is al gezet voordat de animatie start; root.open
+            // kan nog de oude waarde hebben.
+            easing.type: widthBehavior.targetValue > 1 ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized")
             easing.overshoot: ThemeConfig.springOvershoot
         }
     }
     Behavior on height {
+        id: heightBehavior
         NumberAnimation {
             // De launcher is primair toetsenbordgereedschap en moet meteen
             // bruikbaar voelen; de langere ruimtelijke animatie voegt daar
@@ -434,7 +438,7 @@ Item {
             // Ook panelen uit de boven- of onderrand veren nu uit; de
             // launcher blijft snel en strak.
             easing.type: root.visualEntryId === "launcher" ? ThemeConfig.easingToken("standard")
-                : (root.open ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"))
+                : (heightBehavior.targetValue > 1 ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"))
             easing.overshoot: ThemeConfig.springOvershoot
         }
     }

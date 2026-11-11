@@ -122,8 +122,10 @@ Item {
 
     property real visualWidth: targetWidth
     property real visualHeight: targetHeight
-    Behavior on visualWidth { NumberAnimation { duration: ThemeConfig.durationToken("spring"); easing.type: root.mode !== "" ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"); easing.overshoot: ThemeConfig.springOvershoot } }
-    Behavior on visualHeight { NumberAnimation { duration: ThemeConfig.durationToken("spring"); easing.type: root.mode !== "" ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"); easing.overshoot: ThemeConfig.springOvershoot } }
+    // De veer kiest op de nieuwe doelmaat (targetValue), niet op mode: die
+    // kan bij het starten van de animatie nog de oude waarde hebben.
+    Behavior on visualWidth { id: islandWidthBehavior; NumberAnimation { duration: ThemeConfig.durationToken("spring"); easing.type: islandWidthBehavior.targetValue > 1 ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"); easing.overshoot: ThemeConfig.springOvershoot } }
+    Behavior on visualHeight { id: islandHeightBehavior; NumberAnimation { duration: ThemeConfig.durationToken("spring"); easing.type: islandHeightBehavior.targetValue > 1 ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"); easing.overshoot: ThemeConfig.springOvershoot } }
 
     function onFocusedScreen() {
         let monitor = Hyprland.monitorFor(shellWindow.screen);
