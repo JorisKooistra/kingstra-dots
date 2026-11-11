@@ -51,7 +51,9 @@ Uiterlijk
   wallpaper <set|random|pick|...>  achtergrond (zie kingstra wallpaper --help)
 
 Onderhoud
-  update                   alles bijwerken (systeem, Flatpak, dotfiles)
+  update                   bijwerken; vraagt eerst: alles of alleen dotfiles
+  update alles             systeem (pacman + AUR), Flatpak en dotfiles, zonder menu
+  update dotfiles          alleen dotfiles + installer, geen pakketupdates
   update --check           proefdraai: wat de update zou tegenhouden, zonder iets te installeren
   doctor                   installatie controleren, met hersteladvies
   snapshot [list|create]   terugzetpunten tonen of maken

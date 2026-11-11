@@ -4,6 +4,15 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Updater: kiezen en zien wat er gebeurt
+- `kingstra update` begint met een keuzemenu: **1 Alles** (systeem, AUR, Flatpak en dotfiles; Enter), **2 Alleen dotfiles** (config, shell en scripts plus de installer, geen pakketupdates), **3 Proefdraai** of **q** stoppen. Onder de keuzes staat hoeveel pakketupdates er klaarstaan en of er net nieuwe dotfiles zijn opgehaald.
+- Zonder menu: `kingstra update dotfiles` of `kingstra update alles` (ook `--dotfiles` / `--alles`). Zeg je nee op "Updates installeren?", dan vraagt hij of je dan alleen de dotfiles wilt.
+- Vooraf staat het plan in één regel; de venstertitel toont de stap ("Kingstra update 4/10 · Systeempakketten").
+- Arch/AUR is gesplitst in **Systeempakketten** (pacman als dienst) en **AUR** (yay), elk met eigen uitkomst.
+- De voortgangsregel zegt nu in gewone woorden wat pacman doet (pakketlijsten ophalen, downloaden, sleutels controleren, installeren: <pakket>, afronden) met een lopende tijd, en bij de AUR welk pakket er gebouwd wordt (1/2, 2/2). pacman draait via `stdbuf`, zodat zijn uitvoer meteen doorkomt in plaats van in blokken.
+- **Kernel-stap**: zodra de oude opstartbestanden weg gaan verschijnt één vaste regel "Kernel-stap begonnen (1 tot 3 minuten). Zet de pc niet uit; dit venster sluiten mag". Daarna toont de regel welk preset en welke hook mkinitcpio bouwt.
+- Elke stille stap meldt na afloop hoe lang hij duurde; het eind toont de totale tijd.
+
 ### Update kan de opstart niet meer slopen
 - Op 10 november stopte pacman midden in een kernel-update: de oude kernels waren al van /boot gehaald, de nieuwe nog niet neergezet. De pc toonde daarna in het opstartmenu alleen "Reboot Into Firmware Interface". Hersteld via een live-USB met `pacman -S linux linux-lts`.
 - `kingstra update` werkt de repo-pakketten (waaronder de kernels) nu bij als losse systemd-dienst (`kingstra-pacman`). Het updatevenster sluiten breekt pacman daardoor niet meer af. yay doet daarna de AUR. Een volgende run wacht tot een nog lopende dienst klaar is.

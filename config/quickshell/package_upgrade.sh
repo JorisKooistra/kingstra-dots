@@ -2,7 +2,13 @@
 # Kingstra Update Runner: Arch-nieuws, Arch/AUR, Flatpak en dotfiles in één run.
 # In een terminal toont het per stap een korte samenvatting en een
 # voortgangsbalk; de volledige uitvoer van yay/flatpak gaat naar het log.
-# --interactief geeft yay en flatpak weer hun eigen uitvoer en vragen.
+#
+# Gebruik: kingstra update [alles|dotfiles|--check] [--interactief]
+#   zonder keuze   in een terminal eerst een keuzemenu
+#   alles          systeem (pacman), AUR, Flatpak en dotfiles  (--alles)
+#   dotfiles       alleen de dotfiles + installer, geen pakketupdates  (--dotfiles)
+#   --check        proefdraai: wat de update zou tegenhouden  (--proef)
+#   --interactief  yay en flatpak met hun eigen uitvoer en vragen
 set -uo pipefail
 
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/quickshell"
@@ -46,11 +52,23 @@ ORIG_ARGS=("$@")
 SELF="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")"
 
 INTERACTIVE=false
-[[ "${1:-}" == "--interactief" || "${1:-}" == "--interactive" ]] && INTERACTIVE=true
 # --check / --proef: alles nalopen wat de update kan laten mislukken, zonder
 # iets te installeren of de dotfiles te veranderen.
 CHECK=false
-[[ "${1:-}" == "--check" || "${1:-}" == "--proef" ]] && CHECK=true
+# alles | dotfiles; leeg = in een terminal vragen, anders alles.
+MODE=""
+for arg in "$@"; do
+    case "$arg" in
+        --interactief|--interactive) INTERACTIVE=true ;;
+        --check|--proef|check|proef) CHECK=true ;;
+        --dotfiles|--alleen-dotfiles|dotfiles) MODE="dotfiles" ;;
+        --alles|--systeem|--all|alles|systeem) MODE="alles" ;;
+        -h|--help|help)
+            sed -n '6,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+            exit 0 ;;
+    esac
+done
+$INTERACTIVE && [[ -z "$MODE" ]] && MODE="alles"
 
 # ---------------------------------------------------------------------------
 # Weergave
@@ -58,8 +76,7 @@ CHECK=false
 UI=false
 [[ -t 0 && -t 1 && "${TERM:-}" != "dumb" ]] && UI=true
 
-STEPS_TOTAL=9
-$CHECK && STEPS_TOTAL=3
+STEPS_TOTAL=10
 STEP_NUM=0
 STEP_TITLE=""
 SUMMARY=()
@@ -96,18 +113,29 @@ term_cols() {
     printf '%s' "$cols"
 }
 
-# Eén regel die steeds overschreven wordt: spinner, optionele balk, tekst.
+# m:ss sinds $1 (epoch-seconden).
+elapsed_since() {
+    local s=$(( $(date +%s) - $1 ))
+    (( s < 0 )) && s=0
+    printf '%d:%02d' $((s / 60)) $((s % 60))
+}
+
+# Eén regel die steeds overschreven wordt: spinner, tijd sinds het begin van
+# deze deelstap (LIVE_T0), optionele balk, tekst. De lopende tijd laat zien
+# dat er nog iets gebeurt, ook als een stap minuten stil is.
+LIVE_T0=""
 live() {
     $UI || return 0
-    local msg="$1" done="${2:-}" total="${3:-}" prefix plain max
+    local msg="$1" done="${2:-}" total="${3:-}" prefix plain max clock=""
     local spin="${SPIN[SPIN_IDX % ${#SPIN[@]}]}"
     SPIN_IDX=$((SPIN_IDX + 1))
+    [[ -n "$LIVE_T0" ]] && clock="$(elapsed_since "$LIVE_T0") "
     if [[ -n "$total" && "$total" -gt 0 ]]; then
-        plain="    $spin $(bar "$total" "$done" 20) $done/$total  "
-        prefix="    ${C_CYAN}${spin}${C_RESET} ${C_GREEN}$(bar "$total" "$done" 20)${C_RESET} ${C_BOLD}${done}/${total}${C_RESET}  "
+        plain="    $spin $clock$(bar "$total" "$done" 20) $done/$total  "
+        prefix="    ${C_CYAN}${spin}${C_RESET} ${C_DIM}${clock}${C_RESET}${C_GREEN}$(bar "$total" "$done" 20)${C_RESET} ${C_BOLD}${done}/${total}${C_RESET}  "
     else
-        plain="    $spin "
-        prefix="    ${C_CYAN}${spin}${C_RESET} "
+        plain="    $spin $clock"
+        prefix="    ${C_CYAN}${spin}${C_RESET} ${C_DIM}${clock}${C_RESET}"
     fi
     max=$(( $(term_cols) - ${#plain} - 1 ))
     (( max < 10 )) && max=10
@@ -141,6 +169,9 @@ section() {
     fi
     if $UI; then
         live_clear
+        # Venstertitel: ook als het venster klein of op de achtergrond staat
+        # zie je in welke stap de update zit.
+        printf '\033]2;Kingstra update %d/%d · %s\007' "$STEP_NUM" "$STEPS_TOTAL" "$1"
         printf '\n  %s%s%s %s%d/%d%s  %s%s%s\n' \
             "$C_GREEN" "$(bar "$STEPS_TOTAL" "$((STEP_NUM - 1))" 14)" "$C_RESET" \
             "$C_DIM" "$STEP_NUM" "$STEPS_TOTAL" "$C_RESET" "$C_BOLD" "$1" "$C_RESET"
@@ -225,34 +256,133 @@ init_log() {
         | sort -rn | tail -n +$((LOG_KEEP + 1)) | cut -d' ' -f2-)
 }
 
+# Wat pacman/yay op dit moment doet, in gewone woorden. pacman nummert elke
+# fase opnieuw ("( 3/87) ..."), dus zonder de kop ervoor (":: Retrieving
+# packages", ":: Processing package changes", ":: Running post-transaction
+# hooks") lijkt de balk steeds opnieuw te beginnen. Zet PROG_LABEL, PROG_DONE,
+# PROG_TOTAL en PROG_KERNEL (true zodra de kernel-/initramfs-stap bezig is).
+PROG_LABEL="" PROG_DONE="" PROG_TOTAL="" PROG_KERNEL=false
+describe_output() {
+    local file="$1" fallback="$2" tail header="" last="" counter="" what="" made=0
+    PROG_LABEL="" PROG_DONE="" PROG_TOTAL=""
+    tail="$(tail -n 300 "$file" 2>/dev/null | tr '\r' '\n' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g' | awk 'NF')"
+    last="$(printf '%s\n' "$tail" | tail -n 1)"
+    header="$(printf '%s\n' "$tail" | grep -E '^(:: |==> Making package:)' | tail -n 1 || true)"
+    counter="$(printf '%s\n' "$tail" | grep -E '^\( *[0-9]+/[0-9]+\) ' | tail -n 1 || true)"
+    if [[ "$counter" =~ ^\(\ *([0-9]+)/([0-9]+)\)\ +(.*)$ ]]; then
+        PROG_DONE="${BASH_REMATCH[1]}" PROG_TOTAL="${BASH_REMATCH[2]}" what="${BASH_REMATCH[3]}"
+    fi
+
+    # Kernel: tussen "Removing linux initcpios" en het nieuwe opstartbestand
+    # staat er geen werkende kernel op /boot. Daar ging het op 10-11 mis.
+    # PROG_KERNEL blijft staan (voor de waarschuwing); het label alleen zolang
+    # de kernel-hook zelf bezig is.
+    local kernel_re='initcpios|Building image from preset|Running build hook|Image generation|initcpio image|kernel-install|UKI'
+    if printf '%s\n' "$tail" | grep -qE 'initcpios|Building image from preset|kernel-install'; then
+        PROG_KERNEL=true
+    fi
+    if printf '%s\n' "$what" | grep -qE "$kernel_re" \
+        || { [[ ! "$last" =~ ^\(\ *[0-9]+/[0-9]+\) ]] && printf '%s\n' "$last" | grep -qE "$kernel_re"; }; then
+        local sub=""
+        if [[ "$last" =~ preset:\ .*/([^/]+)\.preset:\ \'([^\']+)\' ]]; then
+            sub="${BASH_REMATCH[1]} (${BASH_REMATCH[2]})"
+        elif [[ "$last" =~ build\ hook:\ \[([^]]+)\] ]]; then
+            sub="hook ${BASH_REMATCH[1]}"
+        elif [[ "$last" =~ (Image generation successful|Creating .* initcpio image) ]]; then
+            sub="${BASH_REMATCH[1]}"
+        fi
+        if [[ "$what" == Removing* ]]; then
+            PROG_LABEL="Kernel: oude opstartbestanden weghalen"
+        else
+            PROG_LABEL="Kernel: nieuwe opstartbestanden bouwen${sub:+ · $sub}"
+        fi
+        PROG_DONE="" PROG_TOTAL=""
+        return 0
+    fi
+
+    case "$header" in
+        *"Synchronizing package databases"*|*"Synchronising package databases"*)
+            PROG_LABEL="Pakketlijsten ophalen" ;;
+        *"Starting full system upgrade"*|*"Searching databases for updates"*|*"Searching AUR for updates"*)
+            PROG_LABEL="Updates op een rij zetten" ;;
+        *"Retrieving packages"*)
+            PROG_LABEL="Downloaden" ;;
+        *"Running pre-transaction hooks"*)
+            PROG_LABEL="Voorbereiden" ;;
+        *"Processing package changes"*)
+            PROG_LABEL="Installeren" ;;
+        *"Running post-transaction hooks"*)
+            PROG_LABEL="Afronden" ;;
+        *"Making package:"*)
+            what="${header#*Making package: }"
+            PROG_LABEL="AUR bouwen: ${what%% *}" what="" ;;
+    esac
+    case "$what" in
+        "checking keys in keyring"*) PROG_LABEL="Sleutels controleren" what="" ;;
+        "checking package integrity"*) PROG_LABEL="Pakketten controleren" what="" ;;
+        "loading package files"*) PROG_LABEL="Pakketten laden" what="" ;;
+        "checking for file conflicts"*) PROG_LABEL="Bestandsconflicten zoeken" what="" ;;
+        "checking available disk space"*) PROG_LABEL="Schijfruimte controleren" what="" ;;
+        upgrading\ *|installing\ *|reinstalling\ *|downgrading\ *)
+            PROG_LABEL="Installeren" what="${what#* }" ;;
+        removing\ *)
+            PROG_LABEL="Verwijderen" what="${what#* }" ;;
+    esac
+    # AUR: geen teller van pacman tijdens het bouwen; tel de pakketten zelf.
+    if [[ "$PROG_LABEL" == "AUR bouwen:"* ]]; then
+        made="$(grep -c 'Making package:' "$file" 2>/dev/null || true)"
+        if (( AUR_COUNT > 0 && made > 0 )); then
+            PROG_DONE="$made" PROG_TOTAL="$AUR_COUNT"
+            (( PROG_DONE > PROG_TOTAL )) && PROG_TOTAL="$PROG_DONE"
+        fi
+        what="$(sed -E 's/^ *(->|==>) *//' <<< "$last")"
+    fi
+    if [[ -z "$PROG_LABEL" ]]; then
+        PROG_LABEL="$fallback"
+        what="${what:-$last}"
+    fi
+    [[ -n "$what" ]] && PROG_LABEL+=": $what"
+    return 0
+}
+
 # Draait een commando stil: uitvoer naar het log, in de terminal een
-# voortgangsregel. Tellers als "( 3/87) upgrading foo" van pacman worden
-# een balk; anders staat de laatste uitvoerregel achter de spinner.
+# voortgangsregel met de lopende tijd, wat er nu gebeurt en (als pacman telt)
+# een balk. Zodra de kernel-stap begint verschijnt één vaste waarschuwing.
+QUIET_DETACHED=false
 run_quiet() {
     local label="$1"
     shift
-    local tmp rc=0 last="" counter="" done="" total="" text=""
+    local tmp rc=0 kernel_noted=false
     QUIET_TAIL=""
+    PROG_KERNEL=false
     tmp="$(mktemp)"
     to_log "\$ $*"
+    LIVE_T0="$(date +%s)"
     "$@" </dev/null >"$tmp" 2>&1 &
     local pid=$!
     while kill -0 "$pid" 2>/dev/null; do
-        last="$(tail -n 30 "$tmp" 2>/dev/null | tr '\r' '\n' | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | awk 'NF' | tail -n 1)"
-        counter="$(tail -n 60 "$tmp" 2>/dev/null | tr '\r' '\n' | grep -E '^\( *[0-9]+/[0-9]+\) ' | tail -n 1)"
-        done="" total=""
-        if [[ "$counter" =~ ^\(\ *([0-9]+)/([0-9]+)\)\ +(.*)$ ]]; then
-            done="${BASH_REMATCH[1]}" total="${BASH_REMATCH[2]}" text="${BASH_REMATCH[3]}"
-            live "$label: $text" "$done" "$total"
-        else
-            live "$label${last:+: $last}"
+        describe_output "$tmp" "$label"
+        if $PROG_KERNEL && ! $kernel_noted; then
+            kernel_noted=true
+            # Bewust geen result: het is een melding, geen probleem voor de samenvatting.
+            if $QUIET_DETACHED; then
+                log "${C_YELLOW}${G_WARN}${C_RESET} ${C_BOLD}Kernel-stap begonnen${C_RESET} (1 tot 3 minuten). Zet de pc niet uit; dit venster sluiten mag, pacman loopt als dienst door."
+            else
+                log "${C_YELLOW}${G_WARN}${C_RESET} ${C_BOLD}Kernel-stap begonnen${C_RESET} (1 tot 3 minuten). Zet de pc niet uit en sluit dit venster niet."
+            fi
         fi
-        sleep 0.15
+        live "$PROG_LABEL" "$PROG_DONE" "$PROG_TOTAL"
+        sleep 0.2
     done
     wait "$pid" || rc=$?
     [[ -n "$LOG_FILE" ]] && cat "$tmp" >> "$LOG_FILE"
     QUIET_TAIL="$(tr '\r' '\n' < "$tmp" | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | awk 'NF' | tail -n 8)"
     live_clear
+    if $UI; then
+        printf '    %s%s klaar in %s%s\n' "$C_DIM" "$label" "$(elapsed_since "$LIVE_T0")" "$C_RESET"
+    fi
+    to_log "($label: $(elapsed_since "$LIVE_T0"), code $rc)"
+    LIVE_T0=""
     if (( rc != 0 )); then
         printf '    %sLaatste uitvoer:%s\n' "$C_DIM" "$C_RESET"
         tr '\r' '\n' < "$tmp" | awk 'NF' | tail -n 8 | sed 's/^/      /'
@@ -941,14 +1071,41 @@ update_repo_detached() {
     command -v systemd-run >/dev/null 2>&1 || return 0
     command -v pacman >/dev/null 2>&1 || return 0
     wait_detached_pacman
-    local rc=0
+    local rc=0 since n=0
+    local -a buf=()
+    since="$(date '+%Y-%m-%dT%H:%M:%S')"
+    # stdbuf: anders houdt pacman zijn uitvoer in een buffer zolang hij niet
+    # naar een terminal schrijft, en blijft de voortgangsregel minutenlang stil.
+    command -v stdbuf >/dev/null 2>&1 && buf=(stdbuf -oL -eL)
+    if (( REPO_COUNT > 0 )); then
+        log "$REPO_COUNT systeempakket(ten) via pacman. Loopt als losse dienst: dit venster sluiten breekt het niet af."
+    else
+        log "Geen systeemupdates gevonden; pacman kijkt het nog even na."
+    fi
+    QUIET_DETACHED=true
     run_quiet "pacman" sudo systemd-run --quiet --wait --pipe --collect \
         --unit="$PACMAN_UNIT" --description="Kingstra update (pacman)" \
-        pacman -Syu --noconfirm || rc=$?
+        "${buf[@]+"${buf[@]}"}" pacman -Syu --noconfirm || rc=$?
+    QUIET_DETACHED=false
+    n="$(count_pacman_changes "$since")"
     if (( rc != 0 )); then
-        log "pacman als dienst gaf code $rc; yay probeert het hierna."
+        result warn "pacman stopte met code $rc ($n pakketten al bijgewerkt); yay probeert de rest in de volgende stap."
+    elif (( n == 0 )); then
+        result ok "Systeempakketten waren al actueel."
+    else
+        result ok "Systeempakketten bijgewerkt: $n."
     fi
     return 0
+}
+
+# Aantal upgraded/installed-regels in pacman.log sinds $1.
+count_pacman_changes() {
+    [[ -r "$PACMAN_LOG" ]] || { printf '0'; return 0; }
+    awk -v since="$1" '
+        /^\[[0-9]{4}-[0-9]{2}-[0-9]{2}T[^]]*\] \[ALPM\] (upgraded|installed|downgraded) / {
+            if (substr($1, 2, 19) >= since) n++
+        }
+        END { print n + 0 }' "$PACMAN_LOG" 2>/dev/null || printf '0'
 }
 
 # Een pacman-dienst van een eerder (gesloten) venster mag eerst afmaken.
@@ -987,6 +1144,22 @@ repair_missing_kernels() {
     fi
 }
 
+# Stap "Systeempakketten": de officiële repo's (met de kernel) via pacman als
+# dienst. Zonder terminal of met --interactief doet yay dit in de AUR-stap.
+update_system() {
+    if ! $UI || $INTERACTIVE; then
+        log "Gaat in één keer mee met yay in de volgende stap."
+        return 0
+    fi
+    # Wachtwoord nu vragen, zodat de stille run niet op sudo blijft hangen.
+    if command -v sudo >/dev/null 2>&1 && ! sudo -n true 2>/dev/null; then
+        live_clear
+        log "Wachtwoord nodig voor de pakketupdate:"
+        sudo -v || return 1
+    fi
+    update_repo_detached
+}
+
 # yay/paru en flatpak bijwerken. In de compacte weergave stil met
 # voortgangsbalk; mislukt dat, dan kan de run interactief opnieuw.
 update_arch() {
@@ -1015,13 +1188,16 @@ update_arch() {
         yay) flags+=(--answerdiff None --answerclean None --answeredit None --answerupgrade None) ;;
         paru) flags+=(--skipreview) ;;
     esac
-    # Wachtwoord nu vragen, zodat de stille run niet op sudo blijft hangen.
     if command -v sudo >/dev/null 2>&1 && ! sudo -n true 2>/dev/null; then
         live_clear
         sudo -v || return 1
     fi
     prepare_aur
-    update_repo_detached
+    if (( AUR_COUNT > 0 )); then
+        log "$AUR_COUNT AUR-pakket(ten) bouwen en installeren met $helper: $(inline_names "$AUR_LIST")"
+    else
+        log "Geen AUR-updates; $helper controleert alleen nog of alles klopt."
+    fi
     run_quiet "$helper" "$helper" "${flags[@]}" || rc=$?
     if (( rc != 0 )) && ask_yes "Opnieuw draaien met de gewone $helper-uitvoer en vragen?"; then
         rc=0
@@ -1046,7 +1222,8 @@ finish() {
     rm -f "$PROGRESS_FILE" 2>/dev/null
     if $UI; then
         live_clear
-        printf '\n  %s%s%s %s100%%%s  %sKlaar%s\n' "$C_GREEN" "$(bar 1 1 14)" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET"
+        printf '\n  %s%s%s %s100%%%s  %sKlaar%s %sin %s%s\n' "$C_GREEN" "$(bar 1 1 14)" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_DIM" "$(elapsed_since "$RUN_T0")" "$C_RESET"
+        printf '\033]2;Kingstra update · klaar\007'
         for line in "${SUMMARY[@]+"${SUMMARY[@]}"}"; do
             IFS='|' read -r kind title msg <<< "$line"
             [[ "$kind" == "ok" ]] && continue
@@ -1059,7 +1236,9 @@ finish() {
     else
         section "Klaar"
     fi
-    if [[ $code -eq 0 ]]; then
+    if [[ $code -eq 0 && "$MODE" == "dotfiles" ]]; then
+        log "Dotfiles verwerkt; pakketten zijn niet bijgewerkt (daarvoor: kingstra update alles)."
+    elif [[ $code -eq 0 ]]; then
         log "Alle beschikbare updatebronnen zijn verwerkt."
     else
         log "Minstens één updatebron eindigde met een fout (code $code)."
@@ -1235,15 +1414,129 @@ if command -v flock >/dev/null 2>&1 && exec 9>"$LOCK_FILE"; then
     fi
 fi
 
+# Keuzemenu: alles of alleen de dotfiles (of een proefdraai). Komt na het
+# ophalen van de nieuwe updater, zodat het menu zelf ook altijd actueel is.
+# Zonder terminal of met een keuze op de opdrachtregel: geen vraag.
+choose_mode() {
+    $CHECK && return 0
+    if [[ -n "$MODE" ]]; then
+        return 0
+    fi
+    if ! $UI; then
+        MODE="alles"
+        return 0
+    fi
+    local ts=0 total=0 pkgs=0 flat=0 _d _c sys_hint="" dot_hint="" repo reply=""
+    local cache="$CACHE_DIR/package_updates_status"
+    if [[ -f "$cache" ]]; then
+        read -r ts total pkgs flat _d _c < "$cache" || true
+    fi
+    if [[ "$ts" =~ ^[0-9]+$ && "$pkgs" =~ ^[0-9]+$ && "$flat" =~ ^[0-9]+$ ]] && (( ts > 0 )); then
+        sys_hint="$pkgs pakketten, $flat Flatpak (geteld om $(date -d "@$ts" '+%H:%M' 2>/dev/null))"
+    fi
+    repo="$(resolve_dotfiles_repo 2>/dev/null || true)"
+    if [[ "${KINGSTRA_UPDATE_REEXEC:-}" =~ ^[0-9a-f]{7,}$ && -n "$repo" ]]; then
+        dot_hint="$(git -C "$repo" rev-list --count "$KINGSTRA_UPDATE_REEXEC..HEAD" 2>/dev/null || echo '?') nieuwe commit(s) net opgehaald"
+    elif [[ -n "$repo" ]]; then
+        dot_hint="al actueel ($(git -C "$repo" log -1 --format='%h, %cr' 2>/dev/null))"
+    fi
+
+    live_clear
+    printf '\n  %sWat wil je bijwerken?%s\n\n' "$C_BOLD" "$C_RESET"
+    printf '    %s1%s  %sAlles%s            systeem, AUR, Flatpak en dotfiles\n' "$C_CYAN" "$C_RESET" "$C_BOLD" "$C_RESET"
+    [[ -n "$sys_hint" ]] && printf '                        %s%s%s\n' "$C_DIM" "$sys_hint" "$C_RESET"
+    printf '    %s2%s  %sAlleen dotfiles%s  config, shell en scripts; geen pakketupdates (snel)\n' "$C_CYAN" "$C_RESET" "$C_BOLD" "$C_RESET"
+    [[ -n "$dot_hint" ]] && printf '                        %s%s%s\n' "$C_DIM" "$dot_hint" "$C_RESET"
+    printf '    %s3%s  %sProefdraai%s       kijken wat een update zou tegenhouden; niets installeren\n' "$C_CYAN" "$C_RESET" "$C_BOLD" "$C_RESET"
+    printf '    %sq%s  Stoppen\n\n' "$C_CYAN" "$C_RESET"
+    read -r -p "    ${C_CYAN}${G_ASK}${C_RESET} Keuze ${C_DIM}[1]${C_RESET} " reply || reply="1"
+    case "${reply,,}" in
+        ""|1|a|alles) MODE="alles" ;;
+        2|d|dotfiles) MODE="dotfiles" ;;
+        3|p|proef*) CHECK=true ;;
+        *) MODE="stop" ;;
+    esac
+}
+
+# Wat er in deze run gaat gebeuren, in één regel.
+show_plan() {
+    local plan=""
+    if $CHECK; then
+        STEPS_TOTAL=3
+        plan="Arch-nieuws · Wat er bijwerkt · Proefdraai (niets installeren)"
+    elif [[ "$MODE" == "dotfiles" ]]; then
+        STEPS_TOTAL=2
+        plan="Dotfiles + installer · Controle (geen pakketupdates)"
+    else
+        STEPS_TOTAL=10
+        plan="Arch-nieuws · Wat er bijwerkt · Terugzetpunt · Systeempakketten · AUR · Flatpak · Dotfiles · Na de update · Controle · Opruimen"
+    fi
+    to_log "Keuze: $($CHECK && echo proefdraai || echo "$MODE")" "Plan: $plan"
+    if $UI; then
+        printf '  %sPlan:%s %s%s%s\n' "$C_DIM" "$C_RESET" "$C_DIM" "$plan" "$C_RESET"
+    else
+        printf 'Plan: %s\n' "$plan"
+    fi
+}
+
+# Dotfiles ophalen en de installer draaien (in beide modi gelijk).
+run_dotfiles_step() {
+    section "Dotfiles"
+    dotfiles_update_exit=0
+    update_dotfiles || dotfiles_update_exit=$?
+    if [[ "${KINGSTRA_UPDATE_REEXEC:-}" =~ ^[0-9a-f]{7,}$ && -n "$DOTFILES_REPO" ]]; then
+        log "Aan het begin opgehaald: ${KINGSTRA_UPDATE_REEXEC:0:7} → $(git -C "$DOTFILES_REPO" rev-parse --short HEAD 2>/dev/null)."
+        log_block "$(git -C "$DOTFILES_REPO" log --format='  %h %s' "$KINGSTRA_UPDATE_REEXEC..HEAD" 2>/dev/null | head -n 8)"
+    fi
+
+    # Een git pull alleen is niet genoeg: nieuwe pakketten, gegenereerde hardware-
+    # config en live sessiewijzigingen worden pas door install.sh toegepast. Draai
+    # de installer ook als de repo al actueel is, zodat een eerdere half-afgeronde
+    # update zichzelf kan herstellen.
+    installer_exit=0
+    if [[ -n "$DOTFILES_REPO" ]]; then
+        run_dotfiles_installer "$DOTFILES_REPO" || installer_exit=$?
+        [[ $installer_exit -eq 0 ]] || overall_exit=1
+    fi
+
+    if [[ $dotfiles_update_exit -ne 0 ]]; then
+        overall_exit=1
+    fi
+
+    if [[ $dotfiles_update_exit -ne 0 || $installer_exit -ne 0 ]]; then
+        result fail "Dotfiles: ophalen of installer mislukt (code $dotfiles_update_exit/$installer_exit)."
+    elif [[ -n "$DOTFILES_SKIP" ]]; then
+        : # al als waarschuwing gemeld
+    else
+        result ok "Dotfiles bijgewerkt."
+    fi
+}
+
+# Eén update tegelijk. Twee runs naast elkaar (terminal plus het venster uit
+# Instellingen) wachten op elkaars sudo, git en installer.
+LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/kingstra-update.lock"
+if command -v flock >/dev/null 2>&1 && exec 9>"$LOCK_FILE"; then
+    if ! flock -n 9; then
+        echo
+        echo "  Er draait al een kingstra update (in een ander venster of een gestopte terminal)."
+        echo "  Maak die eerst af of sluit hem. Vastgelopen? pkill -f package_upgrade.sh"
+        echo
+        if [[ -t 0 ]]; then read -r -p "Druk Enter om te sluiten..." _ || true; fi
+        exit 1
+    fi
+fi
+
 init_log
+RUN_T0="${KINGSTRA_UPDATE_T0:-$(date +%s)}"
 
 if $UI; then
-    printf '\n  %sKingstra Update Runner%s  %syay %s Flatpak %s kingstra-dots%s\n' \
-        "$C_BOLD" "$C_RESET" "$C_DIM" "$G_DOT" "$G_DOT" "$C_RESET"
+    printf '\033]2;Kingstra update\007'
+    printf '\n  %sKingstra Update Runner%s  %spacman %s yay %s Flatpak %s kingstra-dots%s\n' \
+        "$C_BOLD" "$C_RESET" "$C_DIM" "$G_DOT" "$G_DOT" "$G_DOT" "$C_RESET"
 else
     echo "=============================================="
     echo " Kingstra Update Runner"
-    echo " yay · Flatpak · kingstra-dots"
+    echo " pacman · yay · Flatpak · kingstra-dots"
     echo "=============================================="
 fi
 to_log "Gestart: $(date '+%Y-%m-%d %H:%M:%S')"
@@ -1255,24 +1548,44 @@ if $CHECK; then
     : # proefdraai: niets ophalen of veranderen
 elif [[ -z "${KINGSTRA_UPDATE_REEXEC:-}" ]]; then
     self_before="$(git -C "$(resolve_dotfiles_repo 2>/dev/null || echo /nonexistent)" rev-parse HEAD 2>/dev/null || true)"
-    live "Updater bijwerken"
+    live "Nieuwste versie van de updater en dotfiles ophalen"
     # Stil: wat er gebeurt staat in het log en komt bij Dotfiles terug.
     if [[ -n "$self_before" ]] && update_dotfiles >/dev/null; then
         self_after="$(git -C "$DOTFILES_REPO" rev-parse HEAD 2>/dev/null || true)"
         live_clear
         if [[ -n "$self_after" && "$self_after" != "$self_before" && -f "$SELF" ]]; then
             log "Dotfiles bijgewerkt (${self_before:0:7} → ${self_after:0:7}); verder met de nieuwe updater."
-            export KINGSTRA_UPDATE_REEXEC="$self_before" KINGSTRA_UPDATE_LOG="$LOG_FILE"
+            export KINGSTRA_UPDATE_REEXEC="$self_before" KINGSTRA_UPDATE_LOG="$LOG_FILE" KINGSTRA_UPDATE_T0="$RUN_T0"
             exec bash "$SELF" "${ORIG_ARGS[@]+"${ORIG_ARGS[@]}"}"
         fi
     fi
+    live_clear
     DOTFILES_REPO=""
 elif [[ "$KINGSTRA_UPDATE_REEXEC" =~ ^[0-9a-f]{7,}$ ]]; then
     to_log "Opnieuw gestart na dotfiles-update vanaf $KINGSTRA_UPDATE_REEXEC"
 fi
 
+choose_mode
+if [[ "$MODE" == "stop" ]]; then
+    log "Niets bijgewerkt."
+    [[ -n "$LOG_FILE" ]] && to_log "Gestopt bij het keuzemenu."
+    exit 0
+fi
+show_plan
+
 if ! $CHECK && [[ -z "${KINGSTRA_UPDATE_REEXEC:-}" || "${KINGSTRA_UPDATE_REEXEC}" =~ ^[0-9a-f]{7,}$ ]]; then
     resume_after_abort
+fi
+
+# Alleen dotfiles: geen nieuws, pakketlijst, terugzetpunt of opruimen.
+if [[ "$MODE" == "dotfiles" ]] && ! $CHECK; then
+    run_dotfiles_step
+    section "Controle"
+    check_after_update
+    # Teller in de balk bijwerken zonder hierop te wachten.
+    ( "$COUNT_SCRIPT" --refresh >/dev/null 2>&1 & )
+    finish "$overall_exit"
+    exit "$overall_exit"
 fi
 
 section "Arch-nieuws"
@@ -1297,6 +1610,15 @@ if $CHECK; then
 fi
 if $UI && ! $INTERACTIVE && (( REPO_COUNT + AUR_COUNT + FLATPAK_COUNT > 0 )); then
     if ! ask_yes "Updates installeren?"; then
+        if ask_yes "Dan alleen de dotfiles bijwerken?"; then
+            MODE="dotfiles"
+            STEPS_TOTAL=$((STEP_NUM + 2))
+            run_dotfiles_step
+            section "Controle"
+            check_after_update
+            finish "$overall_exit"
+            exit "$overall_exit"
+        fi
         log "Update op verzoek gestopt."
         finish 0
         exit 0
@@ -1306,10 +1628,17 @@ fi
 section "Terugzetpunt"
 make_restore_point
 
-section "Arch/AUR"
+section "Systeempakketten"
 arch_exit=0
 arch_since="$(date '+%Y-%m-%dT%H:%M:%S')"
-update_arch || arch_exit=$?
+update_system || arch_exit=$?
+
+section "AUR"
+if [[ $arch_exit -eq 0 ]]; then
+    update_arch || arch_exit=$?
+else
+    log "Overgeslagen: geen sudo voor de pakketupdate."
+fi
 if ! verify_arch "$arch_since" "$arch_exit"; then
     [[ $arch_exit -eq 0 ]] && arch_exit=1
 fi
@@ -1318,6 +1647,7 @@ fi
 section "Flatpak"
 flatpak_exit=0
 if command -v flatpak >/dev/null 2>&1; then
+    (( FLATPAK_COUNT > 0 )) && log "$FLATPAK_COUNT Flatpak-update(s)."
     update_flatpak || flatpak_exit=$?
     if [[ $flatpak_exit -eq 0 ]]; then
         result ok "Flatpak bijgewerkt."
@@ -1329,34 +1659,7 @@ else
 fi
 [[ $flatpak_exit -eq 0 ]] || overall_exit=$flatpak_exit
 
-section "Dotfiles"
-dotfiles_update_exit=0
-update_dotfiles || dotfiles_update_exit=$?
-if [[ "${KINGSTRA_UPDATE_REEXEC:-}" =~ ^[0-9a-f]{7,}$ && -n "$DOTFILES_REPO" ]]; then
-    log "Aan het begin opgehaald: ${KINGSTRA_UPDATE_REEXEC:0:7} → $(git -C "$DOTFILES_REPO" rev-parse --short HEAD 2>/dev/null)."
-fi
-
-# Een git pull alleen is niet genoeg: nieuwe pakketten, gegenereerde hardware-
-# config en live sessiewijzigingen worden pas door install.sh toegepast. Draai
-# de installer ook als de repo al actueel is, zodat een eerdere half-afgeronde
-# update zichzelf kan herstellen.
-installer_exit=0
-if [[ -n "$DOTFILES_REPO" ]]; then
-    run_dotfiles_installer "$DOTFILES_REPO" || installer_exit=$?
-    [[ $installer_exit -eq 0 ]] || overall_exit=1
-fi
-
-if [[ $dotfiles_update_exit -ne 0 ]]; then
-    overall_exit=1
-fi
-
-if [[ $dotfiles_update_exit -ne 0 || $installer_exit -ne 0 ]]; then
-    result fail "Dotfiles: ophalen of installer mislukt (code $dotfiles_update_exit/$installer_exit)."
-elif [[ -n "$DOTFILES_SKIP" ]]; then
-    : # al als waarschuwing gemeld
-else
-    result ok "Dotfiles bijgewerkt."
-fi
+run_dotfiles_step
 
 section "Na de update"
 report_pacnew
