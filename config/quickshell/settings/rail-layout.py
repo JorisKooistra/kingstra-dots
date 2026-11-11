@@ -23,7 +23,7 @@ FILE = STATE / "rail-layout.json"
 THEMES = {"organic", "neon", "paper", "mono", "mono-accent", "matte"}
 # Houd gelijk met RailLayout.qml (known/repeatable).
 ITEMS = {"launcher", "workspaces", "specials", "overview", "notifications", "system", "updates",
-         "games", "pins", "more", "tray", "audio", "status", "clock", "power", "settings"}
+         "games", "koppeling", "pins", "more", "tray", "audio", "status", "clock", "power", "settings"}
 REPEATABLE = {"gap", "fill"}
 APP_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")
 

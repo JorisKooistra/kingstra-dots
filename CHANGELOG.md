@@ -9,6 +9,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Muis en toetsenbord** schuiven over de schermrand naar de andere machine met lan-mouse (versleuteld, alleen de gekoppelde machine mag erin). Vastgelopen? Linker Ctrl+Shift+Super+Alt tegelijk haalt de muis terug.
 - **Klembord** loopt mee, tekst en afbeeldingen tot 20 MB (`kingstra-klembord`-dienst). Kopieën uit een wachtwoordmanager gaan niet over het netwerk.
 - **Bestanden**: de andere machine staat als map in de zijbalk van Bestanden (sftp), rechtsklik › Scripts › "Naar Laptop" (of "Naar PC") stuurt de selectie naar Downloads daar, met een melding en een knop Openen. Ook: `kingstra koppel stuur <bestand...>`.
+- **Railknop "Naar Laptop"** (alleen zichtbaar als je gekoppeld bent): sleep bestanden op de knop, of klik om ze te kiezen. In een eigen rail-indeling komt de knop onderaan; verslepen kan in Instellingen › Rail-indeling.
+- **Venster ook daar openen**: toetsenbordmenu › Vensters › "Dit venster ook openen op de andere machine" (of `kingstra koppel open`). Opent dezelfde app aan de andere kant; bestanden uit dat venster en links gaan mee. Een venster echt overslepen kan op Wayland niet.
+- **Beeldschermen** toont de andere machine als extra scherm. Sleep hem naar links, rechts, boven of onder je schermen en druk op Toepassen; beide machines nemen de nieuwe kant over. Ook: `kingstra koppel kant links|rechts|boven|onder`.
+- Toetsenbordmenu › Snel schakelen › "Andere machine (pc ↔ laptop)": bestanden sturen, venster openen, plaats, delen aan/uit, status.
 - `kingstra koppel status`, `aan`, `uit`, `vergeet`.
 - De installer (fase 12) installeert lan-mouse, zet de ssh-server aan en plaatst het script en de twee diensten. Die starten bij inloggen alleen als er een koppeling is.
 

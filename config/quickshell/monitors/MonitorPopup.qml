@@ -59,6 +59,51 @@ Item {
     ListModel {
         id: monitorsModel
     }
+
+    // Gekoppelde machine (kingstra koppel) als extra, versleepbaar "scherm".
+    // Wordt nooit aan Hyprland doorgegeven; Toepassen zet alleen de kant.
+    readonly property string koppelScript: Quickshell.env("HOME") + "/.local/bin/kingstra-koppel"
+    property string koppelKant: ""
+    readonly property bool activeIsRemote: monitorsModel.count > 0
+        && window.activeEditIndex < monitorsModel.count
+        && monitorsModel.get(window.activeEditIndex).remote === true
+
+    Process {
+        id: koppelReader
+        command: ["sh", "-c", "cat \"$HOME/.config/kingstra/koppeling.json\" 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let k = null;
+                try { k = JSON.parse(this.text.trim()); } catch (e) { return; }
+                if (!k || !k.host) return;
+                let realCount = monitorsModel.count;
+                if (realCount === 0) return;
+                let minX = 999999, minY = 999999, maxX = -999999, maxY = -999999;
+                for (let i = 0; i < realCount; i++) {
+                    let m = monitorsModel.get(i);
+                    let w = (m.resW / m.sysScale) * window.uiScale;
+                    let h = (m.resH / m.sysScale) * window.uiScale;
+                    minX = Math.min(minX, m.uiX); minY = Math.min(minY, m.uiY);
+                    maxX = Math.max(maxX, m.uiX + w); maxY = Math.max(maxY, m.uiY + h);
+                }
+                let rw = k.scherm && k.scherm.breedte ? k.scherm.breedte : 1920;
+                let rh = k.scherm && k.scherm.hoogte ? k.scherm.hoogte : 1200;
+                let w = rw * window.uiScale, h = rh * window.uiScale;
+                let kant = String(k.kant || "links");
+                let x = minX - w, y = minY;
+                if (kant === "rechts") { x = maxX; y = minY; }
+                else if (kant === "boven") { x = minX; y = minY - h; }
+                else if (kant === "onder") { x = minX; y = maxY; }
+                window.koppelKant = kant;
+                let label = String(k.label || k.host);
+                monitorsModel.append({
+                    name: label === "pc" ? "PC" : label.charAt(0).toUpperCase() + label.slice(1),
+                    resW: rw, resH: rh, sysScale: 1.0, rate: "0",
+                    uiX: x, uiY: y, remote: true
+                });
+            }
+        }
+    }
     
     property color selectedResAccent: window.mauve
     property color selectedRateAccent: window.blue
@@ -235,13 +280,15 @@ Item {
                             sysScale: scl,
                             rate: Math.round(data[i].refreshRate).toString(),
                             uiX: normalizedX,
-                            uiY: normalizedY
+                            uiY: normalizedY,
+                            remote: false
                         });
 
                         if (data[i].focused) window.activeEditIndex = i;
                     }
                     
                     window.forceLayoutUpdate();
+                    koppelReader.running = true;
                 } catch(e) {}
             }
         }
@@ -602,7 +649,7 @@ Item {
                                                     font.family: ThemeConfig.iconFont
                                                     font.pixelSize: 32
                                                     color: isActive ? window.selectedResAccent : window.text
-                                                    text: "󰍹"
+                                                    text: model.remote ? "󰌢" : "󰍹"
                                                     Behavior on color { ColorAnimation { duration: ThemeConfig.duration(300) } } 
                                                 }
                                                 Text { 
@@ -618,7 +665,7 @@ Item {
                                                     font.family: ThemeConfig.textFont
                                                     font.pixelSize: 10
                                                     color: window.subtext0
-                                                    text: model.resW + "x" + model.resH + " @ " + model.rate + "Hz" 
+                                                    text: model.remote ? "gekoppeld · sleep om te verplaatsen" : model.resW + "x" + model.resH + " @ " + model.rate + "Hz" 
                                                 }
                                             }
                                         }
@@ -836,7 +883,7 @@ Item {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        if (monitorsModel.count > 0) {
+                                        if (monitorsModel.count > 0 && !window.activeIsRemote) {
                                             window.selectedResAccent = accentColor;
                                             monitorsModel.setProperty(window.activeEditIndex, "resW", modelData.resW);
                                             monitorsModel.setProperty(window.activeEditIndex, "resH", modelData.resH);
@@ -949,7 +996,7 @@ Item {
                             cursorShape: Qt.PointingHandCursor
 
                             function updateSelection(mouseX, snapToGrid) {
-                                if (monitorsModel.count === 0) return;
+                                if (monitorsModel.count === 0 || window.activeIsRemote) return;
                                 let pct = (mouseX - track.x) / track.width;
                                 pct = Math.max(0, Math.min(1, pct));
                                 let idx = Math.round(pct * (sliderContainer.rates.length - 1));
@@ -1085,8 +1132,14 @@ Item {
                             Quickshell.execDetached([window.monitorApplyScript, monitorStr]);
                         } else {
                             let rects = [];
+                            let remoteRect = null;
                             for (let i = 0; i < monitorsModel.count; i++) {
                                 let m = monitorsModel.get(i);
+                                if (m.remote === true) {
+                                    remoteRect = { x: m.uiX / window.uiScale, y: m.uiY / window.uiScale,
+                                                   w: m.resW, h: m.resH };
+                                    continue;
+                                }
                                 let layoutW = Math.round(m.resW / m.sysScale);
                                 let layoutH = Math.round(m.resH / m.sysScale);
                                 let rawX = m.uiX / window.uiScale;
@@ -1160,6 +1213,27 @@ Item {
                                 summaryString += r.name + " ";
                             }
                             
+                            // Gekoppelde machine: welke kant ligt hij nu, ten opzichte van alle schermen samen?
+                            if (remoteRect !== null) {
+                                let bx1 = 999999, by1 = 999999, bx2 = -999999, by2 = -999999;
+                                for (let i = 0; i < rects.length; i++) {
+                                    bx1 = Math.min(bx1, rects[i].x + finalMinX); by1 = Math.min(by1, rects[i].y + finalMinY);
+                                    bx2 = Math.max(bx2, rects[i].x + finalMinX + rects[i].w); by2 = Math.max(by2, rects[i].y + finalMinY + rects[i].h);
+                                }
+                                let cx = remoteRect.x + remoteRect.w / 2, cy = remoteRect.y + remoteRect.h / 2;
+                                let kant = "links";
+                                if (remoteRect.x + remoteRect.w <= bx1 + 30) kant = "links";
+                                else if (remoteRect.x >= bx2 - 30) kant = "rechts";
+                                else if (remoteRect.y + remoteRect.h <= by1 + 30) kant = "boven";
+                                else if (remoteRect.y >= by2 - 30) kant = "onder";
+                                else kant = cx < (bx1 + bx2) / 2 ? "links" : "rechts";
+                                if (kant !== window.koppelKant) {
+                                    window.koppelKant = kant;
+                                    Quickshell.execDetached([window.koppelScript, "kant", kant]);
+                                }
+                            }
+                            if (rects.length === 0) return;
+
                             let postReloadCmd = "pkill -x awww-daemon ; sleep 0.2 ; awww-daemon &";
                             
                             Quickshell.execDetached(applyArgs);

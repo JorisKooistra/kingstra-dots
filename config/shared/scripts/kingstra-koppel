@@ -11,11 +11,16 @@
 #                              machine staat, gezien vanaf deze (standaard links)
 #   kingstra koppel status     laat zien of alles draait en de ander bereikbaar is
 #   kingstra koppel stuur <bestand...>   naar Downloads op de andere machine
+#   kingstra koppel stuur-kies           bestanden kiezen en sturen
+#   kingstra koppel open       actieve venster ook op de andere machine openen
+#                              (zelfde app; bestanden en links gaan mee)
+#   kingstra koppel kant <links|rechts|boven|onder>
+#                              de andere machine verplaatsen (ook: Beeldschermen)
 #   kingstra koppel aan|uit    delen tijdelijk aan- of uitzetten
 #   kingstra koppel vergeet    koppeling op deze machine weghalen
 #
 # Achter de schermen (via ssh door de andere machine aangeroepen):
-#   _bevestig, _klembord-ontvang, _melding, _downloads, _vingerafdruk
+#   _bevestig, _klembord-ontvang, _melding, _downloads, _start, _kant
 # =============================================================================
 set -uo pipefail
 USER="${USER:-$(id -un)}"
@@ -65,6 +70,27 @@ eigen_label() {
 
 # Weergavenaam: "pc" → "PC", "laptop" → "Laptop".
 toon() { [[ "$1" == pc ]] && echo PC || echo "${1^}"; }
+
+# Omvang van alle schermen samen (logische pixels), voor de scherminstellingen
+# aan de andere kant: "1920x1200".
+eigen_scherm() {
+    sessie_env
+    hyprctl monitors -j 2>/dev/null | python3 -c '
+import json, sys
+try:
+    mons = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+if not mons:
+    sys.exit(0)
+def size(m):
+    s = m.get("scale") or 1
+    w, h = m["width"] / s, m["height"] / s
+    return (h, w) if m.get("transform", 0) % 2 else (w, h)
+xs = [m["x"] for m in mons]; ys = [m["y"] for m in mons]
+xe = [m["x"] + size(m)[0] for m in mons]; ye = [m["y"] + size(m)[1] for m in mons]
+print("%dx%d" % (round(max(xe) - min(xs)), round(max(ye) - min(ys))))' 2>/dev/null
+}
 
 eigen_host() { cat /etc/hostname 2>/dev/null || uname -n; }
 
@@ -146,13 +172,18 @@ EOF
 }
 
 schrijf_state() {
-    # $1 host  $2 ip  $3 user  $4 kant  $5 label (van de ander)
+    # $1 host  $2 ip  $3 user  $4 kant  $5 label  $6 scherm (BxH, van de ander)
     mkdir -p "$STATE_DIR"
-    python3 - "$STATE" "$@" <<'PY'
+    python3 - "$STATE" "$1" "$2" "$3" "$4" "$5" "${6:-}" <<'PY'
 import json, sys
-path, host, ip, user, kant, label = sys.argv[1:7]
-json.dump({"host": host, "ip": ip, "user": user, "kant": kant, "label": label},
-          open(path, "w"), indent=2)
+path, host, ip, user, kant, label, scherm = sys.argv[1:8]
+data = {"host": host, "ip": ip, "user": user, "kant": kant, "label": label}
+try:
+    w, h = (int(v) for v in scherm.lower().split("x"))
+    data["scherm"] = {"breedte": w, "hoogte": h}
+except Exception:
+    pass
+json.dump(data, open(path, "w"), indent=2)
 PY
 }
 
@@ -217,14 +248,14 @@ cmd_koppel() {
     local antwoord peer_fp peer_label
     antwoord="$(ssh "${opts[@]}" "$user@$host" "$REMOTE_SELF" _bevestig \
         "$(printf '%q' "$mijn_host")" "$mijn_ip" "$(tegenkant "$kant")" "$mijn_fp" "$mijn_label" "$USER" \
-        "$(printf '%q' "$pubkey")")" || die "De andere kant kon de koppeling niet opslaan"
+        "$(printf '%q' "$pubkey")" "$(eigen_scherm)")" || die "De andere kant kon de koppeling niet opslaan"
     peer_fp="$(sed -n 's/^fp=//p' <<<"$antwoord")"
     peer_label="$(sed -n 's/^label=//p' <<<"$antwoord")"
     [[ -n "$peer_fp" ]] || die "Geen vingerafdruk van $host ontvangen"
     ok "$host is ingesteld (${peer_label:-?})"
 
     schrijf_lan_mouse "$host" "$ip" "$kant" "$peer_fp" "${peer_label:-$host}"
-    schrijf_state "$host" "$ip" "$user" "$kant" "${peer_label:-$host}"
+    schrijf_state "$host" "$ip" "$user" "$kant" "${peer_label:-$host}" "$(sed -n 's/^scherm=//p' <<<"$antwoord")"
     schrijf_bestanden "$host" "$ip" "$user" "${peer_label:-$host}"
     local peer_pub; peer_pub="$(sed -n 's/^pubkey=//p' <<<"$antwoord")"
     if [[ -n "$peer_pub" ]]; then
@@ -248,18 +279,19 @@ cmd_koppel() {
 
 # Draait op de ANDERE machine, via ssh vanuit cmd_koppel.
 cmd_bevestig() {
-    local host="$1" ip="$2" kant="$3" fp="$4" label="$5" user="$6" pubkey="$7"
+    local host="$1" ip="$2" kant="$3" fp="$4" label="$5" user="$6" pubkey="$7" scherm="${8:-}"
     mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
     touch "$HOME/.ssh/authorized_keys"; chmod 600 "$HOME/.ssh/authorized_keys"
     grep -qxF "$pubkey" "$HOME/.ssh/authorized_keys" || printf '%s\n' "$pubkey" >> "$HOME/.ssh/authorized_keys"
     [[ -f "$HOME/.ssh/id_ed25519" ]] || ssh-keygen -q -t ed25519 -N '' -f "$HOME/.ssh/id_ed25519" -C "$USER@$(eigen_host) (kingstra)"
     zorg_certificaat || { echo "fout=certificaat"; exit 1; }
     schrijf_lan_mouse "$host" "$ip" "$kant" "$fp" "$label"
-    schrijf_state "$host" "$ip" "$user" "$kant" "$label"
+    schrijf_state "$host" "$ip" "$user" "$kant" "$label" "$scherm"
     schrijf_bestanden "$host" "$ip" "$user" "$label"
     diensten_aan
     echo "fp=$(vingerafdruk)"
     echo "label=$(eigen_label)"
+    echo "scherm=$(eigen_scherm)"
     echo "pubkey=$(cat "$HOME/.ssh/id_ed25519.pub")"
 }
 
@@ -359,6 +391,126 @@ cmd_stuur() {
     fi
 }
 
+# Bestanden kiezen (railknop, menu) en dan sturen.
+cmd_stuur_kies() {
+    [[ -f "$STATE" ]] || die "nog niet gekoppeld"
+    command -v zenity >/dev/null 2>&1 || die "zenity ontbreekt; sleep bestanden op de railknop of gebruik Bestanden"
+    local naam keuze
+    naam="$(toon "$(state_get label)")"
+    keuze="$(zenity --file-selection --multiple --separator=$'\n' --title="Naar $naam sturen" 2>/dev/null)" || exit 0
+    local files=()
+    mapfile -t files <<<"$keuze"
+    [[ ${#files[@]} -gt 0 && -n "${files[0]}" ]] || exit 0
+    cmd_stuur "${files[@]}"
+}
+
+# ---------------------------------------------------------------------------
+# Apps: het actieve venster ook op de andere machine openen
+# ---------------------------------------------------------------------------
+# Zoekt het .desktop-bestand bij een vensterklasse. Drukt de bestandsnaam af.
+desktop_voor_klasse() {
+    python3 - "$1" <<'PY'
+import os, sys, glob, configparser
+cls = sys.argv[1].lower()
+home = os.path.expanduser("~")
+dirs = [home + "/.local/share/applications", home + "/.local/share/flatpak/exports/share/applications",
+        "/var/lib/flatpak/exports/share/applications", "/usr/local/share/applications", "/usr/share/applications"]
+best = None
+for d in dirs:
+    for f in sorted(glob.glob(d + "/*.desktop")):
+        base = os.path.basename(f)[:-8].lower()
+        if base == cls or base.endswith("." + cls):
+            print(os.path.basename(f)); sys.exit(0)
+        if best is None:
+            try:
+                cp = configparser.ConfigParser(interpolation=None, strict=False)
+                cp.read(f, encoding="utf-8")
+                if cp.get("Desktop Entry", "StartupWMClass", fallback="").lower() == cls:
+                    best = os.path.basename(f)
+            except Exception:
+                pass
+if best:
+    print(best)
+PY
+}
+
+desktop_pad() {
+    local id="$1" d
+    for d in "$HOME/.local/share/applications" "$HOME/.local/share/flatpak/exports/share/applications" \
+             /var/lib/flatpak/exports/share/applications /usr/local/share/applications /usr/share/applications; do
+        [[ -f "$d/$id" ]] && { printf '%s\n' "$d/$id"; return 0; }
+    done
+    return 1
+}
+
+cmd_open() {
+    [[ -f "$STATE" ]] || die "nog niet gekoppeld"
+    sessie_env
+    local info klasse pid naam desktop
+    info="$(hyprctl activewindow -j 2>/dev/null)"
+    klasse="$(python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("class") or d.get("initialClass") or "")' <<<"$info" 2>/dev/null)"
+    pid="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("pid") or "")' <<<"$info" 2>/dev/null)"
+    naam="$(toon "$(state_get label)")"
+    [[ -n "$klasse" ]] || { notify-send -a Kingstra "Geen venster" "Klik eerst het venster aan dat je op $naam wilt openen" 2>/dev/null; die "geen actief venster"; }
+    desktop="$(desktop_voor_klasse "$klasse")"
+
+    # Bestanden en links uit de opdrachtregel van het venster gaan mee.
+    local args=() a stuurlijst=()
+    if [[ -n "$pid" && -r "/proc/$pid/cmdline" ]]; then
+        local first=1
+        while IFS= read -r -d '' a; do
+            (( first )) && { first=0; continue; }
+            if [[ "$a" == http://* || "$a" == https://* ]]; then
+                args+=("$a")
+            elif [[ "$a" != -* && -f "$a" ]]; then
+                stuurlijst+=("$a")
+            fi
+        done <"/proc/$pid/cmdline"
+    fi
+    local exe=""
+    [[ -n "$pid" ]] && exe="$(basename "$(readlink -f "/proc/$pid/exe" 2>/dev/null)" 2>/dev/null)"
+
+    local dir=""
+    if (( ${#stuurlijst[@]} > 0 )); then
+        local doel opts f
+        doel="$(peer_doel)"; mapfile -t opts < <(ssh_opts)
+        dir="$(peer_ssh "$REMOTE_SELF _downloads" 2>/dev/null)" || die "$naam is niet bereikbaar"
+        scp -q "${opts[@]}" -- "${stuurlijst[@]}" "$doel:$(printf '%q' "$dir")/" || die "bestanden kopiëren mislukte"
+        for f in "${stuurlijst[@]}"; do args+=("$dir/${f##*/}"); done
+    fi
+
+    local q="" a2
+    for a2 in "${args[@]}"; do q+=" $(printf '%q' "$a2")"; done
+    if peer_ssh "$REMOTE_SELF _start $(printf '%q' "${desktop:--}") $(printf '%q' "${exe:-$klasse}") $(printf '%q' "$(toon "$(eigen_label)")")$q" 2>/dev/null; then
+        notify-send -a Kingstra -i video-display "Geopend op $naam" "$klasse" 2>/dev/null || true
+        ok "$klasse geopend op $naam"
+    else
+        local rc=$?
+        notify-send -a Kingstra "Niet geopend op $naam" "$klasse staat daar niet, of $naam is niet bereikbaar" 2>/dev/null || true
+        exit "$rc"
+    fi
+}
+
+# Draait op de ANDERE machine: app starten in de grafische sessie daar.
+cmd_start() {
+    local desktop="$1" exe="$2" van="$3"; shift 3
+    sessie_env
+    local pad=""
+    [[ "$desktop" != "-" ]] && pad="$(desktop_pad "$desktop")"
+    if [[ -n "$pad" ]]; then
+        systemd-run --user --collect --quiet -- gio launch "$pad" "$@" >/dev/null 2>&1 \
+            || setsid -f gio launch "$pad" "$@" </dev/null >/dev/null 2>&1
+    elif command -v "$exe" >/dev/null 2>&1; then
+        systemd-run --user --collect --quiet -- "$exe" "$@" >/dev/null 2>&1 \
+            || setsid -f "$exe" "$@" </dev/null >/dev/null 2>&1
+    else
+        notify-send -a Kingstra "Niet geopend" "${desktop%.desktop} staat niet op deze machine (vanaf $van)" 2>/dev/null || true
+        exit 3
+    fi
+    local wat="${desktop%.desktop}"; [[ "$desktop" == "-" ]] && wat="$exe"
+    notify-send -a Kingstra -i video-display "Geopend vanaf $van" "$wat" 2>/dev/null || true
+}
+
 # ---------------------------------------------------------------------------
 cmd_status() {
     if [[ ! -f "$STATE" ]]; then
@@ -374,6 +526,36 @@ cmd_status() {
     done
 }
 
+# Kant wijzigen (ook vanuit Beeldschermen, waar je de andere machine als
+# scherm versleept). Past beide machines aan; de ander krijgt de tegenkant.
+cmd_kant() {
+    local kant="${1:-}"
+    case "$kant" in links|rechts|boven|onder) ;; *) die "gebruik: kingstra koppel kant links|rechts|boven|onder" ;; esac
+    [[ -f "$STATE" ]] || die "nog niet gekoppeld"
+    zet_kant "$kant"
+    local naam; naam="$(toon "$(state_get label)")"
+    if peer_ssh "$REMOTE_SELF _kant $(tegenkant "$kant")" >/dev/null 2>&1; then
+        ok "$naam staat nu $kant"
+        notify-send -a Kingstra -i video-display "$naam staat nu $kant" "Schuif de muis over die rand" 2>/dev/null || true
+    else
+        warn "$naam staat hier nu $kant; $naam zelf was niet bereikbaar (daar nog de oude kant)"
+        notify-send -a Kingstra -i video-display "$naam staat nu $kant" "$naam was niet bereikbaar; daar nog de oude kant" 2>/dev/null || true
+    fi
+}
+
+zet_kant() {
+    local kant="$1"
+    python3 - "$STATE" "$kant" <<'PY'
+import json, sys
+path, kant = sys.argv[1:3]
+data = json.load(open(path))
+data["kant"] = kant
+json.dump(data, open(path, "w"), indent=2)
+PY
+    [[ -f "$LM_CONF" ]] && sed -i "s/^position = \".*\"/position = \"$(lm_positie "$kant")\"/" "$LM_CONF"
+    systemctl --user restart kingstra-lan-mouse.service 2>/dev/null || true
+}
+
 cmd_vergeet() {
     systemctl --user stop "${UNITS[@]}" >/dev/null 2>&1 || true
     local label; label="$(state_get label 2>/dev/null)"
@@ -387,12 +569,17 @@ cmd_vergeet() {
 case "${1:-status}" in
     status) cmd_status ;;
     stuur|send) shift; cmd_stuur "$@" ;;
+    stuur-kies) cmd_stuur_kies ;;
+    open|openen) cmd_open ;;
+    _start) shift; cmd_start "$@" ;;
     aan|on)
         [[ -f "$STATE" ]] || die "nog niet gekoppeld"
         systemctl --user start "${UNITS[@]}" && ok "Delen staat aan" ;;
     uit|off)
         systemctl --user stop "${UNITS[@]}" && ok "Delen staat uit (tot 'kingstra koppel aan' of opnieuw inloggen)" ;;
     vergeet|forget) cmd_vergeet ;;
+    kant|side) shift; cmd_kant "$@" ;;
+    _kant) shift; [[ -f "$STATE" ]] && zet_kant "$1" ;;
     klembord) cmd_klembord ;;
     _klembord-stuur) cmd_klembord_stuur ;;
     _klembord-ontvang) shift; cmd_klembord_ontvang "$@" ;;

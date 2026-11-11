@@ -723,6 +723,30 @@ Item {
         running: true
     }
 
+    // Gekoppelde machine (kingstra koppel): label voor de railknop "Naar …".
+    property string koppelLabel: ""
+    readonly property string koppelScript: Quickshell.env("HOME") + "/.local/bin/kingstra-koppel"
+    function applyKoppeling(raw) {
+        let label = "";
+        try {
+            let k = JSON.parse(String(raw || "").trim() || "{}");
+            if (k && k.host) label = String(k.label || k.host);
+        } catch (e) {}
+        root.koppelLabel = label === "pc" ? "PC" : (label ? label.charAt(0).toUpperCase() + label.slice(1) : "");
+    }
+    Process {
+        id: koppelingReader
+        command: ["sh", "-c", "cat \"$HOME/.config/kingstra/koppeling.json\" 2>/dev/null; true"]
+        running: true
+        stdout: StdioCollector { onStreamFinished: root.applyKoppeling(this.text) }
+    }
+    Timer {
+        interval: 15000
+        running: true
+        repeat: true
+        onTriggered: if (!koppelingReader.running) koppelingReader.running = true
+    }
+
     FileView {
         id: modeFileView
         path: Quickshell.env("HOME") + "/.config/kingstra/state/mode.json"
@@ -2052,6 +2076,52 @@ Item {
             onTriggered: root.togglePanel("gaming")
         }
     }
+    // Naar de gekoppelde machine (kingstra koppel): sleep bestanden op de
+    // knop om ze naar Downloads daar te sturen; klik kiest bestanden.
+    // Alleen zichtbaar als er een koppeling is.
+    Component {
+        id: koppelingSlot
+        RailButton {
+            id: koppelBtn
+            property bool dropHover: false
+            tooltip: "Naar " + root.koppelLabel + " · sleep bestanden hierheen of klik om te kiezen"
+            available: root.koppelLabel !== ""
+            icon: "󰌢"
+            accent: root.mocha.accent2
+            onTriggered: Quickshell.execDetached([root.koppelScript, "stuur-kies"])
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: Qt.rgba(koppelBtn.accent.r, koppelBtn.accent.g, koppelBtn.accent.b, 0.22)
+                border.width: 1
+                border.color: koppelBtn.accent
+                opacity: koppelBtn.dropHover ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation { duration: ThemeConfig.durationToken("fast"); easing.type: ThemeConfig.easingToken("standard") }
+                }
+            }
+            DropArea {
+                anchors.fill: parent
+                onEntered: (drag) => {
+                    koppelBtn.dropHover = drag.hasUrls;
+                    if (drag.hasUrls) drag.accept(Qt.CopyAction);
+                }
+                onExited: koppelBtn.dropHover = false
+                onDropped: (drop) => {
+                    koppelBtn.dropHover = false;
+                    if (!drop.hasUrls) return;
+                    let files = [];
+                    for (let u of drop.urls) {
+                        let s = String(u);
+                        if (s.indexOf("file://") === 0) files.push(decodeURIComponent(s.substring(7)));
+                    }
+                    if (files.length === 0) return;
+                    Quickshell.execDetached([root.koppelScript, "stuur"].concat(files));
+                    drop.accept(Qt.CopyAction);
+                }
+            }
+        }
+    }
     // Vastgepinde modules uit het controlecentrum: één klik schakelt,
     // middelklik maakt los (rechtsklik op de pil pint weer vast).
     Component {
@@ -2195,6 +2265,7 @@ Item {
         case "system": return systemSlot;
         case "updates": return updatesSlot;
         case "games": return gamesSlot;
+        case "koppeling": return koppelingSlot;
         case "pins": return pinsSlot;
         case "more": return moreSlot;
         case "tray": return traySlot;

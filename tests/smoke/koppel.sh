@@ -38,6 +38,7 @@ cat > "$STUB/wl-copy" <<'S'
 cat > "$HOME/clip"
 S
 printf '#!/bin/sh\nexit 0\n' > "$STUB/notify-send"
+printf '#!/bin/sh\nexit 0\n' > "$STUB/systemctl"
 printf '#!/bin/sh\necho "$HOME/Downloads"\n' > "$STUB/xdg-user-dir"
 chmod +x "$STUB"/*
 export PATH="$STUB:$PATH" T KOPPEL_LOG="$T/log"; : > "$T/log"
@@ -68,5 +69,31 @@ sleep 0.5
 echo inhoud > "$T/A/home/test bestand.txt"
 side A stuur "$T/A/home/test bestand.txt" >/dev/null
 [[ -f "$T/B/home/Downloads/test bestand.txt" ]] || { echo "FOUT: bestand kwam niet aan"; cat "$T/log"; exit 1; }
+
+# Kant wisselen (Beeldschermen / kingstra koppel kant): beide kanten volgen
+for side in A B; do
+    mkdir -p "$T/$side/home/.config/lan-mouse"
+    printf 'port = 4242\n\n[[clients]]\nposition = "left"\nhostname = "peer"\n' > "$T/$side/home/.config/lan-mouse/config.toml"
+done
+side A kant rechts >/dev/null
+grep -q '^position = "right"' "$T/A/home/.config/lan-mouse/config.toml" || { echo "FOUT: A niet naar rechts"; exit 1; }
+grep -q '^position = "left"' "$T/B/home/.config/lan-mouse/config.toml" || { echo "FOUT: B niet links"; exit 1; }
+grep -q '"kant": "links"' "$T/B/home/.config/kingstra/koppeling.json" || { echo "FOUT: B-state niet links"; exit 1; }
+grep -q '"kant": "rechts"' "$T/A/home/.config/kingstra/koppeling.json" || { echo "FOUT: A-state niet rechts"; exit 1; }
+
+# Venster ook daar openen: zelfde app via het .desktop-bestand, bestand gaat mee
+mkdir -p "$T/A/home/.local/share/applications" "$T/B/home/.local/share/applications"
+printf '[Desktop Entry]\nName=Test\nExec=testapp %%F\nType=Application\n' > "$T/A/home/.local/share/applications/org.voorbeeld.testapp.desktop"
+cp "$T/A/home/.local/share/applications/org.voorbeeld.testapp.desktop" "$T/B/home/.local/share/applications/"
+echo doc > "$T/A/home/notities.txt"
+bash -c 'sleep 30; :' _ "$T/A/home/notities.txt" & spid=$!
+printf '#!/bin/sh\necho "{\\"class\\": \\"testapp\\", \\"pid\\": %s}"\n' "$spid" > "$STUB/hyprctl"
+printf '#!/bin/sh\necho "$@" >> "$KOPPEL_LOG.start"\n' > "$STUB/systemd-run"
+chmod +x "$STUB/hyprctl" "$STUB/systemd-run"
+side A open >/dev/null
+kill "$spid" 2>/dev/null || true
+grep -q "gio launch $T/B/home/.local/share/applications/org.voorbeeld.testapp.desktop $T/B/home/Downloads/notities.txt" "$KOPPEL_LOG.start" \
+    || { echo "FOUT: open startte niet goed:"; cat "$KOPPEL_LOG.start" 2>/dev/null; exit 1; }
+[[ -f "$T/B/home/Downloads/notities.txt" ]] || { echo "FOUT: bestand ging niet mee"; exit 1; }
 
 echo "koppel: ok"

@@ -33,6 +33,7 @@ function build(home, scripts) {
             { icon: "󰁝", label: "Venster naar kladblok", hint: "Super+Shift+`", cmd: ["bash", scripts + "/scratchpad.sh", "send"] },
             { icon: "󰖰", label: "Venster parkeren", hint: "Super+-", cmd: ["python3", scripts + "/park-window.py", "park"] },
             { icon: "󰖯", label: "Geparkeerd venster terug", hint: "Super+Shift+-", cmd: ["python3", scripts + "/park-window.py", "last"] },
+            { icon: "󰌢", label: "Dit venster ook openen op de andere machine", cmd: kingstra("koppel open") },
             { icon: "󰐃", label: "Op alle werkruimtes vastzetten", cmd: ["hyprctl", "dispatch", "hl.dsp.window.pin()"] },
             { icon: "󰓩", label: "Venster uit groep halen", cmd: ["hyprctl", "dispatch", "hl.dsp.group.move_window({ action = \"out\" })"] },
             { icon: "󰌾", label: "Groep vergrendelen of vrijgeven", cmd: ["hyprctl", "dispatch", "hl.dsp.group.lock_active({ action = \"toggle\" })"] }
@@ -82,6 +83,14 @@ function build(home, scripts) {
             { icon: "󰤨", label: "Netwerk beheren (nmtui)", cmd: ["kitty", "--title=Network", "nmtui"] },
             { icon: "󰂱", label: "Bluetooth-apparaten", cmd: ["blueman-manager"] },
             { icon: "󰄜", label: "Telefoon (KDE Connect)", cmd: qs("phone"), panel: true },
+            { icon: "󰌢", label: "Andere machine (pc ↔ laptop)", children: [
+                { icon: "󰁝", label: "Bestanden sturen", cmd: kingstra("koppel stuur-kies") },
+                { icon: "󰌢", label: "Dit venster ook daar openen", cmd: kingstra("koppel open") },
+                { icon: "󰍹", label: "Plaats naast je schermen (Beeldschermen)", cmd: qs("monitors"), panel: true },
+                { icon: "󰔡", label: "Delen aan", cmd: kingstra("koppel aan") },
+                { icon: "󰔢", label: "Delen uit", cmd: kingstra("koppel uit") },
+                { icon: "󰋼", label: "Status", cmd: inTerminal("PATH=\"$HOME/.local/bin:$PATH\" kingstra koppel status") }
+            ] },
             { icon: "󰂛", label: "Niet storen aan/uit", cmd: ["bash", home + "/.config/quickshell/notifications/notification_control.sh", "dnd"] },
             { icon: "󰑐", label: "Laatst weggeklikte melding terug", cmd: ["bash", home + "/.config/quickshell/notifications/notification_control.sh", "recall"] },
             { icon: "󰓅", label: "Energieprofiel", children: [
