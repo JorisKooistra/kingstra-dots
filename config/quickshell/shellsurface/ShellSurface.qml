@@ -72,9 +72,8 @@ Scope {
                 // Hyprland liet deze schermvullende laag met een slide +
                 // overshoot van boven invliegen. Die laaganimatie staat uit
                 // (rules.lua). Bij het opstarten komt de shell alleen rustig
-                // op (geen zoom of verschuiving meer); na een herlaadactie
-                // staat hij er meteen. Bij een themawissel speelt een zachte
-                // versie, zodat de nieuwe vorm "neerstrijkt".
+                // op (geen zoom of verschuiving meer); na een herlaadactie en
+                // bij een themawissel staat hij er meteen.
                 // Alleen opacity/scale van het contentItem: vormen, blobs en
                 // alle bestaande animaties blijven ongemoeid.
                 property real introOpacity: surfacePersist.introPlayed ? 1 : 0
@@ -135,12 +134,9 @@ Scope {
                 Connections {
                     target: ThemeConfig
                     function onThemeChanged() {
-                        // Alleen bij een echte themawissel, niet als een
-                        // herladen instantie hetzelfde thema opnieuw inleest.
-                        let t = String(ThemeConfig.theme || "");
-                        let changed = surfacePersist.lastTheme !== "" && t !== surfacePersist.lastTheme;
-                        surfacePersist.lastTheme = t;
-                        if (surfaceWindow.introSettled && changed) surfaceWindow.playIntro(true);
+                        // Geen "neerstrijk"-animatie meer bij een themawissel:
+                        // Joris wil daar geen beweging (2026-11-11).
+                        surfacePersist.lastTheme = String(ThemeConfig.theme || "");
                     }
                 }
 

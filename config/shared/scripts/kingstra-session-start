@@ -252,10 +252,21 @@ start_shell() {
     run_bg_once "focus_daemon.py" "FocusTime daemon" python3 "$CONFIG_HOME/quickshell/focustime/focus_daemon.py"
 }
 
+# Herlaadt de bar in hetzelfde proces (IpcHandler "shell" in TopBar.qml).
+# Vensters en ruimtereserveringen blijven staan, dus na een update springt
+# niets. Mislukt het (oude bar zonder handler, bar hangt), dan 1.
+soft_reload_topbar() {
+    [[ "${KINGSTRA_HARD_RESTART:-0}" == "1" ]] && return 1
+    pgrep -f "quickshell.*$CONFIG_HOME/quickshell/TopBar.qml" >/dev/null 2>&1 || return 1
+    command -v quickshell >/dev/null 2>&1 || return 1
+    timeout 5 quickshell ipc -p "$CONFIG_HOME/quickshell/TopBar.qml" call shell reload >/dev/null 2>&1 || return 1
+    log "topbar zacht herladen"
+}
+
 stop_shell() {
     log "stop shell"
 
-    stop_pattern "quickshell.*$CONFIG_HOME/quickshell/TopBar.qml" "Quickshell topbar"
+    [[ "${KEEP_TOPBAR:-0}" == "1" ]] || stop_pattern "quickshell.*$CONFIG_HOME/quickshell/TopBar.qml" "Quickshell topbar"
     stop_pattern "quickshell.*$CONFIG_HOME/quickshell/Main.qml" "Quickshell popups"
     stop_pattern "qs.*$CONFIG_HOME/quickshell/overview/shell.qml" "Quickshell overview"
     stop_pattern "focus_daemon.py" "FocusTime daemon"
@@ -347,8 +358,13 @@ case "${1:-start}" in
             exit 1
         fi
         pause_shell_watch
+        # Bar zacht herladen als dat kan (KINGSTRA_HARD_RESTART=1 = altijd
+        # echt herstarten, bijvoorbeeld vanuit kingstra-herstel).
+        KEEP_TOPBAR=0
+        soft_reload_topbar && KEEP_TOPBAR=1
         stop_shell
         for _ in 1 2 3 4 5 6 7 8 9 10; do
+            [[ "$KEEP_TOPBAR" == "1" ]] && break
             pgrep -f "quickshell.*$CONFIG_HOME/quickshell/TopBar.qml" >/dev/null 2>&1 || break
             sleep 0.2
         done

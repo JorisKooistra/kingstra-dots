@@ -57,7 +57,7 @@ reset_shell() {
     ask "Doorgaan?" || return 0
     rm -rf "${HOME:?}/.cache/quickshell/qmlcache" "${HOME:?}/.cache/kingstra/qmlcache" 2>/dev/null
     if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
-        run_tool kingstra-session-start restart-shell
+        KINGSTRA_HARD_RESTART=1 run_tool kingstra-session-start restart-shell
     else
         echo "Klaar. De shell start schoon bij de volgende keer inloggen."
     fi

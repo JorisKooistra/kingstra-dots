@@ -130,7 +130,10 @@ _phase05_apply_live() {
 
     if command -v kingstra-session-start >/dev/null 2>&1; then
         if _phase05_shell_running; then
-            kingstra-session-start restart-shell >/dev/null 2>&1 || \
+            # Zonder plugin-wijziging herlaadt de bar zacht: vensters
+            # springen dan niet na een update.
+            KINGSTRA_HARD_RESTART="${PHASE05_PLUGIN_CHANGED:-0}" \
+                kingstra-session-start restart-shell >/dev/null 2>&1 || \
                 log_warn "Kingstra shell kon niet live herstarten"
         else
             kingstra-session-start start-ui >/dev/null 2>&1 || \
@@ -228,6 +231,12 @@ _phase05_install_kingstra_qml_plugin() {
     ensure_dir "$build_dir"
     ensure_dir "$install_prefix/lib/qml"
 
+    # Verandert de plugin, dan kan de bar niet zacht herladen (een geladen .so
+    # wordt niet vervangen) en moet hij straks echt herstarten.
+    local so="$install_prefix/lib/qml/Kingstra/Blobs/libkingstrablobs.so"
+    local so_before=""
+    [[ -f "$so" ]] && so_before="$(sha256sum "$so" 2>/dev/null | cut -d' ' -f1)"
+
     local -a generator_args=()
     if command -v ninja >/dev/null 2>&1; then
         generator_args=(-G Ninja)
@@ -244,6 +253,10 @@ _phase05_install_kingstra_qml_plugin() {
 
     INSTALL_NEXT_RUN_LABEL="CMake installeren: Kingstra QML-plugin" \
         run_cmd cmake --install "$build_dir"
+
+    local so_after=""
+    [[ -f "$so" ]] && so_after="$(sha256sum "$so" 2>/dev/null | cut -d' ' -f1)"
+    [[ "$so_before" != "$so_after" ]] && PHASE05_PLUGIN_CHANGED=1
 
     log_ok "Kingstra QML-plugin geïnstalleerd in $install_prefix/lib/qml"
 }
