@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Fastfetch nieuw
+- **Nieuwe indeling** voor het overzicht bij het openen van een terminal: een Kingstra-kroon in plaats van het grote Arch-logo, en de gegevens in drie groepen (systeem, bureaublad, hardware) met een boomlijn. Nieuw erbij: het actieve Kingstra-thema en de schermresolutie. Geheugen en schijf hebben een balkje.
+- **Kleuren volgen het thema**: alleen de terminalkleuren die matugen voor kitty maakt (accent 1 voor de namen, accent 3 voor de kopjes, outline voor de lijnen).
+- **Geen afgebroken regels meer**: Lettertype toont alleen het terminallettertype, GPU alleen de kaartnaam, en te lange regels worden afgekapt in plaats van afgebroken, zodat het logo niet meer verschuift.
+
 ### Printen: passend op A4
 - **"Passend op pagina" weer te kiezen.** GTK4 (4.24) gebruikt ook buiten Flatpak de print-portal. Die dialoog laat de eigen tabbladen van apps weg, zoals "Page Handling" in Papers, en dan blijft de schaal op "geen": een grote PDF of foto kwam op 100% half van het A4 af. De installer zet nu `org.freedesktop.impl.portal.Print=none` in `portals.conf`, zodat GTK-apps hun eigen printdialoog met "Fit to Printable Area" tonen.
 - **A4 standaard in plaats van US Letter.** Met de en_US-locale kozen printdialogen Letter. De installer genereert `nl_NL.UTF-8` en zet `LC_PAPER` via `~/.config/kingstra/paper-locale` (Hyprland-env en dbus/systemd). Na opnieuw inloggen is A4 de standaard. Papers/Evince-instellingen die nog op Letter stonden, gaan eenmalig naar A4.

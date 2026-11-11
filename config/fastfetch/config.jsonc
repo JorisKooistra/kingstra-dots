@@ -1,110 +1,174 @@
 // =============================================================================
 // fastfetch/config.jsonc — kingstra-dots
 // =============================================================================
-// Stijl: Arch ASCII logo links, systeeminfo rechts
-// Kleuren volgen matugen in fase 8 via $FASTFETCH_COLOR_* variabelen
+// Kingstra-kroon links, systeeminfo rechts in drie groepen met een boomlijn.
+//
+// Kleuren: alleen de 16 terminalkleuren. Kitty krijgt die van matugen
+// (templates/kitty-colors.conf), dus fastfetch volgt vanzelf het thema:
+//   blue        = accent 1 (focus)      -> sleutels, kroon
+//   green       = accent 2 (activiteit) -> balkjes, waarden onder 60%
+//   magenta     = accent 3 (attentie)   -> kopjes, kroonjuwelen
+//   light_black = outline               -> boomlijnen, rustige tekst
+// Let op: schrijf "light_black", niet "bright_black" (dat wordt vet + zwart),
+// en gebruik alleen kleurnamen die fastfetch kent; een onbekende naam laat
+// fastfetch helemaal stoppen.
+//
+// Regels worden afgekapt in plaats van afgebroken, zodat het logo nooit
+// verschuift in een smal venster.
 // =============================================================================
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
 
     "logo": {
-        "type": "builtin",
-        "source": "arch",
+        "type": "file",
+        "source": "~/.config/fastfetch/kingstra.txt",
         "color": {
             "1": "blue",
-            "2": "cyan"
+            "2": "magenta",
+            "3": "light_black"
         },
         "padding": {
-            "top": 1,
-            "left": 2,
-            "right": 2
+            "top": 3,
+            "left": 3,
+            "right": 4
         }
     },
 
     "display": {
-        "separator": "  ",
+        "separator": " ",
+        "disableLinewrap": true,
         "color": {
             "keys": "blue",
-            "title": "cyan"
+            "title": "blue",
+            "separator": "light_black"
+        },
+        "key": {
+            "width": 16
+        },
+        "bar": {
+            "char": {
+                "elapsed": "━",
+                "total": "─"
+            },
+            "border": null,
+            "width": 12,
+            "color": {
+                "total": "light_black"
+            }
+        },
+        "percent": {
+            "type": ["num", "num-color"],
+            "color": {
+                "green": "green",
+                "yellow": "light_yellow",
+                "red": "light_red"
+            }
         }
     },
 
     "modules": [
         {
             "type": "title",
-            "format": "{user-name}@{host-name}",
-            "key": "",
-            "keyColor": "cyan"
+            "format": "{#bold_blue}{user-name}{#}{#light_black} @ {#}{#bold_magenta}{host-name}{#}"
         },
-        "break",
+        {
+            "type": "custom",
+            "format": "{#light_black}╭─{#} {#magenta}systeem{#} {#light_black}──────────────────────────────{#}"
+        },
         {
             "type": "os",
-            "key": "󰣇 OS",
-            "format": "{pretty-name} {version}"
+            "key": "{#light_black}│{#} {#blue}󰣇  OS",
+            "format": "{pretty-name}"
         },
         {
             "type": "kernel",
-            "key": " Kernel"
+            "key": "{#light_black}│{#} {#blue}  Kernel",
+            "format": "{release}"
         },
         {
             "type": "uptime",
-            "key": "󰔚 Uptime"
+            "key": "{#light_black}│{#} {#blue}󰔚  Looptijd",
+            "format": "{?days}{days}d {?}{?hours}{hours}u {?}{minutes}m"
         },
         {
             "type": "packages",
-            "key": "󰏗 Pakketten"
+            "key": "{#light_black}│{#} {#blue}󰏗  Pakketten",
+            "format": "{pacman} pacman{?flatpak-all}{#light_black} · {#}{flatpak-all} flatpak{?}"
         },
-        "break",
+        {
+            "type": "command",
+            "key": "{#light_black}│{#} {#blue}󰏘  Thema",
+            "text": "t=$(cat \"${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/active-theme\" 2>/dev/null); t=${t:-standaard}; printf '%s' \"$t\" | awk '{print toupper(substr($0,1,1)) substr($0,2)}'"
+        },
+        {
+            "type": "custom",
+            "format": "{#light_black}├─{#} {#magenta}bureaublad{#} {#light_black}───────────────────────────{#}"
+        },
         {
             "type": "wm",
-            "key": "󱂬 WM"
+            "key": "{#light_black}│{#} {#blue}󱂬  WM",
+            "format": "{pretty-name} {version}"
+        },
+        {
+            "type": "display",
+            "key": "{#light_black}│{#} {#blue}󰍹  Scherm",
+            "format": "{width}×{height} @ {refresh-rate} Hz"
         },
         {
             "type": "shell",
-            "key": " Shell"
+            "key": "{#light_black}│{#} {#blue}  Shell"
         },
         {
             "type": "terminal",
-            "key": " Terminal"
+            "key": "{#light_black}│{#} {#blue}  Terminal"
         },
         {
-            "type": "font",
-            "key": " Font"
+            "type": "terminalfont",
+            "key": "{#light_black}│{#} {#blue}  Lettertype",
+            "format": "{name}{#light_black} · {#}{size}pt"
         },
-        "break",
+        {
+            "type": "custom",
+            "format": "{#light_black}├─{#} {#magenta}hardware{#} {#light_black}─────────────────────────────{#}"
+        },
         {
             "type": "cpu",
-            "key": " CPU",
-            "format": "{name} ({cores-physical}C/{cores-logical}T) @ {freq-max}"
+            "key": "{#light_black}│{#} {#blue}  CPU",
+            "format": "{name}{#light_black} · {#}{cores-physical}C/{cores-logical}T"
         },
         {
             "type": "gpu",
-            "key": "󰍛 GPU",
-            "format": "{name} [{driver}]",
+            "key": "{#light_black}│{#} {#blue}󰢮  GPU",
+            "format": "{name}",
             "detectionMethod": "pci"
         },
         {
             "type": "memory",
-            "key": " RAM",
-            "format": "{used} / {total} ({percentage})"
+            "key": "{#light_black}│{#} {#blue}  Geheugen",
+            "format": "{percentage-bar} {used}{#light_black} / {total}{#}"
         },
         {
             "type": "disk",
-            "key": "󰋊 Schijf",
-            "folders": "/"
+            "key": "{#light_black}│{#} {#blue}󰋊  Schijf",
+            "folders": "/",
+            "format": "{size-percentage-bar} {size-used}{#light_black} / {size-total}{#}"
         },
-        "break",
         {
             "type": "localip",
-            "key": "󰩟 LAN",
+            "key": "{#light_black}│{#} {#blue}󰩟  Netwerk",
             "showIpv4": true,
-            "showIpv6": false
+            "showIpv6": false,
+            "showPrefixLen": false
+        },
+        {
+            "type": "custom",
+            "format": "{#light_black}╰───────────────────────────────────────{#}"
         },
         "break",
         {
             "type": "colors",
-            "paddingLeft": 0,
-            "symbol": "circle"
+            "symbol": "circle",
+            "paddingLeft": 2
         }
     ]
 }
