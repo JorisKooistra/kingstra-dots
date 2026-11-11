@@ -930,6 +930,63 @@ prepare_aur() {
     live_clear
 }
 
+# Repo-pakketten (waaronder de kernels) als losse systemd-dienst bijwerken.
+# Op 10-11-2026 stopte pacman midden in een kernel-update, na het weghalen van
+# de oude kernels van /boot en vóór het neerzetten van de nieuwe: de pc startte
+# daarna niet meer. Een dienst hoort niet bij dit terminalvenster, dus sluiten
+# (of een vastgelopen sessie) breekt pacman niet meer af. yay doet daarna alleen
+# nog de AUR. Lukt dit niet (conflict, vraag), dan pakt yay het zoals vroeger.
+PACMAN_UNIT="kingstra-pacman"
+update_repo_detached() {
+    command -v systemd-run >/dev/null 2>&1 || return 0
+    command -v pacman >/dev/null 2>&1 || return 0
+    wait_detached_pacman
+    local rc=0
+    run_quiet "pacman" sudo systemd-run --quiet --wait --pipe --collect \
+        --unit="$PACMAN_UNIT" --description="Kingstra update (pacman)" \
+        pacman -Syu --noconfirm || rc=$?
+    if (( rc != 0 )); then
+        log "pacman als dienst gaf code $rc; yay probeert het hierna."
+    fi
+    return 0
+}
+
+# Een pacman-dienst van een eerder (gesloten) venster mag eerst afmaken.
+wait_detached_pacman() {
+    command -v systemctl >/dev/null 2>&1 || return 0
+    systemctl is-active --quiet "$PACMAN_UNIT.service" 2>/dev/null || return 0
+    result warn "Een eerdere update is nog bezig met pakketten installeren; even wachten tot die klaar is."
+    while systemctl is-active --quiet "$PACMAN_UNIT.service" 2>/dev/null; do
+        live "Wachten op de lopende pacman-update"
+        sleep 1
+    done
+    live_clear
+}
+
+# Ontbreekt een kernel op /boot (afgebroken update), dan start de pc niet meer.
+# pacman -S zet de kernel én de mkinitcpio-preset terug en bouwt de initramfs;
+# mkinitcpio -P alleen helpt niet als de preset ook weg is.
+repair_missing_kernels() {
+    command -v pacman >/dev/null 2>&1 || return 0
+    local boot="${KINGSTRA_BOOT_DIR:-/boot}" k missing=()
+    for k in $(pacman -Qq linux linux-lts linux-zen linux-hardened 2>/dev/null); do
+        if [[ -r "$boot" && -x "$boot" ]]; then
+            [[ -f "$boot/vmlinuz-$k" ]] || missing+=("$k")
+        elif sudo -n true 2>/dev/null; then
+            sudo -n test -f "$boot/vmlinuz-$k" || missing+=("$k")
+        fi
+    done
+    (( ${#missing[@]} > 0 )) || return 0
+    result fail "Kernel ontbreekt op $boot: ${missing[*]}. Zo start de pc niet meer op."
+    if ask_yes "Nu terugzetten (sudo pacman -S ${missing[*]})?"; then
+        if sudo pacman -S --noconfirm "${missing[@]}" >>"${LOG_FILE:-/dev/null}" 2>&1; then
+            result ok "Kernel(s) teruggezet: ${missing[*]}."
+        else
+            result fail "Terugzetten mislukt; zie het log. Draai zelf: sudo pacman -S ${missing[*]}"
+        fi
+    fi
+}
+
 # yay/paru en flatpak bijwerken. In de compacte weergave stil met
 # voortgangsbalk; mislukt dat, dan kan de run interactief opnieuw.
 update_arch() {
@@ -964,6 +1021,7 @@ update_arch() {
         sudo -v || return 1
     fi
     prepare_aur
+    update_repo_detached
     run_quiet "$helper" "$helper" "${flags[@]}" || rc=$?
     if (( rc != 0 )) && ask_yes "Opnieuw draaien met de gewone $helper-uitvoer en vragen?"; then
         rc=0
@@ -1153,12 +1211,14 @@ resume_after_abort() {
     fi
     # Een achtergebleven pacman-slot zonder pacman erachter houdt yay tegen
     # ("unable to lock database").
+    wait_detached_pacman
     if [[ -e /var/lib/pacman/db.lck ]] && ! pgrep -x pacman >/dev/null 2>&1 && ! pgrep -x yay >/dev/null 2>&1; then
         result warn "Pacman-slot van een afgebroken update gevonden (/var/lib/pacman/db.lck)."
         if ask_yes "Slot weghalen? (er draait geen pacman)"; then
             sudo rm -f /var/lib/pacman/db.lck && log "Slot weggehaald."
         fi
     fi
+    repair_missing_kernels
 }
 
 # Eén update tegelijk. Twee runs naast elkaar (terminal plus het venster uit

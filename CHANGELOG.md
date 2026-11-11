@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Update kan de opstart niet meer slopen
+- Op 10 november stopte pacman midden in een kernel-update: de oude kernels waren al van /boot gehaald, de nieuwe nog niet neergezet. De pc toonde daarna in het opstartmenu alleen "Reboot Into Firmware Interface". Hersteld via een live-USB met `pacman -S linux linux-lts`.
+- `kingstra update` werkt de repo-pakketten (waaronder de kernels) nu bij als losse systemd-dienst (`kingstra-pacman`). Het updatevenster sluiten breekt pacman daardoor niet meer af. yay doet daarna de AUR. Een volgende run wacht tot een nog lopende dienst klaar is.
+- Bij elke start controleert de updater of iedere geïnstalleerde kernel op /boot staat. Ontbreekt er een, dan biedt hij aan die meteen terug te zetten met `sudo pacman -S <kernel>`.
+- `kingstra-health` noemt als herstel nu `sudo pacman -S <kernel>` in plaats van `mkinitcpio -P`. Dat laatste werkt niet meer als de preset ook weg is.
+
 ### Sneltoetsen volgens jouw grammatica (novemberronde 2)
 - **Muziekpaneel: Super+Ctrl+P** (P van player). Een paneel is een kiezer, dus Ctrl. Super+Shift+M doet niets meer.
 - **Vastleg-studio: Super+Ctrl+Print.** Gewoon **Print** legt weer meteen een gebied vast (opslaan en kopiëren, met voorbeeldmelding). Super+Print, Shift+Print, Ctrl+Print en Super+Shift+R blijven zoals ze waren.
