@@ -16,6 +16,8 @@ inotify-tools
 # Wallpaper renderer (picker is native Kingstra Quickshell)
 aur:skwd-wall
 
-# --- Optioneel (video wallpapers) ---
-# Schakel in via profiel: ENABLE_VIDEO_WALLPAPER=true
+# --- Video wallpapers (picker: ▶-kaarten, Pixabay/Pexels video) ---
+# Fase 9 installeert mpvpaper standaard (ENABLE_VIDEO_WALLPAPER staat altijd
+# aan; uitzetten kan in overrides.conf). Het bewegende voorbeeld in de picker
+# gebruikt qt6-multimedia (ui.txt).
 # aur:mpvpaper

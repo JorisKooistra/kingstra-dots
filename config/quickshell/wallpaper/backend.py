@@ -59,7 +59,7 @@ def source_status():
     wallhaven = skwd_config().get("wallhaven", {})
     existing = keys.get("wallhaven") or wallhaven.get("apiKey") or wallhaven.get("api_key")
     return [dict(id="wallhaven", label="Wallhaven", optionalKey=True, configured=bool(existing), hasLocalKey=bool(keys.get("wallhaven")),
-                 url="https://wallhaven.cc/", keyUrl="https://wallhaven.cc/settings/account")] + [dict(id=key, configured=bool(keys.get(key)), **value) for key, value in providers.SOURCES.items()]
+                 url="https://wallhaven.cc/", keyUrl="https://wallhaven.cc/settings/account")] + [dict(id=key, configured=bool(keys.get(value.get("keySource", key))), **value) for key, value in providers.SOURCES.items()]
 
 
 def credential(payload):
@@ -98,7 +98,7 @@ def provider_fetch(source, url, headers=None, as_json=True, ttl=300):
     if cached and time.time() - target.stat().st_mtime < ttl: return cached["data"]
     request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.3 (https://github.com/JorisKooistra/kingstra-dots)", **(headers or {})})
     # Keys in either headers or query parameters must stay on that exact host.
-    redirect_hosts = {parsed.hostname} if headers or source == "pixabay" else hosts
+    redirect_hosts = {parsed.hostname} if headers or providers.SOURCES.get(source, {}).get("keySource", source) == "pixabay" else hosts
     opener = urllib.request.build_opener(SafeRedirect(redirect_hosts))
     limit = 4 * 1024 * 1024
     with opener.open(request, timeout=25) as response:
@@ -175,6 +175,11 @@ def library():
 
 def current_wallpaper():
     base = CACHE.parents[1]
+    # Bij een videowallpaper staat elders het stilstaande beeld; toon de video.
+    with contextlib.suppress(OSError):
+        if (base / "kingstra/wallpaper-mode").read_text().strip() == "video":
+            video = (base / "kingstra/last-video-wallpaper").read_text().strip()
+            if Path(video).is_file(): return video
     for path in (base / "kingstra/theme-wallpaper-source", base / "skwd-wall/current_wallpaper",
                  base / "kingstra/last-wallpaper"):
         with contextlib.suppress(OSError):
@@ -409,7 +414,7 @@ def catalog():
             dirs[:] = sorted(d for d in dirs if not d.startswith("."))
             for name in sorted(files):
                 path = Path(parent) / name
-                if path.suffix.lower() not in IMAGES | VIDEOS:
+                if name.startswith(".") or path.suffix.lower() not in IMAGES | VIDEOS:
                     continue
                 try:
                     resolved = str(path.resolve())
@@ -524,8 +529,9 @@ def trim_previews(keep, budget=256 * 1024 * 1024):
 def saved_wallhaven(identifier):
     folder = library()
     stem = identifier if identifier.startswith(("nasa-", "commons-", *(source + "-" for source in providers.SOURCES))) else "wallhaven-" + identifier
-    return next((str(folder / (stem + suffix)) for suffix in sorted(IMAGES)
-                 if (folder / (stem + suffix)).is_file()), "")
+    candidates = [folder / (stem + suffix) for suffix in sorted(IMAGES)]
+    candidates += [folder / "video" / (stem + suffix) for suffix in sorted(VIDEOS)]
+    return next((str(path) for path in candidates if path.is_file()), "")
 
 
 def search(args):
@@ -590,9 +596,11 @@ def search_extra(args):
     if info.get("externalOnly"):
         emit("search", items=[], page=1, lastPage=1, notice=info["notice"])
         return
-    key = provider_keys().get(source, "")
+    key_source = info.get("keySource", source)
+    key = provider_keys().get(key_source, "")
     if info.get("needsKey") and not key:
-        emit("error", message="Voeg je " + info["label"] + "-sleutel toe via API-sleutels", needsKey=True)
+        label = providers.SOURCES.get(key_source, info)["label"]
+        emit("error", message="Voeg je " + label + "-sleutel toe via API-sleutels", needsKey=True)
         return
     fetch = lambda url, **kwargs: provider_fetch(source, url, **kwargs)
     data = providers.search(source, args, fetch, key)
@@ -622,7 +630,8 @@ def search_extra(args):
         if getattr(args, "exclude_ai", False) and providers.is_ai(record): continue
         local = CACHE / "remote" / (identifier + ".jpg")
         items.append(dict(id=identifier, source=source, name=record["name"], page=record["url"],
-                          path=saved_wallhaven(identifier), type="static", favorite=False, dimensions=record.get("resolution", ""),
+                          path=saved_wallhaven(identifier), type="video" if record.get("media") == "video" else "static",
+                          duration=record.get("duration", 0), favorite=False, dimensions=record.get("resolution", ""),
                           tags=record.get("tag_names", []), credit=record.get("uploader", ""),
                           thumb=local.as_uri() if local.is_file() else "", remoteThumb=record["thumb_url"], **cached_visuals(local)))
     emit("search", items=items, page=data["page"], lastPage=data["lastPage"], notice=data.get("notice", ""))
@@ -764,6 +773,8 @@ def download_public(identifier, preview=False, exclude_ai=False):
         record["details_ready"] = True
         atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
     if exclude_ai and providers.is_ai(record): raise ExcludedAI("AI-label gevonden; deze afbeelding is uitgesloten")
+    if record.get("media") == "video":
+        return download_video(identifier, record, hosts, preview)
     url = record.get("download_url", "")
     if not url and source == "nasa":
         manifest = remote_json("https://images-api.nasa.gov/asset/" + urllib.parse.quote(record["nasa_id"], safe=""), authenticated=False)
@@ -800,6 +811,70 @@ def download_public(identifier, preview=False, exclude_ai=False):
              uploader=record.get("uploader", ""), tags=record.get("tag_names", []), page=record["url"],
              source=source, license=record.get("license", ""), notice=record.get("asset_note", ""))
     else: emit("download", id=identifier, path=str(target), tags=record.get("tag_names", []))
+
+
+def download_video(identifier, record, hosts, preview):
+    # Voorbeeld: de kleinste versie (snel, een paar MB). Opslaan: de versie
+    # die bij een groot scherm past, in de submap video/ van de collectie.
+    url = record.get("preview_url") if preview and record.get("preview_url") else record.get("download_url", "")
+    if not valid_url(url, hosts): raise ValueError("Ongeldig downloadadres")
+    suffix = Path(urllib.parse.urlparse(url).path).suffix.lower()
+    suffix = suffix if suffix in VIDEOS else ".mp4"
+    saved = saved_wallhaven(identifier)
+    if preview:
+        target = Path(saved) if saved else CACHE / "previews" / (identifier + ".preview" + suffix)
+    else:
+        target = Path(saved) if saved else library() / "video" / (identifier + suffix)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    transfer_video(url, target, hosts)
+    if preview:
+        if not saved:
+            os.utime(target, None)
+            trim_previews(target)
+        emit("preview", id=identifier, path=str(target), url=target.as_uri(), video=True,
+             dimensions=record.get("resolution", ""), uploader=record.get("uploader", ""),
+             tags=record.get("tag_names", []), page=record["url"], source=record["source"],
+             duration=record.get("duration", 0), license=record.get("license", ""), notice=record.get("asset_note", ""))
+        return
+    record["path"] = str(target)
+    atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
+    atomic_json(metadata_file(target), record)
+    emit("download", id=identifier, path=str(target), tags=record.get("tag_names", []))
+
+
+def valid_video(path):
+    if not shutil.which("ffprobe"): return path.stat().st_size > 0
+    result = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_type",
+                             "-of", "csv=p=0", str(path)], capture_output=True, text=True, timeout=20)
+    return result.returncode == 0 and "video" in result.stdout
+
+
+def transfer_video(url, target, hosts, limit=400 * 1024 * 1024):
+    if target.is_file() and valid_video(target): return
+    fd, temp = tempfile.mkstemp(dir=target.parent, prefix=".picker-", suffix=target.suffix)
+    try:
+        with os.fdopen(fd, "wb") as output:
+            emit("progress", stage="download", label="Video downloaden…", percent=-1)
+            request = urllib.request.Request(url, headers={"User-Agent": "KingstraWallpaperPicker/1.3"})
+            with urllib.request.urlopen(request, timeout=60) as response:
+                if not valid_url(response.url, hosts): raise ValueError("Onverwachte downloadredirect")
+                expected = int(response.headers.get("Content-Length", 0) or 0)
+                if expected > limit: raise ValueError("Video is groter dan 400 MB")
+                total, last = 0, 0
+                while chunk := response.read(512 * 1024):
+                    total += len(chunk)
+                    if total > limit: raise ValueError("Video is groter dan 400 MB")
+                    output.write(chunk)
+                    if time.monotonic() - last > .12:
+                        last = time.monotonic()
+                        emit("progress", stage="download", label="Video downloaden…",
+                             percent=min(100, round(total * 100 / expected)) if expected else -1, bytes=total)
+                if expected and total != expected: raise ValueError("Download onderbroken; probeer opnieuw")
+        if not valid_video(Path(temp)): raise ValueError("Het gedownloade bestand is geen bruikbare video")
+        os.chmod(temp, 0o644)
+        os.replace(temp, target)
+    finally:
+        with contextlib.suppress(FileNotFoundError): os.unlink(temp)
 
 
 def transfer_image(url, target, hosts, cached=None):

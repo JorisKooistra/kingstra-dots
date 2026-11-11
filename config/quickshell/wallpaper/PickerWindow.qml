@@ -42,12 +42,16 @@ PanelWindow {
     property string sourceTab: "local"
     readonly property bool online: sourceTab !== "local"
     property var extraSources: []
-    readonly property var allSources: [{id: "local", label: "Collectie"}, {id: "wallhaven", label: "Wallhaven", url: "https://wallhaven.cc/"}, {id: "nasa", label: "NASA", url: "https://images.nasa.gov/"}, {id: "commons", label: "Commons", url: "https://commons.wikimedia.org/"}].concat(extraSources.filter(source => source.id !== "wallhaven" && (source.id !== "pexels" || source.configured)))
+    readonly property var allSources: [{id: "local", label: "Collectie"}, {id: "wallhaven", label: "Wallhaven", url: "https://wallhaven.cc/"}, {id: "nasa", label: "NASA", url: "https://images.nasa.gov/"}, {id: "commons", label: "Commons", url: "https://commons.wikimedia.org/"}].concat(extraSources.filter(source => source.id !== "wallhaven" && ((source.keySource || source.id) !== "pexels" || source.configured)))
     readonly property var sourceInfo: allSources.find(source => source.id === sourceTab) || ({})
     readonly property bool externalSource: sourceInfo.externalOnly === true
+    readonly property bool videoSource: sourceInfo.media === "video"
+    readonly property bool pixabayLike: sourceTab === "pixabay" || sourceTab === "pixabayvideo"
+    // Collectie: alles, alleen foto's of alleen video's.
+    property string mediaFilter: "all"
     readonly property string sourceName: (allSources.find(source => source.id === sourceTab) || {}).label || "Wallpapers"
     readonly property bool hasRemoteColors: ["wallhaven", "pexels", "pixabay"].includes(sourceTab)
-    readonly property string safetyNote: online && !externalSource && !["wallhaven", "pixabay"].includes(sourceTab) ? "Geen instelbaar SFW-filter bij deze bron" : ""
+    readonly property string safetyNote: online && !externalSource && !["wallhaven", "pixabay", "pixabayvideo"].includes(sourceTab) ? "Geen instelbaar SFW-filter bij deze bron" : ""
     readonly property var pixabayCategories: [""].concat((extraSources.find(source => source.id === "pixabay") || {}).categories || [])
     property var wallhavenPurity: [true, false, false]
     readonly property string purityMask: wallhavenPurity.map(checked => checked ? "1" : "0").join("")
@@ -145,7 +149,7 @@ PanelWindow {
     function filter(appendOnly) {
         let previous = identity(chosen);
         let query = sourceTab === "local" ? searchField.text.toLowerCase().trim() : "";
-        let next = (sourceTab === "local" ? localItems : remoteItems).filter(item => (!excludeAi || !Logic.isAi(item)) && (!favoritesOnly || item.favorite) && (sourceTab !== "local" || localHue < 0 || (thumbnailFor(item).hue === undefined ? item.hue : thumbnailFor(item).hue) === localHue) && (!query || (item.name + " " + (item.displayName || "") + " " + (item.folder || "") + " " + (item.tags || []).join(" ") + " " + (item.tagAliases || []).join(" ")).toLowerCase().includes(query)));
+        let next = (sourceTab === "local" ? localItems : remoteItems).filter(item => (!excludeAi || !Logic.isAi(item)) && (!favoritesOnly || item.favorite) && (sourceTab !== "local" || mediaFilter === "all" || (item.type || "static") === mediaFilter) && (sourceTab !== "local" || localHue < 0 || (thumbnailFor(item).hue === undefined ? item.hue : thumbnailFor(item).hue) === localHue) && (!query || (item.name + " " + (item.displayName || "") + " " + (item.folder || "") + " " + (item.tags || []).join(" ") + " " + (item.tagAliases || []).join(" ")).toLowerCase().includes(query)));
         if (sourceTab === "local") {
             if (sortMode === "name")
                 next.sort((a, b) => a.name.localeCompare(b.name));
@@ -225,6 +229,19 @@ PanelWindow {
         selected = index;
         previewInfo = ({});
         previewMessage = "";
+        if (!online) {
+            // Eigen bestand: geen download nodig, meteen tonen/afspelen.
+            let item = items[index];
+            previewInfo = {
+                dimensions: thumbnailFor(item).dimensions || item.dimensions || "",
+                tags: item.tags || []
+            };
+            previewSource = "file://" + item.path.split("/").map(encodeURIComponent).join("/");
+            previewOpen = true;
+            if (views.item && views.item.pause)
+                views.item.pause();
+            return;
+        }
         // Decode only the full image. A thumbnail followed by the original
         // creates a distracting second resize/flash in this large preview.
         previewSource = "";
@@ -359,9 +376,9 @@ PanelWindow {
         remoteLoadFailed = false;
         activeSearchPage = page;
         message = "";
-        let topic = (sourceTab === "nasa" ? ["", "nebula", "galaxy", "earth", "moon", "mars", "jupiter"] : ["", "nature", "landscape", "space", "abstract", "minimalism", "architecture", "cyberpunk", "digital art", "video game", "movie", "car", "fantasy", "retro", "animal"])[remoteTopic.currentIndex] || "";
+        let topic = (sourceTab === "nasa" ? ["", "nebula", "galaxy", "earth", "moon", "mars", "jupiter"] : (videoSource ? ["", "nature", "ocean", "space", "abstract", "rain", "clouds", "city night", "fire", "particles", "forest", "snow"] : ["", "nature", "landscape", "space", "abstract", "minimalism", "architecture", "cyberpunk", "digital art", "video game", "movie", "car", "fantasy", "retro", "animal"]))[remoteTopic.currentIndex] || "";
         let query = [searchField.text.trim(), topic].filter(Boolean).join(" ");
-        let parameters = ["search", "--source", sourceTab, "--query", query, "--page", String(page), "--sort", ["toplist", "date_added", "random", "favorites", "views"][remoteSort.currentIndex] || "toplist", "--categories", ["111", "100", "010", "001"][categoryBox.currentIndex], "--purity", sourceTab === "wallhaven" ? purityMask : (safeSearch ? "100" : "111"), "--color", hasRemoteColors ? colorFilter : "", "--atleast", resolutionField.visible ? resolutionField.text.trim() : "", "--ratios", ratioField.visible ? ratioField.text.trim() : "", "--seed", page > 1 ? remoteSeed : "", "--category", sourceTab === "pixabay" ? (pixabayCategories[pixabayCategory.currentIndex] || "") : "", "--size", sourceTab === "pexels" ? (["", "small", "medium", "large"][pexelsSize.currentIndex] || "") : ""];
+        let parameters = ["search", "--source", sourceTab, "--query", query, "--page", String(page), "--sort", ["toplist", "date_added", "random", "favorites", "views"][remoteSort.currentIndex] || "toplist", "--categories", ["111", "100", "010", "001"][categoryBox.currentIndex], "--purity", sourceTab === "wallhaven" ? purityMask : (safeSearch ? "100" : "111"), "--color", hasRemoteColors ? colorFilter : "", "--atleast", resolutionField.visible ? resolutionField.text.trim() : "", "--ratios", ratioField.visible ? ratioField.text.trim() : "", "--seed", page > 1 ? remoteSeed : "", "--category", pixabayLike ? (pixabayCategories[pixabayCategory.currentIndex] || "") : "", "--size", sourceTab === "pexels" || sourceTab === "pexelsvideo" ? (["", "small", "medium", "large"][pexelsSize.currentIndex] || "") : ""];
         if (excludeAi) parameters.push("--exclude-ai");
         searchProcess.command = worker(parameters);
         searchProcess.running = true;
@@ -485,7 +502,7 @@ PanelWindow {
     }
     function setSources(sources) {
         extraSources = sources;
-        if (sourceTab === "pexels" && !sources.some(source => source.id === "pexels" && source.configured))
+        if ((sourceTab === "pexels" || sourceTab === "pexelsvideo") && !sources.some(source => source.id === "pexels" && source.configured))
             switchSource("local");
     }
     function searchTag(tag) {
@@ -550,6 +567,19 @@ PanelWindow {
             root.localHue = hue;
             root.filter();
         }
+        function tab(id: string): void {
+            if (root.allSources.some(source => source.id === id))
+                root.switchSource(id);
+        }
+        function media(kind: string): void {
+            if (["all", "static", "video"].includes(kind)) {
+                root.mediaFilter = kind;
+                root.filter();
+            }
+        }
+        function show(): void {
+            root.openPreview(root.selected);
+        }
         function current(): void {
             root.sourceTab = "local";
             root.localHue = -1;
@@ -563,6 +593,8 @@ PanelWindow {
                 mode: root.mode,
                 sort: root.sortMode,
                 source: root.sourceTab,
+                mediaFilter: root.mediaFilter,
+                chosenType: root.chosen.type,
                 count: root.items.length,
                 selected: root.selected,
                 chosen: root.chosen.name,
@@ -972,6 +1004,19 @@ PanelWindow {
                     root.focusBrowser();
                 }
             }
+            PickerCombo {
+                id: mediaBox
+                objectName: "media-filter"
+                colors: c
+                visible: root.sourceTab === "local"
+                model: ["Foto’s en video’s", "Alleen foto’s", "Alleen video’s"]
+                currentIndex: Math.max(0, ["all", "static", "video"].indexOf(root.mediaFilter))
+                onActivated: {
+                    root.mediaFilter = ["all", "static", "video"][currentIndex];
+                    root.filter();
+                    root.focusBrowser();
+                }
+            }
             PickerButton {
                 colors: c
                 text: "♥ Favorieten"
@@ -1003,9 +1048,9 @@ PanelWindow {
             PickerCombo {
                 id: remoteSort
                 objectName: "remote-sort"
-                visible: root.sourceTab === "wallhaven" || root.sourceTab === "pixabay"
+                visible: root.sourceTab === "wallhaven" || root.pixabayLike
                 colors: c
-                model: root.sourceTab === "pixabay" ? ["Populair", "Nieuwste"] : ["Populair", "Nieuwste", "Willekeurig", "Favorieten", "Bekeken"]
+                model: root.pixabayLike ? ["Populair", "Nieuwste"] : ["Populair", "Nieuwste", "Willekeurig", "Favorieten", "Bekeken"]
                 onActivated: root.scheduleSearch()
             }
             PickerCombo {
@@ -1024,7 +1069,7 @@ PanelWindow {
                 displayText: "Zoekonderwerp: " + currentText
                 ToolTip.visible: hovered
                 ToolTip.text: "Voegt een zoekwoord toe; dit zijn geen categorieën van de bron."
-                model: root.sourceTab === "nasa" ? ["Alle onderwerpen", "Nevels", "Sterrenstelsels", "Aarde", "Maan", "Mars", "Jupiter"] : ["Alle onderwerpen", "Natuur", "Landschappen", "Ruimte", "Abstract", "Minimalisme", "Architectuur", "Cyberpunk", "Digitale kunst", "Games", "Films", "Auto’s", "Fantasy", "Retro", "Dieren"]
+                model: root.sourceTab === "nasa" ? ["Alle onderwerpen", "Nevels", "Sterrenstelsels", "Aarde", "Maan", "Mars", "Jupiter"] : root.videoSource ? ["Alle onderwerpen", "Natuur", "Oceaan", "Ruimte", "Abstract", "Regen", "Wolken", "Stad bij nacht", "Vuur", "Deeltjes", "Bos", "Sneeuw"] : ["Alle onderwerpen", "Natuur", "Landschappen", "Ruimte", "Abstract", "Minimalisme", "Architectuur", "Cyberpunk", "Digitale kunst", "Games", "Films", "Auto’s", "Fantasy", "Retro", "Dieren"]
                 onActivated: root.scheduleSearch()
             }
             Row {
@@ -1050,7 +1095,7 @@ PanelWindow {
             }
             PickerCheckBox {
                 objectName: "pixabay-safe"
-                visible: root.sourceTab === "pixabay"
+                visible: root.pixabayLike
                 colors: c
                 text: "Veilig zoeken"
                 checked: root.safeSearch
@@ -1076,7 +1121,7 @@ PanelWindow {
             PickerCombo {
                 id: pixabayCategory
                 objectName: "pixabay-category"
-                visible: root.sourceTab === "pixabay"
+                visible: root.pixabayLike
                 colors: c
                 model: ["Alle categorieën", "Achtergronden", "Mode", "Natuur", "Wetenschap", "Onderwijs", "Gevoelens", "Gezondheid", "Mensen", "Religie", "Plaatsen", "Dieren", "Industrie", "Computers", "Eten", "Sport", "Vervoer", "Reizen", "Gebouwen", "Zakelijk", "Muziek"]
                 onActivated: root.scheduleSearch()
@@ -1084,7 +1129,7 @@ PanelWindow {
             PickerCombo {
                 id: pexelsSize
                 objectName: "pexels-size"
-                visible: root.sourceTab === "pexels"
+                visible: root.sourceTab === "pexels" || root.sourceTab === "pexelsvideo"
                 colors: c
                 model: ["Alle formaten", "Min. 4 MP", "Min. 12 MP", "Min. 24 MP"]
                 onActivated: root.scheduleSearch()
@@ -1259,6 +1304,10 @@ PanelWindow {
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_F && root.sourceTab === "local") {
                     root.favorite(root.selected);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Space && root.sourceTab === "local" && root.items.length) {
+                    // Spatie: eigen foto of video groot bekijken/afspelen.
+                    root.openPreview(root.selected);
                     event.accepted = true;
                 }
             }

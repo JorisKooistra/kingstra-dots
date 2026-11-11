@@ -25,6 +25,7 @@ THEME_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/theme.json"
 STATE_FILE="$CACHE_DIR/last-wallpaper"
 IMAGE_STATE_FILE="$CACHE_DIR/last-image-wallpaper"
 MODE_FILE="$CACHE_DIR/wallpaper-mode"          # "static" of "video"
+VIDEO_STATE_FILE="$CACHE_DIR/last-video-wallpaper"
 LOG_PREFIX="[kingstra-wallpaper]"
 SCRIPT_REALPATH="$(readlink -f "${BASH_SOURCE[0]}")"
 REPO_ROOT="$(cd "$(dirname "$SCRIPT_REALPATH")/../.." && pwd)"
@@ -32,7 +33,9 @@ REPO_ROOT="$(cd "$(dirname "$SCRIPT_REALPATH")/../.." && pwd)"
 STATIC_EXTS=("jpg" "jpeg" "png" "webp" "gif")
 VIDEO_EXTS=("mp4" "mkv" "webm" "avi" "mov")
 
-MPVPAPER_OPTS="${MPVPAPER_OPTS:---no-audio --loop}"
+# mpv-opties voor mpvpaper (-o). panscan vult het scherm zonder zwarte randen.
+MPVPAPER_OPTS="${MPVPAPER_OPTS:-no-audio loop hwdec=auto panscan=1.0 no-osc no-osd-bar no-input-default-bindings}"
+VIDEO_FRAME_DIR="$CACHE_DIR/video-frames"
 
 mkdir -p "$CACHE_DIR"
 
@@ -240,32 +243,64 @@ _set_static() {
 # ---------------------------------------------------------------------------
 # Backend: video (mpvpaper)
 # ---------------------------------------------------------------------------
+_video_frame() {
+    # Eén stilstaand beeld uit de video: voor de themakleuren, het
+    # vergrendelscherm en als achtergrond zolang mpvpaper opstart.
+    local file="$1" hash frame tmp
+    command -v ffmpeg &>/dev/null || return 1
+    hash="$(printf '%s:%s:%s' "$file" "$(stat -c '%Y' "$file" 2>/dev/null || echo 0)" "$(stat -c '%s' "$file" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
+    frame="$VIDEO_FRAME_DIR/$hash.jpg"
+    if [[ ! -s "$frame" ]]; then
+        mkdir -p "$VIDEO_FRAME_DIR"
+        tmp="$(mktemp "$VIDEO_FRAME_DIR/.${hash}.XXXXXX.jpg")"
+        if ! ffmpeg -nostdin -v error -y -ss 1 -i "$file" -frames:v 1 -q:v 2 "$tmp" 2>/dev/null \
+            || [[ ! -s "$tmp" ]]; then
+            # Heel korte clips: neem dan het allereerste beeld.
+            ffmpeg -nostdin -v error -y -i "$file" -frames:v 1 -q:v 2 "$tmp" 2>/dev/null || true
+        fi
+        if [[ ! -s "$tmp" ]]; then
+            rm -f "$tmp"
+            return 1
+        fi
+        mv -f "$tmp" "$frame"
+    fi
+    printf '%s\n' "$frame"
+}
+
 _set_video() {
-    local file="$1"
+    local file="$1" monitor started=0
     [[ -f "$file" ]] || _die "Bestand niet gevonden: $file"
 
     if ! command -v mpvpaper &>/dev/null; then
         _warn "mpvpaper niet geïnstalleerd — val terug op statisch"
         _set_static_fallback_for_video "$file"
-        return 0
+        return 1
     fi
 
     _stop_video
 
-    # Start mpvpaper op alle monitors
+    # Eén mpvpaper per monitor. Eigen sessie en geen gedeelde stdout: anders
+    # wacht de picker op de uitvoer van een proces dat nooit stopt.
+    # -p pauzeert de video als hij helemaal bedekt is (bespaart stroom).
     while IFS= read -r monitor; do
         [[ -z "$monitor" ]] && continue
-        mpvpaper $MPVPAPER_OPTS "$monitor" "$file" &
-        disown
+        setsid -f mpvpaper -p -o "$MPVPAPER_OPTS" "$monitor" "$file" \
+            </dev/null >>"$CACHE_DIR/mpvpaper.log" 2>&1
+        started=1
     done < <(_monitors)
 
+    if [[ "$started" != 1 ]]; then
+        _warn "Geen monitors gevonden voor mpvpaper"
+        return 1
+    fi
     _log "Videowallpaper gestart: $(basename "$file")"
 }
 
 _set_static_fallback_for_video() {
     # Gebruik een eventuele thumbnailafbeelding of de huidige static state
     local current
-    current="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+    current="$(cat "$IMAGE_STATE_FILE" 2>/dev/null || echo "")"
+    [[ -f "$current" ]] || current="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
     if [[ -f "$current" ]] && _is_image "$current"; then
         _set_static "$current"
     fi
@@ -280,6 +315,8 @@ _save_state() {
     echo "$mode"  > "$MODE_FILE"
     if [[ "$mode" == "static" ]]; then
         echo "$file" > "$IMAGE_STATE_FILE"
+    else
+        echo "$file" > "$VIDEO_STATE_FILE"
     fi
 }
 
@@ -563,29 +600,52 @@ cmd_set() {
 }
 
 cmd_video() {
-    local file="${1:-}"
+    local file="${1:-}" frame="" previous_image
     [[ -z "$file" ]] && _die "Gebruik: kingstra-wallpaper video <bestand>"
     file="$(realpath "$file")"
+    previous_image="$(cat "$IMAGE_STATE_FILE" 2>/dev/null || echo "")"
 
-    _set_video "$file"
-    _save_state "$file" "video"
-    _update_wallpaper_json "$file"
-    _sync_skwd_current_wallpaper "$file" "video"
-    _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
-
-    local last_image
-    last_image="$(cat "$IMAGE_STATE_FILE" 2>/dev/null || echo "")"
-    if [[ -f "$last_image" ]]; then
-        local APPLY="${HOME}/.local/bin/apply-shell-state"
-        if [[ -f "$APPLY" ]]; then
-            _run_helper "$APPLY" --wallpaper "$last_image" 2>/dev/null || true
+    frame="$(_video_frame "$file" || true)"
+    if [[ -n "$frame" ]]; then
+        # Stilstaand beeld onder de video: skwd toont het tot mpvpaper draait
+        # en het vergrendelscherm gebruikt het. Stopt ook een vorige video.
+        _set_static "$frame" || true
+        # De laatste "echte" foto blijft bewaard voor stop-video.
+        if [[ -n "$previous_image" ]]; then
+            printf '%s\n' "$previous_image" > "$IMAGE_STATE_FILE"
+        else
+            rm -f "$IMAGE_STATE_FILE"
         fi
     fi
 
-    _notify "Videowallpaper" "$(basename "$file")"
-    if [[ ! -f "$last_image" || ! -f "${APPLY:-}" ]]; then
-        _cache_wallhaven_tags "$file"
+    if ! _set_video "$file"; then
+        _notify "Videowallpaper niet gestart" "mpvpaper ontbreekt of faalde; zie ~/.cache/kingstra/mpvpaper.log"
+        return 1
     fi
+    _save_state "$file" "video"
+    _sync_skwd_current_wallpaper "${frame:-$file}" "video"
+    if [[ -n "$frame" ]] && command -v jq &>/dev/null; then
+        local state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/kingstra/state"
+        mkdir -p "$state_dir"
+        jq -n --arg name "$(basename "$file")" --arg path "$frame" --arg video "$file" \
+            '{"name":$name,"path":$path,"video":$video}' > "$state_dir/wallpaper.json" || true
+    else
+        _update_wallpaper_json "$file"
+    fi
+    [[ "${KINGSTRA_PICKER_EVENTS:-}" != "1" ]] || printf 'KINGSTRA_PICKER_WALLPAPER_SET\n'
+    _run_helper "${HOME}/.local/bin/kingstra-session-update" 2>/dev/null || true
+
+    # Themakleuren uit het videobeeld (anders die van de laatste foto).
+    local color_source="${frame:-$previous_image}"
+    local APPLY="${HOME}/.local/bin/apply-shell-state"
+    if [[ -f "$color_source" && -f "$APPLY" ]]; then
+        _run_helper "$APPLY" --wallpaper "$color_source" 2>/dev/null || true
+        # apply-shell-state schrijft het beeld als "laatste wallpaper"; de
+        # video is wat er na een herstart terug moet komen.
+        _save_state "$file" "video"
+    fi
+
+    _notify "Videowallpaper" "$(basename "$file")"
 }
 
 cmd_random() {
@@ -625,6 +685,14 @@ cmd_reload() {
     file="$state_file"
     mode="$(cat "$MODE_FILE" 2>/dev/null || echo "static")"
 
+    if [[ "$mode" == "video" ]]; then
+        # Thema- en kleurscripts schrijven het stilstaande videobeeld als
+        # laatste wallpaper; de video zelf staat apart.
+        local video_file
+        video_file="$(cat "$VIDEO_STATE_FILE" 2>/dev/null || echo "")"
+        [[ -f "$video_file" ]] && file="$video_file"
+    fi
+
     if [[ "$mode" != "video" ]]; then
         active_file="$(_current_static_wallpaper || true)"
         if [[ -n "$active_file" && -f "$active_file" ]]; then
@@ -653,13 +721,16 @@ cmd_reload() {
     fi
 
     if [[ "$mode" == "video" ]]; then
-        _set_video "$file"
-        local last_image
-        last_image="$(cat "$IMAGE_STATE_FILE" 2>/dev/null || echo "")"
-        if [[ -f "$last_image" ]]; then
-            last_image="$(_prepare_static_for_active_theme "$last_image")"
+        local frame
+        frame="$(_video_frame "$file" || true)"
+        if ! _set_video "$file"; then
+            [[ -n "$frame" ]] && _set_static "$frame" || true
+        fi
+        _save_state "$file" "video"
+        if [[ -f "$frame" ]]; then
             local APPLY="${HOME}/.local/bin/apply-shell-state"
-            [[ -f "$APPLY" ]] && _run_helper "$APPLY" --wallpaper "$last_image" 2>/dev/null || true
+            [[ -f "$APPLY" ]] && _run_helper "$APPLY" --wallpaper "$frame" 2>/dev/null || true
+            _save_state "$file" "video"
         fi
     else
         local source_file="$file"

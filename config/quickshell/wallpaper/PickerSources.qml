@@ -68,7 +68,8 @@ Rectangle {
 
                     Repeater {
                         model: dialog.controller.extraSources.filter((source) => {
-                            return source.needsKey || source.optionalKey;
+                            // Videobronnen delen de sleutel van hun fotobron.
+                            return (source.needsKey || source.optionalKey) && !source.keySource;
                         })
 
                         ColumnLayout {
@@ -160,7 +161,7 @@ Rectangle {
 
             PickerText {
                 Layout.fillWidth: true
-                text: "Pexels verstrekt momenteel geen nieuwe sleutels. Vraag bij Pixabay ook volledige API-toegang aan voor originele resoluties. De andere bronnen hebben geen sleutel nodig."
+                text: "Pexels verstrekt momenteel geen nieuwe sleutels. Vraag bij Pixabay ook volledige API-toegang aan voor originele resoluties. De Pixabay- en Pexels-sleutel werken ook voor het zoeken naar video’s. De andere bronnen hebben geen sleutel nodig."
                 wrapMode: Text.WordWrap
                 color: dialog.colors.onSurfaceVariant
                 font.pixelSize: 12

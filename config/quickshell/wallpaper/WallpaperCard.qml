@@ -32,6 +32,7 @@ Item {
     signal downloadRequested
     signal removeRequested
     readonly property string imageSource: thumbnail.thumb || itemData.thumb || ""
+    readonly property bool isVideo: itemData.type === "video"
     function inspect() {
         return {
             source: imageSource,
@@ -153,6 +154,26 @@ Item {
         }
     }
 
+    // Video's herken je zonder te hoveren aan een rond afspeelteken.
+    Rectangle {
+        objectName: "video-badge"
+        visible: card.isVideo && card.width > 70 && !(card.remote && card.shape === "hex" && (card.hovered || card.selected))
+        width: card.width < 150 ? 24 : 30
+        height: width
+        radius: width / 2
+        x: card.shape === "hex" ? (card.width - width) / 2 : 12
+        y: (card.shape === "hex" ? 18 : 12) - card.bend(x + width / 2)
+        color: Qt.rgba(card.colors.surface.r, card.colors.surface.g, card.colors.surface.b, 0.82)
+        border.width: card.highlighted ? 1 : 0
+        border.color: card.colors.primary
+        Text {
+            anchors.centerIn: parent
+            anchors.horizontalCenterOffset: 1
+            text: "▶"
+            color: card.colors.primary
+            font.pixelSize: parent.width * 0.42
+        }
+    }
     Rectangle {
         anchors.horizontalCenter: card.horizontalCenter
         anchors.bottom: card.bottom
@@ -166,7 +187,7 @@ Item {
             id: caption
             anchors.centerIn: parent
             width: Math.min(implicitWidth, parent.width - 16)
-            text: (card.current ? "✓  " : "") + (card.itemData.favorite ? "♥  " : "") + (card.itemData.displayName || card.itemData.name)
+            text: (card.current ? "✓  " : "") + (card.itemData.favorite ? "♥  " : "") + (card.isVideo ? "▶  " : "") + (card.itemData.displayName || card.itemData.name)
             textFormat: Text.PlainText
             color: card.colors.text
             elide: Text.ElideMiddle

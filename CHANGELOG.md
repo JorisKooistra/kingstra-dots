@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Video-wallpapers in de picker
+- Video's in je collectie (mp4, webm, mkv, mov, ook in `~/Pictures/Wallpapers/video`) krijgen een rond ▶-teken op de kaart. Nieuwe keuze naast de sortering: "Foto’s en video’s", "Alleen foto’s" of "Alleen video’s".
+- **Spatie** op een eigen wallpaper opent hem groot; een video speelt dan geluidloos af (klik = pauze). Enter zet hem in.
+- Nieuwe bronnen **Pixabay video** (met je Pixabay-sleutel) en **Pexels video** (alleen als je een Pexels-sleutel hebt), met eigen onderwerpen (oceaan, regen, wolken, stad bij nacht…). Voorbeeld = kleine versie; opslaan haalt de versie tot 2560 px breed (geen 4K-bestanden van honderden MB) naar `~/Pictures/Wallpapers/video`.
+- Een video instellen start mpvpaper op elk scherm (geluid uit, herhalen, pauzeert als hij helemaal bedekt is). De themakleuren komen nu uit een beeld van de video in plaats van je vorige foto, en dat beeld staat ook op het vergrendelscherm. Na een herstart komt de video terug.
+- mpvpaper startte eerder met opties die het niet kent en hield de picker vast; dat is opgelost. De installer installeert mpvpaper standaard.
+
 ### Koppeling: gekopieerde bestanden plakken op de andere machine
 - Bestanden of mappen die je in Bestanden kopieert (Ctrl+C) gaan nu zelf mee naar de gekoppelde machine en staan daar klaar om met Ctrl+V in Bestanden te plakken. Eerder ging alleen het pad als tekst mee, waardoor plakken niets deed.
 - Ze worden klaargezet in `~/.cache/kingstra/klembord` aan de andere kant (alleen de laatste kopie). Boven 2 GB gaat er niets mee; gebruik dan ‘Naar … sturen’. Boven 50 MB krijg je een melding als het klaar is.

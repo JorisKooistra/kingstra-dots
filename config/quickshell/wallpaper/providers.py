@@ -23,6 +23,9 @@ SOURCES = {
     "wallpaperswide": dict(label="WallpapersWide", url="https://wallpaperswide.com/", kind="site", tagSearch=True),
     "pexels": dict(label="Pexels", url="https://www.pexels.com/", keyUrl="https://www.pexels.com/api/", needsKey=True, kind="api"),
     "pixabay": dict(label="Pixabay", url="https://pixabay.com/", keyUrl="https://pixabay.com/api/docs/", needsKey=True, kind="api"),
+    # Videowallpapers. Ze gebruiken de sleutel van hun fotobron (keySource).
+    "pixabayvideo": dict(label="Pixabay video", url="https://pixabay.com/videos/", keyUrl="https://pixabay.com/api/docs/", needsKey=True, kind="api", keySource="pixabay", media="video"),
+    "pexelsvideo": dict(label="Pexels video", url="https://www.pexels.com/videos/", keyUrl="https://www.pexels.com/api/", needsKey=True, kind="api", keySource="pexels", media="video"),
 }
 # Preserve the metadata of images already saved from a removed source.
 LEGACY_SOURCES = {"zedge"}
@@ -38,6 +41,8 @@ IMAGE_HOSTS = {
     "wallpaperswide": {"wallpaperswide.com", "hd.wallpaperswide.com"},
     "pexels": {"images.pexels.com"},
     "pixabay": {"pixabay.com", "cdn.pixabay.com"},
+    "pixabayvideo": {"cdn.pixabay.com"},
+    "pexelsvideo": {"images.pexels.com", "videos.pexels.com"},
 }
 PAGE_HOSTS = {
     "wallpaperscom": {"wallpapers.com"},
@@ -49,6 +54,8 @@ PAGE_HOSTS = {
     "wallpaperswide": {"wallpaperswide.com", "www.wallpaperswide.com"},
     "pexels": {"www.pexels.com", "api.pexels.com"},
     "pixabay": {"pixabay.com"},
+    "pixabayvideo": {"pixabay.com"},
+    "pexelsvideo": {"www.pexels.com", "api.pexels.com"},
 }
 
 
@@ -127,6 +134,14 @@ def is_ai(item):
     return bool(re.search(r"\b(?:ai[-_ ]+(?:art|generated|generat(?:ed|ive)?|wallpapers?)|generative[-_ ]+ai|midjourney|stable[-_ ]*diffusion|dall[-_ ]?e)\b", " ".join(values), re.I))
 
 
+def best_video(files, target=2560):
+    """Scherp genoeg voor een groot scherm, zonder 4K-bestanden van honderden MB."""
+    files = [value for value in files if value.get("url") and (value.get("width") or 0) >= (value.get("height") or 0)]
+    if not files: return None
+    fitting = [value for value in files if (value.get("width") or 0) <= target]
+    return max(fitting, key=lambda value: value["width"]) if fitting else min(files, key=lambda value: value["width"])
+
+
 def slug(query):
     return re.sub(r"[^a-z0-9]+", "-", query.lower()).strip("-")
 
@@ -191,6 +206,43 @@ def search(source, args, fetch, key=""):
             records.append(item)
         more = page * 24 < min(500, data.get("totalHits", 0))
         notice = "Pixabay · origineel/Full HD vereist volledige API-toegang" if limited else "Foto’s van Pixabay"
+    elif source == "pixabayvideo":
+        params = dict(key=key, q=(query or "loop background")[:100], page=page, per_page=24, video_type="all",
+                      safesearch="true" if getattr(args, "purity", "100") == "100" else "false",
+                      order="latest" if getattr(args, "sort", "") == "date_added" else "popular")
+        if getattr(args, "category", "") in PIXABAY_CATEGORIES: params["category"] = args.category
+        data = fetch("https://pixabay.com/api/videos/?" + urlencode(params), ttl=86400)
+        for row in data.get("hits", []):
+            versions = row.get("videos", {})
+            choice = best_video([dict(url=value.get("url", ""), width=value.get("width", 0), height=value.get("height", 0),
+                                      size=value.get("size", 0)) for value in versions.values() if isinstance(value, dict)])
+            if not choice: continue
+            small = versions.get("tiny") or versions.get("small") or {}
+            thumb = next((value.get("thumbnail") for name in ["medium", "small", "large", "tiny"]
+                          if (value := versions.get(name) or {}).get("thumbnail")), "")
+            item = record(source, row["id"], row.get("tags") or "Pixabay video " + str(row["id"]), row.get("pageURL", ""), thumb, choice["url"])
+            item.update(tag_names=[part.strip() for part in row.get("tags", "").split(",") if part.strip()],
+                        uploader=row.get("user", ""), resolution=dimension(choice["width"], choice["height"]),
+                        media="video", duration=row.get("duration", 0), preview_url=small.get("url", ""), file_size=choice.get("size", 0))
+            records.append(item)
+        more = page * 24 < min(500, data.get("totalHits", 0))
+        notice = "Video’s van Pixabay · gratis te gebruiken, maker bij elke video"
+    elif source == "pexelsvideo":
+        params = dict(page=page, per_page=24, orientation="landscape", query=query or "loop background")
+        if getattr(args, "size", ""): params["size"] = args.size
+        data = fetch("https://api.pexels.com/videos/search?" + urlencode(params), headers={"Authorization": key}, ttl=3600)
+        for row in data.get("videos", []):
+            files = [dict(url=value.get("link", ""), width=value.get("width") or 0, height=value.get("height") or 0, size=value.get("size") or 0)
+                     for value in row.get("video_files", []) if value.get("file_type") == "video/mp4"]
+            choice = best_video(files)
+            if not choice: continue
+            small = min(files, key=lambda value: value["width"] or 99999)
+            item = record(source, row["id"], "Pexels video " + str(row["id"]), row.get("url", ""), row.get("image", ""), choice["url"])
+            item.update(uploader=(row.get("user") or {}).get("name", ""), resolution=dimension(choice["width"], choice["height"]),
+                        media="video", duration=row.get("duration", 0), preview_url=small["url"], file_size=choice.get("size", 0))
+            records.append(item)
+        more = bool(data.get("next_page"))
+        notice = "Video’s van Pexels · maker en bron bij elke video"
     elif source == "alphacoders":
         url = "https://alphacoders.com/" + (quote(slug(query)) + "-wallpapers" if query else "resolution/4k-wallpapers") + "?" + urlencode({"page": page})
         body = fetch(url, as_json=False)

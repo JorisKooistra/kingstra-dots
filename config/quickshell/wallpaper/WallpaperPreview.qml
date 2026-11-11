@@ -8,6 +8,8 @@ Rectangle {
     required property var colors
     color: colors.surface
     property real zoom: 1
+    readonly property bool isVideo: controller.chosen.type === "video"
+    readonly property bool local: !controller.online
     readonly property point panPosition: Qt.point(pan.contentX, pan.contentY)
     onVisibleChanged: {
         if (visible) {
@@ -119,16 +121,37 @@ Rectangle {
                     objectName: "preview-image"
                     width: pan.contentWidth
                     height: pan.contentHeight
-                    source: preview.controller.previewSource
+                    // Video: het stilstaande beeld tot het filmpje speelt.
+                    source: preview.isVideo ? (preview.controller.thumbnailFor(preview.controller.chosen).thumb || preview.controller.chosen.thumb || "") : preview.controller.previewSource
                     asynchronous: true
                     cache: false
                     sourceSize.width: Math.min(4096, Math.round(imageArea.width * 2))
                     sourceSize.height: Math.min(3072, Math.round(imageArea.height * 2))
                     fillMode: Image.PreserveAspectFit
                 }
+                Loader {
+                    id: videoPlayer
+                    objectName: "preview-video"
+                    width: pan.contentWidth
+                    height: pan.contentHeight
+                    active: preview.visible && preview.isVideo && !!preview.controller.previewSource
+                    source: "WallpaperVideo.qml"
+                    onLoaded: item.source = Qt.binding(() => preview.controller.previewSource)
+                    opacity: item && item.ready ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: 220
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                }
                 MouseArea {
                     anchors.fill: parent
                     onClicked: event => {
+                        if (preview.isVideo && videoPlayer.item) {
+                            videoPlayer.item.toggle();
+                            return;
+                        }
                         let left = (fullImage.width - fullImage.paintedWidth) / 2;
                         let top = (fullImage.height - fullImage.paintedHeight) / 2;
                         if (fullImage.status !== Image.Ready || event.x < left || event.x > left + fullImage.paintedWidth || event.y < top || event.y > top + fullImage.paintedHeight)
@@ -146,14 +169,30 @@ Rectangle {
             }
             PickerText {
                 anchors.centerIn: parent
-                visible: fullImage.status !== Image.Ready
+                visible: fullImage.status !== Image.Ready && !preview.isVideo
                 text: fullImage.status === Image.Error ? "Afbeelding laden mislukt" : "Volledige afbeelding laden…"
                 color: preview.colors.onSurfaceVariant
+            }
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 18
+                visible: preview.isVideo && !(videoPlayer.item && videoPlayer.item.playing)
+                width: videoNote.implicitWidth + 28
+                height: 34
+                radius: 17
+                color: Qt.rgba(preview.colors.surface.r, preview.colors.surface.g, preview.colors.surface.b, 0.85)
+                PickerText {
+                    id: videoNote
+                    anchors.centerIn: parent
+                    text: videoPlayer.status === Loader.Error ? "Bewegend voorbeeld kan niet (qt6-multimedia ontbreekt) · Instellen werkt wel" : (videoPlayer.item && videoPlayer.item.failed ? "Video afspelen mislukt" : (videoPlayer.item && videoPlayer.item.ready ? "▶ Gepauzeerd · klik om af te spelen" : "Video laden…"))
+                    color: preview.colors.text
+                }
             }
         }
         PickerText {
             Layout.fillWidth: true
-            text: (preview.controller.previewInfo.dimensions || preview.controller.chosen.dimensions || "") + (preview.controller.previewInfo.uploader ? "   ·   " + preview.controller.previewInfo.uploader : "") + (preview.controller.previewInfo.license ? "   ·   " + preview.controller.previewInfo.license : "") + (preview.controller.previewInfo.notice ? "   ·   " + preview.controller.previewInfo.notice : "") + (preview.controller.previewLoading ? "   ·   Volledige afbeelding laden…" : "")
+            text: (preview.isVideo ? "▶ Video" + ((preview.controller.previewInfo.duration || preview.controller.chosen.duration) ? " · " + (preview.controller.previewInfo.duration || preview.controller.chosen.duration) + " s" : "") + "   ·   " : "") + (preview.controller.previewInfo.dimensions || preview.controller.chosen.dimensions || "") + (preview.controller.previewInfo.uploader ? "   ·   " + preview.controller.previewInfo.uploader : "") + (preview.controller.previewInfo.license ? "   ·   " + preview.controller.previewInfo.license : "") + (preview.controller.previewInfo.notice ? "   ·   " + preview.controller.previewInfo.notice : "") + (preview.controller.previewLoading ? (preview.isVideo ? "   ·   Video laden…" : "   ·   Volledige afbeelding laden…") : "")
             elide: Text.ElideRight
             color: preview.colors.onSurfaceVariant
             textFormat: Text.PlainText
@@ -175,7 +214,7 @@ Rectangle {
         }
         PickerText {
             Layout.fillWidth: true
-            text: "Scroll of +/− zoomen    Sleep om te verplaatsen    ← → bladeren    Enter instellen    Esc terug"
+            text: (preview.isVideo ? "Klik om te pauzeren    " : "") + "Scroll of +/− zoomen    Sleep om te verplaatsen    ← → bladeren    Enter instellen    Esc terug"
             color: preview.colors.onSurfaceVariant
             font.pixelSize: 12
             elide: Text.ElideRight
@@ -218,11 +257,13 @@ Rectangle {
             }
             PickerButton {
                 colors: preview.colors
+                visible: !preview.local
                 text: preview.controller.sourceName + "-bron"
                 onClicked: Qt.openUrlExternally(preview.controller.previewInfo.page || preview.controller.chosen.page || "https://wallhaven.cc/w/" + preview.controller.chosen.id)
             }
             PickerButton {
                 objectName: "preview-download"
+                visible: !preview.local
                 colors: preview.colors
                 text: preview.controller.chosen.path ? "Opgeslagen" : "Downloaden"
                 available: !preview.controller.busy && !preview.controller.chosen.path
