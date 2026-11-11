@@ -14,7 +14,14 @@ CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 qml="$CONFIG_HOME/quickshell/splash/Splash.qml"
 if [[ -f "$qml" && ! -e "$CONFIG_HOME/kingstra/geen-startscherm" ]] && command -v quickshell >/dev/null 2>&1; then
     # Tijdslimiet: lukt afsluiten niet (bv. geweigerd), dan verdwijnt het beeld weer.
+    flag="${XDG_RUNTIME_DIR:-/tmp}/kingstra-splash-covered"
+    rm -f "$flag"
     KINGSTRA_SPLASH_MODE=out setsid -f timeout 20 quickshell -p "$qml" >/dev/null 2>&1 || true
-    sleep 0.6
+    # Wachten tot het beeld alle schermen dekt (hooguit 2,5 s).
+    for _ in $(seq 25); do
+        [[ -e "$flag" ]] && break
+        sleep 0.1
+    done
+    rm -f "$flag"
 fi
 exec systemctl "$action" "${@:2}"

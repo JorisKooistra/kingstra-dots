@@ -28,14 +28,18 @@ ShellRoot {
     // Kort minimum, zodat het geen flits wordt.
     readonly property int minMs: 900
 
-    property real cover: leaving ? 0 : 1
+    // Pas tonen als de achtergrond op elk scherm geladen is, zodat alle
+    // schermen tegelijk afgedekt worden (anders verscheen het per scherm).
+    property int loadedScreens: 0
+    readonly property bool allLoaded: loadedScreens >= Quickshell.screens.length
+    property real cover: 0
     property bool fading: false
     property real spin: 0
     property real breathe: 0
 
     Behavior on cover {
         NumberAnimation {
-            duration: splashRoot.leaving ? 450 : 750
+            duration: splashRoot.fading ? 750 : (splashRoot.leaving ? 400 : 180)
             easing.type: Easing.OutCubic
         }
     }
@@ -48,9 +52,32 @@ ShellRoot {
         quitTimer.start();
     }
 
-    Component.onCompleted: {
+    function reveal() {
+        if (splashRoot.cover > 0 || splashRoot.fading)
+            return;
+        splashRoot.cover = 1;
         if (splashRoot.leaving)
-            splashRoot.cover = 1;
+            coveredTimer.start();
+    }
+
+    onAllLoadedChanged: if (allLoaded) reveal()
+
+    // Vangnet: laadt een afbeelding niet, toch tonen.
+    Timer {
+        interval: 700
+        running: true
+        onTriggered: splashRoot.reveal()
+    }
+
+    // Afsluiten: kingstra-power wacht op dit bestand voordat het systemctl roept.
+    Timer {
+        id: coveredTimer
+        interval: 450
+        onTriggered: coveredSignal.running = true
+    }
+    Process {
+        id: coveredSignal
+        command: ["sh", "-c", "touch \"${XDG_RUNTIME_DIR:-/tmp}/kingstra-splash-covered\""]
     }
 
     Timer {
@@ -170,8 +197,15 @@ ShellRoot {
                     anchors.fill: parent
                     source: splashRoot.themeDir + "background.png"
                     fillMode: Image.PreserveAspectCrop
-                    asynchronous: false
+                    asynchronous: true
                     cache: false
+                    property bool counted: false
+                    onStatusChanged: {
+                        if (!counted && (status === Image.Ready || status === Image.Error)) {
+                            counted = true;
+                            splashRoot.loadedScreens += 1;
+                        }
+                    }
                 }
 
                 Image {
@@ -205,7 +239,10 @@ ShellRoot {
                     anchors.centerIn: parent
                     width: 170 * stage.sc
                     height: width
-                    source: splashRoot.themeDir + "orb.png"
+                    // Startscherm: bol zonder aan/uit-teken; afsluiten: met.
+                    source: splashRoot.themeDir + (splashRoot.leaving || plainMissing ? "orb.png" : "orb-plain.png")
+                    property bool plainMissing: false
+                    onStatusChanged: if (status === Image.Error && !splashRoot.leaving) plainMissing = true
                     smooth: true
                     mipmap: true
                     // Bij het weggaan zakt de bol iets terug, zoals de intro van de shell.

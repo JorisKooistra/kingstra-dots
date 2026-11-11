@@ -112,6 +112,11 @@ def render(dest):
     d.line((cx, cy - r - 10, cx, cy - 6), fill=rgba(text), width=10)
     orb.resize((170, 170), Image.LANCZOS).save(dest / "orb.png")
 
+    # Zonder aan/uit-teken, voor het startscherm na het inloggen (Splash.qml).
+    plain = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    ImageDraw.Draw(plain).ellipse((4, 4, s - 5, s - 5), fill=rgba(surface0, 0.9), outline=rgba(text), width=4)
+    plain.resize((170, 170), Image.LANCZOS).save(dest / "orb-plain.png")
+
 
 def sync(theme_dir):
     for name in ("kingstra.plymouth", "kingstra.script"):
