@@ -189,6 +189,14 @@ _phase14b_plymouth() {
         log_warn "Opstartbeeld instellen mislukt"
         return 0
     fi
+    # Afsluitbeeld: wachten tot Hyprland/X het scherm loslaten (alleen bij
+    # afsluiten/herstarten; de opstart blijft ongemoeid).
+    local unit changed=false
+    for unit in plymouth-poweroff plymouth-reboot plymouth-halt; do
+        _phase14b_install 0644 "$VANGNET_SRC/plymouth-wacht-op-scherm.conf" \
+            "/etc/systemd/system/$unit.service.d/kingstra-wacht-op-scherm.conf" && changed=true
+    done
+    $changed && sudo systemctl daemon-reload && log_ok "Afsluitbeeld wacht nu tot het scherm vrij is"
     # De SDDM-koppeling (plymouth quit --retain-splash vóór SDDM) hield op
     # 4 november het inlogscherm tegen: grijs scherm, SDDM startte niet.
     # Niet meer installeren en een eerder geïnstalleerde versie weghalen.

@@ -31,7 +31,11 @@ LOADER = ESP / "loader" / "loader.conf"
 BACKUPS = Path(os.environ.get("KINGSTRA_BOOT_BACKUPS", "/var/backups/kingstra-boot"))
 TRIES = 3
 
-QUIET = ["quiet", "splash", "loglevel=3", "rd.udev.log_level=3",
+# plymouth.use-simpledrm: zonder deze optie slaat Plymouth het firmwarebeeld
+# (simpledrm) over en wacht op de NVIDIA-driver, die pas ~0,8 s vóór het
+# inlogscherm klaar is. Dan zie je het opstartbeeld niet. Met de optie tekent
+# Plymouth meteen en schuift het over naar de NVIDIA-driver zodra die er is.
+QUIET = ["quiet", "splash", "plymouth.use-simpledrm", "loglevel=3", "rd.udev.log_level=3",
          "systemd.show_status=auto", "vt.global_cursor_default=0"]
 # Deze opties beheren wij; ze komen niet dubbel uit het bestaande item mee.
 MANAGED = re.compile(r"^(quiet|splash|loglevel=.*|rd\.udev\.log_level=.*|systemd\.show_status=.*|"

@@ -46,7 +46,7 @@ boot setup >/dev/null
 [[ -f "$ESP/loader/entries/kingstra-herstel.conf" ]] || fail "herstel-item ontbreekt"
 grep -q '^default kingstra-\*$' "$ESP/loader/loader.conf" || fail "default niet gezet"
 grep -q '^timeout 2$' "$ESP/loader/loader.conf" || fail "timeout niet gezet"
-grep -q 'root=PARTUUID=abc rw rootfstype=ext4 quiet splash' "$ESP/loader/entries/kingstra-linux+3.conf" \
+grep -q 'root=PARTUUID=abc rw rootfstype=ext4 quiet splash plymouth.use-simpledrm' "$ESP/loader/entries/kingstra-linux+3.conf" \
     || fail "opties niet overgenomen of quiet dubbel"
 grep -q 'initramfs-linux-lts.img' "$ESP/loader/entries/kingstra-herstel.conf" || fail "herstel hoort de lts-kernel te gebruiken"
 grep -q 'systemd.unit=multi-user.target' "$ESP/loader/entries/kingstra-herstel.conf" || fail "herstel start niet zonder inlogscherm"

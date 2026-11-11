@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Opstart- en afsluitbeeld zichtbaar
+- **Opstartbeeld kwam niet in beeld.** Plymouth slaat het firmwarebeeld (simpledrm) standaard over en wacht op de echte driver. Op de pc met de NVIDIA-kaart is die pas op 6,7 s klaar, en op 7,5 s neemt het inlogscherm al over: het Kingstra-beeld stond hooguit een fractie van een seconde. De Kingstra-opstartitems krijgen nu `plymouth.use-simpledrm`, zodat Plymouth meteen tekent (vanaf ~4,4 s) en daarna overschuift naar de NVIDIA-driver. Initramfs en mkinitcpio blijven ongemoeid; "Kingstra herstel" en de oorspronkelijke Arch-items blijven zonder opstartbeeld als terugval.
+- **Afsluitbeeld soms wel, soms niet.** Plymouth startte bij elke afsluiting, maar vaak terwijl Hyprland nog aan het afsluiten was en het scherm vasthield (een keer crashte Hyprland zelfs tijdens het afsluiten). Dan kreeg Plymouth geen beeld. Nieuwe drop-in voor `plymouth-poweroff/-reboot/-halt`: eerst wachten tot Hyprland en X weg zijn (hooguit 6 s), dan pas het afsluitbeeld.
+
 ### Wallpaperkiezer opgeschoond, MoeWalls erbij, video's op schermmaat
 - **MoeWalls** is een nieuwe videobron in de kiezer: zoeken, Vergroten speelt het voorbeeldfilmpje van de site, Opslaan haalt de echte video op. De kiezer stelt zich eerlijk voor (geen nagemaakte browser) en downloadt alleen als jij op Opslaan drukt. Voor persoonlijk gebruik; de rechten blijven bij de makers. AI-werk is herkenbaar aan de tags van de site, dus **Geen AI** werkt ook hier.
 - **Video's op schermmaat**: een opgeslagen video wordt omgezet naar de maat uit Instellingen › Bureaublad › Wallpapers (standaard je hoogste scherm, 30 beelden per seconde, h264). Alleen wat groter, sneller of zwaarder is wordt omgezet; het origineel gaat naar de prullenbak. De mapbewaker doet hetzelfde voor video's die je zelf in `~/Pictures/Wallpapers` zet. Elke video speelt op elk scherm apart, dus dit scheelt drie keer rekenwerk.
