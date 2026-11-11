@@ -4,6 +4,10 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Opruimen: kapotte koppelingen en rommel in de repo
+- De updater haalt nu bij elke run kapotte symlinks weg in `~`, `~/.config`, `~/.local/bin` en `~/.local/share/applications` die naar een map in kingstra-dots wezen die er niet meer is (zoals `~/.config/swaync`). Alleen dode links die echt in de repo wezen; verder wordt niets aangeraakt.
+- Een per ongeluk meegecommit shellcheck-pakket (`.whl`) is uit de repo-root gehaald.
+
 ### Laptop krijgt een eigen menu
 - De gekoppelde machine (`kingstra koppel`) heeft nu een eigen paneel, net als de telefoon, in plaats van een pil in Snelle instellingen. Je opent het via de railknop, de knop in de statusstrip of Matte-bovenbalk, of Menu › Snel schakelen › Andere machine › Menu openen.
 - Bovenaan staan de naam, of hij bereikbaar is (snelle ssh-check, hooguit elke 10 s zolang het paneel open is), of delen aan staat en aan welke kant hij staat.

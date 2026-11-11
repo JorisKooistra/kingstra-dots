@@ -117,3 +117,6 @@ config/kingstra/koppel-kant
 config/kingstra/phone/
 # Vanzelf-regels (kingstra-auto-mode), per machine.
 config/kingstra/auto-modes.json
+
+# Opruim-inventaris van de thuismap (lokaal rapport, persoonlijk)
+.opruim-inventaris.txt

@@ -34,3 +34,32 @@ cleanup_legacy_paths() {
         log_info "Geen conflicterende bestanden gevonden."
     fi
 }
+
+# Kapotte symlinks die naar de repo wijzen, ruimen we op: dat zijn
+# koppelingen naar configmappen die uit kingstra-dots zijn gehaald (zoals
+# config/swaync). Alleen links die écht dood zijn en écht in de repo
+# wezen; verder raken we niets aan.
+cleanup_dead_repo_links() {
+    local repo="${REPO_ROOT:?}"
+    local dir link target found=0
+
+    for dir in "$HOME" "${XDG_CONFIG_HOME:-$HOME/.config}" "$HOME/.local/bin" \
+               "${XDG_DATA_HOME:-$HOME/.local/share}/applications"; do
+        [[ -d "$dir" ]] || continue
+        while IFS= read -r -d '' link; do
+            target="$(readlink "$link")" || continue
+            [[ "$target" == "$repo"/* ]] || continue
+            [[ -e "$link" ]] && continue
+            found=$((found + 1))
+            if "${DRY_RUN:-false}"; then
+                log_dry "Zou kapotte koppeling weghalen: $link -> $target"
+            else
+                rm -f -- "$link"
+                log_ok "Kapotte koppeling weg: ${link/#$HOME/\~}"
+            fi
+        done < <(find "$dir" -maxdepth 1 -type l -print0 2>/dev/null)
+    done
+
+    (( found == 0 )) && log_info "Geen kapotte koppelingen naar de repo."
+    return 0
+}
