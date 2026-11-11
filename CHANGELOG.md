@@ -23,11 +23,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ### Telefoonpaneel opnieuw (KDE Connect)
 - Nieuwe opbouw in de stijl van Batterij & energie: kaart met naam, status, batterij (balk met laadglans), mobiel netwerk en aantal meldingen.
 - Gekoppeld maar weg? Dat staat er nu duidelijk, met uitleg en een knop **Opnieuw zoeken** (ook rechtsboven). Koppelverzoeken van de telefoon kun je accepteren of weigeren, met de code erbij.
-- Tegels: Zoek telefoon, Klembord, Bestand (meerdere tegelijk), Bladeren (bestanden van de telefoon via sshfs), Sms (direct typen en sturen), Gesprekken (KDE Connect SMS), Testbericht en Scherm op pc (scrcpy). Een tegel draait tijdens het werk en toont een vinkje als het gelukt is.
+- Tegels: Zoek telefoon, Klembord, Bestand (meerdere tegelijk), Bladeren (bestanden van de telefoon via sshfs), Sms (direct typen en sturen), Gesprekken (KDE Connect SMS) en Testbericht. Scherm delen tussen pc en telefoon wacht op een compleet plan. Een tegel draait tijdens het werk en toont een vinkje als het gelukt is.
 - Media van de telefoon: titel, vorige/afspelen/volgende en het volume van de telefoon.
 - Meldingen van de telefoon in het paneel: wegvegen, en antwoorden waar de app dat toestaat.
 - Het paneel opent meteen met de laatst bekende stand en haalt alles nu via D-Bus op in plaats van kdeconnect-cli (was ruim 2 seconden "Zoeken…").
-- Installer zet sshfs en scrcpy er optioneel bij.
+- Installer zet sshfs er optioneel bij.
+- **Zuinig voor de telefoon:** bij de eerste verbinding zet de pc onderdelen uit die de telefoon onnodig wekken: pc-meldingen naar de telefoon, pc-volume en pc-muziek doorgeven, contacten synchroniseren, opdrachten, en muis/toetsenbord op afstand (werkt onder Hyprland niet en gaf duizenden logregels). Het klembord gaat niet meer bij elke kopie automatisch naar de telefoon (ook geen wachtwoorden); de tegel Klembord stuurt het nog wel. Opnieuw toepassen: `phone.py zuinig <id>`.
+- Het paneel vraagt alleen de pc om de laatst bekende stand; zolang het open staat gaat er niets naar de telefoon behalve wat je zelf aanklikt.
 
 ### Update kan de opstart niet meer slopen
 - Op 10 november stopte pacman midden in een kernel-update: de oude kernels waren al van /boot gehaald, de nieuwe nog niet neergezet. De pc toonde daarna in het opstartmenu alleen "Reboot Into Firmware Interface". Hersteld via een live-USB met `pacman -S linux linux-lts`.

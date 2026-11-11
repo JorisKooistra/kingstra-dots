@@ -11,7 +11,7 @@ import ".."
 //    mobiel netwerk; duidelijke uitleg als hij gekoppeld maar weg is;
 //  - koppelen, koppelverzoek van de telefoon accepteren of weigeren;
 //  - tegels: zoek telefoon, klembord, bestand(en) sturen, bestanden
-//    bladeren (sshfs), sms, testbericht en scherm op pc (scrcpy);
+//    bladeren (sshfs), sms en testbericht;
 //  - media van de telefoon: titel, vorige/afspelen/volgende en volume;
 //  - meldingen van de telefoon: wegvegen en (waar het kan) antwoorden.
 // Alles via je eigen netwerk, niets via internet (phone.py, D-Bus).
@@ -38,7 +38,6 @@ Item {
     property bool installed: true
     property bool hasSshfs: false
     property bool hasSmsApp: false
-    property bool hasScrcpy: false
     property var devices: []
     property string selectedId: ""
     readonly property var dev: {
@@ -132,12 +131,6 @@ Item {
                 }
             }
         }
-    }
-    Process {
-        id: toolProc
-        command: ["sh", "-c", "command -v scrcpy >/dev/null && echo 1 || echo 0"]
-        running: true
-        stdout: StdioCollector { onStreamFinished: root.hasScrcpy = this.text.trim() === "1" }
     }
     Process {
         id: actProc
@@ -572,17 +565,6 @@ Item {
                 action: "ping"; icon: "󰍡"; label: "Testbericht"; accent: mocha.accent2
                 tip: "Stuur een korte melding naar je telefoon"
                 onTriggered: root.act("ping")
-            }
-            ActionTile {
-                action: "mirror"; icon: "󰍹"; label: "Scherm op pc"; accent: mocha.accent3
-                visible: root.hasScrcpy
-                tip: "Toon en bedien je telefoon op de pc (scrcpy, USB-foutopsporing nodig)"
-                onTriggered: {
-                    Quickshell.execDetached(["bash", "-lc",
-                        "scrcpy --window-title='Telefoon' >/dev/null 2>&1 || bash ~/.config/hypr/scripts/feedback.sh '󰍹' 'Scherm spiegelen lukte niet' 'Zet USB-foutopsporing aan op je telefoon en sluit hem één keer met een kabel aan.' 5000"]);
-                    root.done = "mirror";
-                    doneTimer.restart();
-                }
             }
         }
 

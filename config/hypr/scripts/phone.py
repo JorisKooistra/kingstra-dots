@@ -18,6 +18,8 @@
   phone.py reply <id> <nid> <t> antwoorden op een melding
   phone.py pair|accept|reject|unpair <id>
   phone.py app                  KDE Connect-instellingen openen
+  phone.py zuinig <id>          onderdelen uitzetten die de telefoon onnodig
+                                wekken (gebeurt automatisch één keer per telefoon)
 
 Alles via je eigen netwerk; niets via internet. De dienst start pas als iets
 hem nodig heeft (D-Bus).
@@ -184,6 +186,73 @@ def device_info(dev_id, name):
     return dev
 
 
+# Onderdelen die de telefoon wakker maken voor iets wat we niet gebruiken, of
+# die onder Hyprland niet werken (muis/toetsenbord op afstand: geen
+# RemoteDesktop-portal, alleen logspam). Meldingen, batterij, klembord (met de
+# hand), bestanden, sms, media van de telefoon en zoek-mijn-telefoon blijven.
+QUIET_PLUGINS = [
+    "sendnotifications",   # elke pc-melding naar de telefoon
+    "systemvolume",        # elke volumewijziging van de pc naar de telefoon
+    "mpriscontrol",        # elke track/positie van pc-muziek naar de telefoon
+    "contacts",            # contacten periodiek synchroniseren
+    "runcommand",
+    "screensaver_inhibit",
+    "mousepad", "remotecontrol", "remotekeyboard", "presenter", "digitizer",
+    "shareinputdevices", "shareinputdevicesremote",
+]
+TUNED_DIR = os.path.join(os.path.expanduser("~"), ".config", "kingstra", "phone")
+
+
+def set_clipboard_manual(dev_id):
+    # Klembord niet meer automatisch bij elke kopie naar de telefoon sturen
+    # (wekt hem, en stuurt ook wachtwoorden mee). De tegel Klembord blijft.
+    import configparser
+    path = os.path.join(os.path.expanduser("~"), ".config", "kdeconnect", dev_id,
+                        "kdeconnect_clipboard", "config")
+    cfg = configparser.ConfigParser()
+    cfg.optionxform = str
+    try:
+        cfg.read(path, encoding="utf-8")
+    except configparser.Error:
+        cfg = configparser.ConfigParser()
+        cfg.optionxform = str
+    if not cfg.has_section("General"):
+        cfg.add_section("General")
+    cfg.set("General", "autoShare", "false")
+    cfg.set("General", "sendPassword", "false")
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            cfg.write(fh, space_around_delimiters=False)
+    except OSError:
+        return False
+    return True
+
+
+def make_quiet(dev_id):
+    base = f"{ROOT}/devices/{dev_id}"
+    ok_all = True
+    for name in QUIET_PLUGINS:
+        if call(base, DEV_IFACE, "setPluginEnabled", "sb", "kdeconnect_" + name, "false") is None:
+            ok_all = False
+    set_clipboard_manual(dev_id)
+    call(base, DEV_IFACE, "reloadPlugins")
+    return ok_all
+
+
+def ensure_quiet(dev_id):
+    marker = os.path.join(TUNED_DIR, dev_id + ".zuinig")
+    if os.path.exists(marker):
+        return
+    if make_quiet(dev_id):
+        try:
+            os.makedirs(TUNED_DIR, exist_ok=True)
+            with open(marker, "w", encoding="utf-8") as fh:
+                fh.write("\n".join(QUIET_PLUGINS) + "\n")
+        except OSError:
+            pass
+
+
 def status():
     if not shutil.which("kdeconnect-cli") and not shutil.which("kdeconnectd") \
             and not os.path.exists("/usr/lib/kdeconnectd"):
@@ -191,6 +260,10 @@ def status():
     names = daemon_devices(False, False)
     if names is None:
         names = cli_devices()
+    for dev_id in names:
+        p = get_all(f"{ROOT}/devices/{dev_id}", DEV_IFACE)
+        if p.get("isPaired") and p.get("isReachable"):
+            ensure_quiet(dev_id)
     devices = [device_info(i, n) for i, n in names.items()]
     devices.sort(key=lambda d: (not d["reachable"], not d["paired"], d["name"].lower()))
     return {"installed": True, "devices": devices,
@@ -263,6 +336,8 @@ def main(args):
     def ok(result):
         return 0 if result is not None else 1
 
+    if action == "zuinig":
+        return 0 if make_quiet(dev) else 1
     if action == "ring":
         return ok(call(base + "/findmyphone", "org.kde.kdeconnect.device.findmyphone", "ring")) \
             and run(["kdeconnect-cli", "-d", dev, "--ring"])[0]
