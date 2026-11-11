@@ -1449,6 +1449,8 @@ Item {
                 StripButton { tooltip: "Games"; visible: root.moduleEnabled("game_launcher"); icon: "󰊴"; accent: root.mocha.accent2; onTriggered: root.togglePanel("gaming") }
                 // Telefoon: in de strip alleen zonder rail (de rail heeft zijn eigen knop).
                 StripButton { tooltip: PhoneState.tooltip; visible: !root.railEnabled && PhoneState.present; icon: PhoneState.icon; text: PhoneState.batteryText; badge: PhoneState.notifications; accent: PhoneState.reachable ? root.mocha.accent2 : root.mocha.subtext0; onTriggered: root.togglePanel("phone") }
+                // Andere machine (kingstra koppel): idem, alleen zonder rail.
+                StripButton { tooltip: root.koppelLabel + (root.koppelActief ? " · muis en klembord gedeeld" : " · delen uit"); visible: !root.railEnabled && root.koppelLabel !== ""; icon: "󰌢"; accent: root.koppelActief ? root.mocha.accent2 : root.mocha.subtext0; onTriggered: root.togglePanel("quicksettings") }
             }
 
             // De klok is de agendaknop: klik opent de agenda. Hover geeft
