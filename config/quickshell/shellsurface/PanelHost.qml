@@ -413,32 +413,36 @@ Item {
             easing.type: ThemeConfig.easingToken("standard")
         }
     }
+    // Veren alleen als het paneel echt opengaat (vanaf ~0), vastgelegd bij
+    // de start van de animatie. Dichtgaan zonder veer (doorschieten voorbij
+    // 0 breekt de vorm), en een nieuwe doelmaat halverwege (inhoud geladen,
+    // ander paneel) loopt rustig uit; anders stapelden veren zich op.
+    property bool springWidth: false
+    property bool springHeight: false
     Behavior on width {
         id: widthBehavior
         enabled: !root.visualVerticalEdge
+        onTargetValueChanged: root.springWidth = targetValue > 1 && root.width < 2
         NumberAnimation {
-            duration: ThemeConfig.durationToken("spring")
-            // Dichtgaan zonder veer: doorschieten voorbij 0 geeft een
-            // negatieve maat en breekt de vorm.
-            // targetValue is al gezet voordat de animatie start; root.open
-            // kan nog de oude waarde hebben.
-            easing.type: widthBehavior.targetValue > 1 ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized")
+            duration: root.springWidth ? ThemeConfig.durationToken("spring") : ThemeConfig.durationToken("spatial")
+            easing.type: root.springWidth ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized")
             easing.overshoot: ThemeConfig.springOvershoot
         }
     }
     Behavior on height {
         id: heightBehavior
+        onTargetValueChanged: root.springHeight = targetValue > 1 && root.height < 2
         NumberAnimation {
             // De launcher is primair toetsenbordgereedschap en moet meteen
             // bruikbaar voelen; de langere ruimtelijke animatie voegt daar
             // onnodig wachttijd aan toe.
             duration: root.visualEntryId === "launcher"
                 ? ThemeConfig.durationToken("fast")
-                : ThemeConfig.durationToken("spring")
+                : (root.springHeight ? ThemeConfig.durationToken("spring") : ThemeConfig.durationToken("spatial"))
             // Ook panelen uit de boven- of onderrand veren nu uit; de
             // launcher blijft snel en strak.
             easing.type: root.visualEntryId === "launcher" ? ThemeConfig.easingToken("standard")
-                : (heightBehavior.targetValue > 1 ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"))
+                : (root.springHeight ? ThemeConfig.easingToken("spring") : ThemeConfig.easingToken("emphasized"))
             easing.overshoot: ThemeConfig.springOvershoot
         }
     }
