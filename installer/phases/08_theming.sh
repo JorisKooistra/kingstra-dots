@@ -171,6 +171,7 @@ _phase08_deploy_state_scripts() {
         ["kingstra-welcome"]="kingstra-welcome"
         ["kingstra-nightlight"]="kingstra-nightlight"
         ["kingstra-auto-mode"]="kingstra-auto-mode"
+        ["kingstra-battery-watch"]="kingstra-battery-watch"
         ["kingstra-dictate"]="kingstra-dictate"
     )
 

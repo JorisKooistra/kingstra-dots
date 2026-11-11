@@ -139,6 +139,11 @@ start_core() {
     if [[ -x "$HOME/.local/bin/kingstra-auto-mode" ]]; then
         run_bg_once "kingstra-auto-mode daemon" "auto modes" "$HOME/.local/bin/kingstra-auto-mode" daemon
     fi
+    # Batterijwaarschuwingen (20/10/5%, slapen bij 3%). Op een pc zonder eigen
+    # batterij stopt hij meteen.
+    if [[ -x "$HOME/.local/bin/kingstra-battery-watch" ]]; then
+        run_bg_once "kingstra-battery-watch daemon" "battery warnings" "$HOME/.local/bin/kingstra-battery-watch" daemon
+    fi
     # Koppeling met de andere machine (kingstra koppel): muis/toetsenbord en
     # klembord delen. Alleen als er een koppeling is; restart pakt de nieuwe
     # WAYLAND_DISPLAY op na opnieuw inloggen.

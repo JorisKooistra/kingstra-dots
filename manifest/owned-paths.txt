@@ -53,6 +53,7 @@
 ~/.local/bin/kingstra-shell-watch|symlink
 ~/.local/bin/kingstra-welcome|symlink
 ~/.local/bin/kingstra-nightlight|symlink
+~/.local/bin/kingstra-battery-watch|symlink
 ~/.local/bin/kingstra-auto-mode|symlink
 ~/.local/bin/kingstra-dictate|symlink
 ~/.local/bin/kingstra-firefox-optimize|symlink

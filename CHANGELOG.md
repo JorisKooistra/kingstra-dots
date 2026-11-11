@@ -4,6 +4,13 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Batterijwaarschuwingen op de laptop
+- Nieuw: `kingstra-battery-watch` waarschuwt op batterij bij **20%** (gewone melding), **10%** (kritieke melding die blijft staan, ook met Niet storen aan, met geluid) en **5%** ("bij 3% gaat de laptop slapen"). De meldingen vervangen elkaar in plaats van te stapelen en tonen de resttijd als die bekend is.
+- Bij **3%** telt hij 60 seconden af met een knop "Uitstellen (10 min)" en gaat de laptop daarna vergrendeld in slaapstand. Lader erin tijdens het aftellen: niets gebeurt. Na wakker worden eerst 5 minuten rust.
+- Lader erin: de meldingen verdwijnen en alle drempels gaan opnieuw scherp.
+- Alleen de eigen laptopbatterij telt (geen muis of headset); op de pc doet hij niets. Start bij inloggen.
+- Aanpassen in `~/.config/kingstra/batterij.json`, bijvoorbeeld `{"waarschuwingen": [25, 10, 5], "slapen": 3, "actie": "suspend"}` (`"slapen": 0` = nooit vanzelf slapen, `"aan": false` = helemaal uit). Proberen: `kingstra-battery-watch test 20|10|5|slapen` (slapen telt af maar slaapt niet).
+
 ### Reparaties (11 nov)
 - Snelle instellingen opent weer in één beweging: de indeling en de laatste meting (helderheid, volume) staan er meteen, in plaats van dat het paneel in stappen groeide.
 - Vanzelf › "Zuinig op batterij" zag de batterij van een draadloze muis aan voor een laptopbatterij. Apparaatbatterijen tellen niet meer mee; wat de batterijstand overschrijft, wordt buiten /run bewaard zodat een herstart het energieprofiel niet op zuinig laat hangen.

@@ -1,0 +1,366 @@
+#!/usr/bin/env python3
+"""kingstra-battery-watch — waarschuwt op tijd als de laptopbatterij leegraakt.
+
+Op batterij (niet aan de lader):
+  20%   melding "Batterij op 20%"
+  10%   kritieke melding (blijft staan, ook met Niet storen aan) + geluid
+   5%   kritieke melding: "bij 3% gaat de laptop slapen"
+   3%   aftellen van 60 s met knop "Uitstellen" (10 min), daarna slaapstand
+        (eerst vergrendelen, via hypr/scripts/suspend.sh)
+Lader erin: de meldingen verdwijnen en alles begint opnieuw.
+
+Alleen de eigen batterij van de laptop telt: batterijen van muis, toetsenbord
+of headset (scope "Device") niet. Een pc zonder batterij doet niets.
+
+Instellingen (optioneel): ~/.config/kingstra/batterij.json
+  {"aan": true, "waarschuwingen": [20, 10, 5], "slapen": 3,
+   "actie": "suspend"}          # "hibernate" = diepe slaap, 0 bij slapen = nooit
+
+Gebruik:
+  kingstra-battery-watch daemon        volgen (gestart door kingstra-session-start)
+  kingstra-battery-watch status        stand van de batterij als JSON
+  kingstra-battery-watch test [20|10|5|slapen]
+                                       meldingen proberen; 'slapen' telt af maar
+                                       slaapt niet echt
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import threading
+import time
+
+HOME = os.path.expanduser("~")
+CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME", HOME + "/.config")
+CONFIG_FILE = os.path.join(CONFIG_HOME, "kingstra/batterij.json")
+SUSPEND_SCRIPT = os.path.join(CONFIG_HOME, "hypr/scripts/suspend.sh")
+POWER_SUPPLY = os.environ.get("KINGSTRA_POWER_SUPPLY", "/sys/class/power_supply")
+SOUND_FILES = (
+    "/usr/share/sounds/freedesktop/stereo/dialog-warning.oga",
+    "/usr/share/sounds/freedesktop/stereo/suspend-error.oga",
+)
+DEFAULTS = {"aan": True, "waarschuwingen": [20, 10, 5], "slapen": 3, "actie": "suspend"}
+COUNTDOWN = 60          # seconden tussen de laatste melding en slapen
+POSTPONE = 10 * 60      # "Uitstellen"
+AFTER_RESUME = 5 * 60   # na wakker worden eerst even met rust laten
+APP = "Batterij"
+
+
+def load_config():
+    cfg = dict(DEFAULTS)
+    try:
+        with open(CONFIG_FILE) as fh:
+            data = json.load(fh)
+        if isinstance(data, dict):
+            cfg.update({k: v for k, v in data.items() if k in DEFAULTS})
+    except Exception:
+        pass
+    try:
+        cfg["waarschuwingen"] = sorted({int(x) for x in cfg["waarschuwingen"] if 0 < int(x) < 100}, reverse=True)
+    except Exception:
+        cfg["waarschuwingen"] = list(DEFAULTS["waarschuwingen"])
+    try:
+        cfg["slapen"] = max(0, min(50, int(cfg["slapen"])))
+    except Exception:
+        cfg["slapen"] = DEFAULTS["slapen"]
+    if cfg["actie"] not in ("suspend", "hibernate"):
+        cfg["actie"] = "suspend"
+    cfg["aan"] = cfg["aan"] is not False
+    return cfg
+
+
+def read(path):
+    try:
+        with open(path) as fh:
+            return fh.read().strip()
+    except OSError:
+        return ""
+
+
+def read_battery():
+    """{'percent', 'charging', 'minutes'} van de laptopbatterij, of None zonder."""
+    try:
+        entries = sorted(os.listdir(POWER_SUPPLY))
+    except OSError:
+        return None
+    now_sum = full_sum = power_sum = 0.0
+    caps = []
+    statuses = []
+    mains_online = False
+    found = False
+    for entry in entries:
+        base = os.path.join(POWER_SUPPLY, entry)
+        kind = read(os.path.join(base, "type"))
+        if kind == "Battery":
+            # Muis/headset/toetsenbord melden zich als scope "Device".
+            if read(os.path.join(base, "scope")).lower() == "device":
+                continue
+            if read(os.path.join(base, "present")) == "0":
+                continue
+            found = True
+            statuses.append(read(os.path.join(base, "status")))
+            for now_key, full_key, rate_key in (("energy_now", "energy_full", "power_now"),
+                                                ("charge_now", "charge_full", "current_now")):
+                now_v = read(os.path.join(base, now_key))
+                full_v = read(os.path.join(base, full_key))
+                if now_v.isdigit() and full_v.isdigit() and int(full_v) > 0:
+                    now_sum += int(now_v)
+                    full_sum += int(full_v)
+                    rate = read(os.path.join(base, rate_key))
+                    if rate.lstrip("-").isdigit():
+                        power_sum += abs(int(rate))
+                    break
+            else:
+                cap = read(os.path.join(base, "capacity"))
+                if cap.isdigit():
+                    caps.append(int(cap))
+        elif kind in ("Mains", "USB", "USB_C", "USB_PD"):
+            mains_online = mains_online or read(os.path.join(base, "online")) == "1"
+    if not found:
+        return None
+    if full_sum > 0:
+        percent = 100.0 * now_sum / full_sum
+    elif caps:
+        percent = float(sum(caps)) / len(caps)
+    else:
+        return None
+    charging = mains_online or any(s in ("Charging", "Full") for s in statuses)
+    minutes = None
+    if not charging and power_sum > 0 and now_sum > 0:
+        minutes = int(60.0 * now_sum / power_sum)
+    return {"percent": max(0, min(100, int(round(percent)))), "charging": charging, "minutes": minutes}
+
+
+def time_left(minutes):
+    if not minutes or minutes <= 0 or minutes > 24 * 60:
+        return ""
+    if minutes < 60:
+        return "nog ongeveer %d min" % minutes
+    return "nog ongeveer %d u %02d" % (minutes // 60, minutes % 60)
+
+
+def play_sound():
+    player = shutil.which("pw-play") or shutil.which("paplay")
+    if not player:
+        return
+    for path in SOUND_FILES:
+        if os.path.exists(path):
+            try:
+                subprocess.Popen([player, path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except OSError:
+                pass
+            return
+
+
+def close_notification(nid):
+    if not nid or not shutil.which("gdbus"):
+        return
+    subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
+                    "--object-path", "/org/freedesktop/Notifications",
+                    "--method", "org.freedesktop.Notifications.CloseNotification", str(nid)],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+
+
+class Note:
+    """Eén melding die zichzelf vervangt in plaats van te stapelen."""
+
+    def __init__(self):
+        self.nid = 0
+        self.proc = None
+        self.action = None
+
+    def show(self, title, body, urgency="normal", icon="battery-caution", actions=None, timeout_ms=None):
+        if not shutil.which("notify-send"):
+            print("%s: %s" % (title, body))
+            return
+        self._drop_proc()
+        cmd = ["notify-send", "-a", APP, "-u", urgency, "-i", icon, "-p",
+               "-h", "string:x-kingstra-category:battery"]
+        if self.nid:
+            cmd += ["-r", str(self.nid)]
+        if timeout_ms:
+            cmd += ["-t", str(timeout_ms)]
+        for key, label in (actions or []):
+            cmd += ["-A", "%s=%s" % (key, label)]
+        cmd += [title, body]
+        if not actions:
+            out = subprocess.run(cmd, capture_output=True, text=True, timeout=10).stdout.split()
+            if out and out[0].isdigit():
+                self.nid = int(out[0])
+            return
+        # Met knoppen blijft notify-send wachten op een klik: lees die apart.
+        self.action = None
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        self.proc = proc
+        first = proc.stdout.readline().strip()
+        if first.isdigit():
+            self.nid = int(first)
+
+        def wait_for_click():
+            for line in proc.stdout:
+                line = line.strip()
+                if line and not line.isdigit():
+                    self.action = line
+            proc.wait()
+
+        threading.Thread(target=wait_for_click, daemon=True).start()
+
+    def close(self):
+        close_notification(self.nid)
+        self.nid = 0
+        self._drop_proc()
+
+    def _drop_proc(self):
+        if self.proc and self.proc.poll() is None:
+            try:
+                self.proc.terminate()
+            except OSError:
+                pass
+        self.proc = None
+
+
+def warning_text(level, cfg, minutes=None, pct=None):
+    """Tekst bij drempel `level`; de titel toont de echte stand `pct`."""
+    pct = level if pct is None else pct
+    left = time_left(minutes)
+    extra = (", " + left) if left else ""
+    sleep_at = cfg["slapen"]
+    if level == "slapen":
+        return ("Batterij leeg: de laptop gaat slapen",
+                "Over %d seconden gaat hij in slaapstand. Sluit de lader aan om dat te voorkomen." % COUNTDOWN,
+                "critical", "battery-empty")
+    lowest = min(cfg["waarschuwingen"]) if cfg["waarschuwingen"] else level
+    if level <= lowest and sleep_at:
+        return ("Batterij bijna leeg: %d%%" % pct,
+                "Sluit nu de lader aan. Bij %d%% gaat de laptop vanzelf slapen%s." % (sleep_at, extra),
+                "critical", "battery-empty")
+    if level <= 10:
+        return ("Batterij laag: %d%%" % pct,
+                "Sluit de lader aan%s." % extra, "critical", "battery-caution")
+    return ("Batterij op %d%%" % pct,
+            "Tijd om de lader te pakken%s." % extra, "normal", "battery-low")
+
+
+def do_sleep(cfg):
+    if cfg["actie"] == "hibernate":
+        can = subprocess.run(["busctl", "call", "org.freedesktop.login1", "/org/freedesktop/login1",
+                              "org.freedesktop.login1.Manager", "CanHibernate"],
+                             capture_output=True, text=True, timeout=10).stdout
+        if '"yes"' in can:
+            subprocess.run(["systemctl", "hibernate"], timeout=60)
+            return
+    if os.access(SUSPEND_SCRIPT, os.X_OK):
+        subprocess.run([SUSPEND_SCRIPT])
+    else:
+        subprocess.run(["systemctl", "suspend"])
+
+
+class Watch:
+    def __init__(self, dry_run=False):
+        self.note = Note()
+        self.fired = set()
+        self.quiet_until = 0.0
+        self.dry_run = dry_run
+
+    def reset(self):
+        if self.fired or self.note.nid:
+            self.note.close()
+        self.fired.clear()
+
+    def tick(self, cfg, bat):
+        if bat is None or not cfg["aan"] or bat["charging"]:
+            self.reset()
+            return
+        pct = bat["percent"]
+        # Weer boven een drempel geladen (bv. even aan de lader): opnieuw scherp.
+        self.fired = {t for t in self.fired if pct <= t + 2}
+        if cfg["slapen"] and pct <= cfg["slapen"] and time.time() >= self.quiet_until:
+            self.countdown(cfg)
+            return
+        due = [t for t in cfg["waarschuwingen"] if pct <= t and t not in self.fired]
+        if not due:
+            return
+        level = min(due)
+        self.fired.update(t for t in cfg["waarschuwingen"] if pct <= t)
+        title, body, urgency, icon = warning_text(level, cfg, bat["minutes"], pct)
+        self.note.show(title, body, urgency, icon, timeout_ms=None if urgency == "critical" else 15000)
+        if urgency == "critical":
+            play_sound()
+
+    def countdown(self, cfg):
+        title, body, urgency, icon = warning_text("slapen", cfg)
+        self.note.show(title, body, urgency, icon, actions=[("uitstellen", "Uitstellen (10 min)")])
+        play_sound()
+        end = time.time() + COUNTDOWN
+        while time.time() < end:
+            time.sleep(2)
+            if self.note.action == "uitstellen":
+                self.quiet_until = time.time() + POSTPONE
+                self.note.close()
+                self.note.show("Slaapstand uitgesteld",
+                               "Over 10 minuten waarschuw ik opnieuw. Sluit de lader aan.",
+                               "critical", "battery-empty")
+                return
+            bat = read_battery()
+            if bat is None or bat["charging"]:
+                self.reset()
+                return
+        self.note.close()
+        self.fired.clear()
+        if self.dry_run:
+            print("proef: hier zou de laptop gaan slapen")
+            self.quiet_until = time.time() + AFTER_RESUME
+            return
+        do_sleep(cfg)
+        # Terug wakker (misschien nog steeds leeg): eerst even rust, dan opnieuw.
+        self.quiet_until = time.time() + AFTER_RESUME
+
+    def run(self):
+        while True:
+            cfg = load_config()
+            bat = read_battery()
+            try:
+                self.tick(cfg, bat)
+            except Exception as exc:  # nooit stoppen om één mislukte melding
+                print("kingstra-battery-watch: %s" % exc, file=sys.stderr)
+            if bat is None:
+                time.sleep(300)
+            elif not bat["charging"] and bat["percent"] <= 12:
+                time.sleep(15)
+            else:
+                time.sleep(30)
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else "status"
+    if cmd == "daemon":
+        if read_battery() is None and not os.environ.get("KINGSTRA_POWER_SUPPLY"):
+            # Geen eigen batterij (pc): toch blijven kijken of er een verschijnt
+            # is zinloos; netjes stoppen.
+            print("kingstra-battery-watch: geen laptopbatterij, niets te doen")
+            return 0
+        Watch().run()
+    elif cmd == "status":
+        print(json.dumps({"battery": read_battery(), "config": load_config()}))
+    elif cmd == "test":
+        what = argv[2] if len(argv) > 2 else "10"
+        cfg = load_config()
+        if what == "slapen":
+            Watch(dry_run=True).countdown(cfg)
+        elif what.isdigit():
+            title, body, urgency, icon = warning_text(int(what), cfg, 42)
+            Note().show(title, body, urgency, icon, timeout_ms=None if urgency == "critical" else 15000)
+            if urgency == "critical":
+                play_sound()
+        else:
+            print(__doc__.strip(), file=sys.stderr)
+            return 2
+    else:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
