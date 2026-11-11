@@ -33,7 +33,10 @@ Scope {
         id: widgetsPersist
         reloadableId: "kingstraDesktopWidgetsPersist"
         property bool introPlayed: false
+        onLoaded: { root.widgetsPersistReady = true; root.widgetsPersistLoaded(); }
     }
+    property bool widgetsPersistReady: false
+    signal widgetsPersistLoaded()
 
     property bool enabled: true
     property string clockPos: "top-left"
@@ -300,8 +303,15 @@ Scope {
                     property: "opacity"
                     value: win.introOpacity
                 }
+                Component.onCompleted: if (root.widgetsPersistReady && !widgetsPersist.introPlayed) widgetsIntro.start()
+                Connections {
+                    target: root
+                    function onWidgetsPersistLoaded() {
+                        if (!widgetsPersist.introPlayed && !widgetsIntro.running) widgetsIntro.start();
+                    }
+                }
                 SequentialAnimation {
-                    running: !widgetsPersist.introPlayed
+                    id: widgetsIntro
                     PauseAnimation { duration: ThemeConfig.duration(220) }
                     NumberAnimation {
                         target: win; property: "introOpacity"; to: 1

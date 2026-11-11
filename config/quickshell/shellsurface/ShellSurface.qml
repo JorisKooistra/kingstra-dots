@@ -20,7 +20,15 @@ Scope {
         reloadableId: "kingstraShellSurfacePersist"
         property bool introPlayed: false
         property string lastTheme: ""
+        // Pas na loaded() weten we of dit een herladen instantie is; tot dan
+        // geen intro starten (anders knippert de bar bij elke herlaadactie).
+        onLoaded: {
+            shellSurface.persistReady = true;
+            shellSurface.persistLoaded();
+        }
     }
+    property bool persistReady: false
+    signal persistLoaded()
 
     readonly property bool neonHudActive: String(ThemeConfig.theme || ThemeConfig.styleFamily || "").toLowerCase() === "neon"
 
@@ -114,9 +122,14 @@ Scope {
                     }
                 }
 
-                Component.onCompleted: {
+                function startIntroIfNeeded() {
                     if (surfacePersist.lastTheme === "") surfacePersist.lastTheme = String(ThemeConfig.theme || "");
-                    if (!surfacePersist.introPlayed) playIntro(false);
+                    if (!surfacePersist.introPlayed && !introAnim.running && !introSettled) playIntro(false);
+                }
+                Component.onCompleted: if (shellSurface.persistReady) startIntroIfNeeded()
+                Connections {
+                    target: shellSurface
+                    function onPersistLoaded() { surfaceWindow.startIntroIfNeeded() }
                 }
 
                 Connections {
