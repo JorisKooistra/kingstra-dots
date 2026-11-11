@@ -1082,6 +1082,8 @@ def apply(path):
         if marker == "KINGSTRA_PICKER_WALLPAPER_SET":
             emit("wallpaper-set", path=str(path))
             emit("progress", stage="colors", label="Kleuren bijwerken…", percent=-1)
+        elif marker == "KINGSTRA_PICKER_LOOP_START":
+            emit("progress", stage="apply", label="Vloeiende loop maken (eenmalig)…", percent=-1)
         elif marker == "KINGSTRA_PICKER_PALETTE_READY":
             emit("progress", stage="apps", label="Wallpaper ingesteld · apps bijwerken…", percent=-1)
     if process.wait():

@@ -9,6 +9,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - **Spatie** op een eigen wallpaper opent hem groot; een video speelt dan geluidloos af (klik = pauze). Enter zet hem in.
 - Nieuwe bronnen **Pixabay video** (met je Pixabay-sleutel) en **Pexels video** (alleen als je een Pexels-sleutel hebt), met eigen onderwerpen (oceaan, regen, wolken, stad bij nacht…). Voorbeeld = kleine versie; opslaan haalt de versie tot 2560 px breed (geen 4K-bestanden van honderden MB) naar `~/Pictures/Wallpapers/video`.
 - Een video instellen start mpvpaper op elk scherm (geluid uit, herhalen, pauzeert als hij helemaal bedekt is). De themakleuren komen nu uit een beeld van de video in plaats van je vorige foto, en dat beeld staat ook op het vergrendelscherm. Na een herstart komt de video terug.
+- Clips die geen echte loop zijn (eind springt terug naar begin) krijgen bij het instellen eenmalig een versie waarin het eind in het begin overvloeit (`~/.cache/kingstra/video-loops`, origineel blijft). Echte loops worden herkend en niet aangeraakt. Uitzetten: `KINGSTRA_VIDEO_SMOOTH_LOOP=0`.
+- Eigen foto's en video's kunnen naar de prullenbak: prullenbakje bij hover, in het grote voorbeeld of met Delete, twee keer klikken. Een actieve video mag ook weg (de vorige foto komt terug).
 - mpvpaper startte eerder met opties die het niet kent en hield de picker vast; dat is opgelost. De installer installeert mpvpaper standaard.
 
 ### Koppeling: gekopieerde bestanden plakken op de andere machine

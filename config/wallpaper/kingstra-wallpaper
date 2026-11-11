@@ -36,6 +36,7 @@ VIDEO_EXTS=("mp4" "mkv" "webm" "avi" "mov")
 # mpv-opties voor mpvpaper (-o). panscan vult het scherm zonder zwarte randen.
 MPVPAPER_OPTS="${MPVPAPER_OPTS:-no-audio loop hwdec=auto panscan=1.0 no-osc no-osd-bar no-input-default-bindings}"
 VIDEO_FRAME_DIR="$CACHE_DIR/video-frames"
+VIDEO_LOOP_DIR="$CACHE_DIR/video-loops"
 
 mkdir -p "$CACHE_DIR"
 
@@ -267,8 +268,64 @@ _video_frame() {
     printf '%s\n' "$frame"
 }
 
+_video_duration() {
+    ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null | head -n1
+}
+
+_loop_seam_ok() {
+    # Lijkt het laatste beeld op het eerste? Dan is het al een echte loop.
+    local file="$1" duration="$2" score
+    score="$(ffmpeg -nostdin -hide_banner -v info -i "$file" -ss "$(awk -v d="$duration" 'BEGIN{t=d-0.12; if(t<0)t=0; print t}')" -i "$file" \
+        -lavfi "[0:v]trim=end_frame=1,scale=320:180,setpts=PTS-STARTPTS[a];[1:v]trim=end_frame=1,scale=320:180,setpts=PTS-STARTPTS[b];[a][b]ssim" \
+        -f null - 2>&1 | sed -n 's/.*All:\([0-9.]*\).*/\1/p' | tail -n1)"
+    [[ -n "$score" ]] || return 0
+    awk -v s="$score" 'BEGIN{exit !(s >= 0.92)}'
+}
+
+_smooth_loop() {
+    # Clips die geen echte loop zijn springen aan het eind terug naar het
+    # begin. Maak dan eenmalig een versie waarin het eind in het begin
+    # overvloeit (cache); het origineel blijft onaangeroerd.
+    # Uitzetten: KINGSTRA_VIDEO_SMOOTH_LOOP=0.
+    local file="$1" duration fade hash target tmp offset
+    if [[ "${KINGSTRA_VIDEO_SMOOTH_LOOP:-1}" == "0" ]] || ! command -v ffmpeg &>/dev/null || ! command -v ffprobe &>/dev/null; then
+        printf '%s\n' "$file"; return 0
+    fi
+    hash="$(printf 'loop-v1:%s:%s:%s' "$file" "$(stat -c '%Y' "$file" 2>/dev/null || echo 0)" "$(stat -c '%s' "$file" 2>/dev/null || echo 0)" | sha1sum | awk '{print $1}')"
+    target="$VIDEO_LOOP_DIR/$hash.mp4"
+    if [[ -s "$target" ]]; then printf '%s\n' "$target"; return 0; fi
+    if [[ -f "$VIDEO_LOOP_DIR/$hash.seamless" ]]; then printf '%s\n' "$file"; return 0; fi
+
+    duration="$(_video_duration "$file")"
+    # Te kort om over te vloeien, of te lang om snel om te zetten.
+    if [[ -z "$duration" ]] || ! awk -v d="$duration" 'BEGIN{exit !(d >= 3 && d <= 120)}'; then
+        printf '%s\n' "$file"; return 0
+    fi
+    mkdir -p "$VIDEO_LOOP_DIR"
+    if _loop_seam_ok "$file" "$duration"; then
+        : > "$VIDEO_LOOP_DIR/$hash.seamless"
+        printf '%s\n' "$file"; return 0
+    fi
+    [[ "${KINGSTRA_PICKER_EVENTS:-}" != "1" ]] || printf 'KINGSTRA_PICKER_LOOP_START\n' >&2
+    fade="$(awk -v d="$duration" 'BEGIN{f=d/5; if(f>1.5)f=1.5; if(f<0.6)f=0.6; printf "%.2f", f}')"
+    offset="$(awk -v d="$duration" -v f="$fade" 'BEGIN{printf "%.3f", d-2*f}')"
+    tmp="$(mktemp "$VIDEO_LOOP_DIR/.${hash}.XXXXXX.mp4")"
+    # Eind (vanaf fade) loopt over in het begin (0..fade): het laatste beeld
+    # is dan gelijk aan het eerste, zonder schok.
+    if ffmpeg -nostdin -v error -y -i "$file" -an -filter_complex \
+        "[0:v]trim=start=${fade},setpts=PTS-STARTPTS,format=yuv420p[main];[0:v]trim=end=${fade},setpts=PTS-STARTPTS,format=yuv420p[head];[main][head]xfade=transition=fade:duration=${fade}:offset=${offset},format=yuv420p[v]" \
+        -map "[v]" -c:v libx264 -preset veryfast -crf 19 -movflags +faststart "$tmp" 2>>"$CACHE_DIR/mpvpaper.log" && [[ -s "$tmp" ]]; then
+        mv -f "$tmp" "$target"
+        _log "Vloeiende loop gemaakt: $(basename "$file")" >&2
+        printf '%s\n' "$target"
+    else
+        rm -f "$tmp"
+        printf '%s\n' "$file"
+    fi
+}
+
 _set_video() {
-    local file="$1" monitor started=0
+    local file="$1" monitor started=0 play
     [[ -f "$file" ]] || _die "Bestand niet gevonden: $file"
 
     if ! command -v mpvpaper &>/dev/null; then
@@ -277,6 +334,7 @@ _set_video() {
         return 1
     fi
 
+    play="$(_smooth_loop "$file")"
     _stop_video
 
     # Eén mpvpaper per monitor. Eigen sessie en geen gedeelde stdout: anders
@@ -284,7 +342,7 @@ _set_video() {
     # -p pauzeert de video als hij helemaal bedekt is (bespaart stroom).
     while IFS= read -r monitor; do
         [[ -z "$monitor" ]] && continue
-        setsid -f mpvpaper -p -o "$MPVPAPER_OPTS" "$monitor" "$file" \
+        setsid -f mpvpaper -p -o "$MPVPAPER_OPTS" "$monitor" "$play" \
             </dev/null >>"$CACHE_DIR/mpvpaper.log" 2>&1
         started=1
     done < <(_monitors)
