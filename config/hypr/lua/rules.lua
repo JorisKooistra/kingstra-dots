@@ -13,6 +13,9 @@ rule("nautilus-properties", { class = "^org\\.gnome\\.Nautilus$", title = "(Best
 rule("file-dialogs", { title = "^(Open File|Open Folder|Save File|Save As|Confirm)$" }, { float = true })
 rule("picture-in-picture", { title = "^Picture-in-Picture$" }, { float = true, pin = true, move = "monitor_w*0.69 monitor_h*0.04", size = "monitor_w*0.25 monitor_h*0.25", keep_aspect_ratio = true })
 rule("media-viewer", { title = "^Media viewer$" }, { float = true })
+-- Telefoon op de pc (paneel Telefoon > Scherm, scrcpy): zwevend en gecentreerd,
+-- verhouding van de telefoon vast.
+pcall(rule, "phone-mirror", { title = "^Telefoon$" }, { float = true, center = true, keep_aspect_ratio = true })
 rule("kitty-opacity", { class = "^kitty$" }, { opacity = "0.95 0.88" })
 rule("hyprland-opacity", { class = "^Hyprland$" }, { opacity = "1.0 1.0" })
 rule("fullscreen-opacity", { fullscreen = true }, { opacity = "1.0" })

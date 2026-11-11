@@ -12,6 +12,8 @@ import ".."
 //  - koppelen, koppelverzoek van de telefoon accepteren of weigeren;
 //  - tegels: zoek telefoon, klembord, bestand(en) sturen, bestanden
 //    bladeren (sshfs), sms en testbericht;
+//  - scherm: telefoon op de pc (scrcpy, eigen venster "Telefoon") en de pc
+//    op de telefoon (wayvnc via Tailscale), met status en aan/uit hier;
 //  - media van de telefoon: titel, vorige/afspelen/volgende en volume;
 //  - meldingen van de telefoon: wegvegen en (waar het kan) antwoorden.
 // Alles via je eigen netwerk, niets via internet (phone.py, D-Bus).
@@ -38,6 +40,10 @@ Item {
     property bool installed: true
     property bool hasSshfs: false
     property bool hasSmsApp: false
+    // Scherm delen (phone-screen.sh tools).
+    readonly property string screenScript: Quickshell.env("HOME") + "/.config/hypr/scripts/phone-screen.sh"
+    property var screenInfo: ({ scrcpy: false, wayvnc: false, vnc: false, mirror: false, wifiKnown: false, tailscale: "", port: 5900 })
+    readonly property bool hasScreenTools: !!screenInfo.scrcpy || !!screenInfo.wayvnc
     property var devices: []
     property string selectedId: ""
     readonly property var dev: {
@@ -133,6 +139,20 @@ Item {
         }
     }
     Process {
+        id: screenProc
+        command: ["bash", root.screenScript, "tools"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: { try { root.screenInfo = JSON.parse(this.text.trim()); } catch (e) {} }
+        }
+    }
+    function screenAction(args) {
+        Quickshell.execDetached(["bash", root.screenScript].concat(args));
+        screenRecheck.restart();
+    }
+    Timer { id: screenRecheck; interval: 1200; onTriggered: if (!screenProc.running) screenProc.running = true }
+
+    Process {
         id: actProc
         onExited: (code) => {
             let what = root.busy;
@@ -165,7 +185,7 @@ Item {
         interval: 3000
         running: true
         repeat: true
-        onTriggered: root.refresh()
+        onTriggered: { root.refresh(); if (!screenProc.running) screenProc.running = true; }
     }
 
     function search() {
@@ -616,6 +636,73 @@ Item {
             }
         }
 
+        // --- Scherm: telefoon op pc en pc op telefoon ------------------------
+        Rectangle {
+            Layout.fillWidth: true
+            visible: !!root.dev && root.dev.paired
+            Layout.preferredHeight: screenCol.implicitHeight + 20
+            radius: Math.min(root.itemRadius, 16)
+            color: root.matteStyle ? mocha.shellRaisedFill : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.05)
+            border.width: 1
+            border.color: root.screenInfo.mirror || root.screenInfo.vnc
+                ? Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, 0.45)
+                : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+            Behavior on border.color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
+
+            ColumnLayout {
+                id: screenCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 10
+                spacing: 8
+
+                Text {
+                    text: "Scherm"
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 10
+                    font.weight: ThemeConfig.emphasisWeight
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: 0.6
+                    color: mocha.subtext0
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: !root.hasScreenTools
+                    wrapMode: Text.WordWrap
+                    text: "Je telefoon op de pc bedienen of je pc-scherm op je telefoon bekijken: draai eerst kingstra update (scrcpy en wayvnc)."
+                    font.family: ThemeConfig.uiFont
+                    font.pixelSize: 11
+                    color: mocha.subtext0
+                }
+                ScreenRow {
+                    visible: !!root.screenInfo.scrcpy
+                    icon: "󰍹"
+                    title: "Telefoon op pc"
+                    active: !!root.screenInfo.mirror
+                    detail: root.screenInfo.mirror ? "Staat in het venster Telefoon · telefoonscherm uit"
+                        : (root.screenInfo.wifiKnown ? "Via wifi, je telefoonscherm gaat uit om te sparen"
+                                                 : "Eerste keer: USB-foutopsporing aan en kabel erin")
+                    activeLabel: "Stoppen"
+                    idleLabel: "Tonen"
+                    onToggled: root.screenAction(["mirror", "toggle"])
+                }
+                ScreenRow {
+                    visible: !!root.screenInfo.wayvnc
+                    icon: "󰍺"
+                    title: "Pc op telefoon"
+                    active: !!root.screenInfo.vnc
+                    detail: root.screenInfo.vnc
+                        ? "Gedeeld · VNC-app op " + (root.screenInfo.tailscale || "?") + ":" + root.screenInfo.port
+                        : (root.screenInfo.tailscale !== "" ? "Alleen via Tailscale, dus alleen je eigen apparaten"
+                                                        : "Zet eerst Tailscale aan")
+                    activeLabel: "Stoppen"
+                    idleLabel: "Delen"
+                    onToggled: root.screenAction(["share", "toggle"])
+                }
+            }
+        }
+
         // --- Media van de telefoon ------------------------------------------------
         Rectangle {
             Layout.fillWidth: true
@@ -898,6 +985,70 @@ Item {
     // ------------------------------------------------------------------------
     // Componenten
     // ------------------------------------------------------------------------
+
+    // Eén regel in de kaart Scherm: icoon, titel, uitleg en een aan/uit-knop.
+    component ScreenRow: RowLayout {
+        id: srow
+        property string icon: ""
+        property string title: ""
+        property string detail: ""
+        property bool active: false
+        property string activeLabel: ""
+        property string idleLabel: ""
+        signal toggled()
+        Layout.fillWidth: true
+        spacing: 10
+        Rectangle {
+            Layout.preferredWidth: 32
+            Layout.preferredHeight: 32
+            radius: Math.min(root.itemRadius, 16)
+            color: Qt.rgba(mocha.accent3.r, mocha.accent3.g, mocha.accent3.b, srow.active ? 0.28 : 0.12)
+            Behavior on color { ColorAnimation { duration: ThemeConfig.durationToken("normal") } }
+            Text {
+                id: srowGlyph
+                anchors.centerIn: parent
+                text: srow.icon
+                font.family: ThemeConfig.iconFont
+                font.pixelSize: 15
+                color: mocha.accent3
+                SequentialAnimation on opacity {
+                    running: srow.active
+                    loops: Animation.Infinite
+                    onRunningChanged: if (!running) srowGlyph.opacity = 1
+                    NumberAnimation { to: 0.45; duration: 900; easing.type: Easing.InOutSine }
+                    NumberAnimation { to: 1; duration: 900; easing.type: Easing.InOutSine }
+                }
+            }
+        }
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 1
+            Text {
+                Layout.fillWidth: true
+                text: srow.title
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+                color: mocha.text
+                elide: Text.ElideRight
+            }
+            Text {
+                Layout.fillWidth: true
+                text: srow.detail
+                font.family: ThemeConfig.uiFont
+                font.pixelSize: 10
+                color: srow.active ? mocha.accent3 : mocha.subtext0
+                wrapMode: Text.WordWrap
+            }
+        }
+        PillButton {
+            label: srow.active ? srow.activeLabel : srow.idleLabel
+            icon: srow.active ? "󰓛" : "󰐊"
+            accent: srow.active ? mocha.red : mocha.accent3
+            primary: !srow.active
+            onTriggered: srow.toggled()
+        }
+    }
 
     component IconButton: Rectangle {
         id: ib

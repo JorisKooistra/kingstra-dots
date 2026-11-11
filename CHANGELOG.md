@@ -23,11 +23,14 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 ### Telefoonpaneel opnieuw (KDE Connect)
 - Nieuwe opbouw in de stijl van Batterij & energie: kaart met naam, status, batterij (balk met laadglans), mobiel netwerk en aantal meldingen.
 - Gekoppeld maar weg? Dat staat er nu duidelijk, met uitleg en een knop **Opnieuw zoeken** (ook rechtsboven). Koppelverzoeken van de telefoon kun je accepteren of weigeren, met de code erbij.
-- Tegels: Zoek telefoon, Klembord, Bestand (meerdere tegelijk), Bladeren (bestanden van de telefoon via sshfs), Sms (direct typen en sturen), Gesprekken (KDE Connect SMS) en Testbericht. Scherm delen tussen pc en telefoon wacht op een compleet plan. Een tegel draait tijdens het werk en toont een vinkje als het gelukt is.
+- Tegels: Zoek telefoon, Klembord, Bestand (meerdere tegelijk), Bladeren (bestanden van de telefoon via sshfs), Sms (direct typen en sturen), Gesprekken (KDE Connect SMS) en Testbericht. Een tegel draait tijdens het werk en toont een vinkje als het gelukt is.
 - Media van de telefoon: titel, vorige/afspelen/volgende en het volume van de telefoon.
 - Meldingen van de telefoon in het paneel: wegvegen, en antwoorden waar de app dat toestaat.
 - Het paneel opent meteen met de laatst bekende stand en haalt alles nu via D-Bus op in plaats van kdeconnect-cli (was ruim 2 seconden "Zoeken…").
-- Installer zet sshfs er optioneel bij.
+- Kaart **Scherm** in hetzelfde paneel, met status en één knop per richting:
+  - **Telefoon op pc** (scrcpy): de eerste keer met kabel en USB-foutopsporing, daarna via wifi. Verschijnt als zwevend venster "Telefoon"; het scherm van de telefoon gaat zolang uit (spaart batterij) en bij stoppen gaat hij op slot.
+  - **Pc op telefoon** (wayvnc): alleen op het Tailscale-adres, dus alleen je eigen apparaten. Op de telefoon een VNC-app zoals AVNC. Blijft aan tot je op Stoppen drukt.
+- Installer zet sshfs, scrcpy en wayvnc er optioneel bij.
 - **Zuinig voor de telefoon:** bij de eerste verbinding zet de pc onderdelen uit die de telefoon onnodig wekken: pc-meldingen naar de telefoon, pc-volume en pc-muziek doorgeven, contacten synchroniseren, opdrachten, en muis/toetsenbord op afstand (werkt onder Hyprland niet en gaf duizenden logregels). Het klembord gaat niet meer bij elke kopie automatisch naar de telefoon (ook geen wachtwoorden); de tegel Klembord stuurt het nog wel. Opnieuw toepassen: `phone.py zuinig <id>`.
 - Het paneel vraagt alleen de pc om de laatst bekende stand; zolang het open staat gaat er niets naar de telefoon behalve wat je zelf aanklikt.
 
