@@ -115,3 +115,5 @@ config/hypr/xdph.conf
 config/kingstra/koppeling.json
 config/kingstra/koppel-kant
 config/kingstra/phone/
+# Vanzelf-regels (kingstra-auto-mode), per machine.
+config/kingstra/auto-modes.json
