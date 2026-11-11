@@ -1034,7 +1034,9 @@ run_dotfiles_installer() {
     fi
 
     log "Installer bijwerken: pakketten, gegenereerde config en live reload."
-    KINGSTRA_UI_EMBEDDED=true bash "$installer" --yes
+    # 9>&-: de installer herstart de shell live; zonder dit erven quickshell en
+    # co. de update-lock en zegt elke volgende run "draait al".
+    KINGSTRA_UI_EMBEDDED=true bash "$installer" --yes 9>&-
 }
 
 # Bekende AUR-valkuilen vóór de build oplossen:
@@ -1420,20 +1422,6 @@ resume_after_abort() {
     repair_missing_kernels
 }
 
-# Eén update tegelijk. Twee runs naast elkaar (terminal plus het venster uit
-# Instellingen) wachten op elkaars sudo, git en installer.
-LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/kingstra-update.lock"
-if command -v flock >/dev/null 2>&1 && exec 9>"$LOCK_FILE"; then
-    if ! flock -n 9; then
-        echo
-        echo "  Er draait al een kingstra update (in een ander venster of een gestopte terminal)."
-        echo "  Maak die eerst af of sluit hem. Vastgelopen? pkill -f package_upgrade.sh"
-        echo
-        if [[ -t 0 ]]; then read -r -p "Druk Enter om te sluiten..." _ || true; fi
-        exit 1
-    fi
-fi
-
 # Keuzemenu: alles of alleen de dotfiles (of een proefdraai). Komt na het
 # ophalen van de nieuwe updater, zodat het menu zelf ook altijd actueel is.
 # Zonder terminal of met een keuze op de opdrachtregel: geen vraag.
@@ -1538,7 +1526,11 @@ run_dotfiles_step() {
 # Instellingen) wachten op elkaars sudo, git en installer.
 LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/kingstra-update.lock"
 if command -v flock >/dev/null 2>&1 && exec 9>"$LOCK_FILE"; then
-    if ! flock -n 9; then
+    # Lock bezet maar geen updater actief: een kindproces (bv. een shell die
+    # een oudere updater live herstartte) houdt hem vast. Dan gewoon door.
+    if ! flock -n 9 && ! pgrep -f 'package_upgrade\.sh' | grep -qvxE "$$|$PPID"; then
+        echo "  (Oude update-lock zonder lopende update genegeerd.)"
+    elif ! flock -n 9; then
         echo
         echo "  Er draait al een kingstra update (in een ander venster of een gestopte terminal)."
         echo "  Maak die eerst af of sluit hem. Vastgelopen? pkill -f package_upgrade.sh"
@@ -1610,7 +1602,7 @@ if [[ "$MODE" == "dotfiles" ]] && ! $CHECK; then
     section "Controle"
     check_after_update
     # Teller in de balk bijwerken zonder hierop te wachten.
-    ( "$COUNT_SCRIPT" --refresh >/dev/null 2>&1 & )
+    ( "$COUNT_SCRIPT" --refresh >/dev/null 2>&1 9>&- & )
     finish "$overall_exit"
     exit "$overall_exit"
 fi
@@ -1704,7 +1696,7 @@ fi
 
 mkdir -p "$CACHE_DIR"
 rm -f "$CACHE_DIR/package_updates_status" "$CACHE_DIR/package_updates_count"
-"$COUNT_SCRIPT" --refresh >/dev/null 2>&1 || true
+"$COUNT_SCRIPT" --refresh >/dev/null 2>&1 9>&- || true
 
 finish "$overall_exit"
 exit "$overall_exit"
