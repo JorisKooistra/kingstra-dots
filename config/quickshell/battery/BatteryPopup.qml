@@ -573,12 +573,12 @@ Item {
             HoldAction {
                 icon: "󰜉"; label: "Herstart"; accent: mocha.yellow
                 holdMs: 1375
-                cmd: "systemctl reboot"
+                cmd: "\"$HOME/.local/bin/kingstra-power\" reboot || systemctl reboot"
             }
             HoldAction {
                 icon: "󰐥"; label: "Afsluiten"; accent: mocha.red
                 holdMs: 2000
-                cmd: "systemctl poweroff"
+                cmd: "\"$HOME/.local/bin/kingstra-power\" poweroff || systemctl poweroff"
                 // Kort tikken = slaapstand, lang vasthouden = afsluiten.
                 tapCmd: "bash ~/.config/hypr/scripts/suspend.sh"
             }

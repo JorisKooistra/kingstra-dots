@@ -94,6 +94,18 @@ prepare_wayland_environment() {
     return 0
 }
 
+# Startscherm (zelfde beeld als het opstartbeeld) over alle schermen tot balk
+# en achtergrond er zijn; daarna vervaagt het in één keer. Altijd onder een
+# harde tijdslimiet, zodat het nooit blijft hangen. Uitzetten:
+# touch ~/.config/kingstra/geen-startscherm
+start_splash() {
+    local qml="$CONFIG_HOME/quickshell/splash/Splash.qml"
+    [[ -f "$qml" && ! -e "$CONFIG_HOME/kingstra/geen-startscherm" ]] || return 0
+    has_cmd quickshell || return 0
+    [[ -n "${WAYLAND_DISPLAY:-}" ]] || prepare_wayland_environment || return 0
+    run_bg_once "quickshell.*splash/Splash.qml" "startscherm" timeout 15 quickshell --no-duplicate -p "$qml"
+}
+
 start_core() {
     log "start core"
 
@@ -172,7 +184,9 @@ start_ui() {
     # awww is volledig uit de pipeline verwijderd; stop_session ruimt een
     # eventueel nog lopende legacy awww-daemon op.
     systemctl_user start skwd-daemon.service
-    run_once "wallpaper-init.sh" "wallpaper init" "$CONFIG_HOME/hypr/scripts/wallpaper-init.sh"
+    # Op de achtergrond: wallpaper-init wacht zelf 1,2 s op skwd en hield zo
+    # de balk ~2 s tegen. Het startscherm dekt af tot beide er zijn.
+    run_bg_once "wallpaper-init.sh" "wallpaper init" "$CONFIG_HOME/hypr/scripts/wallpaper-init.sh"
 
     touch /tmp/qs_notifications_command 2>/dev/null || true
     run_bg_once "quickshell.*TopBar.qml" "Quickshell topbar" quickshell --no-duplicate -p "$CONFIG_HOME/quickshell/TopBar.qml"
@@ -304,6 +318,7 @@ status_session() {
 
 case "${1:-start}" in
     start)
+        start_splash
         start_core
         start_ui
         ;;

@@ -81,7 +81,7 @@ _phase14b_deploy_scripts() {
         return 0
     fi
     ensure_dir "$HOME/.local/bin"
-    for name in kingstra-health kingstra-herstel kingstra-backup kingstra-plymouth-sync kingstra-aur-cache kingstra-pacnew-merge kingstra-rapport kingstra-github-login kingstra-ruimte; do
+    for name in kingstra-health kingstra-herstel kingstra-backup kingstra-plymouth-sync kingstra-aur-cache kingstra-pacnew-merge kingstra-rapport kingstra-github-login kingstra-ruimte kingstra-power; do
         chmod +x "$scripts_dir/$name"
         deploy_link "$scripts_dir/$name" "$HOME/.local/bin/$name"
     done

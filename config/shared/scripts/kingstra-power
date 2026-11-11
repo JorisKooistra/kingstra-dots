@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# kingstra-power poweroff|reboot [systemctl-opties] — afsluiten vanuit de shell met een vloeiende
+# overgang: eerst vaagt het Kingstra-beeld over alle schermen in, daarna neemt
+# het afsluitbeeld van Plymouth (hetzelfde beeld) het over.
+set -uo pipefail
+
+action="${1:-}"
+case "$action" in
+    poweroff|reboot) ;;
+    *) echo "Gebruik: kingstra-power poweroff|reboot" >&2; exit 2 ;;
+esac
+
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+qml="$CONFIG_HOME/quickshell/splash/Splash.qml"
+if [[ -f "$qml" && ! -e "$CONFIG_HOME/kingstra/geen-startscherm" ]] && command -v quickshell >/dev/null 2>&1; then
+    # Tijdslimiet: lukt afsluiten niet (bv. geweigerd), dan verdwijnt het beeld weer.
+    KINGSTRA_SPLASH_MODE=out setsid -f timeout 20 quickshell -p "$qml" >/dev/null 2>&1 || true
+    sleep 0.6
+fi
+exec systemctl "$action" "${@:2}"

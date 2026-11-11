@@ -213,14 +213,14 @@ Item {
                 label: "Herstarten"
                 holdToTrigger: true
                 accent: mocha.mauve
-                onTriggered: root.runAndClose("systemctl reboot")
+                onTriggered: root.runAndClose("\"$HOME/.local/bin/kingstra-power\" reboot || systemctl reboot")
             }
             ActionRow {
                 icon: "󰐥"
                 label: "Afsluiten"
                 holdToTrigger: true
                 accent: mocha.red
-                onTriggered: root.runAndClose("systemctl poweroff -i")
+                onTriggered: root.runAndClose("\"$HOME/.local/bin/kingstra-power\" poweroff -i || systemctl poweroff -i")
             }
         }
     }
