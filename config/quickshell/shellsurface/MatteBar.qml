@@ -183,7 +183,7 @@ Item {
             QuietButton { visible: bar.chrome.hasBluetooth && bar.chrome.isBtOn; icon: "󰂯"; tip: "Bluetooth"; target: "quicksettings" }
             QuietButton { visible: PhoneState.present; icon: PhoneState.icon; lit: PhoneState.reachable; tip: PhoneState.tooltip; target: "phone" }
             // Andere machine (kingstra koppel): alleen als gekoppeld. Klik opent
-            // Snelle instellingen; bestanden erop slepen stuurt ze erheen.
+            // het eigen menu; bestanden erop slepen stuurt ze erheen.
             QuietButton {
                 id: koppelButton
                 property bool dropHover: false
@@ -192,7 +192,7 @@ Item {
                 lit: bar.chrome.koppelActief || dropHover
                 tip: bar.chrome.koppelLabel + (bar.chrome.koppelActief ? " · muis en klembord gedeeld" : " · delen uit")
                     + " · sleep bestanden hierheen"
-                target: "quicksettings"
+                target: "koppeling"
                 border.width: dropHover ? 1 : 0
                 border.color: bar.mocha.accent1
                 DropArea {

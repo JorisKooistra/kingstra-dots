@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Laptop krijgt een eigen menu
+- De gekoppelde machine (`kingstra koppel`) heeft nu een eigen paneel, net als de telefoon, in plaats van een pil in Snelle instellingen. Je opent het via de railknop, de knop in de statusstrip of Matte-bovenbalk, of Menu › Snel schakelen › Andere machine › Menu openen.
+- Bovenaan staan de naam, of hij bereikbaar is (snelle ssh-check, hooguit elke 10 s zolang het paneel open is), of delen aan staat en aan welke kant hij staat.
+- Tegels: delen aan/uit, bestanden sturen, venster daar openen (het paneel sluit eerst, zodat het juiste venster meegaat), plaats naast je schermen (Beeldschermen), bladeren in Bestanden en status. Bestanden op het dropvak slepen stuurt ze naar Downloads op de andere machine.
+- Nog niet gekoppeld: één knop "Koppelen…" die het koppelen in een terminal start.
+
 ### Batterijwaarschuwingen op de laptop
 - Nieuw: `kingstra-battery-watch` waarschuwt op batterij bij **20%** (gewone melding), **10%** (kritieke melding die blijft staan, ook met Niet storen aan, met geluid) en **5%** ("bij 3% gaat de laptop slapen"). De meldingen vervangen elkaar in plaats van te stapelen en tonen de resttijd als die bekend is.
 - Bij **3%** telt hij 60 seconden af met een knop "Uitstellen (10 min)" en gaat de laptop daarna vergrendeld in slaapstand. Lader erin tijdens het aftellen: niets gebeurt. Na wakker worden eerst 5 minuten rust.

@@ -1450,7 +1450,7 @@ Item {
                 // Telefoon: in de strip alleen zonder rail (de rail heeft zijn eigen knop).
                 StripButton { tooltip: PhoneState.tooltip; visible: !root.railEnabled && PhoneState.present; icon: PhoneState.icon; text: PhoneState.batteryText; badge: PhoneState.notifications; accent: PhoneState.reachable ? root.mocha.accent2 : root.mocha.subtext0; onTriggered: root.togglePanel("phone") }
                 // Andere machine (kingstra koppel): idem, alleen zonder rail.
-                StripButton { tooltip: root.koppelLabel + (root.koppelActief ? " · muis en klembord gedeeld" : " · delen uit"); visible: !root.railEnabled && root.koppelLabel !== ""; icon: "󰌢"; accent: root.koppelActief ? root.mocha.accent2 : root.mocha.subtext0; onTriggered: root.togglePanel("quicksettings") }
+                StripButton { tooltip: root.koppelLabel + (root.koppelActief ? " · muis en klembord gedeeld" : " · delen uit"); visible: !root.railEnabled && root.koppelLabel !== ""; icon: "󰌢"; accent: root.koppelActief ? root.mocha.accent2 : root.mocha.subtext0; onTriggered: root.togglePanel("koppeling") }
             }
 
             // De klok is de agendaknop: klik opent de agenda. Hover geeft
@@ -2097,18 +2097,18 @@ Item {
         }
     }
     // Naar de gekoppelde machine (kingstra koppel): sleep bestanden op de
-    // knop om ze naar Downloads daar te sturen; klik kiest bestanden.
+    // knop om ze naar Downloads daar te sturen; klik opent het eigen menu.
     // Alleen zichtbaar als er een koppeling is.
     Component {
         id: koppelingSlot
         RailButton {
             id: koppelBtn
             property bool dropHover: false
-            tooltip: "Naar " + root.koppelLabel + " · sleep bestanden hierheen of klik om te kiezen"
+            tooltip: root.koppelLabel + " · klik voor het menu, sleep bestanden hierheen om te sturen"
             available: root.koppelLabel !== ""
             icon: "󰌢"
             accent: root.mocha.accent2
-            onTriggered: Quickshell.execDetached([root.koppelScript, "stuur-kies"])
+            onTriggered: root.togglePanel("koppeling")
             Rectangle {
                 anchors.fill: parent
                 radius: parent.radius

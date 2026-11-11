@@ -84,6 +84,7 @@ function build(home, scripts) {
             { icon: "󰂱", label: "Bluetooth-apparaten", cmd: ["blueman-manager"] },
             { icon: "󰄜", label: "Telefoon (KDE Connect)", cmd: qs("phone"), panel: true },
             { icon: "󰌢", label: "Andere machine (pc ↔ laptop)", children: [
+                { icon: "󰌢", label: "Menu openen", cmd: qs("koppeling"), panel: true },
                 { icon: "󰁝", label: "Bestanden sturen", cmd: kingstra("koppel stuur-kies") },
                 { icon: "󰌢", label: "Dit venster ook daar openen", cmd: kingstra("koppel open") },
                 { icon: "󰍹", label: "Plaats naast je schermen (Beeldschermen)", cmd: qs("monitors"), panel: true },

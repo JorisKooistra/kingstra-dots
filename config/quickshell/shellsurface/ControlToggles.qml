@@ -89,13 +89,9 @@ Item {
     property var hotspot: ({ available: false, active: false, ssid: "", password: "", qr: "" })
     property bool hotspotBusy: false
     readonly property string hotspotScript: Quickshell.env("HOME") + "/.config/hypr/scripts/hotspot.sh"
-    // Andere machine (kingstra koppel): naam en of delen aan staat.
-    property var koppel: ({ gekoppeld: false, naam: "", kant: "", actief: false })
-    property bool koppelBusy: false
-    readonly property string koppelScript: Quickshell.env("HOME") + "/.local/bin/kingstra-koppel"
 
     // --- Bewerkmodus: volgorde, breedte, verborgen ---------------------------
-    readonly property var pillIds: ["wifi", "eth", "bt", "dnd", "night", "power", "monitors", "keyboard", "hotspot", "phone", "laptop"]
+    readonly property var pillIds: ["wifi", "eth", "bt", "dnd", "night", "power", "monitors", "keyboard", "hotspot", "phone"]
     property var ccOrder: pillIds
     property var ccHidden: []
     property var ccWide: []
@@ -194,13 +190,11 @@ Item {
         if (id === "keyboard") return "󰌌";
         if (id === "hotspot") return "󰀂";
         if (id === "phone") return "󰄜";
-        if (id === "laptop") return "󰌢";
         return "";
     }
     function pillLabel(id) {
         return ({ wifi: "Wi-Fi", eth: "Bedraad", bt: "Bluetooth", dnd: "Niet storen", night: "Nachtlicht", power: "Energie",
-                  monitors: "Beeldschermen", keyboard: "Toetsenbord", hotspot: "Hotspot", phone: "Telefoon",
-                  laptop: koppel.gekoppeld ? koppel.naam : "Andere machine" })[id] || id;
+                  monitors: "Beeldschermen", keyboard: "Toetsenbord", hotspot: "Hotspot", phone: "Telefoon" })[id] || id;
     }
     function pillSubtitle(id) {
         if (id === "wifi") return !wifiOn ? "Uit" : (wifiName !== "" ? wifiName : "Aan");
@@ -212,7 +206,6 @@ Item {
         if (id === "monitors") return Quickshell.screens.length === 1 ? "1 scherm" : Quickshell.screens.length + " schermen";
         if (id === "keyboard") return kbLayout !== "" ? kbLayout : "Volgende indeling";
         if (id === "phone") return "KDE Connect";
-        if (id === "laptop") return !koppel.gekoppeld ? "Koppelen…" : (koppelBusy ? "Bezig…" : (koppel.actief ? "Muis en klembord gedeeld" : "Delen uit"));
         if (id === "hotspot") return hotspotBusy ? "Bezig…" : (hotspot.active ? String(hotspot.ssid || "Aan") : "Uit");
         return "";
     }
@@ -224,7 +217,6 @@ Item {
         if (id === "night") return NightLight.nightOn;
         if (id === "power") return powerProfileName !== "balanced";
         if (id === "hotspot") return !!hotspot.active;
-        if (id === "laptop") return koppel.gekoppeld && koppel.actief;
         return false;
     }
     function pillAccent(id) {
@@ -239,14 +231,12 @@ Item {
         if (id === "bt") return "bt";
         if (id === "power") return "power";
         if (id === "hotspot") return "hotspot";
-        if (id === "laptop") return "laptop";
         return "";
     }
     function pillExpandable(id) {
         if (id === "wifi") return wifiOn;
         if (id === "bt") return bluetoothOn;
         if (id === "hotspot") return !!hotspot.active;
-        if (id === "laptop") return koppel.gekoppeld;
         return id === "power";
     }
     function pillTrigger(id) {
@@ -271,20 +261,6 @@ Item {
             refreshSoon.restart();
         } else if (id === "phone") {
             openPanel("phone");
-        } else if (id === "laptop") {
-            if (!koppel.gekoppeld) {
-                // Eenmalig koppelen gaat in een terminal (wachtwoord van de ander).
-                Quickshell.execDetached(["kitty", "--title=Koppelen", "bash", "-lc",
-                    "PATH=\"$HOME/.local/bin:$PATH\"; echo 'Koppel deze machine aan je andere Kingstra-machine.'; " +
-                    "read -rp 'Naam van de andere machine (bv. titus): ' h; [ -n \"$h\" ] && kingstra koppel \"$h\"; " +
-                    "echo; read -rp 'Enter om te sluiten' _"]);
-                root.panelSwitchRequested("");
-                return;
-            }
-            if (koppelBusy) return;
-            koppelBusy = true;
-            koppelToggle.command = [koppelScript, koppel.actief ? "uit" : "aan"];
-            koppelToggle.running = true;
         } else if (id === "hotspot") {
             if (hotspotBusy) return;
             hotspotBusy = true;
@@ -309,7 +285,6 @@ Item {
         }
         if (expanded === "bt") refreshBt();
         if (expanded === "hotspot") refreshHotspot();
-        if (expanded === "laptop") refreshKoppel();
     }
 
     function profileLabel(name) {
@@ -395,45 +370,11 @@ Item {
     function refreshBt() {
         if (!btPoller.running) btPoller.running = true;
     }
-    function refreshKoppel() {
-        if (!koppelPoller.running) koppelPoller.running = true;
-    }
-
-    Process {
-        id: koppelPoller
-        command: ["sh", "-c", "cat \"$HOME/.config/kingstra/koppeling.json\" 2>/dev/null || echo '{}'; " +
-            "echo; systemctl --user is-active kingstra-lan-mouse.service 2>/dev/null; true"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let txt = String(this.text || "");
-                let cut = txt.lastIndexOf("}");
-                let k = {};
-                try { k = JSON.parse(cut >= 0 ? txt.substring(0, cut + 1) : "{}"); } catch (e) { k = {}; }
-                let state = cut >= 0 ? txt.substring(cut + 1).trim() : "";
-                let label = String(k.label || k.host || "");
-                root.koppel = {
-                    gekoppeld: !!k.host,
-                    naam: label === "pc" ? "PC" : (label ? label.charAt(0).toUpperCase() + label.slice(1) : ""),
-                    kant: String(k.kant || ""),
-                    actief: state === "active"
-                };
-            }
-        }
-    }
-    Process {
-        id: koppelToggle
-        onExited: {
-            root.koppelBusy = false;
-            root.refreshKoppel();
-        }
-    }
-
     Component.onCompleted: {
         applyLayout(layoutView.text());
         applyState(stateCache.text());
         refresh();
         refreshHotspot();
-        refreshKoppel();
     }
 
     Process {
@@ -834,37 +775,9 @@ Item {
                     }
                 }
 
-                // Andere machine (kingstra koppel): wat je ermee kunt.
-                ListRow {
-                    visible: root.expanded === "laptop"
-                    icon: "󰁝"
-                    label: "Bestanden naar " + root.koppel.naam + " sturen…"
-                    detail: "of sleep ze op het balkicoon"
-                    onTriggered: {
-                        Quickshell.execDetached([root.koppelScript, "stuur-kies"]);
-                        root.panelSwitchRequested("");
-                    }
-                }
-                ListRow {
-                    visible: root.expanded === "laptop"
-                    icon: "󰌢"
-                    label: "Actieve venster ook daar openen"
-                    onTriggered: {
-                        Quickshell.execDetached([root.koppelScript, "open"]);
-                        root.panelSwitchRequested("");
-                    }
-                }
-                ListRow {
-                    visible: root.expanded === "laptop"
-                    icon: "󰍹"
-                    label: "Plaats naast je schermen"
-                    detail: root.koppel.kant
-                    onTriggered: root.openPanel("monitors")
-                }
-
                 // Naar het volledige paneel, zoals "Meer instellingen" bij GNOME.
                 ListRow {
-                    visible: root.expanded !== "" && root.expanded !== "hotspot" && root.expanded !== "laptop"
+                    visible: root.expanded !== "" && root.expanded !== "hotspot"
                     icon: "󰒓"
                     label: root.expanded === "wifi" ? "Alle wifi-instellingen"
                         : (root.expanded === "bt" ? "Koppelen en meer" : (root.hasBattery ? "Batterij en energie" : "Energie-instellingen"))
