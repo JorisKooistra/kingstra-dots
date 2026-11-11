@@ -215,8 +215,15 @@ PanelWindow {
         viewport.forceActiveFocus();
     }
     function activate(index) {
-        if (busy || index < 0 || index >= items.length)
+        if (index < 0 || index >= items.length)
             return;
+        // Tijdens downloaden/omzetten blijft rondkijken mogen; alleen een
+        // tweede instellen/opslaan wacht tot de eerste klaar is.
+        if (busy && !online) {
+            selected = index;
+            showMessage("Even geduld: " + operationLabel.replace(/…$/, "") + " loopt nog");
+            return;
+        }
         selected = index;
         if (views.item && views.item.pause)
             views.item.pause();

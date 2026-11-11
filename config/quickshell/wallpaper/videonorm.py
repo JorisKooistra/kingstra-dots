@@ -114,8 +114,11 @@ def convert(source, height, fps, info, progress=None):
     WORK.mkdir(parents=True, exist_ok=True)
     fd, temp = tempfile.mkstemp(dir=WORK, prefix="norm-", suffix=".mp4")
     os.close(fd)
-    command = ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(source), "-an", "-sn", "-dn",
-               "-map", "0:v:0", "-vf", ",".join(filters), "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+    # Op de achtergrond: lage prioriteit en niet alle kernen, zodat de kiezer
+    # en de rest van het bureaublad soepel blijven tijdens het omzetten.
+    threads = str(max(1, (os.cpu_count() or 4) // 2))
+    command = ["nice", "-n", "15", "ffmpeg", "-nostdin", "-threads", threads, "-v", "error", "-y", "-i", str(source), "-an", "-sn", "-dn",
+               "-map", "0:v:0", "-vf", ",".join(filters), "-c:v", "libx264", "-threads", threads, "-preset", "faster", "-crf", "20",
                "-maxrate", f"{cap}k", "-bufsize", f"{cap * 2}k", "-profile:v", "high",
                "-movflags", "+faststart", "-progress", "pipe:1", "-nostats", temp]
     try:
@@ -212,7 +215,7 @@ def playable_preview(path):
     fd, temp = tempfile.mkstemp(dir=path.parent, prefix=".prev-", suffix=".mp4")
     os.close(fd)
     try:
-        result = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(path), "-an", "-sn",
+        result = subprocess.run(["nice", "-n", "10", "ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(path), "-an", "-sn",
                                  "-vf", "scale='min(1280,iw)':-2,format=yuv420p", "-c:v", "libx264", "-preset", "veryfast",
                                  "-crf", "26", "-movflags", "+faststart", temp], capture_output=True, timeout=120)
         if result.returncode or not Path(temp).stat().st_size: return path
