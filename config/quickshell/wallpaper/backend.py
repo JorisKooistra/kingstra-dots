@@ -869,6 +869,10 @@ def download_video(identifier, record, hosts, preview):
     else:
         target = Path(saved) if saved else library() / "video" / (identifier + suffix)
     target.parent.mkdir(parents=True, exist_ok=True)
+    if not preview and not saved:
+        final_target = target
+        target = CACHE / "incoming" / target.name
+        target.parent.mkdir(parents=True, exist_ok=True)
     # Alleen een Referer (MoeWalls wil weten van welke pagina je komt).
     extra = {key: value for key, value in (record.get("download_headers") or {}).items()
              if key == "Referer" and valid_url(value, providers.PAGE_HOSTS.get(record["source"], set()))}
@@ -885,13 +889,32 @@ def download_video(identifier, record, hosts, preview):
              tags=record.get("tag_names", []), page=record["url"], source=record["source"],
              duration=record.get("duration", 0), license=record.get("license", ""), notice=record.get("asset_note", ""))
         return
-    record["path"] = str(target)
-    atomic_json(metadata_file(target), record)
-    # Op maat van de schermen (instelbaar): geen 4K-decode per scherm.
     label = "Video omzetten naar je schermmaat…"
-    emit("progress", stage="convert", label=label, percent=-1)
-    target, _, _ = videonorm.normalize(target, read_json(SETTINGS),
-                                       progress=lambda percent: emit("progress", stage="convert", label=label, percent=percent))
+    progress = lambda percent: emit("progress", stage="convert", label=label, percent=percent)
+    if saved:
+        # Al in de collectie: hooguit ter plekke op maat (marker voorkomt dubbel werk).
+        record["path"] = str(target)
+        atomic_json(metadata_file(target), dict(read_json(metadata_file(target)) or record, **{"path": str(target)}))
+        target, _, _ = videonorm.normalize(target, read_json(SETTINGS), progress=progress)
+    else:
+        # Downloaden en omzetten in de cache; pas het eindresultaat (met
+        # 'normalized' in de sidecar) gaat naar video/. Anders ziet de
+        # mapbewaker de ruwe download en zet hem tegelijk nog eens om.
+        final_dir = final_target.parent
+        staging = target
+        record["path"] = str(staging)
+        atomic_json(metadata_file(staging), record)
+        emit("progress", stage="convert", label=label, percent=-1)
+        done, _, _ = videonorm.normalize(staging, read_json(SETTINGS), progress=progress, trash_original=False)
+        if done != staging:
+            for leftover in (staging, metadata_file(staging)):
+                with contextlib.suppress(FileNotFoundError): leftover.unlink()
+        target = final_dir / done.name
+        meta = read_json(metadata_file(done)) or dict(record)
+        meta["path"] = str(target)
+        atomic_json(metadata_file(target), meta)  # Eerst de sidecar: de bewaker ziet dan meteen de marker.
+        with contextlib.suppress(FileNotFoundError): metadata_file(done).unlink()
+        shutil.move(str(done), str(target))
     record = read_json(metadata_file(target)) or dict(record, path=str(target))
     atomic_json(CACHE / "metadata" / (identifier + ".json"), record)
     emit("download", id=identifier, path=str(target), tags=record.get("tag_names", []))
