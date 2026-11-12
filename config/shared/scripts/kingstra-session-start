@@ -7,6 +7,10 @@ set -uo pipefail
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kingstra"
 LOG_FILE="$LOG_DIR/session.log"
+# Hyprland start ons zonder ~/.local/bin in PATH; daar staan kingstra-wallpaper,
+# apply-shell-state en de andere helpers. Zonder dit viel wallpaper-init terug
+# op een kale skwd-apply en startte een videowallpaper nooit (2026-11-12).
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
 export QML_IMPORT_PATH="$HOME/.local/lib/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
 
 mkdir -p "$LOG_DIR" 2>/dev/null || LOG_FILE="/tmp/kingstra-session-${UID:-$(id -u)}.log"

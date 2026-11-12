@@ -17,10 +17,14 @@ sleep 1.2
 # ---------------------------------------------------------------------------
 # Pad 1 — Gebruik de kingstra-wallpaper orchestrator als die beschikbaar is
 # ---------------------------------------------------------------------------
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
 if command -v kingstra-wallpaper &>/dev/null; then
     if kingstra-wallpaper reload; then
         exit 0
     fi
+    echo "[kingstra] kingstra-wallpaper reload mislukt — terugval op skwd (video speelt dan niet)" >&2
+else
+    echo "[kingstra] kingstra-wallpaper niet gevonden — terugval op skwd (video speelt dan niet)" >&2
 fi
 
 # ---------------------------------------------------------------------------
