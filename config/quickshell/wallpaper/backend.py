@@ -491,7 +491,10 @@ def catalog():
     with contextlib.suppress(Exception):
         autotag_folder(events=True, network_limit=5, budget=20)
     emit("ready")
-    trim_cache()
+    keep = set()
+    for item in items:
+        with contextlib.suppress(OSError): keep.add(thumbnail_key(Path(item["path"])))
+    trim_cache(keep)
 
 
 def remote_json(url, authenticated=True):
@@ -529,7 +532,7 @@ def remote_thumbnail(item):
     return dict(path=item["id"], thumb=target.as_uri(), **metadata)
 
 
-def trim_cache():
+def trim_cache(keep_thumbs=None):
     # Interrupted workers can leave an unpublished temporary file. Network and
     # decoder timeouts are far shorter than this grace period.
     for folder in ("thumbs", "remote", "search", "previews"):
@@ -537,14 +540,24 @@ def trim_cache():
             if path.name.startswith((".picker-", ".wallhaven-", "tmp")):
                 with contextlib.suppress(OSError):
                     if time.time() - path.stat().st_mtime > 3600: path.unlink()
-    # Bound accumulated thumbnails across years of local edits / online pages.
-    files = [p for folder in ("thumbs", "remote", "search", "previews") for p in (CACHE / folder).glob("*") if p.is_file()]
+    # Thumbnails van de eigen collectie vallen buiten het budget: die moeten er
+    # altijd zijn, anders blijven tegels leeg en wordt bij elke opening een
+    # andere groep opnieuw gemaakt. Alleen thumbs van bestanden die niet meer
+    # bestaan (of veranderd zijn) gaan weg; dat weet alleen catalog().
+    if keep_thumbs is not None:
+        for path in (CACHE / "thumbs").glob("*"):
+            key = path.name.split(".", 1)[0]
+            if key in keep_thumbs or path.name.startswith((".picker-", "tmp")): continue
+            with contextlib.suppress(OSError):
+                if time.time() - path.stat().st_mtime > 86400: path.unlink()
+    # Bound accumulated online thumbnails, search pages and previews.
+    files = [p for folder in ("remote", "search", "previews") for p in (CACHE / folder).glob("*") if p.is_file()]
     sizes = []
     for path in files:
         with contextlib.suppress(OSError): sizes.append((path, path.stat()))
     total = sum(stat.st_size for _, stat in sizes)
     for path, stat in sorted(sizes, key=lambda row: row[1].st_mtime):
-        if total <= 512 * 1024 * 1024:
+        if total <= 384 * 1024 * 1024:
             break
         # Never evict this session's newly generated/visible images.
         if time.time() - stat.st_mtime > 86400:
