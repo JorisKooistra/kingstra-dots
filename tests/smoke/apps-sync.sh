@@ -9,7 +9,9 @@ trap 'rm -rf -- "$T"' EXIT
 H="$T/home"
 mkdir -p "$H/.config/quickshell" "$H/.config/kingstra/state" "$H/.config/Code/User" \
     "$H/.config/vesktop/settings" "$H/.config/spicetify/Themes/Matugen" \
-    "$H/.vscode/extensions/kingstra.kingstra-theme-1.0.0/themes"
+    "$H/.vscode/extensions/kingstra.kingstra-theme-1.0.0/themes" \
+    "$H/.config/Cursor/User" "$H/.cursor/extensions/kingstra.kingstra-theme-1.0.0/themes" \
+    "$H/.claude"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 run() { HOME="$H" XDG_CONFIG_HOME="$H/.config" XDG_STATE_HOME="$H/.local/state" \
@@ -21,6 +23,8 @@ cat > "$H/.config/quickshell/theme.json" <<'JSON'
  "material":{"glow_intensity":0.0},"style_profile":{"density":"comfortable","outline_strength":0.2}}
 JSON
 printf '{\n  // eigen commentaar blijft\n  "editor.fontSize": 14,\n}\n' > "$H/.config/Code/User/settings.json"
+printf '{\n  "window.autoDetectColorScheme": true\n}\n' > "$H/.config/Cursor/User/settings.json"
+echo '{"model": "opus"}' > "$H/.claude/settings.json"
 echo '{"enabledThemes":["eigen.css"]}' > "$H/.config/vesktop/settings/settings.json"
 echo 'body {}' > "$H/.config/spicetify/Themes/Matugen/user.css"
 
@@ -37,6 +41,21 @@ grep -q '"workbench.colorTheme": "Kingstra Licht' "$H/.config/Code/User/settings
 grep -q 'eigen commentaar blijft' "$H/.config/Code/User/settings.json" || fail "VS Code-commentaar verloren"
 python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
     "$H/.vscode/extensions/kingstra.kingstra-theme-1.0.0/package.json" || fail "VS Code package.json kapot"
+grep -q '"workbench.preferredLightColorTheme": "Kingstra Licht' "$H/.config/Cursor/User/settings.json" \
+    || fail "Cursor-thema niet gekozen"
+python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$H/.config/Cursor/User/settings.json" || fail "Cursor settings kapot"
+python3 - "$H/.claude" <<'PY' || fail "Claude Code-thema niet goed"
+import json, sys
+d = sys.argv[1]
+s = json.load(open(d + "/settings.json"))
+assert s["theme"] == "custom:kingstra" and s["model"] == "opus", s
+t = json.load(open(d + "/themes/kingstra.json"))
+assert t["base"] == "light" and t["overrides"]["claude"].startswith("#"), t
+PY
+# Eigen keuze in Claude Code blijft staan.
+python3 -c 'import json,sys; p=sys.argv[1]; s=json.load(open(p)); s["theme"]="dark"; json.dump(s,open(p,"w"))' "$H/.claude/settings.json"
+run
+grep -q '"theme": "dark"' "$H/.claude/settings.json" || fail "eigen Claude Code-keuze overschreven"
 grep -q 'kingstra.theme.css' "$H/.config/vesktop/settings/settings.json" || fail "Vesktop-thema niet aan"
 grep -q 'eigen.css' "$H/.config/vesktop/settings/settings.json" || fail "eigen Vesktop-thema weg"
 [[ "$(grep -c 'kingstra vorm >>>' "$H/.config/spicetify/Themes/Matugen/user.css")" == 1 ]] || fail "Spotify-blok dubbel"

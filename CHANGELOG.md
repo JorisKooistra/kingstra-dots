@@ -4,6 +4,11 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Cursor en Claude Code in thema
+- Cursor krijgt nu hetzelfde gegenereerde Kingstra-kleurthema als VS Code (extensie via `cursor --install-extension`). Omdat Cursor `window.autoDetectColorScheme` aan heeft, zet de sync ook `workbench.preferredDark/LightColorTheme`.
+- Claude Code in de terminal krijgt een eigen thema `~/.claude/themes/kingstra.json` uit het matugen-palet (accent, randen, achtergronden van berichten), licht of donker volgens het thema. De sync kiest `custom:kingstra` eenmalig in `~/.claude/settings.json`; een eigen keuze daarna blijft staan. Claude Code laadt wijzigingen live.
+- Claude Desktop heeft geen thema-aansluiting; het volgt alleen licht/donker van het systeem als de app op "Systeem" staat.
+
 ### Fastfetch nieuw
 - **Nieuwe indeling** voor het overzicht bij het openen van een terminal: een Kingstra-kroon in plaats van het grote Arch-logo, en de gegevens in drie groepen (systeem, bureaublad, hardware) met een boomlijn. Nieuw erbij: het actieve Kingstra-thema en de schermresolutie. Geheugen en schijf hebben een balkje.
 - **Kleuren volgen het thema**: alleen de terminalkleuren die matugen voor kitty maakt (accent 1 voor de namen, accent 3 voor de kopjes, outline voor de lijnen).

@@ -8,7 +8,8 @@ Eén bron (theme.json + matugen-palet) voor alles buiten de shell:
   2. Vormlaag: hoeken, randen, dichtheid en gloed van het thema in GTK,
      Firefox, VS Code, Vesktop en Spotify.
   3. Live: open GTK-apps, VS Code en Vesktop wisselen mee zonder herstart.
-  4. VS Code: een eigen gegenereerd kleurthema (werkbalk + syntax).
+  4. VS Code en Cursor: een eigen gegenereerd kleurthema (werkbalk + syntax).
+  5. Claude Code (terminal): eigen thema in ~/.claude/themes/kingstra.json.
   6. Vesktop (Vencord-thema) en Spotify (Spicetify-vormlaag).
   8. Mapiconen in de accentkleur (eigen Papirus-afgeleide in ~/.local).
 
@@ -579,6 +580,7 @@ VSCODE_TARGETS = [  # (extensiemap, gebruikersinstellingen, cli)
     (HOME / ".vscode/extensions", CONFIG / "Code/User", "code"),
     (HOME / ".vscode-oss/extensions", CONFIG / "VSCodium/User", "codium"),
     (HOME / ".vscode-oss/extensions", CONFIG / "Code - OSS/User", "code-oss"),
+    (HOME / ".cursor/extensions", CONFIG / "Cursor/User", "cursor"),
 ]
 
 
@@ -765,6 +767,13 @@ def sync_vscode(theme: dict, palette: dict) -> None:
             continue
         label = VSCODE_LABELS[(theme["mode"], slot)]
         new_text = set_jsonc_string(text, "workbench.colorTheme", label)
+        # Met window.autoDetectColorScheme (Cursor zet die standaard aan) kiest
+        # de editor het "preferred"-thema voor licht/donker; zet dat ook.
+        pref = "workbench.preferredDarkColorTheme" if theme["mode"] == "dark" \
+            else "workbench.preferredLightColorTheme"
+        cur_pref = str(current.get(pref, ""))
+        if not cur_pref or cur_pref.startswith("Kingstra") or not info.get("adopted"):
+            new_text = set_jsonc_string(new_text, pref, label)
         font = f"'{theme['mono_font']}', monospace"
         if "editor.fontFamily" not in current or current.get("editor.fontFamily") == info.get("font"):
             new_text = set_jsonc_string(new_text, "editor.fontFamily", font)
@@ -792,6 +801,83 @@ def sync_vscode(theme: dict, palette: dict) -> None:
         state[key] = info
         log(f"VS Code: {label}")
     write_atomic(state_file, json.dumps(state, indent=2) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# 5. Claude Code (terminal): eigen thema uit het palet
+# ---------------------------------------------------------------------------
+CLAUDE_DIR = Path(os.environ.get("CLAUDE_CONFIG_DIR") or HOME / ".claude")
+CLAUDE_THEME = "custom:kingstra"
+
+
+def mix(a: str, b: str, t: float) -> str:
+    """Meng twee #rrggbb-kleuren (t=0 → a, t=1 → b)."""
+    a, b = a.lstrip("#"), b.lstrip("#")
+    out = []
+    for i in (0, 2, 4):
+        x, y = int(a[i:i + 2], 16), int(b[i:i + 2], 16)
+        out.append(round(x + (y - x) * t))
+    return "#" + "".join(f"{v:02x}" for v in out)
+
+
+def claude_code_theme(theme: dict, p: dict) -> dict:
+    fg = p["on_surface"]
+    primary, second, third = p["primary"], p["secondary_accent"], p["tertiary_accent"]
+    o = {
+        "claude": primary, "claudeShimmer": mix(primary, fg, 0.45),
+        "text": fg, "inverseText": p["on_primary"],
+        "inactive": p["outline"], "inactiveShimmer": mix(p["outline"], fg, 0.4),
+        "subtle": p["outline_variant"],
+        "suggestion": primary, "permission": third, "permissionShimmer": mix(third, fg, 0.45),
+        "remember": second, "error": p["error"],
+        "promptBorder": p["outline"], "promptBorderShimmer": primary,
+        "planMode": third, "autoAccept": second, "bashBorder": third, "ide": second,
+        "userMessageBackground": p["surface_container_high"],
+        "userMessageBackgroundHover": p["surface_container_highest"],
+        "bashMessageBackgroundColor": p["surface_container"],
+        "memoryBackgroundColor": p["surface_container"],
+        "selectionBg": p.get("primary_container", mix(primary, p["background"], 0.6)),
+        "composerSidebarBackground": p["surface_container_low"],
+        "rate_limit_fill": primary, "rate_limit_empty": p["outline_variant"],
+        "briefLabelClaude": primary, "briefLabelYou": second,
+    }
+    return {"name": "Kingstra", "base": "dark" if theme["mode"] == "dark" else "light",
+            "overrides": o}
+
+
+def sync_claude_code(theme: dict, palette: dict) -> None:
+    if not CLAUDE_DIR.is_dir() and not shutil.which("claude"):
+        return
+    data = claude_code_theme(theme, palette)
+    write_atomic(CLAUDE_DIR / "themes" / "kingstra.json", json.dumps(data, indent=2) + "\n")
+
+    # Kies het thema eenmalig; kiest Joris daarna zelf iets anders, dan blijft dat.
+    state_file = STATE / "claude-code-sync.json"
+    state = load_json(state_file, {})
+    settings_path = (CLAUDE_DIR / "settings.json").resolve()
+    try:
+        text = settings_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        text = "{}"
+    except OSError as exc:
+        log(f"Claude Code: {settings_path} niet leesbaar ({exc})")
+        return
+    try:
+        current = json.loads(text or "{}")
+    except ValueError:
+        log(f"Claude Code: {settings_path} is geen geldige JSON, thema niet gekozen")
+        return
+    if not isinstance(current, dict):
+        return
+    chosen = str(current.get("theme", ""))
+    if chosen != CLAUDE_THEME and not (state.get("adopted") and chosen):
+        current["theme"] = CLAUDE_THEME
+        write_atomic(settings_path, json.dumps(current, indent=2, ensure_ascii=False) + "\n")
+        log("Claude Code: thema Kingstra gekozen")
+    if chosen == CLAUDE_THEME or not state.get("adopted"):
+        state["adopted"] = True
+        write_atomic(state_file, json.dumps(state, indent=2) + "\n")
+    log(f"Claude Code: Kingstra ({data['base']})")
 
 
 # ---------------------------------------------------------------------------
@@ -976,6 +1062,7 @@ def main(argv) -> int:
     step("Firefox-vorm", lambda: write_atomic(
         GEN / "firefox-shape.css", firefox_css(theme, palette, current_wallpaper(wallpaper))))
     step("VS Code", sync_vscode, theme, palette)
+    step("Claude Code", sync_claude_code, theme, palette)
     step("Vesktop", sync_vesktop, theme, palette)
     step("Spotify", sync_spicetify, theme, palette)
     if profile:
