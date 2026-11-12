@@ -584,6 +584,10 @@ VSCODE_TARGETS = [  # (extensiemap, gebruikersinstellingen, cli)
 ]
 
 
+def editor_name(cli: str) -> str:
+    return {"cursor": "Cursor", "codium": "VSCodium"}.get(cli, "VS Code")
+
+
 def vscode_package_json() -> dict:
     themes = []
     for (mode, slot), label in VSCODE_LABELS.items():
@@ -679,17 +683,46 @@ def vscode_ext_dir(ext_root: Path):
     return Path(found[-1]) if found else None
 
 
+def editor_cli(cli: str):
+    """Pad naar de echte CLI. Een AppImage-wrapper (Cursor: /usr/bin/cursor →
+    /opt/cursor/AppRun) start de hele Electron-app in plaats van de CLI; die
+    blijft dan hangen en installeert niets. Neem dan bin/<cli> in de app."""
+    path = shutil.which(cli)
+    if not path:
+        return None
+    candidates = []
+    try:
+        text = Path(path).read_text(encoding="utf-8", errors="ignore")[:4096]
+    except OSError:
+        text = ""
+    for m in re.finditer(r"(/\S+?)/AppRun\b", text):
+        candidates.append(Path(m.group(1)) / "usr/share" / cli / "bin" / cli)
+    real = Path(path).resolve()
+    if real.name == "AppRun":
+        candidates.append(real.parent / "usr/share" / cli / "bin" / cli)
+    candidates.append(Path("/opt") / cli / "usr/share" / cli / "bin" / cli)
+    for c in candidates:
+        if c.is_file() and os.access(c, os.X_OK):
+            return str(c)
+    if "AppRun" in text or real.name == "AppRun":
+        return None  # liever geen thema dan een hangende Electron-app
+    return path
+
+
 def ensure_vscode_extension(ext_root: Path, cli: str):
     ext = vscode_ext_dir(ext_root)
-    if ext is not None or not APPLY or not shutil.which(cli):
+    if ext is not None or not APPLY:
+        return ext
+    cli_path = editor_cli(cli)
+    if not cli_path:
         return ext
     with tempfile.TemporaryDirectory() as tmp:
         vsix = Path(tmp) / "kingstra-theme.vsix"
         build_vsix(vsix)
-        run(cli, "--install-extension", str(vsix), "--force", timeout=60)
+        run(cli_path, "--install-extension", str(vsix), "--force", timeout=60)
     ext = vscode_ext_dir(ext_root)
     if ext:
-        log(f"VS Code-thema geïnstalleerd ({cli})")
+        log(f"{editor_name(cli)}-thema geïnstalleerd ({cli})")
     return ext
 
 
@@ -759,7 +792,7 @@ def sync_vscode(theme: dict, palette: dict) -> None:
         try:
             current = json.loads(strip_jsonc(text) or "{}")
         except ValueError:
-            log(f"VS Code: {settings_path} niet leesbaar, overgeslagen")
+            log(f"{editor_name(cli)}: {settings_path} niet leesbaar, overgeslagen")
             continue
         current_theme = str(current.get("workbench.colorTheme", ""))
         # Kies Kingstra eenmalig; kiest Joris daarna zelf iets anders, dan blijft dat.
@@ -799,7 +832,7 @@ def sync_vscode(theme: dict, palette: dict) -> None:
             write_atomic(settings_path, new_text)
         info.update({"slot": slot, "adopted": True})
         state[key] = info
-        log(f"VS Code: {label}")
+        log(f"{editor_name(cli)}: {label}")
     write_atomic(state_file, json.dumps(state, indent=2) + "\n")
 
 
