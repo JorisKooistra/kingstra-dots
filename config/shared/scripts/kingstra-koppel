@@ -710,8 +710,10 @@ cmd_ververs_ip() {
 # - Rand uit: elke WAAK_TIK s een ssh-check of lan-mouse daar draait; zodra
 #   dat zo is IP verversen en de rand weer aan.
 # - Rand aan: elke WAAK_TIK s één ping; twee keer geen antwoord → rand uit.
+#   Elke WAAK_SSH_ELKE tikken een ssh-check of lan-mouse daar nog draait.
 # Gebeurtenissen komen uit het lan-mouse-journal (geen extra polling).
 WAAK_TIK="${KOPPEL_WAAK_TIK:-12}"
+WAAK_SSH_ELKE="${KOPPEL_WAAK_SSH_ELKE:-5}"
 
 lm_cli() { timeout 3 lan-mouse cli "$@" >/dev/null 2>&1; }
 
@@ -802,6 +804,13 @@ waak_tik() {
         fi
     elif (( PING_NEGEREN )) || peer_ping; then
         PING_MIS=0
+        # Machine aan maar lan-mouse daar gestopt: elke WAAK_SSH_ELKE tikken
+        # (standaard ±1 min) één ssh-check.
+        TIK_N=$((TIK_N + 1))
+        if (( TIK_N >= WAAK_SSH_ELKE )); then
+            TIK_N=0
+            peer_lan_mouse_actief || rand_uit "lan-mouse op $(state_get host) draait niet"
+        fi
     else
         PING_MIS=$((PING_MIS + 1))
         (( PING_MIS >= 2 )) && rand_uit "$(state_get host) reageert niet op ping"
@@ -810,7 +819,7 @@ waak_tik() {
 
 cmd_waakhond() {
     [[ -f "$STATE" ]] || die "nog niet gekoppeld"
-    RAND=aan; MUIS=hier; PING_MIS=0; PING_NEGEREN=0; VOLGENDE_CHECK=0
+    RAND=aan; MUIS=hier; PING_MIS=0; PING_NEGEREN=0; VOLGENDE_CHECK=0; TIK_N=0
     local bron="${KOPPEL_WAAK_BRON:-journalctl --user -u kingstra-lan-mouse.service -f -n0 -o cat --no-pager}"
     exec {WAAK_FD}< <(bash -c "$bron" 2>/dev/null)
     # Bij de start meteen kijken of de ander er is.

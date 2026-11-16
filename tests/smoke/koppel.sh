@@ -186,7 +186,7 @@ cat > "$STUB/ping" <<'S'
 [ -f "$T/ping-ok" ]
 S
 chmod +x "$STUB/lan-mouse" "$STUB/systemctl" "$STUB/ping"
-waak() { HOME="$T/A/home" XDG_RUNTIME_DIR="$T/A/run" KOPPEL_WAAK_TIK=1 KOPPEL_WAAK_BRON="$1" \
+waak() { HOME="$T/A/home" XDG_RUNTIME_DIR="$T/A/run" KOPPEL_WAAK_TIK=1 KOPPEL_WAAK_SSH_ELKE="${KOPPEL_WAAK_SSH_ELKE:-99}" KOPPEL_WAAK_BRON="$1" \
     "$T/A/home/.local/bin/kingstra-koppel" _waakhond 2>>"$T/waak.err"; }
 
 # 1) muis is daar, verbinding valt weg, capture laat niet los → deactiveren + herstarten;
@@ -222,5 +222,10 @@ grep -qx 'cli activate 0' "$KOPPEL_LOG.lm" && { echo "FOUT: rand weer aan terwij
 waak "sleep 6"
 [[ "$(grep -cx 'cli deactivate 0' "$KOPPEL_LOG.lm")" -le 1 ]] || { echo "FOUT: rand flapt bij geblokkeerde ping"; cat "$KOPPEL_LOG.lm"; exit 1; }
 [[ "$(tail -n1 "$KOPPEL_LOG.lm")" != 'cli deactivate 0' ]] || { echo "FOUT: rand eindigt uit bij geblokkeerde ping"; exit 1; }
+
+# 6) machine antwoordt op ping, maar lan-mouse daar stopt → na de ssh-check rand uit
+: > "$KOPPEL_LOG.lm"; touch "$T/B/home/lm-actief" "$T/ping-ok"
+KOPPEL_WAAK_SSH_ELKE=2 waak "sleep 1.5; rm -f '$T/B/home/lm-actief'; sleep 4"
+grep -qx 'cli deactivate 0' "$KOPPEL_LOG.lm" || { echo "FOUT: rand niet uit toen lan-mouse op B stopte"; cat "$T/waak.err"; exit 1; }
 
 echo "koppel: ok"
