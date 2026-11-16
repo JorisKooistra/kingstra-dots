@@ -43,7 +43,7 @@
             "separator": "light_black"
         },
         "key": {
-            "width": 16
+            "width": 18
         },
         "bar": {
             "char": {
@@ -110,9 +110,9 @@
             "format": "{pretty-name} {version}"
         },
         {
-            "type": "display",
+            "type": "command",
             "key": "{#light_black}│{#} {#blue}󰍹  Scherm",
-            "format": "{width}×{height} @ {refresh-rate} Hz"
+            "text": "\"${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/schermen.sh\""
         },
         {
             "type": "shell",
