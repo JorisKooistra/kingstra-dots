@@ -3567,13 +3567,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll2
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll2.availableWidth
                         spacing: root.s(15)
 
                         Text { text: "Tijd & weer"; font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
@@ -3774,13 +3775,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll3
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll3.availableWidth
                         spacing: root.s(15)
 
                         Text { text: "Invoer"; font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }
@@ -3974,13 +3976,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll4
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll4.availableWidth
                         spacing: root.s(14)
 
                         Text { text: "Thema aanpassen"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
@@ -4680,13 +4683,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll5
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll5.availableWidth
                         spacing: root.s(14)
 
                         Text { text: "Beeldschermen"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
@@ -4923,13 +4927,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll6
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll6.availableWidth
                         spacing: root.s(14)
 
                         Text { text: "Geluid"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
@@ -5093,13 +5098,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll7
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll7.availableWidth
                         spacing: root.s(14)
 
                         Text { text: "Sessie"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
@@ -5533,13 +5539,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll8
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll8.availableWidth
                         spacing: root.s(14)
 
                         Text { text: "Updates"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
@@ -5822,13 +5829,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll9
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll9.availableWidth
                         spacing: root.s(14)
 
                         Text { text: "Back-up"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
@@ -5940,13 +5948,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll10
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll10.availableWidth
                         spacing: root.s(14)
 
                         RowLayout {
@@ -6099,13 +6108,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: ThemeConfig.duration(250) } }
 
                 ScrollView {
+                    id: pageScroll11
                     anchors.fill: parent
                     anchors.margins: root.s(20)
                     clip: true
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: pageScroll11.availableWidth
                         spacing: root.s(14)
 
                         Text { text: "Onderhoud"; font.family: root.displayFontFamily; font.weight: root.themedFontWeight; font.letterSpacing: root.themedLetterSpacing; font.pixelSize: root.s(28); color: root.text }
@@ -6202,7 +6212,7 @@ Item {
                     ScrollBar.vertical.policy: TouchProfile.isTouchscreen ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
 
                     ColumnLayout {
-                        width: parent.availableWidth !== undefined ? parent.availableWidth : parent.width
+                        width: themeScroll.availableWidth
                         spacing: root.s(15)
 
                         Text { text: "Thema"; font.family: ThemeConfig.textFont; font.weight: Font.Black; font.pixelSize: root.s(28); color: root.text }

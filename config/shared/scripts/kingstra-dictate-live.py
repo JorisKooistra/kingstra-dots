@@ -77,6 +77,10 @@ HALLUCINATIONS = {
     "ondertiteling", "ondertitels", "bedankt voor het kijken", "dank u wel voor het kijken",
     "thank you", "thanks for watching", "you",
 }
+# Aftiteling uit ondertitelde tv, die whisper op ruis of een toon verzint
+# (live gezien: "(C) TV GELDERLAND 2021").
+CREDITS = re.compile(r"tv gelderland|amara\.org|ondertitel(ing|d)? (door|ingediend)|"
+                     r"copyright|©", re.IGNORECASE)
 
 
 def transcribe(samples):
@@ -95,7 +99,7 @@ def transcribe(samples):
         return ""
     text = NOISE.sub(" ", out.replace("\n", " "))
     text = re.sub(r"\s+", " ", text).strip()
-    if text.lower().strip(" .!?,") in HALLUCINATIONS:
+    if text.lower().strip(" .!?,") in HALLUCINATIONS or CREDITS.search(text):
         return ""
     return text
 

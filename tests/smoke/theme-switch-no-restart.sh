@@ -23,8 +23,10 @@ fi
 
 # Quickshell hot-reloads when a QML/JS file it loaded changes. The switch may
 # only publish runtime data (json) into the Quickshell config directory.
+# Naming TopBar.qml to find the running shell (pgrep, quickshell ipc -p) is fine.
 if grep -nE 'quickshell/[^"[:space:]]*\.(qml|js)\b' "${switch_path[@]}" \
-        | grep -vE ':[[:space:]]*#'; then
+        | grep -vE ':[[:space:]]*#' \
+        | grep -vE '(pgrep|quickshell ipc)[^|;&]*quickshell/[^"[:space:]]*\.qml'; then
     printf 'Theme switch path writes QML/JS into the Quickshell config\n' >&2
     exit 1
 fi
