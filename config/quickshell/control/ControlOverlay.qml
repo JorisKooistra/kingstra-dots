@@ -453,7 +453,7 @@ Item {
         id: panel
         anchors.fill: parent
         radius: overlay.s(26)
-        color: Qt.rgba(overlay.c.mantle.r, overlay.c.mantle.g, overlay.c.mantle.b, 0.94)
+        color: Qt.rgba(overlay.c.mantle.r, overlay.c.mantle.g, overlay.c.mantle.b, 1.0) // dekkend: tekst erachter las mee
         border.width: 1
         border.color: Qt.rgba(overlay.c.surface2.r, overlay.c.surface2.g, overlay.c.surface2.b, 0.7)
         scale: overlay.shown ? 1.0 : 0.985
@@ -528,7 +528,9 @@ Item {
                         id: themeTile
                         required property int index
                         readonly property var theme: index < overlay.themes.length ? overlay.themes[index] : null
-                        width: overlay.s(168)
+                        // Alle thema's plus Aanpassen passen naast elkaar; de
+                        // laatste tegel viel eerst half buiten beeld.
+                        width: Math.min(overlay.s(168), Math.floor((themeList.width - themeList.spacing * overlay.themes.length) / (overlay.themes.length + 1)))
                         frameHeight: overlay.s(100)
                         label: theme ? theme.title : "Aanpassen…"
                         glyph: "󰏘"

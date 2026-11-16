@@ -227,9 +227,9 @@ Scope {
     // Wisselen in de schermvullende speler: bewaart de keuze voor dit thema
     // (de mediakaart wisselt mee) en zet de nieuwe speler neer. Bij sluiten
     // krimpt hij terug in de kleine van dezelfde soort.
-    function switchStage(kind) {
+    function switchStage(kind, keep) {
         if (kind !== "vinyl" && kind !== "cassette" && kind !== "discman") return;
-        PlayerChoice.set(kind);
+        if (keep !== false) PlayerChoice.set(kind);
         stageSpin = ({});
         stageDevice = kind;
         Qt.callLater(() => {
@@ -250,6 +250,9 @@ Scope {
     function toggleStage(kind) {
         if (root.stageOpen && root.stageDevice === kind) root.stageOpen = false;
         else if (!root.stageOpen) root.openStage(kind);
+        // Al open met een andere speler: wisselen, zonder de themakeuze te
+        // veranderen. Eerder deed bv. "vinyl discman" dan niets.
+        else root.switchStage(kind, false);
     }
     LazyLoader {
         active: root.saverSeconds > 0
