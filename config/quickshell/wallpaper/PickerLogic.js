@@ -6,11 +6,27 @@ function isAi(item) {
     return /\b(ai[-_ ]+(art|generated|generative|wallpapers?)|generative[-_ ]+ai|midjourney|stable[-_ ]*diffusion|dall[-_ ]?e)\b/i.test(values.join(" "));
 }
 
-// skwd v1 groups colours by hue, then saturation (MIT; see SKWD-LICENSE.txt).
+// Doorlopende kleurcirkel: sorteren op de echte tint (graden) i.p.v. op
+// emmers, zodat elke stap klein is. Grijze beelden staan bij hun lichte
+// tint i.p.v. als blok achteraan; de lus sluit rood → rood zonder sprong.
+function hueAngle(item) {
+    let match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(item.color || "");
+    if (!match) return 1000;
+    let r = parseInt(match[1], 16) / 255, g = parseInt(match[2], 16) / 255, b = parseInt(match[3], 16) / 255;
+    let max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
+    let hue = 0;
+    if (delta > 0) {
+        if (max === r) hue = ((g - b) / delta) % 6;
+        else if (max === g) hue = (b - r) / delta + 2;
+        else hue = (r - g) / delta + 4;
+    }
+    hue = (hue * 60 + 360) % 360;
+    // Begin bij roze-rood, zodat de rode tinten bij elkaar staan.
+    return (hue + 20) % 360;
+}
+
 function compareColors(a, b) {
-    let hueA = a.hue === undefined || a.hue === 99 ? 100 : a.hue;
-    let hueB = b.hue === undefined || b.hue === 99 ? 100 : b.hue;
-    return hueA - hueB || (b.saturation || 0) - (a.saturation || 0);
+    return hueAngle(a) - hueAngle(b) || (b.saturation || 0) - (a.saturation || 0);
 }
 
 function modulo(value, count) { return count ? ((value % count) + count) % count : 0; }

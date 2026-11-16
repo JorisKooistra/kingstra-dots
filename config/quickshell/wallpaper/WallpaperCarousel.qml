@@ -293,10 +293,12 @@ Item {
             }
             Repeater {
                 id: cards
-                model: column.visible ? Math.max(0, Math.min(carousel.rows, carousel.controller.items.length - column.baseIndex * carousel.rows)) : 0
+                // In de lus vult de laatste kolom aan met het begin van de
+                // lijst, anders zit er bij de naad een gat in de raat.
+                model: !column.visible ? 0 : (carousel.looping && carousel.controller.items.length > carousel.rows ? carousel.rows : Math.max(0, Math.min(carousel.rows, carousel.controller.items.length - column.baseIndex * carousel.rows)))
                 WallpaperCard {
                     required property int index
-                    readonly property int flatIndex: column.baseIndex * carousel.rows + index
+                    readonly property int flatIndex: Logic.modulo(column.baseIndex * carousel.rows + index, Math.max(1, carousel.controller.items.length))
                     itemData: carousel.controller.items[flatIndex] || ({})
                     remote: carousel.controller.sourceTab !== "local"
                     actionBusy: !!carousel.controller.busy
