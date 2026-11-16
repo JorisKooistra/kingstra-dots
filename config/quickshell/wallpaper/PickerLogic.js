@@ -7,26 +7,29 @@ function isAi(item) {
 }
 
 // Doorlopende kleurcirkel: sorteren op de echte tint (graden) i.p.v. op
-// emmers, zodat elke stap klein is. Grijze beelden staan bij hun lichte
-// tint i.p.v. als blok achteraan; de lus sluit rood → rood zonder sprong.
-function hueAngle(item) {
+// emmers, zodat elke stap klein is. Grijze beelden (verzadiging < 10%, net als
+// het grijsfilter) vormen de brug tussen roze en rood, van licht naar donker:
+// lichtroze → lichtgrijs → donkergrijs → donkerrood → rood. Zo sluit de lus
+// zonder sprong en staan grijze beelden niet los tussen felle kleuren.
+function colorKey(item) {
     let match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(item.color || "");
     if (!match) return 1000;
     let r = parseInt(match[1], 16) / 255, g = parseInt(match[2], 16) / 255, b = parseInt(match[3], 16) / 255;
     let max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
+    let lightness = (max + min) / 2;
+    let saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+    if (saturation < 0.1) return 360 + (1 - lightness) * 100;
     let hue = 0;
-    if (delta > 0) {
-        if (max === r) hue = ((g - b) / delta) % 6;
-        else if (max === g) hue = (b - r) / delta + 2;
-        else hue = (r - g) / delta + 4;
-    }
+    if (max === r) hue = ((g - b) / delta) % 6;
+    else if (max === g) hue = (b - r) / delta + 2;
+    else hue = (r - g) / delta + 4;
     hue = (hue * 60 + 360) % 360;
-    // Begin bij roze-rood, zodat de rode tinten bij elkaar staan.
+    // Begin bij rood (net na roze), zodat de rode tinten bij elkaar staan.
     return (hue + 20) % 360;
 }
 
 function compareColors(a, b) {
-    return hueAngle(a) - hueAngle(b) || (b.saturation || 0) - (a.saturation || 0);
+    return colorKey(a) - colorKey(b) || (b.saturation || 0) - (a.saturation || 0);
 }
 
 function modulo(value, count) { return count ? ((value % count) + count) % count : 0; }
