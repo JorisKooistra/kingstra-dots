@@ -255,7 +255,7 @@ _phase12_koppeling() {
     deploy_link "$src" "$HOME/.local/bin/kingstra-koppel"
 
     ensure_dir "$HOME/.config/systemd/user"
-    for unit in kingstra-lan-mouse.service kingstra-klembord.service kingstra-koppel-ip.service kingstra-koppel-ip.timer; do
+    for unit in kingstra-lan-mouse.service kingstra-klembord.service kingstra-koppel-ip.service kingstra-koppel-ip.timer kingstra-koppel-waakhond.service; do
         deploy_link "$REPO_ROOT/config/systemd/$unit" "$HOME/.config/systemd/user/$unit"
     done
     systemctl --user daemon-reload 2>/dev/null || true
@@ -271,7 +271,7 @@ _phase12_koppeling() {
     fi
 
     if [[ -f "$HOME/.config/kingstra/koppeling.json" ]]; then
-        systemctl --user restart kingstra-lan-mouse.service kingstra-klembord.service kingstra-koppel-ip.timer 2>/dev/null || true
+        systemctl --user restart kingstra-lan-mouse.service kingstra-klembord.service kingstra-koppel-ip.timer kingstra-koppel-waakhond.service 2>/dev/null || true
         log_ok "Koppeling actief ($(python3 -c 'import json;print(json.load(open("'"$HOME"'/.config/kingstra/koppeling.json")).get("host","?"))' 2>/dev/null))"
     else
         log_info "Koppelen met je andere machine: kingstra koppel <naam> [links|rechts]"

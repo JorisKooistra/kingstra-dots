@@ -169,4 +169,58 @@ side A _ververs-ip --als-nodig 2>/dev/null || { echo "FOUT: --als-nodig werkte n
 [[ "$(st_ip)" == 192.168.1.26 && "$(lm_ip)" == 192.168.1.26 ]] || { echo "FOUT: --als-nodig zette IP niet"; exit 1; }
 grep -q 'restart kingstra-lan-mouse.service' "$KOPPEL_LOG.systemctl" || { echo "FOUT: lan-mouse niet herstart"; exit 1; }
 
+# Waakhond: muis terughalen bij verbroken verbinding, rand uit/aan.
+cat > "$STUB/lan-mouse" <<'S'
+#!/usr/bin/env bash
+echo "$*" >> "$KOPPEL_LOG.lm"
+[[ "$*" == "cli list" ]] && echo "id 0: peer:4242 (left) active: true, ips: {192.168.1.26}"
+exit 0
+S
+cat > "$STUB/systemctl" <<'S'
+#!/usr/bin/env bash
+if [[ "$*" == *is-active* ]]; then [[ -f "$HOME/lm-actief" ]]; exit; fi
+echo "$@" >> "$KOPPEL_LOG.systemctl"
+S
+cat > "$STUB/ping" <<'S'
+#!/bin/sh
+[ -f "$T/ping-ok" ]
+S
+chmod +x "$STUB/lan-mouse" "$STUB/systemctl" "$STUB/ping"
+waak() { HOME="$T/A/home" XDG_RUNTIME_DIR="$T/A/run" KOPPEL_WAAK_TIK=1 KOPPEL_WAAK_BRON="$1" \
+    "$T/A/home/.local/bin/kingstra-koppel" _waakhond 2>>"$T/waak.err"; }
+
+# 1) muis is daar, verbinding valt weg, capture laat niet los → deactiveren + herstarten;
+#    daarna komt B terug → rand weer aan
+touch "$T/B/home/lm-actief" "$T/ping-ok"; : > "$KOPPEL_LOG.lm"; : > "$KOPPEL_LOG.systemctl"
+waak "echo 'entering client 0 ...'; rm -f '$T/B/home/lm-actief'; echo '192.168.1.26:4242 did not respond, closing connection'; sleep 4; touch '$T/B/home/lm-actief'; sleep 3"
+grep -qx 'cli deactivate 0' "$KOPPEL_LOG.lm" || { echo "FOUT: waakhond haalde de muis niet terug"; cat "$T/waak.err"; exit 1; }
+grep -q 'restart kingstra-lan-mouse.service' "$KOPPEL_LOG.systemctl" || { echo "FOUT: vastgelopen capture niet herstart"; cat "$T/waak.err"; exit 1; }
+grep -qx 'cli activate 0' "$KOPPEL_LOG.lm" || { echo "FOUT: rand niet weer aan toen B terug was"; cat "$T/waak.err"; exit 1; }
+[[ "$(grep -n 'cli activate 0' "$KOPPEL_LOG.lm" | tail -1 | cut -d: -f1)" -gt "$(grep -n 'cli deactivate 0' "$KOPPEL_LOG.lm" | tail -1 | cut -d: -f1)" ]] \
+    || { echo "FOUT: rand eindigde uit"; cat "$KOPPEL_LOG.lm"; exit 1; }
+
+# 2) capture laat netjes los → geen herstart nodig
+: > "$KOPPEL_LOG.lm"; : > "$KOPPEL_LOG.systemctl"; touch "$T/B/home/lm-actief"
+waak "echo 'entering client 0 ...'; echo 'connection closed'; echo 'releasing capture: not connected'; sleep 1"
+grep -qx 'cli deactivate 0' "$KOPPEL_LOG.lm" || { echo "FOUT: geen deactivate bij verbroken verbinding"; exit 1; }
+grep -q 'restart' "$KOPPEL_LOG.systemctl" && { echo "FOUT: onnodig herstart"; exit 1; }
+
+# 3) B niet bereikbaar bij start → rand meteen uit; ping blijft weg → blijft uit
+: > "$KOPPEL_LOG.lm"; rm -f "$T/B/home/lm-actief" "$T/ping-ok"
+waak "sleep 3"
+grep -qx 'cli deactivate 0' "$KOPPEL_LOG.lm" || { echo "FOUT: rand niet uit bij onbereikbare B"; exit 1; }
+grep -qx 'cli activate 0' "$KOPPEL_LOG.lm" && { echo "FOUT: rand aan terwijl B weg is"; exit 1; }
+
+# 4) rand aan, B valt weg (twee pings mislukt) → rand uit
+: > "$KOPPEL_LOG.lm"; touch "$T/B/home/lm-actief" "$T/ping-ok"
+waak "sleep 1.5; rm -f '$T/B/home/lm-actief' '$T/ping-ok'; sleep 4"
+grep -qx 'cli deactivate 0' "$KOPPEL_LOG.lm" || { echo "FOUT: rand niet uit na mislukte pings"; cat "$T/waak.err"; exit 1; }
+grep -qx 'cli activate 0' "$KOPPEL_LOG.lm" && { echo "FOUT: rand weer aan terwijl B weg is"; exit 1; }
+
+# 5) ping geblokkeerd maar B draait wel → rand uit, één keer terug aan en dan niet blijven flappen
+: > "$KOPPEL_LOG.lm"; touch "$T/B/home/lm-actief"; rm -f "$T/ping-ok"
+waak "sleep 6"
+[[ "$(grep -cx 'cli deactivate 0' "$KOPPEL_LOG.lm")" -le 1 ]] || { echo "FOUT: rand flapt bij geblokkeerde ping"; cat "$KOPPEL_LOG.lm"; exit 1; }
+[[ "$(tail -n1 "$KOPPEL_LOG.lm")" != 'cli deactivate 0' ]] || { echo "FOUT: rand eindigt uit bij geblokkeerde ping"; exit 1; }
+
 echo "koppel: ok"

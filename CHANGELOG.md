@@ -50,6 +50,8 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 - `kingstra-lan-mouse` vraagt nu bij het starten via ssh aan de andere machine welk adres hij richting deze machine gebruikt en werkt `koppeling.json` en de lan-mouse-config bij. Niet bereikbaar via ssh: het opgeslagen adres blijft staan.
 - Nieuwe lichte timer (`kingstra-koppel-ip.timer`, elke 2 min): alleen als de handshake de laatste minuten mislukte, controleert hij het adres opnieuw en herstart hij lan-mouse als het veranderd is.
 - De installer schakelt systemd-networkd (en de socket/wait-online) uit als NetworkManager ook aan staat, zodat er één DHCP-client overblijft. Alleen in die combinatie.
+- Nieuwe waakhond (`kingstra-koppel-waakhond.service`, op beide machines): valt de verbinding weg terwijl de muis aan de andere kant is, dan haalt hij hem terug (client uit; laat lan-mouse de capture niet binnen 2 s los, dan herstart hij lan-mouse). Is de andere machine onbereikbaar of draait lan-mouse daar niet, dan gaat de rand uit, zodat de muis niet meer naar een machine kan die uit staat; zodra hij terug is (ssh-check elke 12 s, alleen zolang de rand uit is) gaat de rand vanzelf weer aan. Met rand aan alleen één ping per 12 s.
+- Een veranderd adres wordt nu live doorgegeven met `lan-mouse cli set-ips` in plaats van lan-mouse te herstarten.
 - De smoke-test van de koppeling schreef via `XDG_CACHE_HOME` in je echte klembordmap; hij blijft nu in zijn eigen tijdelijke map.
 
 ### Video-wallpapers in de picker

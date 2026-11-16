@@ -1,0 +1,13 @@
+[Unit]
+Description=Kingstra koppeling: waakhond (muis terughalen, rand uit als de ander weg is)
+Documentation=https://github.com/JorisKooistra/kingstra-dots
+# Gestart door kingstra-session-start zodra er een koppeling is.
+ConditionPathExists=%h/.config/kingstra/koppeling.json
+After=kingstra-lan-mouse.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/kingstra-koppel _waakhond
+Restart=always
+RestartSec=5
+Environment=XDG_RUNTIME_DIR=/run/user/%U
