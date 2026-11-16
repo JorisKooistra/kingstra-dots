@@ -703,19 +703,37 @@ cmd_ververs_ip() {
 # ---------------------------------------------------------------------------
 # Waakhond (kingstra-koppel-waakhond.service, op beide machines)
 # ---------------------------------------------------------------------------
-# - Verbinding weg terwijl de muis aan de andere kant is → muis terughalen:
-#   client deactiveren; laat lan-mouse de capture dan niet los, herstarten.
-# - De ander niet bereikbaar → de rand uit (client gedeactiveerd), zodat de
-#   muis niet naar een machine kan die uit staat of niet antwoordt.
-# - Rand uit: elke WAAK_TIK s een ssh-check of lan-mouse daar draait; zodra
-#   dat zo is IP verversen en de rand weer aan.
+# Harde regel: de muis mag nooit bij een machine blijven die niet antwoordt.
+# - Muis naar de ander gestuurd ("entering client") maar binnen WAAK_ACK_S s
+#   geen bevestiging ("acknowledged") → muis terughalen. Zo ook als de ander
+#   net uit de slaap komt, op het vergrendelscherm hangt of lan-mouse daar
+#   vastzit.
+# - Verbinding weg terwijl de muis daar is → muis terughalen.
+# - Terughalen = client uit én lan-mouse herstarten. Alleen een herstart laat
+#   de capture betrouwbaar los, ook als de portal geen gebeurtenissen meer
+#   doorgeeft (dan werkt ook Ctrl+Shift+Super+Alt niet).
+# - Na terughalen blijft de rand WAAK_BLOK s dicht, daarna pas weer aan als
+#   lan-mouse aan de andere kant draait (ssh-check).
+# - De ander niet bereikbaar → de rand uit (client gedeactiveerd).
+# - Rand uit: elke WAAK_TIK s een ssh-check; zodra lan-mouse daar draait IP
+#   verversen en de rand weer aan.
 # - Rand aan: elke WAAK_TIK s één ping; twee keer geen antwoord → rand uit.
 #   Elke WAAK_SSH_ELKE tikken een ssh-check of lan-mouse daar nog draait.
 # Gebeurtenissen komen uit het lan-mouse-journal (geen extra polling).
 WAAK_TIK="${KOPPEL_WAAK_TIK:-12}"
 WAAK_SSH_ELKE="${KOPPEL_WAAK_SSH_ELKE:-5}"
+WAAK_ACK_S="${KOPPEL_WAAK_ACK_S:-3}"
+WAAK_BLOK="${KOPPEL_WAAK_BLOK:-30}"
 
-lm_cli() { timeout 3 lan-mouse cli "$@" >/dev/null 2>&1; }
+# lan-mouse cli, met een paar pogingen (de daemon kan net herstarten).
+lm_cli() {
+    local i
+    for i in 1 2 3; do
+        timeout 3 lan-mouse cli "$@" >/dev/null 2>&1 && return 0
+        sleep 1
+    done
+    return 1
+}
 
 lm_id() {
     local id
@@ -744,47 +762,37 @@ rand_uit() {
 rand_aan() {
     cmd_ververs_ip 2>/dev/null && lm_cli set-ips "$(lm_id)" "$(state_get ip)"
     lm_cli activate "$(lm_id)"
-    RAND=aan; PING_MIS=0
-    waak_log "rand weer aan: $(state_get host) is terug"
+    RAND=aan; PING_MIS=0; TIK_N=0
+    waak_log "rand aan: $(state_get host) is bereikbaar"
 }
 
 haal_muis_terug() {
-    waak_log "verbinding weg terwijl de muis daar was: terughalen"
+    waak_log "muis terughalen: $1"
     lm_cli deactivate "$(lm_id)"
-    RAND=uit
-    # Laat lan-mouse de capture binnen 2 s los? Anders vastgelopen: herstarten.
-    if ! waak_wacht_op 'releasing capture' 2; then
-        waak_log "capture bleef hangen: kingstra-lan-mouse herstarten"
-        systemctl --user restart kingstra-lan-mouse.service 2>/dev/null
-        sleep 1
-        lm_cli deactivate "$(lm_id)" || { sleep 1; lm_cli deactivate "$(lm_id)"; }
-    fi
-    MUIS=hier
-}
-
-# Wacht max $2 s op een journalregel met $1 (uit dezelfde bron als de lus).
-waak_wacht_op() {
-    local patroon="$1" eind=$((SECONDS + $2)) regel
-    while (( SECONDS < eind )); do
-        IFS= read -r -t 1 -u "$WAAK_FD" regel || continue
-        [[ "$regel" == *"$patroon"* ]] && return 0
-    done
-    return 1
+    systemctl --user restart kingstra-lan-mouse.service 2>/dev/null
+    sleep 1
+    # Na de herstart is de client weer actief (config); dicht houden.
+    lm_cli deactivate "$(lm_id)"
+    RAND=uit; MUIS=hier
+    BLOK_TOT=$((SECONDS + WAAK_BLOK))
 }
 
 waak_regel() {
     local r="$1"
     case "$r" in
-        *"entering client"*) MUIS=daar ;;
+        *"entering client"*)
+            [[ "$MUIS" == daar ]] || ENTER_T=$SECONDS
+            MUIS=daar; ACK=0 ;;
+        *"acknowledged"*) ACK=1 ;;
         *"releasing capture"*) MUIS=hier ;;
         *"did not respond, closing connection"*|*"connection closed"*|*"failed to connect to"*)
             if [[ "$MUIS" == daar ]]; then
-                haal_muis_terug
+                haal_muis_terug "verbinding weg terwijl de muis daar was"
             fi
             # Hooguit één ssh-check per tik, ook als lan-mouse elke 5 s faalt.
             (( SECONDS >= VOLGENDE_CHECK )) || return 0
             VOLGENDE_CHECK=$((SECONDS + WAAK_TIK))
-            if peer_lan_mouse_actief; then
+            if [[ "$RAND" == aan ]] && peer_lan_mouse_actief; then
                 # Hij draait wel: misschien een ander adres → live bijwerken.
                 cmd_ververs_ip 2>/dev/null && lm_cli set-ips "$(lm_id)" "$(state_get ip)" \
                     && waak_log "adres bijgewerkt naar $(state_get ip)"
@@ -794,8 +802,16 @@ waak_regel() {
     esac
 }
 
+# Elke seconde: muis daar zonder bevestiging? Dan meteen terug.
+waak_ack_check() {
+    [[ "$MUIS" == daar && "$ACK" == 0 ]] || return 0
+    (( SECONDS - ENTER_T >= WAAK_ACK_S )) || return 0
+    haal_muis_terug "$(state_get host) bevestigde niet binnen ${WAAK_ACK_S} s"
+}
+
 waak_tik() {
     if [[ "$RAND" == uit ]]; then
+        (( SECONDS >= BLOK_TOT )) || return 0
         if peer_lan_mouse_actief; then
             # Bereikbaar via ssh maar geen ping-antwoord: ping blokkeert hier,
             # dan voortaan alleen op lan-mouse-fouten letten.
@@ -804,8 +820,6 @@ waak_tik() {
         fi
     elif (( PING_NEGEREN )) || peer_ping; then
         PING_MIS=0
-        # Machine aan maar lan-mouse daar gestopt: elke WAAK_SSH_ELKE tikken
-        # (standaard ±1 min) één ssh-check.
         TIK_N=$((TIK_N + 1))
         if (( TIK_N >= WAAK_SSH_ELKE )); then
             TIK_N=0
@@ -819,11 +833,13 @@ waak_tik() {
 
 cmd_waakhond() {
     [[ -f "$STATE" ]] || die "nog niet gekoppeld"
-    RAND=aan; MUIS=hier; PING_MIS=0; PING_NEGEREN=0; VOLGENDE_CHECK=0; TIK_N=0
+    RAND=onbekend; MUIS=hier; ACK=1; ENTER_T=0; BLOK_TOT=0
+    PING_MIS=0; PING_NEGEREN=0; VOLGENDE_CHECK=0; TIK_N=0
     local bron="${KOPPEL_WAAK_BRON:-journalctl --user -u kingstra-lan-mouse.service -f -n0 -o cat --no-pager}"
     exec {WAAK_FD}< <(bash -c "$bron" 2>/dev/null)
-    # Bij de start meteen kijken of de ander er is.
-    peer_lan_mouse_actief || rand_uit "$(state_get host) niet bereikbaar bij start"
+    # Bij de start de rand expliciet goed zetten: lan-mouse schrijft na een
+    # cli-(de)activate zijn config terug zonder activate_on_startup.
+    if peer_lan_mouse_actief; then rand_aan; else RAND=aan; rand_uit "$(state_get host) niet bereikbaar bij start"; fi
     local regel volgende=$((SECONDS + WAAK_TIK)) rc
     while :; do
         IFS= read -r -t 1 -u "$WAAK_FD" regel; rc=$?
@@ -832,6 +848,7 @@ cmd_waakhond() {
         elif (( rc <= 128 )); then
             break   # bron gestopt (journalctl weg / einde testinvoer)
         fi
+        waak_ack_check
         if (( SECONDS >= volgende )); then
             waak_tik; volgende=$((SECONDS + WAAK_TIK))
         fi
