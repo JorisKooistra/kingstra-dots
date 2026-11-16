@@ -779,8 +779,8 @@ Item {
                 "# Automatisch dimmen voor de eerstvolgende idle-actie",
                 "listener {",
                 "    timeout   = " + dimSeconds,
-                "    on-timeout = brightnessctl -s s 10%",
-                "    on-resume  = brightnessctl -r",
+                "    on-timeout = brightnessctl -c backlight -s s 10%",
+                "    on-resume  = brightnessctl -c backlight -r",
                 "}",
                 ""
             );
@@ -1333,7 +1333,7 @@ Item {
     function adjustBrightness(delta) {
         let step = Math.max(1, Math.abs(delta || 5));
         let direction = (delta || 0) >= 0 ? "+" : "";
-        Quickshell.execDetached(["bash", "-lc", "if command -v brightnessctl >/dev/null 2>&1; then brightnessctl set '" + direction + step + "%' >/dev/null 2>&1; fi"]);
+        Quickshell.execDetached(["bash", "-lc", "if command -v brightnessctl >/dev/null 2>&1; then brightnessctl -c backlight set '" + direction + step + "%' >/dev/null 2>&1; fi"]);
         displayRefreshTimer.start();
     }
 

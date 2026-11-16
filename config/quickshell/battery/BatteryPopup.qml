@@ -122,6 +122,9 @@ Item {
     // Volume (Pipewire) en helderheid (brightnessctl)
     // ------------------------------------------------------------------------
     readonly property var sink: Pipewire.defaultAudioSink
+    // Zonder tracker zijn volume en demping van de sink niet gebonden en
+    // leest het paneel 0% (gedempt) als niets anders in dit proces hem volgt.
+    PwObjectTracker { objects: root.sink ? [root.sink] : [] }
     readonly property bool volumeReady: !!sink && !!sink.audio && sink.audio.ready !== false
     readonly property int sysVolume: volumeReady ? Math.round(sink.audio.volume * 100) : -1
     readonly property bool sysMuted: volumeReady ? sink.audio.muted : false
@@ -148,7 +151,7 @@ Item {
         property int targetPct: -1
         onTriggered: {
             if (targetPct >= 0)
-                Quickshell.execDetached(["brightnessctl", "-q", "set", targetPct + "%"]);
+                Quickshell.execDetached(["brightnessctl", "-q", "-c", "backlight", "set", targetPct + "%"]);
             targetPct = -1;
         }
     }
@@ -165,7 +168,7 @@ Item {
         command: ["bash", "-c",
             "echo \"$USER\"; " +
             "awk '{print int($1/3600)\" \"int(($1%3600)/60)}' /proc/uptime 2>/dev/null || echo '0 0'; " +
-            "if command -v brightnessctl >/dev/null 2>&1; then brightnessctl -m 2>/dev/null | awk -F, 'NR==1{gsub(/%/,\"\",$4); print $4}'; else echo -1; fi"
+            "if command -v brightnessctl >/dev/null 2>&1; then brightnessctl -c backlight -m 2>/dev/null | awk -F, 'NR==1{gsub(/%/,\"\",$4); print $4}'; else echo -1; fi"
         ]
         stdout: StdioCollector {
             onStreamFinished: {

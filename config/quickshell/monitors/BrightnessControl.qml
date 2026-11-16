@@ -26,7 +26,7 @@ Rectangle {
     Process {
         id: brightReader
         command: ["bash", "-c",
-            "brightnessctl get 2>/dev/null | tr -d '\\n' || echo 100"
+            "brightnessctl -c backlight get 2>/dev/null | tr -d '\\n' || echo 100"
         ]
         stdout: StdioCollector { onStreamFinished: {
             let v = parseInt(this.text.trim());
@@ -41,7 +41,7 @@ Rectangle {
 
     Process {
         id: maxReader
-        command: ["bash", "-c", "brightnessctl max 2>/dev/null || echo 255"]
+        command: ["bash", "-c", "brightnessctl -c backlight max 2>/dev/null || echo 255"]
         stdout: StdioCollector { onStreamFinished: {
             let m = parseInt(this.text.trim());
             if (!isNaN(m) && m > 0) {
@@ -92,7 +92,7 @@ Rectangle {
                     pct = Math.max(1, Math.min(100, pct));
                     root.brightness = pct;
                     Quickshell.execDetached(["bash", "-c",
-                        "brightnessctl set " + pct + "% 2>/dev/null || true"
+                        "brightnessctl -c backlight set " + pct + "% 2>/dev/null || true"
                     ]);
                 }
             }
@@ -116,7 +116,7 @@ Rectangle {
             let newVal = Math.max(1, Math.min(100, root.brightness + delta));
             root.brightness = newVal;
             Quickshell.execDetached(["bash", "-c",
-                "brightnessctl set " + newVal + "% 2>/dev/null || true"
+                "brightnessctl -c backlight set " + newVal + "% 2>/dev/null || true"
             ]);
             wheel.accepted = true;
         }

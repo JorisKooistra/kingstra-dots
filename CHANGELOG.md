@@ -4,6 +4,12 @@ Versions follow `YYYY.MM.N` (year, month, release within that month). The curren
 
 ## Unreleased
 
+### Nalooprond ongeteste functies (16 nov)
+- **Helderheid stuurde op de pc het scroll-lock-lampje aan.** Zonder schermverlichting pakte `brightnessctl` het eerste apparaat dat het vond (een toetsenbord-led). Alle plekken (energiepaneel, Snelle instellingen, OSD-toetsen, Schermen, idle-dimmen) vragen nu alleen nog `-c backlight`; zonder verlichting verdwijnt de schuif in plaats van 0% te tonen.
+- **Energiepaneel toonde volume 0% en gedempt**: het paneel volgde de Pipewire-uitgang niet zelf (`PwObjectTracker`), dus de waarden bleven leeg als niets anders in het proces hem volgde.
+- **Instellingen: Invoer, Sessie, Geluid, Netwerk, Updates, Back-up, Ruimte en Schermen** bonden hun breedte aan iets wat in een ScrollView niet bestaat; de Invoer-kaart werd daardoor een smalle kolom met tekst buiten de rand. Ze vullen nu de pagina.
+- **Live dicteren** typt geen whisper-verzinsels als "TV GELDERLAND 2021" of Amara-aftiteling meer bij ruis.
+
 ### Cursor en Claude Code in thema
 - Cursor krijgt nu hetzelfde gegenereerde Kingstra-kleurthema als VS Code (extensie via de echte CLI in de AppImage, niet de `cursor`-wrapper die de hele app start). Omdat Cursor `window.autoDetectColorScheme` aan heeft, zet de sync ook `workbench.preferredDark/LightColorTheme`.
 - Claude Code in de terminal krijgt een eigen thema `~/.claude/themes/kingstra.json` uit het matugen-palet (accent, randen, achtergronden van berichten), licht of donker volgens het thema. De sync kiest `custom:kingstra` eenmalig in `~/.claude/settings.json`; een eigen keuze daarna blijft staan. Claude Code laadt wijzigingen live.

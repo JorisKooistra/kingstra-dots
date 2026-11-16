@@ -101,8 +101,8 @@ write_config() {
             printf '%s\n' '# Automatisch dimmen voor de eerstvolgende idle-actie'
             printf '%s\n' 'listener {'
             printf '    timeout   = %s\n' "$dim"
-            printf '%s\n' '    on-timeout = brightnessctl -s s 10%'
-            printf '%s\n' '    on-resume  = brightnessctl -r'
+            printf '%s\n' '    on-timeout = brightnessctl -c backlight -s s 10%'
+            printf '%s\n' '    on-resume  = brightnessctl -c backlight -r'
             printf '%s\n' '}'
             printf '\n'
         fi

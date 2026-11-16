@@ -87,11 +87,11 @@ case "$kind" in
     brightness)
         command -v brightnessctl >/dev/null 2>&1 || { swayosd_fallback; exit 0; }
         case "$action" in
-            up)   brightnessctl -q set "${STEP}%+" ;;
-            down) brightnessctl -q -n 1 set "${STEP}%-" ;;
+            up)   brightnessctl -c backlight -q set "${STEP}%+" ;;
+            down) brightnessctl -c backlight -q -n 1 set "${STEP}%-" ;;
         esac
-        cur="$(brightnessctl get 2>/dev/null || echo 0)"
-        max="$(brightnessctl max 2>/dev/null || echo 1)"
+        cur="$(brightnessctl -c backlight get 2>/dev/null || echo 0)"
+        max="$(brightnessctl -c backlight max 2>/dev/null || echo 1)"
         (( max > 0 )) || max=1
         emit brightness "$(( cur * 100 / max ))" false
         ;;

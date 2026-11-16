@@ -85,7 +85,7 @@ print_brightness() {
         return 0
     fi
 
-    brightnessctl -m 2>/dev/null | awk -F, 'NR == 1 { print "Helderheid: " $4 }'
+    brightnessctl -c backlight -m 2>/dev/null | awk -F, 'NR == 1 { print "Helderheid: " $4 }'
 }
 
 case "${1:-summary}" in

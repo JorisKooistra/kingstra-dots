@@ -313,7 +313,7 @@ Item {
     function setBrightness(percent) {
         let v = Math.max(1, Math.min(100, Math.round(percent)));
         root.brightness = v;
-        Quickshell.execDetached(["bash", "-lc", "command -v brightnessctl >/dev/null 2>&1 && brightnessctl -q set " + v + "%"]);
+        Quickshell.execDetached(["bash", "-lc", "command -v brightnessctl >/dev/null 2>&1 && brightnessctl -c backlight -q set " + v + "%"]);
     }
 
     function setVolume(percent) {
@@ -404,7 +404,7 @@ Item {
         id: statePoller
         // Geen login-shell (-l): die laadt eerst het hele profiel.
         command: ["bash", "-c",
-            "bri=''; if command -v brightnessctl >/dev/null 2>&1; then bri=$(brightnessctl -m 2>/dev/null | awk -F, 'NR==1{gsub(/%/,\"\",$4); print $4}'); fi; " +
+            "bri=''; if command -v brightnessctl >/dev/null 2>&1; then bri=$(brightnessctl -c backlight -m 2>/dev/null | awk -F, 'NR==1{gsub(/%/,\"\",$4); print $4}'); fi; " +
             "vol=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null); " +
             "ssid=$(nmcli -t -f NAME,TYPE connection show --active 2>/dev/null | awk -F: '$2==\"802-11-wireless\"{print $1; exit}'); " +
             "kbn=1; kb=''; if command -v jq >/dev/null 2>&1; then " +
