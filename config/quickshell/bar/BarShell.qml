@@ -546,6 +546,8 @@ Variants {
             readonly property bool isMediaPlaying: _activePlayer !== null
                 && _activePlayer.playbackState === MprisPlaybackState.Playing
             readonly property bool isMediaActive: mediaStatus === "Playing" || mediaStatus === "Paused"
+            // Hoes los van musicData: die rekent bij elke positie-tik opnieuw.
+            readonly property string musicArtUrl: _activePlayer ? ArtCache.local(_activePlayer.trackArtUrl || "") : ""
             readonly property var musicData: {
                 if (!_activePlayer || !isMediaActive)
                     return { "status": "Stopped", "title": "", "artUrl": "", "timeStr": "" };
@@ -563,7 +565,7 @@ Variants {
                     ? _activePlayer.trackTitle
                     : (String(_activePlayer.identity || "").trim() !== "" ? _activePlayer.identity : "Media");
                 return { "status": status, "title": title,
-                         "artUrl": ArtCache.local(_activePlayer.trackArtUrl || ""), "timeStr": timeStr };
+                         "artUrl": musicArtUrl, "timeStr": timeStr };
             }
 
             Process {

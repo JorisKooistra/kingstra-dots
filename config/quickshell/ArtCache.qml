@@ -26,15 +26,32 @@ Item {
         return url.indexOf("https://") === 0 || url.indexOf("http://") === 0;
     }
 
+    // Qt.md5 loopt in Qt 6.12 via OpenSSL en laadt per aanroep een provider
+    // in en uit. Dat is duur en wordt met de uren trager; local() wordt per
+    // binding-evaluatie aangeroepen (ook bij elke positie-tik van de speler),
+    // dus na een dag zat de hoofdthread vol en haperde elke animatie. Eén
+    // md5 per unieke URL is genoeg: de sleutels blijven hier bewaard.
+    // (Muteren van dit object geeft bewust geen change-signaal.)
+    readonly property var keys: ({})
+    function keyFor(url) {
+        let key = keys[url];
+        if (key === undefined) {
+            if (Object.keys(keys).length > 500) for (let k in keys) delete keys[k];
+            key = Qt.md5(url);
+            keys[url] = key;
+        }
+        return key;
+    }
+
     function pathFor(url) {
-        return dir + "/" + Qt.md5(url);
+        return dir + "/" + keyFor(url);
     }
 
     function local(value) {
         let url = String(value || "");
         let rev = root.revision; // afhankelijkheid voor de binding
         if (url === "" || !remote(url)) return url;
-        let key = Qt.md5(url);
+        let key = keyFor(url);
         if (ready[key]) return "file://" + dir + "/" + key;
         if (!(failed[key] && Date.now() - failed[key] < 60000) && queue.indexOf(url) === -1 && current !== url) {
             queue.push(url);
@@ -62,7 +79,7 @@ Item {
         id: fetcher
         property string outPath: ""
         onExited: code => {
-            let key = Qt.md5(root.current);
+            let key = root.keyFor(root.current);
             if (code === 0) {
                 let r = root.ready; r[key] = true; root.ready = r;
                 root.revision += 1;
