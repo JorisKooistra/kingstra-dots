@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 import ".."
 
@@ -29,6 +31,41 @@ Item {
         chrome.togglePanel(target);
     }
 
+    // Scherm aanhouden (koffie): zelfde schakelaar als "Idle-instellingen" in
+    // het Afsluitmenu, via kingstra-idle-inhibit. Status = statusbestand in
+    // XDG_RUNTIME_DIR; dat bestaat alleen zolang de blokkering aan staat.
+    property bool keepAwake: false
+    readonly property string keepAwakeFile: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/kingstra-idle-inhibit/enabled"
+    function keepAwakeCommand(action) {
+        return "a='" + action + "'; " +
+            "if command -v kingstra-idle-inhibit >/dev/null 2>&1; then kingstra-idle-inhibit \"$a\"; " +
+            "elif [ -x \"$HOME/.local/bin/kingstra-idle-inhibit\" ]; then \"$HOME/.local/bin/kingstra-idle-inhibit\" \"$a\"; " +
+            "elif [ -x \"$HOME/.config/shared/scripts/kingstra-idle-inhibit\" ]; then \"$HOME/.config/shared/scripts/kingstra-idle-inhibit\" \"$a\"; " +
+            "else \"$HOME/kingstra-dots/config/shared/scripts/kingstra-idle-inhibit\" \"$a\"; fi";
+    }
+    function toggleKeepAwake() {
+        keepAwake = !keepAwake;
+        Quickshell.execDetached(["bash", "-lc", keepAwakeCommand(keepAwake ? "on" : "off")]);
+        keepAwakeRecheck.restart();
+    }
+    Process {
+        id: keepAwakeProbe
+        command: ["test", "-f", bar.keepAwakeFile]
+        running: bar.active
+        onExited: (code) => bar.keepAwake = code === 0
+    }
+    Timer {
+        id: keepAwakeRecheck
+        interval: 600
+        onTriggered: if (!keepAwakeProbe.running) keepAwakeProbe.running = true
+    }
+    Timer {
+        interval: 3000
+        running: bar.active
+        repeat: true
+        onTriggered: if (!keepAwakeProbe.running) keepAwakeProbe.running = true
+    }
+
     component QuietButton: Rectangle {
         id: button
         property string icon: ""
@@ -36,6 +73,8 @@ Item {
         property string tip: ""
         property string target: ""
         property bool lit: false
+        // Zonder target opent de knop geen paneel maar meldt hij activated().
+        signal activated()
         // Alleen knoppen met wheelEnabled vangen het muiswiel (volume).
         property bool wheelEnabled: false
         signal wheelDelta(int delta)
@@ -62,7 +101,7 @@ Item {
             cursorShape: Qt.PointingHandCursor
             onEntered: bar.chrome.showTooltip(button, button.tip, false)
             onExited: bar.chrome.hideTooltip(button.tip)
-            onClicked: bar.openFrom(button, button.target)
+            onClicked: button.target !== "" ? bar.openFrom(button, button.target) : button.activated()
             onWheel: wheel => {
                 if (!button.wheelEnabled) { wheel.accepted = false; return; }
                 let delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.angleDelta.x;
@@ -212,6 +251,12 @@ Item {
                 }
             }
             QuietButton { visible: bar.chrome.hasBattery; label: bar.chrome.batCap + "%"; tip: "Batterij"; target: "battery" }
+            QuietButton {
+                icon: "󰅶"
+                lit: bar.keepAwake
+                tip: bar.keepAwake ? "Scherm blijft aan · klik om weer uit te laten gaan" : "Scherm aanhouden"
+                onActivated: bar.toggleKeepAwake()
+            }
             QuietButton { icon: "󰇘"; tip: "Menu en overige bediening"; target: "menu" }
         }
     }
