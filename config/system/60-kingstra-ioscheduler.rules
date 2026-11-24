@@ -1,0 +1,7 @@
+# /etc/udev/rules.d/60-kingstra-ioscheduler.rules — geplaatst door kingstra-dots
+# SATA-schijven (SSD en HDD) en SD-kaarten krijgen de BFQ-scheduler. Met
+# mq-deadline negeert de kernel ionice/IOSchedulingClass=idle, waardoor de
+# uurlijkse back-up, app-updates en caches even hard op de schijf gaan als
+# de apps waar je mee werkt en de hele desktop gaat haperen. BFQ geeft
+# interactieve processen voorrang. NVMe houdt de standaard (none).
+ACTION=="add|change", KERNEL=="sd[a-z]*|mmcblk[0-9]*", ENV{DEVTYPE}=="disk", ATTR{queue/scheduler}="bfq"

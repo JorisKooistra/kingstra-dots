@@ -443,6 +443,23 @@ _phase11_setup_disks() {
         sudo install -D -m 0644 "$rule_src" "$rule_dest"
         log_ok "Schijven koppelen zonder wachtwoord: $rule_dest"
     fi
+    _phase11_setup_ioscheduler
+}
+
+# BFQ voor SATA-schijven: zonder BFQ telt IOSchedulingClass=idle van de
+# back-up niet en hapert de desktop zodra er iets veel schrijft.
+_phase11_setup_ioscheduler() {
+    local src="$REPO_ROOT/config/system/60-kingstra-ioscheduler.rules"
+    local dest="/etc/udev/rules.d/60-kingstra-ioscheduler.rules"
+
+    [[ -f "$src" ]] || { log_warn "Bron niet gevonden: $src"; return 0; }
+    if ! sudo cmp -s "$src" "$dest" 2>/dev/null; then
+        backup_system_path "$dest"
+        sudo install -D -m 0644 "$src" "$dest"
+        log_ok "BFQ-scheduler voor SATA-schijven: $dest"
+    fi
+    sudo udevadm control --reload 2>/dev/null || true
+    sudo udevadm trigger --action=change --subsystem-match=block 2>/dev/null || true
 }
 
 _phase11_init_yazi_theme_file() {
