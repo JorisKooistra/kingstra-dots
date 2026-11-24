@@ -179,12 +179,23 @@ else:
 PY
 }
 
+# smartd meldt ook te hoge temperatuur (smartd.conf -W 4,45,55). Dat is geen
+# slijtage: een SATA-SSD wordt heet bij langdurig zwaar schrijven en koelt weer
+# af. Zo'n melding is een LET OP voor één dag; echte fouten blijven een FOUT.
 check_smart() {
-    if [[ ! -s "$SMART_FILE" ]]; then
-        systemctl is-active --quiet smartd 2>/dev/null && add 0 smart "Schijven gezond (smartd houdt ze in de gaten)."
+    local real temp today yesterday
+    [[ -s "$SMART_FILE" ]] && real=$(grep -v ': Temperature$' "$SMART_FILE" | tail -n 1)
+    if [[ -n "$real" ]]; then
+        add 2 smart "Schijfwaarschuwing: $real. Maak nu een back-up."
         return 0
     fi
-    add 2 smart "Schijfwaarschuwing: $(tail -n 1 "$SMART_FILE"). Maak nu een back-up."
+    today=$(date +%F); yesterday=$(date -d yesterday +%F)
+    [[ -s "$SMART_FILE" ]] && temp=$(grep -E "^($today|$yesterday) .*: Temperature$" "$SMART_FILE" | tail -n 1)
+    if [[ -n "$temp" ]]; then
+        add 1 smart "Schijf $(awk '{print $3}' <<< "$temp") werd te heet (boven 55 °C) tijdens zwaar schrijven. Geen defect; zorg voor luchtstroom als dit vaker gebeurt."
+        return 0
+    fi
+    systemctl is-active --quiet smartd 2>/dev/null && add 0 smart "Schijven gezond (smartd houdt ze in de gaten)."
 }
 
 check_update_age() {
